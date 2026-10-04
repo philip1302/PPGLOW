@@ -104,6 +104,8 @@
         <DCCReference Include="..\..\Source\Theme\PPG.Theme.pas"/>
         <DCCReference Include="..\..\Source\Theme\PPG.VclStyles.pas"/>
         <DCCReference Include="..\..\Source\Access\PPG.Accessibility.pas"/>
+        <DCCReference Include="..\..\Source\Access\PPG.UIA.Intf.pas"/>
+        <DCCReference Include="..\..\Source\Access\PPG.UIA.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Controls.Base.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Button.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Controls.Check.pas"/>

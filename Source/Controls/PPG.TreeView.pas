@@ -29,7 +29,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls, Vcl.ComCtrls,
-  PPG.Types, PPG.Items, PPG.Animation, PPG.Render.Intf, PPG.ItemPainter,
+  System.Generics.Collections,
+  PPG.Types, PPG.Items, PPG.Animation, PPG.Render.Intf, PPG.ItemPainter, PPG.UIA,
   PPG.Controls.ItemList;
 
 type
@@ -53,6 +54,7 @@ type
     FData: Pointer;
     FRow: Integer;
     FRowGen: Cardinal;
+    FUiaId: Integer; // UI Automation: stabile Nummer (0 = noch keine)
     function GetCount: Integer;
     function GetItem(Index: Integer): TPPGTreeNode;
     function GetIndex: Integer;
@@ -219,6 +221,8 @@ type
     FEditor: TPPGTreeEdit;
     FEditNode: TPPGTreeNode;
     FLastSelected: TPPGTreeNode;
+    FUiaNodes: TDictionary<Integer, TPPGTreeNode>; // UIA-Nummer -> Knoten
+    FUiaNext: Integer;
     FOnChange: TPPGTVChangedEvent;
     FOnChanging: TPPGTVChangingEvent;
     FOnExpanding: TPPGTVExpandingEvent;
@@ -284,6 +288,23 @@ type
     function DropTargetAt(Y: Integer; out Inside: Boolean): Integer; override;
     function DoDropAt(FromIndex, TargetRow: Integer; Inside: Boolean): Boolean; override;
     procedure DoAccChildAction(Index: Integer); override;
+    { UI Automation: Baum mit Knoten (Art 1, A = UIA-Nummer des Knotens).
+      Kinder eines Knotens sind nur bei aufgeklapptem Knoten sichtbar. }
+    function UiaRowOf(const Id: TPPGUiaId): Integer; override;
+    function UiaIdOfRow(Row: Integer): TPPGUiaId; override;
+    function UiaParent(const Id: TPPGUiaId): TPPGUiaId; override;
+    function UiaChildCount(const Id: TPPGUiaId): Integer; override;
+    function UiaChild(const Id: TPPGUiaId; Index: Integer): TPPGUiaId; override;
+    function UiaIndexInParent(const Id: TPPGUiaId): Integer; override;
+    function UiaControlType(const Id: TPPGUiaId): Integer; override;
+    function UiaProperty(const Id: TPPGUiaId; PropertyId: Integer; out Value: OleVariant): Boolean; override;
+    function UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean; override;
+    function UiaExpandState(const Id: TPPGUiaId): Integer; override;
+    procedure UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction; const Value: string); override;
+    /// Stabile UIA-Nummer eines Knotens (wird beim ersten Bedarf vergeben).
+    function NodeUiaId(Node: TPPGTreeNode): Integer;
+    /// Knoten zu einer UIA-Nummer; nil = geloescht oder unbekannt.
+    function NodeFromUiaId(AId: Integer): TPPGTreeNode;
     function AccRole: Integer; override;
     function AccChildRole(Id: Integer): Integer; override;
     function AccChildState(Id: Integer): Integer; override;
@@ -435,7 +456,7 @@ type
 implementation
 
 uses
-  System.SysUtils, Winapi.oleacc,
+  System.SysUtils, Winapi.oleacc, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Markup,
   PPG.Selection, PPG.Render.Registry, Vcl.Forms;
 
@@ -1453,6 +1474,7 @@ begin
   FAnimNode := nil;
   FLastSelected := nil;
   FreeAndNil(FItems); // ohne OnDeletion (wie TTreeView beim Zerstoeren)
+  FreeAndNil(FUiaNodes);
   FreeAndNil(FRows);
   inherited Destroy;
 end;
@@ -1624,6 +1646,9 @@ begin
   end;
   if Node = FLastSelected then
     FLastSelected := nil;
+  // UIA-Elemente des Knotens antworten ab jetzt "nicht verfuegbar"
+  if (Node.FUiaId <> 0) and (FUiaNodes <> nil) then
+    FUiaNodes.Remove(Node.FUiaId);
   if Assigned(FOnDeletion) and not (csDestroying in ComponentState) then
     FOnDeletion(Self, Node);
 end;
@@ -1944,18 +1969,23 @@ begin
 end;
 
 procedure TPPGCustomTreeView.ToggleNode(Node: TPPGTreeNode; ByUser: Boolean);
+var
+  Done: Boolean;
 begin
   if Node = nil then
     Exit;
   BeginUserAction;
   try
     if Node.FExpanded then
-      DoCollapse(Node, False, ByUser)
+      Done := DoCollapse(Node, False, ByUser)
     else
-      DoExpand(Node, False, ByUser);
+      Done := DoExpand(Node, False, ByUser);
   finally
     EndUserAction;
   end;
+  // Screenreader: aufgeklappt/zugeklappt (MSAA und UIA)
+  if Done and ByUser and (RowOfNode(Node) >= 0) then
+    NotifyAccessibilityChild(EVENT_OBJECT_STATECHANGE, RowOfNode(Node) + 1);
 end;
 
 procedure TPPGCustomTreeView.FullExpand;
@@ -2616,6 +2646,206 @@ begin
   end
   else
     Result := inherited AccChildDefaultAction(Id);
+end;
+
+{ ---- UI Automation ---- }
+
+function TPPGCustomTreeView.NodeUiaId(Node: TPPGTreeNode): Integer;
+begin
+  Result := 0;
+  if Node = nil then
+    Exit;
+  if Node.FUiaId = 0 then
+  begin
+    if FUiaNodes = nil then
+      FUiaNodes := TDictionary<Integer, TPPGTreeNode>.Create;
+    Inc(FUiaNext);
+    Node.FUiaId := FUiaNext;
+    FUiaNodes.Add(Node.FUiaId, Node);
+  end;
+  Result := Node.FUiaId;
+end;
+
+function TPPGCustomTreeView.NodeFromUiaId(AId: Integer): TPPGTreeNode;
+begin
+  if (FUiaNodes = nil) or not FUiaNodes.TryGetValue(AId, Result) then
+    Result := nil;
+end;
+
+function TPPGCustomTreeView.UiaRowOf(const Id: TPPGUiaId): Integer;
+begin
+  if Id.Kind = PPGUiaKindListItem then
+    Result := RowOfNode(NodeFromUiaId(Id.A))
+  else
+    Result := -1;
+end;
+
+function TPPGCustomTreeView.UiaIdOfRow(Row: Integer): TPPGUiaId;
+var
+  N: TPPGTreeNode;
+begin
+  N := NodeOfRow(Row);
+  if N = nil then
+    Result := PPGUiaId(0)
+  else
+    Result := PPGUiaId(PPGUiaKindListItem, NodeUiaId(N));
+end;
+
+function TPPGCustomTreeView.UiaParent(const Id: TPPGUiaId): TPPGUiaId;
+var
+  N: TPPGTreeNode;
+begin
+  N := NodeOfRow(UiaRowOf(Id));
+  if (N = nil) or (N.FParent = nil) then
+    Result := PPGUiaId(0)
+  else
+    Result := PPGUiaId(PPGUiaKindListItem, NodeUiaId(N.FParent));
+end;
+
+function TPPGCustomTreeView.UiaChildCount(const Id: TPPGUiaId): Integer;
+var
+  N: TPPGTreeNode;
+begin
+  if PPGUiaIsRoot(Id) then
+    Exit(FItems.RootCount);
+  N := NodeOfRow(UiaRowOf(Id));
+  if (N <> nil) and N.FExpanded then
+    Result := N.Count
+  else
+    Result := 0;
+end;
+
+function TPPGCustomTreeView.UiaChild(const Id: TPPGUiaId; Index: Integer): TPPGUiaId;
+var
+  N, C: TPPGTreeNode;
+begin
+  C := nil;
+  if PPGUiaIsRoot(Id) then
+  begin
+    if (Index >= 0) and (Index < FItems.RootCount) then
+      C := FItems.Root(Index);
+  end
+  else
+  begin
+    N := NodeOfRow(UiaRowOf(Id));
+    if (N <> nil) and N.FExpanded and (Index >= 0) and (Index < N.Count) then
+      C := N[Index];
+  end;
+  if C = nil then
+    Result := PPGUiaId(0)
+  else
+    Result := PPGUiaId(PPGUiaKindListItem, NodeUiaId(C));
+end;
+
+function TPPGCustomTreeView.UiaIndexInParent(const Id: TPPGUiaId): Integer;
+var
+  N: TPPGTreeNode;
+begin
+  N := NodeOfRow(UiaRowOf(Id));
+  if N = nil then
+    Result := -1
+  else
+    Result := N.Index;
+end;
+
+function TPPGCustomTreeView.UiaControlType(const Id: TPPGUiaId): Integer;
+begin
+  if PPGUiaIsRoot(Id) then
+    Result := UIA_TreeControlTypeId
+  else
+    Result := UIA_TreeItemControlTypeId;
+end;
+
+function TPPGCustomTreeView.UiaProperty(const Id: TPPGUiaId; PropertyId: Integer;
+  out Value: OleVariant): Boolean;
+var
+  N: TPPGTreeNode;
+  L: TList;
+begin
+  Result := False;
+  N := NodeOfRow(UiaRowOf(Id));
+  if N = nil then
+    Exit;
+  case PropertyId of
+    UIA_LevelPropertyId:
+      begin
+        Value := N.Level + 1;
+        Result := True;
+      end;
+    UIA_PositionInSetPropertyId:
+      begin
+        Value := N.Index + 1;
+        Result := True;
+      end;
+    UIA_SizeOfSetPropertyId:
+      begin
+        L := N.Siblings;
+        if L <> nil then
+        begin
+          Value := L.Count;
+          Result := True;
+        end;
+      end;
+  end;
+end;
+
+function TPPGCustomTreeView.UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean;
+begin
+  if PPGUiaIsRoot(Id) or (UiaRowOf(Id) < 0) then
+    Exit(inherited UiaHasPattern(Id, PatternId));
+  case PatternId of
+    UIA_SelectionItemPatternId, UIA_ScrollItemPatternId, UIA_ExpandCollapsePatternId:
+      Result := True;
+    UIA_TogglePatternId:
+      Result := FCheckBoxes;
+  else
+    Result := False;
+  end;
+end;
+
+function TPPGCustomTreeView.UiaExpandState(const Id: TPPGUiaId): Integer;
+var
+  N: TPPGTreeNode;
+begin
+  N := NodeOfRow(UiaRowOf(Id));
+  if (N = nil) or not N.HasChildren then
+    Result := ExpandCollapseState_LeafNode
+  else if N.FExpanded then
+    Result := ExpandCollapseState_Expanded
+  else
+    Result := ExpandCollapseState_Collapsed;
+end;
+
+procedure TPPGCustomTreeView.UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction;
+  const Value: string);
+var
+  N: TPPGTreeNode;
+  R: Integer;
+begin
+  R := UiaRowOf(Id);
+  N := NodeOfRow(R);
+  if (N = nil) or not Enabled then
+  begin
+    inherited UiaExecute(Id, Action, Value);
+    Exit;
+  end;
+  case Action of
+    uaSelect:
+      SelectByUser(N);
+    uaExpand:
+      if not N.FExpanded then
+        ToggleNode(N, True);
+    uaCollapse:
+      if N.FExpanded then
+        ToggleNode(N, True);
+    uaToggle:
+      if FCheckBoxes and N.FEnabled then
+        ItemSpaceKey(R);
+    uaScrollIntoView:
+      MakeItemVisible(R);
+  else
+    inherited UiaExecute(Id, Action, Value);
+  end;
 end;
 
 end.

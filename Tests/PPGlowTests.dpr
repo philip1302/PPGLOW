@@ -34,6 +34,8 @@ uses
   PPG.Theme in '..\Source\Theme\PPG.Theme.pas',
   PPG.VclStyles in '..\Source\Theme\PPG.VclStyles.pas',
   PPG.Accessibility in '..\Source\Access\PPG.Accessibility.pas',
+  PPG.UIA.Intf in '..\Source\Access\PPG.UIA.Intf.pas',
+  PPG.UIA in '..\Source\Access\PPG.UIA.pas',
   PPG.Controls.Base in '..\Source\Controls\PPG.Controls.Base.pas',
   PPG.Button in '..\Source\Controls\PPG.Button.pas',
   PPG.Controls.Check in '..\Source\Controls\PPG.Controls.Check.pas',
@@ -101,7 +103,8 @@ uses
   PPG.Tests.Phase7d in 'PPG.Tests.Phase7d.pas',
   PPG.Tests.Streaming in 'PPG.Tests.Streaming.pas',
   PPG.Tests.Visual in 'PPG.Tests.Visual.pas',
-  PPG.Tests.Phase9a in 'PPG.Tests.Phase9a.pas';
+  PPG.Tests.Phase9a in 'PPG.Tests.Phase9a.pas',
+  PPG.Tests.Phase9b in 'PPG.Tests.Phase9b.pas';
 
 var
   R: TTestResult;

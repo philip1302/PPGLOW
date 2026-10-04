@@ -197,6 +197,8 @@
         <DCCReference Include="..\Source\Core\PPG.Tokens.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.VclStyles.pas"/>
         <DCCReference Include="..\Source\Access\PPG.Accessibility.pas"/>
+        <DCCReference Include="..\Source\Access\PPG.UIA.Intf.pas"/>
+        <DCCReference Include="..\Source\Access\PPG.UIA.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Controls.Check.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.CheckBox.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.RadioButton.pas"/>
@@ -240,6 +242,7 @@
         <DCCReference Include="PPG.Tests.Streaming.pas"/>
         <DCCReference Include="PPG.Tests.Visual.pas"/>
         <DCCReference Include="PPG.Tests.Phase9a.pas"/>
+        <DCCReference Include="PPG.Tests.Phase9b.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

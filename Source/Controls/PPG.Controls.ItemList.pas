@@ -23,14 +23,18 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.Forms, Vcl.ImgList,
   PPG.Types, PPG.Items, PPG.Selection, PPG.RowLayout, PPG.Render.Intf,
-  PPG.Accessibility, PPG.Controls.Base, PPG.Controls.Scroll, PPG.ItemPainter;
+  PPG.Accessibility, PPG.UIA, PPG.Controls.Base, PPG.Controls.Scroll, PPG.ItemPainter;
+
+const
+  /// UIA-Art der Eintraege (A = Index); 0 ist die Liste selbst.
+  PPGUiaKindListItem = 1;
 
 type
   TPPGReorderEvent = procedure(Sender: TObject; FromIndex, ToIndex: Integer;
     var Allow: Boolean) of object;
 
   TPPGCustomItemList = class(TPPGCustomScrollControl, IPPGAccessibleChildren,
-    IPPGAccessibleMultiSelection)
+    IPPGAccessibleMultiSelection, IPPGUiaSource)
   private
     FSource: IPPGItemSource;
     FSelection: TPPGSelection;
@@ -179,6 +183,43 @@ type
     function AccChildSelect(Id: Integer; Flags: Integer): Boolean;
     /// Standardaktion eines Kindes (aus der geposteten Nachricht).
     procedure DoAccChildAction(Index: Integer); virtual;
+    /// Auswahl wie accSelect (SELFLAG_*), als Anwender-Aktion.
+    procedure DoAccSelect(Index: Integer; Flags: Integer);
+
+    { UI Automation (IPPGUiaSource): Liste mit Eintraegen (Art 1, A = Index).
+      Der Baum ueberschreibt die Struktur (Knoten statt Indizes). }
+    function UiaValid(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaParent(const Id: TPPGUiaId): TPPGUiaId; virtual;
+    function UiaChildCount(const Id: TPPGUiaId): Integer; virtual;
+    function UiaChild(const Id: TPPGUiaId; Index: Integer): TPPGUiaId; virtual;
+    function UiaIndexInParent(const Id: TPPGUiaId): Integer; virtual;
+    function UiaElementAt(X, Y: Integer): TPPGUiaId; virtual;
+    function UiaFocused: TPPGUiaId; virtual;
+    function UiaFromAccChild(ChildId: Integer): TPPGUiaId; virtual;
+    function UiaControlType(const Id: TPPGUiaId): Integer; virtual;
+    function UiaName(const Id: TPPGUiaId): string; virtual;
+    function UiaRect(const Id: TPPGUiaId): TRect; virtual;
+    function UiaEnabled(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaFocusable(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaProperty(const Id: TPPGUiaId; PropertyId: Integer; out Value: OleVariant): Boolean; virtual;
+    function UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean; virtual;
+    function UiaCanSelectMultiple: Boolean; virtual;
+    function UiaSelection: TPPGUiaIds; virtual;
+    function UiaIsSelected(const Id: TPPGUiaId): Boolean; virtual;
+    procedure UiaGridSize(out Rows, Cols: Integer); virtual;
+    function UiaGridItem(Row, Col: Integer): TPPGUiaId; virtual;
+    procedure UiaGridPos(const Id: TPPGUiaId; out Row, Col: Integer); virtual;
+    function UiaHeaders(Columns: Boolean): TPPGUiaIds; virtual;
+    function UiaItemHeaders(const Id: TPPGUiaId; Columns: Boolean): TPPGUiaIds; virtual;
+    function UiaValue(const Id: TPPGUiaId): string; virtual;
+    function UiaReadOnly(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaExpandState(const Id: TPPGUiaId): Integer; virtual;
+    function UiaToggleState(const Id: TPPGUiaId): Integer; virtual;
+    procedure UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction; const Value: string); virtual;
+    /// Zeile (Index) eines Elements; -1 = keins. Der Baum bildet Knoten ab.
+    function UiaRowOf(const Id: TPPGUiaId): Integer; virtual;
+    /// Element einer Zeile (Index); Wurzel = keins.
+    function UiaIdOfRow(Row: Integer): TPPGUiaId; virtual;
 
     property Painter: TPPGItemPainter read FPainter;
     property ItemHeight: Integer read FItemHeight write SetItemHeight default 0;
@@ -218,7 +259,7 @@ type
 implementation
 
 uses
-  System.SysUtils, System.Math, Winapi.oleacc,
+  System.SysUtils, System.Math, Winapi.oleacc, Vcl.StdCtrls, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Markup;
 
@@ -1415,26 +1456,29 @@ begin
   begin
     I := Integer(Message.WParam);
     if (I >= 0) and (I < ItemCount) and Enabled then
-    begin
-      BeginUserAction;
-      try
-        if Message.LParam and SELFLAG_TAKESELECTION <> 0 then
-          FSelection.Click(I, [])
-        else if Message.LParam and SELFLAG_EXTENDSELECTION <> 0 then
-          FSelection.Click(I, [ssShift])
-        else if Message.LParam and SELFLAG_ADDSELECTION <> 0 then
-          FSelection.Selected[I] := True
-        else if Message.LParam and SELFLAG_REMOVESELECTION <> 0 then
-          FSelection.Selected[I] := False;
-        if Message.LParam and SELFLAG_TAKEFOCUS <> 0 then
-          FSelection.Focus := I;
-      finally
-        EndUserAction;
-      end;
-    end;
+      DoAccSelect(I, Integer(Message.LParam));
     Exit;
   end;
   inherited WndProc(Message);
+end;
+
+procedure TPPGCustomItemList.DoAccSelect(Index: Integer; Flags: Integer);
+begin
+  BeginUserAction;
+  try
+    if Flags and SELFLAG_TAKESELECTION <> 0 then
+      FSelection.Click(Index, [])
+    else if Flags and SELFLAG_EXTENDSELECTION <> 0 then
+      FSelection.Click(Index, [ssShift])
+    else if Flags and SELFLAG_ADDSELECTION <> 0 then
+      FSelection.Selected[Index] := True
+    else if Flags and SELFLAG_REMOVESELECTION <> 0 then
+      FSelection.Selected[Index] := False;
+    if Flags and SELFLAG_TAKEFOCUS <> 0 then
+      FSelection.Focus := Index;
+  finally
+    EndUserAction;
+  end;
 end;
 
 procedure TPPGCustomItemList.DoAccChildAction(Index: Integer);
@@ -1583,6 +1627,292 @@ begin
   Result := HandleAllocated and (Id >= 1) and (Id <= ItemCount);
   if Result then
     PostMessage(Handle, GMsgChildSelect, WPARAM(Id - 1), LPARAM(Flags));
+end;
+
+{ ---- UI Automation (IPPGUiaSource) ---- }
+
+function TPPGCustomItemList.UiaRowOf(const Id: TPPGUiaId): Integer;
+begin
+  if (Id.Kind = PPGUiaKindListItem) and (Id.A >= 0) and (Id.A < ItemCount) then
+    Result := Id.A
+  else
+    Result := -1;
+end;
+
+function TPPGCustomItemList.UiaIdOfRow(Row: Integer): TPPGUiaId;
+begin
+  if (Row >= 0) and (Row < ItemCount) then
+    Result := PPGUiaId(PPGUiaKindListItem, Row)
+  else
+    Result := PPGUiaId(0);
+end;
+
+function TPPGCustomItemList.UiaValid(const Id: TPPGUiaId): Boolean;
+begin
+  Result := PPGUiaIsRoot(Id) or (UiaRowOf(Id) >= 0);
+end;
+
+function TPPGCustomItemList.UiaParent(const Id: TPPGUiaId): TPPGUiaId;
+begin
+  Result := PPGUiaId(0);
+end;
+
+function TPPGCustomItemList.UiaChildCount(const Id: TPPGUiaId): Integer;
+begin
+  if PPGUiaIsRoot(Id) then
+    Result := ItemCount
+  else
+    Result := 0;
+end;
+
+function TPPGCustomItemList.UiaChild(const Id: TPPGUiaId; Index: Integer): TPPGUiaId;
+begin
+  if PPGUiaIsRoot(Id) then
+    Result := UiaIdOfRow(Index)
+  else
+    Result := PPGUiaId(0);
+end;
+
+function TPPGCustomItemList.UiaIndexInParent(const Id: TPPGUiaId): Integer;
+begin
+  Result := UiaRowOf(Id);
+end;
+
+function TPPGCustomItemList.UiaElementAt(X, Y: Integer): TPPGUiaId;
+begin
+  Result := UiaIdOfRow(ItemAtPos(X, Y));
+end;
+
+function TPPGCustomItemList.UiaFocused: TPPGUiaId;
+begin
+  if Focused then
+    Result := UiaIdOfRow(FSelection.Focus)
+  else
+    Result := PPGUiaId(0);
+end;
+
+function TPPGCustomItemList.UiaFromAccChild(ChildId: Integer): TPPGUiaId;
+begin
+  Result := UiaIdOfRow(ChildId - 1);
+end;
+
+function TPPGCustomItemList.UiaControlType(const Id: TPPGUiaId): Integer;
+var
+  Data: TPPGItemData;
+begin
+  if PPGUiaIsRoot(Id) then
+    Exit(UIA_ListControlTypeId);
+  GetItemData(UiaRowOf(Id), Data);
+  if Data.IsHeader then
+    Result := UIA_TextControlTypeId
+  else
+    Result := UIA_ListItemControlTypeId;
+end;
+
+function TPPGCustomItemList.UiaName(const Id: TPPGUiaId): string;
+var
+  R: Integer;
+begin
+  if PPGUiaIsRoot(Id) then
+    Exit(AccName);
+  R := UiaRowOf(Id);
+  if R < 0 then
+    Result := ''
+  else
+    Result := AccChildName(R + 1);
+end;
+
+function TPPGCustomItemList.UiaRect(const Id: TPPGUiaId): TRect;
+var
+  R: Integer;
+begin
+  R := UiaRowOf(Id);
+  if R < 0 then
+    Result := Rect(0, 0, 0, 0)
+  else
+    Result := ItemRect(R);
+end;
+
+function TPPGCustomItemList.UiaEnabled(const Id: TPPGUiaId): Boolean;
+var
+  Data: TPPGItemData;
+begin
+  Result := Enabled;
+  if Result and not PPGUiaIsRoot(Id) then
+  begin
+    GetItemData(UiaRowOf(Id), Data);
+    Result := Data.Enabled;
+  end;
+end;
+
+function TPPGCustomItemList.UiaFocusable(const Id: TPPGUiaId): Boolean;
+var
+  R: Integer;
+begin
+  if PPGUiaIsRoot(Id) then
+    Exit(TabStop and Enabled);
+  R := UiaRowOf(Id);
+  Result := (R >= 0) and CanSelectItem(R);
+end;
+
+function TPPGCustomItemList.UiaProperty(const Id: TPPGUiaId; PropertyId: Integer;
+  out Value: OleVariant): Boolean;
+var
+  R: Integer;
+begin
+  Result := False;
+  R := UiaRowOf(Id);
+  if R < 0 then
+    Exit;
+  case PropertyId of
+    UIA_PositionInSetPropertyId:
+      begin
+        Value := R + 1;
+        Result := True;
+      end;
+    UIA_SizeOfSetPropertyId:
+      begin
+        Value := ItemCount;
+        Result := True;
+      end;
+  end;
+end;
+
+function TPPGCustomItemList.UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean;
+var
+  R: Integer;
+begin
+  if PPGUiaIsRoot(Id) then
+    Exit(PatternId = UIA_SelectionPatternId);
+  R := UiaRowOf(Id);
+  Result := (R >= 0) and CanSelectItem(R) and
+    ((PatternId = UIA_SelectionItemPatternId) or (PatternId = UIA_ScrollItemPatternId));
+end;
+
+function TPPGCustomItemList.UiaCanSelectMultiple: Boolean;
+begin
+  Result := FSelection.Mode <> smSingle;
+end;
+
+function TPPGCustomItemList.UiaSelection: TPPGUiaIds;
+var
+  Rows: TArray<Integer>;
+  I: Integer;
+begin
+  Rows := AccSelectedChildren;
+  SetLength(Result, Length(Rows));
+  for I := 0 to High(Rows) do
+    Result[I] := UiaIdOfRow(Rows[I] - 1);
+end;
+
+function TPPGCustomItemList.UiaIsSelected(const Id: TPPGUiaId): Boolean;
+var
+  R: Integer;
+begin
+  R := UiaRowOf(Id);
+  if R < 0 then
+    Result := False
+  else if FSelection.Mode = smSingle then
+    Result := FSelection.ItemIndex = R
+  else
+    Result := FSelection.Selected[R];
+end;
+
+procedure TPPGCustomItemList.UiaGridSize(out Rows, Cols: Integer);
+begin
+  Rows := 0;
+  Cols := 0;
+end;
+
+function TPPGCustomItemList.UiaGridItem(Row, Col: Integer): TPPGUiaId;
+begin
+  Result := PPGUiaId(0);
+end;
+
+procedure TPPGCustomItemList.UiaGridPos(const Id: TPPGUiaId; out Row, Col: Integer);
+begin
+  Row := 0;
+  Col := 0;
+end;
+
+function TPPGCustomItemList.UiaHeaders(Columns: Boolean): TPPGUiaIds;
+begin
+  SetLength(Result, 0);
+end;
+
+function TPPGCustomItemList.UiaItemHeaders(const Id: TPPGUiaId; Columns: Boolean): TPPGUiaIds;
+begin
+  SetLength(Result, 0);
+end;
+
+function TPPGCustomItemList.UiaValue(const Id: TPPGUiaId): string;
+begin
+  Result := '';
+end;
+
+function TPPGCustomItemList.UiaReadOnly(const Id: TPPGUiaId): Boolean;
+begin
+  Result := True;
+end;
+
+function TPPGCustomItemList.UiaExpandState(const Id: TPPGUiaId): Integer;
+begin
+  Result := ExpandCollapseState_LeafNode;
+end;
+
+function TPPGCustomItemList.UiaToggleState(const Id: TPPGUiaId): Integer;
+var
+  Data: TPPGItemData;
+begin
+  GetItemData(UiaRowOf(Id), Data);
+  case Data.Checked of
+    cbChecked: Result := ToggleState_On;
+    cbGrayed: Result := ToggleState_Indeterminate;
+  else
+    Result := ToggleState_Off;
+  end;
+end;
+
+procedure TPPGCustomItemList.UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction;
+  const Value: string);
+var
+  R: Integer;
+begin
+  if not Enabled then
+    Exit;
+  R := UiaRowOf(Id);
+  case Action of
+    uaSetFocus:
+      begin
+        if CanFocus and not Focused then
+          SetFocus;
+        if R >= 0 then
+          DoAccSelect(R, SELFLAG_TAKEFOCUS);
+      end;
+    uaSelect:
+      if R >= 0 then
+      begin
+        DoAccSelect(R, SELFLAG_TAKESELECTION or SELFLAG_TAKEFOCUS);
+        MakeItemVisible(R);
+      end;
+    uaAddToSelection:
+      if R >= 0 then
+      begin
+        if FSelection.Mode = smSingle then
+          DoAccSelect(R, SELFLAG_TAKESELECTION)
+        else
+          DoAccSelect(R, SELFLAG_ADDSELECTION);
+      end;
+    uaRemoveFromSelection:
+      if (R >= 0) and (FSelection.Mode <> smSingle) then
+        DoAccSelect(R, SELFLAG_REMOVESELECTION);
+    uaScrollIntoView:
+      if R >= 0 then
+        MakeItemVisible(R);
+    uaInvoke, uaToggle:
+      if R >= 0 then
+        DoAccChildAction(R);
+  end;
 end;
 
 end.

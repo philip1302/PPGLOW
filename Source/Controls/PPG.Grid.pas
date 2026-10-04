@@ -29,8 +29,15 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.StdCtrls, Vcl.Forms,
-  PPG.Types, PPG.RowLayout, PPG.Render.Intf, PPG.Accessibility,
+  PPG.Types, PPG.RowLayout, PPG.Render.Intf, PPG.Accessibility, PPG.UIA,
   PPG.Controls.Base, PPG.Controls.Scroll, PPG.Edit, PPG.ComboBox, PPG.SpinEdit;
+
+const
+  // UI Automation: Arten der Elemente (0 = das Grid selbst)
+  PPGUiaKindGridRow = 1;        // Datenzeile, A = Datenzeile
+  PPGUiaKindGridCell = 2;       // Zelle, A = Datenzeile, B = Spalte
+  PPGUiaKindGridHeaderRow = 3;  // feste Kopfzeile, A = Zeile
+  PPGUiaKindGridHeaderCell = 4; // Kopfzelle, A = feste Zeile, B = Spalte
 
 type
   TPPGGridEditorKind = (gekText, gekNone, gekCombo, gekSpin, gekCheck);
@@ -109,7 +116,7 @@ type
     Fill, Text, Header, Line, Accent, Hint: TColor;
   end;
 
-  TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren)
+  TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren, IPPGUiaSource)
   private
     FPaint: TPPGGridPaintColors;
     FColCount: Integer;
@@ -274,6 +281,41 @@ type
     procedure AccChildDoDefault(Id: Integer);
     function AccFocusedChild: Integer;
     function AccSelectedChild: Integer;
+    { UI Automation (IPPGUiaSource): Tabelle mit Kopfzeilen (Art 3/4) und
+      Datenzeilen (Art 1) mit Zellen (Art 2). Grid-/Table-Muster zaehlen nur
+      Datenzeilen und -spalten (ohne feste Zeilen/Spalten und Filterzeile). }
+    function UiaValid(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaParent(const Id: TPPGUiaId): TPPGUiaId; virtual;
+    function UiaChildCount(const Id: TPPGUiaId): Integer; virtual;
+    function UiaChild(const Id: TPPGUiaId; Index: Integer): TPPGUiaId; virtual;
+    function UiaIndexInParent(const Id: TPPGUiaId): Integer; virtual;
+    function UiaElementAt(X, Y: Integer): TPPGUiaId; virtual;
+    function UiaFocused: TPPGUiaId; virtual;
+    function UiaFromAccChild(ChildId: Integer): TPPGUiaId; virtual;
+    function UiaControlType(const Id: TPPGUiaId): Integer; virtual;
+    function UiaName(const Id: TPPGUiaId): string; virtual;
+    function UiaRect(const Id: TPPGUiaId): TRect; virtual;
+    function UiaEnabled(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaFocusable(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaProperty(const Id: TPPGUiaId; PropertyId: Integer; out Value: OleVariant): Boolean; virtual;
+    function UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean; virtual;
+    function UiaCanSelectMultiple: Boolean; virtual;
+    function UiaSelection: TPPGUiaIds; virtual;
+    function UiaIsSelected(const Id: TPPGUiaId): Boolean; virtual;
+    procedure UiaGridSize(out Rows, Cols: Integer); virtual;
+    function UiaGridItem(Row, Col: Integer): TPPGUiaId; virtual;
+    procedure UiaGridPos(const Id: TPPGUiaId; out Row, Col: Integer); virtual;
+    function UiaHeaders(Columns: Boolean): TPPGUiaIds; virtual;
+    function UiaItemHeaders(const Id: TPPGUiaId; Columns: Boolean): TPPGUiaIds; virtual;
+    function UiaValue(const Id: TPPGUiaId): string; virtual;
+    function UiaReadOnly(const Id: TPPGUiaId): Boolean; virtual;
+    function UiaExpandState(const Id: TPPGUiaId): Integer; virtual;
+    function UiaToggleState(const Id: TPPGUiaId): Integer; virtual;
+    procedure UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction; const Value: string); virtual;
+    /// Sichtbare Zeile eines Elements (Zeile/Zelle/Kopf); -1 = keine.
+    function UiaVRow(const Id: TPPGUiaId): Integer;
+    /// Element der Fokuszelle bzw. einer Zelle (Spalte, sichtbare Zeile).
+    function UiaCellId(ACol, VRow: Integer): TPPGUiaId;
 
     property ColCount: Integer read FColCount write SetColCount default 5;
     property RowCount: Integer read FRowCount write SetRowCount default 5;
@@ -421,7 +463,7 @@ type
 implementation
 
 uses
-  System.SysUtils, Winapi.oleacc, Vcl.Clipbrd,
+  System.SysUtils, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Render.Gdi;
 
@@ -2926,6 +2968,466 @@ end;
 function TPPGCustomGrid.AccSelectedChild: Integer;
 begin
   Result := FFocusV + 1;
+end;
+
+{ ---- UI Automation (IPPGUiaSource) ---- }
+
+const
+  /// Hoechstens so viele Elemente liefern Auswahl und Zeilenkoepfe (UIA
+  /// fragt sonst bei 1 000 000 Zeilen nach einem riesigen Feld).
+  UiaMaxList = 1000;
+
+function TPPGCustomGrid.UiaVRow(const Id: TPPGUiaId): Integer;
+begin
+  case Id.Kind of
+    PPGUiaKindGridRow, PPGUiaKindGridCell:
+      if (Id.A >= FFixedRows) and (Id.A < FRowCount) then
+        Result := VisualRow(Id.A)
+      else
+        Result := -1;
+    PPGUiaKindGridHeaderRow, PPGUiaKindGridHeaderCell:
+      if (Id.A >= 0) and (Id.A < FFixedRows) then
+        Result := Id.A
+      else
+        Result := -1;
+  else
+    Result := -1;
+  end;
+end;
+
+function TPPGCustomGrid.UiaCellId(ACol, VRow: Integer): TPPGUiaId;
+var
+  D: Integer;
+begin
+  Result := PPGUiaId(0);
+  if (ACol < 0) or (ACol >= FColCount) or (VRow < 0) or (VRow >= VRowCount) then
+    Exit;
+  if VRow < FFixedRows then
+    Exit(PPGUiaId(PPGUiaKindGridHeaderCell, VRow, ACol));
+  D := DataRow(VRow);
+  if D >= FFixedRows then
+    Result := PPGUiaId(PPGUiaKindGridCell, D, ACol);
+end;
+
+function TPPGCustomGrid.UiaValid(const Id: TPPGUiaId): Boolean;
+begin
+  case Id.Kind of
+    0: Result := True;
+    PPGUiaKindGridRow, PPGUiaKindGridHeaderRow:
+      Result := UiaVRow(Id) >= 0;
+    PPGUiaKindGridCell, PPGUiaKindGridHeaderCell:
+      Result := (UiaVRow(Id) >= 0) and (Id.B >= 0) and (Id.B < FColCount);
+  else
+    Result := False;
+  end;
+end;
+
+function TPPGCustomGrid.UiaParent(const Id: TPPGUiaId): TPPGUiaId;
+begin
+  case Id.Kind of
+    PPGUiaKindGridCell: Result := PPGUiaId(PPGUiaKindGridRow, Id.A);
+    PPGUiaKindGridHeaderCell: Result := PPGUiaId(PPGUiaKindGridHeaderRow, Id.A);
+  else
+    Result := PPGUiaId(0);
+  end;
+end;
+
+function TPPGCustomGrid.UiaChildCount(const Id: TPPGUiaId): Integer;
+begin
+  case Id.Kind of
+    0: Result := FFixedRows + (VRowCount - VFixedRows);
+    PPGUiaKindGridRow, PPGUiaKindGridHeaderRow: Result := FColCount;
+  else
+    Result := 0;
+  end;
+end;
+
+function TPPGCustomGrid.UiaChild(const Id: TPPGUiaId; Index: Integer): TPPGUiaId;
+var
+  D: Integer;
+begin
+  Result := PPGUiaId(0);
+  if Index < 0 then
+    Exit;
+  case Id.Kind of
+    0:
+      if Index < FFixedRows then
+        Result := PPGUiaId(PPGUiaKindGridHeaderRow, Index)
+      else
+      begin
+        // Datenzeilen in der sichtbaren Reihenfolge (Sortierung, Filter)
+        D := DataRow(VFixedRows + Index - FFixedRows);
+        if D >= FFixedRows then
+          Result := PPGUiaId(PPGUiaKindGridRow, D);
+      end;
+    PPGUiaKindGridRow:
+      if Index < FColCount then
+        Result := PPGUiaId(PPGUiaKindGridCell, Id.A, Index);
+    PPGUiaKindGridHeaderRow:
+      if Index < FColCount then
+        Result := PPGUiaId(PPGUiaKindGridHeaderCell, Id.A, Index);
+  end;
+end;
+
+function TPPGCustomGrid.UiaIndexInParent(const Id: TPPGUiaId): Integer;
+begin
+  case Id.Kind of
+    PPGUiaKindGridHeaderRow: Result := Id.A;
+    PPGUiaKindGridRow: Result := FFixedRows + UiaVRow(Id) - VFixedRows;
+    PPGUiaKindGridCell, PPGUiaKindGridHeaderCell: Result := Id.B;
+  else
+    Result := -1;
+  end;
+end;
+
+function TPPGCustomGrid.UiaElementAt(X, Y: Integer): TPPGUiaId;
+var
+  C, V: Integer;
+begin
+  if MouseCoord(X, Y, C, V) then
+    Result := UiaCellId(C, V)
+  else
+    Result := PPGUiaId(0);
+end;
+
+function TPPGCustomGrid.UiaFocused: TPPGUiaId;
+begin
+  if Focused and not EditorMode then
+    Result := UiaCellId(FFocusC, FFocusV)
+  else
+    Result := PPGUiaId(0);
+end;
+
+function TPPGCustomGrid.UiaFromAccChild(ChildId: Integer): TPPGUiaId;
+var
+  V, D: Integer;
+begin
+  // Das Grid meldet den Fokus je Zeile: UIA bekommt die Fokuszelle
+  V := ChildId - 1;
+  if V = FFocusV then
+    Exit(UiaCellId(FFocusC, V));
+  Result := PPGUiaId(0);
+  if (V >= 0) and (V < FFixedRows) then
+    Result := PPGUiaId(PPGUiaKindGridHeaderRow, V)
+  else
+  begin
+    D := DataRow(V);
+    if D >= FFixedRows then
+      Result := PPGUiaId(PPGUiaKindGridRow, D);
+  end;
+end;
+
+function TPPGCustomGrid.UiaControlType(const Id: TPPGUiaId): Integer;
+begin
+  case Id.Kind of
+    PPGUiaKindGridRow: Result := UIA_DataItemControlTypeId;
+    PPGUiaKindGridHeaderRow: Result := UIA_HeaderControlTypeId;
+    PPGUiaKindGridHeaderCell: Result := UIA_HeaderItemControlTypeId;
+    PPGUiaKindGridCell:
+      if Id.B < FFixedCols then
+        Result := UIA_HeaderItemControlTypeId
+      else if CellEditorKind(Id.B, Id.A) = gekCheck then
+        Result := UIA_CheckBoxControlTypeId
+      else if CanEditCell(Id.B, UiaVRow(Id)) then
+        Result := UIA_EditControlTypeId
+      else
+        Result := UIA_TextControlTypeId;
+  else
+    Result := UIA_DataGridControlTypeId;
+  end;
+end;
+
+function TPPGCustomGrid.UiaName(const Id: TPPGUiaId): string;
+var
+  V: Integer;
+begin
+  case Id.Kind of
+    0: Result := AccName;
+    PPGUiaKindGridCell, PPGUiaKindGridHeaderCell:
+      Result := GetCellText(Id.B, Id.A);
+    PPGUiaKindGridRow, PPGUiaKindGridHeaderRow:
+      begin
+        V := UiaVRow(Id);
+        if V >= 0 then
+          Result := AccChildName(V + 1)
+        else
+          Result := '';
+      end;
+  else
+    Result := '';
+  end;
+end;
+
+function TPPGCustomGrid.UiaRect(const Id: TPPGUiaId): TRect;
+var
+  V: Integer;
+begin
+  V := UiaVRow(Id);
+  if V < 0 then
+    Exit(Rect(0, 0, 0, 0));
+  case Id.Kind of
+    PPGUiaKindGridCell, PPGUiaKindGridHeaderCell: Result := CellRect(Id.B, V);
+  else
+    Result := AccChildRect(V + 1);
+  end;
+end;
+
+function TPPGCustomGrid.UiaEnabled(const Id: TPPGUiaId): Boolean;
+begin
+  Result := Enabled;
+end;
+
+function TPPGCustomGrid.UiaFocusable(const Id: TPPGUiaId): Boolean;
+begin
+  case Id.Kind of
+    0: Result := TabStop and Enabled;
+    PPGUiaKindGridCell: Result := Id.B >= FFixedCols;
+  else
+    Result := False;
+  end;
+end;
+
+function TPPGCustomGrid.UiaProperty(const Id: TPPGUiaId; PropertyId: Integer;
+  out Value: OleVariant): Boolean;
+begin
+  // Sortierrichtung der Kopfzelle als Zustand (z.B. "aufsteigend sortiert")
+  Result := (PropertyId = UIA_ItemStatusPropertyId) and (Id.Kind = PPGUiaKindGridHeaderCell) and
+    (Id.B = FSortCol);
+  if Result then
+  begin
+    if FSortAscending then
+      Value := SPPGSortAscending
+    else
+      Value := SPPGSortDescending;
+  end;
+end;
+
+function TPPGCustomGrid.UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean;
+var
+  DataCell: Boolean;
+begin
+  case Id.Kind of
+    0:
+      Result := (PatternId = UIA_GridPatternId) or (PatternId = UIA_TablePatternId) or
+        (PatternId = UIA_SelectionPatternId);
+    PPGUiaKindGridCell:
+      begin
+        DataCell := Id.B >= FFixedCols;
+        case PatternId of
+          UIA_GridItemPatternId, UIA_TableItemPatternId, UIA_SelectionItemPatternId:
+            Result := DataCell;
+          UIA_ScrollItemPatternId, UIA_ValuePatternId:
+            Result := True;
+          UIA_TogglePatternId:
+            Result := DataCell and (CellEditorKind(Id.B, Id.A) = gekCheck);
+        else
+          Result := False;
+        end;
+      end;
+    PPGUiaKindGridHeaderCell:
+      // Klick auf den Kopf sortiert (wie mit der Maus)
+      Result := (PatternId = UIA_InvokePatternId) and FSortOnHeaderClick and
+        (Id.A = 0) and (Id.B >= FFixedCols);
+    PPGUiaKindGridRow:
+      Result := PatternId = UIA_ScrollItemPatternId;
+  else
+    Result := False;
+  end;
+end;
+
+function TPPGCustomGrid.UiaCanSelectMultiple: Boolean;
+begin
+  Result := (goRangeSelect in FOptions) or (goRowSelect in FOptions);
+end;
+
+function TPPGCustomGrid.UiaSelection: TPPGUiaIds;
+var
+  Sl: TGridRect;
+  C, V, N: Integer;
+begin
+  SetLength(Result, 0);
+  if FFocusV < VFixedRows then
+    Exit;
+  Sl := GetSelection;
+  // Grosse Bereiche: nur die Fokuszelle (UIA erwartet keine Millionen Elemente)
+  if (Int64(Sl.Right - Sl.Left + 1) * (Sl.Bottom - Sl.Top + 1)) > UiaMaxList then
+  begin
+    SetLength(Result, 1);
+    Result[0] := UiaCellId(FFocusC, FFocusV);
+    Exit;
+  end;
+  SetLength(Result, (Sl.Right - Sl.Left + 1) * (Sl.Bottom - Sl.Top + 1));
+  N := 0;
+  for V := Sl.Top to Sl.Bottom do
+    for C := Sl.Left to Sl.Right do
+    begin
+      Result[N] := UiaCellId(C, V);
+      if not PPGUiaIsRoot(Result[N]) then
+        Inc(N);
+    end;
+  SetLength(Result, N);
+end;
+
+function TPPGCustomGrid.UiaIsSelected(const Id: TPPGUiaId): Boolean;
+var
+  Sl: TGridRect;
+  V: Integer;
+begin
+  Result := False;
+  if Id.Kind <> PPGUiaKindGridCell then
+    Exit;
+  V := UiaVRow(Id);
+  Sl := GetSelection;
+  Result := (V >= Sl.Top) and (V <= Sl.Bottom) and (Id.B >= Sl.Left) and (Id.B <= Sl.Right);
+end;
+
+procedure TPPGCustomGrid.UiaGridSize(out Rows, Cols: Integer);
+begin
+  Rows := VRowCount - VFixedRows;
+  if Rows < 0 then
+    Rows := 0;
+  Cols := FColCount - FFixedCols;
+  if Cols < 0 then
+    Cols := 0;
+end;
+
+function TPPGCustomGrid.UiaGridItem(Row, Col: Integer): TPPGUiaId;
+begin
+  Result := UiaCellId(FFixedCols + Col, VFixedRows + Row);
+end;
+
+procedure TPPGCustomGrid.UiaGridPos(const Id: TPPGUiaId; out Row, Col: Integer);
+begin
+  Row := UiaVRow(Id) - VFixedRows;
+  Col := Id.B - FFixedCols;
+end;
+
+function TPPGCustomGrid.UiaHeaders(Columns: Boolean): TPPGUiaIds;
+var
+  I, N, Rows, Cols: Integer;
+begin
+  SetLength(Result, 0);
+  UiaGridSize(Rows, Cols);
+  if Columns then
+  begin
+    // Spaltenkoepfe: unterste feste Zeile
+    if FFixedRows = 0 then
+      Exit;
+    SetLength(Result, Cols);
+    for I := 0 to Cols - 1 do
+      Result[I] := PPGUiaId(PPGUiaKindGridHeaderCell, FFixedRows - 1, FFixedCols + I);
+  end
+  else
+  begin
+    // Zeilenkoepfe: erste feste Spalte (bei sehr vielen Zeilen keine Liste)
+    if (FFixedCols = 0) or (Rows > UiaMaxList) then
+      Exit;
+    SetLength(Result, Rows);
+    N := 0;
+    for I := 0 to Rows - 1 do
+    begin
+      Result[N] := UiaCellId(0, VFixedRows + I);
+      if not PPGUiaIsRoot(Result[N]) then
+        Inc(N);
+    end;
+    SetLength(Result, N);
+  end;
+end;
+
+function TPPGCustomGrid.UiaItemHeaders(const Id: TPPGUiaId; Columns: Boolean): TPPGUiaIds;
+begin
+  SetLength(Result, 0);
+  if Id.Kind <> PPGUiaKindGridCell then
+    Exit;
+  if Columns and (FFixedRows > 0) then
+  begin
+    SetLength(Result, 1);
+    Result[0] := PPGUiaId(PPGUiaKindGridHeaderCell, FFixedRows - 1, Id.B);
+  end
+  else if not Columns and (FFixedCols > 0) then
+  begin
+    SetLength(Result, 1);
+    Result[0] := PPGUiaId(PPGUiaKindGridCell, Id.A, 0);
+  end;
+end;
+
+function TPPGCustomGrid.UiaValue(const Id: TPPGUiaId): string;
+begin
+  if Id.Kind in [PPGUiaKindGridCell, PPGUiaKindGridHeaderCell] then
+    Result := GetCellText(Id.B, Id.A)
+  else
+    Result := '';
+end;
+
+function TPPGCustomGrid.UiaReadOnly(const Id: TPPGUiaId): Boolean;
+begin
+  Result := (Id.Kind <> PPGUiaKindGridCell) or not CanEditCell(Id.B, UiaVRow(Id)) or
+    (CellEditorKind(Id.B, Id.A) = gekCheck);
+end;
+
+function TPPGCustomGrid.UiaExpandState(const Id: TPPGUiaId): Integer;
+begin
+  Result := ExpandCollapseState_LeafNode;
+end;
+
+function TPPGCustomGrid.UiaToggleState(const Id: TPPGUiaId): Integer;
+var
+  S: string;
+begin
+  S := UiaValue(Id);
+  if (S = '1') or SameText(S, 'True') or SameText(S, 'Ja') then
+    Result := ToggleState_On
+  else
+    Result := ToggleState_Off;
+end;
+
+procedure TPPGCustomGrid.UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction;
+  const Value: string);
+var
+  V: Integer;
+  S: string;
+  Ok: Boolean;
+begin
+  if not Enabled then
+    Exit;
+  V := UiaVRow(Id);
+  case Action of
+    uaSetFocus:
+      begin
+        if CanFocus and not Focused then
+          SetFocus;
+        if (Id.Kind = PPGUiaKindGridCell) and (Id.B >= FFixedCols) then
+          MoveFocus(Id.B, V, False, True);
+      end;
+    uaSelect, uaAddToSelection:
+      if (Id.Kind = PPGUiaKindGridCell) and (Id.B >= FFixedCols) then
+        MoveFocus(Id.B, V, (Action = uaAddToSelection) and UiaCanSelectMultiple, True);
+    uaScrollIntoView:
+      if V >= 0 then
+      begin
+        if Id.Kind in [PPGUiaKindGridCell, PPGUiaKindGridHeaderCell] then
+          MakeCellVisible(Id.B, V)
+        else
+          MakeCellVisible(FFixedCols, V);
+      end;
+    uaToggle:
+      if Id.Kind = PPGUiaKindGridCell then
+        ToggleCheck(Id.B, V);
+    uaInvoke:
+      if Id.Kind = PPGUiaKindGridHeaderCell then
+        HeaderClicked(Id.B, Id.A);
+    uaSetValue:
+      if (Id.Kind = PPGUiaKindGridCell) and CanEditCell(Id.B, V) then
+      begin
+        // Wie beim Editor: OnValidateCell darf ablehnen oder aendern
+        S := Value;
+        Ok := True;
+        if Assigned(FOnValidateCell) then
+          FOnValidateCell(Self, Id.B, Id.A, S, Ok);
+        if Ok then
+          SetCellByUser(Id.B, Id.A, S);
+      end;
+  end;
 end;
 
 end.

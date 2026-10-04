@@ -18,7 +18,7 @@ interface
 
 uses
   Winapi.Windows, System.Classes, System.Types, Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls,
-  PPG.Types, PPG.Items, PPG.Render.Intf, PPG.ItemPainter, PPG.ListBox;
+  PPG.Types, PPG.Items, PPG.Render.Intf, PPG.ItemPainter, PPG.UIA, PPG.ListBox;
 
 type
   TPPGCustomCheckListBox = class(TPPGCustomListBox)
@@ -52,6 +52,9 @@ type
     function AccChildRole(Id: Integer): Integer; override;
     function AccChildState(Id: Integer): Integer; override;
     function AccChildDefaultAction(Id: Integer): string; override;
+    { UI Automation: Eintraege zusaetzlich mit Toggle-Muster }
+    function UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean; override;
+    procedure UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction; const Value: string); override;
     /// Anwender schaltet um (Klick, Leertaste, Screenreader): Zustand, dann OnClickCheck.
     procedure ToggleByUser(Index: Integer); virtual;
     procedure ClickCheck; virtual;
@@ -163,7 +166,7 @@ type
 implementation
 
 uses
-  System.SysUtils, Winapi.oleacc, PPG.Consts, PPG.Exceptions, PPG.Appearance,
+  System.SysUtils, Winapi.oleacc, PPG.UIA.Intf, PPG.Consts, PPG.Exceptions, PPG.Appearance,
   PPG.DpiUtils, PPG.Render.Registry;
 
 const
@@ -477,6 +480,33 @@ begin
     Result := SPPGAccUncheck
   else
     Result := SPPGAccCheck;
+end;
+
+{ ---- UI Automation ---- }
+
+function TPPGCustomCheckListBox.UiaHasPattern(const Id: TPPGUiaId; PatternId: Integer): Boolean;
+var
+  R: Integer;
+begin
+  if PatternId = UIA_TogglePatternId then
+  begin
+    R := UiaRowOf(Id);
+    Result := (R >= 0) and not Header[R];
+  end
+  else
+    Result := inherited UiaHasPattern(Id, PatternId);
+end;
+
+procedure TPPGCustomCheckListBox.UiaExecute(const Id: TPPGUiaId; Action: TPPGUiaAction;
+  const Value: string);
+var
+  R: Integer;
+begin
+  R := UiaRowOf(Id);
+  if (Action = uaToggle) and (R >= 0) and Enabled and not Header[R] then
+    ToggleByUser(R)
+  else
+    inherited UiaExecute(Id, Action, Value);
 end;
 
 end.

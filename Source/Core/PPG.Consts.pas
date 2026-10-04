@@ -42,6 +42,8 @@ resourcestring
   SPPGAccOpen = 'Open';
   SPPGAccClose = 'Close';
   SPPGGridFilterHint = 'Filter';
+  SPPGSortAscending = 'Sorted ascending';
+  SPPGSortDescending = 'Sorted descending';
   SPPGAccJump = 'Jump';
   SPPGAccExpand = 'Expand';
   SPPGAccCollapse = 'Collapse';

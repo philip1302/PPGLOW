@@ -32,7 +32,7 @@ uses
   {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF}
   Vcl.Controls, Vcl.Graphics, Vcl.ImgList,
   PPG.Types, PPG.Appearance, PPG.Animation, PPG.Layout, PPG.Tokens,
-  PPG.Render.Intf, PPG.StyleManager, PPG.Accessibility;
+  PPG.Render.Intf, PPG.StyleManager, PPG.Accessibility, PPG.UIA;
 
 type
   TPPGCustomControl = class(TCustomControl, IPPGStyleClient, IPPGAccessibleHost)
@@ -63,6 +63,8 @@ type
     FUIState: Cardinal; // Cache von WM_QUERYUISTATE (Paint darf keine Nachrichten senden)
     FAccessible: TPPGAccessible;
     FAccessibleRef: IInterface; // haelt das COM-Objekt am Leben
+    FUiaRoot: TPPGUiaRoot;      // UI Automation (nur Controls mit IPPGUiaSource)
+    FUiaRootRef: IInterface;
     FStyledAppearance: TPPGAppearance; // Cache: Appearance mit Farben des VCL-Styles bzw. Dark Mode
     FStyledKind: Byte; // Inhalt des Caches: 0 = leer, 1 = VCL-Style, 2 = Dark Mode
     {$IFDEF PPG_HAS_IMAGENAME}
@@ -163,7 +165,12 @@ type
     /// Meldet eine Aenderung an Screenreader (z.B. EVENT_OBJECT_STATECHANGE).
     procedure NotifyAccessibility(Event: DWORD);
     /// Wie NotifyAccessibility, fuer ein virtuelles Kind (IPPGAccessibleChildren).
+    /// Hat das Control einen UIA-Provider (IPPGUiaSource), wird das Ereignis
+    /// zusaetzlich als UIA-Ereignis gemeldet (Fokus, Auswahl, Zustand).
     procedure NotifyAccessibilityChild(Event: DWORD; ChildId: Integer);
+    /// UIA-Ereignis fuer ein Element (nur mit Wurzel und zuhoerendem Client).
+    procedure UiaNotify(const Id: TPPGUiaId; EventId: Integer);
+    procedure UiaNotifyProperty(const Id: TPPGUiaId; PropertyId: Integer; const NewValue: OleVariant);
     procedure Paint; override;
 
     { Zustand }
@@ -255,6 +262,9 @@ type
     /// Signalfarben fuer Fehler/Warnung. Presets ohne eigene Tokens liefern die
     /// neutrale Windows-11-Palette.
     function Tokens: TPPGTokens;
+    /// UIA-Wurzel, sobald ein UIA-Client gefragt hat (sonst nil). Nur fuer
+    /// Controls mit IPPGUiaSource (Grid, TreeView, ListBox, CheckListBox).
+    function UiaRoot: TPPGUiaRoot;
     property Renderer: IPPGRenderer read FRenderer;
     property VisualState: TPPGVisualState read GetVisualState;
   end;
@@ -265,7 +275,7 @@ uses
   System.SysUtils, Vcl.Forms, Vcl.Themes,
   PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.DpiUtils,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Presets, PPG.VclStyles, PPG.Theme,
-  Winapi.oleacc;
+  PPG.UIA.Intf, Winapi.oleacc;
 
 var
   GMsgAccDefaultAction: Cardinal = 0;
@@ -1198,15 +1208,44 @@ end;
 { ---- Barrierefreiheit ---- }
 
 procedure TPPGCustomControl.ReleaseAccessible;
+var
+  Prov: IRawElementProviderSimple;
 begin
   if FAccessible <> nil then
     FAccessible.Disconnect; // externe Referenzen antworten ab jetzt "nicht verbunden"
   FAccessible := nil;
   FAccessibleRef := nil;
+  if FUiaRoot <> nil then
+  begin
+    // Clients koennen die Elemente noch halten: ab jetzt "nicht verfuegbar"
+    Prov := FUiaRoot;
+    FUiaRoot.Disconnect;
+    PPGUiaDisconnectProvider(Prov);
+    Prov := nil;
+  end;
+  FUiaRoot := nil;
+  FUiaRootRef := nil;
 end;
 
 procedure TPPGCustomControl.WMGetObject(var Message: TMessage);
+var
+  Src: IPPGUiaSource;
 begin
+  // UI Automation: nativer Provider nur fuer Controls mit IPPGUiaSource
+  // (Grid, Baum, Listen); alle anderen bleiben bei MSAA (Windows bruecktet).
+  if (Longint(Message.LParam) = PPGUiaRootObjectId) and PPGUiaEnabled and HandleAllocated and
+    not (csDestroying in ComponentState) and not (csDesigning in ComponentState) and
+    Supports(Self, IPPGUiaSource, Src) and PPGUiaAvailable then
+  begin
+    if FUiaRoot = nil then
+    begin
+      FUiaRoot := TPPGUiaRoot.CreateRoot(Src, Handle, Name, ClassName);
+      FUiaRootRef := FUiaRoot as IInterface;
+    end;
+    Message.Result := PPGUiaReturnRawElementProvider(Handle, Message.WParam, Message.LParam,
+      FUiaRoot as IRawElementProviderSimple);
+    Exit;
+  end;
   // OBJID_CLIENT kommt als 32-Bit-Wert (auf Win64 nicht vorzeichenerweitert)
   if (Longint(Message.LParam) = PPGObjIdClient) and HandleAllocated and
     not (csDestroying in ComponentState) then
@@ -1245,6 +1284,14 @@ begin
     ThemeChanged;
     Exit;
   end;
+  if Message.Msg = PPGUiaActionMessage then
+  begin
+    // Aus einem UIA-Aufruf vorgemerkte Aktionen: Anwender-Code laeuft hier,
+    // ausserhalb des COM-Aufrufs des Screenreaders
+    if FUiaRoot <> nil then
+      FUiaRoot.RunQueued;
+    Exit;
+  end;
   inherited WndProc(Message);
 end;
 
@@ -1255,9 +1302,56 @@ begin
 end;
 
 procedure TPPGCustomControl.NotifyAccessibilityChild(Event: DWORD; ChildId: Integer);
+var
+  Src: IPPGUiaSource;
+  Id: TPPGUiaId;
 begin
   if HandleAllocated and not (csDesigning in ComponentState) then
     PPGAccNotifyChild(Handle, Event, ChildId);
+  // Mit nativem UIA-Provider bruecktet Windows die WinEvents nicht mehr
+  // zuverlaessig: dieselben Ereignisse deshalb auch als UIA-Ereignisse.
+  if (FUiaRoot = nil) or not FUiaRoot.Connected or not PPGUiaClientsAreListening then
+    Exit;
+  Src := FUiaRoot.Source;
+  Id := Src.UiaFromAccChild(ChildId);
+  if PPGUiaIsRoot(Id) or not Src.UiaValid(Id) then
+    Exit;
+  case Event of
+    EVENT_OBJECT_FOCUS:
+      FUiaRoot.RaiseEvent(Id, UIA_AutomationFocusChangedEventId);
+    EVENT_OBJECT_SELECTION:
+      FUiaRoot.RaiseEvent(Id, UIA_SelectionItem_ElementSelectedEventId);
+    EVENT_OBJECT_SELECTIONADD:
+      FUiaRoot.RaiseEvent(Id, UIA_SelectionItem_ElementAddedToSelectionEventId);
+    EVENT_OBJECT_SELECTIONREMOVE:
+      FUiaRoot.RaiseEvent(Id, UIA_SelectionItem_ElementRemovedFromSelectionEventId);
+    EVENT_OBJECT_STATECHANGE:
+      begin
+        if Src.UiaHasPattern(Id, UIA_TogglePatternId) then
+          FUiaRoot.RaisePropertyChanged(Id, UIA_ToggleToggleStatePropertyId, Src.UiaToggleState(Id));
+        if Src.UiaHasPattern(Id, UIA_ExpandCollapsePatternId) then
+          FUiaRoot.RaisePropertyChanged(Id, UIA_ExpandCollapseExpandCollapseStatePropertyId,
+            Src.UiaExpandState(Id));
+      end;
+  end;
+end;
+
+function TPPGCustomControl.UiaRoot: TPPGUiaRoot;
+begin
+  Result := FUiaRoot;
+end;
+
+procedure TPPGCustomControl.UiaNotify(const Id: TPPGUiaId; EventId: Integer);
+begin
+  if FUiaRoot <> nil then
+    FUiaRoot.RaiseEvent(Id, EventId);
+end;
+
+procedure TPPGCustomControl.UiaNotifyProperty(const Id: TPPGUiaId; PropertyId: Integer;
+  const NewValue: OleVariant);
+begin
+  if FUiaRoot <> nil then
+    FUiaRoot.RaisePropertyChanged(Id, PropertyId, NewValue);
 end;
 
 function TPPGCustomControl.AccName: string;
