@@ -13,11 +13,11 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Generics.Collections,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.ImgList,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.ImgList, Vcl.ExtCtrls,
   PPG.Types, PPG.Consts, PPG.ErrorHandler, PPG.Render.Registry,
   PPG.Controls.Base, PPG.Button, PPG.PageControl, PPG.Theme, PPG.Tokens,
   PPG.NavigationView, PPG.StatusBar, PPG.Notifications, PPG.ComboBox,
-  PPG.DatePicker, PPG.Controls.Field, PPG.Feedback,
+  PPG.DatePicker, PPG.Controls.Field, PPG.Feedback, PPG.SearchEdit,
   DemoKit;
 
 type
@@ -25,6 +25,8 @@ type
   private
     FImages: TImageList;
     FPages: TPPGPageControl;
+    FContent: TPanel;
+    FSearch: TPPGSearchEdit;
     FNav: TPPGNavigationView;
     FStatus: TPPGStatusBar;
     FNotify: TPPGNotificationCenter;
@@ -40,6 +42,8 @@ type
     procedure BuildPages;
     procedure BuildNavigation;
     procedure BuildStatusBar;
+    procedure BuildSearch;
+    procedure SearchSubmit(Sender: TObject; const SearchText: string);
     procedure NavSelectionChange(Sender: TObject);
     procedure ThemeChanged(Sender: TObject);
     procedure ToastShown(Sender: TObject; Toast: TPPGToast);
@@ -77,6 +81,8 @@ type
     procedure SaveDatePopupCapture(const FileName: string);
     /// Selbsttest aller Seiten (/selftest datei.txt). Ergebnis = Anzahl Fehler.
     function RunSelfTest(const FileName: string): Integer;
+    /// Katalog: Seite zum Suchtext (Control-Name oder Stichwort), -1 = keine.
+    function FindCatalogPage(const SearchText: string): Integer;
   end;
 
 const
@@ -93,6 +99,7 @@ const
   PgFeedback = 9;
   PgAppearance = 10;
   PgEvents = 11;
+  PgDatabase = 12;
 
 implementation
 
@@ -100,7 +107,7 @@ uses
   Winapi.Messages, Winapi.DwmApi, System.Types, System.Math, Vcl.Imaging.pngimage,
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
-  PPG.IconFont, DemoPages1, DemoPages2, DemoPages3;
+  PPG.IconFont, DemoPages1, DemoPages2, DemoPages3, DemoPages4;
 
 type
   TPageDef = record
@@ -111,7 +118,7 @@ type
   end;
 
 const
-  PageDefs: array[0..11] of TPageDef = (
+  PageDefs: array[0..12] of TPageDef = (
     (Caption: 'Start'; Icon: $E80F; Group: ''; Footer: False),
     (Caption: 'Buttons & Befehle'; Icon: $E8B0; Group: 'Grundlagen'; Footer: False),
     (Caption: 'Auswahl & Regler'; Icon: $E9E9; Group: ''; Footer: False),
@@ -123,7 +130,72 @@ const
     (Caption: 'Layout'; Icon: $ECA5; Group: 'Oberfl{ae}che'; Footer: False),
     (Caption: 'R{ue}ckmeldung'; Icon: $EA8F; Group: ''; Footer: False),
     (Caption: 'Darstellung'; Icon: $E771; Group: ''; Footer: True),
-    (Caption: 'Ereignisse'; Icon: $E81C; Group: ''; Footer: True));
+    (Caption: 'Ereignisse'; Icon: $E81C; Group: ''; Footer: True),
+    (Caption: 'Datenbank'; Icon: $E8F1; Group: ''; Footer: False));
+
+  // Reihenfolge in der Navigation (neue Seiten haengen hinten an, damit die
+  // Nummern fuer /page gleich bleiben)
+  NavOrder: array[0..12] of Integer = (PgStart, PgButtons, PgChoice, PgForm, PgLists,
+    PgExplorer, PgGrid, PgDatabase, PgDates, PgLayout, PgFeedback, PgAppearance, PgEvents);
+
+type
+  TCatalogEntry = record
+    Name: string;
+    Keywords: string;
+    Page: Integer;
+  end;
+
+const
+  // Katalog fuer die Suche oben: Control, Stichworte, Seite
+  Catalog: array[0..42] of TCatalogEntry = (
+    (Name: 'TPPGButton'; Keywords: 'Schaltfl{ae}che, Befehl, Split, Akzent'; Page: PgButtons),
+    (Name: 'TPPGToolBar'; Keywords: 'Werkzeugleiste, Symbolleiste'; Page: PgButtons),
+    (Name: 'TPPGCheckBox'; Keywords: 'Kontrollk{ae}stchen, Haken'; Page: PgChoice),
+    (Name: 'TPPGRadioButton'; Keywords: 'Optionsfeld, Gruppe'; Page: PgChoice),
+    (Name: 'TPPGToggleSwitch'; Keywords: 'Schalter, Ein/Aus'; Page: PgChoice),
+    (Name: 'TPPGTrackBar'; Keywords: 'Regler, Slider, Lautst{ae}rke'; Page: PgChoice),
+    (Name: 'TPPGRating'; Keywords: 'Sterne, Bewertung'; Page: PgChoice),
+    (Name: 'TPPGEdit'; Keywords: 'Eingabe, Textfeld, Validierung'; Page: PgForm),
+    (Name: 'TPPGMemo'; Keywords: 'mehrzeilig, Notiz'; Page: PgForm),
+    (Name: 'TPPGLabel'; Keywords: 'Beschriftung, Markup'; Page: PgStart),
+    (Name: 'TPPGLinkLabel'; Keywords: 'Link, Verweis'; Page: PgStart),
+    (Name: 'TPPGComboBox'; Keywords: 'Auswahlliste, Dropdown, Bilder'; Page: PgLists),
+    (Name: 'TPPGListBox'; Keywords: 'Liste, Mehrfachauswahl, Drag'; Page: PgLists),
+    (Name: 'TPPGCheckListBox'; Keywords: 'Liste mit Haken'; Page: PgLists),
+    (Name: 'TPPGSearchEdit'; Keywords: 'Suche, Vorschl{ae}ge, AutoSuggest'; Page: PgLists),
+    (Name: 'TPPGSpinEdit'; Keywords: 'Zahl, Menge, hoch/runter'; Page: PgLists),
+    (Name: 'TPPGTreeView'; Keywords: 'Baum, Ordner, Knoten'; Page: PgExplorer),
+    (Name: 'TPPGBreadcrumb'; Keywords: 'Pfad, Brotkrumen'; Page: PgExplorer),
+    (Name: 'TPPGSplitter'; Keywords: 'Teiler, Gr{oe}{ss}e ziehen'; Page: PgExplorer),
+    (Name: 'TPPGGrid'; Keywords: 'Tabelle, StringGrid, Zellen, Filter, Summe'; Page: PgGrid),
+    (Name: 'TPPGDBGrid'; Keywords: 'Datenbank, TDBGrid, Datenmenge'; Page: PgDatabase),
+    (Name: 'TPPGDBEdit'; Keywords: 'Datenbank, Feld, TDBEdit'; Page: PgDatabase),
+    (Name: 'TPPGDBMemo'; Keywords: 'Datenbank, Memofeld, TDBMemo'; Page: PgDatabase),
+    (Name: 'TPPGDBCheckBox'; Keywords: 'Datenbank, Boolean, TDBCheckBox'; Page: PgDatabase),
+    (Name: 'TPPGDBComboBox'; Keywords: 'Datenbank, TDBComboBox'; Page: PgDatabase),
+    (Name: 'TPPGDBLookupComboBox'; Keywords: 'Datenbank, Nachschlagen, Lookup'; Page: PgDatabase),
+    (Name: 'TPPGDBDatePicker'; Keywords: 'Datenbank, Datum'; Page: PgDatabase),
+    (Name: 'TPPGCalendar'; Keywords: 'Kalender, Monat'; Page: PgDates),
+    (Name: 'TPPGDatePicker'; Keywords: 'Datum, Termin'; Page: PgDates),
+    (Name: 'TPPGTimePicker'; Keywords: 'Uhrzeit, Zeit'; Page: PgDates),
+    (Name: 'TPPGPageControl'; Keywords: 'Seiten, TabSheet'; Page: PgLayout),
+    (Name: 'TPPGTabControl'; Keywords: 'Reiter, Tabs schlie{ss}en'; Page: PgLayout),
+    (Name: 'TPPGExpander'; Keywords: 'aufklappen, Abschnitt'; Page: PgLayout),
+    (Name: 'TPPGNavigationView'; Keywords: 'Navigation, Men{ue}, Hamburger'; Page: PgLayout),
+    (Name: 'TPPGPanel'; Keywords: 'Karte, Container'; Page: PgLayout),
+    (Name: 'TPPGProgressBar'; Keywords: 'Fortschritt, Download'; Page: PgFeedback),
+    (Name: 'TPPGProgressRing'; Keywords: 'Warten, Kreis'; Page: PgFeedback),
+    (Name: 'TPPGInfoBar'; Keywords: 'Hinweis, Meldung, Warnung'; Page: PgFeedback),
+    (Name: 'TPPGBadge'; Keywords: 'Plakette, Z{ae}hler'; Page: PgFeedback),
+    (Name: 'TPPGNotificationCenter'; Keywords: 'Toast, Benachrichtigung'; Page: PgFeedback),
+    (Name: 'TPPGStyleManager'; Keywords: 'Preset, Dark Mode, VCL-Style, Sprache'; Page: PgAppearance),
+    (Name: 'TPPGStatusBar'; Keywords: 'Statusleiste, Protokoll'; Page: PgEvents),
+    (Name: 'PPG.Lang'; Keywords: '{Ue}bersetzung, Sprache, Deutsch'; Page: PgAppearance));
+
+function CatalogText(Index: Integer): string;
+begin
+  Result := Catalog[Index].Name + ' ' + #$2013 + ' ' + L(Catalog[Index].Keywords);
+end;
 
 function PageClass(Index: Integer): TDemoPageClass;
 begin
@@ -139,6 +211,7 @@ begin
     PgLayout: Result := TDemoLayoutPage;
     PgFeedback: Result := TDemoFeedbackPage;
     PgAppearance: Result := TDemoAppearancePage;
+    PgDatabase: Result := TDemoDatabasePage;
   else
     Result := TDemoEventsPage;
   end;
@@ -170,6 +243,7 @@ begin
   FNotify.OnClose := ToastClosed;
   BuildImages;
   BuildStatusBar;
+  BuildSearch;
   BuildPages;
   BuildNavigation;
   ApplyPreset(DemoPreset);
@@ -282,7 +356,7 @@ var
   Sheet: TPPGTabSheet;
 begin
   FPages := TPPGPageControl.Create(Self);
-  FPages.Parent := Self;
+  FPages.Parent := FContent;
   FPages.Preset := DemoPreset;
   FPages.Align := alClient;
   for I := 0 to High(PageDefs) do
@@ -302,7 +376,7 @@ end;
 
 procedure TDemoForm.BuildNavigation;
 var
-  I: Integer;
+  I, N: Integer;
   It: TPPGNavItem;
 begin
   FNav := TPPGNavigationView.Create(Self);
@@ -315,8 +389,9 @@ begin
   FNav.PaneTitle := 'PPGlow';
   FNav.BeginItemsUpdate;
   try
-    for I := 0 to High(PageDefs) do
+    for N := 0 to High(NavOrder) do
     begin
+      I := NavOrder[N];
       if PageDefs[I].Group <> '' then
         FNav.Items.AddHeader(L(PageDefs[I].Group));
       It := FNav.Items.AddItem(L(PageDefs[I].Caption), PageDefs[I].Icon, I);
@@ -350,6 +425,77 @@ begin
   P.Width := 150;
   P.Kind := spkBadge;
   P.Hint := 'Sichtbare Benachrichtigungen';
+end;
+
+procedure TDemoForm.BuildSearch;
+var
+  Bar: TPanel;
+  I: Integer;
+begin
+  // Seitenbereich: Suchleiste oben, Seiten darunter (die Navigation links
+  // bleibt ueber die ganze Hoehe)
+  FContent := TPanel.Create(Self);
+  FContent.Parent := Self;
+  FContent.Align := alClient;
+  FContent.BevelOuter := bvNone;
+  FContent.ParentColor := True;
+  FContent.ParentBackground := True;
+  FContent.Caption := '';
+  Bar := TPanel.Create(Self);
+  Bar.Parent := FContent;
+  Bar.Align := alTop;
+  Bar.Height := 52;
+  Bar.BevelOuter := bvNone;
+  Bar.ParentColor := True;
+  Bar.ParentBackground := True;
+  Bar.Caption := '';
+  FSearch := TPPGSearchEdit.Create(Self);
+  FSearch.Parent := Bar;
+  FSearch.Preset := DemoPreset;
+  FSearch.SetBounds(PageX, 12, 420, CtlH);
+  FSearch.TextHint := L('Control oder Stichwort suchen {...}');
+  FSearch.SearchDelay := 0;
+  for I := 0 to High(Catalog) do
+    FSearch.Items.Add(CatalogText(I));
+  FSearch.OnSubmit := SearchSubmit;
+end;
+
+function TDemoForm.FindCatalogPage(const SearchText: string): Integer;
+var
+  I: Integer;
+  S: string;
+begin
+  Result := -1;
+  S := AnsiLowerCase(Trim(SearchText));
+  if S = '' then
+    Exit;
+  // Zuerst genauer Name (mit oder ohne TPPG), dann Teiltreffer im Katalogtext
+  for I := 0 to High(Catalog) do
+    if (S = AnsiLowerCase(Catalog[I].Name)) or (S = AnsiLowerCase(CatalogText(I))) or
+      ('tppg' + S = AnsiLowerCase(Catalog[I].Name)) then
+      Exit(Catalog[I].Page);
+  for I := 0 to High(Catalog) do
+    if Pos(S, AnsiLowerCase(CatalogText(I))) > 0 then
+      Exit(Catalog[I].Page);
+  // Seitentitel
+  for I := 0 to High(PageDefs) do
+    if Pos(S, AnsiLowerCase(L(PageDefs[I].Caption))) > 0 then
+      Exit(I);
+end;
+
+procedure TDemoForm.SearchSubmit(Sender: TObject; const SearchText: string);
+var
+  Page: Integer;
+begin
+  Page := FindCatalogPage(SearchText);
+  if Page < 0 then
+  begin
+    FNotify.Show('Suche', L(Format('Kein Control zu "%s" gefunden.', [MarkupEscape(SearchText)])),
+      psInformational);
+    Exit;
+  end;
+  ShowPage(Page);
+  Log('Suche', Format('"%s" {>} %s', [SearchText, L(PageDefs[Page].Caption)]));
 end;
 
 function TDemoForm.PageObject(Index: Integer): TDemoPage;
@@ -776,6 +922,13 @@ begin
       Application.ProcessMessages;
     end;
     FNotify.CloseAll;
+    // Katalogsuche
+    SelfCheck('Suche: DBGrid -> Datenbank', FindCatalogPage('DBGrid') = PgDatabase);
+    SelfCheck('Suche: Toast -> Rueckmeldung', FindCatalogPage('toast') = PgFeedback);
+    SelfCheck('Suche: Seitentitel', FindCatalogPage('Termine') = PgDates);
+    SelfCheck('Suche: kein Treffer', FindCatalogPage('xyzzy') = -1);
+    SearchSubmit(FSearch, 'TPPGTreeView');
+    SelfCheck('Suche: springt zur Seite', FPages.ActivePageIndex = PgExplorer);
     FReport.Add(Format('%d Pruefungen, %d Fehler', [FReport.Count, FFailures]));
     FReport.SaveToFile(FileName, TEncoding.UTF8);
   finally

@@ -13,7 +13,7 @@ uses
   PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar, PPG.Controls.Field, PPG.Edit,
   PPG.Memo, PPG.ComboBox, PPG.ListBox, PPG.TabControl, PPG.PageControl,
   PPG.Expander, PPG.Splitter, PPG.NavigationView, PPG.Feedback, PPG.Notifications,
-  PPG.ToolBar, PPG.DpiUtils,
+  PPG.ToolBar, PPG.DpiUtils, PPG.Lang,
   DemoKit;
 
 type
@@ -87,6 +87,7 @@ type
     FModeRadios: array[0..2] of TPPGRadioButton;
     FStyleCombo: TPPGComboBox;
     FGdi: TPPGToggleSwitch;
+    FLang: TPPGComboBox;
     FInfo: TPPGLabel;
     FStyleInfo: TPPGInfoBar;
     FSyncing: Boolean;
@@ -94,6 +95,7 @@ type
     procedure ModeRadioChange(Sender: TObject);
     procedure StyleChange(Sender: TObject);
     procedure GdiChange(Sender: TObject);
+    procedure LangChange(Sender: TObject);
     procedure FailClick(Sender: TObject);
     procedure UpdateInfo;
   protected
@@ -821,12 +823,23 @@ begin
   FStyleInfo.IsOpen := False;
 
   Card := NewCard(Own, Sheet, PageX + 2 * (Col3W + CardGap), PageContentTop + 270 + CardGap, Col3W,
-    190, 'Zeichnen', 'Ohne GDI+ zeichnet PPGlow mit GDI und AlphaBlend weiter.');
+    190, 'Zeichnen und Sprache', 'GDI-Fallback ohne GDI+; Sprache der eingebauten Texte.');
   FGdi := TPPGToggleSwitch.Create(Own);
   FGdi.Parent := Card;
   FGdi.SetBounds(CardPad, Card.Tag, Col3W - 2 * CardPad, CtlH);
   FGdi.Caption := L('GDI-Fallback erzwingen');
   FGdi.OnChange := GdiChange;
+  // Uebersetzung zur Laufzeit (PPG.Lang): Hinweise, Prozentwerte,
+  // Screenreader-Namen und Meldungen der Controls
+  FLang := TPPGComboBox.Create(Own);
+  FLang.Parent := Card;
+  FLang.Style := csDropDownList;
+  FLang.SetBounds(CardPad, Card.Tag + 42, Col3W - 2 * CardPad, CtlH);
+  FLang.Items.Add('Texte: Englisch (Original)');
+  FLang.Items.Add('Texte: Deutsch');
+  FLang.Items.Add('Texte: wie Windows');
+  FLang.ItemIndex := 0;
+  FLang.OnChange := LangChange;
 
   // Robustheit
   Card := NewCard(Own, Sheet, PageX, PageContentTop + 270 + 190 + 2 * CardGap, ColW, 204,
@@ -848,20 +861,23 @@ procedure TDemoAppearancePage.UpdateInfo;
 const
   ModeNames: array[TPPGThemeMode] of string = ('Hell', 'Dunkel', 'System');
 var
-  S: string;
+  S, Lang: string;
 begin
   if FInfo = nil then
     Exit;
+  Lang := PPGLanguage;
+  if Lang = '' then
+    Lang := 'en';
   if TPPGRendererRegistry.ForceGdiFallback then
     S := 'GDI (erzwungen)'
   else
     S := 'GDI+';
   FInfo.Caption := L(Format('Zeichnen: <b>%s</b><br>Preset: <b>%s</b>  {.}  Modus: <b>%s</b>' +
     '<br>Bildschirm: <b>%d DPI</b> (Skalierung %d %%)<br>Windows <b>%d.%d</b> Build <b>%d</b>' +
-    '<br>Delphi-Compiler <b>%s</b>, %d Bit',
+    '<br>Delphi-Compiler <b>%s</b>, %d Bit  {.}  Texte: <b>%s</b>',
     [S, Host.CurrentPreset, ModeNames[TPPGTheme.Mode],
      Sheet.CurrentPPI, MulDiv(Sheet.CurrentPPI, 100, 96), TOSVersion.Major, TOSVersion.Minor,
-     TOSVersion.Build, FormatFloat('0.0', CompilerVersion), SizeOf(Pointer) * 8]));
+     TOSVersion.Build, FormatFloat('0.0', CompilerVersion), SizeOf(Pointer) * 8, Lang]));
 end;
 
 procedure TDemoAppearancePage.AppearanceChanged;
@@ -933,6 +949,21 @@ begin
     RedrawWindow(F.Handle, nil, 0, RDW_INVALIDATE or RDW_ALLCHILDREN or RDW_UPDATENOW);
   UpdateInfo;
   Host.Log('Darstellung', 'GDI-Fallback: ' + BoolToStr(FGdi.Checked, True));
+end;
+
+procedure TDemoAppearancePage.LangChange(Sender: TObject);
+begin
+  case FLang.ItemIndex of
+    1: PPGSetLanguage('de');
+    2: PPGSetLanguage(PPGSystemLanguage);
+  else
+    PPGSetLanguage('');
+  end;
+  UpdateInfo;
+  // Sichtbarer Beweis: die Prozentanzeige im Hinweis der Fortschrittsleiste
+  // und die Screenreader-Aktion eines Buttons kommen jetzt aus der Tabelle
+  Host.Log('Darstellung', Format('Sprache: %s {-} Beispiel: "%s"',
+    [FLang.Items[Max(0, FLang.ItemIndex)], PPGStr(@SPPGAccPress)]));
 end;
 
 procedure TDemoAppearancePage.FailClick(Sender: TObject);
@@ -1059,6 +1090,13 @@ begin
   Check('Darstellung: Dunkel', TPPGTheme.IsDark);
   DemoClick(FModeRadios[0]);
   Check('Darstellung: Hell', not TPPGTheme.IsDark);
+  FLang.ItemIndex := 1;
+  LangChange(FLang);
+  Check('Darstellung: Sprache Deutsch', (PPGLanguage = 'de') and
+    (PPGStr(@SPPGAccPress) <> LoadResString(@SPPGAccPress)));
+  FLang.ItemIndex := 0;
+  LangChange(FLang);
+  Check('Darstellung: Sprache Original', PPGLanguage = '');
   Host.ApplyPreset(Old);
   Check('Darstellung: Preset zurueck', FPresetRadios[2].Checked = SameText(Old, PPGPresetFluent11));
 end;

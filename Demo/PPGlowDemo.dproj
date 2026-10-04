@@ -183,10 +183,14 @@
         <DCCReference Include="..\Source\Core\PPG.Items.pas"/>
         <DCCReference Include="..\Source\Render\PPG.Markup.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.RowLayout.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Controls.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Lookup.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Grid.pas"/>
         <DCCReference Include="DemoKit.pas"/>
         <DCCReference Include="DemoPages1.pas"/>
         <DCCReference Include="DemoPages2.pas"/>
         <DCCReference Include="DemoPages3.pas"/>
+        <DCCReference Include="DemoPages4.pas"/>
         <DCCReference Include="DemoMain.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

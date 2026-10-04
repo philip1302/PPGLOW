@@ -11,7 +11,7 @@ program PPGlowDemo;
     /dropdownimages          ComboBox mit Bildern (Seite Listen) aufgeklappt
     /page <n>                Seite n zeigen: 0 Start, 1 Buttons, 2 Auswahl, 3 Formular,
                              4 Listen, 5 Explorer, 6 Tabelle, 7 Termine, 8 Layout,
-                             9 Rueckmeldung, 10 Darstellung, 11 Ereignisse
+                             9 Rueckmeldung, 10 Darstellung, 11 Ereignisse, 12 Datenbank
     /preset <Name>           Preset fuer alle Controls (Standard: Fluent11)
     /theme dark|light|system Dark Mode ohne VCL-Style
     /style <Name>            VCL-Style aktivieren (z.B. Windows10Dark)
@@ -26,6 +26,7 @@ uses
   Winapi.Messages,
   Vcl.Forms,
   Vcl.Controls,
+  MidasLib,
   PPG.Consts in '..\Source\Core\PPG.Consts.pas',
   PPG.Lang in '..\Source\Core\PPG.Lang.pas',
   PPG.Lang.De in '..\Source\Core\PPG.Lang.De.pas',
@@ -98,10 +99,14 @@ uses
   PPG.ToolBar in '..\Source\Controls\PPG.ToolBar.pas',
   PPG.StatusBar in '..\Source\Controls\PPG.StatusBar.pas',
   PPG.Notifications in '..\Source\Controls\PPG.Notifications.pas',
+  PPG.DB.Controls in '..\Source\DB\PPG.DB.Controls.pas',
+  PPG.DB.Lookup in '..\Source\DB\PPG.DB.Lookup.pas',
+  PPG.DB.Grid in '..\Source\DB\PPG.DB.Grid.pas',
   DemoKit in 'DemoKit.pas',
   DemoPages1 in 'DemoPages1.pas',
   DemoPages2 in 'DemoPages2.pas',
   DemoPages3 in 'DemoPages3.pas',
+  DemoPages4 in 'DemoPages4.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}
