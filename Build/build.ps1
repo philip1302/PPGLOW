@@ -10,13 +10,16 @@
 
   Aufruf:  powershell -ExecutionPolicy Bypass -File Build\build.ps1 [-Only Delphi13] [-Projects Runtime,Tests]
            Projekte: Runtime, Design, Tests, Demo (Standard) sowie Bench (Leistungsmessung, am besten -Config Release)
+           Vorher laeuft check-rules.ps1 (Coding-Rules); -NoRuleCheck laesst ihn aus
 #>
 param(
   [string]$Only = '',
   [string[]]$Projects = @('Runtime', 'Design', 'Tests', 'Demo'),
   [int]$TimeoutSec = 600,
   [ValidateSet('Win32', 'Win64')][string]$Platform = 'Win32',
-  [ValidateSet('Debug', 'Release')][string]$Config = 'Debug'
+  [ValidateSet('Debug', 'Release')][string]$Config = 'Debug',
+  # Regel-Pruefer (check-rules.ps1) vor dem Build auslassen
+  [switch]$NoRuleCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -157,6 +160,16 @@ function Invoke-MsBuild([string]$StudioDir, [string]$Project, [string]$Platform)
   $text = cmd /c $cmd 2>&1 | Out-String
   $problems = ($text -split "`r?`n") | Where-Object { $_ -match ': (error|warning|hint) ' }
   return [pscustomobject]@{ Failed = ($LASTEXITCODE -ne 0); Problems = $problems; Log = $text }
+}
+
+# Zuerst die Coding-Rules pruefen: ein Verstoss (z.B. Unit fehlt in einer
+# Projektliste, Inline-Variable) faellt sonst erst beim XE2-Build auf.
+if (-not $NoRuleCheck) {
+  & (Join-Path $PSScriptRoot 'check-rules.ps1') -Root $Root
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "Regel-Pruefer meldet Verstoesse - Build abgebrochen (-NoRuleCheck zum Uebergehen)" -ForegroundColor Red
+    exit 1
+  }
 }
 
 $total = 0; $failedCount = 0
