@@ -1,0 +1,150 @@
+# PPGlow – Stand und nächste Schritte
+
+*Übergabe für die nächste Claude-Sitzung. Stand: 04.10.2026, Phase 8, Phase 6 und Phase 7 abgeschlossen*
+
+## Worum es geht
+Eigene VCL-Komponentensuite im Stil der TMS-GlowButtons: einheitliche Optik, gleiche Properties und Bedienlogik, **Enterprise-Qualität** (SOLID, sauberes Exception-Handling, keine Leaks, Tests). Zielversionen sind **Delphi XE2 bis Delphi 13**, Präfix `PPG` (Klassen `TPPG…`, Units `PPG.*`). Es gibt drei Presets: „Classic“ (glänzend, Office-Stil), „ModernFlat“ (flach mit Glow, Standard) und „Fluent11“ (Windows 11, Akzent aus dem System).
+
+Ausführliche Doku: `Docs\Architektur.md` (Architektur, SOLID, Exception-Konzept, alle Stolpersteine) und `Docs\Coding-Rules.md` (verbindliche Regeln). **Vor jeder Änderung lesen.**
+
+## Fertig
+| Bereich | Inhalt |
+|---|---|
+| Kern | Appearance/StateStyle (inkl. `Checked`), Animation (ein gemeinsamer Timer), LayoutEngine, ErrorHandler, Exceptions, DPI (logische 96-DPI-Maße) |
+| Rendering | `IPPGCanvas` (GDI+ mit eigenem Startup, GDI-Fallback jetzt mit Alpha per `AlphaBlend`), `IPPGRenderer` + `IPPGIndicatorRenderer` + `IPPGRangeRenderer` + `IPPGContainerRenderer` + `IPPGFieldRenderer` + `IPPGListRenderer` + `IPPGTabRenderer`, Registry, Presets Classic und ModernFlat |
+| Controls | `TPPGButton` (Bild, ModalResult, Default/Cancel, Toggle-Gruppen, Split-Button, DropDownMenu, Action), `TPPGCheckBox`, `TPPGRadioButton`, `TPPGToggleSwitch`, `TPPGStyleManager` |
+| Phase 3 (03.10.2026) | `TPPGProgressBar` (Marquee über den Animator, Error/Paused, Text, weiche Positionswechsel), `TPPGTrackBar` (Ziehen, Tastatur, Mausrad, Ticks, vertikal/RTL), `TPPGPanel`, `TPPGGroupBox` (Plakette auf der Rahmenlinie, Fokus-Glow). Basen: `PPG.Controls.Range`, `PPG.Controls.Container`. DFM-kompatibel zu den VCL-Pendants |
+| Phase 4a (03.10.2026) | Basis `PPG.Controls.Field` (natives Edit/Memo ohne Rahmen im PPG-Rahmen, Fokuslinie, TextHint selbst gezeichnet, ValidationState, Buttons im Feld, Name für Screenreader per `IAccPropServices`). Darauf `TPPGEdit` (ShowClearButton, LeftButton/RightButton mit DropDownMenu), `TPPGMemo`, `TPPGSpinEdit` (Verhalten wie `TSpinEdit`, Wiederholung beim Halten über den Animator). DFM-kompatibel zu `TEdit`/`TMemo`/`TSpinEdit` |
+| Phase 4b (03.10.2026) | `TPPGComboBox` (csDropDown mit AutoComplete, csDropDownList mit Tippsuche) mit eigenem Popup (`PPG.Popup`: Fenster ohne Aktivierung, Maus per `SetCapture` bei der Combo, oberhalb bei fehlendem Platz, Aufklapp-Animation, eigene Scrollleiste). Ereignisse wie `TComboBox` (`OnClick`, dann `OnSelect` bzw. `OnChange`). Barrierefreiheit mit virtuellen Kind-Elementen (`IPPGAccessibleChildren`) |
+| Phase 4c (03.10.2026) | `TPPGTabControl`, `TPPGPageControl` + `TPPGTabSheet` (DFM-kompatibel zu `TPageControl`/`TTabSheet`), gemeinsame Basis `TPPGCustomTabs` und `TPPGTabStrip` (Überlauf mit Blätterpfeilen, gleitender Unterstrich, Schließen-Knöpfe, Strg+Tab nur im innersten Reiter-Control, Accelerator). Komponenteneditor „New Page“ usw. Die Demo ist jetzt selbst ein PageControl (`/page n`) |
+| Lücken geschlossen | Barrierefreiheit (MSAA/IAccessible, jetzt inkl. Kind-Fenster über `IEnumVARIANT`), VCL-Styles (`EffectiveAppearance`, `StyleElements`), AutoSize, Split-Button, `ImageName` (ab 10.4), GDI-Text im GDI+-Canvas beachtet jetzt den Clip |
+| Phase 5 (03.10.2026) | Fundament für Daten-Controls (ohne neue Paletten-Controls): `TPPGCustomScrollControl` (Overlay-Scrollleisten, weiches Scrollen, Rad mit Rest, Auto-Scroll), `TPPGRowLayout` (1M Zeilen), `TPPGSelection` (Windows-Listen-Semantik), `IPPGItemSource` (Collection/TStrings/virtuell), Mini-Markup `PPG.Markup`, Mehrfachauswahl für Screenreader. Benchmark `Tests\Bench`. Dabei: schneller Eltern-Hintergrund für Kinder auf PPGlow-Containern (14× schneller beim Zeichnen vieler Kinder). Details: `Docs\Phase5-Plan.md`, `Docs\Architektur.md` |
+| Phase 6 (04.10.2026) | Daten-Controls: `TPPGListBox` (Items/ItemsEx/virtuell, Gruppen, Detail, Plakette, Markup, Umsortieren, Owner-Draw; DFM wie `TListBox`), `TPPGCheckListBox` (wie `TCheckListBox`, Überschriften), ComboBox mit `ItemsEx`, Bildern und `FilterMode`, `TPPGTreeView` (API wie `TTreeView`, Lazy Loading, Kästchen mit Weitergabe, Umbenennen, Knoten ziehen), `TPPGGrid` (wie `TStringGrid`, Spalten-Editoren, Sortieren, Filterzeile, TSV/CSV, virtuell 1M Zeilen). Gemeinsam: `TPPGItemPainter`, `IPPGItemRenderer`, `TPPGCustomItemList`. Details: `Docs\Phase6-Plan.md` und Abschnitt „Daten-Controls“ in `Docs\Architektur.md` |
+| Phase 7 (04.10.2026) | 16 Controls für ganze Anwendungen: 7a `TPPGLabel`/`TPPGLinkLabel` (`PPG.Labels`), `TPPGBadge`/`TPPGProgressRing`/`TPPGInfoBar` (`PPG.Feedback`), `TPPGExpander`, `TPPGSplitter`, `TPPGRating`, `TPPGSearchEdit`; 7b `TPPGCalendar`, `TPPGDatePicker` (Kalender-Popup, DFM wie `TDateTimePicker`), `TPPGTimePicker`; 7c `TPPGNavigationView`, `TPPGBreadcrumb`, `TPPGToolBar` (Actions, Überlauf), `TPPGStatusBar` (DFM wie `TStatusBar`); 7d `TPPGNotificationCenter`/`TPPGToast` (`PPG.Notifications`). Die Demo hat jetzt die NavigationView als Hauptnavigation, eine StatusBar und drei neue Seiten. Details: `Docs\Phase7-Plan.md` und Abschnitt „Phase 7“ in `Docs\Architektur.md` |
+| QS | **523 DUnit-Tests grün** (Phase 7 komplett plus zwei Prüfrunden am 04.10.2026). Neu: `Tests\PPG.Tests.Streaming.pas` schickt jede einfache Property aller 35 Paletten-Controls durch die DFM. **Sichttests** `Tests\PPG.Tests.Visual.pas`: alle Controls in 5 Zuständen × 6 Varianten. Jeder Lauf schreibt die Galerie nach `Tests\Visual\Gallery\*.png` (ansehen!) und prüft automatisch: nicht leer, Hover/Fokus/Deaktiviert sichtbar, Deaktiviert ohne kräftige Farben und erkennbar, Dunkel lesbar. Die Referenzbilder in `Tests\Visual\Baseline` gelten als Soll; bei gewollter Optikänderung den Ordner löschen, dann werden sie neu angelegt, Benchmark mit neuen Vorgaben für Calendar und NavigationView eingehalten, Runtime auch Win64; davor 410 (Phase 6), davor 333 (Phase 8), 313 (8.2) und 296; Benchmark hält alle Vorgaben ein (`build.ps1 -Projects Bench -Config Release`, dann `Tests\Bench\PPGlowBench.exe`). Davor: 247 DUnit-Tests grün (Konsole, Exit-Code = Fehlerzahl), Runtime auch für Win64 kompiliert. Demo mit Screenshot-Modus: zehn Seiten (`/page 0..9`, 4 = Listen, 5 = Baum, 6 = Grid, 7 = Kleine Controls, 8 = Datum + Zeit, 9 = Navigation; `/dropdownimages` öffnet die Bild-Combo; `/toastcapture datei.png` zeigt drei Toasts und speichert die Bildschirmecke), `/fieldfocus` zeigt die Fokuslinie, `/dropdown` eine offene ComboBox-Liste |
+| IDE | Packages installiert, **Stand Phase 8.1** (Fluent11, Dark Mode/`ThemeMode`, Icons, alle Daten-Controls aus Phase 6 und alle 16 Controls aus Phase 7 sind noch **nicht** in der IDE; dafür neu installieren) (03.10.2026, Win32 + Win64, alle Controls bis PageControl). Neu installieren: IDE schließen, Release Win32/Win64 bauen, `install.ps1` |
+
+## Umgebung (wichtig!)
+- **RAD Studio 13 Community** (`Studio\37.0`). Es gibt **keinen Kommandozeilen-Compiler** (dcc32/msbuild verweigern).
+  - Gebaut wird per IDE-Batch: `bds -rPPGlowBuild -b <projekt>`. Das kapselt `Build\build.ps1` und wertet die `.err`-Datei aus.
+  - Das eigene Profil `-rPPGlowBuild` ist nötig, sonst hängt die IDE: Sie verweigert das Kompilieren des installierten Packages und zeigt einen unsichtbaren Dialog.
+- Nach Builds stürzt oft der Code-Insight-Prozess `DelphiLSP.exe` ab (Ereignisprotokoll, evtl. „Runtime error“-Popups). Das kommt von der IDE, nicht von PPGlow.
+- **Nur Delphi 13 vorhanden.** XE2 ist vorbereitet (`Packages\XE2\*.dpk`, LIBSUFFIX `'160'`), aber **nie kompiliert**.
+- Die IDE des Users **nicht** ungefragt schließen oder beenden. Für `install.ps1` muss die IDE geschlossen sein, also den User bitten.
+- Shell-Fallen:
+  - Backslashes in `perl -e`/`sed` werden verschluckt, dafür `\x5C` verwenden oder das Edit-Tool nehmen.
+  - Neue Dateien vom Write-Tool haben LF-Zeilenenden, RAD Studio braucht CRLF: `perl -pi -e 's/\r?\n/\r\n/'`.
+  - In Markdown-Dateien nie per Perl Unicode einsetzen, das zerstört die Umlaut-Kodierung.
+  - **Git-Bash wandelt `/screenshot` usw. in Pfade um.** Demo und Tests mit `/`-Schaltern nur über PowerShell starten, sonst läuft die Demo normal weiter und wirkt wie hängend.
+  - **Umgekehrt: Perl-/sed-Einzeiler mit Backslashes nie über PowerShell starten.** Die Backslashes gehen verloren (`s/\r?\n/\r\n/` wurde zu `s/r?n/rn/` und hat sechs Dateien zerstört). Es gibt kein git-Repo, also vor Massenersetzungen Kopien anlegen.
+- Bei Compilerfehlern bleibt die Batch-IDE im Fortschrittsdialog stehen. `build.ps1` klickt dort jetzt selbst auf „OK“, damit die `.err`-Datei entsteht.
+- Die Community Edition zeigt beim Kompilieren **zufällig einen Lizenzhinweis** (`TCENotificationDialog`, „Die Nutzung der Community Edition unterliegt …“), der den Batch-Build anhält. Seit 04.10.2026 bestätigt `build.ps1` diesen Hinweis **nur in der eigenen Batch-IDE** (Profil `PPGlowBuild`) mit OK. Das hat der User ausdrücklich freigegeben.
+- **Während eines Batch-Builds keine Projektdateien (`.dproj`/`.dpr`) ändern.** Die Batch-IDE speichert die `.dproj` beim Beenden und überschreibt dabei neue Einträge (ist am 04.10.2026 passiert).
+- `Label` ist in Delphi ein reserviertes Wort, eine Unit `PPG.Label` geht deshalb nicht. Sie heißt `PPG.Labels`.
+- Die Test-EXE läuft ohne aktive Themes (`StyleServices.Enabled = False`). Der Test `ChildPaintsOnPanelBackground` meldet deshalb nur einen Status, der Eltern-Hintergrund ist per Demo-Screenshot geprüft.
+
+## Befehle
+```powershell
+cd C:\AI\Claude_Arbeitsplatz\PPGlow
+powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design,Tests,Demo
+Tests\PPGlowTests.exe                       # 0 = alles grün
+# Release + Installation (IDE geschlossen!):
+powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design -Platform Win32 -Config Release
+powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design -Platform Win64 -Config Release
+powershell -ExecutionPolicy Bypass -File Build\install.ps1     # -Uninstall zum Entfernen
+# Sichtprüfung (danach PNG ansehen):
+Demo\PPGlowDemo.exe /screenshot C:\pfad\x.png [/hover] [/focus] [/gdi] [/style Windows10Dark]
+```
+Eine neue Unit muss in **alle** Projektlisten eingetragen werden: `Packages\Delphi13\PPGlowR.dpk` und `.dproj` (`DCCReference`), `Packages\XE2\PPGlowR.dpk`, `Tests\PPGlowTests.dpr` und `Demo\PPGlowDemo.dpr` (jeweils auch die `.dproj`) sowie `Tests\Bench\PPGlowBench.dpr`. Neue Komponenten kommen außerdem in `Source\Design\PPG.Reg.pas`.
+
+## Arbeitsweise, die sich bewährt hat
+- Erst bauen, dann testen, dann einen Demo-Screenshot vergrößert ansehen. Pixeltests prüfen Farbe und Rahmen.
+- Jeder gefundene Fehler bekommt einen Regressionstest.
+- Tests dürfen nicht still überspringen, wenn die Voraussetzung eigentlich erfüllt ist.
+- Gegenprobe mit Standard-VCL-Controls, bevor ein Fehler der Suite zugeschrieben wird.
+- Aussagen in der Doku nur nach echter Prüfung.
+
+## Wichtigste gelernte Fallen (Details in Architektur.md)
+- **Paint sendet keine Nachrichten.** Die VCL ruft nach jeder Nachricht `FreeMemoryContexts` auf und macht damit Bitmap-DCs ungültig.
+- `TControl.WMLButtonUp` ruft Click **vor** MouseUp auf. Deshalb wird der Zustand vorher zurückgesetzt.
+- `TWinControl.AdjustSize` tut ohne Handle nichts; `SetBounds` mit gleichen Werten wird verworfen. Deshalb gibt es `RequestAutoSize`.
+- `TSpeedButton` castet `CM_BUTTONPRESSED` blind auf sich selbst. Deshalb nutzt PPGlow eine eigene registrierte Nachricht.
+- FreeNotification im Destruktor nicht vorzeitig entfernen.
+- Ohne `Vcl.Styles` gilt jede `.vsf`-Datei als ungültig.
+- `OBJID_CLIENT`/`NotifyWinEvent` mit festen eigenen Typen importieren, weil die Signaturen je Delphi-Version abweichen.
+
+## Roadmap
+Die freigegebene Roadmap bis TMS-Niveau steht in `Docs\Roadmap.md`. Sie umfasst die Phasen 5–9: Daten-Fundament, Listen/Baum/Grid, Navigation/Datum/Rückmeldung, Fluent-Design mit Dark Mode sowie Designer/DB/UIA. Jede Phase bekommt vor dem Start einen eigenen Detailplan und endet mit Bericht und OK. Reihenfolge, **vom User am 03.10.2026 entschieden**: Phase 5 (**fertig**), dann **Phase 8 vorgezogen** (Detailplan: `Docs\Phase8-Plan.md`), danach Phase 6, 7 und 9.
+
+**Phase 6 (Daten-Controls) ist abgeschlossen** (04.10.2026, 6a–6c am Stück wie vom User entschieden, 410 Tests grün, Win32/Win64, Benchmark eingehalten; Plan und Abweichungen in `Docs\Phase6-Plan.md`).
+
+**Phase 7 (Navigation, Datum/Zeit, Rückmeldung) ist abgeschlossen** (04.10.2026, 7a–7d am Stück wie vom User entschieden, 513 Tests grün, Win32/Win64, Benchmark eingehalten; Plan, Umsetzung und Abweichungen in `Docs\Phase7-Plan.md`). **Als Nächstes: Phase 9** (Designer-Komfort, DB-Anbindung, UIA) – vorher Detailplan schreiben und vom User freigeben lassen. Vorher sinnvoll: Packages neu installieren (IDE schließen, User fragen) und die neuen Controls im Formulardesigner ausprobieren.
+
+**Phase 8 (modernes Design) ist abgeschlossen** (04.10.2026, 333 Tests grün, Win32/Win64, Benchmark eingehalten). Bausteine von Phase 8:
+- 8.1 Design-Tokens (`PPG.Tokens`) – **fertig** (03.10.2026, 304 Tests grün, Win32/Win64)
+- 8.2 Preset `Fluent11` – **fertig** (04.10.2026, 313 Tests grün, Win32/Win64, Sichtprüfung GDI+ und GDI). Details: `Docs\Phase8-Plan.md`, Abschnitt „Preset Fluent11“ in `Docs\Architektur.md`. Demo: `/preset Fluent11`
+- 8.3 Dark Mode ohne VCL-Style – **fertig** (`PPG.Theme`: Hell/Dunkel/System, `StyleForms` mit dunkler Titelleiste, `TPPGStyleManager.ThemeMode`). Demo: Umschalter „Theme“ und `/theme dark`
+- 8.5 Bewegungskurven – **fertig** (`TPPGEasing`, `ekDecelerate` für Aufklappen, Unterstrich, Scrollen, Fokuslinie)
+- 8.6 Fluent-Icons – **fertig** (`PPG.IconFont`, genutzt von Fluent11)
+- 8.4 Mica – Prototyp ausgewertet, **nicht** in der Suite (GDI-Alpha-Problem; Ergebnis in `Docs\Architektur.md`). Demo: `/mica`
+
+Rangfolge der Farben: Hochkontrast > VCL-Style > Dark Mode > Appearance.
+
+## Nächste Schritte (Vorschlag, Reihenfolge mit dem User abstimmen)
+1. **Praxistest mit dem User:**
+   - im Formulardesigner arbeiten (Ziehen, Properties, DFM speichern und laden)
+   - Monitorwechsel mit unterschiedlicher DPI
+   - Remote-Desktop
+   - echter Screenreader (Narrator)
+   - **Phase 4 im Designer:** Seiten per Klick umschalten, „New Page“/„Delete Page“, Controls auf Seiten ablegen, DFM speichern und laden; ComboBox-Popup auf einem zweiten Monitor (andere DPI); Narrator auf Combo-Einträgen und Reitern.
+2. **Designer-Komfort:** Palettensymbole (`.dcr`) und ein Appearance-Editor mit Vorschau.
+3. **Phase 3 nacharbeiten (optional):** TrackBar-Auswahlbereich (`SelStart`/`SelEnd`), manuelle Ticks (`SetTick`), Panel-`AutoSize`; Phase-3-Controls im Formulardesigner ausprobieren.
+4. **Phase 4 ist fertig (4a–4c).** Bilder, Filtern und ListBox kamen in Phase 6. Noch offen: mehrzeilige Reiter sowie Reiter links/rechts, Reiter per Ziehen umsortieren, `TPPGFloatSpinEdit`, Datums-/Dateifelder (DatePicker auf Basis von `TPPGPopupWindow`).
+5. **Weitere Presets**, z. B. Windows 11 und Office.
+6. **Leistungsmessung** bei sehr vielen Controls.
+7. **Kompatibilität:** Compile-Lauf unter XE2 und 10.x auf einem Rechner mit diesen Versionen. `build.ps1` erkennt die Versionen automatisch; `Packages\XE2` bekommt die `.dproj` beim ersten Öffnen.
+8. **Optional:** HotImageName/DisabledImageName und ein nativer UIA-Provider (ab 10.x).
+
+## Vom User bestätigte Entscheidungen
+- Mindestversion XE2. Beide Presets. Eigenes Präfix `PPG`.
+- **Bewusst anders als die VCL:** `Checked` im Code setzen löst nur `OnChange` aus, nicht `OnClick`.
+- Für Win32 ist DUnit statt DUnitX im Einsatz, weil DUnitX hier nur für Win64 installiert ist.
+- Reihenfolge bisher: Phase 1 → 2 → Lücken 1/4/6 → Phase 3 → Phase 4 (4a, 4b, 4c). Designer-Komfort ist offen.
+- Phase 4: Umfang Edit, SpinEdit, Memo, ComboBox mit **eigenem Popup**, PageControl/TabControl (vom User gewählt).
+- Phase 4a (eigene Entscheidungen, vom User noch zu bestätigen): SpinEdit wirft bei `MinValue > MaxValue` **nicht** (wie `TSpinEdit`, sonst scheitert `MinValue := 10; MaxValue := 100`). Die Buttons im Edit haben keinen eigenen Hint und kein `ImageName`. `TextHintVisibleOnFocus` steht standardmäßig auf `False`.
+- Phase 4b/4c (eigene Entscheidungen, vom User noch zu bestätigen):
+  - Combo-Ereignisse genau wie `TComboBox`: `OnClick`, dann `OnSelect`; nur ohne `OnSelect` kommt `OnChange`.
+  - Das Mausrad ändert die geschlossene Combo nicht.
+  - `ItemHeight` ist eine Mindesthöhe.
+  - Strg+Tab wirkt im innersten Reiter-Control (die VCL nimmt das äußerste).
+  - Pfeiltasten auf den Reitern laufen nicht um.
+  - Schließen einer Seite blendet standardmäßig nur den Reiter aus (`caHide`).
+  - `tpLeft`/`tpRight` werden wie oben/unten gezeichnet.
+- Phase 6 (eigene Entscheidungen, vom User noch zu bestätigen):
+  - `ItemHeight` ist bei ListBox/CheckListBox/TreeView eine **Mindesthöhe** (wegen `ItemHeight = 13` in alten DFMs).
+  - Mehrfachauswahl: `ItemIndex := X` setzt nur den Fokus (wie `TListBox`), nicht die Auswahl.
+  - `TreeView.Selected := X` löst `OnChange` aus (wie `TTreeView`, anders als die übrigen PPGlow-Controls).
+  - Baum: nur der Pfeil dreht sich animiert; Lazy Loading über `HasChildren` + `OnExpanding` statt eines eigenen virtuellen Modus; `TTreeView`-Knoten aus alten DFMs werden nicht gelesen.
+  - Grid: `Row`/`Cells` in Datenzeilen, `Selection` in sichtbaren Zeilen; Enter im Editor übernimmt und bleibt in der Zelle (wie `TStringGrid`), Pfeil hoch/runter im Text-Editor übernimmt und wechselt die Zeile; Zeilenhöhe nicht ziehbar; `OnSelectCell` kommt wie bei `TStringGrid` auch bei `Row`/`Col` im Code; Kopfklick-Zyklus aufsteigend → absteigend → unsortiert.
+  - Combo mit `FilterMode`: Filtern ersetzt AutoComplete; ohne Treffer schließt die Liste.
+- Phase 7 (eigene Entscheidungen, vom User noch zu bestätigen):
+  - Code setzt Werte ohne Ereignisse (Expander, Rating, Calendar, DatePicker, TimePicker, NavigationView.Selected, InfoBar.IsOpen); nur Anwenderaktionen lösen Ereignisse aus.
+  - Splitter ist ein Fenster-Control (TabStop standardmäßig aus) mit `ResizeStyle = rsUpdate` als Vorgabe; in Ruhe unsichtbar, Linie und Griff erst bei Hover/Ziehen/Fokus.
+  - SearchEdit und TimePicker bauen auf der ComboBox auf. Der TimePicker löst `OnChange` erst bei der Übernahme aus (Verlassen, Enter, Liste, Pfeile), nicht bei jedem Tastendruck.
+  - DatePicker: Eingabe nur Ziffern und Datumstrenner (Kurzformat); `Kind`, `DateMode`, `ParseInput` werden nur gelesen/gespeichert. Leeres Datum nur mit `ShowCheckbox`.
+  - NavigationView: Elterneinträge klappen nur auf (werden nicht gewählt); kompakt öffnet ein Klick auf einen Elterneintrag die Leiste. `pdmAuto` beobachtet den Parent über ein kleines Hilfsobjekt in dessen `WindowProc`-Kette.
+  - PageControl: Sind alle Reiter ausgeblendet, bleibt die aktive Seite aktiv und die Reiterleiste verschwindet (wie `TPageControl`, nötig für die NavigationView).
+  - Breadcrumb und ToolBar zeigen den Überlauf als natives Kontextmenü (Screenreader-tauglich) statt eines eigenen Popups.
+  - Toasts sind PPGlow-eigene Fenster (keine Windows-Benachrichtigungen); Neuester an der Ecke, höchstens 3 sichtbar, bei Vollbild/Präsentation warten sie.
+- Phase 8.3–8.6 (eigene Entscheidungen, vom User noch zu bestätigen):
+  - Dark Mode ist anwendungsweit; Standard bleibt Hell. Selbst gesetzte Farben gelten im Dunkeln nicht (wie beim VCL-Style); abschaltbar pro Control über `seClient`.
+  - `StyleForms` färbt Formulare mit den neutralen Windows-11-Farben (auch im hellen Modus #F3F3F3 statt `clBtnFace`) und stellt beim Ausschalten die Originalfarben wieder her.
+  - `TPPGStyleManager.ThemeMode` wirkt auch im Designer (alle PPGlow-Controls der IDE); `StyleForms` nur zur Laufzeit.
+  - ModernFlat dunkel: Rand `Stroke` etwas kräftiger ($5C5C5C). Leere Kästchen/Kreise auf dunklen Flächen bekommen mindestens 3:1 Randkontrast (alle Presets).
+  - `ekDecelerate` = Ease-out-Quart (Annäherung an Fluent `cubic-bezier(0,0,0,1)`).
+  - Fluent11-Aufklapp-Pfeil mit Symbolschrift dreht sich nicht, sondern wechselt ab halber Animation.
+- Phase 8.2 (eigene Entscheidungen, vom User noch zu bestätigen):
+  - Fluent11-Druckzustand: dunkler Text plus kräftigerer Rand statt blasserem Text (WinUI), damit eingerastete Toggle-Buttons lesbar und erkennbar bleiben. Ein eingerasteter Toggle in Akzentfarbe (wie WinUI) bräuchte eine Änderung am Button.
+  - Der Systemakzent landet wie alle Preset-Farben in der DFM (Akzent des Entwicklungsrechners). Alternative wäre ein „Akzent folgt System“-Merker in der Appearance.
+  - Der gemischte Zustand der CheckBox ist ein Akzent-Strich auf heller Fläche (WinUI: weißer Strich auf Akzent).
+- Phase 3 (eigene Entscheidungen, vom User noch zu bestätigen): `Position` wird wie in der VCL still geklemmt, `Min > Max` wirft. Die GroupBox-Beschriftung ist eine Plakette statt einer Lücke im Rahmen. Container bieten kein `AutoSize`.

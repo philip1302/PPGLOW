@@ -1,0 +1,17 @@
+ok     DatePicker Popup offen 
+FEHLER DatePicker Kalender Showing 
+FEHLER DatePicker Kalender Fenster sichtbar 
+ok     DatePicker Kalender Groesse 300x330
+FEHLER StatusBar Font nach DFM Size=9 UseSystemFont=True
+FEHLER Expander Padding.Top P.Top=56 Header=48
+ok     Expander DFM 
+ok     InfoBar IsOpen False nach DFM 
+ok     TimePicker DFM 13:45
+ok     NavigationView IsPaneOpen False DFM 48
+FEHLER Rating DFM 3,5 4
+ok     Calendar DFM Monat=5
+ok     DatePicker DFM 03.02.2025
+ok     LinkLabel Umbruch Bottom=52
+ok     LinkLabel DFM 
+ok     Badge Text DFM Neu
+ok     Alle Properties geprueft 
