@@ -296,7 +296,7 @@ begin
     CheckEquals(B.Preset, TPPGButton(D.Preview).Preset);
     D.RoundingEdit.Value := Orig + 3;
     CheckEquals(Orig + 3, D.Session.Work.Rounding, 'Kopie geaendert');
-    CheckEquals(Orig + 3, D.Preview.Appearance.Rounding, 'Vorschau folgt');
+    CheckEquals(Orig + 3, TPPGButton(D.Preview).Appearance.Rounding, 'Vorschau folgt');
     CheckEquals(Orig, B.Appearance.Rounding, 'Ziel erst nach OK');
     CheckTrue(D.Session.Modified);
   finally

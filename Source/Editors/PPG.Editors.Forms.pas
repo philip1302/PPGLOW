@@ -546,9 +546,9 @@ end;
 procedure TPPGAppearanceDialog.UpdatePreviews;
 begin
   if FPreview <> nil then
-    FPreview.Appearance.Assign(FSession.Work);
+    TCtrlAccess(FPreview).Appearance.Assign(FSession.Work);
   if FPreviewDisabled <> nil then
-    FPreviewDisabled.Appearance.Assign(FSession.Work);
+    TCtrlAccess(FPreviewDisabled).Appearance.Assign(FSession.Work);
 end;
 
 procedure TPPGAppearanceDialog.StateClick(Sender: TObject);

@@ -8,7 +8,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Variants, Vcl.Controls,
   Data.DB, Datasnap.DBClient,
-  PPG.Types, PPG.Controls.Base, PPG.Panel, PPG.Labels, PPG.ToolBar, PPG.Grid,
+  PPG.Types, PPG.Controls.Base, PPG.Feedback, PPG.Panel, PPG.Labels, PPG.ToolBar, PPG.Grid,
   PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid,
   DemoKit;
 

@@ -82,6 +82,10 @@ uses
   System.SysUtils, System.TypInfo, Vcl.ComCtrls,
   PPG.Consts, PPG.Exceptions, PPG.Render.Intf, PPG.Render.Registry, PPG.StyleManager;
 
+type
+  // StyleManager und Appearance sind in der Basis protected
+  TCtrlAccess = class(TPPGCustomControl);
+
 { TPPGPresetTargets }
 
 class function TPPGPresetTargets.HasPreset(C: TComponent): Boolean;
@@ -95,7 +99,7 @@ end;
 
 class function TPPGPresetTargets.UsesStyleManager(C: TComponent): Boolean;
 begin
-  Result := (C is TPPGCustomControl) and (TPPGCustomControl(C).StyleManager <> nil);
+  Result := (C is TPPGCustomControl) and (TCtrlAccess(C).StyleManager <> nil);
 end;
 
 class function TPPGPresetTargets.Collect(Root: TComponent; List: TList<TComponent>): Integer;
@@ -292,7 +296,7 @@ begin
     raise EPPGError.CreateResFmt(@SPPGNoTarget, [ClassName]);
   FTarget := ATarget;
   FWork := TPPGAppearance.Create(nil);
-  FWork.Assign(ATarget.Appearance);
+  FWork.Assign(TCtrlAccess(ATarget).Appearance);
 end;
 
 destructor TPPGAppearanceSession.Destroy;
@@ -309,12 +313,12 @@ end;
 
 function TPPGAppearanceSession.Modified: Boolean;
 begin
-  Result := not FWork.Equals(FTarget.Appearance);
+  Result := not FWork.Equals(TCtrlAccess(FTarget).Appearance);
 end;
 
 procedure TPPGAppearanceSession.Apply;
 begin
-  FTarget.Appearance.Assign(FWork);
+  TCtrlAccess(FTarget).Appearance.Assign(FWork);
 end;
 
 end.

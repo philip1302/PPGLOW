@@ -215,7 +215,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.Math, Vcl.Dialogs, PPG.Consts, PPG.Appearance, PPG.Controls.Scroll;
+  System.Math, System.UITypes, Vcl.Dialogs, PPG.Consts, PPG.Appearance, PPG.Controls.Scroll;
 
 const
   // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
@@ -916,7 +916,6 @@ function TPPGCustomDBGrid.SelectCell(ACol, ARow: Integer): Boolean;
 var
   R: Integer;
 begin
-  Result := True;
   if (FSyncing = 0) and FDataLink.Active and (ARow >= FixedRows) then
   begin
     R := ARow - FixedRows;
