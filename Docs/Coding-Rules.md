@@ -12,6 +12,18 @@ Diese Regeln sind verbindlich für jede neue Unit und jedes neue Control. Sie si
 - Quelltexte enthalten nur ASCII (keine Umlaute, auch nicht in Kommentaren) und CRLF-Zeilenenden.
 - Kommentare `{ … }` dürfen keine `}` enthalten, also auch keine Direktiven wie `{$IF}` im Kommentartext. Für solche Fälle `//` verwenden.
 
+## Texte und Übersetzung
+- Jeder sichtbare Text, also Meldung, Hinweis, Screenreader-Name oder Prozentformat, steht als `resourcestring` in `PPG.Consts`.
+- Gelesen wird er **immer** über `PPGStr(@SPPGxxx)`, nie direkt als `SPPGxxx`; sonst greift die Übersetzung nicht. Für Exceptions gilt deshalb `CreateFmt(PPGStr(@SPPGxxx), […])` bzw. `Create(PPGStr(@SPPGxxx))`.
+- Ausgenommen sind die Design-Units (`Source\Design`, `Source\DesignDB`, `Source\Editors`); die IDE bleibt englisch.
+- Jeder neue Text bekommt eine Zeile in `Lang\PPGlow.de.txt`, danach `Build\make-lang.ps1` ausführen. Der Regel-Prüfer (Regel LANG) meldet fehlende oder veraltete Einträge.
+
+## Prüfung ohne Compiler
+- `Build\check-rules.ps1` prüft vor jedem Build: ASCII, CRLF, `{$I ..\PPG.inc}`, `{$IFEND}`, Inline-Variablen und `NameOf`, Syntaxreste, `}` in Kommentaren, `raise` nur mit `PPG.Exceptions` (in `Source`), keine leeren `except`, jede Unit in allen Projektlisten und vollständige Übersetzungen.
+- Ein Verstoß bricht `build.ps1` ab. `-NoRuleCheck` gibt es nur für Notfälle.
+- Neue Regeln bekommen ein Negativbeispiel in `Build\check-rules-tests` (`check-rules.ps1 -SelfTest`).
+- DB-Units (`Data.DB`) gehören nur nach `Source\DB` und damit in `PPGlowDBR`. Das Grundpaket `PPGlowR` linkt kein `Data.DB`.
+
 ## Exceptions
 - Nur Klassen aus `PPG.Exceptions` werfen. Die Meldung kommt aus einem `resourcestring` (`CreateRes`/`CreateResFmt`).
 - **Erst validieren, dann zuweisen.** Zahlenwerte werden über `PPGCheckRange` geprüft. Das wirft zur Laufzeit und klemmt beim DFM-Laden.

@@ -1,6 +1,6 @@
 # PPGlow – Stand und nächste Schritte
 
-*Übergabe für die nächste Claude-Sitzung. Stand: 04.10.2026, Phase 8, Phase 6 und Phase 7 abgeschlossen*
+*Übergabe für die nächste Claude-Sitzung. Stand: 04.10.2026. Phase 8, 6 und 7 sind abgeschlossen. **Phase 9 ist umgesetzt, aber noch nie kompiliert** (Cloud-Sitzung ohne Delphi).*
 
 ## Worum es geht
 Eigene VCL-Komponentensuite im Stil der TMS-GlowButtons: einheitliche Optik, gleiche Properties und Bedienlogik, **Enterprise-Qualität** (SOLID, sauberes Exception-Handling, keine Leaks, Tests). Zielversionen sind **Delphi XE2 bis Delphi 13**, Präfix `PPG` (Klassen `TPPG…`, Units `PPG.*`). Es gibt drei Presets: „Classic“ (glänzend, Office-Stil), „ModernFlat“ (flach mit Glow, Standard) und „Fluent11“ (Windows 11, Akzent aus dem System).
@@ -22,6 +22,7 @@ Ausführliche Doku: `Docs\Architektur.md` (Architektur, SOLID, Exception-Konzept
 | Phase 6 (04.10.2026) | Daten-Controls: `TPPGListBox` (Items/ItemsEx/virtuell, Gruppen, Detail, Plakette, Markup, Umsortieren, Owner-Draw; DFM wie `TListBox`), `TPPGCheckListBox` (wie `TCheckListBox`, Überschriften), ComboBox mit `ItemsEx`, Bildern und `FilterMode`, `TPPGTreeView` (API wie `TTreeView`, Lazy Loading, Kästchen mit Weitergabe, Umbenennen, Knoten ziehen), `TPPGGrid` (wie `TStringGrid`, Spalten-Editoren, Sortieren, Filterzeile, TSV/CSV, virtuell 1M Zeilen). Gemeinsam: `TPPGItemPainter`, `IPPGItemRenderer`, `TPPGCustomItemList`. Details: `Docs\Phase6-Plan.md` und Abschnitt „Daten-Controls“ in `Docs\Architektur.md` |
 | Phase 7 (04.10.2026) | 16 Controls für ganze Anwendungen: 7a `TPPGLabel`/`TPPGLinkLabel` (`PPG.Labels`), `TPPGBadge`/`TPPGProgressRing`/`TPPGInfoBar` (`PPG.Feedback`), `TPPGExpander`, `TPPGSplitter`, `TPPGRating`, `TPPGSearchEdit`; 7b `TPPGCalendar`, `TPPGDatePicker` (Kalender-Popup, DFM wie `TDateTimePicker`), `TPPGTimePicker`; 7c `TPPGNavigationView`, `TPPGBreadcrumb`, `TPPGToolBar` (Actions, Überlauf), `TPPGStatusBar` (DFM wie `TStatusBar`); 7d `TPPGNotificationCenter`/`TPPGToast` (`PPG.Notifications`). Die Demo hat jetzt die NavigationView als Hauptnavigation, eine StatusBar und drei neue Seiten. Details: `Docs\Phase7-Plan.md` und Abschnitt „Phase 7“ in `Docs\Architektur.md` |
 | QS | **523 DUnit-Tests grün** (Phase 7 komplett plus zwei Prüfrunden am 04.10.2026). Neu: `Tests\PPG.Tests.Streaming.pas` schickt jede einfache Property aller 35 Paletten-Controls durch die DFM. **Sichttests** `Tests\PPG.Tests.Visual.pas`: alle Controls in 5 Zuständen × 6 Varianten. Jeder Lauf schreibt die Galerie nach `Tests\Visual\Gallery\*.png` (ansehen!) und prüft automatisch: nicht leer, Hover/Fokus/Deaktiviert sichtbar, Deaktiviert ohne kräftige Farben und erkennbar, Dunkel lesbar. Die Referenzbilder in `Tests\Visual\Baseline` gelten als Soll; bei gewollter Optikänderung den Ordner löschen, dann werden sie neu angelegt, Benchmark mit neuen Vorgaben für Calendar und NavigationView eingehalten, Runtime auch Win64; davor 410 (Phase 6), davor 333 (Phase 8), 313 (8.2) und 296; Benchmark hält alle Vorgaben ein (`build.ps1 -Projects Bench -Config Release`, dann `Tests\Bench\PPGlowBench.exe`). Davor: 247 DUnit-Tests grün (Konsole, Exit-Code = Fehlerzahl), Runtime auch für Win64 kompiliert. Demo mit Screenshot-Modus: zehn Seiten (`/page 0..9`, 4 = Listen, 5 = Baum, 6 = Grid, 7 = Kleine Controls, 8 = Datum + Zeit, 9 = Navigation; `/dropdownimages` öffnet die Bild-Combo; `/toastcapture datei.png` zeigt drei Toasts und speichert die Bildschirmecke), `/fieldfocus` zeigt die Fokuslinie, `/dropdown` eine offene ComboBox-Liste |
+| Phase 9 (04.10.2026, **ungebaut**) | Designer-Komfort (Palettensymbole, Appearance-Editor, Preset-Galerie, Item-Editoren, Verben), nativer UIA-Provider für Grid/TreeView/ListBox/CheckListBox, sieben DB-Controls in eigenen Paketen `PPGlowDBR`/`dclPPGlowDB`, Übersetzung zur Laufzeit (`PPG.Lang`, Deutsch), RTL- und DPI-Galerie, Regel-Prüfer, Leak-Lauf, Hilfe pro Control, Migrationsleitfaden und `migrate.ps1`, Demo als Katalog mit Suche und Datenbank-Seite. Alles in einer Cloud-Sitzung ohne Delphi geschrieben: **nichts kompiliert, kein Test gelaufen.** Plan, Umsetzung und Abweichungen: `Docs\Phase9-Plan.md` |
 | IDE | Packages installiert, **Stand Phase 8.1** (Fluent11, Dark Mode/`ThemeMode`, Icons, alle Daten-Controls aus Phase 6 und alle 16 Controls aus Phase 7 sind noch **nicht** in der IDE; dafür neu installieren) (03.10.2026, Win32 + Win64, alle Controls bis PageControl). Neu installieren: IDE schließen, Release Win32/Win64 bauen, `install.ps1` |
 
 ## Umgebung (wichtig!)
@@ -29,14 +30,15 @@ Ausführliche Doku: `Docs\Architektur.md` (Architektur, SOLID, Exception-Konzept
   - Gebaut wird per IDE-Batch: `bds -rPPGlowBuild -b <projekt>`. Das kapselt `Build\build.ps1` und wertet die `.err`-Datei aus.
   - Das eigene Profil `-rPPGlowBuild` ist nötig, sonst hängt die IDE: Sie verweigert das Kompilieren des installierten Packages und zeigt einen unsichtbaren Dialog.
 - Nach Builds stürzt oft der Code-Insight-Prozess `DelphiLSP.exe` ab (Ereignisprotokoll, evtl. „Runtime error“-Popups). Das kommt von der IDE, nicht von PPGlow.
-- **Nur Delphi 13 vorhanden.** XE2 ist vorbereitet (`Packages\XE2\*.dpk`, LIBSUFFIX `'160'`), aber **nie kompiliert**.
+- **Nur Delphi 13 vorhanden.** XE2 ist vorbereitet (`Packages\XE2\*.dpk`, LIBSUFFIX `'160'`), aber **nie kompiliert**. Prüfplan: `Docs\Kompatibilitaet.md`.
+- Das Projekt liegt jetzt auch in **git** (GitHub `philip1302/ppglow`). Phase 9 entstand dort im Zweig `claude/task-elizkl` in einer Cloud-Sitzung **ohne Delphi**. Geprüft wurde nur mit einem Pascal-Parser (Free Pascal `fcl-passrc`, Syntax), dem Regel-Prüfer und den Selbsttests der Skripte. `.gitattributes` setzt für die Delphi-Dateien CRLF.
 - Die IDE des Users **nicht** ungefragt schließen oder beenden. Für `install.ps1` muss die IDE geschlossen sein, also den User bitten.
 - Shell-Fallen:
   - Backslashes in `perl -e`/`sed` werden verschluckt, dafür `\x5C` verwenden oder das Edit-Tool nehmen.
   - Neue Dateien vom Write-Tool haben LF-Zeilenenden, RAD Studio braucht CRLF: `perl -pi -e 's/\r?\n/\r\n/'`.
   - In Markdown-Dateien nie per Perl Unicode einsetzen, das zerstört die Umlaut-Kodierung.
   - **Git-Bash wandelt `/screenshot` usw. in Pfade um.** Demo und Tests mit `/`-Schaltern nur über PowerShell starten, sonst läuft die Demo normal weiter und wirkt wie hängend.
-  - **Umgekehrt: Perl-/sed-Einzeiler mit Backslashes nie über PowerShell starten.** Die Backslashes gehen verloren (`s/\r?\n/\r\n/` wurde zu `s/r?n/rn/` und hat sechs Dateien zerstört). Es gibt kein git-Repo, also vor Massenersetzungen Kopien anlegen.
+  - **Umgekehrt: Perl-/sed-Einzeiler mit Backslashes nie über PowerShell starten.** Die Backslashes gehen verloren (`s/\r?\n/\r\n/` wurde zu `s/r?n/rn/` und hat sechs Dateien zerstört). Vor Massenersetzungen committen oder Kopien anlegen.
 - Bei Compilerfehlern bleibt die Batch-IDE im Fortschrittsdialog stehen. `build.ps1` klickt dort jetzt selbst auf „OK“, damit die `.err`-Datei entsteht.
 - Die Community Edition zeigt beim Kompilieren **zufällig einen Lizenzhinweis** (`TCENotificationDialog`, „Die Nutzung der Community Edition unterliegt …“), der den Batch-Build anhält. Seit 04.10.2026 bestätigt `build.ps1` diesen Hinweis **nur in der eigenen Batch-IDE** (Profil `PPGlowBuild`) mit OK. Das hat der User ausdrücklich freigegeben.
 - **Während eines Batch-Builds keine Projektdateien (`.dproj`/`.dpr`) ändern.** Die Batch-IDE speichert die `.dproj` beim Beenden und überschreibt dabei neue Einträge (ist am 04.10.2026 passiert).
@@ -46,16 +48,24 @@ Ausführliche Doku: `Docs\Architektur.md` (Architektur, SOLID, Exception-Konzept
 ## Befehle
 ```powershell
 cd C:\AI\Claude_Arbeitsplatz\PPGlow
-powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design,Tests,Demo
+powershell -ExecutionPolicy Bypass -File Build\check-rules.ps1   # Coding-Rules ohne Compiler (läuft auch in build.ps1)
+powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design,DBRuntime,DBDesign,Tests,Demo
 Tests\PPGlowTests.exe                       # 0 = alles grün
+Tests\PPGlowTests.exe /leaks                # zwei Läufe, Exit-Code <> 0 bei Speicherlecks
+Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt   # Szenarien aller Demo-Seiten
+# Generatoren (Ergebnis wird eingecheckt):
+powershell -ExecutionPolicy Bypass -File Build\make-icons.ps1 [-Preview Docs\palette-icons.png]   # Palettensymbole (.dcr)
+powershell -ExecutionPolicy Bypass -File Build\make-lang.ps1            # Lang\PPGlow.de.txt -> PPG.Lang.De.pas (-Check prüft nur)
+powershell -ExecutionPolicy Bypass -File Build\make-docs.ps1            # Docs\Controls\*.md und html
+powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path <Projekt> -Recurse -WhatIf   # VCL/TMS -> PPGlow
 # Release + Installation (IDE geschlossen!):
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design -Platform Win32 -Config Release
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design -Platform Win64 -Config Release
-powershell -ExecutionPolicy Bypass -File Build\install.ps1     # -Uninstall zum Entfernen
+powershell -ExecutionPolicy Bypass -File Build\install.ps1     # -Uninstall zum Entfernen, -NoDB ohne DB-Pakete
 # Sichtprüfung (danach PNG ansehen):
 Demo\PPGlowDemo.exe /screenshot C:\pfad\x.png [/hover] [/focus] [/gdi] [/style Windows10Dark]
 ```
-Eine neue Unit muss in **alle** Projektlisten eingetragen werden: `Packages\Delphi13\PPGlowR.dpk` und `.dproj` (`DCCReference`), `Packages\XE2\PPGlowR.dpk`, `Tests\PPGlowTests.dpr` und `Demo\PPGlowDemo.dpr` (jeweils auch die `.dproj`) sowie `Tests\Bench\PPGlowBench.dpr`. Neue Komponenten kommen außerdem in `Source\Design\PPG.Reg.pas`.
+Eine neue Unit muss in **alle** Projektlisten eingetragen werden: `Packages\Delphi13\PPGlowR.dpk` und `.dproj` (`DCCReference`), `Packages\XE2\PPGlowR.dpk`, `Tests\PPGlowTests.dpr` und `Demo\PPGlowDemo.dpr` (jeweils auch die `.dproj`) sowie `Tests\Bench\PPGlowBench.dpr`. DB-Units (`Source\DB`) gehören in `PPGlowDBR`, Design-Units in `dclPPGlow` bzw. `dclPPGlowDB`. Der Regel-Prüfer (Regel PROJECT) meldet fehlende Einträge. Neue Komponenten kommen außerdem in `Source\Design\PPG.Reg.pas` (DB: `Source\DesignDB\PPG.DB.Reg.pas`), ihr Symbol in `Build\make-icons.ps1`. Neue sichtbare Texte kommen als `resourcestring` nach `PPG.Consts`, werden über `PPGStr(@…)` gelesen und in `Lang\PPGlow.de.txt` übersetzt (Regel LANG).
 
 ## Arbeitsweise, die sich bewährt hat
 - Erst bauen, dann testen, dann einen Demo-Screenshot vergrößert ansehen. Pixeltests prüfen Farbe und Rahmen.
@@ -78,7 +88,9 @@ Die freigegebene Roadmap bis TMS-Niveau steht in `Docs\Roadmap.md`. Sie umfasst 
 
 **Phase 6 (Daten-Controls) ist abgeschlossen** (04.10.2026, 6a–6c am Stück wie vom User entschieden, 410 Tests grün, Win32/Win64, Benchmark eingehalten; Plan und Abweichungen in `Docs\Phase6-Plan.md`).
 
-**Phase 7 (Navigation, Datum/Zeit, Rückmeldung) ist abgeschlossen** (04.10.2026, 7a–7d am Stück wie vom User entschieden, 513 Tests grün, Win32/Win64, Benchmark eingehalten; Plan, Umsetzung und Abweichungen in `Docs\Phase7-Plan.md`). **Als Nächstes: Phase 9** (Designer-Komfort, DB-Anbindung, UIA). Der **Detailplan liegt als Entwurf vor** (`Docs\Phase9-Plan.md`, 04.10.2026, in einer Cloud-Sitzung ohne Delphi geschrieben) und **wartet auf die Freigabe** des Users; am Ende stehen sechs Fragen. Vorher sinnvoll: Packages neu installieren (IDE schließen, User fragen) und die neuen Controls im Formulardesigner ausprobieren.
+**Phase 7 (Navigation, Datum/Zeit, Rückmeldung) ist abgeschlossen** (04.10.2026, 7a–7d am Stück wie vom User entschieden, 513 Tests grün, Win32/Win64, Benchmark eingehalten; Plan, Umsetzung und Abweichungen in `Docs\Phase7-Plan.md`).
+
+**Phase 9 (Designer-Komfort, UIA, DB, Übersetzung, Prüfung, Doku) ist geschrieben, aber nicht gebaut.** Der User hat den Plan am 04.10.2026 freigegeben: alles am Stück, eigene DB-Pakete, UIA nur für Grid/Baum/Listen, Laufzeit-Tabelle, Symbole automatisch, Migrationsskript. Die Umsetzung entstand in einer Cloud-Sitzung ohne Delphi (`Docs\Phase9-Plan.md`, Abschnitt „Umsetzung“). **Als Nächstes muss sie auf dem Rechner mit Delphi gebaut und getestet werden** (siehe Nächste Schritte, Punkt 1).
 
 **Phase 8 (modernes Design) ist abgeschlossen** (04.10.2026, 333 Tests grün, Win32/Win64, Benchmark eingehalten). Bausteine von Phase 8:
 - 8.1 Design-Tokens (`PPG.Tokens`) – **fertig** (03.10.2026, 304 Tests grün, Win32/Win64)
@@ -91,19 +103,21 @@ Die freigegebene Roadmap bis TMS-Niveau steht in `Docs\Roadmap.md`. Sie umfasst 
 Rangfolge der Farben: Hochkontrast > VCL-Style > Dark Mode > Appearance.
 
 ## Nächste Schritte (Vorschlag, Reihenfolge mit dem User abstimmen)
-1. **Praxistest mit dem User:**
-   - im Formulardesigner arbeiten (Ziehen, Properties, DFM speichern und laden)
-   - Monitorwechsel mit unterschiedlicher DPI
-   - Remote-Desktop
-   - echter Screenreader (Narrator)
-   - **Phase 4 im Designer:** Seiten per Klick umschalten, „New Page“/„Delete Page“, Controls auf Seiten ablegen, DFM speichern und laden; ComboBox-Popup auf einem zweiten Monitor (andere DPI); Narrator auf Combo-Einträgen und Reitern.
-2. **Designer-Komfort:** Palettensymbole (`.dcr`) und ein Appearance-Editor mit Vorschau.
-3. **Phase 3 nacharbeiten (optional):** TrackBar-Auswahlbereich (`SelStart`/`SelEnd`), manuelle Ticks (`SetTick`), Panel-`AutoSize`; Phase-3-Controls im Formulardesigner ausprobieren.
-4. **Phase 4 ist fertig (4a–4c).** Bilder, Filtern und ListBox kamen in Phase 6. Noch offen: mehrzeilige Reiter sowie Reiter links/rechts, Reiter per Ziehen umsortieren, `TPPGFloatSpinEdit`, Datums-/Dateifelder (DatePicker auf Basis von `TPPGPopupWindow`).
-5. **Weitere Presets**, z. B. Windows 11 und Office.
-6. **Leistungsmessung** bei sehr vielen Controls.
-7. **Kompatibilität:** Compile-Lauf unter XE2 und 10.x auf einem Rechner mit diesen Versionen. `build.ps1` erkennt die Versionen automatisch; `Packages\XE2` bekommt die `.dproj` beim ersten Öffnen.
-8. **Optional:** HotImageName/DisabledImageName und ein nativer UIA-Provider (ab 10.x).
+1. **Phase 9 bauen und prüfen** (zum ersten Mal mit Compiler):
+   - `git pull` des Zweigs, dann `check-rules.ps1`, dann `build.ps1 -Only Delphi13` (alle sechs Projekte). Compilerfehler beheben; mit Regressionstest, wo es um Verhalten geht.
+   - `Tests\PPGlowTests.exe` – die neuen Suiten `Phase9a`–`Phase9d`, danach `/leaks`.
+   - `Tests\Visual\Gallery\RTL.png` und `DPI.png` ansehen (die RTL-Galerie listet nicht gespiegelte Controls als Status).
+   - Demo: `/selftest`, Seite „Datenbank“, Suchfeld, Sprachumschaltung.
+   - IDE schließen (User fragen), Release Win32/Win64, `install.ps1` → vier Pakete, Palettensymbole, Komponenten-Editoren (Darstellung, Galerie, Items, Spalten) im Formulardesigner.
+   - Narrator auf Grid, TreeView und ListBox (Zelle/Spalte, Ebene, aufgeklappt, Haken).
+   - Risikostellen: GUIDs/Vtable-Reihenfolge in `PPG.UIA.Intf` (prüft `Phase9b` per `IUIAutomation`), `ShowCollectionEditor`-Signatur, `{$R PPGlow.dcr}`/`{$R PPGlowDB.dcr}` in den Design-Units, Scrollverhalten des DB-Grids, typisierte Konstanten mit `@resourcestring`.
+2. **Praxistest mit dem User:**
+   - im Formulardesigner arbeiten (Ziehen, Properties, DFM speichern und laden), auch die Controls aus Phase 6 und 7
+   - Monitorwechsel mit unterschiedlicher DPI, Remote-Desktop
+   - `migrate.ps1` an einem echten Projekt (Kopie!)
+3. **Kompatibilität:** XE2- und 10.x-Lauf nach `Docs\Kompatibilitaet.md`.
+4. **Offen aus Phase 9:** Benchmark DB-Grid mit 100 000 Datensätzen; DB-Controls in den Streaming-Test aufnehmen; weitere Sprachen (eine Datei `Lang\PPGlow.xx.txt` + `make-lang.ps1`).
+5. **Offen aus früheren Phasen (optional):** TrackBar-Auswahlbereich und manuelle Ticks, Panel-`AutoSize`, mehrzeilige/seitliche Reiter, Reiter umsortieren, `TPPGFloatSpinEdit`, HotImageName/DisabledImageName, weitere Presets.
 
 ## Vom User bestätigte Entscheidungen
 - Mindestversion XE2. Beide Presets. Eigenes Präfix `PPG`.
@@ -136,6 +150,16 @@ Rangfolge der Farben: Hochkontrast > VCL-Style > Dark Mode > Appearance.
   - PageControl: Sind alle Reiter ausgeblendet, bleibt die aktive Seite aktiv und die Reiterleiste verschwindet (wie `TPageControl`, nötig für die NavigationView).
   - Breadcrumb und ToolBar zeigen den Überlauf als natives Kontextmenü (Screenreader-tauglich) statt eines eigenen Popups.
   - Toasts sind PPGlow-eigene Fenster (keine Windows-Benachrichtigungen); Neuester an der Ecke, höchstens 3 sichtbar, bei Vollbild/Präsentation warten sie.
+- Phase 9 (vom User am 04.10.2026 entschieden): am Stück; DB-Controls in eigenen Paketen; UIA nur Grid/TreeView/ListBox; Übersetzung per Laufzeit-Tabelle; Palettensymbole automatisch; Migrationsskript dazu; „die bessere Architektur“ durfte ich wählen.
+- Phase 9 (eigene Entscheidungen, vom User noch zu bestätigen):
+  - Keine LiveBindings.
+  - Symbole aus Vektorformen (ohne Schrift, ohne `brcc32`).
+  - Preset-Galerie ohne Undo-Gruppe.
+  - DB-Grid-Ereignisse ohne `Sender` (passend zu `TDBGrid`). Sortieren übernimmt die Anwendung in `OnTitleClick`.
+  - Ungültige DB-Werte als Fehlerzustand am Feld statt Dialog.
+  - UIA ist global über `PPGUiaEnabled` abschaltbar; bei fehlender `UIAutomationCore.dll` bleibt MSAA.
+  - `PPGSetLanguage('en')` gilt als Original.
+  - Wochentage und Monate kommen weiter aus `FormatSettings`.
 - Phase 8.3–8.6 (eigene Entscheidungen, vom User noch zu bestätigen):
   - Dark Mode ist anwendungsweit; Standard bleibt Hell. Selbst gesetzte Farben gelten im Dunkeln nicht (wie beim VCL-Style); abschaltbar pro Control über `seClient`.
   - `StyleForms` färbt Formulare mit den neutralen Windows-11-Farben (auch im hellen Modus #F3F3F3 statt `clBtnFace`) und stellt beim Ausschalten die Originalfarben wieder her.

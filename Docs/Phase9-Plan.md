@@ -1,6 +1,6 @@
 # Phase 9 – Detailplan: Profi-Qualität und Vertrieb
 
-*Stand 04.10.2026. Teil der Roadmap (`Docs\Roadmap.md`). **Entwurf, noch nicht vom User freigegeben.** Geschrieben in einer Cloud-Sitzung ohne Delphi: Es wurde nichts kompiliert, alle Angaben zum Code stammen aus dem Lesen der Quelltexte.*
+*Stand 04.10.2026. Teil der Roadmap (`Docs\Roadmap.md`). **Vom User freigegeben** (Antworten siehe unten) und in derselben Cloud-Sitzung umgesetzt (Abschnitt „Umsetzung“). **Hier gab es kein Delphi:** Es wurde nichts kompiliert und kein Test ausgeführt. Geprüft wurde mit einem Pascal-Parser (Syntax), dem Regel-Prüfer, den Selbsttests der Skripte und durch Lesen. Der erste echte Build steht noch aus.*
 
 Phase 9 bringt keine neuen Grund-Controls mehr. Sie macht die Suite **im Alltag eines Delphi-Entwicklers** benutzbar: Komfort im Formulardesigner, Datenbank-Anbindung, volle Barrierefreiheit für Grid und Baum, Übersetzung, geprüfte Kompatibilität und eine Doku, mit der man ohne Quelltext auskommt. Alles baut auf dem Bestehenden auf (35 Paletten-Controls, Renderer-Interfaces, `TPPGAccessible`, `IPPGItemSource`, Streaming-Test, Sichttests).
 
@@ -119,10 +119,36 @@ LiveBindings: **Vorschlag weglassen.** Die DB-Controls decken den Bedarf; LiveBi
 - 9e: Regel-Prüfer gegen absichtlich fehlerhafte Beispieldateien.
 - Wie immer: DFM-Roundtrip (Streaming-Test auf die neuen Controls erweitern), Sichttests, Leaks.
 
-## Fragen an den User
-1. **Umfang und Reihenfolge:** alle sechs Teile in der vorgeschlagenen Reihenfolge 9a → 9b → 9c → 9d → 9e → 9f? Am Stück oder mit Bericht nach jedem Teil?
-2. **Datenbindung:** eigene Packages `PPGlowDBR`/`dclPPGlowDB` (Empfehlung) oder alles im bestehenden Package? Reicht die Liste der sieben DB-Controls? LiveBindings weglassen?
-3. **UI Automation:** nur Grid, TreeView und ListBox (Empfehlung) oder gleich alle Controls umstellen?
-4. **Übersetzung:** Laufzeit-Tabelle (Empfehlung) oder Ressourcen-DLL?
-5. **Palettensymbole:** automatisch aus den Fluent-Glyphen erzeugen (Empfehlung) oder eigene Grafiken?
-6. **Migration:** reicht der Leitfaden, oder soll das Ersetzungs-Skript `migrate.ps1` mit dazu?
+## Fragen an den User und Antworten (04.10.2026)
+1. **Umfang und Reihenfolge:** alle sechs Teile am Stück, Bericht am Ende.
+2. **Datenbindung:** eigene Packages `PPGlowDBR`/`dclPPGlowDB`. Ob LiveBindings wegfallen, durfte ich entscheiden: Sie fallen weg (siehe Abweichungen).
+3. **UI Automation:** nur Grid, TreeView und ListBox (Empfehlung).
+4. **Übersetzung:** Laufzeit-Tabelle.
+5. **Palettensymbole:** automatisch erzeugen.
+6. **Migration:** Leitfaden **und** Skript `migrate.ps1`.
+
+Außerdem: „Entscheide dich für die bessere Architektur.“
+
+## Umsetzung (04.10.2026)
+
+| Teil | Ergebnis |
+|---|---|
+| **9a** | `Build\make-icons.ps1` erzeugt `Source\Design\PPGlow.dcr` (36 Klassen) und `Source\DesignDB\PPGlowDB.dcr` (7 Klassen), jeweils 16/24/32 px. Vorschau: `Docs\palette-icons.png`. Die Logik der Editoren steht in `Source\Editors\PPG.Editors.Logic.pas` und ist ohne IDE testbar: `TPPGPresetTargets`, `TPPGNavItemOps`, `TPPGTreeNodeOps`, `TPPGAppearanceSession`. Die Dialoge stehen in `PPG.Editors.Forms.pas`: Appearance mit Live-Vorschau hell/dunkel, Preset-Galerie, Editoren für Navigations- und Baumeinträge. In `PPG.Reg` gibt es eine gemeinsame Basis `TPPGComponentEditor` mit den Verben Zurücksetzen, Darstellung und Galerie. Dazu kommen Collection-Editoren für `ItemsEx`, `Columns`, `Panels` und `Items`, „Mit PageControl verbinden…“, „Test-Toast zeigen“ und `TPPGSelectionEditor`. `dclPPGlow` braucht dafür `vclsmp`. Tests: `PPG.Tests.Phase9a` (16) |
+| **9b** | `PPG.UIA.Intf` enthält eigene UIA-Deklarationen und lädt `UIAutomationCore.dll` dynamisch. `PPG.UIA` bringt `TPPGUiaRoot`/`TPPGUiaElement` mit allen Mustern sowie `IPPGUiaSource` mit Element-Kennungen (Art, A, B). Aktionen von außen laufen über eine Warteschlange per `PostMessage`. Der globale Schalter `PPGUiaEnabled` schaltet alles ab. `TPPGCustomControl` beantwortet `UiaRootObjectId` nur für Controls mit `IPPGUiaSource`. `NotifyAccessibilityChild` löst auch die UIA-Ereignisse aus. ListBox/CheckListBox (Toggle), TreeView (stabile Knoten-IDs über ein Dictionary) und Grid (Zeile, Zelle, Kopfzeile, Kopfzelle) liefern die Daten. Tests: `PPG.Tests.Phase9b` (21) mit Client-Test über `IUIAutomation` |
+| **9c** | `Source\DB\PPG.DB.Controls.pas` mit `TPPGDBEdit`, `TPPGDBMemo`, `TPPGDBCheckBox`, `TPPGDBComboBox` und `TPPGDBDatePicker`; dazu `PPG.DB.Lookup.pas` (`TPPGDBLookupComboBox`) und `PPG.DB.Grid.pas` (`TPPGDBGrid` mit `TDBGridOptions`). Design: `Source\DesignDB\PPG.DB.Reg.pas` mit Palette „PPGlow DB“, Feld-Editoren und Spalten-Editor. Pakete `PPGlowDBR`/`dclPPGlowDB` für Delphi 13 und XE2; `build.ps1` und `install.ps1` kennen sie (`-NoDB`). Neue Hooks im Grid für abgeleitete Grids: `CreateColumns`, `ColumnOf`, `ColumnsChanged`, `RowScrollY`, `ScrollCellsTo`, `GetEditText`. Der DatePicker hat jetzt den Hook `UserChange`. Tests: `PPG.Tests.Phase9c` (22) mit `TClientDataSet` |
+| **9d** | `PPG.Lang` stellt `PPGStr`, `PPGSetLanguage`, `PPGSystemLanguage` und `PPGOnLanguageChange` bereit. `Lang\PPGlow.de.txt` → `Build\make-lang.ps1` → `PPG.Lang.De` (39 Texte). Alle Textstellen der Runtime lesen über `PPGStr(@…)`. Die Sichttests haben eine RTL-Galerie (`RTL.png`) und eine DPI-Galerie (`DPI.png`, 96/144/192 PPI). Tests: `PPG.Tests.Phase9d` (6) |
+| **9e** | `Build\check-rules.ps1` prüft die Regeln ASCII, CRLF, INCLUDE, IFEND, INLINEVAR, SYNTAX, COMMENT, RAISE, EXCEPT, PROJECT und LANG. `-SelfTest` prüft gegen `Build\check-rules-tests`. `build.ps1` ruft ihn vorher auf (`-NoRuleCheck` schaltet das ab). `.gitattributes` sorgt für CRLF. `PPGlowTests.exe /leaks` macht zwei Durchläufe und meldet Leaks als Exit-Code (Toleranz 256 KB). Prüfplan für XE2/10.x: `Docs\Kompatibilitaet.md` |
+| **9f** | `Build\make-docs.ps1` erzeugt `Docs\Controls\*.md` (43 Seiten) und `Docs\Controls\html` aus den Quelltexten; eigene Hinweise kommen aus `Docs\Controls\notes`. Der Leitfaden `Docs\Migration.md` beschreibt `Build\migrate.ps1` (Klassen, Units, Umbenennungen, Entfernen unbekannter Properties, Event-Signaturen, Sicherung, Bericht, `-SelfTest`). Die Demo ist jetzt ein Katalog: Suchfeld über allen Seiten (43 Einträge, Name oder Stichwort), neue Seite „Datenbank“ (`/page 12`) und Sprachumschaltung auf „Darstellung“ |
+
+**Abweichungen vom Plan:**
+- **LiveBindings fallen ganz weg**, auch später. Die DB-Controls decken den Bedarf ab. Ein zweiter Bindungsweg würde jedes Control um Observer-Code erweitern, und den müsste man in allen Versionen testen.
+- **Palettensymbole aus Vektorformen statt aus der Symbolschrift.** Das Skript zeichnet eigene Formen auf einem 32er-Raster und schreibt die `.dcr` selbst. So braucht es weder `brcc32` noch die Schrift, und das Ergebnis ist auf jedem Rechner gleich.
+- **Preset-Galerie ohne gemeinsamen Undo-Schritt.** Die Open-Tools-API bietet dafür nichts Verlässliches. Die Galerie meldet die Zahl der umgestellten Controls und ruft `Designer.Modified`.
+- **RTL-Galerie meldet statt zu scheitern.** Controls, die sich bei `bdRightToLeft` nicht spiegeln, erscheinen als Status. Fehler zählen nur leere oder falsch gezeichnete Zellen. Ob ein Control spiegeln muss, entscheidet der Blick auf `RTL.png`.
+- **DB-Grid:** Das Sortieren übernimmt die Anwendung in `OnTitleClick`. Die Ereignisse `OnTitleClick`/`OnCellClick` haben die Signatur `(Column)` ohne `Sender`, damit migrierte `TDBGrid`-Handler passen. Spalten-Eigenschaften von `TDBGrid` wie `Color`, `Title.Font`, `Expanded` und `Visible` gibt es nicht; `migrate.ps1` entfernt sie und listet sie im Bericht auf.
+- **Grid-Puffer** ist mit 1 000 Datensätzen getestet. Ein Benchmark mit 100 000 Datensätzen fehlt noch.
+- **Streaming-Test:** Die DB-Controls haben einen eigenen DFM-Roundtrip in `Phase9c` (`StreamingKeepsColumnsAndOptions`) und laufen nicht durch `PPG.Tests.Streaming`.
+- **Demo:** keine eigene Seite pro Control. Das Suchfeld führt zur Seite, auf der das Control im Einsatz ist; die Hilfe pro Control steht in `Docs\Controls`.
+- Kein eigenes `PPG.Tests.Phase9e`. Der Regel-Prüfer testet sich selbst (`check-rules.ps1 -SelfTest`), ebenso `migrate.ps1 -SelfTest` und `make-lang.ps1 -Check`.
+
+**Offen, nur mit Delphi prüfbar:** Build aller Projekte (Win32/Win64), die vier neuen Test-Suiten, `/leaks`, die Galerien `RTL.png`/`DPI.png`, Installation der vier Pakete, Paletten-Symbole in der IDE, Narrator auf Grid/Baum/Liste und der XE2-Lauf nach `Docs\Kompatibilitaet.md`.

@@ -22,10 +22,15 @@ VCL-Komponentensuite im Glow-Stil (vergleichbar mit TMS GlowButtons). Alle Contr
 | `Source\Render` | Canvas-Abstraktion, GDI+-/GDI-Implementierung, Renderer-Registry, Presets |
 | `Source\Theme` | StyleManager, Preset-Composition-Root |
 | `Source\Controls` | Basisklasse und Controls |
+| `Source\Access` | Barrierefreiheit: MSAA (`PPG.Accessibility`), UI Automation (`PPG.UIA.Intf`, `PPG.UIA`) |
+| `Source\DB` | DB-Controls (`PPG.DB.*`, eigenes Paket `PPGlowDBR`) |
 | `Source\Design` | Registrierung und Property-Editoren (**nur** im Design-Package) |
-| `Packages\<Version>` | `PPGlowR` (runtime) und `dclPPGlow` (designtime) je Delphi-Version |
+| `Source\Editors` | Logik und Dialoge der Komponenten-Editoren (im Design-Package, aber ohne `DesignIntf` und damit testbar) |
+| `Source\DesignDB` | Registrierung der DB-Controls (`dclPPGlowDB`) |
+| `Lang` | Übersetzungen (`PPGlow.de.txt`), daraus erzeugt `Build\make-lang.ps1` die Unit `PPG.Lang.De` |
+| `Packages\<Version>` | `PPGlowR`/`PPGlowDBR` (runtime) und `dclPPGlow`/`dclPPGlowDB` (designtime) je Delphi-Version |
 | `Tests` | DUnit-Suite (Konsole, Exit-Code = Anzahl Fehler) |
-| `Demo` | Showcase auf einem `TPPGPageControl` (sieben Seiten, `/page 0..6`: Buttons, Bereiche, Eingabe, Reiter, Listen, Baum, Grid). `/screenshot datei.png [/page n] [/dropdownimages] [/preset Name] [/theme dark|light|system] [/hover] [/focus] [/fieldfocus] [/dropdown] [/gdi] [/style Name]`, außerdem `/mica [/screencapture datei.png]` (Prototyp) für automatische Sichtprüfung |
+| `Demo` | Showcase mit NavigationView, Suchfeld (Katalog: Control oder Stichwort → Seite) und 13 Seiten (`/page 0..12`, 12 = Datenbank); `/selftest datei.txt` prüft die Szenarien aller Seiten. `/screenshot datei.png [/page n] [/dropdownimages] [/preset Name] [/theme dark|light|system] [/hover] [/focus] [/fieldfocus] [/dropdown] [/gdi] [/style Name]`, außerdem `/mica [/screencapture datei.png]` (Prototyp) für automatische Sichtprüfung |
 | `Build\build.ps1` | Baut alles für alle installierten Delphi-Versionen |
 
 ## SOLID
@@ -462,6 +467,40 @@ Demo-Schalter `/mica [/screencapture datei.png]`: VCL-`GlassFrame` über die gan
 - **Dunkel: nur zufällig brauchbar.** Mica scheint durch, aber auch durch alle Flächen: Die Farben werden verfälscht (Seiten violett getönt), und schwarze Pixel sind ganz durchsichtig.
 - **Folgerung:** Kommt nicht in die Suite. Tragfähig wäre es nur, wenn jedes Control deckend mit Alpha 255 zeichnet (32-Bit-Puffer mit gesetztem Alpha bzw. `BeginBufferedPaint` + `BufferedPaintSetAlpha`) und Text über `DrawThemeTextEx` läuft. Native Kind-Controls (inneres Edit, Standard-VCL) blieben trotzdem fehlerhaft. Mögliche Alternative: Mica nur in Bereichen ohne Inhalt (Titel-/Leistenbereich), z. B. ein eigener „Backdrop“-Container. Das wäre ein Kandidat für Phase 9.
 
+## Phase 9: Designer, UI Automation, Datenbank, Übersetzung
+
+*Geschrieben ohne Delphi (Cloud-Sitzung), noch nicht kompiliert. Plan und Abweichungen: `Docs\Phase9-Plan.md`.*
+
+**Designer (9a).** Die Editoren haben drei Schichten:
+- `PPG.Editors.Logic`: reine Logik, testbar ohne IDE (Preset auf ein Formular anwenden, Appearance auf einer Kopie bearbeiten, Baum-Operationen auf `TPPGNavItems`/`TPPGTreeNodes`).
+- `PPG.Editors.Forms`: dünne Dialoge darüber. Sie sind mit `CreateNew` gebaut, brauchen also keine DFM. Ihre Vorschau-Controls haben `StyleElements := []` und keinen StyleManager, damit sie das Formular nicht umfärben.
+- `PPG.Reg`: nur noch die Anbindung an `DesignIntf` (Verben, `Designer.Modified`, `ShowCollectionEditor`).
+
+Jedes Verb fängt Exceptions und zeigt sie an. Die Palettensymbole erzeugt `Build\make-icons.ps1` aus Vektorformen.
+
+**UI Automation (9b).** Nur Grid, TreeView, ListBox und CheckListBox haben einen nativen Provider; alle anderen Controls bleiben bei MSAA.
+- `PPG.UIA.Intf` deklariert die Interfaces selbst und lädt `UIAutomationCore.dll` dynamisch. Fehlt eine Funktion, bleibt es bei MSAA.
+- Ein Control nimmt teil, indem es `IPPGUiaSource` implementiert. Elemente sind nur Kennungen `(Kind, A, B)`, etwa Zeile/Spalte oder eine Knoten-ID, und halten keine Zeiger. Ist das Ziel weg, liefern sie `UIA_E_ELEMENTNOTAVAILABLE`.
+- Die Wurzel meldet `ServerSideProvider or UseComThreading`. Damit kommen die Aufrufe im Haupt-Thread an.
+- Aktionen von außen (`Invoke`, `Select`, `Expand`, `Toggle`, `SetValue`, `ScrollIntoView`) kommen in eine Warteschlange und laufen erst nach einem `PostMessage`. So läuft Anwender-Code nie im COM-Aufruf.
+- `TPPGCustomControl` beantwortet `WM_GETOBJECT` mit `UiaRootObjectId` nur, wenn das Control `IPPGUiaSource` hat. Es trennt den Provider in `ReleaseAccessible` und löst in `NotifyAccessibilityChild` auch die UIA-Ereignisse aus, aber nur, wenn ein Client zuhört.
+- `PPGUiaEnabled := False` schaltet alles ab.
+
+**Datenbank (9c).** Die DB-Controls erben von den vorhandenen Controls und bringen nur die Anbindung mit; Zeichnen und Verhalten bleiben gleich.
+- `TPPGFieldDataLink` sperrt das Überschreiben, solange der Anwender tippt (`EditByUser`/`Locked`).
+- `PPGDBCommitField` schreibt den Wert zurück. Ein ungültiger Wert setzt `ValidationState` am Feld, statt einen Dialog zu zeigen, und der Fokus bleibt im Feld.
+- Das DB-Grid (`TPPGCustomDBGrid` auf `TPPGCustomGrid`) zeigt nur den Puffer des `TDataLink` (sichtbare Zeilen). Die Texte werden außerhalb von `Paint` zwischengespeichert; `Paint` fasst die Datenmenge nie an.
+- Die Scrollleiste folgt `RecNo`/`RecordCount`, wenn die Datenmenge `IsSequenced` ist, sonst dreistufig (Anfang, Mitte, Ende).
+- Das Grid stellt dafür die Hooks `CreateColumns`, `ColumnOf`, `ColumnsChanged`, `RowScrollY`, `ScrollCellsTo` und `GetEditText` bereit.
+
+**Übersetzung (9d).** Alle Texte bleiben `resourcestring` in `PPG.Consts`, gelesen wird aber immer über `PPGStr(@SPPGxxx)`.
+- `PPGSetLanguage('de')` schaltet eine Tabelle `PResStringRec → string` aktiv, und alle Fenster zeichnen sich neu.
+- Sprach-Units wie `PPG.Lang.De` tragen ihre Tabelle in der `initialization` ein. Sie werden aus `Lang\PPGlow.<sprache>.txt` erzeugt (`make-lang.ps1`).
+- Der Regel-Prüfer (Regel LANG) und der Test `PlaceholdersMatchOriginal` sorgen dafür, dass jede Übersetzung vollständig ist und die Platzhalter stimmen.
+- So geht es in jeder Edition, ohne Ressourcen-DLL, und ist zur Laufzeit umschaltbar.
+
+**Prüfung ohne Compiler (9e).** `Build\check-rules.ps1` prüft die Coding-Rules und die Projektlisten. `build.ps1` ruft ihn vor jedem Build auf.
+
 ## VCL-Styles
 
 Ist ein VCL-Style aktiv, verwendet ein Control beim Zeichnen `EffectiveAppearance`: Die Formen (Rundung, Rahmen, Glow-Größe und -Intensität) kommen aus dem Preset, die Farben aus dem Style. Das Classic-Preset bleibt dabei glänzend. Die gespeicherte `Appearance` wird nie verändert, Style-Farben landen also nicht in der DFM. Ab XE3 lässt sich das pro Control abschalten, indem `seClient` aus `StyleElements` entfernt wird.
@@ -509,7 +548,10 @@ powershell -ExecutionPolicy Bypass -File Build\build.ps1              # alles, a
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Tests
 Tests\PPGlowTests.exe            # Konsole, Exit-Code 0 = grün
 Tests\PPGlowTests.exe /gui       # DUnit-GUI inkl. Leak-Report beim Beenden
+Tests\PPGlowTests.exe /leaks     # zwei Läufe, Exit-Code <> 0 bei Speicherlecks
 ```
+
+Die DB-Pakete heißen in `build.ps1` `DBRuntime` und `DBDesign`; beide sind im Standard enthalten.
 
 Die Community/Starter Edition hat keinen Kommandozeilen-Compiler. Das Skript nutzt dann automatisch den IDE-Batchbuild `bds -b` und wertet die `.err`-Datei aus. Ab Professional läuft der Build über `msbuild`.
 
