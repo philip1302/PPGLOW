@@ -209,3 +209,4 @@ foreach ($ver in $Versions.Keys) {
 Write-Host ""
 Write-Host "Projekte: $total, fehlgeschlagen: $failedCount"
 if ($failedCount -gt 0) { exit 1 }
+exit 0

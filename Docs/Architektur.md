@@ -563,4 +563,14 @@ powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Projects Runtime,Desig
 powershell -ExecutionPolicy Bypass -File Build\install.ps1          # -Uninstall zum Entfernen
 ```
 
-`install.ps1` sichert zuerst die betroffenen Registry-Schlüssel nach `Build\registry-backup\`. Danach kopiert das Skript die BPL- und DCP-Dateien nach `BDSCOMMONDIR\Bpl` bzw. `Bpl\Win64` (beide liegen im `PATH`). Es registriert `dclPPGlow370.bpl` unter *Known Packages* und *Known Packages x64* und trägt `Lib\37.0\<Plattform>\Release` in den Bibliothekspfad ein. Das Skript ist idempotent, du kannst es nach jedem Update einfach erneut ausführen. Die Komponenten erscheinen auf der Palettenseite **PPGlow**.
+`install.ps1` erledigt alles in einem Aufruf:
+1. Es baut `PPGlowR`, `dclPPGlow`, `PPGlowDBR` und `dclPPGlowDB` als Release für Win32 und Win64 über `build.ps1` (`-NoBuild` lässt das aus). Win64 ist optional.
+2. Es bricht ab, wenn eine BPL älter als die Quelltexte ist. So wird nie ein alter Stand installiert, den die IDE nicht laden kann.
+3. Es sichert die Registry nach `Build\registry-backup\`.
+4. Es räumt alte PPGlow-Einträge auf (andere Pfade, „Disabled Packages“ nach einem Ladefehler) und meldet sie.
+5. Es kopiert BPL/DCP nach `BDSCOMMONDIR\Bpl` bzw. `Bpl\Win64` (beide im `PATH`).
+6. Es registriert die Design-Pakete unter *Known Packages*; unter *Known Packages x64* nur, wenn die 64-Bit-IDE installiert ist.
+7. Es trägt `Lib\37.0\<Plattform>\Release` in den Bibliothekspfad ein.
+8. Zum Schluss lädt es jede BPL testweise in einem Prozess der passenden Bitness und meldet Fehler mit Grund (Code 126: Paket fehlt, 127: alter Stand).
+
+Das Skript ist idempotent. Die Komponenten erscheinen auf den Palettenseiten **PPGlow** und **PPGlow DB**, aber nur, solange ein VCL-Formular im Designer offen ist.

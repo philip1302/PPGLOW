@@ -61,7 +61,7 @@ powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path <Projekt> -Recu
 # Release + Installation (IDE geschlossen!):
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design -Platform Win32 -Config Release
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design -Platform Win64 -Config Release
-powershell -ExecutionPolicy Bypass -File Build\install.ps1     # -Uninstall zum Entfernen, -NoDB ohne DB-Pakete
+powershell -ExecutionPolicy Bypass -File Build\install.ps1     # baut selbst (Release Win32/Win64), prüft Alter, Registry und Ladetest; -NoBuild, -NoDB, -Uninstall
 # Sichtprüfung (danach PNG ansehen):
 Demo\PPGlowDemo.exe /screenshot C:\pfad\x.png [/hover] [/focus] [/gdi] [/style Windows10Dark]
 ```
