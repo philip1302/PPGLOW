@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSplitter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGSplitter</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Splitter</code> - Basis <code>TPPGCustomSplitter</code></p>
+<p><strong>Vorbild:</strong> TSplitter</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Fenster-Control (TabStop standardm&#228;&#223;ig aus) mit <code>ResizeStyle = rsUpdate</code> als Vorgabe; in Ruhe unsichtbar, Linie und Griff erst bei Hover/Ziehen/Fokus.</li>
+<li>Pfeiltasten verschieben, wenn der Splitter den Fokus hat.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGSplitter - Ziehgriff zwischen ausgerichteten Controls (Phase 7a).</p>
+<p>Verhalten wie TSplitter (DFM-kompatibel: Align, MinSize, AutoSnap, ResizeStyle, OnCanResize, OnMoved): veraendert die Groesse des Controls, das auf derselben Seite direkt angrenzt. Zusaetzlich:</p>
+<ul>
+<li>Optik im Preset-Stil: Linie und Griffpunkte erscheinen beim Hover, beim Ziehen in der Fokusfarbe; Dark Mode/Hochkontrast ueber die Tokens.</li>
+<li>Fenster-Control: mit TabStop per Tastatur erreichbar; Pfeile verschieben (Strg = 1 px, sonst 10 logische px), Pos1/Ende = Minimum/Maximum.</li>
+<li>ResizeStyle rsUpdate (Standard) zieht live; rsLine/rsPattern zeigen eine invertierte Linie auf dem Parent, rsNone aendert erst beim Loslassen.</li>
+<li>Esc bricht das Ziehen ab (alte Groesse).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>MinSize</code>, <code>AutoSnap</code>, <code>Beveled</code>, <code>ResizeStyle</code>, <code>Align</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>ParentColor</code>, <code>ParentShowHint</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Width</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnCanResize</code>, <code>OnMoved</code>, <code>OnPaint</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSplitter.md</code>.</p>
+</body></html>

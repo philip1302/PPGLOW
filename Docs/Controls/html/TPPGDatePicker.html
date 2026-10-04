@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDatePicker</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDatePicker</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.DatePicker</code> - Basis <code>TPPGCustomDatePicker</code></p>
+<p><strong>Vorbild:</strong> TDateTimePicker (Kind = dtkDate)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Eingabe nur Ziffern und Datumstrenner (Kurzformat); Pr&#252;fung beim Verlassen/Enter, Fehler als <code>ValidationState</code>.</li>
+<li><code>Kind</code>, <code>DateMode</code>, <code>ParseInput</code> werden nur gelesen/gespeichert. Leeres Datum nur mit <code>ShowCheckbox</code>.</li>
+<li>F&#252;r <code>Kind = dtkTime</code> gibt es <code>TPPGTimePicker</code>.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGDatePicker - Datumsfeld mit Kalender-Popup (Phase 7b).</p>
+<ul>
+<li>Basis TPPGCustomField: natives Edit fuer die Eingabe, Kalender-Button rechts, optional ein Kontrollkaestchen links (ShowCheckbox/Checked wie TDateTimePicker: ohne Haken gilt &quot;kein Datum&quot;).</li>
+<li>Eingabe: Ziffern und Datumstrenner; Oben/Unten aendern den Tag (Strg: Monat). Beim Verlassen bzw. Enter wird geprueft: gueltig = uebernehmen (OnChange), ungueltig = ValidationState pvsError, der Text bleibt zum Korrigieren stehen. Grenzen MinDate/MaxDate.</li>
+<li>Popup: TPPGCalendar in einem Popup ohne Aktivierung. Das Feld behaelt den Fokus und leitet Pfeile, Bild, Pos1/Ende und Enter an den Kalender weiter. Klick ausserhalb (Maus-Hook des Threads, solange offen), Esc und Fokusverlust schliessen; Klick auf einen Tag uebernimmt.</li>
+<li>DFM-nah zu TDateTimePicker (Kind = dtkDate): Date, Time, MinDate, MaxDate, ShowCheckbox, Checked, DateFormat, Format, CalAlignment; Kind, DateMode und ParseInput werden gelesen und gespeichert, aendern aber nichts (fuer Zeiten gibt es TPPGTimePicker).</li>
+<li>Code (Date := ...) loest kein OnChange aus.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>TextHint</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CalAlignment</code>, <code>Checked</code>, <code>Color</code>, <code>Constraints</code>, <code>Date</code>, <code>DateFormat</code>, <code>DateMode</code>, <code>Enabled</code>, <code>Font</code>, <code>Format</code>, <code>Kind</code>, <code>MaxDate</code>, <code>MinDate</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>ParseInput</code>, <code>PopupMenu</code>, <code>ShowCheckbox</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Time</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnClick</code>, <code>OnCloseUp</code>, <code>OnContextPopup</code>, <code>OnDropDown</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDatePicker.md</code>.</p>
+</body></html>

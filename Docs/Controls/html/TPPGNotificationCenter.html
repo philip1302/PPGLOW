@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGNotificationCenter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGNotificationCenter</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Notifications</code> - Basis <code>TComponent</code></p>
+<p><strong>Vorbild:</strong> WinUI/Windows-Toasts</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>PPGlow-eigene Fenster (keine Windows-Benachrichtigungen); neuester Toast an der Ecke, h&#246;chstens 3 sichtbar.</li>
+<li>Bei Vollbild/Pr&#228;sentation warten Toasts (<code>RespectQuietHours</code>).</li>
+<li>Im Designer zeigt das Verb „Show test toast“ einen Toast mit den aktuellen Einstellungen.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGNotificationCenter1.Show(&#39;Gespeichert&#39;, &#39;Die Datei wurde gespeichert.&#39;, psSuccess);
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGNotificationCenter - Benachrichtigungen (&quot;Toasts&quot;) der Anwendung (Phase 7d).</p>
+<ul>
+<li>Komponente aufs Formular; Show(Titel, Text, Art, Dauer, Aktionen) zeigt einen Toast: eigenes Fenster ohne Aktivierung (WS_EX_NOACTIVATE, der Fokus bleibt in der Anwendung), gestapelt in einer Ecke des Monitors des Formulars (Position), hoechstens MaxVisible zugleich, weitere warten.</li>
+<li>Ein-/Ausblenden (Deckkraft und Gleiten) und das Nachruecken des Stapels sind animiert; Auto-Ausblenden nach Duration ms, solange die Maus ueber dem Toast steht, ist die Zeit angehalten.</li>
+<li>Schliessen-Knopf, bis zu drei Aktions-Buttons (OnAction), Klick auf den Toast (OnToastClick); OnClose mit Grund.</li>
+<li>Laeuft eine Vollbild-Anwendung bzw. Praesentation (SHQueryUserNotificationState), warten neue Toasts, bis das vorbei ist.</li>
+<li>Kein eigener Timer: alles laeuft ueber den gemeinsamen Animator.</li>
+<li>Screenreader: Rolle Alarm, Meldung EVENT_SYSTEM_ALERT beim Zeigen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Position</code>, <code>Duration</code>, <code>MaxVisible</code>, <code>ToastWidth</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Animations</code>, <code>RespectQuietHours</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnAction</code>, <code>OnClose</code>, <code>OnShow</code>, <code>OnToastClick</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGNotificationCenter.md</code>.</p>
+</body></html>

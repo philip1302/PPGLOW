@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSearchEdit</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGSearchEdit</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.SearchEdit</code> - Basis <code>TPPGCustomSearchEdit</code></p>
+<p><strong>Vorbild:</strong> TSearchBox (Vcl.WinXCtrls), WinUI AutoSuggestBox</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Baut auf der ComboBox auf: Vorschl&#228;ge in <code>ItemsEx</code>, Verz&#246;gerung <code>SearchDelay</code> &#252;ber den Animator, <code>OnSearch</code>.</li>
+<li><code>OnInvokeSearch</code> von <code>TSearchBox</code> hei&#223;t hier <code>OnSearch</code> (Migrationsskript benennt um).</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGSearchEdit - Suchfeld mit Vorschlagsliste (Phase 7a, wie WinUI AutoSuggestBox).</p>
+<p>Basis ist die ComboBox (csDropDown): natives Edit, eigene Aufklappliste, Filter beim Tippen und Tastatur kommen von dort. Dazu:</p>
+<ul>
+<li>Lupen-Button rechts (Klick = Suche absenden), Loeschen-Knopf, kein Aufklapp-Pfeil.</li>
+<li>SearchDelay: Nach dem Tippen wartet das Feld SearchDelay ms (ueber den gemeinsamen Animator, kein Timer) und loest dann OnSearch aus. Dort kann die Anwendung Items (die Vorschlaege) neu fuellen; danach zeigt das Feld die Liste automatisch (gefiltert nach FilterMode).</li>
+<li>Enter, Klick auf die Lupe oder Wahl eines Vorschlags loesen OnSubmit aus (sofort, eine wartende Suche entfaellt). Esc schliesst die Liste bzw. leert den Text.</li>
+<li>Text im Code setzen loest weder OnSearch noch OnSubmit aus.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ItemsEx</code>, <code>FilterMode</code>, <code>SearchDelay</code>, <code>ShowClearButton</code>, <code>TextHint</code>, <code>TextHintVisibleOnFocus</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoComplete</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CharCase</code>, <code>Color</code>, <code>Constraints</code>, <code>DropDownCount</code>, <code>DropDownWidth</code>, <code>Enabled</code>, <code>Font</code>, <code>ItemHeight</code>, <code>Items</code>, <code>MaxLength</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Sorted</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnCloseUp</code>, <code>OnContextPopup</code>, <code>OnDropDown</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnSearch</code>, <code>OnSelect</code>, <code>OnSubmit</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSearchEdit.md</code>.</p>
+</body></html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGStyleManager</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGStyleManager</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.StyleManager</code> - Basis <code>TComponent</code></p>
+<p><strong>Vorbild:</strong> TMS TAdvFormStyler</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Ein Preset und eine Appearance f&#252;r alle verbundenen Controls; <code>ThemeMode</code> (Hell/Dunkel/System) wirkt auch im Designer.</li>
+<li><code>StyleForms</code> f&#228;rbt Formulare mit den neutralen Windows-11-Farben (nur zur Laufzeit).</li>
+<li>Verb „Apply preset to form...“ setzt das Preset aller Controls des Formulars.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster).</p>
+<p>Lebenszyklus-Regeln:</p>
+<ul>
+<li>Clients werden als TComponent gehalten (NIE als Interface-Referenz: TComponent zaehlt keine Referenzen -&gt; haengende Zeiger).</li>
+<li>FreeNotification in beide Richtungen: wird ein Client oder der Manager freigegeben, raeumt Notification(opRemove) die Referenzen auf.</li>
+<li>Benachrichtigt wird ueber ein kurzlebiges IPPGStyleClient (Supports), dadurch kennt diese Unit keine Control-Klassen (keine Zyklen).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>Appearance</code>, <code>Animation</code>, <code>ThemeMode</code>, <code>StyleForms</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGStyleManager.md</code>.</p>
+</body></html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGPanel</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGPanel</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Panel</code> - Basis <code>TPPGCustomPanel</code></p>
+<p><strong>Vorbild:</strong> TPanel</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Container ohne <code>AutoSize</code>.</li>
+<li>Kinder auf dem Panel zeichnen ihren Hintergrund &#252;ber den schnellen Eltern-Hintergrund (<code>GetChildBackground</code>).</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGPanel - Container-Flaeche in der Optik des Presets (abgerundet, Rahmen, im Classic-Preset mit dezentem Verlauf).</p>
+<p>Migration von TPanel: Caption, Alignment, VerticalAlignment, ShowCaption, Padding und die Bevel-Properties bleiben gueltig (Bevels zeichnet nur die VCL selbst bei BevelKind &lt;&gt; bkNone). Color bestimmt nur den Hintergrund hinter den abgerundeten Ecken (ParentBackground = False); die Flaeche kommt aus Appearance.Normal.</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Alignment</code>, <code>VerticalAlignment</code>, <code>ShowCaption</code>, <code>WordWrap</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Anchors</code>, <code>BevelEdges</code>, <code>BevelInner</code>, <code>BevelKind</code>, <code>BevelOuter</code>, <code>BevelWidth</code>, <code>BiDiMode</code>, <code>BorderWidth</code>, <code>Caption</code>, <code>Color</code>, <code>Constraints</code>, <code>DockSite</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>Padding</code>, <code>ParentBackground</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>UseDockManager</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnAlignInsertBefore</code>, <code>OnAlignPosition</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDockDrop</code>, <code>OnDockOver</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetSiteInfo</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnResize</code>, <code>OnStartDock</code>, <code>OnStartDrag</code>, <code>OnUnDock</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPanel.md</code>.</p>
+</body></html>

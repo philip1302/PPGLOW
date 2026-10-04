@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGTimePicker</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGTimePicker</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.TimePicker</code> - Basis <code>TPPGCustomTimePicker</code></p>
+<p><strong>Vorbild:</strong> TDateTimePicker (Kind = dtkTime)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Baut auf der ComboBox auf; <code>OnChange</code> erst bei der &#220;bernahme (Verlassen, Enter, Liste, Pfeile), nicht bei jedem Tastendruck.</li>
+<li>Keine Spin-Buttons: Oben/Unten und Mausrad &#228;ndern den Teil an der Einf&#252;gemarke.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGTimePicker - Uhrzeitfeld (Phase 7b).</p>
+<p>Basis ist die ComboBox (csDropDown): die Aufklappliste enthaelt die Zeiten im Abstand MinuteIncrement (Klick bzw. Enter uebernimmt). Dazu:</p>
+<ul>
+<li>12/24 Stunden aus dem Gebietsschema (LOCALE_ITIME) oder fest (ClockFormat); AM/PM aus FormatSettings; Sekunden optional.</li>
+<li>Oben/Unten bzw. Mausrad aendern den Teil unter der Einfuegemarke (Stunde, Minute, Sekunde, AM/PM) mit Uebertrag.</li>
+<li>Freie Eingabe (&quot;14:30&quot;, &quot;1430&quot;, &quot;2:30 PM&quot;); geprueft wird beim Verlassen bzw. Enter: gueltig = uebernehmen (OnChange), ungueltig = ValidationState pvsError.</li>
+<li>Beim Aufklappen ist die naechstliegende Zeit der Liste hervorgehoben.</li>
+<li>Code (Time := ...) loest kein OnChange aus.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>TextHint</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>Time</code>, <code>ShowSeconds</code>, <code>ClockFormat</code>, <code>MinuteIncrement</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>DropDownCount</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnCloseUp</code>, <code>OnContextPopup</code>, <code>OnDropDown</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGTimePicker.md</code>.</p>
+</body></html>

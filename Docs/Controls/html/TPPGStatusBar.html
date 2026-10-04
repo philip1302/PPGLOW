@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGStatusBar</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGStatusBar</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.StatusBar</code> - Basis <code>TPPGCustomControl</code></p>
+<p><strong>Vorbild:</strong> TStatusBar</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>DFM wie <code>TStatusBar</code> (<code>Panels</code>, <code>SimplePanel</code>); zus&#228;tzlich Panel-Arten Fortschritt und Plakette.</li>
+<li>Eigene Schrift schaltet <code>UseSystemFont</code> ab (wie <code>TStatusBar</code>).</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGStatusBar - Statusleiste (Phase 7c).</p>
+<ul>
+<li>Panels wie TStatusBar (Text, Width, Alignment, Bevel, Style); Bevel &lt;&gt; pbNone zeichnet eine Trennlinie. Zusaetzlich Kind: Text (optional mit Markup, AllowMarkup), Fortschrittsbalken (Progress 0..100) oder Plakette (BadgeCount); Bild aus Images (ImageIndex). Das letzte Panel fuellt den Rest, wenn seine Breite nicht reicht.</li>
+<li>SimplePanel/SimpleText, AutoHint (Hinweise der Anwendung im ersten Panel bzw. SimpleText, ueber THintAction wie TStatusBar).</li>
+<li>SizeGrip: Griff unten rechts (RTL links); Ziehen veraendert die Groesse des Formulars, nur wenn es sizable und nicht maximiert ist.</li>
+<li>psOwnerDraw: OnDrawPanel mit Canvas (TCanvas ueber dem Zeichenpuffer).</li>
+<li>DFM-nah zu TStatusBar (Panels, SimplePanel, SimpleText, SizeGrip, AutoHint, UseSystemFont, OnDrawPanel).</li>
+<li>Screenreader: Statusleiste; Kinder sind die Panels (Text/Fortschritt).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>Images</code>, <code>Panels</code>, <code>SimplePanel</code>, <code>SimpleText</code>, <code>SizeGrip</code>, <code>AutoHint</code>, <code>UseSystemFont</code>, <code>AllowMarkup</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDrawPanel</code>, <code>OnHint</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnResize</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGStatusBar.md</code>.</p>
+</body></html>

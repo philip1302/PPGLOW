@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGToolBar</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGToolBar</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.ToolBar</code> - Basis <code>TPPGCustomControl</code></p>
+<p><strong>Vorbild:</strong> TToolBar</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Eintr&#228;ge (<code>Items</code>) statt Kind-Buttons; daher kein automatischer Umstieg von <code>TToolBar</code>/<code>TToolButton</code>.</li>
+<li>&#220;berlauf als natives Kontextmen&#252;; Actions &#252;ber <code>Items[].Action</code>.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGToolBar - Befehlsleiste (Phase 7c, wie WinUI CommandBar).</p>
+<ul>
+<li>Items: Buttons, Umschalt-Buttons (tisCheck, mit GroupIndex wie Radiobuttons) und Trenner; Symbol aus Images oder der Symbolschrift (IconChar), Text wahlweise daneben (ShowCaptions).</li>
+<li>Optik aus dem Preset: Hover/gedrueckt/eingerastet ueber den Renderer wie TPPGButton, in Ruhe flach.</li>
+<li>Ueberlauf: Was nicht in die Breite passt, landet in einem &quot;...&quot;-Menue am Ende (natives Kontextmenue mit Haken fuer Umschalt-Buttons).</li>
+<li>Actions: Item.Action verbindet Caption, Hint, Enabled, Checked, Visible, ImageIndex und OnExecute; die Leiste aktualisiert die Actions im Leerlauf (InitiateAction) wie die VCL-Controls.</li>
+<li>Tastatur: Links/Rechts, Pos1/Ende, Enter/Leertaste.</li>
+<li>Code (Down := ...) loest kein Ereignis aus; ein Klick loest Item.OnClick (bzw. Action.Execute) und danach OnItemClick aus.</li>
+<li>Screenreader: Symbolleiste; Kinder Buttons/Umschalt-Buttons/Trenner und der Ueberlauf-Knopf.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>Images</code>, <code>Items</code>, <code>ShowCaptions</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnEnter</code>, <code>OnExit</code>, <code>OnItemClick</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGToolBar.md</code>.</p>
+</body></html>

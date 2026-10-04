@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBGrid</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBGrid</h1>
+<p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Grid</code> - Basis <code>TPPGCustomDBGrid</code></p>
+<p><strong>Vorbild:</strong> TDBGrid</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Nur der Puffer sichtbarer Datens&#228;tze wird gelesen; Paint greift nie auf die Datenmenge zu.</li>
+<li><code>Options</code> ist <code>TDBGridOptions</code> (DFM-kompatibel); nicht unterst&#252;tzt: <code>dgMultiSelect</code>, verschiebbare Spalten.</li>
+<li>Spalten: <code>FieldName</code>, <code>Title</code> (statt <code>Title.Caption</code> – das Migrationsskript setzt das um), <code>Width</code>, <code>Alignment</code>, <code>ReadOnly</code>, <code>EditorKind</code>, <code>PickList</code>.</li>
+<li><code>OnTitleClick(Column)</code>/<code>OnCellClick(Column)</code> ohne Sender wie <code>TDBGrid</code>; Sortieren ist Sache der Datenmenge.</li>
+<li>Im Designer: „Edit columns...“ und „Add all fields“.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>procedure TForm1.PPGDBGrid1TitleClick(Column: TPPGDBGridColumn);
+begin
+  ClientDataSet1.IndexFieldNames := Column.FieldName;
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGDBGrid - Tabelle einer Datenmenge (Phase 9c), wie TDBGrid.</p>
+<p>Aufbau:</p>
+<ul>
+<li>Erbt von TPPGCustomGrid (Zeichnen, Editoren, Tastatur, UIA bleiben).</li>
+<li>Zeilen sind der Puffer des TDataLink (BufferCount = sichtbare Zeilen), nie die ganze Tabelle. Die Kopfzeile zeigt die Titel, die feste Spalte links den Datensatzzeiger (Indikator).</li>
+<li>Die Texte des Puffers werden in den DataLink-Ereignissen gelesen und zwischengespeichert. Paint liest nur den Zwischenspeicher: kein Datensatzwechsel und keine Anwender-Ereignisse (OnGetText, OnCalcFields) waehrend des Zeichnens (Fallstrick aus der Roadmap).</li>
+<li>Die senkrechte Leiste zeigt die Lage in der Datenmenge: bei IsSequenced nach RecNo/RecordCount, sonst dreistufig (Anfang, Mitte, Ende) wie TDBGrid. Ziehen, Mausrad und Blaettern bewegen die Datenmenge.</li>
+<li>Spalten: ohne Columns alle sichtbaren Felder (Titel = DisplayLabel, Breite aus DisplayWidth); mit Columns (FieldName je Spalte) genau diese.</li>
+<li>Bearbeiten mit den Grid-Editoren; der Editor zeigt Field.Text, Schreiben setzt Field.Text (Boolean-Felder: Kaestchen-Spalte).</li>
+<li>Tastatur wie TDBGrid: Pfeile/Bild/Strg+Pos1/Ende bewegen die Datenmenge, Pfeil runter am Ende haengt an (dgEditing), Einfg fuegt ein, Strg+Entf loescht (mit Rueckfrage bei dgConfirmDelete), Esc bricht ab.</li>
+<li>Sortieren ist Sache der Datenmenge: Klick auf den Titel loest OnTitleClick aus (dgTitleClick).</li>
+<li>Nicht unterstuetzt: dgMultiSelect, verschiebbare Spalten, Unterspalten (ADT/Array-Felder).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Columns</code>, <code>DataSource</code>, <code>Options</code>, <code>ReadOnly</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>DefaultDrawing</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnCellClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawCell</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code>, <code>OnTitleClick</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBGrid.md</code>.</p>
+</body></html>

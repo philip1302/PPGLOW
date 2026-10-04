@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGListBox</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGListBox</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.ListBox</code> - Basis <code>TPPGCustomListBox</code></p>
+<p><strong>Vorbild:</strong> TListBox</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>ItemHeight</code> ist eine Mindesth&#246;he.</li>
+<li>Mehrfachauswahl: <code>ItemIndex := X</code> setzt nur den Fokus (wie <code>TListBox</code>), nicht die Auswahl.</li>
+<li>Quellen: <code>Items</code>, <code>ItemsEx</code> (reich: Bild, Detail, Gruppe, Plakette) oder virtuell (<code>Style = lbVirtual</code>, <code>Count</code> + <code>OnData</code>).</li>
+<li>UI Automation: Liste mit Auswahl-Muster, Eintr&#228;ge mit Position im Satz.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGListBox1.Style := lbVirtual;
+PPGListBox1.Count := 1000000;   // Texte &#252;ber OnData
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGListBox - Liste im Stil der Suite, DFM-kompatibel zu TListBox.</p>
+<p>Datenquellen (in dieser Rangfolge):</p>
+<ul>
+<li>Style = lbVirtual/lbVirtualOwnerDraw: Count + OnGetItem bzw. OnData (wie TListBox) - Millionen Eintraege, Daten bleiben beim Anwender</li>
+<li>ItemsEx (Collection): Text, Detail, Bild, Plakette, Gruppe - im Designer pflegbar; sobald ItemsEx Eintraege hat, ist es die Quelle</li>
+<li>Items (TStrings): wie TListBox (&quot;Items.Strings&quot; in der DFM)</li>
+</ul>
+<p>Items ist eine eigene TStringList, die Einfuegen/Loeschen mit Index meldet: Auswahl und Fokus wandern mit. Pro Zeile haelt sie eine kleine Huelle (Objects[] des Anwenders, Kaestchen-Zustand der CheckListBox), die beim Sortieren und Verschieben mitwandert.</p>
+<p>Owner-Draw (lbOwnerDrawFixed/Variable): OnDrawItem zeichnet auf Canvas (waehrend des Aufrufs ein TCanvas auf dem Zeichenpuffer, Hintergrund und Auswahl hat das Preset schon gezeichnet), OnMeasureItem liefert Hoehen.</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ItemsEx</code>, <code>AllowMarkup</code>, <code>AllowReorder</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Anchors</code>, <code>AutoComplete</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Columns</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>ExtendedSelect</code>, <code>Font</code>, <code>IntegralHeight</code>, <code>ItemHeight</code>, <code>Items</code>, <code>MultiSelect</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ScrollWidth</code>, <code>ShowHint</code>, <code>Sorted</code>, <code>Style</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>TabWidth</code>, <code>Visible</code>, <code>ItemIndex</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnClick</code>, <code>OnContextPopup</code>, <code>OnData</code>, <code>OnDataFind</code>, <code>OnDataObject</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawItem</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetItem</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMeasureItem</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnReorder</code>, <code>OnScroll</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGListBox.md</code>.</p>
+</body></html>

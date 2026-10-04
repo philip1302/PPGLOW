@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGRating</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGRating</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Rating</code> - Basis <code>TPPGCustomRating</code></p>
+<p><strong>Vorbild:</strong> TMS Rating</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>Value</code> im Code l&#246;st kein Ereignis aus; halbe Sterne mit <code>AllowHalf</code> (gerundet wird erst in <code>Loaded</code>).</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGRating - Sternebewertung (Phase 7a).</p>
+<ul>
+<li>MaxValue Sterne (Icon-Schrift, sonst gezeichnetes Polygon), Value 0..MaxValue, halbe Sterne mit AllowHalf.</li>
+<li>Hover zeigt eine Vorschau; Klick setzt den Wert. Klick auf den aktuellen Wert loescht ihn (AllowClear).</li>
+<li>Tastatur: Links/Rechts (bzw. Hoch/Runter) +/- 1 (halbe: 0,5), Pos1 = 0, Ende = MaxValue, Ziffern 0..9 setzen direkt. RTL gespiegelt.</li>
+<li>ReadOnly zeigt nur an (keine Vorschau, keine Eingabe, bleibt fokussierbar).</li>
+<li>Code (Value := ...) loest kein OnChange aus; der Anwender schon.</li>
+<li>Screenreader: Rolle Schieberegler, Wert &quot;3,5 / 5&quot;.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>Value</code>, <code>MaxValue</code>, <code>AllowHalf</code>, <code>AllowClear</code>, <code>ReadOnly</code>, <code>StarSize</code>, <code>StarSpacing</code>, <code>StarColor</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>ParentBiDiMode</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnEnter</code>, <code>OnExit</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGRating.md</code>.</p>
+</body></html>

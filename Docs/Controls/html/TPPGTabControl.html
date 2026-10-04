@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGTabControl</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGTabControl</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.TabControl</code> - Basis <code>TPPGCustomTabControl</code></p>
+<p><strong>Vorbild:</strong> TTabControl</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Strg+Tab wirkt im innersten Reiter-Control (die VCL nimmt das &#228;u&#223;erste).</li>
+<li>Pfeiltasten auf den Reitern laufen nicht um.</li>
+<li><code>tpLeft</code>/<code>tpRight</code> werden wie oben/unten gezeichnet.</li>
+<li>&#220;berlauf mit Bl&#228;tterpfeilen, gleitender Unterstrich, Schlie&#223;en-Kn&#246;pfe.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Reiter-Controls der Suite.</p>
+<p>TPPGCustomTabs - gemeinsame Basis von TPPGTabControl und TPPGPageControl:</p>
+<ul>
+<li>Reiterleiste (TPPGTabStrip) oben oder unten, darunter bzw. darueber die Seite als Container-Flaeche. Der gewaehlte Reiter haengt mit der Seite zusammen; ModernFlat zeigt zusaetzlich einen gleitenden Unterstrich.</li>
+<li>Maus: Klick waehlt (OnChanging kann abbrechen, danach OnChange), Schliessen-Knopf (ShowCloseButtons), Blaetterpfeile bei Ueberlauf.</li>
+<li>Tastatur: Strg+Tab / Strg+Umschalt+Tab / Strg+Bild auf/ab, wenn der Fokus im Control liegt (das innerste Reiter-Control gewinnt); Links/Rechts/Pos1/Ende, wenn das Control selbst den Fokus hat; Accelerator (&amp;) in den Beschriftungen.</li>
+<li>Designer: Klicks auf die Reiter erreichen das Control (CM_DESIGNHITTEST).</li>
+<li>Barrierefreiheit: Rolle PAGETABLIST mit virtuellen PAGETAB-Kindern.</li>
+<li>Wie bei TPageControl loest das Setzen im Code (TabIndex, ActivePage) kein OnChanging/OnChange aus.</li>
+</ul>
+<p>TPPGTabControl - wie TTabControl: Tabs (TStrings) + TabIndex; der Inhalt wechselt nicht selbst, die Anwendung reagiert in OnChange. Kinder liegen direkt im Innenbereich.</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>ShowCloseButtons</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HotTrack</code>, <code>Images</code>, <code>Padding</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabHeight</code>, <code>TabOrder</code>, <code>TabPosition</code>, <code>Tabs</code>, <code>TabIndex</code>, <code>TabStop</code>, <code>TabWidth</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnChanging</code>, <code>OnClose</code>, <code>OnCloseQuery</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetImageIndex</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnResize</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGTabControl.md</code>.</p>
+</body></html>
