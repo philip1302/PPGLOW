@@ -14,7 +14,7 @@ interface
 
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, Winapi.ActiveX, System.Classes,
-  System.SysUtils, System.Variants, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls,
+  System.SysUtils, System.Variants, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Grids,
   PPG.Types, PPG.Exceptions, PPG.Controls.Base, PPG.UIA.Intf, PPG.UIA,
   PPG.Grid, PPG.TreeView, PPG.ListBox, PPG.CheckListBox, PPG.Controls.ItemList,
   PPG.Tests.Controls;
@@ -272,12 +272,12 @@ begin
   CheckEquals(S_OK, Cell.GetPatternProvider(UIA_TableItemPatternId, Unk));
   TI := Unk as ITableItemProvider;
   CheckEquals(S_OK, TI.GetColumnHeaderItems(SA));
-  CheckNotNull(SA, 'Spaltenkopf der Zelle');
+  CheckTrue(SA <> nil, 'Spaltenkopf der Zelle');
   SafeArrayDestroy(SA);
   CheckEquals(S_OK, FRoot.GetPatternProvider(UIA_TablePatternId, Unk));
   Table := Unk as ITableProvider;
   CheckEquals(S_OK, Table.GetColumnHeaders(SA));
-  CheckNotNull(SA);
+  CheckTrue(SA <> nil);
   SafeArrayDestroy(SA);
   // Zeilen haben kein Grid-Muster
   El(PPGUiaId(PPGUiaKindGridRow, 1)).GetPatternProvider(UIA_GridItemPatternId, Unk);
@@ -590,7 +590,7 @@ begin
   CheckEquals(1, FClicks, 'Anwender-Aktion wie ein Klick');
   FRoot.GetPatternProvider(UIA_SelectionPatternId, Unk);
   CheckEquals(S_OK, (Unk as ISelectionProvider).GetSelection(SA));
-  CheckNotNull(SA);
+  CheckTrue(SA <> nil);
   SafeArrayDestroy(SA);
   // Wert aendern geht in der Liste nicht
   El(PPGUiaId(PPGUiaKindListItem, 0)).GetPatternProvider(UIA_ValuePatternId, Unk);
