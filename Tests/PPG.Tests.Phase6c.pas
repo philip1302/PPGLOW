@@ -19,6 +19,9 @@ type
     FSorted: Integer;
     FAllowSelect: Boolean;
     FRejectValue: string;
+  protected
+    procedure SetUp; override;
+  private
     procedure SetEditText(Sender: TObject; ACol, ARow: Integer; const Value: string);
     procedure Sorted(Sender: TObject);
     procedure SelectCellEvent(Sender: TObject; ACol, ARow: Integer; var CanSelect: Boolean);
@@ -106,6 +109,16 @@ begin
 end;
 
 { TGridTests }
+
+procedure TGridTests.SetUp;
+begin
+  inherited SetUp;
+  // DUnit verwendet die Testobjekte wieder (Leak-Lauf: zwei Laeufe)
+  FSetEdits := 0;
+  FSorted := 0;
+  FAllowSelect := False;
+  FRejectValue := '';
+end;
 
 procedure TGridTests.SetEditText(Sender: TObject; ACol, ARow: Integer; const Value: string);
 begin

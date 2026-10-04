@@ -76,6 +76,8 @@ type
     FEvents: Integer;
     procedure CountEvent(Sender: TObject);
     function Sel(S: TPPGSelection): string;
+  protected
+    procedure SetUp; override;
   published
     procedure SingleMode;
     procedure ExtendedMouse;
@@ -97,6 +99,8 @@ type
     procedure OldChange(Sender: TObject);
     procedure GetVirtual(Sender: TObject; Index: Integer; var Data: TPPGItemData);
     procedure SetVirtualChecked(Sender: TObject; Index: Integer; Value: TCheckBoxState);
+  protected
+    procedure SetUp; override;
   published
     procedure CollectionSourceReflectsItems;
     procedure StringsSourceKeepsOldHandler;
@@ -474,6 +478,13 @@ end;
 
 { TSelectionTests }
 
+procedure TSelectionTests.SetUp;
+begin
+  inherited SetUp;
+  // DUnit verwendet die Testobjekte wieder (Leak-Lauf: zwei Laeufe)
+  FEvents := 0;
+end;
+
 procedure TSelectionTests.CountEvent(Sender: TObject);
 begin
   Inc(FEvents);
@@ -708,6 +719,15 @@ begin
 end;
 
 { TItemSourceTests }
+
+procedure TItemSourceTests.SetUp;
+begin
+  inherited SetUp;
+  // DUnit verwendet die Testobjekte wieder (Leak-Lauf: zwei Laeufe)
+  FLastIndex := 0;
+  FChanges := 0;
+  FOldChanges := 0;
+end;
 
 procedure TItemSourceTests.SourceChanged(Sender: TObject; Index: Integer);
 begin

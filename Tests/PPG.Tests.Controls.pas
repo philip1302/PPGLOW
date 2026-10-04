@@ -71,6 +71,8 @@ type
     FClicks: Integer;
     procedure CountClick(Sender: TObject);
     procedure RaisingClick(Sender: TObject);
+  protected
+    procedure SetUp; override;
   published
     procedure MouseClickFiresOnce;
     procedure ReleaseOutsideDoesNotClick;
@@ -628,6 +630,13 @@ begin
 end;
 
 { TBehaviourTests }
+
+procedure TBehaviourTests.SetUp;
+begin
+  inherited SetUp;
+  // DUnit verwendet die Testobjekte wieder (Leak-Lauf: zwei Laeufe)
+  FClicks := 0;
+end;
 
 procedure TBehaviourTests.CountClick(Sender: TObject);
 begin

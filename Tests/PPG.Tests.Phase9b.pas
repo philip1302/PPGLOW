@@ -14,7 +14,7 @@ interface
 
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, Winapi.ActiveX, System.Classes,
-  System.SysUtils, System.Variants, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Grids,
+  System.SysUtils, System.Variants, System.Win.Registry, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Grids,
   PPG.Types, PPG.Exceptions, PPG.Controls.Base, PPG.UIA.Intf, PPG.UIA,
   PPG.Grid, PPG.TreeView, PPG.ListBox, PPG.CheckListBox, PPG.Controls.ItemList,
   PPG.Tests.Controls;
@@ -24,6 +24,7 @@ type
   protected
     FRoot: TPPGUiaRoot;
     FRootRef: IInterface;
+    FOwnRoot: Boolean; // True: nicht die Wurzel des Controls (ohne UIA-DLL)
     FClicks: Integer;
     procedure TearDown; override;
     procedure CountClick(Sender: TObject);
@@ -40,6 +41,7 @@ type
     procedure OnlyDataControlsAnswerUiaRequest;
     procedure SwitchOffKeepsMsaa;
     procedure RootReleasedWithWindow;
+    procedure InterfaceGuidsMatchWindows;
   end;
 
   TUiaGridTests = class(TUiaTestCase)
@@ -103,10 +105,14 @@ end;
 
 procedure TUiaTestCase.TearDown;
 begin
-  if FRoot <> nil then
+  // Die Wurzel eines Controls trennt das Control selbst beim Freigeben
+  if FOwnRoot and (FRoot <> nil) then
     FRoot.Disconnect;
+  FOwnRoot := False;
   FRoot := nil;
   FRootRef := nil;
+  // DUnit verwendet die Testobjekte wieder (Leak-Lauf: zwei Laeufe)
+  FClicks := 0;
   inherited TearDown;
 end;
 
@@ -125,12 +131,26 @@ begin
     TranslateMessage(Msg);
     DispatchMessage(Msg);
   end;
+  if FOwnRoot then
+    FRoot.RunQueued;
 end;
 
 function TUiaTestCase.MakeRoot(C: TPPGCustomControl): TPPGUiaRoot;
 begin
   C.HandleNeeded;
-  FRoot := TPPGUiaRoot.CreateRoot(C as IPPGUiaSource, C.Handle, C.Name, C.ClassName);
+  // Die Wurzel des Controls selbst (wie ein Screenreader per WM_GETOBJECT):
+  // nur sie fuehrt die gepostete Aktionsnachricht im WndProc aus
+  if PPGUiaAvailable then
+  begin
+    SendMessage(C.Handle, WM_GETOBJECT, 0, LPARAM(PPGUiaRootObjectId));
+    FRoot := C.UiaRoot;
+  end;
+  // Ohne UIAutomationCore.dll: eigene Wurzel, Pump fuehrt die Aktionen aus
+  if FRoot = nil then
+  begin
+    FRoot := TPPGUiaRoot.CreateRoot(C as IPPGUiaSource, C.Handle, C.Name, C.ClassName);
+    FOwnRoot := True;
+  end;
   FRootRef := FRoot as IInterface;
   Result := FRoot;
 end;
@@ -160,6 +180,19 @@ begin
   Result.ColCount := 4;
   Result.RowCount := 4;
   Result.Options := Result.Options + [goEditing];
+  // Spalten zuerst und in einem Schritt: Columns bestimmt ColCount, einzelne
+  // Add-Aufrufe wuerden das Grid zwischendurch auf 1 Spalte verkleinern
+  // (Zellen weg, FixedCols = 0)
+  Result.Columns.BeginUpdate;
+  try
+    Result.Columns.Add;
+    Result.Columns.Add;
+    Result.Columns.Add;
+    Result.Columns.Add.EditorKind := gekCheck; // Spalte 3
+  finally
+    Result.Columns.EndUpdate;
+  end;
+  Result.Columns[2].ReadOnly := True;        // Preis nur lesen
   Result.Cells[1, 0] := 'Name';
   Result.Cells[2, 0] := 'Preis';
   Result.Cells[3, 0] := 'Aktiv';
@@ -175,11 +208,6 @@ begin
   Result.Cells[3, 1] := '0';
   Result.Cells[3, 2] := '1';
   Result.Cells[3, 3] := '0';
-  Result.Columns.Add;
-  Result.Columns.Add;
-  Result.Columns.Add;
-  Result.Columns.Add.EditorKind := gekCheck; // Spalte 3
-  Result.Columns[2].ReadOnly := True;        // Preis nur lesen
   Result.HandleNeeded;
 end;
 
@@ -233,6 +261,50 @@ begin
   G.Free;
   // Ein Screenreader haelt das Element noch: es antwortet, stuerzt aber nicht
   CheckEquals(UIA_E_ELEMENTNOTAVAILABLE, Held.GetPropertyValue(UIA_NamePropertyId, V));
+end;
+
+procedure TUiaHostTests.InterfaceGuidsMatchWindows;
+
+  procedure CheckGuid(const Guid: TGUID; const Name: string);
+  var
+    Reg: TRegistry;
+    Key: string;
+  begin
+    // Windows registriert die Proxys der UIA-Interfaces unter ihrer GUID.
+    // Eine falsche GUID faellt sonst nur auf, wenn ein Screenreader das
+    // Muster ueber COM-Marshalling holt (es kommt dann still nil zurueck).
+    Reg := TRegistry.Create(KEY_READ);
+    try
+      Reg.RootKey := HKEY_CLASSES_ROOT;
+      Key := 'Interface\' + GUIDToString(Guid);
+      if not Reg.OpenKeyReadOnly(Key) then
+        Fail(Name + ': GUID ' + GUIDToString(Guid) + ' ist in Windows nicht registriert');
+      CheckEquals(Name, Reg.ReadString(''), 'Name zur GUID');
+    finally
+      Reg.Free;
+    end;
+  end;
+
+begin
+  if not PPGUiaAvailable then
+  begin
+    Status('UIAutomationCore.dll fehlt - Test entfaellt');
+    Exit;
+  end;
+  CheckGuid(IRawElementProviderSimple, 'IRawElementProviderSimple');
+  CheckGuid(IRawElementProviderFragment, 'IRawElementProviderFragment');
+  CheckGuid(IRawElementProviderFragmentRoot, 'IRawElementProviderFragmentRoot');
+  CheckGuid(IInvokeProvider, 'IInvokeProvider');
+  CheckGuid(ISelectionProvider, 'ISelectionProvider');
+  CheckGuid(ISelectionItemProvider, 'ISelectionItemProvider');
+  CheckGuid(IValueProvider, 'IValueProvider');
+  CheckGuid(IExpandCollapseProvider, 'IExpandCollapseProvider');
+  CheckGuid(IGridProvider, 'IGridProvider');
+  CheckGuid(IGridItemProvider, 'IGridItemProvider');
+  CheckGuid(ITableProvider, 'ITableProvider');
+  CheckGuid(ITableItemProvider, 'ITableItemProvider');
+  CheckGuid(IToggleProvider, 'IToggleProvider');
+  CheckGuid(IScrollItemProvider, 'IScrollItemProvider');
 end;
 
 { TUiaGridTests }
@@ -687,6 +759,7 @@ var
   Node, Cell: HUIANODE;
   Grid: HUIAPATTERNOBJECT;
   V: OleVariant;
+  R: HResult;
 begin
   CoInitializeEx(nil, COINIT_MULTITHREADED);
   try
@@ -710,11 +783,21 @@ begin
     try
       if Succeeded(GetProp(Node, UIA_AutomationIdPropertyId, V)) then
         AutomationId := VarToStr(V);
-      if Succeeded(GetPattern(Node, UIA_GridPatternId, Grid)) and (Grid <> nil) then
+      // Jeder Schritt mit eigener Meldung: sonst sagt ein leerer Name nichts
+      R := GetPattern(Node, UIA_GridPatternId, Grid);
+      if Failed(R) or (Grid = nil) then
+        Error := Format('UiaGetPatternProvider(Grid): %x', [R])
+      else
       try
-        if Succeeded(GetItem(Grid, 1, 0, Cell)) and (Cell <> nil) then
+        R := GetItem(Grid, 1, 0, Cell);
+        if Failed(R) or (Cell = nil) then
+          Error := Format('GridPattern_GetItem: %x', [R])
+        else
         try
-          if Succeeded(GetProp(Cell, UIA_NamePropertyId, V)) then
+          R := GetProp(Cell, UIA_NamePropertyId, V);
+          if Failed(R) then
+            Error := Format('UiaGetPropertyValue(Name) der Zelle: %x', [R])
+          else
             CellName := VarToStr(V);
         finally
           NodeRelease(Cell);

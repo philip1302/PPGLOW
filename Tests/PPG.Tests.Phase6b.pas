@@ -22,6 +22,9 @@ type
     FChecked: Integer;
     FEdited: Integer;
     FDrops: Integer;
+  protected
+    procedure SetUp; override;
+  private
     procedure OnChange(Sender: TObject; Node: TPPGTreeNode);
     procedure OnChanging(Sender: TObject; Node: TPPGTreeNode; var AllowChange: Boolean);
     procedure OnDeletion(Sender: TObject; Node: TPPGTreeNode);
@@ -104,6 +107,19 @@ begin
 end;
 
 { TTreeTests }
+
+procedure TTreeTests.SetUp;
+begin
+  inherited SetUp;
+  // DUnit verwendet die Testobjekte wieder (Leak-Lauf: zwei Laeufe)
+  FChanges := 0;
+  FChangedNode := nil;
+  FDeletions := 0;
+  FAllow := False;
+  FChecked := 0;
+  FEdited := 0;
+  FDrops := 0;
+end;
 
 procedure TTreeTests.OnChange(Sender: TObject; Node: TPPGTreeNode);
 begin

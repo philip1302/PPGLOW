@@ -23,6 +23,7 @@ type
     FAllowReorder: Boolean;
     FDraws: Integer;
     FDrawCanvasOk: Boolean;
+    procedure SetUp; override;
     procedure CountClick(Sender: TObject);
     procedure CountCheck(Sender: TObject);
     procedure DoReorder(Sender: TObject; FromIndex, ToIndex: Integer; var Allow: Boolean);
@@ -146,6 +147,18 @@ begin
 end;
 
 { TListTestCase }
+
+procedure TListTestCase.SetUp;
+begin
+  inherited SetUp;
+  // DUnit verwendet die Testobjekte wieder (Leak-Lauf: zwei Laeufe)
+  FClicks := 0;
+  FChecks := 0;
+  FReorders := 0;
+  FAllowReorder := False;
+  FDraws := 0;
+  FDrawCanvasOk := False;
+end;
 
 procedure TListTestCase.CountClick(Sender: TObject);
 begin

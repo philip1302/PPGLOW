@@ -197,7 +197,7 @@ type
   end;
 
   IGridProvider = interface(IUnknown)
-    ['{B17D6187-0907-464B-A168-0BF17A15B9E6}']
+    ['{B17D6187-0907-464B-A168-0EF17A1572B1}']
     function GetItem(row, column: Integer; out pRetVal: IRawElementProviderSimple): HResult; stdcall;
     function get_RowCount(out pRetVal: Integer): HResult; stdcall;
     function get_ColumnCount(out pRetVal: Integer): HResult; stdcall;

@@ -294,7 +294,9 @@ begin
       F.ValidationHint := E.Message;
       F.ValidationState := pvsError;
       F.SelectAll;
-      if F.CanFocus then
+      // Unsichtbares Fenster (Formular schliesst/ist verborgen): kein Fokus,
+      // sonst ersetzt EInvalidOperation den stillen Abbruch
+      if F.CanFocus and F.HandleAllocated and IsWindowVisible(F.Handle) then
         F.SetFocus;
       // Still abbrechen: der Fokuswechsel unterbleibt, der Zustand zeigt den
       // Fehler (EAbort ist kein Fehler, sondern der VCL-Weg fuer "abbrechen")
@@ -315,7 +317,7 @@ begin
   try
     Link.UpdateRecord;
   except
-    if Ctrl.CanFocus then
+    if Ctrl.CanFocus and Ctrl.HandleAllocated and IsWindowVisible(Ctrl.Handle) then
       Ctrl.SetFocus;
     raise;
   end;
