@@ -237,7 +237,22 @@ type
     function GetCellText(ACol, ARow: Integer): string; virtual;
     /// Wert setzen (Editor, Einfuegen): Cells + OnSetEditText.
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); virtual;
-    function ColumnOf(ACol: Integer): TPPGGridColumn;
+    /// Text fuer den Editor (Standard: Zelltext + OnGetEditText). Das DB-Grid
+    /// liefert Field.Text statt des Anzeigetexts.
+    function GetEditText(ACol, ARow: Integer): string; virtual;
+    function ColumnOf(ACol: Integer): TPPGGridColumn; virtual;
+    /// Erzeugt die Spalten-Collection (DB-Grid: eigene Spaltenklasse).
+    function CreateColumns: TPPGGridColumns; virtual;
+    /// Spalten geaendert (Standard: Spaltenzahl folgt den Spalten).
+    procedure ColumnsChanged; virtual;
+    /// Senkrechte Verschiebung der Datenzeilen in Pixeln. Standard: ScrollY.
+    /// Das DB-Grid zeigt nur seinen Puffer (immer 0) und nutzt die Leiste
+    /// fuer die Lage in der Datenmenge.
+    function RowScrollY: Integer; virtual;
+    /// Inhaltshoehe fuer die Scroll-Basis (Standard: Hoehe aller Zeilen).
+    function RowsContentHeight: Integer; virtual;
+    /// Lage setzen, um eine Zelle sichtbar zu machen (Standard: ScrollTo).
+    procedure ScrollCellsTo(X, Y: Integer); virtual;
     function CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind;
     function CanEditCell(ACol, VRow: Integer): Boolean; virtual;
     { Zeichnen }
@@ -607,14 +622,7 @@ begin
   G := TPPGCustomGrid(GetOwner);
   if csLoading in G.ComponentState then
     Exit;
-  // Spalten bestimmen die Spaltenzahl
-  if (Count > 0) and (G.FColCount <> Count) then
-    G.ColCount := Count
-  else
-  begin
-    G.InvalidateGeometry;
-    G.Invalidate;
-  end;
+  G.ColumnsChanged;
 end;
 
 { TPPGCustomGrid }
@@ -643,7 +651,7 @@ begin
   FEditV := -1;
   FLastFocusRow := -1;
   FLayout := TPPGRowLayout.Create;
-  FColumns := TPPGGridColumns.Create(Self, TPPGGridColumn);
+  FColumns := CreateColumns;
   FItemCanvas := TCanvas.Create;
   FColCount := 0;
   FRowCount := 0;
@@ -675,10 +683,44 @@ end;
 procedure TPPGCustomGrid.Loaded;
 begin
   inherited Loaded;
-  if (FColumns.Count > 0) and (FColCount <> FColumns.Count) then
-    ColCount := FColumns.Count;
+  ColumnsChanged;
   RebuildMap;
   InvalidateGeometry;
+end;
+
+function TPPGCustomGrid.CreateColumns: TPPGGridColumns;
+begin
+  Result := TPPGGridColumns.Create(Self, TPPGGridColumn);
+end;
+
+procedure TPPGCustomGrid.ColumnsChanged;
+begin
+  // Spalten bestimmen die Spaltenzahl
+  if (FColumns.Count > 0) and (FColCount <> FColumns.Count) then
+    ColCount := FColumns.Count
+  else
+  begin
+    InvalidateGeometry;
+    Invalidate;
+  end;
+end;
+
+function TPPGCustomGrid.RowScrollY: Integer;
+begin
+  Result := ScrollY;
+end;
+
+function TPPGCustomGrid.RowsContentHeight: Integer;
+begin
+  if FLayout.TotalHeight64 > MaxInt then
+    Result := MaxInt
+  else
+    Result := FLayout.TotalHeight;
+end;
+
+procedure TPPGCustomGrid.ScrollCellsTo(X, Y: Integer);
+begin
+  ScrollTo(X, Y);
 end;
 
 { ---- Streaming (wie TCustomGrid) ---- }
@@ -1004,6 +1046,13 @@ begin
   end;
 end;
 
+function TPPGCustomGrid.GetEditText(ACol, ARow: Integer): string;
+begin
+  Result := GetCellText(ACol, ARow);
+  if Assigned(FOnGetEditText) then
+    FOnGetEditText(Self, ACol, ARow, Result);
+end;
+
 procedure TPPGCustomGrid.SetCellByUser(ACol, ARow: Integer; const Value: string);
 begin
   EnsureCellStorage(ARow);
@@ -1303,10 +1352,7 @@ begin
           FLayout.SetRowHeight(V, H);
       end;
     end;
-  if FLayout.TotalHeight64 > MaxInt then
-    SetContentSize(X, MaxInt)
-  else
-    SetContentSize(X, FLayout.TotalHeight);
+  SetContentSize(X, RowsContentHeight);
 end;
 
 function TPPGCustomGrid.FixedWidth: Integer;
@@ -1340,7 +1386,7 @@ begin
     X := X - ScrollX;
   Y := FLayout.RowTop(VRow);
   if VRow >= VFixedRows then
-    Y := Y - ScrollY;
+    Y := Y - RowScrollY;
   W := FColX[ACol + 1] - FColX[ACol];
   if (Y > V.Bottom - V.Top) or (Y + FLayout.RowHeight(VRow) < 0) then
     Exit;
@@ -1378,7 +1424,7 @@ begin
     end;
   CY := Y - V.Top;
   if CY >= FixedHeight then
-    Inc(CY, ScrollY);
+    Inc(CY, RowScrollY);
   if (CY < FLayout.TotalHeight64) and (FLayout.Count > 0) then
     VRow := FLayout.RowAt(CY);
   Result := (ACol >= 0) and (VRow >= 0);
@@ -1395,7 +1441,7 @@ begin
     Exit;
   V := ViewRect;
   X := ScrollX;
-  Y := ScrollY;
+  Y := RowScrollY;
   VW := (V.Right - V.Left) - FixedWidth;
   VH := (V.Bottom - V.Top) - FixedHeight;
   if ACol >= FFixedCols then
@@ -1416,7 +1462,7 @@ begin
     else if RB > Y + VH then
       Y := Integer(RB - VH);
   end;
-  ScrollTo(X, Y);
+  ScrollCellsTo(X, Y);
 end;
 
 procedure TPPGCustomGrid.Resize;
@@ -1529,7 +1575,7 @@ begin
     X := X - ScrollX;
   Y := FLayout.RowTop(VRow);
   if VRow >= VFixedRows then
-    Y := Y - ScrollY;
+    Y := Y - RowScrollY;
   if Y > MaxInt div 2 then
     Y := MaxInt div 2;
   if Y < -(MaxInt div 2) then
@@ -1887,7 +1933,7 @@ begin
   C1 := C0;
   while (C1 < FColCount - 1) and (FColX[C1 + 1] < CX + (View.Right - View.Left) - FW) do
     Inc(C1);
-  CY := Int64(ScrollY) + FH;
+  CY := Int64(RowScrollY) + FH;
   if CY >= FLayout.TotalHeight64 then
     R0 := FLayout.Count
   else
@@ -2540,9 +2586,7 @@ begin
       FEditV := -1;
       Exit;
     end;
-    S := GetCellText(FEditC, D);
-    if Assigned(FOnGetEditText) then
-      FOnGetEditText(Self, FEditC, D, S);
+    S := GetEditText(FEditC, D);
   end;
   MakeCellVisible(FEditC, V);
   R := CellRect(FEditC, V);

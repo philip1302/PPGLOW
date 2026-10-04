@@ -188,6 +188,9 @@
         <DCCReference Include="..\Source\Controls\PPG.Notifications.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Logic.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Forms.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Controls.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Lookup.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Grid.pas"/>
         <DCCReference Include="..\Source\Render\PPG.Render.Fluent11.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.Presets.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.StyleManager.pas"/>
@@ -243,6 +246,7 @@
         <DCCReference Include="PPG.Tests.Visual.pas"/>
         <DCCReference Include="PPG.Tests.Phase9a.pas"/>
         <DCCReference Include="PPG.Tests.Phase9b.pas"/>
+        <DCCReference Include="PPG.Tests.Phase9c.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

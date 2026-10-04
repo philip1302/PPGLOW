@@ -9,12 +9,13 @@
     Ausgabe in <Projekt>.err
 
   Aufruf:  powershell -ExecutionPolicy Bypass -File Build\build.ps1 [-Only Delphi13] [-Projects Runtime,Tests]
-           Projekte: Runtime, Design, Tests, Demo (Standard) sowie Bench (Leistungsmessung, am besten -Config Release)
+           Projekte: Runtime, Design, DBRuntime, DBDesign, Tests, Demo (Standard) sowie Bench
+           (Leistungsmessung, am besten -Config Release). DBRuntime/DBDesign = DB-Controls (PPGlowDBR/dclPPGlowDB)
            Vorher laeuft check-rules.ps1 (Coding-Rules); -NoRuleCheck laesst ihn aus
 #>
 param(
   [string]$Only = '',
-  [string[]]$Projects = @('Runtime', 'Design', 'Tests', 'Demo'),
+  [string[]]$Projects = @('Runtime', 'Design', 'DBRuntime', 'DBDesign', 'Tests', 'Demo'),
   [int]$TimeoutSec = 600,
   [ValidateSet('Win32', 'Win64')][string]$Platform = 'Win32',
   [ValidateSet('Debug', 'Release')][string]$Config = 'Debug',
@@ -37,6 +38,8 @@ $Versions = [ordered]@{
 $ProjectFiles = @{
   'Runtime' = 'Packages\{0}\PPGlowR.dproj'
   'Design'  = 'Packages\{0}\dclPPGlow.dproj'
+  'DBRuntime' = 'Packages\{0}\PPGlowDBR.dproj'
+  'DBDesign'  = 'Packages\{0}\dclPPGlowDB.dproj'
   'Tests'   = 'Tests\PPGlowTests.dproj'
   'Demo'    = 'Demo\PPGlowDemo.dproj'
   'Bench'   = 'Tests\Bench\PPGlowBench.dproj'

@@ -1,0 +1,1045 @@
+unit PPG.DB.Grid;
+
+{ TPPGDBGrid - Tabelle einer Datenmenge (Phase 9c), wie TDBGrid.
+
+  Aufbau:
+  - Erbt von TPPGCustomGrid (Zeichnen, Editoren, Tastatur, UIA bleiben).
+  - Zeilen sind der Puffer des TDataLink (BufferCount = sichtbare Zeilen),
+    nie die ganze Tabelle. Die Kopfzeile zeigt die Titel, die feste Spalte
+    links den Datensatzzeiger (Indikator).
+  - Die Texte des Puffers werden in den DataLink-Ereignissen gelesen und
+    zwischengespeichert. Paint liest nur den Zwischenspeicher: kein
+    Datensatzwechsel und keine Anwender-Ereignisse (OnGetText,
+    OnCalcFields) waehrend des Zeichnens (Fallstrick aus der Roadmap).
+  - Die senkrechte Leiste zeigt die Lage in der Datenmenge: bei
+    IsSequenced nach RecNo/RecordCount, sonst dreistufig (Anfang, Mitte,
+    Ende) wie TDBGrid. Ziehen, Mausrad und Blaettern bewegen die Datenmenge.
+  - Spalten: ohne Columns alle sichtbaren Felder (Titel = DisplayLabel,
+    Breite aus DisplayWidth); mit Columns (FieldName je Spalte) genau diese.
+  - Bearbeiten mit den Grid-Editoren; der Editor zeigt Field.Text, Schreiben
+    setzt Field.Text (Boolean-Felder: Kaestchen-Spalte).
+  - Tastatur wie TDBGrid: Pfeile/Bild/Strg+Pos1/Ende bewegen die Datenmenge,
+    Pfeil runter am Ende haengt an (dgEditing), Einfg fuegt ein, Strg+Entf
+    loescht (mit Rueckfrage bei dgConfirmDelete), Esc bricht ab.
+  - Sortieren ist Sache der Datenmenge: Klick auf den Titel loest
+    OnTitleClick aus (dgTitleClick).
+  - Nicht unterstuetzt: dgMultiSelect, verschiebbare Spalten, Unterspalten
+    (ADT/Array-Felder). }
+
+{$I ..\PPG.inc}
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Types,
+  Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Data.DB,
+  PPG.Types, PPG.Grid;
+
+type
+  TPPGCustomDBGrid = class;
+
+  /// Spalte mit Feldname (Columns des DB-Grids).
+  TPPGDBGridColumn = class(TPPGGridColumn)
+  private
+    FFieldName: string;
+    procedure SetFieldName(const Value: string);
+  protected
+    function GetDisplayName: string; override;
+  public
+    procedure Assign(Source: TPersistent); override;
+  published
+    property FieldName: string read FFieldName write SetFieldName;
+  end;
+
+  /// Verbindung des Grids zur Datenmenge.
+  TPPGGridDataLink = class(TDataLink)
+  private
+    FGrid: TPPGCustomDBGrid;
+  protected
+    procedure ActiveChanged; override;
+    procedure DataSetChanged; override;
+    procedure DataSetScrolled(Distance: Integer); override;
+    procedure LayoutChanged; override;
+    procedure EditingChanged; override;
+    procedure RecordChanged(Field: TField); override;
+    procedure UpdateData; override;
+    procedure FocusControl(Field: TFieldRef); override;
+  public
+    constructor Create(AGrid: TPPGCustomDBGrid);
+  end;
+
+  TPPGDBGridColumnEvent = procedure(Sender: TObject; Column: TPPGDBGridColumn) of object;
+
+  TPPGCustomDBGrid = class(TPPGCustomGrid)
+  private
+    FDataLink: TPPGGridDataLink;
+    FDBOptions: TDBGridOptions;
+    FAutoColumns: TPPGGridColumns;  // ohne Columns: je sichtbares Feld eine
+    FFields: array of TField;       // Feld je Datenspalte
+    FCache: array of array of string; // Puffer-Zeile x Datenspalte
+    FSyncing: Integer;
+    FLayoutBusy: Boolean;
+    FReadOnly: Boolean;
+    FOnTitleClick: TPPGDBGridColumnEvent;
+    FOnCellClick: TPPGDBGridColumnEvent;
+    function GetDataSource: TDataSource;
+    procedure SetDataSource(Value: TDataSource);
+    procedure SetDBOptions(const Value: TDBGridOptions);
+    function GetSelectedField: TField;
+    function GetFieldCount: Integer;
+    function GetField(Index: Integer): TField;
+    procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
+    procedure CMExit(var Message: TCMExit); message CM_EXIT;
+  protected
+    { Ereignisse des DataLinks }
+    procedure LinkActive(Value: Boolean); virtual;
+    procedure DataChanged; virtual;
+    procedure LayoutChanged; virtual;
+    procedure EditingChanged; virtual;
+    procedure RecordChanged(Field: TField); virtual;
+    procedure UpdateData; virtual;
+    { Aufbau }
+    procedure BuildColumns;
+    procedure UpdateBufferCount;
+    procedure RebuildCache;
+    procedure SyncPosition;
+    function DataRowHeight: Integer;
+    function VisibleDataRows: Integer;
+    function FieldOfCol(ACol: Integer): TField;
+    function DataColCount: Integer;
+    { Erweiterungspunkte des Grids }
+    function CreateColumns: TPPGGridColumns; override;
+    function ColumnOf(ACol: Integer): TPPGGridColumn; override;
+    procedure ColumnsChanged; override;
+    function RowScrollY: Integer; override;
+    function RowsContentHeight: Integer; override;
+    procedure ScrollCellsTo(X, Y: Integer); override;
+    function GetCellText(ACol, ARow: Integer): string; override;
+    function GetEditText(ACol, ARow: Integer): string; override;
+    procedure SetCellByUser(ACol, ARow: Integer; const Value: string); override;
+    function CanEditCell(ACol, VRow: Integer): Boolean; override;
+    function SelectCell(ACol, ARow: Integer): Boolean; override;
+    procedure HeaderClicked(ACol, VRow: Integer); override;
+    procedure Scrolled; override;
+    procedure Resize; override;
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    /// Rueckfrage vor dem Loeschen (dgConfirmDelete). Standard: MessageDlg.
+    function ConfirmDelete: Boolean; virtual;
+
+    property DataLink: TPPGGridDataLink read FDataLink;
+    property Options: TDBGridOptions read FDBOptions write SetDBOptions
+      default [dgEditing, dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines,
+        dgTabs, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack];
+    property ReadOnly: Boolean read FReadOnly write FReadOnly default False;
+    property OnTitleClick: TPPGDBGridColumnEvent read FOnTitleClick write FOnTitleClick;
+    property OnCellClick: TPPGDBGridColumnEvent read FOnCellClick write FOnCellClick;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    function UpdateAction(Action: TBasicAction): Boolean; override;
+    /// Feld der Fokusspalte.
+    property SelectedField: TField read GetSelectedField;
+    /// Felder der angezeigten Spalten (ohne Indikator).
+    property FieldCount: Integer read GetFieldCount;
+    property Fields[Index: Integer]: TField read GetField;
+    property DataSource: TDataSource read GetDataSource write SetDataSource;
+  end;
+
+  TPPGDBGrid = class(TPPGCustomDBGrid)
+  published
+    property Preset;
+    property StyleManager;
+    property Appearance;
+    property Animation;
+    property Columns;
+    property DataSource;
+    property Options;
+    property ReadOnly;
+    property ScrollBarMode;
+    property SmoothScrolling;
+    property HighContrastSupport;
+    { wie TDBGrid }
+    property Align;
+    property Anchors;
+    property BiDiMode;
+    property BorderStyle;
+    property Color default clWindow;
+    property Constraints;
+    property DefaultDrawing;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property ParentBiDiMode;
+    property ParentColor default False;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    {$IFDEF PPG_HAS_STYLEELEMENTS}
+    property StyleElements;
+    {$ENDIF}
+    property TabOrder;
+    property TabStop default True;
+    property Visible;
+    property OnCellClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnDrawCell;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseDown;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnStartDock;
+    property OnStartDrag;
+    property OnTitleClick;
+  end;
+
+implementation
+
+uses
+  System.Math, Vcl.Dialogs, PPG.Appearance, PPG.Controls.Scroll;
+
+resourcestring
+  SPPGDBGridConfirmDelete = 'Delete record?';
+
+const
+  // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
+  IndBrowse = #$25B6;  // Dreieck
+  IndEdit = #$270E;    // Stift
+  IndInsert = '*';
+  // Dreistufige Leiste ohne RecNo: Anfang, Mitte, Ende (in Zeilen)
+  ThreeStateRows = 2;
+
+{ TPPGDBGridColumn }
+
+procedure TPPGDBGridColumn.Assign(Source: TPersistent);
+begin
+  if Source is TPPGDBGridColumn then
+    FFieldName := TPPGDBGridColumn(Source).FFieldName;
+  inherited Assign(Source);
+end;
+
+function TPPGDBGridColumn.GetDisplayName: string;
+begin
+  if Title <> '' then
+    Result := Title
+  else if FFieldName <> '' then
+    Result := FFieldName
+  else
+    Result := inherited GetDisplayName;
+end;
+
+procedure TPPGDBGridColumn.SetFieldName(const Value: string);
+begin
+  if FFieldName <> Value then
+  begin
+    FFieldName := Value;
+    Changed(False);
+  end;
+end;
+
+{ TPPGGridDataLink }
+
+constructor TPPGGridDataLink.Create(AGrid: TPPGCustomDBGrid);
+begin
+  inherited Create;
+  FGrid := AGrid;
+  VisualControl := True;
+end;
+
+procedure TPPGGridDataLink.ActiveChanged;
+begin
+  if FGrid <> nil then
+    FGrid.LinkActive(Active);
+end;
+
+procedure TPPGGridDataLink.DataSetChanged;
+begin
+  if FGrid <> nil then
+    FGrid.DataChanged;
+end;
+
+procedure TPPGGridDataLink.DataSetScrolled(Distance: Integer);
+begin
+  if FGrid <> nil then
+    FGrid.DataChanged;
+end;
+
+procedure TPPGGridDataLink.LayoutChanged;
+begin
+  if FGrid <> nil then
+    FGrid.LayoutChanged;
+  inherited LayoutChanged;
+end;
+
+procedure TPPGGridDataLink.EditingChanged;
+begin
+  if FGrid <> nil then
+    FGrid.EditingChanged;
+end;
+
+procedure TPPGGridDataLink.RecordChanged(Field: TField);
+begin
+  if FGrid <> nil then
+    FGrid.RecordChanged(Field);
+end;
+
+procedure TPPGGridDataLink.UpdateData;
+begin
+  if FGrid <> nil then
+    FGrid.UpdateData;
+end;
+
+procedure TPPGGridDataLink.FocusControl(Field: TFieldRef);
+var
+  I: Integer;
+begin
+  // Datenmenge will ein Feld fokussieren (z.B. Pflichtfeld leer): Spalte waehlen
+  if (FGrid = nil) or (Field = nil) or (Field^ = nil) then
+    Exit;
+  for I := 0 to FGrid.DataColCount - 1 do
+    if FGrid.FFields[I] = Field^ then
+    begin
+      FGrid.Col := FGrid.FixedCols + I;
+      if FGrid.CanFocus then
+        FGrid.SetFocus;
+      Field^ := nil;
+      Exit;
+    end;
+end;
+
+{ TPPGCustomDBGrid }
+
+constructor TPPGCustomDBGrid.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FDBOptions := [dgEditing, dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines,
+    dgTabs, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack];
+  FAutoColumns := TPPGGridColumns.Create(Self, TPPGDBGridColumn);
+  FDataLink := TPPGGridDataLink.Create(Self);
+  // Sortieren ist Sache der Datenmenge
+  SortOnHeaderClick := False;
+  SetDBOptions(FDBOptions);
+  FixedCols := 1;
+  FixedRows := 1;
+  ColCount := 2;
+  RowCount := 2;
+end;
+
+destructor TPPGCustomDBGrid.Destroy;
+begin
+  if FDataLink <> nil then
+    FDataLink.FGrid := nil;
+  FreeAndNil(FDataLink);
+  FreeAndNil(FAutoColumns);
+  inherited Destroy;
+end;
+
+function TPPGCustomDBGrid.CreateColumns: TPPGGridColumns;
+begin
+  Result := TPPGGridColumns.Create(Self, TPPGDBGridColumn);
+end;
+
+procedure TPPGCustomDBGrid.Loaded;
+begin
+  inherited Loaded;
+  BuildColumns;
+end;
+
+procedure TPPGCustomDBGrid.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (FDataLink <> nil) and (AComponent = DataSource) then
+    DataSource := nil;
+end;
+
+function TPPGCustomDBGrid.GetDataSource: TDataSource;
+begin
+  Result := FDataLink.DataSource;
+end;
+
+procedure TPPGCustomDBGrid.SetDataSource(Value: TDataSource);
+begin
+  if Value = FDataLink.DataSource then
+    Exit;
+  FDataLink.DataSource := Value;
+  if Value <> nil then
+    Value.FreeNotification(Self);
+  LinkActive(FDataLink.Active);
+end;
+
+procedure TPPGCustomDBGrid.SetDBOptions(const Value: TDBGridOptions);
+var
+  G: TGridOptions;
+begin
+  FDBOptions := Value;
+  G := [goRangeSelect];
+  if dgEditing in Value then
+    Include(G, goEditing);
+  if dgColLines in Value then
+    G := G + [goVertLine, goFixedVertLine];
+  if dgRowLines in Value then
+    G := G + [goHorzLine, goFixedHorzLine];
+  if dgTabs in Value then
+    Include(G, goTabs);
+  if dgRowSelect in Value then
+    G := G - [goRangeSelect] + [goRowSelect];
+  if dgColumnResize in Value then
+    Include(G, goColSizing);
+  inherited Options := G;
+  if not (csLoading in ComponentState) then
+    BuildColumns;
+end;
+
+function TPPGCustomDBGrid.ExecuteAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited ExecuteAction(Action) or ((FDataLink <> nil) and FDataLink.ExecuteAction(Action));
+end;
+
+function TPPGCustomDBGrid.UpdateAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited UpdateAction(Action) or ((FDataLink <> nil) and FDataLink.UpdateAction(Action));
+end;
+
+procedure TPPGCustomDBGrid.CMGetDataLink(var Message: TMessage);
+begin
+  Message.Result := LRESULT(FDataLink);
+end;
+
+procedure TPPGCustomDBGrid.CMExit(var Message: TCMExit);
+begin
+  try
+    HideEditor(True);
+    // Leerer, unveraenderter neuer Datensatz verschwindet wieder (TDBGrid)
+    if (dgCancelOnExit in FDBOptions) and FDataLink.Active and
+      (FDataLink.DataSet.State = dsInsert) and not FDataLink.DataSet.Modified then
+      FDataLink.DataSet.Cancel;
+  except
+    if CanFocus then
+      SetFocus;
+    raise;
+  end;
+  inherited;
+end;
+
+{ ---- Aufbau ---- }
+
+function TPPGCustomDBGrid.DataRowHeight: Integer;
+begin
+  Result := PPGScale(DefaultRowHeight, ScalePPI);
+  if Result < 1 then
+    Result := 1;
+end;
+
+function TPPGCustomDBGrid.VisibleDataRows: Integer;
+var
+  V: TRect;
+begin
+  V := ViewRect;
+  Result := ((V.Bottom - V.Top) - FixedHeight) div DataRowHeight;
+  if Result < 1 then
+    Result := 1;
+end;
+
+function TPPGCustomDBGrid.DataColCount: Integer;
+begin
+  Result := Length(FFields);
+end;
+
+function TPPGCustomDBGrid.FieldOfCol(ACol: Integer): TField;
+var
+  I: Integer;
+begin
+  I := ACol - FixedCols;
+  if (I >= 0) and (I < Length(FFields)) then
+    Result := FFields[I]
+  else
+    Result := nil;
+end;
+
+function TPPGCustomDBGrid.GetFieldCount: Integer;
+begin
+  Result := Length(FFields);
+end;
+
+function TPPGCustomDBGrid.GetField(Index: Integer): TField;
+begin
+  if (Index >= 0) and (Index < Length(FFields)) then
+    Result := FFields[Index]
+  else
+    Result := nil;
+end;
+
+function TPPGCustomDBGrid.GetSelectedField: TField;
+begin
+  Result := FieldOfCol(Col);
+end;
+
+procedure TPPGCustomDBGrid.BuildColumns;
+var
+  DS: TDataSet;
+  I, N, W: Integer;
+  F: TField;
+  C: TPPGDBGridColumn;
+  CharW: Integer;
+begin
+  if FLayoutBusy or (csLoading in ComponentState) then
+    Exit;
+  FLayoutBusy := True;
+  try
+    // Titel und Indikator
+    if dgIndicator in FDBOptions then
+      N := 1
+    else
+      N := 0;
+    SetLength(FFields, 0);
+    DS := nil;
+    if FDataLink.Active then
+      DS := FDataLink.DataSet;
+    if Columns.Count > 0 then
+    begin
+      SetLength(FFields, Columns.Count);
+      for I := 0 to Columns.Count - 1 do
+        if DS <> nil then
+          FFields[I] := DS.FindField(TPPGDBGridColumn(Columns[I]).FieldName)
+        else
+          FFields[I] := nil;
+    end
+    else
+    begin
+      FAutoColumns.BeginUpdate;
+      try
+        FAutoColumns.Clear;
+        if DS <> nil then
+        begin
+          // Breite aus DisplayWidth (Zeichen) in logischen Pixeln
+          CharW := 7;
+          for I := 0 to DS.FieldCount - 1 do
+          begin
+            F := DS.Fields[I];
+            if not F.Visible then
+              Continue;
+            SetLength(FFields, Length(FFields) + 1);
+            FFields[High(FFields)] := F;
+            C := TPPGDBGridColumn(FAutoColumns.Add);
+            C.FieldName := F.FieldName;
+            C.Title := F.DisplayLabel;
+            C.Alignment := F.Alignment;
+            C.ReadOnly := F.ReadOnly;
+            W := F.DisplayWidth * CharW + 12;
+            if W < 32 then
+              W := 32;
+            if W > 400 then
+              W := 400;
+            C.Width := W;
+            if F.DataType = ftBoolean then
+              C.EditorKind := gekCheck;
+          end;
+        end;
+      finally
+        FAutoColumns.EndUpdate;
+      end;
+    end;
+    if Length(FFields) = 0 then
+      ColCount := N + 1
+    else
+      ColCount := N + Length(FFields);
+    FixedCols := N;
+    if dgTitles in FDBOptions then
+      FixedRows := 1
+    else
+      FixedRows := 0;
+    if Col < FixedCols then
+      Col := FixedCols;
+  finally
+    FLayoutBusy := False;
+  end;
+  UpdateBufferCount;
+  DataChanged;
+end;
+
+procedure TPPGCustomDBGrid.UpdateBufferCount;
+begin
+  if FDataLink.Active then
+    FDataLink.BufferCount := VisibleDataRows;
+end;
+
+procedure TPPGCustomDBGrid.RebuildCache;
+var
+  R, C, N, Old: Integer;
+  F: TField;
+begin
+  if not FDataLink.Active then
+  begin
+    SetLength(FCache, 0);
+    Exit;
+  end;
+  N := FDataLink.RecordCount;
+  SetLength(FCache, N);
+  Old := FDataLink.ActiveRecord;
+  try
+    for R := 0 to N - 1 do
+    begin
+      FDataLink.ActiveRecord := R;
+      SetLength(FCache[R], Length(FFields));
+      for C := 0 to High(FFields) do
+      begin
+        F := FFields[C];
+        if F = nil then
+          FCache[R][C] := ''
+        else if F.DataType = ftBoolean then
+        begin
+          // Kaestchen-Spalte: 1/0 wie im Grid; leer = kein Wert
+          if F.IsNull then
+            FCache[R][C] := ''
+          else if F.AsBoolean then
+            FCache[R][C] := '1'
+          else
+            FCache[R][C] := '0';
+        end
+        else
+          FCache[R][C] := F.DisplayText;
+      end;
+    end;
+  finally
+    FDataLink.ActiveRecord := Old;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.SyncPosition;
+var
+  DS: TDataSet;
+  RowH, Top, MaxY, Target: Integer;
+begin
+  if not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  Inc(FSyncing);
+  try
+    // Fokus auf die aktive Zeile des Puffers
+    if FixedRows + FDataLink.ActiveRecord < RowCount then
+      MoveFocus(Col, VisualRow(FixedRows + FDataLink.ActiveRecord), False, False);
+    // Leiste auf die Lage in der Datenmenge (Inhaltshoehe zuerst neu)
+    InvalidateGeometry;
+    EnsureGeometry;
+    RowH := DataRowHeight;
+    MaxY := MaxScroll(saVert);
+    if DS.IsSequenced and (DS.RecNo > 0) then
+    begin
+      Top := DS.RecNo - 1 - FDataLink.ActiveRecord;
+      if Top < 0 then
+        Top := 0;
+      Target := Top * RowH;
+    end
+    else if DS.Bof then
+      Target := 0
+    else if DS.Eof then
+      Target := MaxY
+    else
+      Target := MaxY div 2;
+    if Target > MaxY then
+      Target := MaxY;
+    if ScrollY <> Target then
+      ScrollTo(ScrollX, Target);
+  finally
+    Dec(FSyncing);
+  end;
+end;
+
+{ ---- Ereignisse des DataLinks ---- }
+
+procedure TPPGCustomDBGrid.LinkActive(Value: Boolean);
+begin
+  if (csDestroying in ComponentState) then
+    Exit;
+  HideEditor(False);
+  BuildColumns;
+end;
+
+procedure TPPGCustomDBGrid.LayoutChanged;
+begin
+  if not (csDestroying in ComponentState) then
+    BuildColumns;
+end;
+
+procedure TPPGCustomDBGrid.DataChanged;
+var
+  N: Integer;
+begin
+  if (csDestroying in ComponentState) or FLayoutBusy then
+    Exit;
+  if not EditorMode then
+    HideEditor(False);
+  RebuildCache;
+  // Mindestens eine (ggf. leere) Datenzeile: RowCount > FixedRows
+  N := Length(FCache);
+  if N < 1 then
+    N := 1;
+  if RowCount <> FixedRows + N then
+    RowCount := FixedRows + N;
+  SyncPosition;
+  Invalidate;
+end;
+
+procedure TPPGCustomDBGrid.EditingChanged;
+begin
+  Invalidate;
+end;
+
+procedure TPPGCustomDBGrid.RecordChanged(Field: TField);
+begin
+  if csDestroying in ComponentState then
+    Exit;
+  // Nur der aktive Datensatz hat sich geaendert: Zwischenspeicher neu
+  RebuildCache;
+  Invalidate;
+end;
+
+procedure TPPGCustomDBGrid.UpdateData;
+begin
+  // Datenmenge schreibt (Post): offenen Editor uebernehmen
+  if EditorMode then
+    HideEditor(True);
+end;
+
+{ ---- Erweiterungspunkte des Grids ---- }
+
+function TPPGCustomDBGrid.ColumnOf(ACol: Integer): TPPGGridColumn;
+var
+  I: Integer;
+begin
+  Result := nil;
+  I := ACol - FixedCols;
+  if I < 0 then
+    Exit;
+  if Columns.Count > 0 then
+  begin
+    if I < Columns.Count then
+      Result := Columns[I];
+  end
+  else if (FAutoColumns <> nil) and (I < FAutoColumns.Count) then
+    Result := FAutoColumns[I];
+end;
+
+procedure TPPGCustomDBGrid.ColumnsChanged;
+begin
+  // Persistente Spalten geaendert: Felder neu zuordnen
+  if not (csLoading in ComponentState) and not FLayoutBusy then
+    BuildColumns;
+  InvalidateGeometry;
+  Invalidate;
+end;
+
+function TPPGCustomDBGrid.RowScrollY: Integer;
+begin
+  // Der Puffer steht immer oben; die Leiste gehoert der Datenmenge
+  Result := 0;
+end;
+
+function TPPGCustomDBGrid.RowsContentHeight: Integer;
+var
+  DS: TDataSet;
+  N: Int64;
+  V: TRect;
+begin
+  V := ViewRect;
+  Result := V.Bottom - V.Top;
+  if not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  if DS.IsSequenced and (DS.RecordCount > 0) then
+  begin
+    N := Int64(FixedHeight) + Int64(DS.RecordCount) * DataRowHeight;
+    if N > MaxInt then
+      N := MaxInt;
+    if N > Result then
+      Result := Integer(N);
+  end
+  else if not (DS.Bof and DS.Eof) then
+    Result := Result + ThreeStateRows * DataRowHeight;
+end;
+
+procedure TPPGCustomDBGrid.ScrollCellsTo(X, Y: Integer);
+begin
+  // Nur waagerecht: senkrecht bewegt sich die Datenmenge
+  ScrollTo(X, ScrollY);
+end;
+
+procedure TPPGCustomDBGrid.Scrolled;
+var
+  DS: TDataSet;
+  RowH, Wanted, Top, Delta: Integer;
+begin
+  inherited Scrolled;
+  if (FSyncing > 0) or not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  RowH := DataRowHeight;
+  Inc(FSyncing);
+  try
+    if DS.IsSequenced and (DS.RecNo > 0) then
+    begin
+      Wanted := ScrollY div RowH;
+      Top := DS.RecNo - 1 - FDataLink.ActiveRecord;
+      Delta := Wanted - Top;
+      if Delta = 0 then
+        Exit;
+      // Grosse Spruenge (Daumen gezogen) direkt, kleine (Mausrad) schrittweise
+      if Abs(Delta) > FDataLink.BufferCount then
+        DS.RecNo := Min(DS.RecordCount, Wanted + 1 + FDataLink.ActiveRecord)
+      else
+        FDataLink.MoveBy(Delta);
+    end
+    else if ScrollY = 0 then
+      DS.First
+    else if ScrollY >= MaxScroll(saVert) then
+      DS.Last
+    else if ScrollY > MaxScroll(saVert) div 2 then
+      FDataLink.MoveBy(FDataLink.BufferCount)
+    else
+      FDataLink.MoveBy(-FDataLink.BufferCount);
+  finally
+    Dec(FSyncing);
+  end;
+  SyncPosition;
+end;
+
+procedure TPPGCustomDBGrid.Resize;
+begin
+  inherited Resize;
+  if not (csLoading in ComponentState) and (FDataLink <> nil) then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
+end;
+
+function TPPGCustomDBGrid.GetCellText(ACol, ARow: Integer): string;
+var
+  C: TPPGGridColumn;
+  F: TField;
+  R: Integer;
+begin
+  Result := '';
+  if ARow < FixedRows then
+  begin
+    // Titel
+    if ACol < FixedCols then
+      Exit;
+    C := ColumnOf(ACol);
+    F := FieldOfCol(ACol);
+    if (C <> nil) and (C.Title <> '') then
+      Result := C.Title
+    else if F <> nil then
+      Result := F.DisplayLabel;
+    Exit;
+  end;
+  R := ARow - FixedRows;
+  if ACol < FixedCols then
+  begin
+    // Indikator: Datensatzzeiger und Zustand
+    if FDataLink.Active and (R = FDataLink.ActiveRecord) and (R < Length(FCache)) then
+      case FDataLink.DataSet.State of
+        dsEdit: Result := IndEdit;
+        dsInsert: Result := IndInsert;
+      else
+        Result := IndBrowse;
+      end;
+    Exit;
+  end;
+  if (R >= 0) and (R < Length(FCache)) and (ACol - FixedCols < Length(FCache[R])) then
+    Result := FCache[R][ACol - FixedCols];
+end;
+
+function TPPGCustomDBGrid.GetEditText(ACol, ARow: Integer): string;
+var
+  F: TField;
+begin
+  // Der Editor bearbeitet den aktiven Datensatz: Field.Text (Bearbeitungsformat)
+  F := FieldOfCol(ACol);
+  if (F <> nil) and FDataLink.Active and (ARow - FixedRows = FDataLink.ActiveRecord) and
+    (F.DataType <> ftBoolean) then
+    Result := F.Text
+  else
+    Result := GetCellText(ACol, ARow);
+end;
+
+function TPPGCustomDBGrid.CanEditCell(ACol, VRow: Integer): Boolean;
+var
+  F: TField;
+begin
+  F := FieldOfCol(ACol);
+  Result := not FReadOnly and (dgEditing in FDBOptions) and FDataLink.Active and
+    not FDataLink.ReadOnly and FDataLink.DataSet.CanModify and (F <> nil) and
+    F.CanModify and (VRow - VisualRow(FixedRows) < Length(FCache)) and
+    inherited CanEditCell(ACol, VRow);
+end;
+
+procedure TPPGCustomDBGrid.SetCellByUser(ACol, ARow: Integer; const Value: string);
+var
+  F: TField;
+begin
+  F := FieldOfCol(ACol);
+  if (F = nil) or not FDataLink.Active or (ARow - FixedRows <> FDataLink.ActiveRecord) then
+    Exit;
+  if F.DataType = ftBoolean then
+  begin
+    if not F.IsNull and (F.AsBoolean = (Value = '1')) then
+      Exit;
+  end
+  else if F.Text = Value then
+    Exit;
+  if not FDataLink.Editing and not FDataLink.Edit then
+    Exit;
+  if F.DataType = ftBoolean then
+    F.AsBoolean := Value = '1'
+  else
+    F.Text := Value;
+end;
+
+function TPPGCustomDBGrid.SelectCell(ACol, ARow: Integer): Boolean;
+var
+  R: Integer;
+begin
+  Result := True;
+  if (FSyncing = 0) and FDataLink.Active and (ARow >= FixedRows) then
+  begin
+    R := ARow - FixedRows;
+    if R >= FDataLink.RecordCount then
+      Exit(False); // leere Fuellzeile
+    if R <> FDataLink.ActiveRecord then
+    begin
+      Inc(FSyncing);
+      try
+        FDataLink.MoveBy(R - FDataLink.ActiveRecord);
+      finally
+        Dec(FSyncing);
+      end;
+    end;
+  end;
+  Result := inherited SelectCell(ACol, ARow);
+end;
+
+procedure TPPGCustomDBGrid.HeaderClicked(ACol, VRow: Integer);
+var
+  C: TPPGGridColumn;
+begin
+  if not (dgTitleClick in FDBOptions) or (ACol < FixedCols) then
+    Exit;
+  C := ColumnOf(ACol);
+  if Assigned(FOnTitleClick) and (C is TPPGDBGridColumn) then
+    FOnTitleClick(Self, TPPGDBGridColumn(C));
+end;
+
+procedure TPPGCustomDBGrid.ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  C, V: Integer;
+  Col: TPPGGridColumn;
+begin
+  inherited ContentMouseUp(Button, Shift, X, Y);
+  if (Button = mbLeft) and Assigned(FOnCellClick) and MouseCoord(X, Y, C, V) and
+    (V >= VisualRow(FixedRows)) and (C >= FixedCols) then
+  begin
+    Col := ColumnOf(C);
+    if Col is TPPGDBGridColumn then
+      FOnCellClick(Self, TPPGDBGridColumn(Col));
+  end;
+end;
+
+function TPPGCustomDBGrid.ConfirmDelete: Boolean;
+begin
+  Result := MessageDlg(SPPGDBGridConfirmDelete, mtConfirmation, [mbOK, mbCancel], 0) = mrOK;
+end;
+
+procedure TPPGCustomDBGrid.KeyDown(var Key: Word; Shift: TShiftState);
+var
+  DS: TDataSet;
+begin
+  if not FDataLink.Active or EditorMode then
+  begin
+    inherited KeyDown(Key, Shift);
+    Exit;
+  end;
+  DS := FDataLink.DataSet;
+  case Key of
+    VK_UP:
+      begin
+        // Neuer, unveraenderter Datensatz am Ende verschwindet wieder (TDBGrid)
+        if (DS.State = dsInsert) and not DS.Modified and DS.Eof then
+          DS.Cancel
+        else
+          DS.Prior;
+        Key := 0;
+      end;
+    VK_DOWN:
+      begin
+        if (DS.State = dsInsert) and not DS.Modified then
+        begin
+          Key := 0;
+          Exit;
+        end;
+        DS.Next;
+        if DS.Eof and (dgEditing in FDBOptions) and not FReadOnly and DS.CanModify then
+          DS.Append;
+        Key := 0;
+      end;
+    VK_PRIOR:
+      begin
+        FDataLink.MoveBy(-VisibleDataRows);
+        Key := 0;
+      end;
+    VK_NEXT:
+      begin
+        FDataLink.MoveBy(VisibleDataRows);
+        Key := 0;
+      end;
+    VK_HOME, VK_END:
+      if ssCtrl in Shift then
+      begin
+        if Key = VK_HOME then
+          DS.First
+        else
+          DS.Last;
+        Key := 0;
+      end;
+    VK_INSERT:
+      if (Shift = []) and (dgEditing in FDBOptions) and not FReadOnly and DS.CanModify then
+      begin
+        DS.Insert;
+        Key := 0;
+      end;
+    VK_DELETE:
+      if (ssCtrl in Shift) and not FReadOnly and DS.CanModify and not (DS.Bof and DS.Eof) then
+      begin
+        if not (dgConfirmDelete in FDBOptions) or ConfirmDelete then
+          DS.Delete;
+        Key := 0;
+      end;
+    VK_ESCAPE:
+      if DS.State in [dsEdit, dsInsert] then
+      begin
+        DS.Cancel;
+        Key := 0;
+      end;
+  end;
+  if Key <> 0 then
+    inherited KeyDown(Key, Shift);
+end;
+
+end.

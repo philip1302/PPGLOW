@@ -106,6 +106,9 @@ type
     function CommitText(UserAction: Boolean): Boolean;
     /// Datum durch den Anwender setzen (OnChange).
     procedure UserSetDate(D: TDate);
+    /// Anwender hat Datum oder Kaestchen geaendert: loest OnChange aus.
+    /// DB-Variante: Datensatz vorher in den Bearbeiten-Modus setzen.
+    procedure UserChange; virtual;
     procedure DoDropDown; virtual;
     procedure DoCloseUp; virtual;
     property Date: TDate read GetDate write SetDate;
@@ -520,7 +523,7 @@ begin
       begin
         FDateTime := 0;
         if UserAction then
-          inherited Change;
+          UserChange;
       end;
       Exit(True);
     end;
@@ -548,6 +551,11 @@ begin
     UpdateText;
 end;
 
+procedure TPPGCustomDatePicker.UserChange;
+begin
+  inherited Change;
+end;
+
 procedure TPPGCustomDatePicker.UserSetDate(D: TDate);
 var
   Old: TDateTime;
@@ -557,7 +565,7 @@ begin
   if FShowCheckbox and not FChecked then
     SetChecked(True);
   if FDateTime <> Old then
-    inherited Change; // OnChange
+    UserChange; // OnChange
 end;
 
 procedure TPPGCustomDatePicker.FieldKeyDown(var Key: Word; Shift: TShiftState);
@@ -724,7 +732,7 @@ begin
   if Id = PPGDateButtonCheck then
   begin
     SetChecked(not FChecked);
-    inherited Change; // Anwender hat umgeschaltet
+    UserChange; // Anwender hat umgeschaltet
     Exit;
   end;
   inherited ButtonClick(Id);

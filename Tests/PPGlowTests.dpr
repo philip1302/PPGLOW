@@ -84,6 +84,9 @@ uses
   PPG.Notifications in '..\Source\Controls\PPG.Notifications.pas',
   PPG.Editors.Logic in '..\Source\Editors\PPG.Editors.Logic.pas',
   PPG.Editors.Forms in '..\Source\Editors\PPG.Editors.Forms.pas',
+  PPG.DB.Controls in '..\Source\DB\PPG.DB.Controls.pas',
+  PPG.DB.Lookup in '..\Source\DB\PPG.DB.Lookup.pas',
+  PPG.DB.Grid in '..\Source\DB\PPG.DB.Grid.pas',
   PPG.Tests.Core in 'PPG.Tests.Core.pas',
   PPG.Tests.Controls in 'PPG.Tests.Controls.pas',
   PPG.Tests.Check in 'PPG.Tests.Check.pas',
@@ -104,7 +107,8 @@ uses
   PPG.Tests.Streaming in 'PPG.Tests.Streaming.pas',
   PPG.Tests.Visual in 'PPG.Tests.Visual.pas',
   PPG.Tests.Phase9a in 'PPG.Tests.Phase9a.pas',
-  PPG.Tests.Phase9b in 'PPG.Tests.Phase9b.pas';
+  PPG.Tests.Phase9b in 'PPG.Tests.Phase9b.pas',
+  PPG.Tests.Phase9c in 'PPG.Tests.Phase9c.pas';
 
 var
   R: TTestResult;
