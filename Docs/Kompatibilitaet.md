@@ -34,7 +34,7 @@ In den Tests prüft `PPG.Tests.Gaps` drei Stellen direkt mit `CompilerVersion >=
 | `PPG.Lang` | `TObjectDictionary<string, …>` mit `doOwnsValues` | Suite **Phase9d** |
 | `PPG.Tests.Phase9d` | Typisierte Konstante `array of PResStringRec` mit `@resourcestring` | Kompiliert. Falls nicht: die Liste in eine Funktion verlegen, die das Array füllt |
 | `PPG.DB.*` | `TFieldDataLink` aus `Vcl.DBCtrls`, `TDBGridOptions` aus `Vcl.DBGrids`, `dsOpening` | Suite **Phase9c**. `MidasLib` gibt es ab XE2 |
-| `PPG.Reg` | `ShowCollectionEditor` (Unit `ColnEdit`), Paket `vclsmp` | Bei den Collection-Editoren („Columns…“, „Items…“) öffnet sich der Standard-Editor |
+| `PPG.Reg` | `ShowCollectionEditor` (Unit `ColnEdit`) | Bei den Collection-Editoren („Columns…“, „Items…“) öffnet sich der Standard-Editor |
 | `PPG.Editors.Forms` | Dialoge mit `CreateNew`; `StyleElements` nur ab XE3 | Darstellungs-Dialog und Preset-Galerie in der IDE öffnen |
 | `PPGlow.dcr`, `PPGlowDB.dcr` | Bitmaps in 16/24/32 px mit Alphakanal; ältere IDEs werten nicht alle Größen bzw. das Alpha aus | Palette: Symbole sichtbar, Hintergrund nicht schwarz |
 

@@ -84,7 +84,6 @@
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="designide.dcp"/>
-        <DCCReference Include="vclsmp.dcp"/>
         <DCCReference Include="PPGlowR.dcp"/>
         <DCCReference Include="..\..\Source\Design\PPG.Reg.pas"/>
         <DCCReference Include="..\..\Source\Editors\PPG.Editors.Logic.pas"/>

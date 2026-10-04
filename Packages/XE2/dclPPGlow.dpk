@@ -33,7 +33,6 @@ requires
   rtl,
   vcl,
   designide,
-  vclsmp,
   PPGlowR;
 
 contains

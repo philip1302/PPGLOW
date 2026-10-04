@@ -25,7 +25,7 @@ interface
 uses
   Winapi.Windows, System.Classes, System.SysUtils, System.Generics.Collections,
   Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Graphics,
-  Vcl.Samples.Spin,
+  PPG.SpinEdit,
   PPG.Types, PPG.Appearance, PPG.Controls.Base, PPG.NavigationView, PPG.TreeView,
   PPG.Editors.Logic;
 
@@ -46,7 +46,7 @@ type
       AOnClick: TNotifyEvent): TButton;
     function NewEdit(AParent: TWinControl; ALeft, ATop, AWidth: Integer; AOnChange: TNotifyEvent): TEdit;
     function NewSpin(AParent: TWinControl; ALeft, ATop, AWidth, AMin, AMax: Integer;
-      AOnChange: TNotifyEvent): TSpinEdit;
+      AOnChange: TNotifyEvent): TPPGSpinEdit;
     function NewCheck(AParent: TWinControl; const ACaption: string; ALeft, ATop: Integer;
       AOnClick: TNotifyEvent): TCheckBox;
     /// Schaltet den VCL-Style der IDE fuer eine Vorschau ab.
@@ -61,12 +61,12 @@ type
     FUpdating: Boolean;
     FState: TComboBox;
     FColors: array[0..6] of TColorBox;
-    FGlowAlpha: TSpinEdit;
+    FGlowAlpha: TPPGSpinEdit;
     FDirection: TComboBox;
     FFocusColor: TColorBox;
-    FRounding: TSpinEdit;
-    FBorderWidth: TSpinEdit;
-    FGlowSize: TSpinEdit;
+    FRounding: TPPGSpinEdit;
+    FBorderWidth: TPPGSpinEdit;
+    FGlowSize: TPPGSpinEdit;
     FPreviewBox: TPanel;
     FPreview: TPPGCustomControl;
     FPreviewDisabled: TPPGCustomControl;
@@ -87,7 +87,7 @@ type
     property StateBox: TComboBox read FState;
     /// Farbe "Color" des gewaehlten Zustands (fuer Tests).
     function ColorBox0: TColorBox;
-    property RoundingEdit: TSpinEdit read FRounding;
+    property RoundingEdit: TPPGSpinEdit read FRounding;
   end;
 
   TPPGPresetGalleryDialog = class(TPPGEditorDialog)
@@ -116,8 +116,8 @@ type
     FUpdating: Boolean;
     FCaption: TEdit;
     FIconChar: TEdit;
-    FPageIndex: TSpinEdit;
-    FBadge: TSpinEdit;
+    FPageIndex: TPPGSpinEdit;
+    FBadge: TPPGSpinEdit;
     FFooter: TCheckBox;
     FEnabled: TCheckBox;
     FHint: TEdit;
@@ -154,8 +154,8 @@ type
     FText: TEdit;
     FDetail: TEdit;
     FBadge: TEdit;
-    FImageIndex: TSpinEdit;
-    FSelectedIndex: TSpinEdit;
+    FImageIndex: TPPGSpinEdit;
+    FSelectedIndex: TPPGSpinEdit;
     FCheckState: TComboBox;
     FEnabled: TCheckBox;
     FHasChildren: TCheckBox;
@@ -337,9 +337,9 @@ begin
 end;
 
 function TPPGEditorDialog.NewSpin(AParent: TWinControl; ALeft, ATop, AWidth, AMin, AMax: Integer;
-  AOnChange: TNotifyEvent): TSpinEdit;
+  AOnChange: TNotifyEvent): TPPGSpinEdit;
 begin
-  Result := TSpinEdit.Create(Self);
+  Result := TPPGSpinEdit.Create(Self);
   Result.Parent := AParent;
   Result.SetBounds(S(ALeft), S(ATop), S(AWidth), S(23));
   Result.MinValue := AMin;
@@ -574,7 +574,7 @@ begin
     St.BorderColor := FColors[4].Selected;
     St.GlowColor := FColors[5].Selected;
     St.TextColor := FColors[6].Selected;
-    // TSpinEdit liefert waehrend der Eingabe auch Werte ausserhalb der Grenzen
+    // Waehrend der Eingabe koennen Werte ausserhalb der Grenzen stehen
     if (FGlowAlpha.Value >= 0) and (FGlowAlpha.Value <= 255) then
       St.GlowAlpha := FGlowAlpha.Value;
     if FDirection.ItemIndex >= 0 then

@@ -113,6 +113,49 @@ foreach ($f in $Files) {
   return @(& $ps -NoProfile -NonInteractive -EncodedCommand $enc)
 }
 
+# Namen der DLL/BPL-Importe einer PE-Datei (Import-Tabelle), z.B. rtl370.bpl
+function Get-PeImports([string]$File) {
+  $b = [IO.File]::ReadAllBytes($File)
+  $pe = [BitConverter]::ToInt32($b, 0x3C)
+  $nsec = [BitConverter]::ToUInt16($b, $pe + 6)
+  $optSize = [BitConverter]::ToUInt16($b, $pe + 20)
+  $opt = $pe + 24
+  $dd = if ([BitConverter]::ToUInt16($b, $opt) -eq 0x20B) { $opt + 112 } else { $opt + 96 }
+  $secs = @()
+  for ($i = 0; $i -lt $nsec; $i++) {
+    $h = $opt + $optSize + 40 * $i
+    $secs += , @([BitConverter]::ToUInt32($b, $h + 12), [Math]::Max([BitConverter]::ToUInt32($b, $h + 8),
+      [BitConverter]::ToUInt32($b, $h + 16)), [BitConverter]::ToUInt32($b, $h + 20))
+  }
+  $toOff = { param($rva) foreach ($s in $secs) { if ($rva -ge $s[0] -and $rva -lt $s[0] + $s[1]) { return [int]($rva - $s[0] + $s[2]) } }; return -1 }
+  $names = @()
+  $off = & $toOff ([BitConverter]::ToUInt32($b, $dd + 8))
+  while ($off -ge 0 -and $off + 20 -le $b.Length) {
+    $nameRva = [BitConverter]::ToUInt32($b, $off + 12)
+    if ($nameRva -eq 0) { break }
+    $n = & $toOff $nameRva
+    if ($n -lt 0) { break }
+    $e = $n; while ($e -lt $b.Length -and $b[$e] -ne 0) { $e++ }
+    $names += [Text.Encoding]::ASCII.GetString($b, $n, $e - $n)
+    $off += 20
+  }
+  return $names
+}
+
+# Importe einer BPL, die in keinem der Ordner liegen (das meint Windows mit Code 126)
+function Get-MissingImports([string]$File, [string[]]$Dirs) {
+  $all = @($Dirs) + @(Join-Path $env:SystemRoot 'System32') + @(Join-Path $env:SystemRoot 'SysWOW64') +
+    @($env:PATH -split ';' | Where-Object { $_ })
+  $missing = @()
+  foreach ($imp in (Get-PeImports $File)) {
+    if ($imp -like 'api-ms-*' -or $imp -like 'ext-ms-*') { continue }
+    $found = $false
+    foreach ($d in $all) { if (Test-Path (Join-Path $d $imp)) { $found = $true; break } }
+    if (-not $found) { $missing += $imp }
+  }
+  return $missing
+}
+
 function Get-LoadHint([int]$Code) {
   switch ($Code) {
     126 { 'Ein benoetigtes Paket wurde nicht gefunden (z.B. PPGlowR nicht im Bpl-Ordner).' }
@@ -251,6 +294,13 @@ foreach ($t in $Targets) {
         Write-Host "  Ladetest FEHLER: $(Split-Path $parts[1] -Leaf): $($parts[3]) (Code $($parts[2]))" -ForegroundColor Red
         $hint = Get-LoadHint ([int]$parts[2])
         if ($hint) { Write-Host "    $hint" -ForegroundColor Red }
+        if ([int]$parts[2] -eq 126) {
+          try {
+            $miss = Get-MissingImports $parts[1] @($t.BplDir, $t.StudioBin)
+            if ($miss) { Write-Host "    Nicht gefunden: $($miss -join ', ')" -ForegroundColor Red }
+            else { Write-Host '    Alle direkten Importe sind vorhanden - eines davon laedt selbst nicht (siehe Zeilen davor).' -ForegroundColor Red }
+          } catch { Write-Host "    Importe nicht lesbar: $($_.Exception.Message)" -ForegroundColor DarkYellow }
+        }
       }
       'SKIP' { Write-Host "  Ladetest uebersprungen: $($parts[3])" -ForegroundColor DarkYellow }
       default { if ("$line".Trim()) { Write-Host "  $line" -ForegroundColor DarkGray } }
