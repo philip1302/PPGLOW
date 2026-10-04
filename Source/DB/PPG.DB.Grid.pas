@@ -68,7 +68,8 @@ type
     constructor Create(AGrid: TPPGCustomDBGrid);
   end;
 
-  TPPGDBGridColumnEvent = procedure(Sender: TObject; Column: TPPGDBGridColumn) of object;
+  /// Wie TDBGridClickEvent (ohne Sender), damit migrierte Handler passen.
+  TPPGDBGridColumnEvent = procedure(Column: TPPGDBGridColumn) of object;
 
   TPPGCustomDBGrid = class(TPPGCustomGrid)
   private
@@ -942,7 +943,7 @@ begin
     Exit;
   C := ColumnOf(ACol);
   if Assigned(FOnTitleClick) and (C is TPPGDBGridColumn) then
-    FOnTitleClick(Self, TPPGDBGridColumn(C));
+    FOnTitleClick(TPPGDBGridColumn(C));
 end;
 
 procedure TPPGCustomDBGrid.ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -956,7 +957,7 @@ begin
   begin
     Col := ColumnOf(C);
     if Col is TPPGDBGridColumn then
-      FOnCellClick(Self, TPPGDBGridColumn(Col));
+      FOnCellClick(TPPGDBGridColumn(Col));
   end;
 end;
 

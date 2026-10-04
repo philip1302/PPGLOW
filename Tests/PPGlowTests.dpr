@@ -113,8 +113,40 @@ uses
   PPG.Tests.Phase9c in 'PPG.Tests.Phase9c.pas',
   PPG.Tests.Phase9d in 'PPG.Tests.Phase9d.pas';
 
+/// Belegter Speicher (Bytes) laut Speichermanager.
+function AllocatedBytes: Int64;
+var
+  S: TMemoryManagerState;
+  I: Integer;
+begin
+  GetMemoryManagerState(S);
+  Result := S.TotalAllocatedMediumBlockSize + S.TotalAllocatedLargeBlockSize;
+  for I := Low(S.SmallBlockTypeStates) to High(S.SmallBlockTypeStates) do
+    Inc(Result, Int64(S.SmallBlockTypeStates[I].AllocatedBlockCount) *
+      S.SmallBlockTypeStates[I].UseableBlockSize);
+end;
+
+/// Ein Durchlauf aller Tests; Ergebnis = Fehler + Failures.
+function RunAll: Integer;
 var
   R: TTestResult;
+begin
+  R := TextTestRunner.RunRegisteredTests(rxbContinue);
+  try
+    Result := R.ErrorCount + R.FailureCount;
+  finally
+    R.Free;
+  end;
+end;
+
+const
+  /// Erlaubter Zuwachs zwischen erstem und zweitem Lauf (Caches des
+  /// Speichermanagers, Fenster-Klassen, Windows-Interna): 256 KB.
+  LeakToleranceBytes = 256 * 1024;
+
+var
+  Errors: Integer;
+  Before, After: Int64;
 begin
   // Leak-Meldung beim Beenden (FastMM): nur im GUI-Modus, sonst blockiert
   // die MessageBox einen automatischen Lauf.
@@ -125,10 +157,26 @@ begin
     GUITestRunner.RunRegisteredTests;
     Exit;
   end;
-  R := TextTestRunner.RunRegisteredTests(rxbContinue);
-  try
-    ExitCode := R.ErrorCount + R.FailureCount;
-  finally
-    R.Free;
+  if FindCmdLineSwitch('leaks', ['/', '-'], True) then
+  begin
+    // Leak-Lauf (Phase 9e): Der erste Lauf fuellt einmalige Caches (Registry,
+    // Animator, Schriften). Waechst der Speicher danach von Lauf zu Lauf,
+    // ist das ein echtes Leck. Exit-Code = Fehler + 1 bei Leck.
+    Errors := RunAll;
+    Application.ProcessMessages;
+    Before := AllocatedBytes;
+    Inc(Errors, RunAll);
+    Application.ProcessMessages;
+    After := AllocatedBytes;
+    WriteLn(Format('Leak-Lauf: %d Bytes vor, %d Bytes nach dem zweiten Lauf (Zuwachs %d)',
+      [Before, After, After - Before]));
+    if After - Before > LeakToleranceBytes then
+    begin
+      WriteLn('LECK: Speicher waechst von Lauf zu Lauf');
+      Inc(Errors);
+    end;
+    ExitCode := Errors;
+    Exit;
   end;
+  ExitCode := RunAll;
 end.
