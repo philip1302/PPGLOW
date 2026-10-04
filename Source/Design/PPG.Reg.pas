@@ -122,7 +122,7 @@ implementation
 {$R PPGlow.dcr}
 
 uses
-  System.SysUtils, System.TypInfo, Vcl.Controls, Vcl.Dialogs, ColnEdit,
+  System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, ColnEdit,
   PPG.Consts, PPG.Render.Registry, PPG.Presets, PPG.StyleManager,
   PPG.Controls.Base, PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch,
   PPG.ProgressBar, PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,

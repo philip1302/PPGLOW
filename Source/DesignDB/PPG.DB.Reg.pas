@@ -58,7 +58,7 @@ implementation
 {$R PPGlowDB.dcr}
 
 uses
-  System.SysUtils, System.TypInfo, Vcl.Dialogs, Data.DB, ColnEdit,
+  System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, Data.DB, ColnEdit,
   PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid;
 
 resourcestring
