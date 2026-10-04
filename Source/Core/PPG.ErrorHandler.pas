@@ -61,6 +61,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   Winapi.Windows, Vcl.Forms, PPG.Consts, PPG.Exceptions;
 
 const
@@ -124,13 +125,13 @@ end;
 
 class procedure TPPGErrorHandler.ReportPaintError(Sender: TObject; E: Exception);
 begin
-  NotifyError(Sender, E, Format(SPPGPaintFailed, [SenderText(Sender), E.Message]));
+  NotifyError(Sender, E, Format(PPGStr(@SPPGPaintFailed), [SenderText(Sender), E.Message]));
 end;
 
 class procedure TPPGErrorHandler.HandleCallbackError(Sender: TObject;
   E: Exception; const Context: string);
 begin
-  NotifyError(Sender, E, Format(SPPGCallbackFailed, [Context, E.Message]));
+  NotifyError(Sender, E, Format(PPGStr(@SPPGCallbackFailed), [Context, E.Message]));
   // Wie die VCL selbst: Anwendung zeigt bzw. protokolliert die Exception
   // (madExcept/EurekaLog haengen sich hier ein), Programm laeuft weiter.
   if (Application <> nil) and not Application.Terminated then

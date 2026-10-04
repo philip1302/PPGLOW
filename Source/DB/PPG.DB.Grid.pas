@@ -213,10 +213,8 @@ type
 implementation
 
 uses
-  System.Math, Vcl.Dialogs, PPG.Appearance, PPG.Controls.Scroll;
-
-resourcestring
-  SPPGDBGridConfirmDelete = 'Delete record?';
+  PPG.Lang,
+  System.Math, Vcl.Dialogs, PPG.Consts, PPG.Appearance, PPG.Controls.Scroll;
 
 const
   // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
@@ -964,7 +962,7 @@ end;
 
 function TPPGCustomDBGrid.ConfirmDelete: Boolean;
 begin
-  Result := MessageDlg(SPPGDBGridConfirmDelete, mtConfirmation, [mbOK, mbCancel], 0) = mrOK;
+  Result := MessageDlg(PPGStr(@SPPGDBGridConfirmDelete), mtConfirmation, [mbOK, mbCancel], 0) = mrOK;
 end;
 
 procedure TPPGCustomDBGrid.KeyDown(var Key: Word; Shift: TShiftState);

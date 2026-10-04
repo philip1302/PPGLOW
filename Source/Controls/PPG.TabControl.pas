@@ -241,6 +241,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Render.Registry;
 
@@ -882,7 +883,7 @@ end;
 
 function TPPGCustomTabs.AccChildDefaultAction(Id: Integer): string;
 begin
-  Result := SPPGAccSelect;
+  Result := PPGStr(@SPPGAccSelect);
 end;
 
 procedure TPPGCustomTabs.AccChildDoDefault(Id: Integer);

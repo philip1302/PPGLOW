@@ -80,6 +80,7 @@ function PPGIsLoading(Sender: TPersistent): Boolean;
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.Windows, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler;
 
 type
@@ -175,7 +176,7 @@ begin
     Result := AMin
   else
     Result := AMax;
-  TPPGErrorHandler.LogWarning(Sender, Format(SPPGValueClamped,
+  TPPGErrorHandler.LogWarning(Sender, Format(PPGStr(@SPPGValueClamped),
     [Value, PPGDisplayName(Sender), PropName, Result]));
 end;
 

@@ -251,6 +251,7 @@ const
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, System.StrUtils, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.Render.Registry, PPG.Markup;
 
@@ -1343,9 +1344,9 @@ end;
 function TPPGCustomComboBox.AccDefaultAction: string;
 begin
   if FDroppedDown then
-    Result := SPPGAccClose
+    Result := PPGStr(@SPPGAccClose)
   else
-    Result := SPPGAccOpen;
+    Result := PPGStr(@SPPGAccOpen);
 end;
 
 procedure TPPGCustomComboBox.AccDoDefaultAction;

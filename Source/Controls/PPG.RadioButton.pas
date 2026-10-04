@@ -105,6 +105,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.Generics.Collections, System.Generics.Defaults, Winapi.oleacc, PPG.Consts;
 
 function TPPGCustomRadioButton.IsSameGroup(C: TControl): Boolean;
@@ -217,7 +218,7 @@ end;
 
 function TPPGCustomRadioButton.AccDefaultAction: string;
 begin
-  Result := SPPGAccSelect;
+  Result := PPGStr(@SPPGAccSelect);
 end;
 
 function TPPGCustomRadioButton.GetIndicatorSize: TSize;

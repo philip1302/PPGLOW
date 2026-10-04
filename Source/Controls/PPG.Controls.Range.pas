@@ -67,6 +67,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler,
   PPG.Render.Registry;
 
@@ -88,7 +89,7 @@ begin
   // Erst jetzt sind Min, Max und Position vollstaendig gelesen
   if FMin > FMax then
   begin
-    TPPGErrorHandler.LogWarning(Self, Format(SPPGValueClamped,
+    TPPGErrorHandler.LogWarning(Self, Format(PPGStr(@SPPGValueClamped),
       [FMax, PPGDisplayName(Self), 'Max', FMin]));
     FMax := FMin;
   end;

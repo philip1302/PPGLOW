@@ -174,6 +174,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont,
   PPG.Render.Gdi;
@@ -1043,7 +1044,7 @@ begin
         Exit(FToasts[I]);
       Inc(N);
     end;
-  raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, VisibleCount - 1]);
+  raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, VisibleCount - 1]);
 end;
 
 end.

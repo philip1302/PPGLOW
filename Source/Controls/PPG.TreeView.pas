@@ -456,6 +456,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Markup,
   PPG.Selection, PPG.Render.Registry, Vcl.Forms;
@@ -627,7 +628,7 @@ end;
 function TPPGTreeNode.GetItem(Index: Integer): TPPGTreeNode;
 begin
   if (Index < 0) or (Index >= Count) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, Count - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, Count - 1]);
   Result := TPPGTreeNode(FChildren[Index]);
 end;
 
@@ -993,7 +994,7 @@ begin
   if (FOwner = nil) or (Destination = Self) then
     Exit;
   if (Destination <> nil) and Destination.HasAsParent(Self) then
-    raise EPPGError.CreateRes(@SPPGTreeMoveIntoChild);
+    raise EPPGError.Create(PPGStr(@SPPGTreeMoveIntoChild));
   FOwner.BeginUpdate;
   try
     OldParent := FParent;
@@ -1253,7 +1254,7 @@ var
   I: Integer;
 begin
   if (Index < 0) or (Index >= FCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, FCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FCount - 1]);
   // Fortlaufender Zugriff (for I := 0 to Count - 1) ueber den letzten Treffer
   if (FCacheNode <> nil) and (FCacheIndex <= Index) then
   begin
@@ -2640,9 +2641,9 @@ begin
   if (N <> nil) and N.HasChildren then
   begin
     if N.FExpanded then
-      Result := SPPGAccCollapse
+      Result := PPGStr(@SPPGAccCollapse)
     else
-      Result := SPPGAccExpand;
+      Result := PPGStr(@SPPGAccExpand);
   end
   else
     Result := inherited AccChildDefaultAction(Id);

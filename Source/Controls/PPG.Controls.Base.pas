@@ -272,6 +272,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Vcl.Forms, Vcl.Themes,
   PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.DpiUtils,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Presets, PPG.VclStyles, PPG.Theme,
@@ -572,7 +573,7 @@ end;
 procedure TPPGCustomControl.Invalidate;
 begin
   Assert(GetCurrentThreadId = MainThreadID,
-    Format(SPPGNotMainThread, [ClassName]));
+    Format(PPGStr(@SPPGNotMainThread), [ClassName]));
   if FUpdateCount > 0 then
   begin
     FInvalidatePending := True;
@@ -700,7 +701,7 @@ begin
     if not PPGIsLoading(Self) then
       raise EPPGPropertyError.CreateInvalid(Self, 'Preset', Value);
     NewName := TPPGRendererRegistry.DefaultName;
-    TPPGErrorHandler.LogWarning(Self, Format(SPPGUnknownPresetFallback,
+    TPPGErrorHandler.LogWarning(Self, Format(PPGStr(@SPPGUnknownPresetFallback),
       [Value, PPGDisplayName(Self), NewName]));
     R := TPPGRendererRegistry.Get(NewName);
   end;
@@ -1398,7 +1399,7 @@ end;
 
 function TPPGCustomControl.AccDefaultAction: string;
 begin
-  Result := SPPGAccPress;
+  Result := PPGStr(@SPPGAccPress);
 end;
 
 procedure TPPGCustomControl.AccDoDefaultAction;

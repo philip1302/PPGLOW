@@ -303,6 +303,7 @@ const
 implementation
 
 uses
+  PPG.Lang,
   System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.ItemPainter,
   PPG.Render.Gdi;
@@ -1466,7 +1467,7 @@ begin
   // Kompakt: Tooltip mit dem Text; sonst Item.Hint
   if FHotRow = -2 then
   begin
-    Message.HintInfo^.HintStr := SPPGNavMenu;
+    Message.HintInfo^.HintStr := PPGStr(@SPPGNavMenu);
     Message.HintInfo^.CursorRect := MenuRect;
     Exit;
   end;
@@ -1880,7 +1881,7 @@ var
   It: TPPGNavItem;
 begin
   if FShowMenuButton and (Id = RowCountAll + 1) then
-    Exit(SPPGNavMenu);
+    Exit(PPGStr(@SPPGNavMenu));
   It := RowItem(Id - 1);
   if It = nil then
     Exit('');
@@ -1953,19 +1954,19 @@ var
   It: TPPGNavItem;
 begin
   if FShowMenuButton and (Id = RowCountAll + 1) then
-    Exit(SPPGAccPress);
+    Exit(PPGStr(@SPPGAccPress));
   It := RowItem(Id - 1);
   if (It = nil) or (It.Kind <> nikItem) then
     Result := ''
   else if It.HasChildren then
   begin
     if It.Expanded then
-      Result := SPPGAccCollapse
+      Result := PPGStr(@SPPGAccCollapse)
     else
-      Result := SPPGAccExpand;
+      Result := PPGStr(@SPPGAccExpand);
   end
   else
-    Result := SPPGAccSelect;
+    Result := PPGStr(@SPPGAccSelect);
 end;
 
 procedure TPPGNavigationView.AccChildDoDefault(Id: Integer);

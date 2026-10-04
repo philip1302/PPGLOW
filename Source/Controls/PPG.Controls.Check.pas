@@ -96,6 +96,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc, PPG.Consts, PPG.DpiUtils, PPG.Render.Registry,
   PPG.Render.Gdi, PPG.VclStyles;
 
@@ -302,9 +303,9 @@ end;
 function TPPGCustomCheckControl.AccDefaultAction: string;
 begin
   if Checked then
-    Result := SPPGAccUncheck
+    Result := PPGStr(@SPPGAccUncheck)
   else
-    Result := SPPGAccCheck;
+    Result := PPGStr(@SPPGAccCheck);
 end;
 
 { ---- Zeichnen ---- }

@@ -166,6 +166,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc, PPG.UIA.Intf, PPG.Consts, PPG.Exceptions, PPG.Appearance,
   PPG.DpiUtils, PPG.Render.Registry;
 
@@ -186,7 +187,7 @@ end;
 procedure TPPGCustomCheckListBox.CheckIndex(Index: Integer);
 begin
   if (Index < 0) or (Index >= ItemCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, ItemCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, ItemCount - 1]);
 end;
 
 function TPPGCustomCheckListBox.GetState(Index: Integer): TCheckBoxState;
@@ -477,9 +478,9 @@ var
 begin
   GetItemData(Id - 1, Data);
   if Data.Checked = cbChecked then
-    Result := SPPGAccUncheck
+    Result := PPGStr(@SPPGAccUncheck)
   else
-    Result := SPPGAccCheck;
+    Result := PPGStr(@SPPGAccCheck);
 end;
 
 { ---- UI Automation ---- }

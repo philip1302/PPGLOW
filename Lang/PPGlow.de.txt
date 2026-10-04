@@ -1,0 +1,43 @@
+# PPGlow - deutsche Texte (UTF-8). Aus dieser Datei erzeugt
+# Build\make-lang.ps1 die Unit Source\Core\PPG.Lang.De.pas.
+# Format: Name=Text. Platzhalter (%s, %d, %%) muessen zum Original passen;
+# das Skript und der Regel-Pruefer pruefen das.
+SPPGInvalidPropertyValue=Ungültiger Wert "%s" für die Eigenschaft %s.%s
+SPPGValueOutOfRange=Wert %d für die Eigenschaft %s.%s liegt außerhalb des Bereichs (%d..%d)
+SPPGValueClamped=Wert %d für die Eigenschaft %s.%s wurde beim Laden auf %d begrenzt
+SPPGUnknownPreset=Unbekanntes Preset "%s"
+SPPGUnknownPresetFallback=Unbekanntes Preset "%s" beim Laden von %s, verwende "%s"
+SPPGRendererAlreadyRegistered=Ein Renderer mit dem Namen "%s" ist bereits registriert
+SPPGRendererClassNil=Die Renderer-Klasse darf nicht nil sein
+SPPGPaintFailed=Zeichnen von %s fehlgeschlagen: %s
+SPPGGdiPlusStartupFailed=GDI+ konnte nicht gestartet werden (Status %d), GDI wird verwendet
+SPPGGdiPlusCallFailed=GDI+-Aufruf %s fehlgeschlagen mit Status %d
+SPPGOSCallFailed=Windows-API-Aufruf %s fehlgeschlagen (Fehler %d: %s)
+SPPGCallbackFailed=Rückruf %s fehlgeschlagen: %s
+SPPGCircularStyleManager=Ein StyleManager kann nicht sich selbst zugewiesen werden
+SPPGNotMainThread=%s darf nur im Haupt-Thread verwendet werden
+SPPGIndexOutOfRange=Index %d außerhalb des Bereichs (0..%d)
+SPPGSortedListMove=Einträge einer sortierten Liste können nicht verschoben werden
+SPPGTreeMoveIntoChild=Ein Knoten kann nicht in seine eigenen Kinder verschoben werden
+SPPGInvalidArgument=Ungültiger Wert %d für %s
+SPPGNoTarget=%s braucht eine Zielkomponente
+SPPGAccPress=Drücken
+SPPGAccCheck=Aktivieren
+SPPGAccUncheck=Deaktivieren
+SPPGAccSelect=Auswählen
+SPPGAccOpen=Öffnen
+SPPGAccClose=Schließen
+SPPGGridFilterHint=Filter
+SPPGSortAscending=Aufsteigend sortiert
+SPPGSortDescending=Absteigend sortiert
+SPPGDBGridConfirmDelete=Datensatz löschen?
+SPPGAccJump=Springen
+SPPGAccExpand=Erweitern
+SPPGAccCollapse=Reduzieren
+SPPGAccOn=Ein
+SPPGAccOff=Aus
+SPPGAccToggle=Umschalten
+SPPGNavMenu=Navigation öffnen oder schließen
+SPPGMoreOptions=Weitere Optionen
+SPPGNotifications=Benachrichtigungen
+SPPGPercentFormat=%d %%

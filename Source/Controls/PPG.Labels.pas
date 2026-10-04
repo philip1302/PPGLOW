@@ -198,6 +198,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc, Vcl.Themes,
   PPG.Consts, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles, PPG.Theme,
   PPG.Render.Registry;
@@ -707,7 +708,7 @@ end;
 
 function TPPGCustomLinkLabel.AccChildDefaultAction(Id: Integer): string;
 begin
-  Result := SPPGAccJump;
+  Result := PPGStr(@SPPGAccJump);
 end;
 
 procedure TPPGCustomLinkLabel.AccChildDoDefault(Id: Integer);

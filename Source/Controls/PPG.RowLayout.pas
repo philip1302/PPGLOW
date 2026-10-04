@@ -52,6 +52,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, PPG.Consts, PPG.Exceptions;
 
 { TPPGRowLayout }
@@ -72,7 +73,7 @@ var
   Old, I: Integer;
 begin
   if Value < 0 then
-    raise EPPGPropertyError.CreateFmt(SPPGInvalidArgument, [Value, 'Count']);
+    raise EPPGPropertyError.CreateFmt(PPGStr(@SPPGInvalidArgument), [Value, 'Count']);
   if Value = FCount then
     Exit;
   Old := FCount;
@@ -89,7 +90,7 @@ end;
 procedure TPPGRowLayout.SetDefaultHeight(const Value: Integer);
 begin
   if Value < 1 then
-    raise EPPGPropertyError.CreateFmt(SPPGInvalidArgument, [Value, 'DefaultHeight']);
+    raise EPPGPropertyError.CreateFmt(PPGStr(@SPPGInvalidArgument), [Value, 'DefaultHeight']);
   if Value <> FDefaultHeight then
   begin
     FDefaultHeight := Value;
@@ -102,7 +103,7 @@ var
   I: Integer;
 begin
   if (Index < 0) or (Index >= FCount) then
-    raise EPPGPropertyError.CreateFmt(SPPGIndexOutOfRange, [Index, FCount - 1]);
+    raise EPPGPropertyError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FCount - 1]);
   if Height < 0 then
     Height := 0;
   if not Variable then

@@ -259,6 +259,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc, Vcl.StdCtrls, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Markup;
@@ -699,7 +700,7 @@ end;
 procedure TPPGCustomItemList.SetSelected(Index: Integer; const Value: Boolean);
 begin
   if (Index < 0) or (Index >= ItemCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, ItemCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, ItemCount - 1]);
   FSelection.Selected[Index] := Value;
 end;
 
@@ -1574,7 +1575,7 @@ end;
 
 function TPPGCustomItemList.AccChildDefaultAction(Id: Integer): string;
 begin
-  Result := SPPGAccSelect;
+  Result := PPGStr(@SPPGAccSelect);
 end;
 
 procedure TPPGCustomItemList.AccChildDoDefault(Id: Integer);

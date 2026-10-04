@@ -134,6 +134,7 @@ function PPGCapRounding(const R: TRect; Rounding: Integer): Integer;
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler,
   PPG.Render.Gdi, PPG.Render.GdiPlus;
 
@@ -1046,9 +1047,9 @@ var
   E: TRendererEntry;
 begin
   if AClass = nil then
-    raise EPPGConfigError.CreateRes(@SPPGRendererClassNil);
+    raise EPPGConfigError.Create(PPGStr(@SPPGRendererClassNil));
   if Entries.IndexOf(AName) >= 0 then
-    raise EPPGConfigError.CreateResFmt(@SPPGRendererAlreadyRegistered, [AName]);
+    raise EPPGConfigError.CreateFmt(PPGStr(@SPPGRendererAlreadyRegistered), [AName]);
   E := TRendererEntry.Create;
   try
     E.RendererClass := AClass;
@@ -1091,7 +1092,7 @@ class function TPPGRendererRegistry.Get(const AName: string): IPPGRenderer;
 begin
   Result := Find(AName);
   if Result = nil then
-    raise EPPGConfigError.CreateResFmt(@SPPGUnknownPreset, [AName]);
+    raise EPPGConfigError.CreateFmt(PPGStr(@SPPGUnknownPreset), [AName]);
 end;
 
 class function TPPGRendererRegistry.IsRegistered(const AName: string): Boolean;

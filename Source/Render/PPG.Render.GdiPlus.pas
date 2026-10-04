@@ -67,6 +67,7 @@ procedure PPGGdiPlusShutdown;
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.Render.Gdi;
 
 type
@@ -106,7 +107,7 @@ begin
     else
     begin
       GState := gpsFailed;
-      TPPGErrorHandler.LogWarning(nil, Format(SPPGGdiPlusStartupFailed, [Status]));
+      TPPGErrorHandler.LogWarning(nil, Format(PPGStr(@SPPGGdiPlusStartupFailed), [Status]));
     end;
   end;
   Result := GState = gpsStarted;
@@ -137,7 +138,7 @@ begin
   inherited Create;
   FDC := ADC;
   if not PPGGdiPlusAvailable then
-    raise EPPGRenderError.CreateResFmt(@SPPGGdiPlusCallFailed, ['GdiplusStartup', -1]);
+    raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['GdiplusStartup', -1]);
   FGraphics := TGPGraphics.Create(ADC);
   Check(FGraphics.GetLastStatus, 'Graphics.Create');
   FGraphics.SetSmoothingMode(SmoothingModeAntiAlias);
@@ -156,7 +157,7 @@ end;
 procedure TPPGGdiPlusCanvas.Check(Status: TStatus; const Call: string);
 begin
   if Status <> Ok then
-    raise EPPGRenderError.CreateResFmt(@SPPGGdiPlusCallFailed, [Call, Ord(Status)]);
+    raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), [Call, Ord(Status)]);
 end;
 
 function TPPGGdiPlusCanvas.IsAntialiased: Boolean;
@@ -442,7 +443,7 @@ begin
   try
     Result := FGraphics.GetHDC;
     if Result = 0 then
-      raise EPPGRenderError.CreateResFmt(@SPPGGdiPlusCallFailed, ['GetHDC', Ord(FGraphics.GetLastStatus)]);
+      raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['GetHDC', Ord(FGraphics.GetLastStatus)]);
     FGdiSaved := SaveDC(Result);
     if Rgn <> 0 then
       SelectClipRgn(Result, Rgn);

@@ -178,6 +178,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Render.Gdi;
@@ -1032,7 +1033,7 @@ end;
 
 function TPPGPopupList.AccChildDefaultAction(Id: Integer): string;
 begin
-  Result := SPPGAccSelect;
+  Result := PPGStr(@SPPGAccSelect);
 end;
 
 procedure TPPGPopupList.AccChildDoDefault(Id: Integer);

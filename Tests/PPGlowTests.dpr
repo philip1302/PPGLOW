@@ -13,6 +13,8 @@ uses
   TextTestRunner,
   GUITestRunner,
   PPG.Consts in '..\Source\Core\PPG.Consts.pas',
+  PPG.Lang in '..\Source\Core\PPG.Lang.pas',
+  PPG.Lang.De in '..\Source\Core\PPG.Lang.De.pas',
   PPG.Exceptions in '..\Source\Core\PPG.Exceptions.pas',
   PPG.ErrorHandler in '..\Source\Core\PPG.ErrorHandler.pas',
   PPG.Types in '..\Source\Core\PPG.Types.pas',
@@ -108,7 +110,8 @@ uses
   PPG.Tests.Visual in 'PPG.Tests.Visual.pas',
   PPG.Tests.Phase9a in 'PPG.Tests.Phase9a.pas',
   PPG.Tests.Phase9b in 'PPG.Tests.Phase9b.pas',
-  PPG.Tests.Phase9c in 'PPG.Tests.Phase9c.pas';
+  PPG.Tests.Phase9c in 'PPG.Tests.Phase9c.pas',
+  PPG.Tests.Phase9d in 'PPG.Tests.Phase9d.pas';
 
 var
   R: TTestResult;

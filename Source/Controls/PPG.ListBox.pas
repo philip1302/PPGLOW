@@ -245,6 +245,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Selection;
 
 type
@@ -388,7 +389,7 @@ begin
   if CurIndex = NewIndex then
     Exit;
   if Sorted then
-    raise EPPGError.CreateRes(@SPPGSortedListMove);
+    raise EPPGError.Create(PPGStr(@SPPGSortedListMove));
   BeginUpdate;
   try
     S := Get(CurIndex);

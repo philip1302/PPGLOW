@@ -69,6 +69,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler,
   PPG.Render.Intf, PPG.Render.Registry, PPG.Presets;
 
@@ -106,7 +107,7 @@ begin
   if (Client = nil) or (FClients = nil) then
     Exit;
   if Client = Self then
-    raise EPPGConfigError.CreateRes(@SPPGCircularStyleManager);
+    raise EPPGConfigError.Create(PPGStr(@SPPGCircularStyleManager));
   if FClients.IndexOf(Client) < 0 then
   begin
     FClients.Add(Client);
@@ -226,7 +227,7 @@ begin
       raise EPPGPropertyError.CreateInvalid(Self, 'Preset', Value);
     // DFM mit unbekanntem Preset (z.B. Plugin fehlt): trotzdem oeffnen
     NewName := TPPGRendererRegistry.DefaultName;
-    TPPGErrorHandler.LogWarning(Self, Format(SPPGUnknownPresetFallback,
+    TPPGErrorHandler.LogWarning(Self, Format(PPGStr(@SPPGUnknownPresetFallback),
       [Value, PPGDisplayName(Self), NewName]));
     R := TPPGRendererRegistry.Find(NewName);
   end;

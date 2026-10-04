@@ -45,6 +45,7 @@ procedure PPGRaiseLastOSError(const ApiCall: string);
 implementation
 
 uses
+  PPG.Lang,
   Winapi.Windows, PPG.Consts;
 
 procedure PPGRaiseLastOSError(const ApiCall: string);
@@ -52,7 +53,7 @@ var
   Code: Cardinal;
 begin
   Code := GetLastError; // sofort sichern, bevor andere Aufrufe es ueberschreiben
-  raise EPPGRenderError.CreateResFmt(@SPPGOSCallFailed,
+  raise EPPGRenderError.CreateFmt(PPGStr(@SPPGOSCallFailed),
     [ApiCall, Code, SysErrorMessage(Code)]);
 end;
 
@@ -75,7 +76,7 @@ constructor EPPGPropertyError.CreateInvalid(Sender: TPersistent;
 begin
   FOwnerName := PPGDisplayName(Sender);
   FPropertyName := APropertyName;
-  CreateResFmt(@SPPGInvalidPropertyValue, [AValue, FOwnerName, APropertyName]);
+  CreateFmt(PPGStr(@SPPGInvalidPropertyValue), [AValue, FOwnerName, APropertyName]);
 end;
 
 constructor EPPGPropertyError.CreateRange(Sender: TPersistent;
@@ -83,7 +84,7 @@ constructor EPPGPropertyError.CreateRange(Sender: TPersistent;
 begin
   FOwnerName := PPGDisplayName(Sender);
   FPropertyName := APropertyName;
-  CreateResFmt(@SPPGValueOutOfRange, [AValue, FOwnerName, APropertyName, AMin, AMax]);
+  CreateFmt(PPGStr(@SPPGValueOutOfRange), [AValue, FOwnerName, APropertyName, AMin, AMax]);
 end;
 
 end.

@@ -478,6 +478,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Render.Gdi;
@@ -932,7 +933,7 @@ var
   C: TPPGGridColumn;
 begin
   if (Index < 0) or (Index >= FColCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, FColCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FColCount - 1]);
   C := ColumnOf(Index);
   if (C <> nil) and (C.Width > 0) then
     Result := C.Width
@@ -948,7 +949,7 @@ var
   V: Integer;
 begin
   if (Index < 0) or (Index >= FColCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, FColCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FColCount - 1]);
   V := PPGCheckRange(Self, 'ColWidths', Value, 0, 10000);
   C := ColumnOf(Index);
   if C <> nil then
@@ -961,7 +962,7 @@ end;
 function TPPGCustomGrid.GetRowHeights(Index: Integer): Integer;
 begin
   if (Index < 0) or (Index >= FRowCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, FRowCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FRowCount - 1]);
   if (Index < Length(FRowHeights)) and (FRowHeights[Index] > 0) then
     Result := FRowHeights[Index]
   else
@@ -973,7 +974,7 @@ var
   V: Integer;
 begin
   if (Index < 0) or (Index >= FRowCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, FRowCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FRowCount - 1]);
   V := PPGCheckRange(Self, 'RowHeights', Value, 0, 10000);
   if Length(FRowHeights) < FRowCount then
     SetLength(FRowHeights, FRowCount);
@@ -988,9 +989,9 @@ end;
 procedure TPPGCustomGrid.CheckCell(ACol, ARow: Integer);
 begin
   if (ACol < 0) or (ACol >= FColCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [ACol, FColCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [ACol, FColCount - 1]);
   if (ARow < 0) or (ARow >= FRowCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [ARow, FRowCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [ARow, FRowCount - 1]);
 end;
 
 procedure TPPGCustomGrid.EnsureCellStorage(ARow: Integer);
@@ -1073,7 +1074,7 @@ end;
 procedure TPPGCustomGrid.SetFilter(ACol: Integer; const Value: string);
 begin
   if (ACol < 0) or (ACol >= FColCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [ACol, FColCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [ACol, FColCount - 1]);
   if FFilters[ACol] <> Value then
   begin
     FFilters[ACol] := Value;
@@ -1792,7 +1793,7 @@ begin
           S := GetFilter(C);
           if S = '' then
           begin
-            S := SPPGGridFilterHint;
+            S := PPGStr(@SPPGGridFilterHint);
             TC := FPaint.Hint;
           end;
         end
@@ -2990,7 +2991,7 @@ end;
 
 function TPPGCustomGrid.AccChildDefaultAction(Id: Integer): string;
 begin
-  Result := SPPGAccSelect;
+  Result := PPGStr(@SPPGAccSelect);
 end;
 
 procedure TPPGCustomGrid.AccChildDoDefault(Id: Integer);
@@ -3240,9 +3241,9 @@ begin
   if Result then
   begin
     if FSortAscending then
-      Value := SPPGSortAscending
+      Value := PPGStr(@SPPGSortAscending)
     else
-      Value := SPPGSortDescending;
+      Value := PPGStr(@SPPGSortDescending);
   end;
 end;
 

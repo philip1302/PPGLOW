@@ -140,6 +140,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Render.Gdi;
 
@@ -635,9 +636,9 @@ end;
 function TPPGCustomExpander.AccDefaultAction: string;
 begin
   if FExpanded then
-    Result := SPPGAccCollapse
+    Result := PPGStr(@SPPGAccCollapse)
   else
-    Result := SPPGAccExpand;
+    Result := PPGStr(@SPPGAccExpand);
 end;
 
 procedure TPPGCustomExpander.AccDoDefaultAction;

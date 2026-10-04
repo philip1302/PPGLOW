@@ -151,6 +151,8 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="..\Source\Core\PPG.Consts.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Lang.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Lang.De.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Exceptions.pas"/>
         <DCCReference Include="..\Source\Core\PPG.ErrorHandler.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Types.pas"/>
@@ -247,6 +249,7 @@
         <DCCReference Include="PPG.Tests.Phase9a.pas"/>
         <DCCReference Include="PPG.Tests.Phase9b.pas"/>
         <DCCReference Include="PPG.Tests.Phase9c.pas"/>
+        <DCCReference Include="PPG.Tests.Phase9d.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -21,6 +21,9 @@
   - EXCEPT      kein leeres "except end"
   - PROJECT     jede Unit steht in allen Projektlisten ihrer Gruppe, und jede
                 eingetragene Datei existiert
+  - LANG        jede resourcestring ist in Lang\PPGlow.*.txt uebersetzt, die
+                Platzhalter passen, und die erzeugten PPG.Lang.*.pas sind aktuell
+                (Build\make-lang.ps1 -Check)
 
   -SelfTest prueft den Pruefer selbst an den Beispieldateien in
   Build\check-rules-tests (jede Datei nennt die erwarteten Regeln).
@@ -301,13 +304,25 @@ function Test-ProjectLists {
 # Lauf
 # ---------------------------------------------------------------------------
 
+function Test-Languages {
+  $script = Join-Path $PSScriptRoot 'make-lang.ps1'
+  if (-not (Test-Path $script)) { return }
+  $out = & $script -Check -Root $Root
+  foreach ($line in @($out)) {
+    if ($line) { Add-Finding (Join-Path $Root 'Lang') 0 'LANG' $line }
+  }
+}
+
 function Invoke-Check([string[]]$Files, [bool]$WithProjects) {
   $script:Findings.Clear()
   foreach ($f in $Files) {
     $isSource = $f -match '[\\/]Source[\\/].+\.pas$'
     Test-SourceFile $f $isSource
   }
-  if ($WithProjects) { Test-ProjectLists }
+  if ($WithProjects) {
+    Test-ProjectLists
+    Test-Languages
+  }
 }
 
 if ($SelfTest) {

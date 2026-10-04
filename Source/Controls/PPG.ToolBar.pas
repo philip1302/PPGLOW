@@ -228,6 +228,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.Math, Winapi.oleacc, Vcl.Forms,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.Render.Gdi;
 
@@ -1122,7 +1123,7 @@ begin
   inherited;
   if FHotPart = -2 then
   begin
-    Message.HintInfo^.HintStr := SPPGMoreOptions;
+    Message.HintInfo^.HintStr := PPGStr(@SPPGMoreOptions);
     Message.HintInfo^.CursorRect := FOverflowRect;
     Exit;
   end;
@@ -1263,7 +1264,7 @@ end;
 function TPPGToolBar.AccChildName(Id: Integer): string;
 begin
   if Id = FItems.Count + 1 then
-    Result := SPPGMoreOptions
+    Result := PPGStr(@SPPGMoreOptions)
   else if (Id >= 1) and (Id <= FItems.Count) then
   begin
     Result := StripHotkey(FItems[Id - 1].Caption);
@@ -1332,11 +1333,11 @@ end;
 function TPPGToolBar.AccChildDefaultAction(Id: Integer): string;
 begin
   if Id = FItems.Count + 1 then
-    Result := SPPGAccOpen
+    Result := PPGStr(@SPPGAccOpen)
   else if (Id >= 1) and (Id <= FItems.Count) and (FItems[Id - 1].Style = tisCheck) then
-    Result := SPPGAccToggle
+    Result := PPGStr(@SPPGAccToggle)
   else
-    Result := SPPGAccPress;
+    Result := PPGStr(@SPPGAccPress);
 end;
 
 procedure TPPGToolBar.AccChildDoDefault(Id: Integer);

@@ -214,6 +214,7 @@ function PPGLocaleFirstDayOfWeek: Integer;
 implementation
 
 uses
+  PPG.Lang,
   System.Math, System.DateUtils, System.UITypes, Winapi.oleacc,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Render.Gdi;
 
@@ -531,7 +532,7 @@ end;
 function TPPGCustomCalendar.SelectedDate(Index: Integer): TDate;
 begin
   if (Index < 0) or (Index >= SelectedCount) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [Index, SelectedCount - 1]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, SelectedCount - 1]);
   case FSelectionMode of
     dsmRange: Result := Trunc(FRangeStart) + Index;
     dsmMultiple: Result := FSelected[Index];
@@ -704,7 +705,7 @@ end;
 procedure TPPGCustomCalendar.ShowMonth(AYear, AMonth: Word);
 begin
   if (AYear < 1) or (AYear > 9999) or (AMonth < 1) or (AMonth > 12) then
-    raise EPPGError.CreateResFmt(@SPPGIndexOutOfRange, [AMonth, 12]);
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [AMonth, 12]);
   FDisplayYear := AYear;
   FDisplayMonth := AMonth;
   FHotCell := -1;
@@ -1560,7 +1561,7 @@ end;
 
 function TPPGCustomCalendar.AccChildDefaultAction(Id: Integer): string;
 begin
-  Result := SPPGAccSelect;
+  Result := PPGStr(@SPPGAccSelect);
 end;
 
 procedure TPPGCustomCalendar.AccChildDoDefault(Id: Integer);

@@ -27,6 +27,8 @@ uses
   Vcl.Forms,
   Vcl.Controls,
   PPG.Consts in '..\Source\Core\PPG.Consts.pas',
+  PPG.Lang in '..\Source\Core\PPG.Lang.pas',
+  PPG.Lang.De in '..\Source\Core\PPG.Lang.De.pas',
   PPG.Exceptions in '..\Source\Core\PPG.Exceptions.pas',
   PPG.ErrorHandler in '..\Source\Core\PPG.ErrorHandler.pas',
   PPG.Types in '..\Source\Core\PPG.Types.pas',

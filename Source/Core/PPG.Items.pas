@@ -170,6 +170,7 @@ procedure PPGInitItemData(var Data: TPPGItemData);
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, PPG.Consts, PPG.Exceptions;
 
 procedure PPGInitItemData(var Data: TPPGItemData);
@@ -472,7 +473,7 @@ end;
 procedure TPPGVirtualSource.SetCount(const Value: Integer);
 begin
   if Value < 0 then
-    raise EPPGPropertyError.CreateFmt(SPPGInvalidArgument, [Value, 'ItemCount']);
+    raise EPPGPropertyError.CreateFmt(PPGStr(@SPPGInvalidArgument), [Value, 'ItemCount']);
   if FCount <> Value then
   begin
     FCount := Value;

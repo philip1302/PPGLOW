@@ -149,6 +149,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, Winapi.oleacc, PPG.Consts, PPG.Appearance, PPG.DpiUtils;
 
 const
@@ -477,7 +478,7 @@ begin
   else if FStyle = pbstMarquee then
     Result := ''
   else
-    Result := Format(SPPGPercentFormat, [Percent]);
+    Result := Format(PPGStr(@SPPGPercentFormat), [Percent]);
 end;
 
 procedure TPPGCustomProgressBar.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
@@ -549,7 +550,7 @@ begin
   if FStyle = pbstMarquee then
     Result := ''
   else
-    Result := Format(SPPGPercentFormat, [Percent]);
+    Result := Format(PPGStr(@SPPGPercentFormat), [Percent]);
 end;
 
 function TPPGCustomProgressBar.AccDefaultAction: string;

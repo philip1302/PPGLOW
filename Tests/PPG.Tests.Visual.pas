@@ -31,6 +31,11 @@ type
   private
     FHost: TPanel;
     FToastCenter: TComponent;
+    FRtl: Boolean;      // Phase 9d: Render von rechts nach links
+    FPPI: Integer;      // Phase 9e: Render bei anderer DPI (96 = normal)
+    /// Galerie aus Zeilen (je Control) und Spalten (je Variante) speichern.
+    procedure SaveSheet(const FileName: string; const Columns: array of string;
+      const Rows: TStrings; const Cells: array of TBitmap);
     function BuildControl(Index: Integer; Dark: Boolean): TControl;
     function HotPoint(C: TControl; Index: Integer): TPoint;
     function Render(Index: Integer; Variant: TVisualVariant; State: TVisualState;
@@ -43,6 +48,10 @@ type
   published
     procedure GalleryAndStateChecks;
     procedure BaselineImages;
+    /// Phase 9d: alle Controls mit BiDiMode = bdRightToLeft (Galerie RTL.png).
+    procedure RtlGallery;
+    /// Phase 9e: alle Controls bei 144 und 192 DPI (Galerie DPI.png, ab 10.3).
+    procedure DpiGallery;
   end;
 
 /// Anzahl Pixel, die sich deutlich (Summe RGB > Tol) unterscheiden.
@@ -214,6 +223,8 @@ end;
 procedure TVisualTests.SetUp;
 begin
   inherited SetUp;
+  FRtl := False;
+  FPPI := 96;
   FForm.SetBounds(0, 0, 640, 520);
   FForm.Show;
   // Fokus-Cues sichtbar (wie nach Tastaturbedienung)
@@ -642,9 +653,19 @@ begin
     C := BuildControl(Index, Dark);
     if C is TPPGCustomControl then
       TCCV(C).Preset := Presets[Variant];
+    if FRtl then
+    begin
+      FHost.BiDiMode := bdRightToLeft;
+      C.BiDiMode := bdRightToLeft;
+    end;
     FHost.SetBounds(0, 0, C.Left + C.Width + 8, C.Top + C.Height + 8);
     if C is TWinControl then
       TWinControl(C).HandleNeeded;
+    {$IF CompilerVersion >= 33.0}
+    // Andere DPI: wie beim Wechsel auf einen Monitor mit dieser Skalierung
+    if (FPPI > 0) and (FPPI <> 96) then
+      FHost.ScaleForPPI(FPPI);
+    {$IFEND}
     // Vor dem Zustand: Leerlauf der VCL meldet sonst CM_MOUSELEAVE (echte Maus ist woanders)
     Application.ProcessMessages;
     Pt := HotPoint(C, Index);
@@ -872,6 +893,175 @@ begin
     Errors.Free;
   end;
 end;
+
+procedure TVisualTests.SaveSheet(const FileName: string; const Columns: array of string;
+  const Rows: TStrings; const Cells: array of TBitmap);
+var
+  Sheet: TBitmap;
+  Png: TPngImage;
+  CW, CH, R, C, N, LabelW, HeadH: Integer;
+begin
+  N := Length(Columns);
+  CW := 0;
+  CH := 0;
+  for R := 0 to High(Cells) do
+    if Cells[R] <> nil then
+    begin
+      CW := Max(CW, Cells[R].Width);
+      CH := Max(CH, Cells[R].Height);
+    end;
+  LabelW := 120;
+  HeadH := 20;
+  Sheet := TBitmap.Create;
+  try
+    Sheet.PixelFormat := pf24bit;
+    Sheet.SetSize(LabelW + N * (CW + 6), HeadH + Rows.Count * (CH + 6));
+    Sheet.Canvas.Brush.Color := clWhite;
+    Sheet.Canvas.FillRect(Rect(0, 0, Sheet.Width, Sheet.Height));
+    Sheet.Canvas.Font.Name := 'Segoe UI';
+    Sheet.Canvas.Font.Size := 8;
+    for C := 0 to N - 1 do
+      Sheet.Canvas.TextOut(LabelW + C * (CW + 6) + 2, 3, Columns[C]);
+    for R := 0 to Rows.Count - 1 do
+    begin
+      Sheet.Canvas.TextOut(4, HeadH + R * (CH + 6) + 4, Rows[R]);
+      for C := 0 to N - 1 do
+        if (R * N + C <= High(Cells)) and (Cells[R * N + C] <> nil) then
+          Sheet.Canvas.Draw(LabelW + C * (CW + 6), HeadH + R * (CH + 6), Cells[R * N + C]);
+    end;
+    Png := TPngImage.Create;
+    try
+      Png.Assign(Sheet);
+      Png.SaveToFile(FileName);
+    finally
+      Png.Free;
+    end;
+  finally
+    Sheet.Free;
+  end;
+end;
+
+procedure TVisualTests.RtlGallery;
+var
+  Index, N: Integer;
+  Cells: array of TBitmap;
+  Rows, Errors, NotMirrored: TStringList;
+  Ok: Boolean;
+  Dir: string;
+  I: Integer;
+begin
+  Dir := ExtractFilePath(ParamStr(0)) + 'Visual\Gallery\';
+  ForceDirectories(Dir);
+  Rows := TStringList.Create;
+  Errors := TStringList.Create;
+  NotMirrored := TStringList.Create;
+  try
+    for Index := 0 to LastControl do
+      if Index <> 34 then // Toast: eigenes Fenster, folgt dem Formular nicht
+        Rows.Add(ControlNames[Index]);
+    SetLength(Cells, Rows.Count * 2);
+    try
+      N := 0;
+      for Index := 0 to LastControl do
+      begin
+        if Index = 34 then
+          Continue;
+        FRtl := False;
+        Cells[N * 2] := Render(Index, vvFlatLight, vsNormalV, Ok);
+        FRtl := True;
+        Cells[N * 2 + 1] := Render(Index, vvFlatLight, vsNormalV, Ok);
+        FRtl := False;
+        if ContentPixels(Cells[N * 2 + 1]) < 20 then
+          Errors.Add(ControlNames[Index] + ': RTL leer');
+        // Symmetrische Controls (Panel, Badge, Ring, Splitter) aendern sich nicht
+        if PPGPixelDiff(Cells[N * 2], Cells[N * 2 + 1], 40) < 8 then
+          NotMirrored.Add(ControlNames[Index]);
+        Inc(N);
+      end;
+      ResetVariant;
+      SaveSheet(Dir + 'RTL.png', ['Links nach rechts', 'Rechts nach links'], Rows, Cells);
+    finally
+      for I := 0 to High(Cells) do
+        Cells[I].Free;
+    end;
+    // Hinweis statt Fehler: Die Galerie RTL.png zeigt, was (noch) nicht spiegelt
+    if NotMirrored.Count > 0 then
+      Status('RTL unveraendert (in RTL.png pruefen): ' + NotMirrored.CommaText);
+    CheckEquals('', Errors.Text, Errors.Text);
+    CheckEquals(0, FErrors.Count, FErrors.Text);
+  finally
+    NotMirrored.Free;
+    Errors.Free;
+    Rows.Free;
+  end;
+end;
+
+procedure TVisualTests.DpiGallery;
+{$IF CompilerVersion >= 33.0}
+const
+  Ppis: array[0..2] of Integer = (96, 144, 192);
+var
+  Index, N, K: Integer;
+  Cells: array of TBitmap;
+  Rows, Errors: TStringList;
+  Ok: Boolean;
+  Dir: string;
+  I: Integer;
+  Base, Scaled: Integer;
+begin
+  Dir := ExtractFilePath(ParamStr(0)) + 'Visual\Gallery\';
+  ForceDirectories(Dir);
+  Rows := TStringList.Create;
+  Errors := TStringList.Create;
+  try
+    for Index := 0 to LastControl do
+      if Index <> 34 then
+        Rows.Add(ControlNames[Index]);
+    SetLength(Cells, Rows.Count * Length(Ppis));
+    try
+      N := 0;
+      for Index := 0 to LastControl do
+      begin
+        if Index = 34 then
+          Continue;
+        for K := 0 to High(Ppis) do
+        begin
+          FPPI := Ppis[K];
+          Cells[N * Length(Ppis) + K] := Render(Index, vvFlatLight, vsNormalV, Ok);
+        end;
+        FPPI := 96;
+        Base := Cells[N * Length(Ppis)].Width * Cells[N * Length(Ppis)].Height;
+        for K := 1 to High(Ppis) do
+        begin
+          Scaled := Cells[N * Length(Ppis) + K].Width * Cells[N * Length(Ppis) + K].Height;
+          if ContentPixels(Cells[N * Length(Ppis) + K]) < 20 then
+            Errors.Add(Format('%s %d DPI: leer', [ControlNames[Index], Ppis[K]]));
+          // Flaeche waechst etwa mit (PPI/96)^2 (Rand 8 px unskaliert: grosszuegig)
+          if Scaled < Base * Sqr(Ppis[K] / 96) * 0.6 then
+            Errors.Add(Format('%s %d DPI: nicht skaliert (%d statt ca. %d Pixel)',
+              [ControlNames[Index], Ppis[K], Scaled, Round(Base * Sqr(Ppis[K] / 96))]));
+        end;
+        Inc(N);
+      end;
+      ResetVariant;
+      SaveSheet(Dir + 'DPI.png', ['96 DPI', '144 DPI (150 %)', '192 DPI (200 %)'], Rows, Cells);
+    finally
+      FPPI := 96;
+      for I := 0 to High(Cells) do
+        Cells[I].Free;
+    end;
+    CheckEquals('', Errors.Text, Errors.Text);
+    CheckEquals(0, FErrors.Count, FErrors.Text);
+  finally
+    Errors.Free;
+    Rows.Free;
+  end;
+end;
+{$ELSE}
+begin
+  Status('Erst ab Delphi 10.3 (ScaleForPPI) - Test entfaellt');
+end;
+{$IFEND}
 
 initialization
   RegisterTest('Visual', TVisualTests.Suite);

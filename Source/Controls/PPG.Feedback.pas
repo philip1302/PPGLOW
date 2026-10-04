@@ -262,6 +262,7 @@ procedure PPGArcPoints(const Center: TPoint; Radius: Integer; StartDeg, SweepDeg
 implementation
 
 uses
+  PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.IconFont, PPG.ItemPainter,
   PPG.Render.Registry, PPG.Render.Gdi;
@@ -1247,7 +1248,7 @@ begin
   if FActionCaption <> '' then
     Result := FActionCaption
   else if FIsClosable then
-    Result := SPPGAccClose
+    Result := PPGStr(@SPPGAccClose)
   else
     Result := '';
 end;

@@ -126,6 +126,7 @@ type
 implementation
 
 uses
+  PPG.Lang,
   System.Math, System.UITypes, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Render.Gdi;
 
@@ -656,7 +657,7 @@ var
 begin
   P := IdToPart(Self, Id);
   if P = -2 then
-    Result := SPPGMoreOptions
+    Result := PPGStr(@SPPGMoreOptions)
   else if (P >= 0) and (P < FItems.Count) then
     Result := FItems[P]
   else
@@ -698,9 +699,9 @@ end;
 function TPPGCustomBreadcrumb.AccChildDefaultAction(Id: Integer): string;
 begin
   if IdToPart(Self, Id) = -2 then
-    Result := SPPGAccOpen
+    Result := PPGStr(@SPPGAccOpen)
   else
-    Result := SPPGAccJump;
+    Result := PPGStr(@SPPGAccJump);
 end;
 
 procedure TPPGCustomBreadcrumb.AccChildDoDefault(Id: Integer);

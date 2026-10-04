@@ -44,6 +44,7 @@ resourcestring
   SPPGGridFilterHint = 'Filter';
   SPPGSortAscending = 'Sorted ascending';
   SPPGSortDescending = 'Sorted descending';
+  SPPGDBGridConfirmDelete = 'Delete record?';
   SPPGAccJump = 'Jump';
   SPPGAccExpand = 'Expand';
   SPPGAccCollapse = 'Collapse';

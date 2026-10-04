@@ -86,15 +86,16 @@ type
 implementation
 
 uses
+  PPG.Lang,
   PPG.Consts;
 
 function TPPGCustomToggleSwitch.AccValue: string;
 begin
   // Schalter melden zusaetzlich "Ein"/"Aus" als Wert (wie Windows-Schalter)
   if Checked then
-    Result := SPPGAccOn
+    Result := PPGStr(@SPPGAccOn)
   else
-    Result := SPPGAccOff;
+    Result := PPGStr(@SPPGAccOff);
 end;
 
 constructor TPPGCustomToggleSwitch.Create(AOwner: TComponent);
