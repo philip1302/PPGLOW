@@ -149,15 +149,41 @@ function Get-PeImports([string]$File) {
   return $names
 }
 
+# Zielplattform einer PE-Datei (0x14C = Win32, 0x8664 = Win64); 0 wenn nicht lesbar
+function Get-PeMachine([string]$File) {
+  try {
+    $s = [IO.File]::OpenRead($File)
+    try {
+      $b = New-Object byte[] 4096
+      [void]$s.Read($b, 0, $b.Length)
+      $pe = [BitConverter]::ToInt32($b, 0x3C)
+      if ($pe -lt 0 -or $pe + 6 -gt $b.Length) { return 0 }
+      return [BitConverter]::ToUInt16($b, $pe + 4)
+    } finally { $s.Dispose() }
+  } catch { return 0 }
+}
+
+# Pfad, unter dem Windows einen Import fuer eine Datei mit $Machine findet.
+# Wie der Loader ueberspringt die Suche Dateien der falschen Bitness (der PATH
+# der IDE enthaelt Bpl vor Bpl\Win64). $null, wenn nichts passt.
+function Find-Import([string]$Name, [string[]]$Dirs, [int]$Machine) {
+  foreach ($d in $Dirs) {
+    $p = Join-Path $d $Name
+    if (-not (Test-Path $p -PathType Leaf)) { continue }
+    $m = Get-PeMachine $p
+    if ($m -eq 0 -or $m -eq $Machine) { return $p }
+  }
+  return $null
+}
+
 # Importe einer BPL, die in keinem der Ordner liegen (das meint Windows mit Code 126)
 function Get-MissingImports([string]$File, [string[]]$Dirs) {
   $all = @($Dirs) + @(Join-Path $env:SystemRoot 'System32') + @(Join-Path $env:SystemRoot 'SysWOW64')
+  $machine = Get-PeMachine $File
   $missing = @()
   foreach ($imp in (Get-PeImports $File)) {
     if ($imp -like 'api-ms-*' -or $imp -like 'ext-ms-*') { continue }
-    $found = $false
-    foreach ($d in $all) { if (Test-Path (Join-Path $d $imp)) { $found = $true; break } }
-    if (-not $found) { $missing += $imp }
+    if (-not (Find-Import $imp $all $machine)) { $missing += $imp }
   }
   return $missing
 }
@@ -171,16 +197,16 @@ function Test-BplImports([string[]]$Dirs, [string[]]$Files) {
   foreach ($f in $Files) { $queue.Enqueue($f) }
   while ($queue.Count) {
     $f = $queue.Dequeue()
-    if ($seen[$f]) { continue }
-    $seen[$f] = $true
+    $id = [IO.Path]::GetFullPath($f).ToLowerInvariant()
+    if ($seen[$id]) { continue }
+    $seen[$id] = $true
     $miss = @(Get-MissingImports $f $Dirs)
     if ($miss) { "MISS|$f|$($miss -join ', ')" } else { "OK|$f" }
+    $machine = Get-PeMachine $f
     foreach ($imp in (Get-PeImports $f)) {
       if ($imp -notlike '*PPGlow*') { continue }
-      foreach ($d in $Dirs) {
-        $p = Join-Path $d $imp
-        if (Test-Path $p) { $queue.Enqueue($p); break }
-      }
+      $p = Find-Import $imp $Dirs $machine
+      if ($p) { $queue.Enqueue($p) }
     }
   }
 }
@@ -396,7 +422,7 @@ foreach ($t in $Targets) {
 
 Write-Host ''
 if ($Problems -eq 0) {
-  Write-Host 'Fertig, alle Pakete laden.' -ForegroundColor Green
+  Write-Host 'Fertig, alle Abhaengigkeiten vorhanden.' -ForegroundColor Green
 } else {
   Write-Host "Fertig mit $Problems Problem(en) - siehe oben." -ForegroundColor Yellow
 }
