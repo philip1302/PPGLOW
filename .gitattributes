@@ -1,0 +1,23 @@
+# RAD Studio braucht CRLF (Coding-Rules). Unabhaengig von core.autocrlf
+# bekommt jeder Checkout deshalb CRLF; im Repository liegen die Dateien mit LF.
+*.pas    text eol=crlf
+*.dpr    text eol=crlf
+*.dpk    text eol=crlf
+*.inc    text eol=crlf
+*.dfm    text eol=crlf
+*.dproj  text eol=crlf
+*.groupproj text eol=crlf
+*.rc     text eol=crlf
+*.ps1    text eol=crlf
+*.md     text
+
+# Binaerdateien nie umwandeln
+*.dcu    binary
+*.dcp    binary
+*.bpl    binary
+*.exe    binary
+*.res    binary
+*.dcr    binary
+*.bmp    binary
+*.png    binary
+*.rsm    binary
