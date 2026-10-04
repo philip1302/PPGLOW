@@ -1,6 +1,6 @@
 # PPGlow Roadmap: auf TMS-Niveau (Phasen 5–9, vom User freigegeben am 03.10.2026)
 
-**Status:** Phase 5, 8 (vorgezogen), 6 und 7 sind fertig (`Docs\Phase5-Plan.md`, `Docs\Phase8-Plan.md`, `Docs\Phase6-Plan.md`, `Docs\Phase7-Plan.md`). Es folgt Phase 9.
+**Status:** Phase 5, 8 (vorgezogen), 6 und 7 sind fertig (`Docs\Phase5-Plan.md`, `Docs\Phase8-Plan.md`, `Docs\Phase6-Plan.md`, `Docs\Phase7-Plan.md`). Es folgt Phase 9 (Detailplan als Entwurf: `Docs\Phase9-Plan.md`, wartet auf Freigabe).
 
 ## Context
 - **Stand:** Phase 4 ist fertig.

@@ -78,7 +78,7 @@ Die freigegebene Roadmap bis TMS-Niveau steht in `Docs\Roadmap.md`. Sie umfasst 
 
 **Phase 6 (Daten-Controls) ist abgeschlossen** (04.10.2026, 6a–6c am Stück wie vom User entschieden, 410 Tests grün, Win32/Win64, Benchmark eingehalten; Plan und Abweichungen in `Docs\Phase6-Plan.md`).
 
-**Phase 7 (Navigation, Datum/Zeit, Rückmeldung) ist abgeschlossen** (04.10.2026, 7a–7d am Stück wie vom User entschieden, 513 Tests grün, Win32/Win64, Benchmark eingehalten; Plan, Umsetzung und Abweichungen in `Docs\Phase7-Plan.md`). **Als Nächstes: Phase 9** (Designer-Komfort, DB-Anbindung, UIA) – vorher Detailplan schreiben und vom User freigeben lassen. Vorher sinnvoll: Packages neu installieren (IDE schließen, User fragen) und die neuen Controls im Formulardesigner ausprobieren.
+**Phase 7 (Navigation, Datum/Zeit, Rückmeldung) ist abgeschlossen** (04.10.2026, 7a–7d am Stück wie vom User entschieden, 513 Tests grün, Win32/Win64, Benchmark eingehalten; Plan, Umsetzung und Abweichungen in `Docs\Phase7-Plan.md`). **Als Nächstes: Phase 9** (Designer-Komfort, DB-Anbindung, UIA). Der **Detailplan liegt als Entwurf vor** (`Docs\Phase9-Plan.md`, 04.10.2026, in einer Cloud-Sitzung ohne Delphi geschrieben) und **wartet auf die Freigabe** des Users; am Ende stehen sechs Fragen. Vorher sinnvoll: Packages neu installieren (IDE schließen, User fragen) und die neuen Controls im Formulardesigner ausprobieren.
 
 **Phase 8 (modernes Design) ist abgeschlossen** (04.10.2026, 333 Tests grün, Win32/Win64, Benchmark eingehalten). Bausteine von Phase 8:
 - 8.1 Design-Tokens (`PPG.Tokens`) – **fertig** (03.10.2026, 304 Tests grün, Win32/Win64)
