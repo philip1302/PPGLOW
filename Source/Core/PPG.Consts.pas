@@ -32,6 +32,7 @@ resourcestring
   SPPGSortedListMove = 'Items of a sorted list cannot be moved';
   SPPGTreeMoveIntoChild = 'A tree node cannot be moved into its own children';
   SPPGInvalidArgument = 'Invalid value %d for %s';
+  SPPGNoTarget = '%s needs a target component';
 
   // Barrierefreiheit (Standardaktionen, werden vom Screenreader vorgelesen)
   SPPGAccPress = 'Press';

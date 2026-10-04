@@ -80,6 +80,8 @@ uses
   PPG.ToolBar in '..\Source\Controls\PPG.ToolBar.pas',
   PPG.StatusBar in '..\Source\Controls\PPG.StatusBar.pas',
   PPG.Notifications in '..\Source\Controls\PPG.Notifications.pas',
+  PPG.Editors.Logic in '..\Source\Editors\PPG.Editors.Logic.pas',
+  PPG.Editors.Forms in '..\Source\Editors\PPG.Editors.Forms.pas',
   PPG.Tests.Core in 'PPG.Tests.Core.pas',
   PPG.Tests.Controls in 'PPG.Tests.Controls.pas',
   PPG.Tests.Check in 'PPG.Tests.Check.pas',
@@ -98,7 +100,8 @@ uses
   PPG.Tests.Phase7c in 'PPG.Tests.Phase7c.pas',
   PPG.Tests.Phase7d in 'PPG.Tests.Phase7d.pas',
   PPG.Tests.Streaming in 'PPG.Tests.Streaming.pas',
-  PPG.Tests.Visual in 'PPG.Tests.Visual.pas';
+  PPG.Tests.Visual in 'PPG.Tests.Visual.pas',
+  PPG.Tests.Phase9a in 'PPG.Tests.Phase9a.pas';
 
 var
   R: TTestResult;

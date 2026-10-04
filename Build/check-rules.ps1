@@ -231,6 +231,11 @@ $Groups = @(
                'Tests\Bench\PPGlowBench.dpr') },
   @{ Name = 'Design'; Folders = @('Source\Design');
      Lists = @('Packages\Delphi13\dclPPGlow.dpk', 'Packages\Delphi13\dclPPGlow.dproj', 'Packages\XE2\dclPPGlow.dpk') },
+  @{ Name = 'Editors'; Folders = @('Source\Editors');
+     Lists = @('Packages\Delphi13\dclPPGlow.dpk', 'Packages\Delphi13\dclPPGlow.dproj', 'Packages\XE2\dclPPGlow.dpk',
+               'Tests\PPGlowTests.dpr', 'Tests\PPGlowTests.dproj') },
+  @{ Name = 'Tests'; Folders = @('Tests');
+     Lists = @('Tests\PPGlowTests.dpr', 'Tests\PPGlowTests.dproj') },
   @{ Name = 'DB'; Folders = @('Source\DB');
      Lists = @('Packages\Delphi13\PPGlowDBR.dpk', 'Packages\Delphi13\PPGlowDBR.dproj', 'Packages\XE2\PPGlowDBR.dpk',
                'Tests\PPGlowTests.dpr', 'Tests\PPGlowTests.dproj') },

@@ -186,6 +186,8 @@
         <DCCReference Include="..\Source\Controls\PPG.ToolBar.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.StatusBar.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Notifications.pas"/>
+        <DCCReference Include="..\Source\Editors\PPG.Editors.Logic.pas"/>
+        <DCCReference Include="..\Source\Editors\PPG.Editors.Forms.pas"/>
         <DCCReference Include="..\Source\Render\PPG.Render.Fluent11.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.Presets.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.StyleManager.pas"/>
@@ -220,6 +222,24 @@
         <DCCReference Include="..\Source\Controls\PPG.RowLayout.pas"/>
         <DCCReference Include="PPG.Tests.Core.pas"/>
         <DCCReference Include="PPG.Tests.Controls.pas"/>
+        <DCCReference Include="PPG.Tests.Check.pas"/>
+        <DCCReference Include="PPG.Tests.Gaps.pas"/>
+        <DCCReference Include="PPG.Tests.Phase3.pas"/>
+        <DCCReference Include="PPG.Tests.Phase4a.pas"/>
+        <DCCReference Include="PPG.Tests.Phase4b.pas"/>
+        <DCCReference Include="PPG.Tests.Phase4c.pas"/>
+        <DCCReference Include="PPG.Tests.Phase5.pas"/>
+        <DCCReference Include="PPG.Tests.Phase6a.pas"/>
+        <DCCReference Include="PPG.Tests.Phase6b.pas"/>
+        <DCCReference Include="PPG.Tests.Phase6c.pas"/>
+        <DCCReference Include="PPG.Tests.Phase8.pas"/>
+        <DCCReference Include="PPG.Tests.Phase7a.pas"/>
+        <DCCReference Include="PPG.Tests.Phase7b.pas"/>
+        <DCCReference Include="PPG.Tests.Phase7c.pas"/>
+        <DCCReference Include="PPG.Tests.Phase7d.pas"/>
+        <DCCReference Include="PPG.Tests.Streaming.pas"/>
+        <DCCReference Include="PPG.Tests.Visual.pas"/>
+        <DCCReference Include="PPG.Tests.Phase9a.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

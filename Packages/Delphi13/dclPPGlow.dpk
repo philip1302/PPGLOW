@@ -33,9 +33,12 @@ requires
   rtl,
   vcl,
   designide,
+  vclsmp,
   PPGlowR;
 
 contains
-  PPG.Reg in '..\..\Source\Design\PPG.Reg.pas';
+  PPG.Reg in '..\..\Source\Design\PPG.Reg.pas',
+  PPG.Editors.Logic in '..\..\Source\Editors\PPG.Editors.Logic.pas',
+  PPG.Editors.Forms in '..\..\Source\Editors\PPG.Editors.Forms.pas';
 
 end.
