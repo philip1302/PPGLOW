@@ -11,8 +11,10 @@
     4. Kopiert BPL/DCP nach BDSCOMMONDIR\Bpl[\Win64] bzw. Dcp[\Win64] (im PATH),
        registriert die Design-Pakete (Known Packages / Known Packages x64)
        und traegt die DCU-Ordner in den Bibliothekspfad ein.
-    5. Ladetest: laedt jede installierte BPL so, wie die IDE es tut
-       (Abhaengigkeiten, Einsprungpunkte). Schlaegt er fehl, steht der Grund da.
+    5. Stellt sicher, dass der Bpl-Ordner im PATH der IDE steht (sonst findet
+       Windows PPGlowR370.bpl nicht: "Das angegebene Modul wurde nicht gefunden").
+    6. Ladetest: laedt die Design-Pakete so, wie die IDE es tut (gleicher
+       Suchpfad). Schlaegt er fehl, steht der Grund und die fehlende Datei da.
 
   Win32 ist Pflicht. Win64 wird mitgenommen, wenn es sich bauen laesst; ein
   Fehler dort bricht die Win32-Installation nicht ab.
@@ -86,13 +88,13 @@ function Remove-PPGlowEntries([string]$RegKey, [string[]]$Keep) {
   return $removed
 }
 
-# Laedt BPLs in einem Prozess der passenden Bitness (wie die IDE: PATH = eigene
-# Bpl-Ordner + Studio\bin). Liefert je Datei 'OK' oder die Windows-Fehlermeldung.
+# Laedt BPLs in einem Prozess der passenden Bitness mit genau dem Suchpfad der
+# IDE (Studio\bin + PATH der IDE). Liefert je Datei 'OK' oder die Windows-Fehlermeldung.
 function Test-BplLoad([string]$Platform, [string[]]$Dirs, [string[]]$Files) {
   $q = { param($s) "'" + ($s -replace "'", "''") + "'" }
   $script = '$Dirs = @(' + (($Dirs | ForEach-Object { & $q $_ }) -join ',') + ')' + "`n" +
     '$Files = @(' + (($Files | ForEach-Object { & $q $_ }) -join ',') + ')' + "`n" + @'
-$env:PATH = ($Dirs -join ';') + ';' + $env:PATH
+$env:PATH = ($Dirs -join ';')
 Add-Type -Namespace PPG -Name K -MemberDefinition @"
 [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
 public static extern IntPtr LoadLibraryW(string f);
@@ -144,8 +146,7 @@ function Get-PeImports([string]$File) {
 
 # Importe einer BPL, die in keinem der Ordner liegen (das meint Windows mit Code 126)
 function Get-MissingImports([string]$File, [string[]]$Dirs) {
-  $all = @($Dirs) + @(Join-Path $env:SystemRoot 'System32') + @(Join-Path $env:SystemRoot 'SysWOW64') +
-    @($env:PATH -split ';' | Where-Object { $_ })
+  $all = @($Dirs) + @(Join-Path $env:SystemRoot 'System32') + @(Join-Path $env:SystemRoot 'SysWOW64')
   $missing = @()
   foreach ($imp in (Get-PeImports $File)) {
     if ($imp -like 'api-ms-*' -or $imp -like 'ext-ms-*') { continue }
@@ -154,6 +155,38 @@ function Get-MissingImports([string]$File, [string[]]$Dirs) {
     if (-not $found) { $missing += $imp }
   }
   return $missing
+}
+
+# PATH, mit dem die IDE startet: System- und Benutzer-PATH aus der Registry (nicht
+# der dieses Fensters), ggf. ueberschrieben in Tools > Optionen > Umgebungsvariablen.
+# Die IDE findet abhaengige BPLs (PPGlowR370.bpl ...) nur ueber ihren Ordner und diesen PATH.
+function Get-IdePathInfo {
+  $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+  $user = [Environment]::GetEnvironmentVariable('Path', 'User')
+  $base = (@($machine, $user) | Where-Object { $_ }) -join ';'
+  $override = (Get-ItemProperty "$Key\Environment Variables" -Name 'PATH' -ErrorAction SilentlyContinue).PATH
+  $eff = $base
+  if ($override) { $eff = [regex]::Replace($override, [regex]::Escape('$(PATH)'), { param($m) $base }, 'IgnoreCase') }
+  $parts = @([Environment]::ExpandEnvironmentVariables($eff) -split ';' |
+    ForEach-Object { $_.Trim().TrimEnd('\') } | Where-Object { $_ })
+  return @{ Parts = $parts; Override = $override; User = $user }
+}
+
+function Test-OnIdePath([string]$Dir) {
+  $d = $Dir.TrimEnd('\')
+  return [bool]((Get-IdePathInfo).Parts | Where-Object { $_ -ieq $d })
+}
+
+# Traegt einen Bpl-Ordner in den PATH der IDE ein (Override der IDE, sonst Benutzer-PATH)
+function Add-IdePath([string]$Dir) {
+  $info = Get-IdePathInfo
+  if ($info.Override) {
+    Set-ItemProperty "$Key\Environment Variables" -Name 'PATH' -Value ($Dir + ';' + $info.Override)
+    return 'Umgebungsvariablen der IDE (PATH-Override)'
+  }
+  $new = (@($info.User, $Dir) | Where-Object { $_ }) -join ';'
+  [Environment]::SetEnvironmentVariable('Path', $new, 'User')   # meldet die Aenderung an Windows
+  return 'Benutzer-PATH'
 }
 
 function Get-LoadHint([int]$Code) {
@@ -282,9 +315,24 @@ foreach ($t in $Targets) {
   Set-SearchPath $P $src $true
   Write-Host "  Bibliothekspfad: $src"
 
-  # --- 5. Ladetest ----------------------------------------------------------------
-  $order = @($files | Where-Object { $hasIde -or ($_ -notlike 'dcl*') } | ForEach-Object { Join-Path $t.BplDir $_ })
-  $result = Test-BplLoad $P @($t.BplDir, $t.StudioBin) $order
+  # --- 5. Suchpfad der IDE ----------------------------------------------------------
+  # Die IDE laedt dclPPGlow370.bpl mit vollem Pfad; dessen Abhaengigkeit
+  # PPGlowR370.bpl sucht Windows aber nur im IDE-Ordner und im PATH.
+  if ($hasIde -and -not (Test-OnIdePath $t.BplDir)) {
+    $where = Add-IdePath $t.BplDir
+    Write-Host "  $($t.BplDir) fehlte im PATH der IDE - eingetragen ($where)." -ForegroundColor Yellow
+    Write-Host '  Die IDE danach aus dem Startmenue neu starten (nicht aus einem alten Fenster).' -ForegroundColor Yellow
+  }
+
+  # --- 6. Ladetest wie in der IDE: nur die Design-Pakete, Suchpfad wie die IDE ------
+  $idePath = @($t.StudioBin) + (Get-IdePathInfo).Parts
+  if ($hasIde) {
+    $order = @($files | Where-Object { $_ -like 'dcl*' } | ForEach-Object { Join-Path $t.BplDir $_ })
+  } else {
+    $order = @($files | ForEach-Object { Join-Path $t.BplDir $_ })
+    $idePath = @($t.BplDir) + $idePath
+  }
+  $result = Test-BplLoad $P $idePath $order
   foreach ($line in $result) {
     $parts = "$line" -split '\|', 4
     switch ($parts[0]) {
@@ -296,7 +344,7 @@ foreach ($t in $Targets) {
         if ($hint) { Write-Host "    $hint" -ForegroundColor Red }
         if ([int]$parts[2] -eq 126) {
           try {
-            $miss = Get-MissingImports $parts[1] @($t.BplDir, $t.StudioBin)
+            $miss = Get-MissingImports $parts[1] $idePath
             if ($miss) { Write-Host "    Nicht gefunden: $($miss -join ', ')" -ForegroundColor Red }
             else { Write-Host '    Alle direkten Importe sind vorhanden - eines davon laedt selbst nicht (siehe Zeilen davor).' -ForegroundColor Red }
           } catch { Write-Host "    Importe nicht lesbar: $($_.Exception.Message)" -ForegroundColor DarkYellow }
