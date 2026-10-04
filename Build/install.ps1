@@ -13,8 +13,12 @@
        und traegt die DCU-Ordner in den Bibliothekspfad ein.
     5. Stellt sicher, dass der Bpl-Ordner im PATH der IDE steht (sonst findet
        Windows PPGlowR370.bpl nicht: "Das angegebene Modul wurde nicht gefunden").
-    6. Ladetest: laedt die Design-Pakete so, wie die IDE es tut (gleicher
-       Suchpfad). Schlaegt er fehl, steht der Grund und die fehlende Datei da.
+    6. Abhaengigkeitsprobe: liest die Import-Tabellen der Design-Pakete und
+       prueft, dass jede benoetigte BPL/DLL im Suchpfad der IDE liegt (nur
+       Dateien lesen, nichts laden). Mit -LoadTest werden die Pakete zusaetzlich
+       wirklich geladen - Achtung: Norton 360 haelt diesen Test (eigene 32-Bit-
+       PowerShell mit -EncodedCommand + LoadLibrary) fuer Schadcode
+       (IDP.HELU.PSE91), loescht install.ps1 und die BPLs und sperrt die Pfade.
 
   Win32 ist Pflicht. Win64 wird mitgenommen, wenn es sich bauen laesst; ein
   Fehler dort bricht die Win32-Installation nicht ab.
@@ -22,7 +26,7 @@
   Die IDE muss geschlossen sein - sie ueberschreibt die Registry beim Beenden.
 
   Aufruf:   powershell -ExecutionPolicy Bypass -File Build\install.ps1
-            [-Version 37.0] [-Config Release] [-Platforms Win32,Win64] [-NoBuild] [-NoDB]
+            [-Version 37.0] [-Config Release] [-Platforms Win32,Win64] [-NoBuild] [-NoDB] [-LoadTest]
   Entfernen: powershell -ExecutionPolicy Bypass -File Build\install.ps1 -Uninstall
 #>
 param(
@@ -31,7 +35,8 @@ param(
   [string[]]$Platforms = @('Win32', 'Win64'),
   [switch]$Uninstall,
   [switch]$NoDB,
-  [switch]$NoBuild
+  [switch]$NoBuild,
+  [switch]$LoadTest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -155,6 +160,29 @@ function Get-MissingImports([string]$File, [string[]]$Dirs) {
     if (-not $found) { $missing += $imp }
   }
   return $missing
+}
+
+# Statische Probe ohne Laden: Importe der BPL und - rekursiv - der eigenen
+# PPGlow-Pakete muessen im Suchpfad liegen. Liefert je Datei 'OK|Datei' oder
+# 'MISS|Datei|fehlende Namen'.
+function Test-BplImports([string[]]$Dirs, [string[]]$Files) {
+  $seen = @{}
+  $queue = New-Object System.Collections.Queue
+  foreach ($f in $Files) { $queue.Enqueue($f) }
+  while ($queue.Count) {
+    $f = $queue.Dequeue()
+    if ($seen[$f]) { continue }
+    $seen[$f] = $true
+    $miss = @(Get-MissingImports $f $Dirs)
+    if ($miss) { "MISS|$f|$($miss -join ', ')" } else { "OK|$f" }
+    foreach ($imp in (Get-PeImports $f)) {
+      if ($imp -notlike '*PPGlow*') { continue }
+      foreach ($d in $Dirs) {
+        $p = Join-Path $d $imp
+        if (Test-Path $p) { $queue.Enqueue($p); break }
+      }
+    }
+  }
 }
 
 # PATH, mit dem die IDE startet: System- und Benutzer-PATH aus der Registry (nicht
@@ -324,7 +352,7 @@ foreach ($t in $Targets) {
     Write-Host '  Die IDE danach aus dem Startmenue neu starten (nicht aus einem alten Fenster).' -ForegroundColor Yellow
   }
 
-  # --- 6. Ladetest wie in der IDE: nur die Design-Pakete, Suchpfad wie die IDE ------
+  # --- 6. Abhaengigkeiten wie in der IDE: nur die Design-Pakete, Suchpfad wie die IDE --
   $idePath = @($t.StudioBin) + (Get-IdePathInfo).Parts
   if ($hasIde) {
     $order = @($files | Where-Object { $_ -like 'dcl*' } | ForEach-Object { Join-Path $t.BplDir $_ })
@@ -332,6 +360,16 @@ foreach ($t in $Targets) {
     $order = @($files | ForEach-Object { Join-Path $t.BplDir $_ })
     $idePath = @($t.BplDir) + $idePath
   }
+  foreach ($line in (Test-BplImports $idePath $order)) {
+    $parts = "$line" -split '\|', 3
+    if ($parts[0] -eq 'OK') {
+      Write-Host "  Abhaengigkeiten OK: $(Split-Path $parts[1] -Leaf)" -ForegroundColor Green
+    } else {
+      $Problems++
+      Write-Host "  Abhaengigkeiten FEHLEN: $(Split-Path $parts[1] -Leaf): $($parts[2])" -ForegroundColor Red
+    }
+  }
+  if (-not $LoadTest) { continue }
   $result = Test-BplLoad $P $idePath $order
   foreach ($line in $result) {
     $parts = "$line" -split '\|', 4
