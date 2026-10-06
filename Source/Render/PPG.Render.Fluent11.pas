@@ -641,14 +641,27 @@ var
   G: TPPGIconGlyph;
   Size: Integer;
 begin
+  Size := IconSize(R, PPI);
   case Glyph of
     fgClear: G := igClose;
     fgSpinUp: G := igChevronUp;
     fgSpinDown, fgDropDown: G := igChevronDown;
+    fgReveal, fgBrowse:
+      begin
+        // Auge ("RedEye") bzw. Ordner aus der Symbolschrift
+        if Glyph = fgReveal then
+        begin
+          if PPGDrawIconChar(Canvas, R, $E7B3, Color, Size) then
+            Exit;
+        end
+        else if PPGDrawIconChar(Canvas, R, $E8B7, Color, Size) then
+          Exit;
+        inherited DrawFieldGlyph(Canvas, R, Glyph, Color, PPI);
+        Exit;
+      end;
   else
     Exit; // fgNone
   end;
-  Size := IconSize(R, PPI);
   if not PPGDrawIcon(Canvas, R, G, Color, Size) then
     inherited DrawFieldGlyph(Canvas, R, Glyph, Color, PPI);
 end;

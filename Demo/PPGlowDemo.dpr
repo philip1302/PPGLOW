@@ -99,14 +99,55 @@ uses
   PPG.ToolBar in '..\Source\Controls\PPG.ToolBar.pas',
   PPG.StatusBar in '..\Source\Controls\PPG.StatusBar.pas',
   PPG.Notifications in '..\Source\Controls\PPG.Notifications.pas',
+  PPG.Xlsx in '..\Source\Controls\PPG.Xlsx.pas',
+  PPG.Grid.Export in '..\Source\Controls\PPG.Grid.Export.pas',
+  PPG.Grid.Print in '..\Source\Controls\PPG.Grid.Print.pas',
+  PPG.Grid.Styles in '..\Source\Controls\PPG.Grid.Styles.pas',
+  PPG.Grid.CellKinds in '..\Source\Controls\PPG.Grid.CellKinds.pas',
+  PPG.Grid.Edit in '..\Source\Controls\PPG.Grid.Edit.pas',
+  PPG.Grid.Paint in '..\Source\Controls\PPG.Grid.Paint.pas',
+  PPG.Grid.Data in '..\Source\Controls\PPG.Grid.Data.pas',
+  PPG.Grid.View in '..\Source\Controls\PPG.Grid.View.pas',
+  PPG.Grid.Columns in '..\Source\Controls\PPG.Grid.Columns.pas',
+  PPG.TagEdit in '..\Source\Controls\PPG.TagEdit.pas',
+  PPG.ColumnComboBox in '..\Source\Controls\PPG.ColumnComboBox.pas',
+  PPG.RowPopup in '..\Source\Controls\PPG.RowPopup.pas',
+  PPG.CheckComboBox in '..\Source\Controls\PPG.CheckComboBox.pas',
+  PPG.ColorSpace in '..\Source\Core\PPG.ColorSpace.pas',
+  PPG.Controls.DropDown in '..\Source\Controls\PPG.Controls.DropDown.pas',
+  PPG.ColorPicker in '..\Source\Controls\PPG.ColorPicker.pas',
+  PPG.FileEdit in '..\Source\Controls\PPG.FileEdit.pas',
+  PPG.MaskEdit in '..\Source\Controls\PPG.MaskEdit.pas',
+  PPG.PasswordEdit in '..\Source\Controls\PPG.PasswordEdit.pas',
+  PPG.NumberFormat in '..\Source\Core\PPG.NumberFormat.pas',
+  PPG.NumberEdit in '..\Source\Controls\PPG.NumberEdit.pas',
+  PPG.Wizard in '..\Source\Controls\PPG.Wizard.pas',
+  PPG.Dialogs in '..\Source\Controls\PPG.Dialogs.pas',
+  PPG.TeachingTip in '..\Source\Controls\PPG.TeachingTip.pas',
+  PPG.Hints in '..\Source\Controls\PPG.Hints.pas',
+  PPG.MenuBar in '..\Source\Controls\PPG.MenuBar.pas',
+  PPG.Popup.Placement in '..\Source\Core\PPG.Popup.Placement.pas',
+  PPG.AppHooks in '..\Source\Controls\PPG.AppHooks.pas',
+  PPG.Menus in '..\Source\Controls\PPG.Menus.pas',
+  PPG.Chart.Series in '..\Source\Controls\PPG.Chart.Series.pas',
+  PPG.Chart in '..\Source\Controls\PPG.Chart.pas',
+  PPG.Chart.Scale in '..\Source\Core\PPG.Chart.Scale.pas',
+  PPG.Chart.Palette in '..\Source\Core\PPG.Chart.Palette.pas',
+  PPG.Render.Shapes in '..\Source\Render\PPG.Render.Shapes.pas',
+  PPG.Sparkline in '..\Source\Controls\PPG.Sparkline.pas',
+  PPG.Gauge in '..\Source\Controls\PPG.Gauge.pas',
   PPG.DB.Controls in '..\Source\DB\PPG.DB.Controls.pas',
   PPG.DB.Lookup in '..\Source\DB\PPG.DB.Lookup.pas',
   PPG.DB.Grid in '..\Source\DB\PPG.DB.Grid.pas',
+  PPG.DB.Chart in '..\Source\DB\PPG.DB.Chart.pas',
+  PPG.DB.Fields in '..\Source\DB\PPG.DB.Fields.pas',
   DemoKit in 'DemoKit.pas',
   DemoPages1 in 'DemoPages1.pas',
   DemoPages2 in 'DemoPages2.pas',
   DemoPages3 in 'DemoPages3.pas',
   DemoPages4 in 'DemoPages4.pas',
+  DemoPages5 in 'DemoPages5.pas',
+  DemoPages6 in 'DemoPages6.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}
@@ -178,6 +219,18 @@ begin
     begin
       Form.Show;
       Form.SaveDatePopupCapture(ParamStr(I + 1));
+      Exit;
+    end;
+
+  // /chartpng seite key datei.png: registriertes Diagramm ueber SaveToPng (Export)
+  for I := 1 to ParamCount - 3 do
+    if SameText(ParamStr(I), '/chartpng') then
+    begin
+      Form.Show;
+      Form.ShowPage(StrToIntDef(ParamStr(I + 1), 0));
+      Application.ProcessMessages;
+      if not Form.SaveChartPng(ParamStr(I + 2), ParamStr(I + 3)) then
+        ExitCode := 1;
       Exit;
     end;
 

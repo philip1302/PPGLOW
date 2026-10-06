@@ -93,6 +93,7 @@ type
     property RightButton;
     property ShowClearButton;
     property TextHint;
+    property UseSystemContextMenu;
     property TextHintVisibleOnFocus;
     property ValidationState;
     property ValidationHint;

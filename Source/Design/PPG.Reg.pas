@@ -18,7 +18,7 @@ unit PPG.Reg;
 interface
 
 uses
-  System.Classes, DesignIntf, DesignEditors, PPG.PageControl;
+  System.Classes, DesignIntf, DesignEditors, PPG.PageControl, PPG.Wizard;
 
 type
   /// Auswahlliste der registrierten Presets im Object Inspector.
@@ -60,6 +60,34 @@ type
     function OwnVerbCount: Integer; override;
     function OwnVerb(Index: Integer): string; override;
     procedure ExecuteOwnVerb(Index: Integer); override;
+  end;
+
+  /// Assistent und seine Seiten: Seiten anlegen, wechseln, loeschen.
+  TPPGWizardEditor = class(TPPGComponentEditor)
+  private
+    function Wizard: TPPGWizard;
+  protected
+    function OwnVerbCount: Integer; override;
+    function OwnVerb(Index: Integer): string; override;
+    procedure ExecuteOwnVerb(Index: Integer); override;
+  end;
+
+  /// TaskDialog: im Designer anzeigen.
+  TPPGTaskDialogEditor = class(TDefaultEditor)
+  public
+    function GetVerbCount: Integer; override;
+    function GetVerb(Index: Integer): string; override;
+    procedure ExecuteVerb(Index: Integer); override;
+    procedure Edit; override;
+  end;
+
+  /// Grid-Drucker: Seitenansicht und Seite einrichten im Designer.
+  TPPGGridPrinterEditor = class(TDefaultEditor)
+  public
+    function GetVerbCount: Integer; override;
+    function GetVerb(Index: Integer): string; override;
+    procedure ExecuteVerb(Index: Integer); override;
+    procedure Edit; override;
   end;
 
   /// Controls mit einer Collection (ItemsEx, Columns, Panels, Items):
@@ -126,10 +154,14 @@ uses
   PPG.Consts, PPG.Render.Registry, PPG.Presets, PPG.StyleManager,
   PPG.Controls.Base, PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch,
   PPG.ProgressBar, PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
-  PPG.TabControl, PPG.Controls.ItemList, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid,
+  PPG.TabControl, PPG.Controls.ItemList, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid, PPG.Grid.Print,
   PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker,
   PPG.NavigationView, PPG.Breadcrumb, PPG.ToolBar, PPG.StatusBar, PPG.Notifications,
+  PPG.Sparkline, PPG.Gauge, PPG.Chart,
+  PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
+  PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
+  PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit,
   PPG.Editors.Logic, PPG.Editors.Forms;
 
 resourcestring
@@ -137,13 +169,19 @@ resourcestring
   SVerbAppearance = 'Edit appearance...';
   SVerbGallery = 'Apply preset to form...';
   SVerbNewPage = 'Ne&w Page';
+  SVerbTestDialog = '&Test dialog...';
   SVerbNextPage = 'Ne&xt Page';
   SVerbPrevPage = '&Previous Page';
   SVerbDeletePage = '&Delete Page';
   SVerbItemsEx = 'Edit rich items (ItemsEx)...';
   SVerbColumns = 'Edit columns...';
+  SVerbPrintPreview = 'Print &preview...';
+  SVerbPageSetup = 'Page &setup...';
   SVerbPanels = 'Edit panels...';
   SVerbToolItems = 'Edit buttons...';
+  SVerbSeries = 'Edit series...';
+  SVerbRanges = 'Edit ranges...';
+  SVerbComboColumns = 'Edit columns...';
   SVerbNavItems = 'Edit items...';
   SVerbConnectPage = 'Connect to %s';
   SVerbDisconnectPage = 'Disconnect page control';
@@ -389,6 +427,129 @@ begin
   Designer.Modified;
 end;
 
+{ TPPGWizardEditor }
+
+function TPPGWizardEditor.Wizard: TPPGWizard;
+begin
+  if Component is TPPGWizard then
+    Result := TPPGWizard(Component)
+  else if Component is TPPGWizardPage then
+    Result := TPPGWizardPage(Component).Wizard
+  else
+    Result := nil;
+end;
+
+function TPPGWizardEditor.OwnVerbCount: Integer;
+begin
+  Result := 4;
+end;
+
+function TPPGWizardEditor.OwnVerb(Index: Integer): string;
+begin
+  case Index of
+    0: Result := SVerbNewPage;
+    1: Result := SVerbNextPage;
+    2: Result := SVerbPrevPage;
+  else
+    Result := SVerbDeletePage;
+  end;
+end;
+
+procedure TPPGWizardEditor.ExecuteOwnVerb(Index: Integer);
+var
+  W: TPPGWizard;
+  Page, P: TPPGWizardPage;
+begin
+  W := Wizard;
+  if W = nil then
+    Exit;
+  case Index of
+    0:
+      begin
+        Page := TPPGWizardPage.Create(Designer.GetRoot);
+        try
+          Page.Name := Designer.UniqueName(TPPGWizardPage.ClassName);
+          Page.Caption := Page.Name;
+          Page.Wizard := W;
+        except
+          Page.Free;
+          raise;
+        end;
+        W.ActivePage := Page;
+        Designer.SelectComponent(Page);
+      end;
+    1, 2:
+      begin
+        // Im Designer auch uebersprungene Seiten erreichbar
+        P := nil;
+        if (W.ActivePageIndex >= 0) and (W.PageCount > 0) then
+          if Index = 1 then
+            P := W.Pages[(W.ActivePageIndex + 1) mod W.PageCount]
+          else
+            P := W.Pages[(W.ActivePageIndex - 1 + W.PageCount) mod W.PageCount];
+        W.ActivePage := P;
+      end;
+    3:
+      if W.ActivePage <> nil then
+      begin
+        Page := W.ActivePage;
+        Designer.SelectComponent(W);
+        Page.Free;
+      end;
+  end;
+  Designer.Modified;
+end;
+
+{ TPPGTaskDialogEditor }
+
+function TPPGTaskDialogEditor.GetVerbCount: Integer;
+begin
+  Result := 1;
+end;
+
+function TPPGTaskDialogEditor.GetVerb(Index: Integer): string;
+begin
+  Result := SVerbTestDialog;
+end;
+
+procedure TPPGTaskDialogEditor.ExecuteVerb(Index: Integer);
+begin
+  TPPGTaskDialog(Component).Execute;
+end;
+
+procedure TPPGTaskDialogEditor.Edit;
+begin
+  ExecuteVerb(0);
+end;
+
+{ TPPGGridPrinterEditor }
+
+function TPPGGridPrinterEditor.GetVerbCount: Integer;
+begin
+  Result := 2;
+end;
+
+function TPPGGridPrinterEditor.GetVerb(Index: Integer): string;
+begin
+  if Index = 0 then
+    Result := SVerbPrintPreview
+  else
+    Result := SVerbPageSetup;
+end;
+
+procedure TPPGGridPrinterEditor.ExecuteVerb(Index: Integer);
+begin
+  if Index = 0 then
+    TPPGGridPrinter(Component).Preview
+  else if TPPGGridPrinter(Component).PageSetup then
+    Designer.Modified;
+end;
+
+procedure TPPGGridPrinterEditor.Edit;
+begin
+  ExecuteVerb(0);
+end;
+
 { TPPGCollectionEditor }
 
 function TPPGCollectionEditor.CollectionProp(out PropName, Verb: string;
@@ -410,6 +571,21 @@ begin
   begin
     PropName := 'Items';
     Verb := SVerbToolItems;
+  end
+  else if Component is TPPGCustomChart then
+  begin
+    PropName := 'Series';
+    Verb := SVerbSeries;
+  end
+  else if Component is TPPGGauge then
+  begin
+    PropName := 'Ranges';
+    Verb := SVerbRanges;
+  end
+  else if Component is TPPGColumnComboBox then
+  begin
+    PropName := 'Columns';
+    Verb := SVerbComboColumns;
   end
   else if IsPublishedProp(Component, 'ItemsEx') then
   begin
@@ -622,7 +798,7 @@ procedure TPPGSelectionEditor.RequiresUnits(Proc: TGetStrProc);
 var
   I: Integer;
   C: TComponent;
-  NeedItems, NeedGrids, NeedComCtrls, NeedExtCtrls, NeedFeedback: Boolean;
+  NeedItems, NeedGrids, NeedComCtrls, NeedExtCtrls, NeedFeedback, NeedChart: Boolean;
 begin
   inherited RequiresUnits(Proc);
   NeedItems := False;
@@ -630,6 +806,7 @@ begin
   NeedComCtrls := False;
   NeedExtCtrls := False;
   NeedFeedback := False;
+  NeedChart := False;
   for I := 0 to Designer.GetRoot.ComponentCount - 1 do
   begin
     C := Designer.GetRoot.Components[I];
@@ -643,6 +820,8 @@ begin
       NeedExtCtrls := True;
     if (C is TPPGNotificationCenter) or (C is TPPGInfoBar) then
       NeedFeedback := True;
+    if C is TPPGCustomChart then
+      NeedChart := True;
   end;
   // Typen der Ereignis-Signaturen (z.B. TPPGCheckState, TPPGItemData,
   // TGridDrawState, TNodeAttachMode, TSysLinkType, TPPGSeverity)
@@ -657,6 +836,9 @@ begin
     Proc('Vcl.ExtCtrls');
   if NeedFeedback then
     Proc('PPG.Feedback');
+  // OnGetPoint: TPPGChartPoint
+  if NeedChart then
+    Proc('PPG.Chart.Series');
 end;
 
 procedure Register;
@@ -668,19 +850,35 @@ begin
     TPPGLabel, TPPGLinkLabel, TPPGBadge, TPPGProgressRing, TPPGInfoBar, TPPGExpander,
     TPPGSplitter, TPPGRating, TPPGSearchEdit, TPPGCalendar, TPPGDatePicker, TPPGTimePicker,
     TPPGNavigationView, TPPGBreadcrumb, TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
-    TPPGStyleManager]);
+    TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart,
+    TPPGPopupMenu, TPPGMenuBar, TPPGHintManager, TPPGCustomHint, TPPGTeachingTip,
+    TPPGTaskDialog, TPPGWizard,
+    TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
+    TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit,
+    TPPGGridPrinter, TPPGStyleManager]);
   // Seiten entstehen ueber den Komponenteneditor, nicht ueber die Palette
   RegisterClass(TPPGTabSheet);
   RegisterNoIcon([TPPGTabSheet]);
+  RegisterClass(TPPGWizardPage);
+  RegisterNoIcon([TPPGWizardPage]);
   RegisterPropertyEditor(TypeInfo(string), TPPGCustomControl, 'Preset', TPPGPresetProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGStyleManager, 'Preset', TPPGPresetProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGNotificationCenter, 'Preset', TPPGPresetProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGPopupMenu, 'Preset', TPPGPresetProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGHintManager, 'Preset', TPPGPresetProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGCustomHint, 'Preset', TPPGPresetProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGTeachingTip, 'Preset', TPPGPresetProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGTaskDialog, 'Preset', TPPGPresetProperty);
   // Spezifischere Klassen nach den allgemeinen registrieren (die IDE nimmt
   // den Editor der naechstliegenden Klasse)
   RegisterComponentEditor(TPPGCustomControl, TPPGComponentEditor);
   RegisterComponentEditor(TPPGStyleManager, TPPGComponentEditor);
   RegisterComponentEditor(TPPGPageControl, TPPGPageControlEditor);
   RegisterComponentEditor(TPPGTabSheet, TPPGPageControlEditor);
+  RegisterComponentEditor(TPPGWizard, TPPGWizardEditor);
+  RegisterComponentEditor(TPPGWizardPage, TPPGWizardEditor);
+  RegisterComponentEditor(TPPGTaskDialog, TPPGTaskDialogEditor);
+  RegisterComponentEditor(TPPGGridPrinter, TPPGGridPrinterEditor);
   RegisterComponentEditor(TPPGListBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGCheckListBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGComboBox, TPPGCollectionEditor);
@@ -688,6 +886,9 @@ begin
   RegisterComponentEditor(TPPGGrid, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGStatusBar, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGToolBar, TPPGCollectionEditor);
+  RegisterComponentEditor(TPPGChart, TPPGCollectionEditor);
+  RegisterComponentEditor(TPPGGauge, TPPGCollectionEditor);
+  RegisterComponentEditor(TPPGColumnComboBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGNavigationView, TPPGNavigationViewEditor);
   RegisterComponentEditor(TPPGTreeView, TPPGTreeViewEditor);
   RegisterComponentEditor(TPPGNotificationCenter, TPPGNotificationCenterEditor);

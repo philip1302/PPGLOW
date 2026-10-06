@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGChart</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGChart</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Chart</code> - Basis <code>TPPGCustomChart</code></p>
+<p><strong>Vorbild:</strong> TMS FNC Chart, TeeChart (Grundfunktionen)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Bewusst kein TeeChart-Nachbau: kein 3D, keine Finanz-Charts, kein Zoom/Pan, keine logarithmische Achse, keine Splines.</li>
+<li>Serienarten: Linie, Stufe, Fl&#228;che, S&#228;ule, Balken, Kreis, Ring. Sind alle sichtbaren Serien Balken, liegt das Diagramm quer; ist die erste sichtbare Serie ein Kreis/Ring, zeigt es nur diese.</li>
+<li><code>Stacking</code> (gestapelt, 100 %) gilt f&#252;r S&#228;ulen, Balken und Fl&#228;chen auf der Kategorieachse.</li>
+<li>Daten&#228;nderungen gleiten (bis 10 000 Punkte). Mehrere &#196;nderungen in <code>BeginDataUpdate</code>/<code>EndDataUpdate</code> ergeben einen &#220;bergang. <code>Append(Y, MaxCount)</code> f&#252;r Live-Daten.</li>
+<li>Virtueller Modus: <code>Series.VirtualCount</code> + <code>OnGetPoint</code>.</li>
+<li>Der Tooltip ist Teil des Controls (kein eigenes Fenster) und erscheint deshalb auch in Screenshots. <code>SaveToBitmap</code>/<code>SaveToPng</code>/<code>CopyToClipboard</code> zeigen immer den Endzustand.</li>
+<li>Screenreader: Kinder sind die Datenpunkte (h&#246;chstens 500 je Serie).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>var
+  S: TPPGChartSeries;
+begin
+  PPGChart1.Categories.CommaText := &#39;Jan,Feb,Mrz&#39;;
+  S := PPGChart1.Series.Add;
+  S.Title := &#39;Umsatz&#39;;
+  S.Kind := cskColumn;
+  S.SetValues([12, 15, 11]);
+  PPGChart1.ReferenceLines.Add.Value := 13;
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGChart - Diagramm im Stil der Suite (Phase 10d).</p>
+<ul>
+<li>Serien (PPG.Chart.Series): Linie, Stufe, Flaeche, Saeule, Balken, Kreis, Ring. Linien, Flaechen und Saeulen lassen sich mischen; sind alle sichtbaren Serien Balken, liegt das Diagramm quer (Kategorien senkrecht). Ist die erste sichtbare Serie ein Kreis/Ring, zeigt das Diagramm nur sie.</li>
+<li>Achsen: X als Kategorie, Zahl oder Datum/Zeit; Y links und optional eine zweite Y-Achse rechts (Series.YAxis = casSecondary). Grenzen automatisch (PPG.Chart.Scale) oder fest; Referenzlinien (ReferenceLines).</li>
+<li>Stapeln (Stacking) fuer Saeulen, Balken und Flaechen auf der Kategorieachse, auch als 100 %.</li>
+<li>Legende oben, unten oder rechts; Klick blendet eine Serie aus/ein (animiert).</li>
+<li>Tooltip beim Ueberfahren: rastet auf den naechsten X-Wert ein (Linie ueber alle Serien) bzw. auf das Segment beim Kreis. Der Tooltip ist Teil des Controls (kein eigenes Fenster): er erscheint so auch beim Export und in Screenshots.</li>
+<li>Tastatur: Pfeile links/rechts laufen durch die Punkte, hoch/runter bzw. Bild wechseln die Serie, Pos1/Ende, Enter/Leertaste = OnPointClick, Esc blendet den Tooltip aus.</li>
+<li>Animation ueber den gemeinsamen Animator: Aufbau beim ersten Zeigen, weicher Uebergang bei Datenaenderungen (bis 10 000 Punkte), Ein-/ Ausblenden von Serien.</li>
+<li>Viele Punkte: Linien werden pro Pixelspalte auf Min/Max verdichtet.</li>
+<li>Export: SaveToBitmap, SaveToPng, CopyToClipboard (gleicher Zeichenweg).</li>
+<li>Screenreader: Rolle Diagramm, Kinder = Datenpunkte (&quot;Serie, Kategorie: Wert&quot;), hoechstens 500 je Serie.</li>
+<li>RTL: Y-Achse rechts, Legende von rechts; die X-Richtung bleibt (wie Excel).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Title</code>, <code>Series</code>, <code>Categories</code>, <code>XAxis</code>, <code>YAxis</code>, <code>Y2Axis</code>, <code>ReferenceLines</code>, <code>Stacking</code>, <code>LegendPosition</code>, <code>ShowTooltips</code>, <code>LegendToggle</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>Hint</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnClick</code>, <code>OnDblClick</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetPoint</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnPointClick</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGChart.md</code>.</p>
+</body></html>

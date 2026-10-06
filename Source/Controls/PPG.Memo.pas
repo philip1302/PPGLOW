@@ -53,6 +53,7 @@ type
     property Appearance;
     property Animation;
     property TextHint;
+    property UseSystemContextMenu;
     property TextHintVisibleOnFocus;
     property ValidationState;
     property ValidationHint;

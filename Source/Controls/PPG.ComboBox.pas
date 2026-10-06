@@ -177,6 +177,7 @@ type
     property FilterMode;
     property ShowClearButton;
     property TextHint;
+    property UseSystemContextMenu;
     property TextHintVisibleOnFocus;
     property ValidationState;
     property ValidationHint;

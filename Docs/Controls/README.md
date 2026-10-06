@@ -41,6 +41,26 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten und `Docs\Controls\notes`.
 | [TPPGToolBar](TPPGToolBar.md) | `PPG.ToolBar` | Befehlsleiste (Phase 7c, wie WinUI CommandBar). |
 | [TPPGStatusBar](TPPGStatusBar.md) | `PPG.StatusBar` | Statusleiste (Phase 7c). |
 | [TPPGNotificationCenter](TPPGNotificationCenter.md) | `PPG.Notifications` | Benachrichtigungen ("Toasts") der Anwendung (Phase 7d). |
+| [TPPGSparkline](TPPGSparkline.md) | `PPG.Sparkline` | kleiner Werteverlauf ohne Achsen (Phase 10b). |
+| [TPPGGauge](TPPGGauge.md) | `PPG.Gauge` | Dashboard-Bausteine (Phase 10c): TPPGGauge und TPPGKpiTile. |
+| [TPPGKpiTile](TPPGKpiTile.md) | `PPG.Gauge` | Dashboard-Bausteine (Phase 10c): TPPGGauge und TPPGKpiTile. |
+| [TPPGChart](TPPGChart.md) | `PPG.Chart` | Diagramm im Stil der Suite (Phase 10d). |
+| [TPPGPopupMenu](TPPGPopupMenu.md) | `PPG.Menus` | Menues im Stil der Suite (Phase 11b). |
+| [TPPGMenuBar](TPPGMenuBar.md) | `PPG.MenuBar` | Hauptmenue als Control im Stil der Suite (Phase 11c). |
+| [TPPGHintManager](TPPGHintManager.md) | `PPG.Hints` | Hints im Stil der Suite (Phase 11e). |
+| [TPPGCustomHint](TPPGCustomHint.md) | `PPG.Hints` | Fuer die CustomHint-Property einzelner Controls (wie TBalloonHint). |
+| [TPPGTeachingTip](TPPGTeachingTip.md) | `PPG.TeachingTip` | TeachingTip (Phase 11f): Sprechblase mit Pfeil, an ein Control geheftet (wie WinUI TeachingTip). |
+| [TPPGTaskDialog](TPPGTaskDialog.md) | `PPG.Dialogs` | Dialoge im Stil der Suite (Phase 11g). |
+| [TPPGWizard](TPPGWizard.md) | `PPG.Wizard` | TPPGWizard + TPPGWizardPage - Schritt-Assistent (Phase 11g). |
+| [TPPGNumberEdit](TPPGNumberEdit.md) | `PPG.NumberEdit` | ein Feld fuer Ganzzahl, Kommazahl, Waehrung und Prozent (Phase 12b; Vorbild TMS TAdvEdit EditType, WinUI NumberBox). |
+| [TPPGMaskEdit](TPPGMaskEdit.md) | `PPG.MaskEdit` | Eingabe mit Maske (Phase 12b, Vorbild TMaskEdit). |
+| [TPPGPasswordEdit](TPPGPasswordEdit.md) | `PPG.PasswordEdit` | Kennwortfeld (Phase 12b, Vorbild WinUI PasswordBox). |
+| [TPPGFileEdit](TPPGFileEdit.md) | `PPG.FileEdit` | Feld fuer eine Datei oder einen Ordner (Phase 12c). |
+| [TPPGColorPicker](TPPGColorPicker.md) | `PPG.ColorPicker` | Farbauswahl mit Palette (Phase 12d). |
+| [TPPGCheckComboBox](TPPGCheckComboBox.md) | `PPG.CheckComboBox` | Mehrfachauswahl im Aufklappfeld (Phase 12e, Vorbild TMS TCheckListEdit). |
+| [TPPGColumnComboBox](TPPGColumnComboBox.md) | `PPG.ColumnComboBox` | mehrspaltige Auswahl mit Kopfzeile (Phase 12e, Vorbild TMS TAdvMultiColumnComboBox). |
+| [TPPGTagEdit](TPPGTagEdit.md) | `PPG.TagEdit` | Stichwoerter als Chips (Phase 12f, Vorbild Outlook-Empfaenger, WinUI TokenizingTextBox). |
+| [TPPGGridPrinter](TPPGGridPrinter.md) | `PPG.Grid.Print` | Drucken von Tabellen (Phase 13e). |
 | [TPPGStyleManager](TPPGStyleManager.md) | `PPG.StyleManager` | Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster). |
 
 ## Palette PPGlow DB
@@ -54,4 +74,10 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten und `Docs\Controls\notes`.
 | [TPPGDBLookupComboBox](TPPGDBLookupComboBox.md) | `PPG.DB.Lookup` | Auswahl eines Schluessels aus einer zweiten Datenmenge (Phase 9c), wie TDBLookupComboBox. |
 | [TPPGDBDatePicker](TPPGDBDatePicker.md) | `PPG.DB.Controls` | Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker. |
 | [TPPGDBGrid](TPPGDBGrid.md) | `PPG.DB.Grid` | Tabelle einer Datenmenge (Phase 9c), wie TDBGrid. |
+| [TPPGDBChart](TPPGDBChart.md) | `PPG.DB.Chart` | Diagramm aus einer Datenmenge (Phase 10e, Paket PPGlowDBR). |
+| [TPPGDBMaskEdit](TPPGDBMaskEdit.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
+| [TPPGDBNumberEdit](TPPGDBNumberEdit.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
+| [TPPGDBColorPicker](TPPGDBColorPicker.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
+| [TPPGDBCheckComboBox](TPPGDBCheckComboBox.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
+| [TPPGDBTagEdit](TPPGDBTagEdit.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
 

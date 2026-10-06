@@ -58,6 +58,110 @@ resourcestring
   // ProgressBar: Prozentanzeige (Text im Balken und Wert fuer Screenreader)
   SPPGPercentFormat = '%d %%';
 
+  // Diagramme (Phase 10)
+  SPPGInvalidValueList = 'Invalid value list "%s" ignored while loading';
+  SPPGChartNoData = 'No data';
+  SPPGSparklineSummary = 'Min %s, max %s, last %s';
+  SPPGGaugeRangeInvalid = 'Minimum (%s) must be less than maximum (%s)';
+  SPPGKpiChange = 'Change %s';
+  SPPGChartSeriesDefault = 'Series %d';
+  SPPGChartPointName = '%s, %s: %s';
+  SPPGChartSeriesName = '%s, %d points';
+  SPPGChartSeriesHidden = '%s (hidden)';
+
+  // Bearbeiten-Menue der Felder (Phase 11d)
+  SPPGEditUndo = '&Undo';
+  SPPGEditCut = 'Cu&t';
+  SPPGEditCopy = '&Copy';
+  SPPGEditPaste = '&Paste';
+  SPPGEditDelete = '&Delete';
+  SPPGEditSelectAll = 'Select &All';
+
+  // Dialoge und Assistent (Phase 11g)
+  SPPGDlgOK = 'OK';
+  SPPGDlgCancel = 'Cancel';
+  SPPGDlgYes = '&Yes';
+  SPPGDlgNo = '&No';
+  SPPGDlgAbort = '&Abort';
+  SPPGDlgRetry = '&Retry';
+  SPPGDlgIgnore = '&Ignore';
+  SPPGDlgAll = '&All';
+  SPPGDlgNoToAll = 'N&o to All';
+  SPPGDlgYesToAll = 'Yes to A&ll';
+  SPPGDlgHelp = '&Help';
+  SPPGDlgClose = '&Close';
+  SPPGDlgWarning = 'Warning';
+  SPPGDlgError = 'Error';
+  SPPGDlgInformation = 'Information';
+  SPPGDlgConfirm = 'Confirm';
+  SPPGDlgShowDetails = 'Show details';
+  SPPGDlgHideDetails = 'Hide details';
+  SPPGWizBack = '< &Back';
+  SPPGWizNext = '&Next >';
+  SPPGWizFinish = '&Finish';
+  SPPGWizStep = 'Step %d of %d: %s';
+
+  // Eingabefelder (Phase 12)
+  SPPGNumberRequired = 'A value is required';
+  SPPGNumberInvalid = 'Not a valid number';
+  SPPGMaskInvalid = 'Input does not match the mask';
+  SPPGCapsLockOn = 'Caps Lock is on';
+  SPPGFileNotFound = 'File not found';
+  SPPGFolderNotFound = 'Folder not found';
+  SPPGColorNone = 'None';
+  SPPGColorDefault = 'Default';
+  SPPGColorMore = 'More colors...';
+  SPPGColorRecent = 'Recent colors';
+  SPPGColorStandard = 'Standard colors';
+  SPPGColorTheme = 'Theme colors';
+  SPPGColorSystem = 'System colors';
+  SPPGColorApply = 'Apply';
+  SPPGSelectAll = 'Select all';
+  SPPGCheckedCount = '%d selected';
+  SPPGAccRemove = 'Remove';
+
+  // Grid-Kopfmenue (Phase 13b)
+  SPPGGridSortAsc = 'Sort ascending';
+  SPPGGridSortDesc = 'Sort descending';
+  SPPGGridSortNone = 'Remove sorting';
+  SPPGGridHideColumn = 'Hide column';
+  SPPGGridColumnChooser = 'Columns';
+  SPPGGridShowAll = 'Show all columns';
+  SPPGGridBestFit = 'Best fit';
+  SPPGGridBestFitAll = 'Best fit (all columns)';
+  SPPGGridGroupBy = 'Group by this column';
+  SPPGGridUngroup = 'Remove grouping';
+  SPPGGridGroupPanelHint = 'Drag a column header here to group by that column';
+  SPPGGridExpandAll = 'Expand all groups';
+  SPPGGridCollapseAll = 'Collapse all groups';
+  SPPGGridGroupName = '%s: %s, %d rows';
+
+  // Drucken (Phase 13e)
+  SPPGPrintFooterDefault = 'Page [Page] of [Pages]';
+  SPPGPrintNoPrinter = 'No printer is installed';
+  SPPGPrinterNotFound = 'Printer "%s" not found';
+  SPPGPreviewTitle = 'Print preview';
+  SPPGPreviewPrint = 'Print';
+  SPPGPreviewPageSetup = 'Page setup...';
+  SPPGPreviewClose = 'Close';
+  SPPGPreviewPage = 'Page %d of %d';
+  SPPGPreviewZoomPage = 'Whole page';
+  SPPGPreviewZoomWidth = 'Page width';
+  SPPGPageSetupTitle = 'Page setup';
+  SPPGPageSetupPortrait = 'Portrait';
+  SPPGPageSetupLandscape = 'Landscape';
+  SPPGPageSetupFit = 'Fit to page width';
+  SPPGPageSetupRepeat = 'Repeat column headers on every page';
+  SPPGPageSetupGridLines = 'Print grid lines';
+  SPPGPageSetupColors = 'Print colors';
+  SPPGPageSetupMargins = 'Margins left, top, right, bottom (mm)';
+  SPPGPageSetupHeader = 'Header';
+  SPPGPageSetupFooter = 'Footer';
+
+  // Export (Phase 13f)
+  SPPGXlsxInvalid = 'Not a valid xlsx file (%s missing)';
+  SPPGPdfPrinterMissing = 'The printer "Microsoft Print to PDF" is not installed (Windows features: "Microsoft Print to PDF")';
+
 implementation
 
 end.

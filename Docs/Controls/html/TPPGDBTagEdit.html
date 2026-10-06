@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBTagEdit</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBTagEdit</h1>
+<p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Fields</code> - Basis <code>TPPGTagEdit</code></p>
+<p><strong>Vorbild:</strong> DB-Variante von <code>TPPGTagEdit</code> (wie <code>TDBEdit</code>)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Bindet sich &#252;ber <code>DataSource</code>/<code>DataField</code> an ein Feld. Die Anbindung ist f&#252;r alle Phase-12-Felder dieselbe (<code>TPPGDBValueBinding</code>, Schnittstelle <code>IPPGFieldValue</code>).</li>
+<li>Null im Feld wird zum leeren Control, und ein leeres Control schreibt Null.</li>
+<li>Tippen bzw. Ausw&#228;hlen setzt den Datensatz in Bearbeitung. Ist das nicht m&#246;glich, kommt der Feldwert zur&#252;ck.</li>
+<li>Beim Verlassen und bei einem Post (auch &#252;ber einen Navigator) wird geschrieben. Eine laufende Eingabe wird vorher &#252;bernommen.</li>
+<li>Fehler stehen am Feld (<code>ValidationState</code>), es erscheint kein Dialog.</li>
+<li>Esc setzt die Bearbeitung zur&#252;ck.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit.</p>
+<p>Alle binden sich ueber IPPGFieldValue (PPG.Controls.Field) an das Feld - eine Anbindung (TPPGDBValueBinding) statt einer je Feldtyp:</p>
+<ul>
+<li>Datensatz wechselt: Null -&gt; FieldClear, sonst SetFieldValue (still, ohne OnChange). Text-Modus (Maske, Auswahl, Tags) ueber Field.Text, sonst Field.Value (Zahl, Farbe).</li>
+<li>Anwender aendert: Datensatz in den Bearbeiten-Modus (EditByUser), dann Modified; geht das nicht, wird der Feldwert wieder angezeigt.</li>
+<li>Schreiben (UpdateData, auch beim Post ueber einen Navigator): eine laufende Eingabe wird vorher uebernommen (Zahl rechnen, Tag anlegen).</li>
+<li>Verlassen: UpdateRecord; ein Fehler steht am Feld (ValidationState), kein Dialog (PPGDBCommitField aus Phase 9).</li>
+<li>TPPGDBMaskEdit uebernimmt Field.EditMask, wenn es keine eigene Maske hat.</li>
+<li>TPPGDBNumberEdit: AllowNull ist Vorgabe (Null ist nicht 0).</li>
+<li>Auswahl und Tags speichern als getrennten Text (Delimiter).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>DataField</code>, <code>DataSource</code>, <code>ReadOnly</code>, <code>Tags</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBTagEdit.md</code>.</p>
+</body></html>

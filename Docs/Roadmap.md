@@ -156,6 +156,7 @@ Ohne diese Schicht wird jedes Listen-Control ein Einzelstück. Deshalb kommt sie
 | 7 | Navigation, Datum/Zeit, Rückmeldung, kleinere Controls | groß, gut teilbar |
 | 8 | Tokens, Fluent11, Dark Mode, Motion, Icons (Mica als Prototyp) | mittel bis groß |
 | 9 | Designer, DB, UIA, Kompatibilität, Doku | fortlaufend |
+| 10 | Datenvisualisierung: Sparkline, Gauge/KPI-Kachel, Chart, DB-Chart (am 04.10.2026 ergänzt, Detailplan `Docs\Phase10-Plan.md`) | groß |
 
 - **Alternative Reihenfolge:** Phase 8 (Tokens und Dark Mode) vor Phase 6. Vorteil: Alle neuen Controls entstehen gleich token-basiert, und das Nachrüsten von 21 Controls passiert nur einmal. **Empfehlung: 8.1–8.3 (Tokens, Fluent11, Dark) direkt nach Phase 5.**
 - Jede Phase bekommt vor dem Start einen eigenen Detailplan (wie Phase 4) und endet mit Bericht und OK.

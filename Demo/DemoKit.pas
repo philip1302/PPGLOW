@@ -19,7 +19,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Generics.Collections,
   Vcl.Graphics, Vcl.Controls, Vcl.ImgList, Vcl.StdCtrls,
   PPG.Types, PPG.Tokens, PPG.Appearance, PPG.Theme, PPG.Controls.Base, PPG.Button, PPG.Panel,
-  PPG.Labels, PPG.PageControl, PPG.Notifications;
+  PPG.Labels, PPG.PageControl, PPG.Notifications, PPG.Hints;
 
 type
   TDemoTextKind = (tkBody, tkStrong, tkSecondary, tkCaption, tkCardTitle,
@@ -95,6 +95,8 @@ const
 var
   /// Wird vom Hauptformular angelegt.
   DemoStyler: TDemoStyler;
+  /// Hints der ganzen Demo (vom Hauptformular angelegt).
+  DemoHints: TPPGHintManager;
   /// Name des aktiven Presets (fuer die Akzentfarbe).
   DemoPreset: string;
 

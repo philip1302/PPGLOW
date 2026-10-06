@@ -501,6 +501,120 @@ Jedes Verb fängt Exceptions und zeigt sie an. Die Palettensymbole erzeugt `Buil
 
 **Prüfung ohne Compiler (9e).** `Build\check-rules.ps1` prüft die Coding-Rules und die Projektlisten. `build.ps1` ruft ihn vor jedem Build auf.
 
+## Phase 10: Datenvisualisierung (Sparkline, Gauge, KPI-Kachel, Chart, DB-Chart)
+
+*Plan, Umsetzung und Abweichungen: `Docs\Phase10-Plan.md`.*
+
+**Zeichenschicht.** `IPPGCanvas` bleibt unverändert. Freie Formen kommen über ein eigenes Interface `IPPGShapeCanvas` (`FillPolygon`, `DrawDashedPolyline`), das GDI+ und der GDI-Fallback implementieren. Der GDI-Fallback zerlegt gestrichelte Linien selbst, weil GDI-Stifte Muster nur bei 1 px Breite können.
+- Controls benutzen nur die Helfer in `PPG.Render.Shapes`: Bögen, Kreis- und Ringsegmente, `PPGFillPolygon` und `PPGDrawDashedLine`. Ohne `IPPGShapeCanvas` (fremder Canvas) entstehen Umrisse statt Flächen.
+- `IPPGChartRenderer` (Balken, Datenpunkt, Tooltip-Fläche) hat eine Standard-Umsetzung in `TPPGRendererBase`. Classic zeichnet glänzende Balken.
+
+**Kern ohne VCL.**
+- `PPG.Chart.Scale`: Achsen nach „Nice Numbers“; nur die Schrittweite wird gerundet, nicht vorher der Bereich, sonst wird die Achse oft doppelt so hoch wie die Daten. Datumsachse von Sekunde bis Jahr, Wochen beginnen am Montag.
+- `PPG.Chart.Palette`: Serienfarben, Farbe 0 ist der Akzent des Presets. Der Test prüft für jedes Preset hell und dunkel mindestens 3:1 zu `Layer` und `Background`.
+
+**Datenmodell.** `TPPGChartSeries` speichert X, Y, Text und Farbe in getrennten Arrays. Text und Farbe werden nur angelegt, wenn sie gebraucht werden. Dazu kommt ein Startversatz für das Lauffenster (`Append`).
+- Die erste Fassung mit `TList<TPPGChartPoint>` kopierte bei jedem Lesen einen Record mit String (`CopyRecord`).
+- Layout und Zeichnen lesen über `XAt`/`YAt` ohne Kopie.
+- Jede Änderung meldet sich vorher (`ChartBeforeDataChange`: angezeigte Werte merken) und nachher (`ChartDataChanged`) über `IPPGChartHost`.
+
+**Animation.** Aufbau, Übergang nach Datenänderung (nur bei gleicher Punktzahl, höchstens 10 000 Punkte) und Ein-/Ausblenden laufen über den gemeinsamen Animator.
+- Wird `Animation` abgeschaltet, springen alle laufenden Animationen ans Ende (`UpdateVisualState`); sonst bliebe das Diagramm im Zwischenstand stehen.
+- Ein Export (`SaveToBitmap`) zeigt immer den Endzustand.
+
+**Layout und Treffer.** `Layout` berechnet alles rein aus dem Zustand: Modus, Legende, Achsen, Zeichenfläche. `DoPaint`, `HitTest`, `PointPos` und die Screenreader-Kinder benutzen dieselbe Berechnung.
+- Der Tooltip ist Teil des Controls statt eines Popups. So erscheint er im Export und in Screenshots und braucht keine Fensteraktivierung.
+- `SaveToPng` speichert über den PNG-Encoder von GDI+ (`PPGSaveBitmapAsPng` in `PPG.Render.GdiPlus`), nicht über `Vcl.Imaging.pngimage`. Sonst müsste `PPGlowR` das Paket `vclimg` verlangen, und Anwendungen mit Laufzeitpaketen müssten es mitliefern.
+
+**Leistung.** Linien werden pro Pixelspalte auf Min/Max verdichtet.
+- Für den Abstand der Kategorie-Beschriftungen wird nur eine Stichprobe gemessen.
+- Ein Slot kann bei sehr vielen Kategorien schmaler als 1 px sein; der Abstand darf deshalb nicht auf 1 px gerundet werden. Sonst wurden bei 100 000 Kategorien über 2 000 Texte gezeichnet.
+- Benchmark: 100 000 Punkte etwa 15 ms je Bild.
+
+**DB-Chart.** Anbinden, Öffnen und Schließen laden sofort; Datenänderungen laden nach `ReloadDelay` über den Animator.
+- Ereignisse des eigenen Lesens (`EnableControls`) werden ignoriert.
+- Während `Edit`/`Insert` wird nicht gelesen: `First` würde über `CheckBrowseMode` die Eingabe des Anwenders speichern.
+
+## Phase 11: Menüs, Hints, TeachingTip, Dialoge, Assistent
+
+*Plan, Umsetzung und Abweichungen: `Docs\Phase11-Plan.md`.*
+
+**Gemeinsame Bausteine.**
+- `PPG.Popup.Placement` (Kern, ohne VCL): `PPGPlacePopup` für Listen, Menüs und Untermenüs (kippen, klemmen, Punkt-Anker klappt nach links) und `PPGPlaceTip` für Sprechblasen (mittig zum Anker, Auto-Reihenfolge oben/unten/links/rechts, Pfeil an der Rundung begrenzt). Beides ist ohne Fenster getestet.
+- `PPG.AppHooks`: Tasten und Klicks, die an andere Fenster gehen, sieht man über **einen** internen `TApplicationEvents` statt über `Application.OnMessage`. Der zuletzt angemeldete Haken kommt zuerst (oberstes Menü vor Menüleiste vor TeachingTip); `Handled` beendet die Kette. Dazu kommt `PPGWatchControl`: Ein Hilfsobjekt hängt sich einmal je Control in `WindowProc` ein und gehört dem Control. Hat sich danach jemand anderes eingehängt, bleibt es als Durchreiche stehen, damit dessen Kette nicht bricht.
+- Popup-Fenster werden nie aktiviert (`MA_NOACTIVATE`), der Fokus bleibt im Formular. Darum laufen Tastatur und „Klick daneben“ über die App-Haken.
+- Renderer: `IPPGMenuRenderer` und `IPPGHintRenderer` (`DrawHint`, `DrawTip` für Fläche mit Pfeil). Die Geometrie bestimmt das Control, der Renderer nur die Form. Standards stehen in `TPPGRendererBase`.
+
+**Menüs.** Das VCL-Modell bleibt (`TMenuItem`, Menü-Designer, Actions); ersetzt wird nur die Darstellung.
+- `TPPGMenuLoop` führt die offenen Ebenen (`TPPGMenuWindow`).
+- Ein Klick wird erst **nach** dem Schließen ausgeführt, über eine Nachricht an ein eigenes Hilfsfenster (`AllocateHWnd`) statt an das Formular. So darf der Handler das Formular freigeben.
+- Alt/F10 schließen erst beim Loslassen der Taste; sonst startet `DefWindowProc` die Systemmenü-Schleife.
+- `TPPGPopupMenu.Popup` ist modal wie bei der VCL. Die Menüleiste läuft nicht modal und schaltet bei Mausbewegung zwischen den Menüs um.
+
+**Hints.** `TPPGHintManager` setzt `HintWindowClass` (opt-in, einer zur Zeit) und stellt die vorige Klasse wieder her. `TPPGHintContent` misst und zeichnet Titel, Markup-Text und Bild für `TPPGHintWindow` und `TPPGCustomHint` (DRY). DPI und Schrift richten sich nach dem Monitor unter dem Mauszeiger.
+
+**TeachingTip.** Fenster ist ein `TPPGPopupWindow` mit Region (abgerundete Fläche plus Pfeil, `ApplyRegion` ist dafür virtuell). Er folgt Ziel und Formular über `PPGWatchControl`; die Neuplatzierung wird gesammelt gepostet und nicht in der Nachricht des Ziels ausgeführt. Gibt ein Ereignis den Tipp frei, gibt sich das Fenster nach seinem Handler selbst frei (`CM_RELEASE`).
+
+**Dialoge.** `TPPGTaskDialog` erbt von `TCustomTaskDialog` und überschreibt nur `DoExecute`, deshalb sind Properties, Collections und DFMs die des Originals.
+- Das Formular (`TPPGDialogForm`) besteht aus Suite-Controls, eine zweite Zeichenlogik gibt es nicht.
+- Private Ergebnisfelder des Vorfahren (`RadioButton`, `Expanded`, `URL`) setzt der Dialog über dessen eigene `DoOn…`-Methoden. Fehlt ein Ereignis, wird kurz ein leerer Handler eingesetzt, weil der Vorfahr sonst nichts merkt.
+- Schließen aus `OnShow` heraus wird zusätzlich gepostet, weil `ShowModal` `ModalResult` nach `OnShow` zurücksetzt.
+- `PPGMessageDlg`, `PPGInputQuery` usw. laufen über denselben Dialog.
+
+**Assistent.** `TPPGWizard` verwaltet Seiten wie `TPPGPageControl` (`CM_CONTROLCHANGE`, `GetChildren`, `SetChildOrder`, `ShowControl`). Die drei Buttons gehören dem Assistenten und stehen nicht in der DFM. `ClientWidth` wird vor dem Fensterhandle nicht benutzt, weil `TWinControl.GetClientRect` sonst eines anfordert.
+
+## Phase 12: Eingabe-Erweiterungen
+
+*Plan, Umsetzung und Abweichungen: `Docs\Phase12-Plan.md`.*
+
+**Feld-Basis.**
+- `IPPGFieldInner`: Jedes innere Edit, auch ein `TCustomMaskEdit`-Nachfahre, bekommt Textfarbe und dunkle Scrollleisten über diese Schnittstelle. Die Farbroutine steht nur einmal da (`PPGFieldCtlColor`); Sonderfälle nach Klasse gibt es nicht mehr.
+- `IPPGFieldValue` (`FieldIsNull`, `FieldClear`, `GetFieldValue`, `SetFieldValue`): typisierte Felder bieten ihren Wert so an. `TPPGDBValueBinding` bindet jedes solche Feld an ein Datenbankfeld, eine Anbindung statt einer je Feldtyp. Die Zell-Editoren des Grids (Phase 13) sollen dieselbe Schnittstelle nutzen.
+- `SetTextSilent` setzt den Text ohne `OnChange` (Anzeige-/Bearbeitungsformat, Werte aus Code).
+- `AdjustInnerBounds` verschiebt das innere Edit, z. B. hinter Chips.
+- Felder folgen mit `AutoSize` nur in der Höhe (`AutoSizeWidth = False`).
+
+**Kern ohne VCL.**
+- `PPG.NumberFormat`: Zahlen tolerant lesen (Gebietsschema, Tausender, Währung, Prozent, Schweizer Apostroph, Buchhaltungsklammern). Ergebnis ist ein invarianter Text, den `TryStrToCurr` exakt liest. Dazu Ausdrücke rechnen, Anzeige/Bearbeitung formatieren und die Einfügemarke nach Ziffern umrechnen.
+- `PPG.ColorSpace`: HSV ↔ RGB, Hex.
+
+**Aufklapp-Basis.** `TPPGCustomDropDownField` übernimmt das Verhalten der ComboBox:
+- Das Popup wird nie aktiviert; das Feld hält per `SetCapture` die Maus und reicht sie in Popup-Koordinaten weiter.
+- Tastatur: Alt+Pfeil/F4 klappen auf und zu, Enter/Esc gehören bei offenem Popup dem Feld.
+- Fokus-, Capture-, Enabled- und Visible-Verlust schließen das Popup.
+- Barrierefreiheit: Rolle ComboBox, auf-/zugeklappt.
+
+Das Popup (`TPPGDropPopup`) antwortet auf Maus und Tasten mit einer Aktion (`pdaKeepOpen`, `pdaAccept`, `pdaCancel`).
+
+`TPPGRowPopup` ist die Zeilenliste dazu: Bildlauf mit Daumen, optionale Kopf- und Filterzeile. Getippte Zeichen kommen über die Tastatur des Felds, deshalb braucht auch eine Filter- oder Hex-Eingabe keinen Fokus im Popup.
+
+**Rundung von Geld.** `Round`/`RoundTo` der RTL runden zur geraden Ziffer. `TPPGNumberEdit` rundet `Currency` deshalb kaufmännisch über die Ganzzahl (`Currency` = Int64 · 10⁻⁴), `Double` über `SimpleRoundTo`.
+
+## Phase 13: Grid-Profi
+
+*Plan, Umsetzung und Abweichungen: `Docs\Phase13-Plan.md`.*
+
+**Schichten.** `PPG.Grid` ist nur noch das Control (Eingabe, Scrollen, Layout) und verbindet:
+- `PPG.Grid.Columns`: Spalten und Bänder. Die Spalten kennen ihr Grid nicht; Änderungen melden sie über `IPPGGridColumnsHost` an den Owner (Grid, DB-Grid).
+- `PPG.Grid.View`: Ansicht als Kette von Stufen hinter `IPPGGridViewStage` (Filter → Sortieren → Gruppieren). Die Stufen arbeiten auf einem Index-Array und fragen „passt?“, „kleiner?“ und „Gruppenschlüssel?“ beim Host (`IPPGGridViewHost`). Ohne aktive Stufe ist die Ansicht die Identität (kein Array).
+- `PPG.Grid.Data`: `IPPGTableSource` (Tabelle, wie Druck und Export sie sehen), `IPPGGridPrintSource` (Darstellung für Druck/HTML), `IPPGTableExport` (Summen, Verbindungen, Gliederung für xlsx), `TPPGCellStore` (Cells[]), `TPPGAggregateAcc`.
+- `PPG.Grid.Paint`: `TPPGCellPainter` sammelt Texte und gibt sie in einem GDI-Block aus; Kästchen, Sortierpfeil und Gruppenpfeil über `IPPGGridCellRenderer` (ein Preset kann es selbst umsetzen).
+- `PPG.Grid.Edit`: Editor-Registry je `TPPGGridEditorKind`; das Grid spricht Editoren nur über `IPPGGridCellEditor` an, Felder aus Phase 12 funktionieren über `IPPGFieldValue`.
+- `PPG.Grid.CellKinds`: Zellarten (`IPPGCellKind`: zeichnen, Klick, Taste, Mauszeiger, Screenreader-Text), registrierbar.
+- `PPG.Grid.Styles`: bedingte Formate, vorab kompiliert; Statistiken (Min/Max/N-ter Wert) entstehen mit den Summen, nicht beim Zeichnen.
+- `PPG.Grid.Print`, `PPG.Xlsx`, `PPG.Grid.Export`: Druck und Export sehen nur die Schnittstellen aus `PPG.Grid.Data`, nie das Control. Grid, DB-Grid und eigene Quellen drucken und exportieren deshalb gleich.
+
+**Indizes.** Zwei Arten, nie gemischt:
+- Anzeige: sichtbare Zeile (`VRow`) und Anzeige-Spalte (`VCol`) – Geometrie, Fokus (`FocusRow`/`FocusCol`), `Selection`, `CellRect`, `MouseCoord`.
+- Daten: Datenzeile und Datenspalte – `Cells[]`, `Row`, `Col`, `Columns[]`, alle Ereignisse.
+- Umrechnung nur über `DataRow`/`VisualRow` und `DataCol`/`VisualCol`. Gruppenzeilen haben keine Datenzeile (`DataRow` < 0, `Row` = -1).
+
+**Gruppieren.** Die Gruppenstufe verteilt die Zeilen per Hash und Counting Sort (O(n)) und legt einen Gruppenbaum in Vorordnung an. Die Ansicht enthält Kopf- und Fuß-Einträge als negative Werte. Auf-/Zuklappen baut nur die flache Liste neu. Der Zustand hängt am Pfad der Schlüssel und übersteht damit Neusortieren.
+
+**Summen.** Unterste Gruppen lesen ihre Zeilen, obere führen die Ergebnisse der Untergruppen zusammen (`TPPGAggregateAcc.Merge`). Neu gerechnet wird beim Ändern der Ansicht sofort, bei Datenänderungen verzögert über eine gepostete Nachricht (viele `Cells[]`-Zuweisungen → eine Rechnung). `FooterText` rechnet bei Bedarf sofort.
+
+**DB-Grid.** Gruppieren und eigene Summen gibt es nicht (`CanGroup` = False): die Summenzeile kommt aus der Datenmenge (`FooterField`, z. B. `TAggregateField`) oder `OnGetFooterText`. Druck und Export lesen die Datenmenge einmal mit `DisableControls` und Lesezeichen (höchstens `ExportMaxRecords`); der Schnappschuss verfällt mit jeder Datenänderung.
+
 ## VCL-Styles
 
 Ist ein VCL-Style aktiv, verwendet ein Control beim Zeichnen `EffectiveAppearance`: Die Formen (Rundung, Rahmen, Glow-Größe und -Intensität) kommen aus dem Preset, die Farben aus dem Style. Das Classic-Preset bleibt dabei glänzend. Die gespeicherte `Appearance` wird nie verändert, Style-Farben landen also nicht in der DFM. Ab XE3 lässt sich das pro Control abschalten, indem `seClient` aus `StyleElements` entfernt wird.

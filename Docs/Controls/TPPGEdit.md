@@ -31,7 +31,7 @@ TPPGEdit - einzeiliges Eingabefeld in der Optik des Presets.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `LeftButton`, `RightButton`, `ShowClearButton`, `TextHint`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `LeftButton`, `RightButton`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 

@@ -22,7 +22,7 @@ Filter beim Tippen und Tastatur kommen von dort. Dazu:
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `FilterMode`, `SearchDelay`, `ShowClearButton`, `TextHint`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoComplete`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DropDownCount`, `DropDownWidth`, `Enabled`, `Font`, `ItemHeight`, `Items`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Sorted`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `FilterMode`, `SearchDelay`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoComplete`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DropDownCount`, `DropDownWidth`, `Enabled`, `Font`, `ItemHeight`, `Items`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Sorted`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`
 
 ## Ereignisse
 

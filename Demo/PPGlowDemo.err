@@ -22,6 +22,5 @@ dcc32 Befehlszeile für "PPGlowDemo.dpr"
   C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
   C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files (x86)\embarcadero\studio\37.0\include" -K00400000 
   -NBC:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp -NHC:\Users\Public\Documents\Embarcadero\Studio\37.0\hpp\Win32  PPGlowDemo.dpr   
-[dcc32 Fataler Fehler] F2039 Ausgabedatei 'PPGlowDemo.exe' kann nicht erstellt werden
-Misslungen
-Verstrichene Zeit: 00:00:01.1
+Erfolg
+Verstrichene Zeit: 00:00:01.6

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGWizard</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGWizard</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Wizard</code> - Basis <code>TPPGCustomContainer</code></p>
+<p><strong>Vorbild:</strong> TMS TAdvWizard, Windows-Assistenten (Aero Wizard)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Seiten (<code>TPPGWizardPage</code>) wie beim <code>TPPGPageControl</code>: Jede Seite mit diesem Parent ist ein Schritt. Die DFM-Reihenfolge ist die Schrittfolge. Neue Seiten entstehen &#252;ber das Kontextmen&#252; im Designer, ein Klick auf einen Schritt wechselt dort die Seite.</li>
+<li>Die Schritt-Anzeige steht oben oder links (<code>StepPosition</code>). Seiten mit <code>PageVisible = False</code> werden &#252;bersprungen und nicht angezeigt.</li>
+<li>Leiste unten: Zur&#252;ck / Weiter (auf dem letzten Schritt Fertig) / Abbrechen. Enter = Weiter, Esc = Abbrechen. Die Beschriftungen sind &#252;bersetzt (deutsch Alt+Z / Alt+W).</li>
+<li><code>OnCanAdvance(Page, Allow)</code> pr&#252;ft jeden Schritt vor Weiter bzw. Fertig. <code>OnPageChanged</code>, <code>OnFinish</code> und <code>OnCancel</code> kommen nur bei Anwenderaktionen; <code>ActivePage</code> aus Code l&#246;st nichts aus.</li>
+<li>Ohne <code>OnFinish</code>/<code>OnCancel</code> in einem modalen Formular wird <code>ModalResult</code> auf <code>mrOk</code> bzw. <code>mrCancel</code> gesetzt.</li>
+<li>Ein Klick auf einen erledigten Schritt geht dorthin zur&#252;ck (ohne Pr&#252;fung).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>procedure TForm1.PPGWizard1CanAdvance(Sender: TObject; Page: TPPGWizardPage;
+  var Allow: Boolean);
+begin
+  Allow := (Page &lt;&gt; PageAccount) or (NameEdit.Text &lt;&gt; &#39;&#39;);
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGWizard + TPPGWizardPage - Schritt-Assistent (Phase 11g).</p>
+<ul>
+<li>Seiten wie beim TPPGPageControl: jede TPPGWizardPage mit diesem Parent ist ein Schritt (DFM-Reihenfolge = Schrittfolge, GetChildren). Nur die aktive Seite ist sichtbar, auch im Designer (csNoDesignVisible).</li>
+<li>Schritt-Anzeige oben oder links (StepPosition): Kreise mit Nummer bzw. Haekchen, verbindende Linie, Titel = Caption der Seite. Seiten mit PageVisible = False werden uebersprungen und nicht angezeigt.</li>
+<li>Leiste unten: Zurueck / Weiter (auf dem letzten Schritt: Fertig) / Abbrechen. Enter = Weiter (Default), Esc = Abbrechen, Mnemonics uebersetzbar (Alt+W/Alt+Z im Deutschen).</li>
+<li>Ereignisse nur bei Anwenderaktionen (Buttons, Next/Back/Finish/Cancel als deren Gegenstueck): OnCanAdvance(Page, Allow) vor jedem Weiter/Fertig, OnPageChanged, OnFinish, OnCancel. ActivePage aus Code: ohne Ereignisse.</li>
+<li>Ohne OnFinish/OnCancel in einem modalen Formular: ModalResult mrOk bzw. mrCancel.</li>
+<li>Klick auf einen erledigten Schritt geht dorthin zurueck; im Designer wechselt ein Klick auf einen Schritt die Seite.</li>
+<li>Screenreader: Name &quot;Schritt x von y: Titel&quot;, Seiten mit Rolle Eigenschaftsseite.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>ActivePage</code>, <code>StepPosition</code>, <code>ShowCancel</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnCanAdvance</code>, <code>OnPageChanged</code>, <code>OnFinish</code>, <code>OnCancel</code>, <code>OnResize</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGWizard.md</code>.</p>
+</body></html>

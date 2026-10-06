@@ -38,6 +38,9 @@ type
     procedure DrawItemBackground(const Canvas: IPPGCanvas; const R: TRect;
       const ListStyle, HighlightStyle: TPPGSurfaceStyle; Selected, Focused: Boolean;
       Hot: Single; RightToLeft: Boolean; PPI: Integer); override;
+    /// Office-Saeule: Glanz-Verlauf quer zur Wachstumsrichtung, feiner Rand.
+    procedure DrawChartBar(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
+      Hot: Single; Vertical, Negative: Boolean; PPI: Integer); override;
   end;
 
 implementation
@@ -356,6 +359,40 @@ procedure TPPGClassicRenderer.DrawTabIndicator(const Canvas: IPPGCanvas; const R
 begin
   // Absichtlich leer (siehe Deklaration)
 end;
+
+procedure TPPGClassicRenderer.DrawChartBar(const Canvas: IPPGCanvas; const R: TRect;
+  Color: TColor; Hot: Single; Vertical, Negative: Boolean; PPI: Integer);
+var
+  C: TColor;
+  First, Second: TRect;
+  Dir: TPPGGradientDirection;
+begin
+  if IsRectEmpty(R) then
+    Exit;
+  C := Color;
+  if Hot > 0 then
+    C := PPGBlendColor(Color, clWhite, 0.25 * Hot);
+  // Glanz quer zur Wachstumsrichtung: helle Haelfte, dann satte Farbe
+  First := R;
+  Second := R;
+  if Vertical then
+  begin
+    Dir := gdHorizontal;
+    First.Right := (R.Left + R.Right) div 2;
+    Second.Left := First.Right;
+  end
+  else
+  begin
+    Dir := gdVertical;
+    First.Bottom := (R.Top + R.Bottom) div 2;
+    Second.Top := First.Bottom;
+  end;
+  Canvas.FillGradientRect(First, PPGBlendColor(C, clWhite, 0.35), C, Dir, 255);
+  Canvas.FillGradientRect(Second, C, PPGDarken(C, 0.15), Dir, 255);
+  if (R.Right - R.Left > 4) and (R.Bottom - R.Top > 4) then
+    Canvas.FrameRoundRect(R, 0, 1, PPGDarken(C, 0.3), 255);
+end;
+
 
 initialization
   TPPGRendererRegistry.RegisterRenderer(PPGPresetClassic, TPPGClassicRenderer);

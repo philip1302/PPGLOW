@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGMaskEdit</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGMaskEdit</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.MaskEdit</code> - Basis <code>TPPGCustomMaskEdit</code></p>
+<p><strong>Vorbild:</strong> <code>TMaskEdit</code></p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Das innere Edit ist ein Nachfahre von <code>TCustomMaskEdit</code>. <code>EditMask</code>, <code>EditText</code>, <code>IsMasked</code> und die Pr&#252;fung stammen unver&#228;ndert aus der VCL. DFMs eines <code>TMaskEdit</code> laden nach dem Tausch des Klassennamens.</li>
+<li>Ung&#252;ltige Eingabe beim Verlassen &#246;ffnet keinen Fehlerdialog (<code>EDBEditError</code>). Stattdessen gilt <code>ValidationState = pvsError</code> mit Hinweis, <code>OnValidationError</code> meldet den Fall, und der Fokus wird nicht festgehalten. Ein ganz leeres Feld gilt als g&#252;ltig.</li>
+<li><code>ValidateInput</code> pr&#252;ft jederzeit; <code>InvalidPos</code> nennt die erste falsche Stelle.</li>
+<li>IME und Masken vertragen sich schlecht (asiatische Eingabe), wie bei der VCL.</li>
+<li><code>TPPGDBMaskEdit</code> &#252;bernimmt <code>Field.EditMask</code>, wenn es selbst keine Maske hat. Eine ung&#252;ltige Eingabe wird dort nicht ins Feld geschrieben.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGMaskEdit1.EditMask := &#39;!(999) 000-0000;1;_&#39;;
+if not PPGMaskEdit1.ValidateInput then
+  PPGMaskEdit1.SetFocus;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGMaskEdit - Eingabe mit Maske (Phase 12b, Vorbild TMaskEdit).</p>
+<ul>
+<li>Das innere Edit ist ein Nachfahre von TCustomMaskEdit: die gesamte Maskenlogik der VCL (EditMask, EditText, IsMasked, Validate) wird wiederverwendet, nichts davon nachgebaut. DFM wie TMaskEdit.</li>
+<li>Ungueltige Eingabe beim Verlassen: kein Exception-Dialog, sondern ValidationState = pvsError mit Hinweis (wie die DB-Felder aus Phase 9); der Fokus wird nicht festgehalten. Ein ganz leeres Feld gilt als gueltig.</li>
+<li>IME und Masken vertragen sich schlecht (asiatische Eingabe); das gilt wie bei der VCL auch hier.</li>
+<li>IPPGFieldValue: Wert = Text, leer = Null (fuer DB-Felder und Grid).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>TextHint</code>, <code>TextHintVisibleOnFocus</code>, <code>UseSystemContextMenu</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>ShowClearButton</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Alignment</code>, <code>Anchors</code>, <code>AutoSelect</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CharCase</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>EditMask</code>, <code>Enabled</code>, <code>Font</code>, <code>HideSelection</code>, <code>MaxLength</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PasswordChar</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnValidationError</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGMaskEdit.md</code>.</p>
+</body></html>

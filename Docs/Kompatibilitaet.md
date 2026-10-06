@@ -21,6 +21,7 @@
 | `PPG_HAS_PPI` | 10.3 (33.0) | `PPG.DpiUtils` | Skalierung über `Screen.PixelsPerInch` (system-DPI) | Verhalten auf 150 % unter 10.2: Controls skalieren einmal beim Start |
 | `PPG_HAS_UITYPES_IMAGEINDEX` | 10.4 (34.0) | `PPG.Types` (2×) | `TImageIndex` aus `Vcl.ImgList` | Kompiliert ohne Deprecated-Warnung |
 | `PPG_HAS_IMAGENAME` | 10.4 | `PPG.Controls.Base` (8×), `PPG.Button` | Kein `ImageName`, nur `ImageIndex` | Button mit `TVirtualImageList` ab 10.4; unter 10.3 fehlt die Property |
+| `PPG_HINTINFO_IN_CONTROLS` | 13 (37.0) | `PPG.Hints` (Alias `TPPGHintInfo`) | `THintInfo` kommt aus `Vcl.Forms` (dort ab 13 veraltet) | `TPPGHintManager.DoShowHint` kompiliert ohne Deprecated-Warnung |
 | `PPG_HAS_UIA` | 13 (37.0) | wird bewusst **nicht** abgefragt | – | Der eigene UIA-Provider (`PPG.UIA*`) läuft ab XE2, siehe unten |
 
 In den Tests prüft `PPG.Tests.Gaps` drei Stellen direkt mit `CompilerVersion >= 34.0` (ImageCollection/VirtualImageList). In `PPG.Tests.Visual` überspringt die DPI-Galerie sich unter 10.3, weil es dort kein `ScaleForPPI` gibt.
@@ -37,6 +38,47 @@ In den Tests prüft `PPG.Tests.Gaps` drei Stellen direkt mit `CompilerVersion >=
 | `PPG.Reg` | `ShowCollectionEditor` (Unit `ColnEdit`) | Bei den Collection-Editoren („Columns…“, „Items…“) öffnet sich der Standard-Editor |
 | `PPG.Editors.Forms` | Dialoge mit `CreateNew`; `StyleElements` nur ab XE3 | Darstellungs-Dialog und Preset-Galerie in der IDE öffnen |
 | `PPGlow.dcr`, `PPGlowDB.dcr` | Bitmaps in 16/24/32 px mit Alphakanal; ältere IDEs werten nicht alle Größen bzw. das Alpha aus | Palette: Symbole sichtbar, Hintergrund nicht schwarz |
+
+## Neue Stellen aus Phase 11 mit Versionsrisiko
+
+| Bereich | Risiko | Prüfen unter XE2 |
+|---|---|---|
+| `PPG.Dialogs` | `TPPGTaskDialog` erbt von `TCustomTaskDialog` und überschreibt `DoExecute` (strict protected, dynamic). Spätere Flags wie `tfSizeToContent` werden nicht verwendet | Suite **Phase11c**; DFM eines `TTaskDialog` mit `TPPGTaskDialog` laden |
+| `PPG.Dialogs` | `TPPGInputValidate` ist ein anonymer Methodentyp mit `TArray<string>` | `PPGInputQuery` mit Prüffunktion |
+| `PPG.Dialogs` | `TMsgDlgType`/`TMsgDlgBtn` werden qualifiziert (`TMsgDlgBtn.mbYes`) verwendet; `mrClose`, `mrAll` usw. aus `System.UITypes` | Kompiliert |
+| `PPG.Dialogs` | `CurrentPPI` des Formulars erst ab 10.3 (`PPG_HAS_PPI`) | Dialog auf einem Monitor mit 150 % |
+| `PPG.Hints` | `TCustomHint` mit `PaintHint`/`SetHintSize`; `CurrentPPI` von `TCustomHint` gibt es erst später und wird nicht verwendet | `TPPGCustomHint` an einem Edit |
+| `PPG.AppHooks` | `TApplicationEvents` verteilt an mehrere Empfänger (ab XE2) | Menüs, TeachingTip und Menüleiste gleichzeitig |
+| `PPG.Wizard`, `PPG.TeachingTip` | `Exit(Wert)` und `TArray<…>` | Kompiliert |
+
+## Neue Stellen aus Phase 12 mit Versionsrisiko
+
+| Bereich | Risiko | Prüfen unter XE2 |
+|---|---|---|
+| `PPG.MaskEdit` | Inneres Edit von `TCustomMaskEdit`; `ValidateEdit` ist dort public und virtuell, `FormatMaskText`/`MaskGetMaskBlank` aus `System.MaskUtils` | Suite **Phase12a** |
+| `PPG.NumberFormat` | `TFormatSettings.Create('de-DE')` in den Tests; Records mit Methoden (`TExprParser`) | Suite **Phase12a** (Parser-Tabelle) |
+| `PPG.FileEdit` | `TFileOpenDialog` ab Vista, Rückfall `TOpenDialog`/`SHBrowseForFolder` (Laufzeitprüfung `Win32MajorVersion`); `SHAutoComplete` dynamisch | Auf XP ohne Vista-Dialog |
+| `PPG.ColorPicker` | `TColorBoxStyle` aus `Vcl.ExtCtrls`; `ScanLine` mit `PRGBTriple` | Galerie `ColorPicker.png` |
+| `PPG.ColumnComboBox` | `TArray.Sort` mit anonymem Vergleicher (`TComparer.Construct`) | Sortieren per Kopfzeile |
+| `PPG.DB.Fields` | `TFieldDataLink`, `Field.Value` als Variant (Currency) | Suite **Phase12d** |
+
+## Neue Stellen aus Phase 13 mit Versionsrisiko
+
+| Bereich | Risiko | Prüfen unter XE2 |
+|---|---|---|
+| `PPG.Xlsx` | `System.Zip` (`TZipFile.Add` mit `TBytes`/Dateiname, `Read`), `System.IOUtils` (`TPath.GetTempFileName`) | Suite **Phase13f** |
+| `PPG.Grid.View`, `PPG.Grid.CellKinds` | `TDictionary<string, …>`, Generics in Records/Arrays | Suiten **Phase13a/c/d** |
+| `PPG.Grid.Styles` | `TArray.Sort<Double>` | Suite **Phase13d** |
+| `PPG.Grid.Print` | Drucker-DC über `OpenPrinter`/`DocumentProperties`/`CreateDC` (statt des veralteten `TPrinter.GetPrinter`), `TMetafileCanvas`, `PlayEnhMetaFile` | Suite **Phase13e**, Vorschau von Hand |
+| `PPG.Grid.Export` | `EnumPrinters` Level 2 (`PPrinterInfo2`), „Microsoft Print to PDF“ erst ab Windows 10 | Suite **Phase13f** (ohne PDF-Drucker: Fehlermeldung wird geprüft) |
+
+**Verhaltensänderungen in Phase 13** (bestehender Code):
+- `Grid.Col` ist die **Datenspalte** (bisher identisch mit der Anzeige). Neu: `FocusCol`, `VisibleColCount`, `DataCol`/`VisualCol`. `CellRect`, `MouseCoord`, `MakeCellVisible` und `Selection` arbeiten mit Anzeige-Spalten. Ohne verschobene/ausgeblendete Spalten ändert sich nichts.
+- Rechtsklick auf den Spaltenkopf öffnet das Kopfmenü statt `PopupMenu` (abschaltbar: `HeaderMenu := False`). Umschalt+F10 ohne `PopupMenu` öffnet es für die Fokusspalte.
+- `IPPGTableSource` des Grids liefert nur die angezeigten Spalten in Anzeige-Reihenfolge und nur Datenzeilen (ohne Gruppenzeilen).
+- `ToCSV`/`SelectionAsText` folgen der Anzeige-Reihenfolge und lassen ausgeblendete Spalten weg.
+- Kästchen-Spalten setzen ihren Wert jetzt über `OnValidateCell` (wie der Editor).
+- DB-Grid: mit `dgColumnResize` lassen sich Spalten verschieben (wie `TDBGrid`); Boolean-Felder sind auch in eigenen `Columns` Kästchen.
 
 ## Bekannte Grenzen (kein Fehler)
 

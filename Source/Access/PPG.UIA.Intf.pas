@@ -82,8 +82,10 @@ const
   UIA_LevelPropertyId = 30154;
 
   // Control-Typen (CONTROLTYPEID)
+  UIA_ButtonControlTypeId = 50000;
   UIA_CheckBoxControlTypeId = 50002;
   UIA_EditControlTypeId = 50004;
+  UIA_HyperlinkControlTypeId = 50005;
   UIA_ListItemControlTypeId = 50007;
   UIA_ListControlTypeId = 50008;
   UIA_TextControlTypeId = 50020;

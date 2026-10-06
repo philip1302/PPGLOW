@@ -26,7 +26,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.Forms,
   Vcl.ImgList, PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility,
-  PPG.Controls.Base, PPG.Items, PPG.ItemPainter;
+  PPG.Controls.Base, PPG.Items, PPG.ItemPainter, PPG.Popup.Placement;
 
 type
   TPPGPopupItemEvent = procedure(Sender: TObject; Index: Integer) of object;
@@ -41,7 +41,6 @@ type
     FSource: TPPGCustomControl;
     procedure DropAnimStep(Sender: TObject);
     procedure ApplyBounds(Progress: Single);
-    procedure ApplyRegion;
     procedure WMMouseActivate(var Message: TWMMouseActivate); message WM_MOUSEACTIVATE;
     procedure WMNCHitTest(var Message: TWMNCHitTest); message WM_NCHITTEST;
     function GetFullHeight: Integer;
@@ -50,9 +49,14 @@ type
     procedure Resize; override;
     /// Rundung des Popups (fuer die Fensterregion), 0 = eckig.
     function PopupRounding: Integer; virtual;
+    /// Fensterregion (Standard: abgerundetes Rechteck nach PopupRounding).
+    procedure ApplyRegion; virtual;
     /// Versatz des Inhalts waehrend des Aufklappens (oberhalb: von unten her).
     function ContentOffset: Integer;
     property FullHeight: Integer read GetFullHeight;
+    /// Farben eines Popups (Liste, Menue): Fill/Text = Flaeche und Schrift,
+    /// dazu Hochkontrast und VCL-Style. HighlightStyle = hervorgehobener Eintrag.
+    procedure GetPopupStyles(Fill, Text: TColor; out ListStyle, HighlightStyle: TPPGSurfaceStyle);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -63,12 +67,19 @@ type
     /// DurationMs = 0: ohne Animation.
     procedure Popup(const Anchor: TRect; AWidth, AHeight: Integer;
       AlignRight: Boolean; DurationMs: Cardinal);
+    /// Zeigt das Popup im fertig platzierten Rechteck (PPG.Popup.Placement).
+    /// Side = ppsAbove klappt von unten nach oben auf.
+    procedure PopupAt(const Bounds: TRect; Side: TPPGPopupSide; DurationMs: Cardinal);
+    /// Arbeitsflaeche des Monitors zu R (Bildschirmkoordinaten).
+    function MonitorWorkArea(const R: TRect): TRect;
     /// Blendet das Popup aus (ohne Ereignisse - die loest der Ausloeser aus).
     procedure ClosePopup;
     function IsOpen: Boolean;
     property OpenedAbove: Boolean read FOpenedAbove;
     /// Der Ausloeser (fuer Name und Barrierefreiheit).
     property Source: TPPGCustomControl read FSource;
+    /// PPI fuer das Zeichnen ohne PPGlow-Ausloeser (0 = aus dem Fenster).
+    property PopupPPI: Integer read FPPI write FPPI;
   end;
 
   TPPGPopupList = class(TPPGPopupWindow, IPPGAccessibleChildren)
@@ -290,47 +301,30 @@ end;
 procedure TPPGPopupWindow.Popup(const Anchor: TRect; AWidth, AHeight: Integer;
   AlignRight: Boolean; DurationMs: Cardinal);
 var
-  WA: TRect;
-  SpaceBelow, SpaceAbove, X, Y, H: Integer;
+  Pl: TPPGPlacement;
+begin
+  // Liste unter dem Feld, sonst darueber (Hoehe auf den Platz gekuerzt)
+  Pl := PPGPlacePopup(Anchor, AWidth, AHeight, ppsBelow, MonitorWorkArea(Anchor),
+    AlignRight, True);
+  PopupAt(Pl.Bounds, Pl.Side, DurationMs);
+end;
+
+function TPPGPopupWindow.MonitorWorkArea(const R: TRect): TRect;
+var
   Mon: TMonitor;
 begin
-  Mon := Screen.MonitorFromRect(Anchor, mdNearest);
+  Mon := Screen.MonitorFromRect(R, mdNearest);
   if Mon <> nil then
-    WA := Mon.WorkareaRect
+    Result := Mon.WorkareaRect
   else
-    WA := Screen.WorkAreaRect;
-  if AWidth > WA.Right - WA.Left then
-    AWidth := WA.Right - WA.Left;
-  if AWidth < 1 then
-    AWidth := 1;
-  H := AHeight;
-  SpaceBelow := WA.Bottom - Anchor.Bottom;
-  SpaceAbove := Anchor.Top - WA.Top;
-  FOpenedAbove := (H > SpaceBelow) and (SpaceAbove > SpaceBelow);
-  if FOpenedAbove then
-  begin
-    if H > SpaceAbove then
-      H := SpaceAbove;
-    Y := Anchor.Top - H;
-  end
-  else
-  begin
-    if H > SpaceBelow then
-      H := SpaceBelow;
-    Y := Anchor.Bottom;
-  end;
-  if H < 1 then
-    H := 1;
-  if AlignRight then
-    X := Anchor.Right - AWidth
-  else
-    X := Anchor.Left;
-  if X + AWidth > WA.Right then
-    X := WA.Right - AWidth;
-  if X < WA.Left then
-    X := WA.Left;
-  FFullRect := Rect(X, Y, X + AWidth, Y + H);
+    Result := Screen.WorkAreaRect;
+end;
 
+procedure TPPGPopupWindow.PopupAt(const Bounds: TRect; Side: TPPGPopupSide;
+  DurationMs: Cardinal);
+begin
+  FFullRect := Bounds;
+  FOpenedAbove := Side = ppsAbove;
   HandleNeeded;
   // Besitzer = Formular des Ausloesers: Popup liegt immer ueber ihm
   if (FSource <> nil) and FSource.HandleAllocated then
@@ -849,17 +843,23 @@ begin
 end;
 
 procedure TPPGPopupList.GetStyles(out ListStyle, HighlightStyle: TPPGSurfaceStyle);
+begin
+  GetPopupStyles(FListColor, FTextColor, ListStyle, HighlightStyle);
+end;
+
+procedure TPPGPopupWindow.GetPopupStyles(Fill, Text: TColor; out ListStyle,
+  HighlightStyle: TPPGSurfaceStyle);
 var
   A: TPPGAppearance;
   PPI: Integer;
-  Fill, Text, SelFill, SelText: TColor;
+  SelFill, SelText: TColor;
 begin
   A := EffectiveAppearance;
   PPI := ScalePPI;
   ListStyle := A.Resolve(vsNormal, PPI, False);
   HighlightStyle := A.Resolve(vsHot, PPI, False);
-  ListStyle.Color := PPGColorToRGB(FListColor);
-  ListStyle.TextColor := PPGColorToRGB(FTextColor);
+  ListStyle.Color := PPGColorToRGB(Fill);
+  ListStyle.TextColor := PPGColorToRGB(Text);
   ListStyle.GlowColor := PPGColorToRGB(A.FocusColor);
   // Rahmen des Popups etwas kraeftiger als der eines Felds (liegt ueber Inhalt)
   ListStyle.BorderColor := PPGBlendColor(ListStyle.BorderColor, ListStyle.TextColor, 0.15);

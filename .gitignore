@@ -1,0 +1,6 @@
+# IDE-Sicherungen und Debug-Symbole (gross, maschinenspezifisch)
+__history/
+__recovery/
+*.rsm
+# Registry-Sicherungen von install.ps1 (maschinenspezifisch)
+Build/registry-backup/

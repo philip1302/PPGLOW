@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSparkline</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGSparkline</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Sparkline</code> - Basis <code>TPPGCustomSparkline</code></p>
+<p><strong>Vorbild:</strong> Excel-Sparklines, TMS FNC Chart (Sparkline)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Kein Fokus, kein Hover, keine Ereignisse au&#223;er Maus/Klick. Werte im Code (<code>SetValues</code>, <code>AddValue</code>) oder im DFM &#252;ber <code>ValuesText</code> (<code>&quot;3;5;2.5&quot;</code>, Punkt als Dezimaltrenner).</li>
+<li><code>MaxCount</code> &gt; 0 macht aus <code>AddValue</code> ein Lauffenster.</li>
+<li>Ohne eigenen Bereich (<code>UseRange = False</code>) stehen S&#228;ulen und Fl&#228;chen auf der Nulllinie.</li>
+<li>Sehr viele Werte werden pro Pixelspalte auf Min/Max verdichtet.</li>
+<li><code>PPGDrawSparkline</code>/<code>PPGDrawSparklineOnCanvas</code> zeichnen dieselbe Darstellung ohne Control (Grid-Zellen, eigene Kacheln).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>procedure TForm1.PPGGrid1DrawCell(Sender: TObject; ACol, ARow: Integer;
+  Rect: TRect; State: TGridDrawState);
+var
+  O: TPPGSparklineOptions;
+begin
+  if (ACol = 3) and (ARow &gt; 0) then
+  begin
+    O := PPGDefaultSparklineOptions(PPGDefaultTokens(False), clWindow, Screen.PixelsPerInch);
+    InflateRect(Rect, -4, -3);
+    PPGDrawSparklineOnCanvas(PPGGrid1.Canvas, Rect, FVerlauf[ARow], O);
+  end;
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGSparkline - kleiner Werteverlauf ohne Achsen (Phase 10b).</p>
+<ul>
+<li>Arten: Linie, Flaeche, Saeulen, Gewinn/Verlust.</li>
+<li>Markierungen fuer Minimum, Maximum, ersten und letzten Wert; Referenzlinie (z.B. Ziel oder Durchschnitt); eigener Wertebereich.</li>
+<li>Werte im Code (SetValues, AddValue mit MaxCount als Lauffenster) oder im DFM ueber ValuesText (&quot;3;5;2.5;8&quot;, Punkt als Dezimaltrenner).</li>
+<li>PPGDrawSparkline zeichnet dieselbe Darstellung ohne Control, z.B. in Grid-Zellen (OnDrawCell) oder in TPPGKpiTile.</li>
+<li>Sehr viele Werte werden pro Pixelspalte auf Min/Max verdichtet.</li>
+<li>Kein Fokus, kein Hover. Screenreader: Rolle Diagramm, Wert &quot;Min x, Max y, letzter z&quot;.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>Kind</code>, <code>Markers</code>, <code>MaxCount</code>, <code>LineWidth</code>, <code>LineColor</code>, <code>NegativeColor</code>, <code>UseRange</code>, <code>RangeMin</code>, <code>RangeMax</code>, <code>ShowReference</code>, <code>ReferenceValue</code>, <code>ValuesText</code>, <code>Align</code>, <code>Anchors</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Hint</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnClick</code>, <code>OnDblClick</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSparkline.md</code>.</p>
+</body></html>

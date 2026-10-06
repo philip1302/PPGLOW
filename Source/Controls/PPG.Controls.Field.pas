@@ -22,7 +22,17 @@ unit PPG.Controls.Field;
     EM_SETCUEBANNER braucht aktive Themes, und Memos kennen ihn nicht.
   - Barrierefreiheit: Das innere Edit bleibt das fokussierte Element. Seinen
     Namen (Label mit FocusControl, sonst TextHint, sonst Hint) setzt das Feld
-    per IAccPropServices. }
+    per IAccPropServices.
+
+  Erweiterung (Phase 12a):
+  - IPPGFieldInner: jedes innere Edit (auch fremde Nachfahren wie ein
+    TCustomMaskEdit) bekommt Textfarbe und dunkle Scrollleisten ueber diese
+    Schnittstelle; die Farblogik selbst steht nur in PPGFieldCtlColor (DRY).
+  - IPPGFieldValue: Felder mit typisiertem Wert (Zahl, Farbe, Auswahl) bieten
+    IsNull, Clear und den Wert als Variant an. DB-Felder und Grid-Editoren
+    binden sich nur an diese Schnittstelle.
+  - SetTextSilent: Text aus Code ohne OnChange (Anzeige- und
+    Bearbeitungsformat, Werte aus Code; Suite-Regel). }
 
 {$I ..\PPG.inc}
 
@@ -30,18 +40,39 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
-  Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls, Vcl.Forms,
+  Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls, Vcl.Forms, Vcl.Menus,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base;
 
 type
   /// Validierungszustand eines Felds (faerbt Rahmen und Fokuslinie).
   TPPGValidationState = (pvsNone, pvsValid, pvsWarning, pvsError);
 
+  /// Inneres Edit eines Felds: Farben setzt das Feld (Phase 12a).
+  IPPGFieldInner = interface
+    ['{6B1F3C2A-8D47-4E95-A2C1-7F0D9E4B3A68}']
+    /// clNone = Font.Color des inneren Edits.
+    procedure SetFieldTextColor(Color: TColor);
+    procedure SetFieldDarkScrollBars(Value: Boolean);
+  end;
+
+  /// Feld mit typisiertem Wert (Phase 12a). Unassigned/Null = kein Wert.
+  IPPGFieldValue = interface
+    ['{C4A85E19-3F62-4B07-9D1E-52A8B6F0C743}']
+    function FieldIsNull: Boolean;
+    procedure FieldClear;
+    function GetFieldValue: Variant;
+    /// Aus Code: ohne OnChange.
+    procedure SetFieldValue(const Value: Variant);
+  end;
+
   /// Natives einzeiliges Edit im Inneren eines Felds (ohne Rahmen).
-  TPPGFieldEdit = class(TCustomEdit)
+  TPPGFieldEdit = class(TCustomEdit, IPPGFieldInner)
   private
     FTextColor: TColor;
     procedure SetTextColor(const Value: TColor);
+    { IPPGFieldInner }
+    procedure SetFieldTextColor(Color: TColor);
+    procedure SetFieldDarkScrollBars(Value: Boolean);
     procedure CNCtlColorEdit(var Message: TWMCtlColorEdit); message CN_CTLCOLOREDIT;
     procedure CNCtlColorStatic(var Message: TWMCtlColorStatic); message CN_CTLCOLORSTATIC;
   public
@@ -52,11 +83,14 @@ type
   end;
 
   /// Natives Memo im Inneren eines Felds (ohne Rahmen).
-  TPPGFieldMemo = class(TCustomMemo)
+  TPPGFieldMemo = class(TCustomMemo, IPPGFieldInner)
   private
     FTextColor: TColor;
     FDarkScrollBars: Boolean;
     procedure SetTextColor(const Value: TColor);
+    { IPPGFieldInner }
+    procedure SetFieldTextColor(Color: TColor);
+    procedure SetFieldDarkScrollBars(Value: Boolean);
     procedure SetDarkScrollBars(const Value: Boolean);
     procedure ApplyScrollTheme;
     procedure CNCtlColorEdit(var Message: TWMCtlColorEdit); message CN_CTLCOLOREDIT;
@@ -98,7 +132,12 @@ type
     FPressedButton: Integer;
     FHintColor: TColor;
     FTabStop: Boolean;
+    FEditMenu: TPopupMenu;
+    FUseSystemContextMenu: Boolean;
+    FChangeLock: Integer;
     FOnChange: TNotifyEvent;
+    procedure EditMenuClick(Sender: TObject);
+    procedure ShowEditMenu(X, Y: Integer);
     procedure InnerWndProc(var Message: TMessage);
     procedure InnerChange(Sender: TObject);
     procedure InnerClick(Sender: TObject);
@@ -167,6 +206,8 @@ type
     function GetBackgroundColor: TColor; override;
     function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function IsHot: Boolean; override;
+    /// Felder folgen mit AutoSize nur in der Hoehe (wie TEdit).
+    function AutoSizeWidth: Boolean; override;
     function IsDown: Boolean; override;
     procedure UpdateVisualState(Animate: Boolean = True); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -217,8 +258,16 @@ type
     /// True = Taste (Enter, Esc, ...) gehoert dem Feld, nicht dem Formular
     /// (Default-/Cancel-Button). Gilt fuer Feld und inneres Edit.
     function WantSpecialKey(Key: Word): Boolean; virtual;
+    /// Text aus Code ohne OnChange (z.B. Wechsel zwischen Anzeige- und
+    /// Bearbeitungsformat, Value aus Code).
+    procedure SetTextSilent(const Value: string);
+    /// True waehrend SetTextSilent.
+    function ChangeLocked: Boolean;
     /// Berechnet Button-Rechtecke und die Lage des inneren Edits neu.
     procedure UpdateLayout;
+    /// Lage des inneren Edits anpassen (R = Textbereich neben den Buttons),
+    /// z.B. hinter Chips (TagEdit).
+    procedure AdjustInnerBounds(var R: TRect); virtual;
     /// Farben des Felds und des inneren Edits neu setzen.
     procedure UpdateColors;
     /// Flaechen- und Textfarbe des Felds (Hochkontrast > VCL-Style > Color).
@@ -250,6 +299,9 @@ type
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
     property ShowClearButton: Boolean read FShowClearButton write SetShowClearButton default False;
     property TabStop: Boolean read GetTabStop write SetTabStop default True;
+    /// True = natives Windows-Kontextmenue des Edits statt des Suite-Menues.
+    property UseSystemContextMenu: Boolean read FUseSystemContextMenu
+      write FUseSystemContextMenu default False;
     property TextHint: string read FTextHint write SetTextHint;
     property TextHintVisibleOnFocus: Boolean read FTextHintVisibleOnFocus
       write SetTextHintVisibleOnFocus default False;
@@ -273,12 +325,17 @@ type
     procedure PasteFromClipboard;
     procedure Undo;
     function CanUndo: Boolean;
+    /// Kontextmenue der Bearbeitung mit aktuellem Zustand (ohne es zu zeigen).
+    function BuildEditMenu: TPopupMenu;
     property Modified: Boolean read GetModified write SetModified;
     property SelStart: Integer read GetSelStart write SetSelStart;
     property SelLength: Integer read GetSelLength write SetSelLength;
     property SelText: string read GetSelText write SetSelText;
     property Text: string read GetText write SetText;
   end;
+
+/// Textfarbe eines inneren Edits in CN_CTLCOLOREDIT/STATIC (clNone = keine).
+procedure PPGFieldCtlColor(DC: HDC; Color: TColor);
 
 const
   /// Button-Id des Loesch-Buttons (ShowClearButton).
@@ -289,7 +346,7 @@ implementation
 uses
   System.SysUtils, System.Math, Winapi.oleacc, Winapi.UxTheme, Vcl.Themes, PPG.Tokens,
   PPG.Appearance, PPG.DpiUtils, PPG.VclStyles, PPG.Accessibility,
-  PPG.Render.Registry, PPG.Render.Gdi;
+  PPG.Render.Registry, PPG.Render.Gdi, PPG.Lang, PPG.Consts, PPG.Menus;
 
 type
   TEditAccess = class(TCustomEdit);
@@ -309,7 +366,7 @@ const
 
 { TPPGFieldEdit / TPPGFieldMemo }
 
-procedure ApplyCtlTextColor(DC: HDC; Color: TColor);
+procedure PPGFieldCtlColor(DC: HDC; Color: TColor);
 begin
   if Color <> clNone then
     Winapi.Windows.SetTextColor(DC, ColorToRGB(Color));
@@ -331,16 +388,26 @@ begin
   end;
 end;
 
+procedure TPPGFieldEdit.SetFieldTextColor(Color: TColor);
+begin
+  SetTextColor(Color);
+end;
+
+procedure TPPGFieldEdit.SetFieldDarkScrollBars(Value: Boolean);
+begin
+  // einzeilig: keine Scrollleisten
+end;
+
 procedure TPPGFieldEdit.CNCtlColorEdit(var Message: TWMCtlColorEdit);
 begin
   inherited;
-  ApplyCtlTextColor(Message.ChildDC, FTextColor);
+  PPGFieldCtlColor(Message.ChildDC, FTextColor);
 end;
 
 procedure TPPGFieldEdit.CNCtlColorStatic(var Message: TWMCtlColorStatic);
 begin
   inherited;
-  ApplyCtlTextColor(Message.ChildDC, FTextColor);
+  PPGFieldCtlColor(Message.ChildDC, FTextColor);
 end;
 
 constructor TPPGFieldMemo.Create(AOwner: TComponent);
@@ -368,6 +435,16 @@ begin
   end;
 end;
 
+procedure TPPGFieldMemo.SetFieldTextColor(Color: TColor);
+begin
+  SetTextColor(Color);
+end;
+
+procedure TPPGFieldMemo.SetFieldDarkScrollBars(Value: Boolean);
+begin
+  SetDarkScrollBars(Value);
+end;
+
 procedure TPPGFieldMemo.ApplyScrollTheme;
 begin
   if not HandleAllocated then
@@ -392,13 +469,13 @@ end;
 procedure TPPGFieldMemo.CNCtlColorEdit(var Message: TWMCtlColorEdit);
 begin
   inherited;
-  ApplyCtlTextColor(Message.ChildDC, FTextColor);
+  PPGFieldCtlColor(Message.ChildDC, FTextColor);
 end;
 
 procedure TPPGFieldMemo.CNCtlColorStatic(var Message: TWMCtlColorStatic);
 begin
   inherited;
-  ApplyCtlTextColor(Message.ChildDC, FTextColor);
+  PPGFieldCtlColor(Message.ChildDC, FTextColor);
 end;
 
 { TPPGCustomField }
@@ -475,6 +552,7 @@ begin
       PPGAccSetWindowName(E.Handle, '');
     FreeAndNil(FInner);
   end;
+  FreeAndNil(FEditMenu);
   if FFocusAnim <> nil then
     FFocusAnim.OnStep := nil;
   FreeAndNil(FFocusAnim);
@@ -566,6 +644,13 @@ begin
         Message.Result := Perform(WM_CONTEXTMENU, Message.WParam, Message.LParam);
         if Message.Result <> 0 then
           Exit;
+      end
+      else if not FUseSystemContextMenu and not (csDesigning in ComponentState) then
+      begin
+        // Bearbeiten-Menue im Stil der Suite statt des nativen Edit-Menues
+        ShowEditMenu(SmallInt(LoWord(Message.LParam)), SmallInt(HiWord(Message.LParam)));
+        Message.Result := 1;
+        Exit;
       end;
     CM_WANTSPECIALKEY:
       if WantSpecialKey(TCMWantSpecialKey(Message).CharCode) then
@@ -660,7 +745,7 @@ begin
     InvalidateInner; // TextHint ein-/ausblenden
     Invalidate;      // Loesch-Button
   end;
-  if not (csLoading in ComponentState) then
+  if not (csLoading in ComponentState) and (FChangeLock = 0) then
     Change;
 end;
 
@@ -1090,6 +1175,7 @@ end;
 procedure TPPGCustomField.UpdateLayout;
 var
   PPI, BW, R, PadX, Gap, BtnH, BtnW, XL, XR, I, N, TextL, TextR, LineH, InnerH, Y: Integer;
+  Inner: TRect;
   S: TPPGSurfaceStyle;
   Client, Content: TRect;
   B: TPPGFieldButtons;
@@ -1201,8 +1287,19 @@ begin
   end;
   if InnerH < 0 then
     InnerH := 0;
-  Ed(FInner).SetBounds(TextL, Y, TextR - TextL, InnerH);
+  Inner := Rect(TextL, Y, TextR, Y + InnerH);
+  AdjustInnerBounds(Inner);
+  Ed(FInner).SetBounds(Inner.Left, Inner.Top, Inner.Right - Inner.Left, Inner.Bottom - Inner.Top);
   Invalidate;
+end;
+
+procedure TPPGCustomField.AdjustInnerBounds(var R: TRect);
+begin
+end;
+
+function TPPGCustomField.AutoSizeWidth: Boolean;
+begin
+  Result := False;
 end;
 
 function TPPGCustomField.CalcAutoSize(out AWidth, AHeight: Integer): Boolean;
@@ -1269,6 +1366,7 @@ end;
 
 procedure TPPGCustomField.UpdateColors;
 var
+  Inner: IPPGFieldInner;
   Fill, Text: TColor;
 begin
   if (FInner = nil) or (csDestroying in ComponentState) then
@@ -1280,12 +1378,10 @@ begin
   // mit VCL-Style faerbt der Style-Hook
   if UseVclStyle then
     Text := clNone;
-  if FInner is TPPGFieldEdit then
-    TPPGFieldEdit(FInner).TextColor := Text
-  else if FInner is TPPGFieldMemo then
+  if Supports(FInner, IPPGFieldInner, Inner) then
   begin
-    TPPGFieldMemo(FInner).TextColor := Text;
-    TPPGFieldMemo(FInner).DarkScrollBars := UseDarkMode;
+    Inner.SetFieldTextColor(Text);
+    Inner.SetFieldDarkScrollBars(UseDarkMode);
   end;
 {$IFDEF PPG_HAS_STYLEELEMENTS}
   // Mit VCL-Style faerbt der Style-Hook das innere Edit (gleiche Style-Farben
@@ -1473,6 +1569,21 @@ end;
 function TPPGCustomField.GetText: string;
 begin
   Result := Ed(FInner).Text;
+end;
+
+procedure TPPGCustomField.SetTextSilent(const Value: string);
+begin
+  Inc(FChangeLock);
+  try
+    SetText(Value);
+  finally
+    Dec(FChangeLock);
+  end;
+end;
+
+function TPPGCustomField.ChangeLocked: Boolean;
+begin
+  Result := FChangeLock > 0;
 end;
 
 procedure TPPGCustomField.SetText(const Value: string);
@@ -1761,6 +1872,100 @@ end;
 function TPPGCustomField.CanUndo: Boolean;
 begin
   Result := Ed(FInner).CanUndo;
+end;
+
+
+{ ---- Bearbeiten-Menue (Phase 11d) ---- }
+
+const
+  EmUndo = 1;
+  EmCut = 2;
+  EmCopy = 3;
+  EmPaste = 4;
+  EmDelete = 5;
+  EmSelectAll = 6;
+
+function TPPGCustomField.BuildEditMenu: TPopupMenu;
+var
+  ReadOnlyNow, HasSel, Secret: Boolean;
+
+  procedure AddItem(const Caption: string; Tag: Integer; Key: Word; Enabled: Boolean);
+  var
+    M: TMenuItem;
+  begin
+    M := TMenuItem.Create(FEditMenu);
+    M.Caption := Caption;
+    M.Tag := Tag;
+    if Key <> 0 then
+    begin
+      if Key = VK_DELETE then
+        M.ShortCut := ShortCut(Key, [])
+      else
+        M.ShortCut := ShortCut(Key, [ssCtrl]);
+    end;
+    M.Enabled := Enabled;
+    M.OnClick := EditMenuClick;
+    FEditMenu.Items.Add(M);
+  end;
+
+  procedure AddLine;
+  var
+    M: TMenuItem;
+  begin
+    M := TMenuItem.Create(FEditMenu);
+    M.Caption := cLineCaption;
+    FEditMenu.Items.Add(M);
+  end;
+
+begin
+  if FEditMenu = nil then
+    FEditMenu := TPPGPopupMenu.Create(nil);
+  FEditMenu.Items.Clear;
+  FEditMenu.BiDiMode := BiDiMode;
+  ReadOnlyNow := ReadOnly or not Enabled;
+  HasSel := SelLength > 0;
+  // Verdeckte Eingabe (Passwort): nichts in die Zwischenablage
+  Secret := Ed(FInner).PasswordChar <> #0;
+  AddItem(PPGStr(@SPPGEditUndo), EmUndo, Ord('Z'), CanUndo and not ReadOnlyNow);
+  AddLine;
+  AddItem(PPGStr(@SPPGEditCut), EmCut, Ord('X'), HasSel and not ReadOnlyNow and not Secret);
+  AddItem(PPGStr(@SPPGEditCopy), EmCopy, Ord('C'), HasSel and not Secret);
+  AddItem(PPGStr(@SPPGEditPaste), EmPaste, Ord('V'), not ReadOnlyNow and
+    (IsClipboardFormatAvailable(CF_UNICODETEXT) or IsClipboardFormatAvailable(CF_TEXT)));
+  AddItem(PPGStr(@SPPGEditDelete), EmDelete, VK_DELETE, HasSel and not ReadOnlyNow);
+  AddLine;
+  AddItem(PPGStr(@SPPGEditSelectAll), EmSelectAll, Ord('A'),
+    (Ed(FInner).GetTextLen > 0) and (SelLength < Ed(FInner).GetTextLen));
+  Result := FEditMenu;
+end;
+
+procedure TPPGCustomField.ShowEditMenu(X, Y: Integer);
+var
+  M: TPopupMenu;
+  P: TPoint;
+  Keyboard: Boolean;
+begin
+  M := BuildEditMenu;
+  M.PopupComponent := Self;
+  // Shift+F10/Kontextmenue-Taste: (-1, -1) - dann am Feld, mit Mnemonics
+  Keyboard := (X = -1) and (Y = -1);
+  if Keyboard then
+    P := ClientToScreen(Point(0, Height))
+  else
+    P := Point(X, Y);
+  TPPGPopupMenu(M).PopupAtRect(Rect(P.X, P.Y, P.X, P.Y), Keyboard);
+end;
+
+procedure TPPGCustomField.EditMenuClick(Sender: TObject);
+begin
+  case TMenuItem(Sender).Tag of
+    EmUndo: Undo;
+    EmCut: CutToClipboard;
+    EmCopy: CopyToClipboard;
+    EmPaste: PasteFromClipboard;
+    EmDelete: ClearSelection;
+    EmSelectAll: SelectAll;
+  end;
 end;
 
 end.

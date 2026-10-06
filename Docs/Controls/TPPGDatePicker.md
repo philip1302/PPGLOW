@@ -22,7 +22,7 @@ TPPGDatePicker - Datumsfeld mit Kalender-Popup (Phase 7b).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `UseSystemContextMenu`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 

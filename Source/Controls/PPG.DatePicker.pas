@@ -149,6 +149,7 @@ type
     property Appearance;
     property Animation;
     property TextHint;
+    property UseSystemContextMenu;
     property ValidationState;
     property ValidationHint;
     property HighContrastSupport;

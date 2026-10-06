@@ -24,7 +24,7 @@ type
     Bounds: TRect;
   end;
 
-  TPPGGdiCanvas = class(TInterfacedObject, IPPGCanvas)
+  TPPGGdiCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas)
   private
     FDC: HDC;
     FClipDepth: Integer;
@@ -54,6 +54,10 @@ type
     procedure DrawFocusRect(const R: TRect);
     function BeginGdi: HDC;
     procedure EndGdi(DC: HDC);
+    { IPPGShapeCanvas }
+    procedure FillPolygon(const Points: array of TPoint; Color: TColor; Alpha: Byte);
+    procedure DrawDashedPolyline(const Points: array of TPoint; Width, Dash, Gap: Integer;
+      Color: TColor; Alpha: Byte);
   end;
 
 { Gemeinsame GDI-Helfer (auch vom GDI+-Canvas ueber GetHDC benutzt) }
@@ -541,6 +545,115 @@ begin
     end;
   end;
   PaintPolyline(FDC, Points, Width, Color);
+end;
+
+function PointsBounds(const Points: array of TPoint; Margin: Integer): TRect;
+var
+  I: Integer;
+begin
+  Result := Rect(Points[0].X, Points[0].Y, Points[0].X, Points[0].Y);
+  for I := 1 to High(Points) do
+  begin
+    if Points[I].X < Result.Left then
+      Result.Left := Points[I].X;
+    if Points[I].Y < Result.Top then
+      Result.Top := Points[I].Y;
+    if Points[I].X > Result.Right then
+      Result.Right := Points[I].X;
+    if Points[I].Y > Result.Bottom then
+      Result.Bottom := Points[I].Y;
+  end;
+  InflateRect(Result, Margin, Margin);
+end;
+
+procedure PaintPolygon(DC: HDC; const Points: array of TPoint; Color: TColor);
+var
+  Brush: HBRUSH;
+  Saved: Integer;
+begin
+  Brush := CreateSolidBrush(ColorToRGB(Color));
+  if Brush = 0 then
+    PPGRaiseLastOSError('CreateSolidBrush');
+  try
+    Saved := SaveDC(DC);
+    try
+      SelectObject(DC, Brush);
+      SelectObject(DC, GetStockObject(NULL_PEN));
+      SetPolyFillMode(DC, ALTERNATE);
+      Polygon(DC, Points[0], Length(Points));
+    finally
+      RestoreDC(DC, Saved);
+    end;
+  finally
+    DeleteObject(Brush);
+  end;
+end;
+
+procedure TPPGGdiCanvas.FillPolygon(const Points: array of TPoint; Color: TColor;
+  Alpha: Byte);
+var
+  L: TPPGGdiLayer;
+begin
+  if (Alpha = 0) or (Length(Points) < 3) then
+    Exit;
+  if (Alpha < 255) and BeginLayer(PointsBounds(Points, 1), L) then
+    try
+      PaintPolygon(L.DC, Points, Color);
+    finally
+      EndLayer(L, Alpha);
+    end
+  else
+    PaintPolygon(FDC, Points, Color);
+end;
+
+procedure TPPGGdiCanvas.DrawDashedPolyline(const Points: array of TPoint;
+  Width, Dash, Gap: Integer; Color: TColor; Alpha: Byte);
+var
+  I: Integer;
+  SegLen, Pos, Phase, Take: Double;
+  DX, DY: Double;
+  OnDash: Boolean;
+  A, B: TPoint;
+begin
+  // GDI-Stifte koennen Muster nur bei 1 px Breite; deshalb selbst zerlegen
+  if (Alpha = 0) or (Width <= 0) or (Length(Points) < 2) then
+    Exit;
+  if Dash < 1 then
+    Dash := 1;
+  if Gap < 1 then
+    Gap := 1;
+  OnDash := True;
+  Phase := Dash; // Rest des aktuellen Abschnitts (Strich oder Luecke)
+  for I := 0 to High(Points) - 1 do
+  begin
+    DX := Points[I + 1].X - Points[I].X;
+    DY := Points[I + 1].Y - Points[I].Y;
+    SegLen := Sqrt(DX * DX + DY * DY);
+    Pos := 0;
+    while Pos < SegLen do
+    begin
+      Take := Phase;
+      if Pos + Take > SegLen then
+        Take := SegLen - Pos;
+      if OnDash and (SegLen > 0) then
+      begin
+        A := Point(Points[I].X + Round(DX * Pos / SegLen), Points[I].Y + Round(DY * Pos / SegLen));
+        B := Point(Points[I].X + Round(DX * (Pos + Take) / SegLen),
+          Points[I].Y + Round(DY * (Pos + Take) / SegLen));
+        DrawPolyline([A, B], Width, Color, Alpha);
+      end;
+      Pos := Pos + Take;
+      Phase := Phase - Take;
+      if Phase <= 0 then
+      begin
+        OnDash := not OnDash;
+        if OnDash then
+          Phase := Dash
+        else
+          Phase := Gap;
+      end;
+    end;
+  end;
 end;
 
 procedure TPPGGdiCanvas.PushClipRoundRect(const R: TRect; Radius: Integer);

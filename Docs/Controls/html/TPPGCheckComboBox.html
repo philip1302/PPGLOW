@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGCheckComboBox</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGCheckComboBox</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.CheckComboBox</code> - Basis <code>TPPGCustomDropDownField</code></p>
+<p><strong>Vorbild:</strong> TMS TCheckListEdit</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Mehrfachauswahl im Aufklappfeld. Das Popup bleibt beim Anhaken offen; Enter oder ein Klick daneben schlie&#223;t es.</li>
+<li>Haken wirken sofort (<code>OnItemCheck</code>, <code>OnChange</code>). Esc schlie&#223;t nur und nimmt nichts zur&#252;ck.</li>
+<li>Anzeige im Feld (<code>DisplayMode</code>):</li>
+<li><code>cdmCompact</code>: „A, B, +2“ (<code>MaxDisplayItems</code>)</li>
+<li><code>cdmList</code>: alle Namen</li>
+<li><code>cdmCount</code>: „3 ausgew&#228;hlt“</li>
+<li><code>ShowSelectAll</code> zeigt „Alle ausw&#228;hlen“ als erste Zeile. Ab <code>FilterThreshold</code> Eintr&#228;gen filtern getippte Zeichen die Liste; die Leertaste hakt dabei weiter an.</li>
+<li><code>CheckedText</code> liefert die gew&#228;hlten Eintr&#228;ge, getrennt durch <code>Delimiter</code>. So stehen sie im DFM und in <code>TPPGDBCheckComboBox</code>.</li>
+<li>Code (<code>Checked[]</code>, <code>CheckAll</code>, <code>CheckedText</code>) l&#246;st keine Ereignisse aus.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGCheckComboBox1.Items.CommaText := &#39;Kunde,Lieferant,Partner&#39;;
+PPGCheckComboBox1.CheckedText := &#39;Kunde;Partner&#39;;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGCheckComboBox - Mehrfachauswahl im Aufklappfeld (Phase 12e, Vorbild TMS TCheckListEdit).</p>
+<ul>
+<li>Popup-Liste mit Kaestchen (Indikator-Renderer wie CheckListBox, keine neue Zeichenlogik). Das Popup bleibt beim Anhaken offen; Enter oder ein Klick daneben schliesst. Haken wirken sofort (OnItemCheck, OnChange).</li>
+<li>Anzeige im Feld: &quot;A, B, +2&quot; (DisplayMode cdmCompact), alle Namen (cdmList) oder &quot;3 ausgewaehlt&quot; (cdmCount). Ohne Auswahl: TextHint.</li>
+<li>Optional &quot;Alle auswaehlen&quot; als erste Zeile (ShowSelectAll) und eine Filterzeile ab FilterThreshold Eintraegen (getippte Zeichen filtern).</li>
+<li>CheckedText: gewaehlte Eintraege getrennt durch Delimiter; damit gespeichert (DFM) und an DB-Felder gebunden (IPPGFieldValue).</li>
+<li>Code (Checked[], CheckAll, CheckedText) loest keine Ereignisse aus.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Items</code>, <code>CheckedText</code>, <code>Delimiter</code>, <code>DisplayDelimiter</code>, <code>DisplayMode</code>, <code>MaxDisplayItems</code>, <code>ShowSelectAll</code>, <code>FilterThreshold</code>, <code>DropDownCount</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>TextHint</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnItemCheck</code>, <code>OnChange</code>, <code>OnCloseUp</code>, <code>OnDropDown</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGCheckComboBox.md</code>.</p>
+</body></html>

@@ -113,7 +113,8 @@ type
   end;
 
   /// Symbole der Feld-Buttons (fgNone = nur Hintergrund, z.B. fuer ein Bild).
-  TPPGFieldGlyph = (fgNone, fgClear, fgSpinUp, fgSpinDown, fgDropDown);
+  /// fgReveal = Auge (Passwort aufdecken), fgBrowse = Datei/Ordner waehlen (Phase 12).
+  TPPGFieldGlyph = (fgNone, fgClear, fgSpinUp, fgSpinDown, fgDropDown, fgReveal, fgBrowse);
 
   /// Eingabefelder (Edit, Memo, SpinEdit, ComboBox). Das Innere ist immer
   /// EINFARBIG Style.Color: dort liegt das native Edit, das keinen Verlauf kann.
@@ -226,6 +227,74 @@ type
     procedure DrawScrollBar(const Canvas: IPPGCanvas; const Track, Thumb: TRect;
       const Style: TPPGSurfaceStyle; Vertical: Boolean; Expand: Single;
       Hot, Pressed: Boolean; PPI: Integer);
+  end;
+
+  /// Menues (Phase 11): Popup-Menue und Menueleiste. ListStyle/HighlightStyle
+  /// wie bei IPPGListRenderer (Flaeche des Popups bzw. hervorgehobener Eintrag).
+  IPPGMenuRenderer = interface
+    ['{3E7B91C4-58A2-4D6F-9B13-C0A54E8D2F71}']
+    procedure DrawMenuFrame(const Canvas: IPPGCanvas; const R: TRect;
+      const ListStyle: TPPGSurfaceStyle; PPI: Integer);
+    /// Hintergrund eines Eintrags; Hot 0..1 = Hervorhebung (Maus/Tastatur).
+    procedure DrawMenuItem(const Canvas: IPPGCanvas; const R: TRect;
+      const ListStyle, HighlightStyle: TPPGSurfaceStyle; Hot: Single; PPI: Integer);
+    procedure DrawMenuSeparator(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
+      PPI: Integer);
+    /// Haekchen bzw. Punkt (RadioItem) in R.
+    procedure DrawMenuCheck(const Canvas: IPPGCanvas; const R: TRect; Radio: Boolean;
+      Color: TColor; PPI: Integer);
+    /// Pfeil eines Untermenues (zeigt nach rechts, bei RTL nach links).
+    procedure DrawMenuSubArrow(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
+      RightToLeft: Boolean; PPI: Integer);
+    /// Menueleiste und ihr Eintrag (Hot 0..1, Pressed = Untermenue offen).
+    procedure DrawMenuBar(const Canvas: IPPGCanvas; const R: TRect;
+      const Style: TPPGSurfaceStyle; PPI: Integer);
+    procedure DrawMenuBarItem(const Canvas: IPPGCanvas; const R: TRect;
+      const Style, HighlightStyle: TPPGSurfaceStyle; Hot: Single; Pressed: Boolean;
+      PPI: Integer);
+  end;
+
+  /// Hint-Fenster (Phase 11e). Style: Color = Flaeche, BorderColor/BorderWidth,
+  /// Rounding. Standard: wie der Tooltip der Diagramme.
+  IPPGHintRenderer = interface
+    ['{9A4E61D2-3B87-4C5F-A0E9-71D2C68B4F35}']
+    procedure DrawHint(const Canvas: IPPGCanvas; const R: TRect; const Style: TPPGSurfaceStyle;
+      PPI: Integer);
+    /// Sprechblase (TeachingTip): Body = Flaeche, Tail = Pfeil (Basis 1, Spitze,
+    /// Basis 2; leer = ohne Pfeil). Die Geometrie bestimmt das Control.
+    procedure DrawTip(const Canvas: IPPGCanvas; const Body: TRect; const Tail: array of TPoint;
+      const Style: TPPGSurfaceStyle; PPI: Integer);
+  end;
+
+  /// Freie Formen (Phase 10, Diagramme). Eigenes Interface, damit IPPGCanvas
+  /// unveraendert bleibt; beide mitgelieferten Canvas-Klassen implementieren
+  /// es. Fremde Canvas ohne dieses Interface: PPG.Render.Shapes faellt auf
+  /// Umrisse zurueck.
+  IPPGShapeCanvas = interface
+    ['{5B8E2D14-9C67-4A3F-B1D0-6E4F2A9C7D53}']
+    /// Gefuelltes Polygon (geschlossen, Fuellregel "alternate").
+    procedure FillPolygon(const Points: array of TPoint; Color: TColor; Alpha: Byte);
+    /// Gestrichelte Linie; Dash/Gap in Pixeln (bereits skaliert).
+    procedure DrawDashedPolyline(const Points: array of TPoint; Width, Dash, Gap: Integer;
+      Color: TColor; Alpha: Byte);
+  end;
+
+  /// Diagramm-Elemente (Phase 10). Die Geometrie berechnet das Control; der
+  /// Renderer bestimmt nur die Form (z.B. Classic: Balken mit Glanz).
+  IPPGChartRenderer = interface
+    ['{A3C95E27-41D8-4B6F-8E02-D7B1F49A6C38}']
+    /// Balken/Saeule. Hot 0..1 = Hervorhebung beim Ueberfahren. Vertical =
+    /// Saeule (waechst nach oben), sonst Balken (waechst nach rechts).
+    /// Rundung nur an der Wertseite (bei negativem Wert: Negative = True).
+    procedure DrawChartBar(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
+      Hot: Single; Vertical, Negative: Boolean; PPI: Integer);
+    /// Datenpunkt einer Linie. Ring = Farbe des Rands (Hintergrund), damit
+    /// der Punkt sich von der Linie abhebt.
+    procedure DrawChartMarker(const Canvas: IPPGCanvas; const Center: TPoint;
+      Radius: Integer; Color, Ring: TColor; PPI: Integer);
+    /// Flaeche des Tooltips (Style.Color/BorderColor/Rounding).
+    procedure DrawChartTooltip(const Canvas: IPPGCanvas; const R: TRect;
+      const Style: TPPGSurfaceStyle; PPI: Integer);
   end;
 
 implementation

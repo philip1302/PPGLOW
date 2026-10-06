@@ -8,7 +8,7 @@ unit PPG.ToolBar;
   - Optik aus dem Preset: Hover/gedrueckt/eingerastet ueber den Renderer wie
     TPPGButton, in Ruhe flach.
   - Ueberlauf: Was nicht in die Breite passt, landet in einem "..."-Menue am
-    Ende (natives Kontextmenue mit Haken fuer Umschalt-Buttons).
+    Ende (Menue im Stil der Suite mit Haken fuer Umschalt-Buttons, Phase 11).
   - Actions: Item.Action verbindet Caption, Hint, Enabled, Checked, Visible,
     ImageIndex und OnExecute; die Leiste aktualisiert die Actions im Leerlauf
     (InitiateAction) wie die VCL-Controls.
@@ -230,7 +230,8 @@ implementation
 uses
   PPG.Lang,
   System.Math, Winapi.oleacc, Vcl.Forms,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.Render.Gdi;
+  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.Render.Gdi,
+  PPG.Menus;
 
 const
   BtnPadH = 10;
@@ -893,7 +894,7 @@ begin
   if not HasOverflow or not HandleAllocated then
     Exit;
   if FMenu = nil then
-    FMenu := TPopupMenu.Create(nil);
+    FMenu := TPPGPopupMenu.Create(nil);
   FMenu.Items.Clear;
   FMenu.Images := Images;
   PrevSep := True;
@@ -928,14 +929,14 @@ begin
   end;
   FMenu.BiDiMode := BiDiMode;
   if UseRightToLeftAlignment then
-    P := ClientToScreen(Point(FOverflowRect.Left, FOverflowRect.Bottom))
-  else
-    P := ClientToScreen(Point(FOverflowRect.Right, FOverflowRect.Bottom));
-  if UseRightToLeftAlignment then
     FMenu.Alignment := paLeft
   else
     FMenu.Alignment := paRight;
-  FMenu.Popup(P.X, P.Y);
+  // Menue im Stil der Suite unter dem Ueberlauf-Knopf (Preset vom ToolBar)
+  FMenu.PopupComponent := Self;
+  P := ClientToScreen(FOverflowRect.TopLeft);
+  TPPGPopupMenu(FMenu).PopupAtRect(Rect(P.X, P.Y, P.X + FOverflowRect.Right - FOverflowRect.Left,
+    P.Y + FOverflowRect.Bottom - FOverflowRect.Top));
 end;
 
 procedure TPPGToolBar.MenuItemClick(Sender: TObject);

@@ -5,7 +5,7 @@ unit PPG.Breadcrumb;
   - Items: Segmente von der Wurzel bis zum aktuellen Ort (letztes Segment),
     getrennt durch Chevrons. Das letzte Segment ist hervorgehoben.
   - Passt der Pfad nicht in die Breite, fallen die vorderen Segmente in ein
-    "..."-Menue am Anfang (natives Kontextmenue, Screenreader-tauglich).
+    "..."-Menue am Anfang (Menue im Stil der Suite, Screenreader-tauglich, Phase 11).
   - Klick bzw. Enter auf ein Segment loest OnItemClick(Index) aus; mit
     TruncateOnClick werden die folgenden Segmente entfernt.
   - Tastatur: Links/Rechts wechseln das Segment, Pos1/Ende, Enter/Leertaste
@@ -128,7 +128,7 @@ implementation
 uses
   PPG.Lang,
   System.Math, System.UITypes, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Render.Gdi;
+  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Render.Gdi, PPG.Menus;
 
 const
   SegPad = 8;
@@ -507,7 +507,7 @@ begin
   if (FFirstVisible = 0) or not HandleAllocated then
     Exit;
   if FMenu = nil then
-    FMenu := TPopupMenu.Create(nil);
+    FMenu := TPPGPopupMenu.Create(nil);
   FMenu.Items.Clear;
   for I := 0 to FFirstVisible - 1 do
   begin
@@ -518,12 +518,11 @@ begin
     FMenu.Items.Add(M);
   end;
   FMenu.BiDiMode := BiDiMode;
+  // Menue im Stil der Suite unter dem "..."-Teil (Preset vom Breadcrumb)
+  FMenu.PopupComponent := Self;
   R := PartRect(-2);
-  if UseRightToLeftAlignment then
-    P := ClientToScreen(Point(R.Right, R.Bottom))
-  else
-    P := ClientToScreen(Point(R.Left, R.Bottom));
-  FMenu.Popup(P.X, P.Y);
+  P := ClientToScreen(R.TopLeft);
+  TPPGPopupMenu(FMenu).PopupAtRect(Rect(P.X, P.Y, P.X + R.Right - R.Left, P.Y + R.Bottom - R.Top));
 end;
 
 procedure TPPGCustomBreadcrumb.MenuItemClick(Sender: TObject);

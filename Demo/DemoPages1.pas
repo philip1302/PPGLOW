@@ -7,10 +7,12 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Math, System.UITypes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Menus, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.Forms,
+  Vcl.Controls, Vcl.Menus, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.Forms, Vcl.ExtCtrls,
   PPG.Types, PPG.Consts, PPG.Theme, PPG.Render.Registry, PPG.Controls.Base,
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar,
   PPG.TrackBar, PPG.Panel, PPG.Labels, PPG.Controls.Field, PPG.Edit, PPG.Memo,
+  PPG.NumberFormat, PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit,
+  PPG.ColorPicker, PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit,
   PPG.SpinEdit, PPG.ComboBox, PPG.Feedback, PPG.Rating, PPG.ToolBar,
   PPG.DatePicker, PPG.TimePicker, PPG.ListBox, PPG.Items, PPG.Notifications,
   DemoKit;
@@ -115,6 +117,18 @@ type
     FListResult: TPPGLabel;
     FContacts: array of TDemoContact;
     FSaveBtn: TPPGButton;
+    FPlz: TPPGMaskEdit;
+    FAmount: TPPGNumberEdit;
+    FDiscount: TPPGNumberEdit;
+    FPin: TPPGPasswordEdit;
+    FFile: TPPGFileEdit;
+    FColor: TPPGColorPicker;
+    FCats: TPPGCheckComboBox;
+    FCustomer: TPPGColumnComboBox;
+    FTags: TPPGTagEdit;
+    FSpecialResult: TPPGLabel;
+    procedure BuildSpecialFields;
+    procedure SpecialChange(Sender: TObject);
     function Field(AParent: TWinControl; Col, Row: Integer; const ACaption: string): TPoint;
     procedure MailChange(Sender: TObject);
     procedure PhoneChange(Sender: TObject);
@@ -952,6 +966,7 @@ begin
   FList.Images := Host.Images;
   FList.OnClick := ListClick;
   FListResult := NewResult(Own, Card, 'Anzahl');
+  BuildSpecialFields;
 
   C.FirstName := 'Anna';
   C.LastName := 'Schmidt';
@@ -1231,10 +1246,149 @@ begin
     (FVolumeRing.Value = 30));
 end;
 
+procedure TDemoFormPage.BuildSpecialFields;
+const
+  W = 290;
+var
+  Card: TPPGPanel;
+  Y0: Integer;
+
+  function Pos(Col, Row: Integer; const ACaption: string): TPoint;
+  begin
+    Result.X := CardPad + Col * (W + 20);
+    Result.Y := Y0 + Row * 64;
+    NewLabel(Own, Card, Result.X, Result.Y, 0, ACaption, tkBody);
+    Inc(Result.Y, 22);
+  end;
+
+  procedure Place(C: TPPGCustomControl; P: TPoint);
+  begin
+    C.Parent := Card;
+    C.SetBounds(P.X, P.Y, W, CtlH);
+  end;
+
+begin
+  Card := NewCard(Own, Sheet, PageX, PageContentTop + 640 + CardGap, FullW, 340,
+    'Spezialfelder',
+    L('Maske, Betrag, Prozent, Kennwort, Datei, Farbe, Mehrfachauswahl, Spaltenliste und ') +
+    L('Stichw{oe}rter {-} alle mit Tastatur, Screenreader und Fehler am Feld.'));
+  Y0 := Card.Tag;
+  FPlz := TPPGMaskEdit.Create(Own);
+  Place(FPlz, Pos(0, 0, 'PLZ (Maske 00000)'));
+  FPlz.EditMask := '00000;0;_';
+  FPlz.OnChange := SpecialChange;
+  FAmount := TPPGNumberEdit.Create(Own);
+  Place(FAmount, Pos(1, 0, L('Betrag (rechnet: 2*19,99)')));
+  FAmount.NumberKind := nkCurrency;
+  FAmount.ShowSpinButtons := True;
+  FAmount.MinValue := 0;
+  FAmount.MaxValue := 100000;
+  FAmount.Value := 1234.5;
+  FAmount.OnChange := SpecialChange;
+  FDiscount := TPPGNumberEdit.Create(Own);
+  Place(FDiscount, Pos(2, 0, 'Rabatt'));
+  FDiscount.NumberKind := nkPercent;
+  FDiscount.Decimals := 1;
+  FDiscount.MaxValue := 100;
+  FDiscount.Value := 12.5;
+  FDiscount.OnChange := SpecialChange;
+  FPin := TPPGPasswordEdit.Create(Own);
+  Place(FPin, Pos(0, 1, 'Kennwort'));
+  FPin.RevealMode := rmToggle;
+  FPin.TextHint := L('Auge zum Aufdecken');
+  FFile := TPPGFileEdit.Create(Own);
+  Place(FFile, Pos(1, 1, L('Anhang (Datei hierher ziehen)')));
+  FFile.Filter := 'Dokumente|*.pdf;*.docx|Alle Dateien|*.*';
+  FFile.MustExist := True;
+  FFile.OnChange := SpecialChange;
+  FColor := TPPGColorPicker.Create(Own);
+  Place(FColor, Pos(2, 1, 'Farbe'));
+  FColor.Style := FColor.Style + [cbIncludeNone];
+  FColor.Selected := TColor($D47800);
+  FColor.OnChange := SpecialChange;
+  FCats := TPPGCheckComboBox.Create(Own);
+  Place(FCats, Pos(0, 2, 'Kategorien'));
+  FCats.Items.CommaText := L('Kunde,Lieferant,Partner,Presse,Intern,Interessent');
+  FCats.ShowSelectAll := True;
+  FCats.CheckedText := 'Kunde;Partner';
+  FCats.TextHint := L('ausw{ae}hlen{...}');
+  FCats.OnChange := SpecialChange;
+  FCustomer := TPPGColumnComboBox.Create(Own);
+  Place(FCustomer, Pos(1, 2, 'Kunde (mehrspaltig)'));
+  with FCustomer.Columns.Add do
+  begin
+    Title := 'Nr';
+    Width := 60;
+  end;
+  with FCustomer.Columns.Add do
+  begin
+    Title := 'Name';
+    Width := 150;
+  end;
+  with FCustomer.Columns.Add do
+  begin
+    Title := 'Ort';
+    Width := 110;
+  end;
+  FCustomer.Items.Add('1001|Albers GmbH|Hamburg');
+  FCustomer.Items.Add(L('1002|M{ue}ller & S{oe}hne|Berlin'));
+  FCustomer.Items.Add(L('1003|Zander AG|K{oe}ln'));
+  FCustomer.Items.Add(L('1004|Bauer KG|M{ue}nchen'));
+  FCustomer.DisplayColumn := 1;
+  FCustomer.TextHint := L('Kunde w{ae}hlen{...}');
+  FCustomer.OnChange := SpecialChange;
+  FTags := TPPGTagEdit.Create(Own);
+  Place(FTags, Pos(2, 2, L('Stichw{oe}rter (Enter oder ;)')));
+  FTags.Suggestions.CommaText := 'Delphi,VCL,Windows,Fluent,Datenbank,Design,Barrierefreiheit';
+  FTags.TagsText := 'Delphi;VCL';
+  FTags.OnChange := SpecialChange;
+  FSpecialResult := NewResult(Own, Card, L('Zuletzt ge{ae}ndert'));
+  Host.RegisterSpecial('numberedit', FAmount);
+  Host.RegisterSpecial('tagedit', FTags);
+end;
+
+procedure TDemoFormPage.SpecialChange(Sender: TObject);
+var
+  S: string;
+begin
+  if Sender = FAmount then
+    S := 'Betrag = ' + FAmount.DisplayText
+  else if Sender = FDiscount then
+    S := 'Rabatt = ' + FDiscount.DisplayText
+  else if Sender = FPlz then
+    S := 'PLZ = ' + FPlz.Text
+  else if Sender = FFile then
+    S := 'Datei = ' + ExtractFileName(FFile.FileName)
+  else if Sender = FColor then
+    S := 'Farbe = ' + FColor.ColorName(FColor.Selected)
+  else if Sender = FCats then
+    S := 'Kategorien = ' + FCats.CheckedText
+  else if Sender = FCustomer then
+    S := 'Kunde = ' + FCustomer.KeyValue + ' ' + FCustomer.DisplayText
+  else if Sender = FTags then
+    S := L('Stichw{oe}rter = ') + FTags.TagsText;
+  SetResult(FSpecialResult, MarkupEscape(S));
+  Host.Log('Formular', S);
+end;
+
 procedure TDemoFormPage.SelfTest(Check: TDemoCheck);
 var
   N: Integer;
 begin
+  Check('Spezialfelder: Betrag als Waehrung', FAmount.AsCurrency = 1234.5);
+  FAmount.Value := 2.345;
+  Check(L('Spezialfelder: kaufm{ae}nnisch gerundet'), FAmount.AsCurrency = 2.35);
+  FAmount.Value := 1234.5;
+  Check('Spezialfelder: Kategorien', FCats.CheckedCount = 2);
+  Check(L('Spezialfelder: Stichw{oe}rter'), FTags.AddTag('Design') and (FTags.Tags.Count = 3));
+  FTags.TagsText := 'Delphi;VCL';
+  FCustomer.KeyValue := '1003';
+  Check('Spezialfelder: Kunde per Schluessel', FCustomer.ItemIndex = 2);
+  FCustomer.ItemIndex := -1;
+  FPlz.Text := '1';
+  Check('Spezialfelder: Maske prueft', not FPlz.ValidateInput);
+  FPlz.Text := '';
+  FPlz.ValidateInput;
   ResetClick(nil);
   N := Length(FContacts);
   DemoClick(FSaveBtn);

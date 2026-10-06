@@ -265,7 +265,7 @@ uses
   PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.IconFont, PPG.ItemPainter,
-  PPG.Render.Registry, PPG.Render.Gdi;
+  PPG.Render.Registry, PPG.Render.Gdi, PPG.Render.Shapes;
 
 var
   GMsgInfoAction: Cardinal = 0;
@@ -283,18 +283,8 @@ end;
 
 procedure PPGArcPoints(const Center: TPoint; Radius: Integer; StartDeg, SweepDeg: Single;
   var Points: TArray<TPoint>);
-var
-  N, I: Integer;
-  A: Double;
 begin
-  // Segmente nach Bogenlaenge: glatt auch bei grossen Ringen
-  N := Round(Abs(SweepDeg) / 6) + 2;
-  SetLength(Points, N + 1);
-  for I := 0 to N do
-  begin
-    A := (StartDeg + SweepDeg * I / N - 90) * Pi / 180;
-    Points[I] := Point(Center.X + Round(Radius * Cos(A)), Center.Y + Round(Radius * Sin(A)));
-  end;
+  PPGShapeArcPoints(Center, Radius, StartDeg, SweepDeg, Points);
 end;
 
 function ContrastText(Fill: TColor): TColor;

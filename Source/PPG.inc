@@ -37,6 +37,13 @@
   {$DEFINE PPG_HAS_UIA}
 {$IFEND}
 
+// THintInfo liegt (belegt ab Delphi 13) in Vcl.Controls; Vcl.Forms.THintInfo ist dort
+// veraltet. Aeltere Versionen nehmen Vcl.Forms (auch falls der Umzug frueher war:
+// dann nur eine Veraltet-Warnung, kein Fehler).
+{$IF CompilerVersion >= 37.0}
+  {$DEFINE PPG_HINTINFO_IN_CONTROLS}
+{$IFEND}
+
 // Einheitliche Compiler-Einstellungen fuer alle Units
 {$SCOPEDENUMS OFF}
 {$BOOLEVAL OFF}

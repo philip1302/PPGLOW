@@ -8,6 +8,7 @@ unit PPG.DB.Reg;
     (Felder der jeweiligen Datenmenge, auch bei geschlossener Datenmenge
     ueber die FieldDefs).
   - DB-Grid: Spalten-Editor und "Alle Felder als Spalten".
+  - DB-Chart: Auswahl fuer LabelField/XField, Serien-Editor.
   Die gemeinsamen Verben (Preset, Appearance, Galerie) kommen von
   TPPGComponentEditor aus dclPPGlow. }
 
@@ -59,7 +60,7 @@ implementation
 
 uses
   System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, Data.DB, ColnEdit,
-  PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid;
+  PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Fields;
 
 resourcestring
   SPPGDBPalette = 'PPGlow DB';
@@ -197,16 +198,25 @@ end;
 procedure Register;
 begin
   RegisterComponents(SPPGDBPalette, [TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
-    TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid]);
+    TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart,
+    TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit]);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBEdit, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBMemo, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBCheckBox, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBComboBox, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBDatePicker, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBMaskEdit, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBNumberEdit, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBColorPicker, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBCheckComboBox, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBTagEdit, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBLookupComboBox, 'KeyField', TPPGListFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBLookupComboBox, 'ListField', TPPGListFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBGridColumn, 'FieldName', TPPGColumnFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBChart, 'LabelField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBChart, 'XField', TPPGDataFieldProperty);
   RegisterComponentEditor(TPPGDBGrid, TPPGDBGridEditor);
+  RegisterComponentEditor(TPPGDBChart, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGDBComboBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGDBLookupComboBox, TPPGComponentEditor);
 end;

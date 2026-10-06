@@ -67,28 +67,31 @@ uses
   PPG.TabControl, PPG.PageControl, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid,
   PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NavigationView, PPG.Breadcrumb,
-  PPG.ToolBar, PPG.StatusBar, PPG.Notifications;
+  PPG.ToolBar, PPG.StatusBar, PPG.Notifications,
+  PPG.Sparkline, PPG.Gauge, PPG.Chart, PPG.Chart.Series;
 
 type
   TCCV = class(TPPGCustomControl);
 
 const
-  ControlCount = 36;
+  ControlCount = 40;
+  ToastIndex = 38; // eigenes Fenster (Sonderweg in Render und den RTL-/DPI-Galerien)
   ControlNames: array[0..ControlCount - 1] of string = ('Button', 'CheckBox', 'RadioButton',
     'ToggleSwitch', 'ProgressBar', 'TrackBar', 'Panel', 'GroupBox', 'Edit', 'Memo', 'SpinEdit',
     'ComboBox', 'TabControl', 'PageControl', 'ListBox', 'CheckListBox', 'TreeView', 'Grid',
     'Label', 'LinkLabel', 'Badge', 'ProgressRing', 'InfoBar', 'Expander', 'Splitter', 'Rating',
     'SearchEdit', 'Calendar', 'DatePicker', 'TimePicker', 'NavigationView', 'Breadcrumb',
-    'ToolBar', 'StatusBar', 'Toast', 'StyleTitle');
+    'ToolBar', 'StatusBar', 'Sparkline', 'Gauge', 'KpiTile', 'Chart',
+    'Toast', 'StyleTitle');
   // Welche Zustaende sichtbar anders sein muessen
   HasHover: array[0..ControlCount - 1] of Boolean = (True, True, True, True, False, True,
     False, False, True, True, True, True, True, True, True, True, True, False, // Grid: kein Hover
     False, True, False, False, True, True, True, True, True, True, True, True, True, True,
-    True, False, True, False);
+    True, False, False, False, True, True, True, False);
   HasFocus: array[0..ControlCount - 1] of Boolean = (True, True, True, True, False, True,
     False, False, True, True, True, True, True, True, True, True, True, True,
     False, True, False, False, True, True, True, True, True, True, True, True, True, True,
-    True, False, False, False);
+    True, False, False, False, True, True, False, False);
   VariantNames: array[TVisualVariant] of string = ('ModernFlat hell', 'ModernFlat dunkel',
     'Classic', 'Fluent11 hell', 'Fluent11 dunkel', 'GDI');
   StateNames: array[TVisualState] of string = ('Normal', 'Hover', 'Gedrueckt', 'Fokus',
@@ -98,7 +101,7 @@ const
   HasDisabled: array[0..ControlCount - 1] of Boolean = (True, True, True, True, True, True,
     False, True, True, True, True, True, True, True, True, True, True, True,
     True, True, True, True, True, True, False, True, True, True, True, True, True, True,
-    True, True, False, False);
+    True, True, True, True, True, True, False, False);
 
 function PPGPixelDiff(A, B: TBitmap; Tol: Integer): Integer;
 var
@@ -264,6 +267,8 @@ var
   It: TPPGNavItem;
   SP: TPPGStatusPanel;
   E: TPPGEdit;
+  Rg: TPPGGaugeRange;
+  Ser: TPPGChartSeries;
 begin
   P := FHost;
   Result := nil;
@@ -542,6 +547,62 @@ begin
         SP.BadgeCount := 3;
         Result.SetBounds(8, 8, 360, 24);
       end;
+    34:
+      begin
+        Result := TPPGSparkline.Create(FForm);
+        TPPGSparkline(Result).ValuesText := '3;5;2;8;6;9;7;11';
+        TPPGSparkline(Result).Kind := skArea;
+        TPPGSparkline(Result).Markers := [smMin, smMax, smLast];
+        Result.SetBounds(8, 8, 160, 40);
+      end;
+    35:
+      begin
+        Result := TPPGGauge.Create(FForm);
+        TPPGGauge(Result).Caption := 'Auslastung';
+        TPPGGauge(Result).Units := ' %';
+        Rg := TPPGGauge(Result).Ranges.Add;
+        Rg.StartValue := 0;
+        Rg.EndValue := 60;
+        Rg.RangeColor := grcSuccess;
+        Rg := TPPGGauge(Result).Ranges.Add;
+        Rg.StartValue := 60;
+        Rg.EndValue := 85;
+        Rg.RangeColor := grcWarning;
+        Rg := TPPGGauge(Result).Ranges.Add;
+        Rg.StartValue := 85;
+        Rg.EndValue := 100;
+        Rg.RangeColor := grcDanger;
+        TPPGGauge(Result).ShowTarget := True;
+        TPPGGauge(Result).TargetValue := 80;
+        TPPGGauge(Result).Value := 68;
+        Result.SetBounds(8, 8, 150, 150);
+      end;
+    36:
+      begin
+        Result := TPPGKpiTile.Create(FForm);
+        TPPGKpiTile(Result).Title := 'Umsatz';
+        TPPGKpiTile(Result).Value := 12480;
+        TPPGKpiTile(Result).Units := 'EUR';
+        TPPGKpiTile(Result).Change := 4.2;
+        TPPGKpiTile(Result).SparklineText := '3;5;4;7;6;8;9';
+        Result.SetBounds(8, 8, 200, 120);
+      end;
+    37:
+      begin
+        Result := TPPGChart.Create(FForm);
+        TPPGChart(Result).Title := 'Umsatz';
+        TPPGChart(Result).Categories.CommaText := 'Jan,Feb,Mrz,Apr,Mai,Jun';
+        Ser := TPPGChart(Result).Series.Add;
+        Ser.Title := 'Plan';
+        Ser.Kind := cskColumn;
+        Ser.SetValues([12, 14, 13, 17, 19, 21]);
+        Ser := TPPGChart(Result).Series.Add;
+        Ser.Title := 'Ist';
+        Ser.Kind := cskLine;
+        Ser.ShowMarkers := True;
+        Ser.SetValues([11, 15, 12, 18, 17, 23]);
+        Result.SetBounds(8, 8, 360, 220);
+      end;
   end;
   if (Result <> nil) and (Result.Parent = nil) then
     Result.Parent := P;
@@ -619,7 +680,7 @@ begin
   Ok := True;
   ApplyVariant(Variant);
   Dark := Variant in [vvFlatDark, vvFluentDark];
-  if Index = 34 then
+  if Index = ToastIndex then
   begin
     // Toast: eigenes Fenster
     Center := TPPGNotificationCenter.Create(FForm);
@@ -813,7 +874,8 @@ begin
         CountLightDark(Cells[vvFlatDark, vsNormalV], LightD, DarkD);
         if PPGPixelDiff(Cells[vvFlatLight, vsNormalV], Cells[vvFlatDark, vsNormalV]) < 50 then
           Errors.Add(Name + ': dunkel nicht anders als hell');
-        if (Index <> 4) and (Index <> 21) and (Index <> 24) and (LightD < 10) then
+        // ProgressBar, ProgressRing, Splitter, Sparkline: ohne Text
+        if (Index <> 4) and (Index <> 21) and (Index <> 24) and (Index <> 34) and (LightD < 10) then
           Errors.Add(Name + ': dunkel ohne hellen Inhalt (Text unsichtbar?)');
       finally
         for V := Low(TVisualVariant) to High(TVisualVariant) do
@@ -957,14 +1019,14 @@ begin
   NotMirrored := TStringList.Create;
   try
     for Index := 0 to LastControl do
-      if Index <> 34 then // Toast: eigenes Fenster, folgt dem Formular nicht
+      if Index <> ToastIndex then // Toast: eigenes Fenster, folgt dem Formular nicht
         Rows.Add(ControlNames[Index]);
     SetLength(Cells, Rows.Count * 2);
     try
       N := 0;
       for Index := 0 to LastControl do
       begin
-        if Index = 34 then
+        if Index = ToastIndex then
           Continue;
         FRtl := False;
         Cells[N * 2] := Render(Index, vvFlatLight, vsNormalV, Ok);
@@ -1015,14 +1077,14 @@ begin
   Errors := TStringList.Create;
   try
     for Index := 0 to LastControl do
-      if Index <> 34 then
+      if Index <> ToastIndex then
         Rows.Add(ControlNames[Index]);
     SetLength(Cells, Rows.Count * Length(Ppis));
     try
       N := 0;
       for Index := 0 to LastControl do
       begin
-        if Index = 34 then
+        if Index = ToastIndex then
           Continue;
         for K := 0 to High(Ppis) do
         begin

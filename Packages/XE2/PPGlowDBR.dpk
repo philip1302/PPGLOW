@@ -39,6 +39,8 @@ requires
 contains
   PPG.DB.Controls in '..\..\Source\DB\PPG.DB.Controls.pas',
   PPG.DB.Lookup in '..\..\Source\DB\PPG.DB.Lookup.pas',
-  PPG.DB.Grid in '..\..\Source\DB\PPG.DB.Grid.pas';
+  PPG.DB.Grid in '..\..\Source\DB\PPG.DB.Grid.pas',
+  PPG.DB.Chart in '..\..\Source\DB\PPG.DB.Chart.pas',
+  PPG.DB.Fields in '..\..\Source\DB\PPG.DB.Fields.pas';
 
 end.

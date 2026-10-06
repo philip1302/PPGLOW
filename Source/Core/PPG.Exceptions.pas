@@ -42,6 +42,10 @@ function PPGDisplayName(Sender: TPersistent): string;
 /// (im Feld sofort zuordenbar) und als EPPGRenderError.
 procedure PPGRaiseLastOSError(const ApiCall: string);
 
+/// Wirft EPPGError, wenn nicht im Haupt-Thread aufgerufen (Fenster, Dialoge:
+/// klare Meldung statt Haenger).
+procedure PPGCheckMainThread(const What: string);
+
 implementation
 
 uses
@@ -67,6 +71,12 @@ begin
     Result := Sender.GetNamePath;
   if Result = '' then
     Result := Sender.ClassName;
+end;
+
+procedure PPGCheckMainThread(const What: string);
+begin
+  if GetCurrentThreadId <> MainThreadID then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGNotMainThread), [What]);
 end;
 
 { EPPGPropertyError }

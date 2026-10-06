@@ -15,7 +15,7 @@ TPPGToolBar - Befehlsleiste (Phase 7c, wie WinUI CommandBar).
 
 - Items: Buttons, Umschalt-Buttons (tisCheck, mit GroupIndex wie Radiobuttons) und Trenner; Symbol aus Images oder der Symbolschrift (IconChar), Text wahlweise daneben (ShowCaptions).
 - Optik aus dem Preset: Hover/gedrueckt/eingerastet ueber den Renderer wie TPPGButton, in Ruhe flach.
-- Ueberlauf: Was nicht in die Breite passt, landet in einem "..."-Menue am Ende (natives Kontextmenue mit Haken fuer Umschalt-Buttons).
+- Ueberlauf: Was nicht in die Breite passt, landet in einem "..."-Menue am Ende (Menue im Stil der Suite mit Haken fuer Umschalt-Buttons, Phase 11).
 - Actions: Item.Action verbindet Caption, Hint, Enabled, Checked, Visible, ImageIndex und OnExecute; die Leiste aktualisiert die Actions im Leerlauf (InitiateAction) wie die VCL-Controls.
 - Tastatur: Links/Rechts, Pos1/Ende, Enter/Leertaste.
 - Code (Down := ...) loest kein Ereignis aus; ein Klick loest Item.OnClick (bzw. Action.Execute) und danach OnItemClick aus.

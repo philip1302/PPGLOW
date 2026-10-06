@@ -78,6 +78,7 @@ type
     property SearchDelay;
     property ShowClearButton default True;
     property TextHint;
+    property UseSystemContextMenu;
     property TextHintVisibleOnFocus;
     property ValidationState;
     property ValidationHint;

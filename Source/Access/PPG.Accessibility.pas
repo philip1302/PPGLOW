@@ -164,6 +164,12 @@ procedure PPGAccNotifyChild(Wnd: HWND; Event: DWORD; ChildId: Integer);
 /// PPGlow-Feld) per IAccPropServices; Name = '' entfernt ihn wieder.
 /// Ohne COM oder bei Fehlern passiert nichts (Barrierefreiheit ist Zusatz).
 procedure PPGAccSetWindowName(Wnd: HWND; const Name: string);
+/// Rolle eines fremden Fensters fuer Screenreader (z.B. ROLE_SYSTEM_TOOLTIP fuer
+/// das Hint-Fenster); 0 = Rolle zuruecksetzen.
+procedure PPGAccSetWindowRole(Wnd: HWND; Role: Integer);
+/// Beschreibung eines Fensters fuer Screenreader (z.B. Text eines Dialogs,
+/// dessen Labels kein eigenes Fenster haben); '' = zuruecksetzen.
+procedure PPGAccSetWindowDescription(Wnd: HWND; const Description: string);
 
 implementation
 
@@ -242,7 +248,9 @@ type
     function SetPropValue: HResult; stdcall;
     function SetPropServer: HResult; stdcall;
     function ClearProps: HResult; stdcall;
-    function SetHwndProp: HResult; stdcall;
+    // VARIANT als WERT (Win32: 16 Byte auf dem Stack; Win64: per Zeiger wie MSAAPROPID)
+    function SetHwndProp(Wnd: HWND; idObject, idChild: DWORD; idProp: TGUID;
+      Value: TVarData): HResult; stdcall;
     // MSAAPROPID wird als WERT uebergeben (Win32: 16 Byte auf dem Stack)
     function SetHwndPropStr(Wnd: HWND; idObject, idChild: DWORD; idProp: TGUID;
       Str: PWideChar): HResult; stdcall;
@@ -272,6 +280,56 @@ begin
   else
   begin
     W := Name;
+    Svc.SetHwndPropStr(Wnd, DWORD(PPGObjIdClient), CHILDID_SELF, Prop, PWideChar(W));
+  end;
+end;
+
+const
+  PROPID_PPG_ACC_ROLE: TGUID = '{CB905FF2-7BD1-4C05-B3C8-E6C241364D70}';
+
+procedure PPGAccSetWindowRole(Wnd: HWND; Role: Integer);
+var
+  Svc: IPPGAccPropServices;
+  Prop: TGUID;
+  V: TVarData;
+begin
+  if Wnd = 0 then
+    Exit;
+  if Failed(CoCreateInstance(CLSID_PPGAccPropServices, nil, CLSCTX_INPROC_SERVER,
+    IPPGAccPropServices, Svc)) or (Svc = nil) then
+    Exit;
+  Prop := PROPID_PPG_ACC_ROLE;
+  if Role = 0 then
+    Svc.ClearHwndProps(Wnd, DWORD(PPGObjIdClient), CHILDID_SELF, @Prop, 1)
+  else
+  begin
+    FillChar(V, SizeOf(V), 0);
+    V.VType := varInteger;
+    V.VInteger := Role;
+    Svc.SetHwndProp(Wnd, DWORD(PPGObjIdClient), CHILDID_SELF, Prop, V);
+  end;
+end;
+
+const
+  PROPID_PPG_ACC_DESCRIPTION: TGUID = '{4D48DFE4-BD3F-491F-A648-492D6F20C588}';
+
+procedure PPGAccSetWindowDescription(Wnd: HWND; const Description: string);
+var
+  Svc: IPPGAccPropServices;
+  Prop: TGUID;
+  W: WideString;
+begin
+  if Wnd = 0 then
+    Exit;
+  if Failed(CoCreateInstance(CLSID_PPGAccPropServices, nil, CLSCTX_INPROC_SERVER,
+    IPPGAccPropServices, Svc)) or (Svc = nil) then
+    Exit;
+  Prop := PROPID_PPG_ACC_DESCRIPTION;
+  if Description = '' then
+    Svc.ClearHwndProps(Wnd, DWORD(PPGObjIdClient), CHILDID_SELF, @Prop, 1)
+  else
+  begin
+    W := Description;
     Svc.SetHwndPropStr(Wnd, DWORD(PPGObjIdClient), CHILDID_SELF, Prop, PWideChar(W));
   end;
 end;

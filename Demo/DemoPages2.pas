@@ -12,6 +12,8 @@ uses
   PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid, PPG.Splitter,
   PPG.Breadcrumb, PPG.ToolBar, PPG.Calendar, PPG.DatePicker, PPG.TimePicker,
   PPG.CheckBox, PPG.Feedback, PPG.Notifications,
+  PPG.Grid.Columns, PPG.Grid.Styles, PPG.Grid.Print, PPG.Grid.Export, PPG.Grid.Data, PPG.Xlsx,
+  Vcl.Dialogs,
   DemoKit;
 
 type
@@ -77,6 +79,8 @@ type
   TDemoGridPage = class(TDemoPage)
   private
     FGrid: TPPGGrid;
+    FPrinter: TPPGGridPrinter;
+    FGroupItem: TPPGToolItem;
     FSum: TPPGLabel;
     FVirtualResult: TPPGLabel;
     FVirtual: TPPGGrid;
@@ -90,6 +94,7 @@ type
     procedure Sorted(Sender: TObject);
     procedure VirtualText(Sender: TObject; ACol, ARow: Integer; var Text: string);
     procedure VirtualScroll(Sender: TObject);
+    procedure ExportTo(Kind: Integer);
   protected
     procedure Build; override;
   public
@@ -835,21 +840,25 @@ const
   ColPrice = 3;
   ColActive = 4;
   ColValue = 5;
+  ColRating = 6;
+  ColStock = 7;
 
 procedure TDemoGridPage.Build;
 var
   Card: TPPGPanel;
   TB: TPPGToolBar;
   C: TPPGGridColumn;
+  CF: TPPGGridConditionalFormat;
 begin
-  NewPageHeader(Own, Sheet, 'Tabelle', 'Lagerliste mit Editoren in den Zellen, Sortieren per ' +
-    'Klick auf den Kopf, Filterzeile und Summen, die sich bei jeder {Ae}nderung neu berechnen.');
+  NewPageHeader(Own, Sheet, 'Tabelle', 'Lagerliste mit Editoren, Sortieren, Filterzeile und ' +
+    'Gruppenleiste (Kopf hineinziehen), Spalten verschieben und ausblenden (Rechtsklick auf den ' +
+    'Kopf), Summenzeile, bedingten Formaten, Druck sowie Excel-, PDF- und HTML-Export.');
 
-  Card := NewCard(Own, Sheet, PageX, PageContentTop, FullW, 420, '', '');
+  Card := NewCard(Own, Sheet, PageX, PageContentTop, FullW, 520, '', '');
   TB := TPPGToolBar.Create(Own);
   TB.Parent := Card;
   TB.Align := alNone;
-  TB.SetBounds(CardPad - 6, 12, 760, 40);
+  TB.SetBounds(CardPad - 6, 12, FullW - 2 * CardPad, 40);
   TB.Items.AddButton(L('Hinzuf{ue}gen'), $E710);
   TB.Items.AddButton(L('L{oe}schen'), $E74D);
   TB.Items.AddSeparator;
@@ -857,14 +866,23 @@ begin
   TB.Items.AddButton('Sortierung aufheben', $E8CB);
   TB.Items.AddSeparator;
   TB.Items.AddButton('Als CSV kopieren', $E8C8);
+  TB.Items.AddSeparator;
+  FGroupItem := TB.Items.AddCheck('Nach Kategorie', $E8FD);
+  TB.Items.AddButton('Vorschau', $E749);
+  TB.Items.AddButton('Excel', $EDE1);
+  TB.Items.AddButton('PDF', $EA90);
+  TB.Items.AddButton('HTML', $E774);
   TB.OnItemClick := ToolClick;
 
   FGrid := TPPGGrid.Create(Own);
   FGrid.Parent := Card;
-  FGrid.SetBounds(CardPad, 58, FullW - 2 * CardPad, 420 - 58 - 48);
+  FGrid.SetBounds(CardPad, 58, FullW - 2 * CardPad, 520 - 58 - 48);
   FGrid.FixedCols := 0;
-  FGrid.Options := FGrid.Options + [goEditing, goColSizing, goTabs];
+  FGrid.Options := FGrid.Options + [goEditing, goColSizing, goColMoving, goTabs];
   FGrid.ShowFilterRow := True;
+  FGrid.ShowGroupPanel := True;
+  FGrid.ShowFooter := True;
+  FGrid.GroupFooter := True;
   C := FGrid.Columns.Add;
   C.Title := 'Artikel';
   C.Width := 300;
@@ -879,10 +897,15 @@ begin
   C.Alignment := taRightJustify;
   C.EditorKind := gekSpin;
   C.MaxValue := 9999;
+  C.Aggregate := agSum;
+  C.FooterFormat := '#,##0';
   C := FGrid.Columns.Add;
   C.Title := L('Preis ({EUR})');
   C.Width := 120;
   C.Alignment := taRightJustify;
+  C.Aggregate := agAvg;
+  C.FooterFormat := '0.00';
+  C.Format := '#,##0.00';
   C := FGrid.Columns.Add;
   C.Title := 'Aktiv';
   C.Width := 80;
@@ -892,6 +915,50 @@ begin
   C.Width := 160;
   C.Alignment := taRightJustify;
   C.ReadOnly := True;
+  C.Aggregate := agSum;
+  C.FooterFormat := '#,##0.00';
+  C.Format := '#,##0.00';
+  C := FGrid.Columns.Add;
+  C.Title := 'Bewertung';
+  C.Width := 120;
+  C.CellKind := ckRating;
+  C.EditorKind := gekNone;
+  C := FGrid.Columns.Add;
+  C.Title := 'Lager';
+  C.Width := 160;
+  C.CellKind := ckProgress;
+  C.MaxValue := 400;
+  C.ReadOnly := True;
+  // Baender ueber den Spalten
+  FGrid.Bands.Add.Caption := 'Artikel';
+  FGrid.Bands.Add.Caption := L('Bestand und Preise');
+  FGrid.Columns[ColName].Band := 0;
+  FGrid.Columns[ColCategory].Band := 0;
+  FGrid.Columns[ColQty].Band := 1;
+  FGrid.Columns[ColPrice].Band := 1;
+  FGrid.Columns[ColActive].Band := 1;
+  FGrid.Columns[ColValue].Band := 1;
+  // Bedingte Formate: wenig Bestand rot, die 5 hoechsten Werte gruen und fett
+  CF := FGrid.ConditionalFormats.Add;
+  CF.Column := ColQty;
+  CF.Rule := crRange;
+  CF.Value2 := '50';
+  CF.Color := ccDanger;
+  CF := FGrid.ConditionalFormats.Add;
+  CF.Column := ColValue;
+  CF.Rule := crTop;
+  CF.Value1 := '5';
+  CF.Color := ccSuccess;
+  CF.Target := ctText;
+  CF.Bold := True;
+  CF := FGrid.ConditionalFormats.Add;
+  CF.Column := ColPrice;
+  CF.Rule := crDataBar;
+  CF.Color := ccAccent;
+  FPrinter := TPPGGridPrinter.Create(Own);
+  FPrinter.Grid := FGrid;
+  FPrinter.Title := 'Lagerliste';
+  FPrinter.HeaderText := '[Titel] - [Datum]';
   FGrid.OnSetEditText := CellSet;
   FGrid.OnValidateCell := CellValidate;
   FGrid.OnSorted := Sorted;
@@ -899,7 +966,7 @@ begin
   FillGrid;
 
   // Virtuell
-  Card := NewCard(Own, Sheet, PageX, PageContentTop + 420 + CardGap, FullW, 206,
+  Card := NewCard(Own, Sheet, PageX, PageContentTop + 520 + CardGap, FullW, 206,
     'Eine Million Zeilen {x} 20 Spalten', 'Virtuelles Grid {-} der Inhalt entsteht beim ' +
     'Zeichnen (OnGetCellText). Scrollen Sie mit Rad, Bildlaufleiste oder Strg+Ende.');
   FVirtual := TPPGGrid.Create(Own);
@@ -934,6 +1001,8 @@ begin
     FGrid.Cells[ColQty, I] := IntToStr((I * 37) mod 400 + 5);
     FGrid.Cells[ColPrice, I] := FormatFloat('0.00', Prices[(I - 1) mod 10] * (1 + ((I - 1) div 10) * 0.1));
     FGrid.Cells[ColActive, I] := IntToStr(Ord(I mod 5 <> 0));
+    FGrid.Cells[ColRating, I] := IntToStr((I * 7) mod 6);
+    FGrid.Cells[ColStock, I] := FGrid.Cells[ColQty, I];
     UpdateRowValue(I);
   end;
   FGrid.Row := 1;
@@ -973,6 +1042,8 @@ procedure TDemoGridPage.CellSet(Sender: TObject; ACol, ARow: Integer; const Valu
 begin
   if ACol in [ColQty, ColPrice] then
     UpdateRowValue(ARow);
+  if ACol = ColQty then
+    FGrid.Cells[ColStock, ARow] := Value;
   UpdateSummary;
   Host.Log('Grid', Format('Zeile %d, %s = %s', [ARow, FGrid.Columns[ACol].Title, Value]));
 end;
@@ -1053,6 +1124,59 @@ begin
         Host.Notifier.Show('In Zwischenablage kopiert', L('Alle Zeilen als Text {-} ' +
           'zum Einf{ue}gen in Excel.'), psSuccess);
       end;
+    $E8FD:
+      if Item.Down then
+        FGrid.GroupBy([ColCategory])
+      else
+        FGrid.Ungroup;
+    $E749:
+      FPrinter.Preview;
+    $EDE1, $EA90, $E774:
+      ExportTo(Item.IconChar);
+  end;
+end;
+
+procedure TDemoGridPage.ExportTo(Kind: Integer);
+var
+  D: TSaveDialog;
+  T: IPPGTableSource;
+begin
+  D := TSaveDialog.Create(nil);
+  try
+    case Kind of
+      $EDE1:
+        begin
+          D.Filter := 'Excel (*.xlsx)|*.xlsx';
+          D.DefaultExt := 'xlsx';
+        end;
+      $EA90:
+        begin
+          D.Filter := 'PDF (*.pdf)|*.pdf';
+          D.DefaultExt := 'pdf';
+        end;
+    else
+      D.Filter := 'HTML (*.html)|*.html';
+      D.DefaultExt := 'html';
+    end;
+    D.FileName := 'Lagerliste';
+    D.Options := D.Options + [ofOverwritePrompt];
+    if not D.Execute then
+      Exit;
+    Supports(FGrid, IPPGTableSource, T);
+    try
+      case Kind of
+        $EDE1: PPGExportXlsx(T, D.FileName, 'Lager');
+        $EA90: PPGExportPdf(FPrinter, D.FileName);
+      else
+        PPGExportHtml(T, D.FileName, 'Lagerliste');
+      end;
+      Host.Notifier.Show('Exportiert', D.FileName, psSuccess);
+    except
+      on E: Exception do
+        Host.Notifier.Show('Export fehlgeschlagen', E.Message, psError);
+    end;
+  finally
+    D.Free;
   end;
 end;
 
@@ -1368,6 +1492,17 @@ begin
       Ok := False;
   Check('Tabelle: Sortieren absteigend', Ok);
   FillGrid;
+  FGrid.SortBy(-1);
+  Check('Tabelle: Summenzeile Menge', FGrid.FooterText(ColQty) <> '');
+  FGrid.GroupBy([ColCategory]);
+  Check('Tabelle: vier Kategorien gruppiert', FGrid.GroupCount = 4);
+  Check('Tabelle: Gruppen-Summe', FGrid.GroupFooterText(0, ColValue) <> '');
+  FGrid.Ungroup;
+  Check('Tabelle: Druck hat Seiten', FPrinter.PageCount(TPPGPrintDevice.A4(96, False)) >= 1);
+  Check('Tabelle: Export enthaelt alle Zeilen', Pos('<td', PPGExportHtmlText(FGrid as IPPGTableSource)) > 0);
+  FGrid.MoveColumn(ColQty, ColName);
+  Check('Tabelle: Spalte verschoben', FGrid.VisualCol(ColQty) = ColName);
+  FGrid.LoadLayout('[PPGGridLayout]' + #13#10 + 'Version=1');
 end;
 
 procedure TDemoDatesPage.SelfTest(Check: TDemoCheck);

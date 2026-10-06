@@ -1,15 +1,15 @@
 ﻿Abhängigkeiten des Projekts werden überprüft...
-Erzeugen von PPGlowBench.dproj (Debug, Win32)
+Erzeugen von PPGlowBench.dproj (Release, Win32)
 brcc32 Befehlszeile für "PPGlowBench.vrc"
   c:\program files (x86)\embarcadero\studio\37.0\bin64\cgrc.exe -c65001 -= resinator.exe PPGlowBench.vrc -foPPGlowBench.res 
 dcc32 Befehlszeile für "PPGlowBench.dpr"
-  c:\program files (x86)\embarcadero\studio\37.0\bin\dcc32.exe -$O- -$W+ -$R+ -$Q+ --no-config -B -Q -TX.exe 
+  c:\program files (x86)\embarcadero\studio\37.0\bin\dcc32.exe -$D0 -$L- -$Y- --no-config -B -Q -TX.exe 
   -AGenerics.Collections=System.Generics.Collections;Generics.Defaults=System.Generics.Defaults;WinTypes=Winapi.Windows;WinProcs=Winapi.Windows;
-  DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE -DDEBUG;;FRAMEWORK_VCL -E. -I"c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release\DE";"c:\program 
-  files (x86)\embarcadero\studio\37.0\lib\Win32\release";C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;
+  DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE -DRELEASE;;FRAMEWORK_VCL -E. -I"c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release\DE";
+  "c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release";C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;
   C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
   C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files (x86)\embarcadero\studio\37.0\include" 
-  -LEC:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl -LNC:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp -NU.\Win32\Debug\dcu -NSWinapi;
+  -LEC:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl -LNC:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp -NU.\Win32\Release\dcu -NSWinapi;
   System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;
   DUnitX; -O"c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release";C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;
   C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
@@ -21,7 +21,7 @@ dcc32 Befehlszeile für "PPGlowBench.dpr"
   (x86)\embarcadero\studio\37.0\lib\Win32\release";C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;
   C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
   C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files (x86)\embarcadero\studio\37.0\include" -K00400000 
-  -NBC:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp -NHC:\Users\Public\Documents\Embarcadero\Studio\37.0\hpp\Win32 -NO.\Win32\Debug\dcu  
+  -NBC:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp -NHC:\Users\Public\Documents\Embarcadero\Studio\37.0\hpp\Win32 -NO.\Win32\Release\dcu  
   PPGlowBench.dpr   
 Erfolg
-Verstrichene Zeit: 00:00:00.8
+Verstrichene Zeit: 00:00:01.5

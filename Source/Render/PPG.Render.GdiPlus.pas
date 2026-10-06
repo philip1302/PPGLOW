@@ -22,7 +22,7 @@ uses
   PPG.Types, PPG.Render.Intf;
 
 type
-  TPPGGdiPlusCanvas = class(TInterfacedObject, IPPGCanvas)
+  TPPGGdiPlusCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas)
   private
     FDC: HDC;
     FGraphics: TGPGraphics;
@@ -56,10 +56,17 @@ type
     procedure DrawFocusRect(const R: TRect);
     function BeginGdi: HDC;
     procedure EndGdi(DC: HDC);
+    { IPPGShapeCanvas }
+    procedure FillPolygon(const Points: array of TPoint; Color: TColor; Alpha: Byte);
+    procedure DrawDashedPolyline(const Points: array of TPoint; Width, Dash, Gap: Integer;
+      Color: TColor; Alpha: Byte);
   end;
 
 /// Startet GDI+ bei Bedarf. False = nicht verfuegbar (GDI-Fallback nutzen).
 function PPGGdiPlusAvailable: Boolean;
+/// Speichert ein GDI-Bitmap als PNG ueber den GDI+-Encoder (ohne vclimg/
+/// Vcl.Imaging.pngimage). EPPGRenderError, wenn GDI+ fehlt oder scheitert.
+procedure PPGSaveBitmapAsPng(Bitmap: HBITMAP; const FileName: string);
 /// Fuer DLL-Hosts: GDI+ explizit vor dem Entladen der DLL beenden
 /// (ausserhalb von DllMain aufrufen!).
 procedure PPGGdiPlusShutdown;
@@ -129,6 +136,31 @@ var
 begin
   C := ColorToRGB(Color);
   Result := MakeColor(Alpha, GetRValue(C), GetGValue(C), GetBValue(C));
+end;
+
+procedure PPGSaveBitmapAsPng(Bitmap: HBITMAP; const FileName: string);
+const
+  // CLSID des eingebauten PNG-Encoders von GDI+ (fest seit Windows XP)
+  PngEncoder: TGUID = '{557CF406-1A04-11D3-9A73-0000F81EF32E}';
+var
+  B: TGPBitmap;
+  S: TStatus;
+begin
+  if not PPGGdiPlusAvailable then
+    raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['GdiplusStartup', -1]);
+  B := TGPBitmap.Create(Bitmap, 0);
+  try
+    S := B.GetLastStatus;
+    if S <> Ok then
+      raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed),
+        ['GdipCreateBitmapFromHBITMAP', Ord(S)]);
+    S := B.Save(FileName, PngEncoder);
+    if S <> Ok then
+      raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed),
+        ['GdipSaveImageToFile', Ord(S)]);
+  finally
+    B.Free;
+  end;
 end;
 
 { TPPGGdiPlusCanvas }
@@ -384,6 +416,61 @@ begin
     Pen.SetLineJoin(LineJoinRound);
     Pen.SetStartCap(LineCapRound);
     Pen.SetEndCap(LineCapRound);
+    Check(FGraphics.DrawLines(Pen, PGPPointF(@Pts[0]), Length(Pts)), 'DrawLines');
+  finally
+    Pen.Free;
+  end;
+end;
+
+procedure TPPGGdiPlusCanvas.FillPolygon(const Points: array of TPoint; Color: TColor;
+  Alpha: Byte);
+var
+  Pts: array of TGPPointF;
+  Brush: TGPSolidBrush;
+  I: Integer;
+begin
+  if (Alpha = 0) or (Length(Points) < 3) then
+    Exit;
+  SetLength(Pts, Length(Points));
+  for I := 0 to High(Points) do
+  begin
+    Pts[I].X := Points[I].X;
+    Pts[I].Y := Points[I].Y;
+  end;
+  Brush := TGPSolidBrush.Create(ToARGB(Color, Alpha));
+  try
+    Check(FGraphics.FillPolygon(Brush, PGPPointF(@Pts[0]), Length(Pts)), 'FillPolygon');
+  finally
+    Brush.Free;
+  end;
+end;
+
+procedure TPPGGdiPlusCanvas.DrawDashedPolyline(const Points: array of TPoint;
+  Width, Dash, Gap: Integer; Color: TColor; Alpha: Byte);
+var
+  Pts: array of TGPPointF;
+  Pattern: array[0..1] of Single;
+  Pen: TGPPen;
+  I: Integer;
+begin
+  if (Alpha = 0) or (Width <= 0) or (Length(Points) < 2) then
+    Exit;
+  if Dash < 1 then
+    Dash := 1;
+  if Gap < 1 then
+    Gap := 1;
+  SetLength(Pts, Length(Points));
+  for I := 0 to High(Points) do
+  begin
+    Pts[I].X := Points[I].X;
+    Pts[I].Y := Points[I].Y;
+  end;
+  Pen := TGPPen.Create(ToARGB(Color, Alpha), Width);
+  try
+    // Muster ist relativ zur Strichstaerke
+    Pattern[0] := Dash / Width;
+    Pattern[1] := Gap / Width;
+    Check(Pen.SetDashPattern(@Pattern[0], 2), 'SetDashPattern');
     Check(FGraphics.DrawLines(Pen, PGPPointF(@Pts[0]), Length(Pts)), 'DrawLines');
   finally
     Pen.Free;

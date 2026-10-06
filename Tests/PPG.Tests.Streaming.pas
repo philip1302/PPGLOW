@@ -14,7 +14,8 @@ uses
   PPG.PageControl, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid,
   PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NavigationView, PPG.Breadcrumb,
-  PPG.ToolBar, PPG.StatusBar, PPG.Notifications, PPG.Tests.Controls;
+  PPG.ToolBar, PPG.StatusBar, PPG.Notifications, PPG.Sparkline, PPG.Gauge, PPG.Chart,
+  PPG.Tests.Controls;
 
 type
   TStreamingTests = class(TControlTestCase)
@@ -29,13 +30,14 @@ type
 implementation
 
 const
-  ControlClasses: array[0..34] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
+  ControlClasses: array[0..38] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
     TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGGroupBox, TPPGEdit,
     TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl, TPPGListBox,
     TPPGCheckListBox, TPPGTreeView, TPPGGrid, TPPGLabel, TPPGLinkLabel, TPPGBadge,
     TPPGProgressRing, TPPGInfoBar, TPPGExpander, TPPGSplitter, TPPGRating, TPPGSearchEdit,
     TPPGCalendar, TPPGDatePicker, TPPGTimePicker, TPPGNavigationView, TPPGBreadcrumb,
-    TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter);
+    TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
+    TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart);
 
   // Layout-, Eltern- und Verweis-Properties gehoeren nicht zum Einzeltest
   SkipProps: array[0..21] of string = ('Name', 'Left', 'Top', 'Width', 'Height', 'Align',

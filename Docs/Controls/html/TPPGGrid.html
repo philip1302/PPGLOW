@@ -3,15 +3,26 @@
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGGrid</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Grid</code> - Basis <code>TPPGCustomGrid</code></p>
-<p><strong>Vorbild:</strong> TStringGrid, TMS TAdvStringGrid</p>
+<p><strong>Vorbild:</strong> TStringGrid, TMS TAdvStringGrid, DevExpress Grid (Gruppenleiste)</p>
 <h2>Unterschiede und Hinweise</h2>
 <ul>
-<li><code>Row</code>/<code>Cells[]</code> arbeiten mit Datenzeilen, <code>Selection</code> mit sichtbaren Zeilen (Sortierung/Filter).</li>
+<li><code>Row</code>/<code>Col</code>/<code>Cells[]</code> arbeiten mit Daten-Indizes, <code>Selection</code>/<code>FocusRow</code>/<code>FocusCol</code>/<code>CellRect</code> mit der Anzeige (Sortierung, Filter, verschobene Spalten). Umrechnen mit <code>DataRow</code>/<code>VisualRow</code>, <code>DataCol</code>/<code>VisualCol</code>.</li>
 <li>Enter im Editor &#252;bernimmt und bleibt in der Zelle (wie <code>TStringGrid</code>); Pfeil hoch/runter im Text-Editor &#252;bernimmt und wechselt die Zeile.</li>
-<li><code>OnSelectCell</code> kommt wie bei <code>TStringGrid</code> auch bei <code>Row</code>/<code>Col</code> im Code.</li>
-<li>Kopfklick sortiert: aufsteigend → absteigend → unsortiert. Zeilenh&#246;he nur per Code (<code>RowHeights</code>).</li>
-<li>UI Automation: Tabellen-Muster mit Kopfzeilen, Wert, K&#228;stchen-Spalten und Sortieren per Invoke.</li>
+<li>Kopfklick sortiert: aufsteigend → absteigend → unsortiert. Rechtsklick auf den Kopf: Kopfmen&#252; (Sortieren, Gruppieren, Ausblenden, Spaltenauswahl, optimale Breite), erweiterbar &#252;ber <code>OnHeaderMenu</code>.</li>
+<li>Spalten (<code>Columns</code>): verschieben per Ziehen (<code>goColMoving</code>), <code>Visible</code>, <code>DisplayIndex</code>, Doppelklick auf die Kopfkante passt die Breite an, <code>FixedColsRight</code>, <code>Bands</code> (auch mehrstufig).</li>
+<li>Gruppieren: <code>GroupBy</code>/<code>Column.GroupIndex</code> oder Kopf in die Gruppenleiste ziehen (<code>ShowGroupPanel</code>). Gruppenzeilen mit Pfeil (Klick, Doppelklick, Pfeiltasten, Enter/Leertaste), Text &#252;ber <code>OnGetGroupText</code> (Markup).</li>
+<li>Summen: <code>ShowFooter</code>, <code>GroupFooter</code>, <code>Column.Aggregate</code>/<code>FooterFormat</code>, <code>agCustom</code> &#252;ber <code>OnCustomAggregate</code>. Summen gelten f&#252;r die gefilterte Ansicht.</li>
+<li>Zellen: <code>Column.CellKind</code> (K&#228;stchen, Fortschritt, Sparkline, Bewertung, Bild, Link, Button, Farbfeld, Markup; eigene &#252;ber <code>PPGRegisterCellKindName</code>), <code>ConditionalFormats</code>, <code>OnGetCellStyle</code>, <code>MergeCells</code>.</li>
+<li>Layout merken: <code>SaveLayout</code>/<code>LoadLayout</code> (Reihenfolge, Breiten, Sichtbarkeit, Sortierung, Gruppen).</li>
+<li>Drucken mit <code>TPPGGridPrinter</code>; Export &#252;ber <code>PPG.Grid.Export</code> (xlsx, PDF, HTML, CSV), Import <code>PPGLoadXlsx</code>.</li>
+<li>UI Automation: Tabellen-Muster mit Kopfzeilen, Gruppenzeilen (Auf-/Zuklappen), K&#228;stchen, Links und Buttons (Invoke).</li>
 </ul>
+<h2>Beispiel</h2>
+<pre><code>Grid1.Columns[2].Aggregate := agSum;
+Grid1.ShowFooter := True;
+Grid1.GroupBy([1]);                       // nach Kategorie gruppieren
+PPGExportXlsx(Grid1 as IPPGTableSource, &#39;Liste.xlsx&#39;);
+</code></pre>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>TPPGGrid - Tabelle im Stil der Suite (Phase 6c).</p>
 <ul>
@@ -20,16 +31,19 @@
 <li>Daten: Cells[] (wie TStringGrid) oder virtuell ueber OnGetCellText.</li>
 <li>Sortieren (Klick auf den Kopf) und Filtern (Filterzeile) arbeiten auf einem Index-Array &quot;sichtbare Zeile -&gt; Datenzeile&quot;, nie auf den Daten. Row und Cells[] verwenden immer DATEN-Zeilen; Selection (TGridRect) ist in sichtbaren Zeilen (wie bei TStringGrid ohne Sortierung identisch).</li>
 <li>Spalten (Columns): Titel, Breite, Ausrichtung, Editor (Text, Auswahl, Zahl, Kaestchen), Auswahlliste, Schreibschutz.</li>
+<li>Spalten in der Anzeige (Phase 13b): verschieben (Ziehen am Kopf, goColMoving), ausblenden (Visible, Kopfmenue), Breite per Doppelklick, rechts fixieren (FixedColsRight), Baender (Bands) und Layout speichern.</li>
+<li>Gruppieren und Summen (Phase 13c): Column.GroupIndex bzw. GroupBy, Gruppen- leiste (ShowGroupPanel, Kopf hineinziehen), Gruppenzeilen mit Pfeil und Markup-Text (OnGetGroupText), Summenzeile (ShowFooter) und Gruppenfuss (GroupFooter) ueber Column.Aggregate. Summen gelten fuer die Ansicht (gefiltert), werden beim Aendern von Ansicht oder Daten neu berechnet und zwischengespeichert - nie beim Zeichnen.</li>
+<li>Zellen (Phase 13d): verbundene Zellen (MergeCells; nur ohne Sortierung, Filter und Gruppierung - dann ruhen sie), bedingte Formate (ConditionalFormats, OnGetCellStyle) und Zellarten je Spalte (Column.CellKind ueber IPPGCellKind: Kaestchen, Fortschritt, Sparkline, Bewertung, Bild, Link, Button, Farbfeld, Markup). Intern sind Spalten-Indizes von Geometrie, Fokus und Auswahl ANZEIGE- Spalten (wie sichtbare Zeilen); Cells[], Col, Columns[] und Ereignisse verwenden DATEN-Spalten. DataCol/VisualCol rechnen um.</li>
 <li>Editoren sind PPGlow-Felder (TPPGEdit/TPPGComboBox/TPPGSpinEdit) ueber der Zelle: Enter uebernimmt, Esc verwirft, Tab uebernimmt und geht weiter, Scrollen und Fokusverlust uebernehmen.</li>
 <li>Zwischenablage als TSV (Strg+C / Strg+V), Export als CSV.</li>
 <li>DFM-kompatibel zu TStringGrid in den Grundproperties (ColCount, RowCount, FixedCols/Rows, DefaultColWidth/RowHeight, Options, ColWidths/RowHeights). Breiten und Hoehen sind wie ueberall in PPGlow logische 96-DPI-Pixel.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>Columns</code>, <code>ShowFilterRow</code>, <code>SortOnHeaderClick</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>Bands</code>, <code>Columns</code>, <code>ShowFilterRow</code>, <code>FixedColsRight</code>, <code>HeaderMenu</code>, <code>ShowFooter</code>, <code>GroupFooter</code>, <code>ShowGroupPanel</code>, <code>ConditionalFormats</code>, <code>SortOnHeaderClick</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
 <p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>ColCount</code>, <code>Constraints</code>, <code>DefaultColWidth</code>, <code>DefaultDrawing</code>, <code>DefaultRowHeight</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>FixedCols</code>, <code>FixedRows</code>, <code>Font</code>, <code>Options</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>RowCount</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnClick</code>, <code>OnCompareCells</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawCell</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnFixedCellClick</code>, <code>OnGetCellText</code>, <code>OnGetEditText</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnScroll</code>, <code>OnSelectCell</code>, <code>OnSetEditText</code>, <code>OnSorted</code>, <code>OnStartDock</code>, <code>OnStartDrag</code>, <code>OnTopLeftChanged</code>, <code>OnValidateCell</code></p>
+<p><code>OnClick</code>, <code>OnCompareCells</code>, <code>OnCellButtonClick</code>, <code>OnColumnMoved</code>, <code>OnCustomAggregate</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawCell</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnFixedCellClick</code>, <code>OnGetCellText</code>, <code>OnGetEditText</code>, <code>OnGetGroupText</code>, <code>OnGetCellStyle</code>, <code>OnHeaderMenu</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnLinkClick</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnScroll</code>, <code>OnSelectCell</code>, <code>OnSetEditText</code>, <code>OnSorted</code>, <code>OnStartDock</code>, <code>OnStartDrag</code>, <code>OnTopLeftChanged</code>, <code>OnValidateCell</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGGrid.md</code>.</p>
 </body></html>

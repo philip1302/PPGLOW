@@ -7,6 +7,8 @@ program PPGlowBench;
 
 uses
   System.SysUtils,
+  System.IOUtils,
+  System.Variants,
   System.Classes,
   System.Types,
   Winapi.Windows,
@@ -87,7 +89,44 @@ uses
   PPG.Breadcrumb in '..\..\Source\Controls\PPG.Breadcrumb.pas',
   PPG.ToolBar in '..\..\Source\Controls\PPG.ToolBar.pas',
   PPG.StatusBar in '..\..\Source\Controls\PPG.StatusBar.pas',
-  PPG.Notifications in '..\..\Source\Controls\PPG.Notifications.pas';
+  PPG.Notifications in '..\..\Source\Controls\PPG.Notifications.pas',
+  PPG.Xlsx in '..\..\Source\Controls\PPG.Xlsx.pas',
+  PPG.Grid.Export in '..\..\Source\Controls\PPG.Grid.Export.pas',
+  PPG.Grid.Print in '..\..\Source\Controls\PPG.Grid.Print.pas',
+  PPG.Grid.Styles in '..\..\Source\Controls\PPG.Grid.Styles.pas',
+  PPG.Grid.CellKinds in '..\..\Source\Controls\PPG.Grid.CellKinds.pas',
+  PPG.Grid.Edit in '..\..\Source\Controls\PPG.Grid.Edit.pas',
+  PPG.Grid.Paint in '..\..\Source\Controls\PPG.Grid.Paint.pas',
+  PPG.Grid.Data in '..\..\Source\Controls\PPG.Grid.Data.pas',
+  PPG.Grid.View in '..\..\Source\Controls\PPG.Grid.View.pas',
+  PPG.Grid.Columns in '..\..\Source\Controls\PPG.Grid.Columns.pas',
+  PPG.TagEdit in '..\..\Source\Controls\PPG.TagEdit.pas',
+  PPG.ColumnComboBox in '..\..\Source\Controls\PPG.ColumnComboBox.pas',
+  PPG.RowPopup in '..\..\Source\Controls\PPG.RowPopup.pas',
+  PPG.CheckComboBox in '..\..\Source\Controls\PPG.CheckComboBox.pas',
+  PPG.ColorSpace in '..\..\Source\Core\PPG.ColorSpace.pas',
+  PPG.Controls.DropDown in '..\..\Source\Controls\PPG.Controls.DropDown.pas',
+  PPG.ColorPicker in '..\..\Source\Controls\PPG.ColorPicker.pas',
+  PPG.FileEdit in '..\..\Source\Controls\PPG.FileEdit.pas',
+  PPG.MaskEdit in '..\..\Source\Controls\PPG.MaskEdit.pas',
+  PPG.PasswordEdit in '..\..\Source\Controls\PPG.PasswordEdit.pas',
+  PPG.NumberFormat in '..\..\Source\Core\PPG.NumberFormat.pas',
+  PPG.NumberEdit in '..\..\Source\Controls\PPG.NumberEdit.pas',
+  PPG.Wizard in '..\..\Source\Controls\PPG.Wizard.pas',
+  PPG.Dialogs in '..\..\Source\Controls\PPG.Dialogs.pas',
+  PPG.TeachingTip in '..\..\Source\Controls\PPG.TeachingTip.pas',
+  PPG.Hints in '..\..\Source\Controls\PPG.Hints.pas',
+  PPG.MenuBar in '..\..\Source\Controls\PPG.MenuBar.pas',
+  PPG.Popup.Placement in '..\..\Source\Core\PPG.Popup.Placement.pas',
+  PPG.AppHooks in '..\..\Source\Controls\PPG.AppHooks.pas',
+  PPG.Menus in '..\..\Source\Controls\PPG.Menus.pas',
+  PPG.Chart.Series in '..\..\Source\Controls\PPG.Chart.Series.pas',
+  PPG.Chart in '..\..\Source\Controls\PPG.Chart.pas',
+  PPG.Chart.Scale in '..\..\Source\Core\PPG.Chart.Scale.pas',
+  PPG.Chart.Palette in '..\..\Source\Core\PPG.Chart.Palette.pas',
+  PPG.Render.Shapes in '..\..\Source\Render\PPG.Render.Shapes.pas',
+  PPG.Sparkline in '..\..\Source\Controls\PPG.Sparkline.pas',
+  PPG.Gauge in '..\..\Source\Controls\PPG.Gauge.pas';
 
 {$R *.res}
 
@@ -101,10 +140,21 @@ type
   /// Ereignis-Handler der Daten-Controls (Ereignisse brauchen Methoden).
   TCalAccessB = class(TPPGCalendar);
 
+  /// Virtuelle Tabelle fuer Export und Druck (1 000 000 Zeilen)
+  TBenchTable = class(TInterfacedObject, IPPGTableSource)
+  public
+    function TableColCount: Integer;
+    function TableRowCount: Integer;
+    function TableColumn(ACol: Integer): TPPGTableColumnInfo;
+    function TableCellText(ACol, ARow: Integer): string;
+    function TableCellValue(ACol, ARow: Integer): Variant;
+  end;
+
   TBenchData = class
   public
     procedure ListData(Control: TWinControl; Index: Integer; var Data: string);
     procedure GridText(Sender: TObject; ACol, ARow: Integer; var Text: string);
+    procedure GroupText(Sender: TObject; ACol, ARow: Integer; var Text: string);
   end;
 
   TBenchProc = reference to procedure;
@@ -134,9 +184,54 @@ begin
   Data := 'Eintrag ' + IntToStr(Index);
 end;
 
+function TBenchTable.TableColCount: Integer;
+begin
+  Result := 5;
+end;
+
+function TBenchTable.TableRowCount: Integer;
+begin
+  Result := 1000000;
+end;
+
+function TBenchTable.TableColumn(ACol: Integer): TPPGTableColumnInfo;
+begin
+  Result.Title := 'Spalte ' + IntToStr(ACol);
+  Result.Width := 90;
+  Result.Alignment := taLeftJustify;
+  Result.Format := '';
+end;
+
+function TBenchTable.TableCellText(ACol, ARow: Integer): string;
+begin
+  if Odd(ACol) then
+    Result := 'Text ' + IntToStr(ARow mod 1000)
+  else
+    Result := IntToStr(ARow * 7 + ACol);
+end;
+
+function TBenchTable.TableCellValue(ACol, ARow: Integer): Variant;
+begin
+  if Odd(ACol) then
+    Result := TableCellText(ACol, ARow)
+  else
+    Result := ARow * 7 + ACol;
+end;
+
 procedure TBenchData.GridText(Sender: TObject; ACol, ARow: Integer; var Text: string);
 begin
   Text := IntToStr(ARow * 31 + ACol);
+end;
+
+procedure TBenchData.GroupText(Sender: TObject; ACol, ARow: Integer; var Text: string);
+begin
+  // Spalte 1: 100 Gruppen, Spalte 2: Zahlen fuer die Summe
+  case ACol of
+    1: Text := 'Gruppe ' + IntToStr(ARow mod 100);
+    2: Text := IntToStr(ARow mod 1000);
+  else
+    Text := IntToStr(ARow);
+  end;
 end;
 
 function Measure(const Name: string; BudgetMs: Cardinal; const Proc: TBenchProc): Cardinal;
@@ -476,7 +571,75 @@ begin
         end;
       end);
 
+    Measure('Grid 1 000 000 Zeilen: gruppieren (100 Gruppen) + Summen + zeichnen', 1500,
+      procedure
+      var
+        G: TPPGGrid;
+        D: TBenchData;
+      begin
+        D := TBenchData.Create;
+        G := TPPGGrid.Create(Form);
+        try
+          G.Parent := Form;
+          G.SetBounds(0, 0, 800, 600);
+          G.SmoothScrolling := False;
+          G.OnGetCellText := D.GroupText;
+          G.Columns.Add.Title := '#';
+          G.Columns.Add.Title := 'Gruppe';
+          G.Columns.Add.Aggregate := agSum;
+          G.FixedCols := 1;
+          G.ShowFooter := True;
+          G.GroupFooter := True;
+          G.RowCount := 1000001;
+          G.GroupBy([1]);
+          if (G.GroupCount <> 100) or (G.FooterText(2) = '') then
+            raise Exception.Create('Gruppieren falsch');
+          PaintToBitmap(G);
+        finally
+          G.Free;
+          D.Free;
+        end;
+      end);
+
     // Phase 7: Calendar und NavigationView
+    Measure('xlsx: 1 000 000 Zeilen x 5 exportieren (Datei)', 6000,
+      procedure
+      var
+        T: IPPGTableSource;
+        F: string;
+      begin
+        T := TBenchTable.Create;
+        F := TPath.Combine(TPath.GetTempPath, 'PPGlowBench.xlsx');
+        PPGExportXlsx(T, F);
+        System.SysUtils.DeleteFile(F);
+      end);
+
+    Measure('Druck: 1 000 000 Zeilen aufteilen + 3 Seiten in der Vorschau', 1000,
+      procedure
+      var
+        P: TPPGGridPrinter;
+        V: TPPGPrintPreviewView;
+        D: TPPGPrintDevice;
+        I: Integer;
+      begin
+        P := TPPGGridPrinter.Create(nil);
+        V := TPPGPrintPreviewView.Create(Form);
+        try
+          V.Parent := Form;
+          V.SetBounds(0, 0, 800, 600);
+          P.SetSource(TBenchTable.Create);
+          D := TPPGPrintDevice.A4(600, False);
+          if P.PageCount(D) < 1000 then
+            raise Exception.Create('zu wenige Seiten');
+          V.Setup(P, D);
+          for I := 0 to 2 do
+            V.PageMetafile(I * 1000);
+        finally
+          V.Free;
+          P.Free;
+        end;
+      end);
+
     Measure('Calendar: 1000 Monate blaettern + zeichnen', 2500,
       procedure
       var
@@ -584,6 +747,56 @@ begin
           end;
         finally
           N.Free;
+        end;
+      end);
+
+    // Phase 10: Diagramme (Ziel aus dem Plan: 100 000 Punkte <= 50 ms je Bild)
+    Measure('Chart 100 000 Punkte: 20 x zeichnen', 1000,
+      procedure
+      var
+        C: TPPGChart;
+        V: TArray<Double>;
+        I: Integer;
+      begin
+        C := TPPGChart.Create(Form);
+        try
+          C.Parent := Form;
+          C.Animation.Enabled := False;
+          C.SetBounds(0, 0, 800, 400);
+          SetLength(V, 100000);
+          for I := 0 to High(V) do
+            V[I] := Sin(I / 700) * 100 + (I mod 17);
+          C.Series.Add.SetValues(V);
+          for I := 1 to 20 do
+            PaintToBitmap(C);
+        finally
+          C.Free;
+        end;
+      end);
+
+    Measure('Chart live: 600 x Wert anhaengen (1000 Punkte) + zeichnen', 3000,
+      procedure
+      var
+        C: TPPGChart;
+        S: TPPGChartSeries;
+        I: Integer;
+      begin
+        C := TPPGChart.Create(Form);
+        try
+          C.Parent := Form;
+          C.Animation.Enabled := False;
+          C.SetBounds(0, 0, 800, 400);
+          S := C.Series.Add;
+          S.Kind := cskArea;
+          for I := 0 to 999 do
+            S.Append(Sin(I / 30) * 50, 1000);
+          for I := 0 to 599 do
+          begin
+            S.Append(Sin(I / 30) * 50, 1000);
+            PaintToBitmap(C);
+          end;
+        finally
+          C.Free;
         end;
       end);
 

@@ -9,7 +9,9 @@ uses
   System.SysUtils, System.Classes, System.Variants, Vcl.Controls,
   Data.DB, Datasnap.DBClient,
   PPG.Types, PPG.Controls.Base, PPG.Feedback, PPG.Panel, PPG.Labels, PPG.ToolBar, PPG.Grid,
-  PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid,
+  PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.Chart.Series, PPG.DB.Chart,
+  PPG.NumberFormat, PPG.DB.Fields,
+  Vcl.Dialogs, PPG.Grid.Data, PPG.Grid.Export,
   DemoKit;
 
 type
@@ -25,9 +27,11 @@ type
     FSince: TPPGDBDatePicker;
     FCategory: TPPGDBLookupComboBox;
     FActive: TPPGDBCheckBox;
-    FSales: TPPGDBEdit;
+    FSales: TPPGDBNumberEdit;
     FNotes: TPPGDBMemo;
+    FTags: TPPGDBTagEdit;
     FResult: TPPGLabel;
+    FChart: TPPGDBChart;
     procedure BuildData;
     procedure ToolClick(Sender: TObject; Item: TPPGToolItem);
     procedure SourceChange(Sender: TObject; Field: TField);
@@ -38,6 +42,8 @@ type
     procedure Build; override;
   public
     procedure SelfTest(Check: TDemoCheck); override;
+    procedure GridFooter(Sender: TObject; Column: TPPGDBGridColumn; var Text: string);
+    procedure ExportExcel;
   end;
 
 implementation
@@ -48,6 +54,7 @@ const
   Col3W = (FullW - 2 * CardPad - 2 * CardGap) div 3;
   GridH = 290;
   DetailH = 334;
+  ChartH = 300;
 
   IcoPrior = $E76B;
   IcoNext = $E76C;
@@ -57,6 +64,16 @@ const
   IcoCancel = $E711;
 
 { TDemoDatabasePage }
+
+function TagsOf(I: Integer): string;
+begin
+  case I mod 3 of
+    0: Result := 'Stammkunde;Rabatt';
+    1: Result := 'Neukunde';
+  else
+    Result := '';
+  end;
+end;
 
 procedure TDemoDatabasePage.BuildData;
 const
@@ -68,6 +85,7 @@ const
   CatOf: array[0..7] of Integer = (1, 2, 3, 1, 2, 2, 3, 4);
   Sales: array[0..7] of Double = (48200, 12950.5, 210000, 87400, 23100, 9800, 0, 1250);
 var
+  Agg: TAggregateField;
   I: Integer;
 begin
   FCategories := TClientDataSet.Create(Own);
@@ -88,7 +106,18 @@ begin
   FCustomers.FieldDefs.Add('Active', ftBoolean);
   FCustomers.FieldDefs.Add('Sales', ftFloat);
   FCustomers.FieldDefs.Add('Notes', ftWideMemo);
+  FCustomers.FieldDefs.Add('Tags', ftWideString, 120);
   FCustomers.CreateDataSet;
+  // Summe fuer die Summenzeile des DB-Grids: TAggregateField der Datenmenge
+  FCustomers.Close;
+  Agg := TAggregateField.Create(FCustomers);
+  Agg.FieldName := 'SalesTotal';
+  Agg.Expression := 'SUM(Sales)';
+  Agg.DisplayFormat := '#,##0.00';
+  Agg.Active := True;
+  Agg.DataSet := FCustomers;
+  FCustomers.AggregatesActive := True;
+  FCustomers.Open;
   FCustomers.FieldByName('Name').DisplayLabel := 'Kunde';
   FCustomers.FieldByName('City').DisplayLabel := 'Ort';
   FCustomers.FieldByName('Since').DisplayLabel := 'Kunde seit';
@@ -97,7 +126,7 @@ begin
   FCustomers.FieldByName('Sales').OnValidate := SalesValidate;
   for I := 0 to High(Names) do
     FCustomers.AppendRecord([I + 1, L(Names[I]), L(Cities[I]), EncodeDate(2015 + I, 1 + I, 3 + I),
-      CatOf[I], I mod 3 <> 2, Sales[I], '']);
+      CatOf[I], I mod 3 <> 2, Sales[I], '', TagsOf(I)]);
   FCustomers.First;
   FSource := TDataSource.Create(Own);
   FSource.DataSet := FCustomers;
@@ -141,6 +170,8 @@ begin
   TB.Items.AddSeparator;
   TB.Items.AddButton('Speichern', IcoPost);
   TB.Items.AddButton('Verwerfen', IcoCancel);
+  TB.Items.AddSeparator;
+  TB.Items.AddButton('Excel', $EDE1);
   TB.OnItemClick := ToolClick;
   FGrid := TPPGDBGrid.Create(Own);
   FGrid.Parent := Card;
@@ -153,6 +184,10 @@ begin
     Col.Width := Widths[I];
   end;
   FGrid.DataSource := FSource;
+  // Summenzeile: Umsatz aus dem TAggregateField, Anzahl ueber das Ereignis
+  FGrid.ShowFooter := True;
+  TPPGDBGridColumn(FGrid.Columns[4]).FooterField := 'SalesTotal';
+  FGrid.OnGetFooterText := GridFooter;
 
   // Formular zum aktuellen Datensatz
   Card := NewCard(Own, Sheet, PageX, PageContentTop + GridH + CardGap, FullW, DetailH,
@@ -197,8 +232,10 @@ begin
   FCategory.DataSource := FSource;
   FCategory.DataField := 'CategoryID';
   AddCaption(X2, Y, L('Umsatz ({EUR})'));
-  FSales := TPPGDBEdit.Create(Own);
+  // Betrag als Zahlenfeld (Phase 12): Waehrung, rechnet, Null bleibt Null
+  FSales := TPPGDBNumberEdit.Create(Own);
   FSales.Parent := Card;
+  FSales.NumberKind := nkCurrency;
   FSales.SetBounds(X2, Y + 20, Col3W, CtlH);
   FSales.DataSource := FSource;
   FSales.DataField := 'Sales';
@@ -213,11 +250,35 @@ begin
   AddCaption(CardPad, Y, 'Notiz');
   FNotes := TPPGDBMemo.Create(Own);
   FNotes.Parent := Card;
-  FNotes.SetBounds(CardPad, Y + 20, FullW - 2 * CardPad, 48);
+  FNotes.SetBounds(CardPad, Y + 20, (FullW - 2 * CardPad) div 2 - 8, 48);
   FNotes.DataSource := FSource;
   FNotes.DataField := 'Notes';
+  AddCaption(CardPad + (FullW - 2 * CardPad) div 2 + 8, Y, L('Schlagw{oe}rter (TPPGDBTagEdit)'));
+  FTags := TPPGDBTagEdit.Create(Own);
+  FTags.Parent := Card;
+  FTags.SetBounds(CardPad + (FullW - 2 * CardPad) div 2 + 8, Y + 20, (FullW - 2 * CardPad) div 2 - 8, CtlH);
+  FTags.AutoSize := False;
+  FTags.Height := 48;
+  FTags.Suggestions.CommaText := 'Stammkunde,Neukunde,Rabatt,Export,Messe';
+  FTags.DataSource := FSource;
+  FTags.DataField := 'Tags';
 
   FResult := NewResult(Own, Card, 'Datensatz');
+
+  // Diagramm aus derselben Datenmenge (TPPGDBChart)
+  Card := NewCard(Own, Sheet, PageX, PageContentTop + GridH + DetailH + 2 * CardGap, FullW,
+    ChartH, 'Umsatz je Kunde (TPPGDBChart)', 'Folgt jeder {Ae}nderung der Tabelle; der aktuelle ' +
+    'Datensatz ist markiert, ein Klick auf eine S{ae}ule springt zum Kunden.');
+  FChart := TPPGDBChart.Create(Own);
+  FChart.Parent := Card;
+  FChart.SetBounds(CardPad - 8, Card.Tag, FullW - 2 * CardPad + 16, ChartH - Card.Tag - 8);
+  FChart.LegendPosition := clpNone;
+  FChart.ValueFields := 'Sales';
+  FChart.LabelField := 'Name';
+  FChart.Series.Add.Kind := cskColumn;
+  FChart.Series[0].ValueFormat := L('#,##0 {EUR}');
+  FChart.DataSource := FSource;
+  Host.RegisterSpecial('dbchart', FChart);
   UpdateResult;
 end;
 
@@ -264,6 +325,7 @@ begin
     case Item.IconChar of
       IcoPrior: FCustomers.Prior;
       IcoNext: FCustomers.Next;
+      $EDE1: ExportExcel;
       IcoAdd:
         begin
           FCustomers.Append;
@@ -298,6 +360,33 @@ begin
   UpdateResult;
 end;
 
+procedure TDemoDatabasePage.GridFooter(Sender: TObject; Column: TPPGDBGridColumn;
+  var Text: string);
+begin
+  if Column.FieldName = 'Name' then
+    Text := IntToStr(FCustomers.RecordCount) + ' Kunden';
+end;
+
+procedure TDemoDatabasePage.ExportExcel;
+var
+  D: TSaveDialog;
+begin
+  D := TSaveDialog.Create(nil);
+  try
+    D.Filter := 'Excel (*.xlsx)|*.xlsx';
+    D.DefaultExt := 'xlsx';
+    D.FileName := 'Kunden';
+    D.Options := D.Options + [ofOverwritePrompt];
+    if D.Execute then
+    begin
+      PPGExportXlsx(FGrid as IPPGTableSource, D.FileName, 'Kunden');
+      Host.Notifier.Show('Exportiert', D.FileName, psSuccess);
+    end;
+  finally
+    D.Free;
+  end;
+end;
+
 procedure TDemoDatabasePage.SelfTest(Check: TDemoCheck);
 var
   N: Integer;
@@ -322,6 +411,10 @@ begin
     (FName.Text = 'Selbsttest'));
   FCustomers.Delete;
   Check('Datenbank: Datensatz geloescht', FCustomers.RecordCount = N);
+  FChart.FlushReload;
+  Check('Datenbank: Diagramm folgt der Tabelle', FChart.Series[0].Count = N);
+  FCustomers.RecNo := 2;
+  Check('Datenbank: Diagramm laedt alle Kunden', FChart.LoadedCount = N);
   FCustomers.Edit;
   try
     FCustomers.FieldByName('Sales').AsFloat := -1;
@@ -333,6 +426,9 @@ begin
   FCustomers.Cancel;
   UpdateResult;
   Check('Datenbank: Ergebniszeile', Pos(IntToStr(FCustomers.RecordCount), FResult.Caption) > 0);
+  Check('Datenbank: Summenzeile aus TAggregateField', FGrid.FooterText(5) <> '');
+  Check('Datenbank: Export liest alle Saetze',
+    (FGrid as IPPGTableSource).TableRowCount = FCustomers.RecordCount);
 end;
 
 end.

@@ -23,6 +23,30 @@ uses
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Field;
 
 type
+  TPPGSpinStepEvent = procedure(Steps: Integer) of object;
+
+  /// Wiederholung gehaltener Spin-Buttons: sofort ein Schritt, nach 400 ms
+  /// alle 50 ms, nur solange die Maus auf dem gedrueckten Button steht.
+  /// Der Takt kommt vom gemeinsamen Animator. Fuer SpinEdit und NumberEdit.
+  TPPGSpinRepeater = class
+  private
+    FField: TPPGCustomField;
+    FOnStep: TPPGSpinStepEvent;
+    FAnim: TPPGAnimation;
+    FId: Integer;
+    FDirection: Integer;
+    FStart: Cardinal;
+    FDone: Integer;
+    procedure Tick(Sender: TObject);
+  public
+    constructor Create(AField: TPPGCustomField; AOnStep: TPPGSpinStepEvent);
+    destructor Destroy; override;
+    /// Button Id gedrueckt: ein Schritt in Direction (+1/-1), dann Wiederholung.
+    procedure Start(Id, Direction: Integer);
+    procedure Stop;
+    function Running: Boolean;
+  end;
+
   TPPGCustomSpinEdit = class(TPPGCustomField)
   private
     FMinValue: Integer;
@@ -30,10 +54,7 @@ type
     FIncrement: Integer;
     FEditorEnabled: Boolean;
     FReadOnly: Boolean;
-    FRepeatAnim: TPPGAnimation;
-    FRepeatId: Integer;
-    FRepeatStart: Cardinal;
-    FRepeatDone: Integer;
+    FRepeater: TPPGSpinRepeater;
     FValueCache: Integer; // Value ohne WM_GETTEXT (Paint sendet keine Nachrichten)
     function GetValue: Integer;
     procedure SetValue(const Value: Integer);
@@ -46,7 +67,6 @@ type
     procedure SetAutoSelect(const Value: Boolean);
     procedure UpdateInnerReadOnly;
     procedure NormalizeForRange;
-    procedure RepeatStep(Sender: TObject);
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
   protected
     procedure Loaded; override;
@@ -89,6 +109,7 @@ type
     property Appearance;
     property Animation;
     property TextHint;
+    property UseSystemContextMenu;
     property ValidationState;
     property ValidationHint;
     property HighContrastSupport;
@@ -160,11 +181,82 @@ uses
 
 type
   TEditAccess = class(TCustomEdit);
+  TFieldAccess = class(TPPGCustomField);
 
 const
   RepeatDelay = 400;   // ms bis zur ersten Wiederholung
   RepeatInterval = 50; // ms zwischen Wiederholungen
   PageSteps = 10;
+
+{ TPPGSpinRepeater }
+
+constructor TPPGSpinRepeater.Create(AField: TPPGCustomField; AOnStep: TPPGSpinStepEvent);
+begin
+  inherited Create;
+  FField := AField;
+  FOnStep := AOnStep;
+  FAnim := TPPGAnimation.Create(nil);
+  FAnim.OnStep := Tick;
+end;
+
+destructor TPPGSpinRepeater.Destroy;
+begin
+  if FAnim <> nil then
+    FAnim.OnStep := nil;
+  FreeAndNil(FAnim); // meldet sich selbst beim Animator ab
+  inherited Destroy;
+end;
+
+procedure TPPGSpinRepeater.Start(Id, Direction: Integer);
+begin
+  FId := Id;
+  FDirection := Direction;
+  FStart := GetTickCount;
+  FDone := 0;
+  FOnStep(Direction);
+  if not (csDesigning in FField.ComponentState) then
+    FAnim.StartLoop(1000);
+end;
+
+procedure TPPGSpinRepeater.Stop;
+begin
+  FAnim.Stop;
+  FId := 0;
+end;
+
+function TPPGSpinRepeater.Running: Boolean;
+begin
+  Result := (FAnim <> nil) and FAnim.Running;
+end;
+
+procedure TPPGSpinRepeater.Tick(Sender: TObject);
+var
+  Elapsed: Cardinal;
+  Due: Integer;
+  F: TFieldAccess;
+begin
+  F := TFieldAccess(FField);
+  if (F.PressedButton < 0) or (FId = 0) then
+  begin
+    FAnim.Stop;
+    Exit;
+  end;
+  Elapsed := GetTickCount - FStart;
+  if Elapsed < RepeatDelay then
+    Exit;
+  Due := 1 + Integer((Elapsed - RepeatDelay) div RepeatInterval);
+  // Nur solange die Maus auf dem gedrueckten Button steht (wie Windows)
+  if F.HotButton <> F.PressedButton then
+  begin
+    FDone := Due;
+    Exit;
+  end;
+  while FDone < Due do
+  begin
+    Inc(FDone);
+    FOnStep(FDirection);
+  end;
+end;
 
 { TPPGCustomSpinEdit }
 
@@ -173,16 +265,13 @@ begin
   inherited Create(AOwner);
   FIncrement := 1;
   FEditorEnabled := True;
-  FRepeatAnim := TPPGAnimation.Create(Self);
-  FRepeatAnim.OnStep := RepeatStep;
+  FRepeater := TPPGSpinRepeater.Create(Self, Spin);
   Text := '0';
 end;
 
 destructor TPPGCustomSpinEdit.Destroy;
 begin
-  if FRepeatAnim <> nil then
-    FRepeatAnim.OnStep := nil;
-  FreeAndNil(FRepeatAnim); // meldet sich selbst beim Animator ab
+  FreeAndNil(FRepeater);
   inherited Destroy;
 end;
 
@@ -369,56 +458,20 @@ procedure TPPGCustomSpinEdit.ButtonDown(Id: Integer);
 begin
   if (Id <> PPGSpinButtonUp) and (Id <> PPGSpinButtonDown) then
     Exit;
-  FRepeatId := Id;
-  FRepeatStart := GetTickCount;
-  FRepeatDone := 0;
   if Id = PPGSpinButtonUp then
-    Spin(1)
+    FRepeater.Start(Id, 1)
   else
-    Spin(-1);
-  if not (csDesigning in ComponentState) then
-    FRepeatAnim.StartLoop(1000);
+    FRepeater.Start(Id, -1);
 end;
 
 procedure TPPGCustomSpinEdit.ButtonUp(Id: Integer);
 begin
-  FRepeatAnim.Stop;
-  FRepeatId := 0;
+  FRepeater.Stop;
 end;
 
 function TPPGCustomSpinEdit.Repeating: Boolean;
 begin
-  Result := (FRepeatAnim <> nil) and FRepeatAnim.Running;
-end;
-
-procedure TPPGCustomSpinEdit.RepeatStep(Sender: TObject);
-var
-  Elapsed: Cardinal;
-  Due: Integer;
-begin
-  if (PressedButton < 0) or (FRepeatId = 0) then
-  begin
-    FRepeatAnim.Stop;
-    Exit;
-  end;
-  Elapsed := GetTickCount - FRepeatStart;
-  if Elapsed < RepeatDelay then
-    Exit;
-  Due := 1 + Integer((Elapsed - RepeatDelay) div RepeatInterval);
-  // Nur solange die Maus auf dem gedrueckten Button steht (wie Windows)
-  if HotButton <> PressedButton then
-  begin
-    FRepeatDone := Due;
-    Exit;
-  end;
-  while FRepeatDone < Due do
-  begin
-    Inc(FRepeatDone);
-    if FRepeatId = PPGSpinButtonUp then
-      Spin(1)
-    else
-      Spin(-1);
-  end;
+  Result := (FRepeater <> nil) and FRepeater.Running;
 end;
 
 { ---- Tastatur und Mausrad ---- }

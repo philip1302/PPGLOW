@@ -18,7 +18,7 @@ type
   /// Basisklasse fuer Renderer: zustandslos, wird von allen Controls geteilt.
   TPPGRendererBase = class(TInterfacedObject, IPPGRenderer, IPPGIndicatorRenderer,
     IPPGRangeRenderer, IPPGContainerRenderer, IPPGFieldRenderer, IPPGListRenderer, IPPGTabRenderer, IPPGScrollRenderer,
-    IPPGThemeRenderer, IPPGItemRenderer)
+    IPPGThemeRenderer, IPPGItemRenderer, IPPGChartRenderer, IPPGMenuRenderer, IPPGHintRenderer)
   public
     constructor Create; virtual;
     function Name: string; virtual; abstract;
@@ -104,6 +104,34 @@ type
       Color: TColor; PPI: Integer); virtual;
     procedure DrawDropIndicator(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
       PPI: Integer); virtual;
+    { IPPGChartRenderer - Standard: flache Saeulen mit gerundeter Wertseite }
+    procedure DrawChartBar(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
+      Hot: Single; Vertical, Negative: Boolean; PPI: Integer); virtual;
+    procedure DrawChartMarker(const Canvas: IPPGCanvas; const Center: TPoint;
+      Radius: Integer; Color, Ring: TColor; PPI: Integer); virtual;
+    procedure DrawChartTooltip(const Canvas: IPPGCanvas; const R: TRect;
+      const Style: TPPGSurfaceStyle; PPI: Integer); virtual;
+    { IPPGHintRenderer }
+    procedure DrawHint(const Canvas: IPPGCanvas; const R: TRect; const Style: TPPGSurfaceStyle;
+      PPI: Integer); virtual;
+    procedure DrawTip(const Canvas: IPPGCanvas; const Body: TRect; const Tail: array of TPoint;
+      const Style: TPPGSurfaceStyle; PPI: Integer); virtual;
+    { IPPGMenuRenderer - Standard: Rahmen und Hervorhebung wie die Listen-Popups }
+    procedure DrawMenuFrame(const Canvas: IPPGCanvas; const R: TRect;
+      const ListStyle: TPPGSurfaceStyle; PPI: Integer); virtual;
+    procedure DrawMenuItem(const Canvas: IPPGCanvas; const R: TRect;
+      const ListStyle, HighlightStyle: TPPGSurfaceStyle; Hot: Single; PPI: Integer); virtual;
+    procedure DrawMenuSeparator(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
+      PPI: Integer); virtual;
+    procedure DrawMenuCheck(const Canvas: IPPGCanvas; const R: TRect; Radio: Boolean;
+      Color: TColor; PPI: Integer); virtual;
+    procedure DrawMenuSubArrow(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
+      RightToLeft: Boolean; PPI: Integer); virtual;
+    procedure DrawMenuBar(const Canvas: IPPGCanvas; const R: TRect;
+      const Style: TPPGSurfaceStyle; PPI: Integer); virtual;
+    procedure DrawMenuBarItem(const Canvas: IPPGCanvas; const R: TRect;
+      const Style, HighlightStyle: TPPGSurfaceStyle; Hot: Single; Pressed: Boolean;
+      PPI: Integer); virtual;
   end;
 
   TPPGRendererClass = class of TPPGRendererBase;
@@ -136,7 +164,7 @@ implementation
 uses
   PPG.Lang,
   System.SysUtils, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler,
-  PPG.Render.Gdi, PPG.Render.GdiPlus;
+  PPG.Render.Gdi, PPG.Render.GdiPlus, PPG.Render.Shapes;
 
 type
   TRendererEntry = class
@@ -572,6 +600,21 @@ begin
         Pts[1] := Point(CX, CY + Quarter);
         Pts[2] := Point(CX + Half, CY - Quarter);
         Canvas.DrawPolyline(Pts, W, Color, 255);
+      end;
+    fgReveal:
+      begin
+        // Auge: flache Ellipse mit Pupille
+        Canvas.FrameRoundRect(Rect(CX - Half - Quarter, CY - Quarter - 1, CX + Half + Quarter + 1,
+          CY + Quarter + 2), Quarter + 1, W, Color, 255);
+        Canvas.FillEllipse(Rect(CX - Quarter, CY - Quarter, CX + Quarter + 1, CY + Quarter + 1),
+          Color, 255);
+      end;
+    fgBrowse:
+      begin
+        // Drei Punkte ("...")
+        Canvas.FillEllipse(Rect(CX - Half - W, CY - W, CX - Half + W, CY + W), Color, 255);
+        Canvas.FillEllipse(Rect(CX - W, CY - W, CX + W, CY + W), Color, 255);
+        Canvas.FillEllipse(Rect(CX + Half - W, CY - W, CX + Half + W, CY + W), Color, 255);
       end;
   end;
 end;
@@ -1037,6 +1080,210 @@ begin
   D := (R.Bottom - R.Top) * 3;
   Dot := Rect(R.Left, (R.Top + R.Bottom - D) div 2, R.Left + D, (R.Top + R.Bottom + D) div 2);
   Canvas.FrameEllipse(Dot, R.Bottom - R.Top, Color, 255);
+end;
+
+procedure TPPGRendererBase.DrawChartBar(const Canvas: IPPGCanvas; const R: TRect;
+  Color: TColor; Hot: Single; Vertical, Negative: Boolean; PPI: Integer);
+var
+  Rad: Integer;
+  Base: TRect;
+  C: TColor;
+begin
+  if IsRectEmpty(R) then
+    Exit;
+  C := Color;
+  if Hot > 0 then
+    C := PPGBlendColor(Color, clWhite, 0.25 * Hot);
+  Rad := PPGScale(3, PPI);
+  if Vertical then
+  begin
+    if Rad > (R.Right - R.Left) div 2 then
+      Rad := (R.Right - R.Left) div 2;
+    if Rad > R.Bottom - R.Top then
+      Rad := R.Bottom - R.Top;
+  end
+  else
+  begin
+    if Rad > (R.Bottom - R.Top) div 2 then
+      Rad := (R.Bottom - R.Top) div 2;
+    if Rad > R.Right - R.Left then
+      Rad := R.Right - R.Left;
+  end;
+  Canvas.FillRoundRect(R, Rad, C, 255);
+  if Rad <= 0 then
+    Exit;
+  // Basisseite eckig: dort schliesst der Balken an die Achse an
+  Base := R;
+  if Vertical and not Negative then
+    Base.Top := R.Bottom - Rad
+  else if Vertical then
+    Base.Bottom := R.Top + Rad
+  else if not Negative then
+    Base.Right := R.Left + Rad
+  else
+    Base.Left := R.Right - Rad;
+  Canvas.FillRoundRect(Base, 0, C, 255);
+end;
+
+procedure TPPGRendererBase.DrawChartMarker(const Canvas: IPPGCanvas; const Center: TPoint;
+  Radius: Integer; Color, Ring: TColor; PPI: Integer);
+var
+  R: TRect;
+  W: Integer;
+begin
+  if Radius <= 0 then
+    Exit;
+  W := PPGScale(2, PPI);
+  R := Rect(Center.X - Radius - W, Center.Y - Radius - W, Center.X + Radius + W,
+    Center.Y + Radius + W);
+  Canvas.FillEllipse(R, Ring, 255);
+  R := Rect(Center.X - Radius, Center.Y - Radius, Center.X + Radius, Center.Y + Radius);
+  Canvas.FillEllipse(R, Color, 255);
+end;
+
+procedure TPPGRendererBase.DrawChartTooltip(const Canvas: IPPGCanvas; const R: TRect;
+  const Style: TPPGSurfaceStyle; PPI: Integer);
+var
+  Shadow: TRect;
+begin
+  if IsRectEmpty(R) then
+    Exit;
+  // Weicher Schatten als Abhebung (Popup-Ebene)
+  Shadow := R;
+  OffsetRect(Shadow, 0, PPGScale(2, PPI));
+  Canvas.FillRoundRect(Shadow, Style.Rounding, clBlack, 24);
+  Canvas.FillRoundRect(R, Style.Rounding, Style.Color, 255);
+  if Style.BorderWidth > 0 then
+    Canvas.FrameRoundRect(R, Style.Rounding, Style.BorderWidth, Style.BorderColor, 255);
+end;
+
+procedure TPPGRendererBase.DrawHint(const Canvas: IPPGCanvas; const R: TRect;
+  const Style: TPPGSurfaceStyle; PPI: Integer);
+begin
+  // Kein eigener Schatten: das Hint-Fenster hat CS_DROPSHADOW
+  if IsRectEmpty(R) then
+    Exit;
+  Canvas.FillRoundRect(R, Style.Rounding, Style.Color, 255);
+  if Style.BorderWidth > 0 then
+    Canvas.FrameRoundRect(R, Style.Rounding, Style.BorderWidth, Style.BorderColor, 255);
+end;
+
+procedure TPPGRendererBase.DrawTip(const Canvas: IPPGCanvas; const Body: TRect;
+  const Tail: array of TPoint; const Style: TPPGSurfaceStyle; PPI: Integer);
+var
+  Fill: array[0..2] of TPoint;
+  D: Integer;
+begin
+  if IsRectEmpty(Body) then
+    Exit;
+  Canvas.FillRoundRect(Body, Style.Rounding, Style.Color, 255);
+  if Style.BorderWidth > 0 then
+    Canvas.FrameRoundRect(Body, Style.Rounding, Style.BorderWidth, Style.BorderColor, 255);
+  if Length(Tail) <> 3 then
+    Exit;
+  // Pfeil: Basis um die Rahmenbreite in die Flaeche ziehen, damit er den
+  // Rahmen an der Ansatzstelle ueberdeckt (eine durchgehende Kontur)
+  D := Style.BorderWidth + 1;
+  Fill[0] := Tail[0];
+  Fill[1] := Tail[1];
+  Fill[2] := Tail[2];
+  if Tail[0].Y = Tail[2].Y then
+  begin
+    if Tail[1].Y < Tail[0].Y then
+      D := -D;
+    Inc(Fill[0].Y, -D);
+    Inc(Fill[2].Y, -D);
+  end
+  else
+  begin
+    if Tail[1].X < Tail[0].X then
+      D := -D;
+    Inc(Fill[0].X, -D);
+    Inc(Fill[2].X, -D);
+  end;
+  PPGFillPolygon(Canvas, Fill, Style.Color, 255);
+  if Style.BorderWidth > 0 then
+    Canvas.DrawPolyline(Tail, Style.BorderWidth, Style.BorderColor, 255);
+end;
+
+procedure TPPGRendererBase.DrawMenuFrame(const Canvas: IPPGCanvas; const R: TRect;
+  const ListStyle: TPPGSurfaceStyle; PPI: Integer);
+begin
+  DrawPopupFrame(Canvas, R, ListStyle, PPI);
+end;
+
+procedure TPPGRendererBase.DrawMenuItem(const Canvas: IPPGCanvas; const R: TRect;
+  const ListStyle, HighlightStyle: TPPGSurfaceStyle; Hot: Single; PPI: Integer);
+begin
+  if Hot > 0 then
+    DrawListItem(Canvas, R, ListStyle, HighlightStyle, False, Hot, PPI);
+end;
+
+procedure TPPGRendererBase.DrawMenuSeparator(const Canvas: IPPGCanvas; const R: TRect;
+  Color: TColor; PPI: Integer);
+var
+  Y, W: Integer;
+begin
+  W := PPGScale(1, PPI);
+  if W < 1 then
+    W := 1;
+  Y := (R.Top + R.Bottom) div 2;
+  Canvas.FillRoundRect(Rect(R.Left, Y, R.Right, Y + W), 0, Color, 255);
+end;
+
+procedure TPPGRendererBase.DrawMenuCheck(const Canvas: IPPGCanvas; const R: TRect;
+  Radio: Boolean; Color: TColor; PPI: Integer);
+var
+  D: Integer;
+  C: TPoint;
+begin
+  if Radio then
+  begin
+    D := (R.Right - R.Left) div 3;
+    C := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+    Canvas.FillEllipse(Rect(C.X - D div 2, C.Y - D div 2, C.X + (D + 1) div 2,
+      C.Y + (D + 1) div 2), Color, 255);
+  end
+  else
+    DrawCheckMark(Canvas, R, Color, PPI);
+end;
+
+procedure TPPGRendererBase.DrawMenuSubArrow(const Canvas: IPPGCanvas; const R: TRect;
+  Color: TColor; RightToLeft: Boolean; PPI: Integer);
+var
+  S, CX, CY, W: Integer;
+begin
+  S := PPGScale(3, PPI);
+  W := PPGScale(1, PPI);
+  if W < 1 then
+    W := 1;
+  CX := (R.Left + R.Right) div 2;
+  CY := (R.Top + R.Bottom) div 2;
+  if RightToLeft then
+    Canvas.DrawPolyline([Point(CX + S div 2, CY - S), Point(CX - S div 2, CY),
+      Point(CX + S div 2, CY + S)], W, Color, 255)
+  else
+    Canvas.DrawPolyline([Point(CX - S div 2, CY - S), Point(CX + S div 2, CY),
+      Point(CX - S div 2, CY + S)], W, Color, 255);
+end;
+
+procedure TPPGRendererBase.DrawMenuBar(const Canvas: IPPGCanvas; const R: TRect;
+  const Style: TPPGSurfaceStyle; PPI: Integer);
+begin
+  Canvas.FillRoundRect(R, 0, Style.Color, 255);
+end;
+
+procedure TPPGRendererBase.DrawMenuBarItem(const Canvas: IPPGCanvas; const R: TRect;
+  const Style, HighlightStyle: TPPGSurfaceStyle; Hot: Single; Pressed: Boolean;
+  PPI: Integer);
+var
+  H: Single;
+begin
+  H := Hot;
+  if Pressed then
+    H := 1;
+  if H > 0 then
+    DrawListItem(Canvas, R, Style, HighlightStyle, False, H, PPI);
 end;
 
 { TPPGRendererRegistry }

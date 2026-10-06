@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..38] of PResStringRec = (
+  AllTexts: array[0..128] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -41,7 +41,31 @@ const
     @SPPGAccPress, @SPPGAccCheck, @SPPGAccUncheck, @SPPGAccSelect, @SPPGAccOpen, @SPPGAccClose,
     @SPPGGridFilterHint, @SPPGSortAscending, @SPPGSortDescending, @SPPGDBGridConfirmDelete,
     @SPPGAccJump, @SPPGAccExpand, @SPPGAccCollapse, @SPPGAccOn, @SPPGAccOff, @SPPGAccToggle,
-    @SPPGNavMenu, @SPPGMoreOptions, @SPPGNotifications, @SPPGPercentFormat);
+    @SPPGNavMenu, @SPPGMoreOptions, @SPPGNotifications, @SPPGPercentFormat,
+    @SPPGInvalidValueList, @SPPGChartNoData, @SPPGSparklineSummary, @SPPGGaugeRangeInvalid,
+    @SPPGKpiChange, @SPPGChartSeriesDefault, @SPPGChartPointName, @SPPGChartSeriesName,
+    @SPPGChartSeriesHidden,
+    @SPPGEditUndo, @SPPGEditCut, @SPPGEditCopy, @SPPGEditPaste, @SPPGEditDelete,
+    @SPPGEditSelectAll,
+    @SPPGDlgOK, @SPPGDlgCancel, @SPPGDlgYes, @SPPGDlgNo, @SPPGDlgAbort, @SPPGDlgRetry,
+    @SPPGDlgIgnore, @SPPGDlgAll, @SPPGDlgNoToAll, @SPPGDlgYesToAll, @SPPGDlgHelp, @SPPGDlgClose,
+    @SPPGDlgWarning, @SPPGDlgError, @SPPGDlgInformation, @SPPGDlgConfirm, @SPPGDlgShowDetails,
+    @SPPGDlgHideDetails, @SPPGWizBack, @SPPGWizNext, @SPPGWizFinish, @SPPGWizStep,
+    @SPPGNumberRequired, @SPPGNumberInvalid, @SPPGMaskInvalid, @SPPGCapsLockOn,
+    @SPPGFileNotFound, @SPPGFolderNotFound,
+    @SPPGColorNone, @SPPGColorDefault, @SPPGColorMore, @SPPGColorRecent, @SPPGColorStandard,
+    @SPPGColorTheme, @SPPGColorSystem, @SPPGColorApply,
+    @SPPGSelectAll, @SPPGCheckedCount, @SPPGAccRemove,
+    @SPPGGridSortAsc, @SPPGGridSortDesc, @SPPGGridSortNone, @SPPGGridHideColumn,
+    @SPPGGridColumnChooser, @SPPGGridShowAll, @SPPGGridBestFit, @SPPGGridBestFitAll,
+    @SPPGGridGroupBy, @SPPGGridUngroup, @SPPGGridGroupPanelHint, @SPPGGridExpandAll,
+    @SPPGGridCollapseAll, @SPPGGridGroupName,
+    @SPPGPrintFooterDefault, @SPPGPrintNoPrinter, @SPPGPrinterNotFound, @SPPGPreviewTitle,
+    @SPPGPreviewPrint, @SPPGPreviewPageSetup, @SPPGPreviewClose, @SPPGPreviewPage,
+    @SPPGPreviewZoomPage, @SPPGPreviewZoomWidth, @SPPGPageSetupTitle, @SPPGPageSetupPortrait,
+    @SPPGPageSetupLandscape, @SPPGPageSetupFit, @SPPGPageSetupRepeat, @SPPGPageSetupGridLines,
+    @SPPGPageSetupColors, @SPPGPageSetupMargins, @SPPGPageSetupHeader, @SPPGPageSetupFooter,
+    @SPPGXlsxInvalid, @SPPGPdfPrinterMissing);
 
 var
   GChanges: Integer;

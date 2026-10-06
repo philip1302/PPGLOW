@@ -79,6 +79,8 @@ type
     procedure SaveScreenCapture(const FileName: string);
     procedure SaveToastCapture(const FileName: string);
     procedure SaveDatePopupCapture(const FileName: string);
+    /// Registriertes Diagramm (Key) ueber SaveToPng speichern. False = unbekannt.
+    function SaveChartPng(const Key, FileName: string): Boolean;
     /// Selbsttest aller Seiten (/selftest datei.txt). Ergebnis = Anzahl Fehler.
     function RunSelfTest(const FileName: string): Integer;
     /// Katalog: Seite zum Suchtext (Control-Name oder Stichwort), -1 = keine.
@@ -100,6 +102,8 @@ const
   PgAppearance = 10;
   PgEvents = 11;
   PgDatabase = 12;
+  PgCharts = 13;
+  PgMenus = 14;
 
 implementation
 
@@ -107,7 +111,8 @@ uses
   Winapi.Messages, Winapi.DwmApi, System.Types, System.Math, Vcl.Imaging.pngimage,
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
-  PPG.IconFont, DemoPages1, DemoPages2, DemoPages3, DemoPages4;
+  PPG.Chart, PPG.IconFont, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
+  DemoPages5, DemoPages6, PPG.Hints;
 
 type
   TPageDef = record
@@ -118,7 +123,7 @@ type
   end;
 
 const
-  PageDefs: array[0..12] of TPageDef = (
+  PageDefs: array[0..14] of TPageDef = (
     (Caption: 'Start'; Icon: $E80F; Group: ''; Footer: False),
     (Caption: 'Buttons & Befehle'; Icon: $E8B0; Group: 'Grundlagen'; Footer: False),
     (Caption: 'Auswahl & Regler'; Icon: $E9E9; Group: ''; Footer: False),
@@ -131,12 +136,14 @@ const
     (Caption: 'R{ue}ckmeldung'; Icon: $EA8F; Group: ''; Footer: False),
     (Caption: 'Darstellung'; Icon: $E771; Group: ''; Footer: True),
     (Caption: 'Ereignisse'; Icon: $E81C; Group: ''; Footer: True),
-    (Caption: 'Datenbank'; Icon: $E8F1; Group: ''; Footer: False));
+    (Caption: 'Datenbank'; Icon: $E8F1; Group: ''; Footer: False),
+    (Caption: 'Diagramme'; Icon: $E9D2; Group: ''; Footer: False),
+    (Caption: 'Men{ue}s & Dialoge'; Icon: $E8BD; Group: ''; Footer: False));
 
   // Reihenfolge in der Navigation (neue Seiten haengen hinten an, damit die
   // Nummern fuer /page gleich bleiben)
-  NavOrder: array[0..12] of Integer = (PgStart, PgButtons, PgChoice, PgForm, PgLists,
-    PgExplorer, PgGrid, PgDatabase, PgDates, PgLayout, PgFeedback, PgAppearance, PgEvents);
+  NavOrder: array[0..14] of Integer = (PgStart, PgButtons, PgChoice, PgForm, PgLists,
+    PgExplorer, PgGrid, PgDatabase, PgCharts, PgMenus, PgDates, PgLayout, PgFeedback, PgAppearance, PgEvents);
 
 type
   TCatalogEntry = record
@@ -147,7 +154,7 @@ type
 
 const
   // Katalog fuer die Suche oben: Control, Stichworte, Seite
-  Catalog: array[0..42] of TCatalogEntry = (
+  Catalog: array[0..54] of TCatalogEntry = (
     (Name: 'TPPGButton'; Keywords: 'Schaltfl{ae}che, Befehl, Split, Akzent'; Page: PgButtons),
     (Name: 'TPPGToolBar'; Keywords: 'Werkzeugleiste, Symbolleiste'; Page: PgButtons),
     (Name: 'TPPGCheckBox'; Keywords: 'Kontrollk{ae}stchen, Haken'; Page: PgChoice),
@@ -175,6 +182,11 @@ const
     (Name: 'TPPGDBComboBox'; Keywords: 'Datenbank, TDBComboBox'; Page: PgDatabase),
     (Name: 'TPPGDBLookupComboBox'; Keywords: 'Datenbank, Nachschlagen, Lookup'; Page: PgDatabase),
     (Name: 'TPPGDBDatePicker'; Keywords: 'Datenbank, Datum'; Page: PgDatabase),
+    (Name: 'TPPGDBChart'; Keywords: 'Datenbank, Diagramm aus Datenmenge'; Page: PgDatabase),
+    (Name: 'TPPGChart'; Keywords: 'Diagramm, S{ae}ulen, Linie, Kreis, Ring, Balken, Graph'; Page: PgCharts),
+    (Name: 'TPPGSparkline'; Keywords: 'Verlauf, Mini-Diagramm, Trend'; Page: PgCharts),
+    (Name: 'TPPGGauge'; Keywords: 'Tacho, Anzeige, Auslastung, Bogen'; Page: PgCharts),
+    (Name: 'TPPGKpiTile'; Keywords: 'Kennzahl, Kachel, Dashboard, KPI'; Page: PgCharts),
     (Name: 'TPPGCalendar'; Keywords: 'Kalender, Monat'; Page: PgDates),
     (Name: 'TPPGDatePicker'; Keywords: 'Datum, Termin'; Page: PgDates),
     (Name: 'TPPGTimePicker'; Keywords: 'Uhrzeit, Zeit'; Page: PgDates),
@@ -190,7 +202,14 @@ const
     (Name: 'TPPGNotificationCenter'; Keywords: 'Toast, Benachrichtigung'; Page: PgFeedback),
     (Name: 'TPPGStyleManager'; Keywords: 'Preset, Dark Mode, VCL-Style, Sprache'; Page: PgAppearance),
     (Name: 'TPPGStatusBar'; Keywords: 'Statusleiste, Protokoll'; Page: PgEvents),
-    (Name: 'PPG.Lang'; Keywords: '{Ue}bersetzung, Sprache, Deutsch'; Page: PgAppearance));
+    (Name: 'PPG.Lang'; Keywords: '{Ue}bersetzung, Sprache, Deutsch'; Page: PgAppearance),
+    (Name: 'TPPGMenuBar'; Keywords: 'Men{ue}leiste, Hauptmen{ue}, TMainMenu'; Page: PgMenus),
+    (Name: 'TPPGPopupMenu'; Keywords: 'Kontextmen{ue}, Rechtsklick, TPopupMenu'; Page: PgMenus),
+    (Name: 'TPPGHintManager'; Keywords: 'Hint, Tooltip, Kurzinfo'; Page: PgMenus),
+    (Name: 'TPPGTeachingTip'; Keywords: 'Sprechblase, Tipp, Tour, Einf{ue}hrung'; Page: PgMenus),
+    (Name: 'TPPGTaskDialog'; Keywords: 'Dialog, TTaskDialog, Command-Link'; Page: PgMenus),
+    (Name: 'PPGMessageDlg'; Keywords: 'Meldung, MessageDlg, ShowMessage, InputQuery'; Page: PgMenus),
+    (Name: 'TPPGWizard'; Keywords: 'Assistent, Schritte, Wizard'; Page: PgMenus));
 
 function CatalogText(Index: Integer): string;
 begin
@@ -212,6 +231,8 @@ begin
     PgFeedback: Result := TDemoFeedbackPage;
     PgAppearance: Result := TDemoAppearancePage;
     PgDatabase: Result := TDemoDatabasePage;
+    PgCharts: Result := TDemoChartsPage;
+    PgMenus: Result := TDemoMenusPage;
   else
     Result := TDemoEventsPage;
   end;
@@ -236,6 +257,10 @@ begin
   // Formular und Titelleiste folgen dem Dark Mode
   TPPGTheme.StyleForms := True;
   TPPGTheme.OnChange := ThemeChanged;
+  // Hints der Demo im Suite-Stil ("Titel|Text")
+  DemoHints := TPPGHintManager.Create(Self);
+  DemoHints.Preset := DemoPreset;
+  ShowHint := True;
   FNotify := TPPGNotificationCenter.Create(Self);
   FNotify.Preset := DemoPreset;
   FNotify.OnShow := ToastShown;
@@ -252,6 +277,7 @@ end;
 
 destructor TDemoForm.Destroy;
 begin
+  DemoHints := nil;
   TPPGTheme.OnChange := nil;
   TPPGErrorHandler.OnError := nil;
   FreeAndNil(FSpecial);
@@ -550,6 +576,8 @@ begin
     Exit;
   DemoPreset := AName;
   FNotify.Preset := AName;
+  if DemoHints <> nil then
+    DemoHints.Preset := AName;
   // Controls mit eigenem StyleManager (Vorschau-Kacheln) behalten ihr Preset
   for I := 0 to ComponentCount - 1 do
     if (Components[I] is TPPGCustomControl) and
@@ -615,6 +643,16 @@ end;
 procedure TDemoForm.RegisterSpecial(const Key: string; C: TControl);
 begin
   FSpecial.AddOrSetValue(Key, C);
+end;
+
+function TDemoForm.SaveChartPng(const Key, FileName: string): Boolean;
+var
+  C: TControl;
+begin
+  C := SpecialControl(Key);
+  Result := C is TPPGCustomChart;
+  if Result then
+    TPPGCustomChart(C).SaveToPng(FileName);
 end;
 
 function TDemoForm.SpecialControl(const Key: string): TControl;

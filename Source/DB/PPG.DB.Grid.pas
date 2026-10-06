@@ -23,7 +23,16 @@ unit PPG.DB.Grid;
     loescht (mit Rueckfrage bei dgConfirmDelete), Esc bricht ab.
   - Sortieren ist Sache der Datenmenge: Klick auf den Titel loest
     OnTitleClick aus (dgTitleClick).
-  - Nicht unterstuetzt: dgMultiSelect, verschiebbare Spalten, Unterspalten
+  - Spalten verschieben (dgColumnResize, wie TDBGrid), ausblenden, Layout
+    speichern (Schluessel = Feldname) wie im Grid (Phase 13g); automatische
+    Spalten behalten Position, Sichtbarkeit und Breite beim Neuaufbau.
+  - Summenzeile (ShowFooter) aus der Datenmenge: Column.FooterField (z.B. ein
+    TAggregateField) oder OnGetFooterText. Das Grid liest dafuer nie die
+    ganze Datenmenge (Paint-Regel aus Phase 9).
+  - Drucken und Export (IPPGTableSource): die Datenmenge wird einmal mit
+    DisableControls und Lesezeichen durchlaufen (hoechstens ExportMaxRecords).
+  - Nicht unterstuetzt: Gruppieren (braeuchte die ganze Datenmenge im Speicher;
+    GROUP BY in der Abfrage nutzen), dgMultiSelect, Unterspalten
     (ADT/Array-Felder). }
 
 {$I ..\PPG.inc}
@@ -33,7 +42,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Data.DB,
-  PPG.Types, PPG.Grid;
+  PPG.Types, PPG.Grid, PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds;
 
 type
   TPPGCustomDBGrid = class;
@@ -42,6 +51,7 @@ type
   TPPGDBGridColumn = class(TPPGGridColumn)
   private
     FFieldName: string;
+    FFooterField: string;
     procedure SetFieldName(const Value: string);
   protected
     function GetDisplayName: string; override;
@@ -49,6 +59,8 @@ type
     procedure Assign(Source: TPersistent); override;
   published
     property FieldName: string read FFieldName write SetFieldName;
+    /// Feld fuer die Summenzeile (z.B. TAggregateField der Datenmenge).
+    property FooterField: string read FFooterField write FFooterField;
   end;
 
   /// Verbindung des Grids zur Datenmenge.
@@ -70,12 +82,16 @@ type
 
   /// Wie TDBGridClickEvent (ohne Sender), damit migrierte Handler passen.
   TPPGDBGridColumnEvent = procedure(Column: TPPGDBGridColumn) of object;
+  /// Text der Summenzeile fuer eine Spalte (nach FooterField).
+  TPPGDBGridFooterEvent = procedure(Sender: TObject; Column: TPPGDBGridColumn;
+    var Text: string) of object;
 
   TPPGCustomDBGrid = class(TPPGCustomGrid)
   private
     FDataLink: TPPGGridDataLink;
     FDBOptions: TDBGridOptions;
     FAutoColumns: TPPGGridColumns;  // ohne Columns: je sichtbares Feld eine
+    FAutoState: TPPGGridColumns;    // Zustand der Auto-Spalten (Position, Breite ...)
     FFields: array of TField;       // Feld je Datenspalte
     FCache: array of array of string; // Puffer-Zeile x Datenspalte
     FSyncing: Integer;
@@ -83,6 +99,11 @@ type
     FReadOnly: Boolean;
     FOnTitleClick: TPPGDBGridColumnEvent;
     FOnCellClick: TPPGDBGridColumnEvent;
+    FOnGetFooterText: TPPGDBGridFooterEvent;
+    FExportMaxRecords: Integer;
+    FSnap: array of array of Variant;   // Export: Werte [Satz][Feld]
+    FSnapText: array of array of string;
+    FSnapValid: Boolean;
     function GetDataSource: TDataSource;
     procedure SetDataSource(Value: TDataSource);
     procedure SetDBOptions(const Value: TDBGridOptions);
@@ -111,6 +132,23 @@ type
     { Erweiterungspunkte des Grids }
     function CreateColumns: TPPGGridColumns; override;
     function ColumnOf(ACol: Integer): TPPGGridColumn; override;
+    function ColumnKey(ACol: Integer): string; override;
+    function CanGroup: Boolean; override;
+    function ColumnCollection: TPPGGridColumns; override;
+    function KindOf(ACol: Integer): IPPGCellKind; override;
+    function CachedFooterText(ACol: Integer): string; override;
+    { Druck und Export: Felder der Datenmenge (ohne Indikator) }
+    procedure EnsureSnapshot;
+    function TableColCount: Integer; override;
+    function TableRowCount: Integer; override;
+    function TableColumn(ACol: Integer): TPPGTableColumnInfo; override;
+    function TableCellText(ACol, ARow: Integer): string; override;
+    function TableCellValue(ACol, ARow: Integer): Variant; override;
+    function PrintCellStyle(ACol, ARow: Integer; const Text: string): TPPGGridCellStyle; override;
+    function PrintCellKind(ACol: Integer; out Ctx: TPPGCellKindContext): IPPGCellKind; override;
+    function ExportAggregate(ACol: Integer): TPPGGridAggregate; override;
+    function ExportMerges: TArray<TRect>; override;
+    function ExportOutline: TArray<TPPGOutlineRow>; override;
     procedure ColumnsChanged; override;
     function RowScrollY: Integer; override;
     function RowsContentHeight: Integer; override;
@@ -137,6 +175,9 @@ type
     property ReadOnly: Boolean read FReadOnly write FReadOnly default False;
     property OnTitleClick: TPPGDBGridColumnEvent read FOnTitleClick write FOnTitleClick;
     property OnCellClick: TPPGDBGridColumnEvent read FOnCellClick write FOnCellClick;
+    property OnGetFooterText: TPPGDBGridFooterEvent read FOnGetFooterText write FOnGetFooterText;
+    /// Druck/Export lesen hoechstens so viele Saetze.
+    property ExportMaxRecords: Integer read FExportMaxRecords write FExportMaxRecords default 100000;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -157,6 +198,12 @@ type
     property Appearance;
     property Animation;
     property Columns;
+    property Bands;
+    property ConditionalFormats;
+    property ExportMaxRecords;
+    property FixedColsRight;
+    property HeaderMenu;
+    property ShowFooter;
     property DataSource;
     property Options;
     property ReadOnly;
@@ -189,6 +236,7 @@ type
     property TabStop default True;
     property Visible;
     property OnCellClick;
+    property OnColumnMoved;
     property OnContextPopup;
     property OnDblClick;
     property OnDragDrop;
@@ -198,6 +246,9 @@ type
     property OnEndDrag;
     property OnEnter;
     property OnExit;
+    property OnGetCellStyle;
+    property OnGetFooterText;
+    property OnHeaderMenu;
     property OnKeyDown;
     property OnKeyPress;
     property OnKeyUp;
@@ -215,7 +266,8 @@ implementation
 
 uses
   PPG.Lang,
-  System.Math, System.UITypes, Vcl.Dialogs, PPG.Consts, PPG.Appearance, PPG.Controls.Scroll;
+  System.Math, System.UITypes, System.Variants, Vcl.Dialogs, PPG.Consts, PPG.Appearance,
+  PPG.Controls.Scroll;
 
 const
   // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
@@ -230,7 +282,10 @@ const
 procedure TPPGDBGridColumn.Assign(Source: TPersistent);
 begin
   if Source is TPPGDBGridColumn then
+  begin
     FFieldName := TPPGDBGridColumn(Source).FFieldName;
+    FFooterField := TPPGDBGridColumn(Source).FFooterField;
+  end;
   inherited Assign(Source);
 end;
 
@@ -331,6 +386,8 @@ begin
   FDBOptions := [dgEditing, dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines,
     dgTabs, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack];
   FAutoColumns := TPPGGridColumns.Create(Self, TPPGDBGridColumn);
+  FAutoState := TPPGGridColumns.Create(nil, TPPGDBGridColumn);
+  FExportMaxRecords := 100000;
   FDataLink := TPPGGridDataLink.Create(Self);
   // Sortieren ist Sache der Datenmenge
   SortOnHeaderClick := False;
@@ -347,6 +404,7 @@ begin
     FDataLink.FGrid := nil;
   FreeAndNil(FDataLink);
   FreeAndNil(FAutoColumns);
+  FreeAndNil(FAutoState);
   inherited Destroy;
 end;
 
@@ -395,6 +453,8 @@ begin
     G := G + [goVertLine, goFixedVertLine];
   if dgRowLines in Value then
     G := G + [goHorzLine, goFixedHorzLine];
+  if dgColumnResize in Value then
+    G := G + [goColSizing, goColMoving];
   if dgTabs in Value then
     Include(G, goTabs);
   if dgRowSelect in Value then
@@ -450,7 +510,7 @@ function TPPGCustomDBGrid.VisibleDataRows: Integer;
 var
   V: TRect;
 begin
-  V := ViewRect;
+  V := GridViewRect;
   Result := ((V.Bottom - V.Top) - FixedHeight) div DataRowHeight;
   if Result < 1 then
     Result := 1;
@@ -493,7 +553,9 @@ end;
 procedure TPPGCustomDBGrid.BuildColumns;
 var
   DS: TDataSet;
-  I, N, W: Integer;
+  I, N, W, K: Integer;
+  Keep: TStringList;
+  OldC: TPPGDBGridColumn;
   F: TField;
   C: TPPGDBGridColumn;
   CharW: Integer;
@@ -501,6 +563,7 @@ begin
   if FLayoutBusy or (csLoading in ComponentState) then
     Exit;
   FLayoutBusy := True;
+  Keep := TStringList.Create;
   try
     // Titel und Indikator
     if dgIndicator in FDBOptions then
@@ -524,6 +587,14 @@ begin
     begin
       FAutoColumns.BeginUpdate;
       try
+        // Position, Sichtbarkeit und Breite je Feld merken (Verschieben,
+        // Ausblenden und Breite aendern bauen die Spalten neu auf)
+        // (auch ueber eine geschlossene Datenmenge hinweg: FAutoState)
+        if FAutoColumns.Count > 0 then
+          FAutoState.Assign(FAutoColumns);
+        Keep.Clear;
+        for I := 0 to FAutoState.Count - 1 do
+          Keep.Add(TPPGDBGridColumn(FAutoState.Items[I]).FieldName);
         FAutoColumns.Clear;
         if DS <> nil then
         begin
@@ -549,6 +620,16 @@ begin
             C.Width := W;
             if F.DataType = ftBoolean then
               C.EditorKind := gekCheck;
+            K := Keep.IndexOf(F.FieldName);
+            if K >= 0 then
+            begin
+              OldC := TPPGDBGridColumn(FAutoState.Items[K]);
+              C.DisplayIndex := OldC.DisplayIndex;
+              C.Visible := OldC.Visible;
+              C.Width := OldC.Width;
+              C.Band := OldC.Band;
+              C.FooterField := OldC.FooterField;
+            end;
           end;
         end;
       finally
@@ -567,6 +648,7 @@ begin
     if Col < FixedCols then
       Col := FixedCols;
   finally
+    Keep.Free;
     FLayoutBusy := False;
   end;
   UpdateBufferCount;
@@ -633,7 +715,7 @@ begin
   try
     // Fokus auf die aktive Zeile des Puffers
     if FixedRows + FDataLink.ActiveRecord < RowCount then
-      MoveFocus(Col, VisualRow(FixedRows + FDataLink.ActiveRecord), False, False);
+      MoveFocus(FocusCol, VisualRow(FixedRows + FDataLink.ActiveRecord), False, False);
     // Leiste auf die Lage in der Datenmenge (Inhaltshoehe zuerst neu)
     InvalidateGeometry;
     EnsureGeometry;
@@ -681,6 +763,7 @@ procedure TPPGCustomDBGrid.DataChanged;
 var
   N: Integer;
 begin
+  FSnapValid := False;
   if (csDestroying in ComponentState) or FLayoutBusy then
     Exit;
   if not EditorMode then
@@ -719,6 +802,24 @@ end;
 
 { ---- Erweiterungspunkte des Grids ---- }
 
+function TPPGCustomDBGrid.CanGroup: Boolean;
+begin
+  // Kein Gruppieren im DB-Grid (Phase 13: Datenmenge bleibt die Quelle)
+  Result := False;
+end;
+
+function TPPGCustomDBGrid.ColumnKey(ACol: Integer): string;
+var
+  C: TPPGGridColumn;
+begin
+  // Layout ueber Feldnamen: bleibt gueltig, wenn sich die Felder verschieben
+  C := ColumnOf(ACol);
+  if (C is TPPGDBGridColumn) and (TPPGDBGridColumn(C).FieldName <> '') then
+    Result := TPPGDBGridColumn(C).FieldName
+  else
+    Result := inherited ColumnKey(ACol);
+end;
+
 function TPPGCustomDBGrid.ColumnOf(ACol: Integer): TPPGGridColumn;
 var
   I: Integer;
@@ -736,11 +837,193 @@ begin
     Result := FAutoColumns[I];
 end;
 
+function TPPGCustomDBGrid.KindOf(ACol: Integer): IPPGCellKind;
+var
+  F: TField;
+begin
+  // Boolean-Felder als Kaestchen, auch in eigenen Columns ohne EditorKind
+  Result := inherited KindOf(ACol);
+  if Result = nil then
+  begin
+    F := FieldOfCol(ACol);
+    if (F <> nil) and (F.DataType = ftBoolean) then
+      Result := PPGCellKind(ckCheck);
+  end;
+end;
+
+function TPPGCustomDBGrid.ColumnCollection: TPPGGridColumns;
+begin
+  if Columns.Count > 0 then
+    Result := Columns
+  else
+    Result := FAutoColumns;
+end;
+
+function TPPGCustomDBGrid.CachedFooterText(ACol: Integer): string;
+var
+  C: TPPGGridColumn;
+  F: TField;
+begin
+  // Summen liefert die Datenmenge (TAggregateField) oder das Ereignis
+  Result := '';
+  C := ColumnOf(ACol);
+  if not (C is TPPGDBGridColumn) then
+    Exit;
+  if (TPPGDBGridColumn(C).FooterField <> '') and FDataLink.Active then
+  begin
+    F := FDataLink.DataSet.FindField(TPPGDBGridColumn(C).FooterField);
+    if F <> nil then
+    try
+      Result := F.DisplayText;
+    except
+      // Aggregate noch nicht bereit (AggregatesActive = False): leer lassen
+      on E: Exception do
+        Result := '';
+    end;
+  end;
+  if Assigned(FOnGetFooterText) then
+    FOnGetFooterText(Self, TPPGDBGridColumn(C), Result);
+end;
+
+procedure TPPGCustomDBGrid.EnsureSnapshot;
+var
+  DS: TDataSet;
+  BM: TBookmark;
+  N, C, Cols: Integer;
+  F: TField;
+begin
+  if FSnapValid then
+    Exit;
+  FSnap := nil;
+  FSnapText := nil;
+  if not FDataLink.Active then
+  begin
+    FSnapValid := True;
+    Exit;
+  end;
+  DS := FDataLink.DataSet;
+  Cols := TableColCount;
+  // Einmal durch die Datenmenge (Muster aus PPG.DB.Chart): ohne Anzeige-
+  // Aktualisierung, Position danach wieder herstellen
+  DS.DisableControls;
+  BM := DS.GetBookmark;
+  try
+    DS.First;
+    N := 0;
+    while not DS.Eof and (N < FExportMaxRecords) do
+    begin
+      SetLength(FSnap, N + 1);
+      SetLength(FSnapText, N + 1);
+      SetLength(FSnap[N], Cols);
+      SetLength(FSnapText[N], Cols);
+      for C := 0 to Cols - 1 do
+      begin
+        F := FieldOfCol(DataCol(C + FixedCols));
+        if (F = nil) or F.IsNull then
+        begin
+          FSnap[N][C] := Null;
+          FSnapText[N][C] := '';
+        end
+        else
+        begin
+          FSnapText[N][C] := F.DisplayText;
+          if F.DataType in [ftDate, ftTime, ftDateTime, ftTimeStamp] then
+            FSnap[N][C] := VarFromDateTime(F.AsDateTime)
+          else if F.DataType = ftBoolean then
+            FSnap[N][C] := F.AsBoolean
+          else if F.DataType in [ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency, ftBCD,
+            ftLargeint, ftFMTBcd, ftAutoInc, ftShortint, ftByte, ftLongWord, ftExtended,
+            ftSingle] then
+            FSnap[N][C] := F.AsFloat
+          else
+            FSnap[N][C] := F.DisplayText;
+        end;
+      end;
+      Inc(N);
+      DS.Next;
+    end;
+  finally
+    if DS.BookmarkValid(BM) then
+      DS.GotoBookmark(BM);
+    DS.FreeBookmark(BM);
+    DS.EnableControls; // loest DataChanged aus (verwirft den Schnappschuss) ...
+  end;
+  FSnapValid := True; // ... deshalb erst danach gueltig
+end;
+
+function TPPGCustomDBGrid.TableColCount: Integer;
+begin
+  // ohne Indikator
+  Result := VisibleColCount - FixedCols;
+  if Result < 0 then
+    Result := 0;
+end;
+
+function TPPGCustomDBGrid.TableRowCount: Integer;
+begin
+  EnsureSnapshot;
+  Result := Length(FSnap);
+end;
+
+function TPPGCustomDBGrid.TableColumn(ACol: Integer): TPPGTableColumnInfo;
+begin
+  Result := inherited TableColumn(ACol + FixedCols);
+end;
+
+function TPPGCustomDBGrid.TableCellText(ACol, ARow: Integer): string;
+begin
+  EnsureSnapshot;
+  if (ARow >= 0) and (ARow < Length(FSnapText)) and (ACol >= 0) and (ACol < Length(FSnapText[ARow])) then
+    Result := FSnapText[ARow][ACol]
+  else
+    Result := '';
+end;
+
+function TPPGCustomDBGrid.TableCellValue(ACol, ARow: Integer): Variant;
+begin
+  EnsureSnapshot;
+  if (ARow >= 0) and (ARow < Length(FSnap)) and (ACol >= 0) and (ACol < Length(FSnap[ARow])) then
+    Result := FSnap[ARow][ACol]
+  else
+    Result := Null;
+end;
+
+function TPPGCustomDBGrid.PrintCellStyle(ACol, ARow: Integer; const Text: string): TPPGGridCellStyle;
+begin
+  // Bedingte Formate je Feld; OnGetCellStyle bekommt die Satznummer (0-basiert)
+  Result.Reset;
+  if ConditionalFormats.Count > 0 then
+    ConditionalFormats.Apply(DataCol(ACol + FixedCols), Text, Tokens, clWhite, Result);
+  if Assigned(OnGetCellStyle) then
+    OnGetCellStyle(Self, DataCol(ACol + FixedCols), ARow, Result);
+end;
+
+function TPPGCustomDBGrid.PrintCellKind(ACol: Integer; out Ctx: TPPGCellKindContext): IPPGCellKind;
+begin
+  Result := inherited PrintCellKind(ACol + FixedCols, Ctx);
+end;
+
+function TPPGCustomDBGrid.ExportAggregate(ACol: Integer): TPPGGridAggregate;
+begin
+  Result := agNone; // Summen rechnet die Datenmenge
+end;
+
+function TPPGCustomDBGrid.ExportMerges: TArray<TRect>;
+begin
+  SetLength(Result, 0);
+end;
+
+function TPPGCustomDBGrid.ExportOutline: TArray<TPPGOutlineRow>;
+begin
+  SetLength(Result, 0);
+end;
+
 procedure TPPGCustomDBGrid.ColumnsChanged;
 begin
   // Persistente Spalten geaendert: Felder neu zuordnen
   if not (csLoading in ComponentState) and not FLayoutBusy then
     BuildColumns;
+  RebuildColumnMap;
   InvalidateGeometry;
   Invalidate;
 end;
@@ -757,7 +1040,7 @@ var
   N: Int64;
   V: TRect;
 begin
-  V := ViewRect;
+  V := GridViewRect;
   Result := V.Bottom - V.Top;
   if not FDataLink.Active then
     Exit;
@@ -954,7 +1237,7 @@ begin
   if (Button = mbLeft) and Assigned(FOnCellClick) and MouseCoord(X, Y, C, V) and
     (V >= VisualRow(FixedRows)) and (C >= FixedCols) then
   begin
-    Col := ColumnOf(C);
+    Col := ColumnOf(DataCol(C));
     if Col is TPPGDBGridColumn then
       FOnCellClick(TPPGDBGridColumn(Col));
   end;

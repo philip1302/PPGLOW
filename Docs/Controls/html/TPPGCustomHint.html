@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGCustomHint</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGCustomHint</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Hints</code> - Basis <code>TCustomHint</code></p>
+<p>Fuer die CustomHint-Property einzelner Controls (wie TBalloonHint).</p>
+<p><strong>Vorbild:</strong> <code>TBalloonHint</code> der VCL</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>F&#252;r die Property <code>CustomHint</code> einzelner Controls: Titel und Beschreibung kommen wie bei <code>TBalloonHint</code> aus dem Hint-Text des Controls (<code>&quot;Titel|Beschreibung&quot;</code>), das Bild aus <code>Images</code>/<code>ImageIndex</code>.</li>
+<li>Zeichnet wie der Hint-Manager (Preset, Dark Mode, Hochkontrast, DPI des Monitors), aber ohne Ballonform: <code>Style</code> ist standardm&#228;&#223;ig <code>bhsStandard</code>.</li>
+<li>Ein- und Ausblenden &#252;bernimmt die VCL (<code>TCustomHint</code> mit eigenem Thread); <code>Delay</code> und <code>HideAfter</code> wirken wie gewohnt.</li>
+<li><code>MaxWidth</code> begrenzt die Breite in logischen Pixeln (80–2000).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>Edit1.CustomHint := PPGCustomHint1;
+Edit1.Hint := &#39;Kundennummer|Sieben Ziffern, z. B. 1004711.&#39;;
+Edit1.ShowHint := True;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Hints im Stil der Suite (Phase 11e).</p>
+<p>TPPGHintManager (nicht sichtbare Komponente, Opt-in):</p>
+<ul>
+<li>setzt zur Laufzeit Vcl.Forms.HintWindowClass := TPPGHintWindow und stellt beim Freigeben die vorige Klasse wieder her. Zur Entwurfszeit nie (sonst bekaeme die IDE selbst diese Hints).</li>
+<li>Die VCL legt ihr Hint-Fenster erst beim ersten Hint an; nach dem Wechsel wird es ueber Application.ShowHint := False/True neu erzeugt.</li>
+<li>Hint-Text &quot;Titel|Text&quot; wie bei der VCL: zeigt die VCL sonst nur den kurzen Teil, zeigt der Manager (ShowTitle) Titel fett und Text darunter. Ein Control, das den Text in CM_HINTSHOW selbst setzt, behaelt ihn.</li>
+<li>Optional Markup (&lt;b&gt;, &lt;i&gt;, &lt;color=...&gt;) ueber PPG.Markup.</li>
+</ul>
+<p>TPPGHintWindow (THintWindow):</p>
+<ul>
+<li>zeichnet ueber IPPGHintRenderer mit den Farben des Presets (Hell/Dunkel, Hochkontrast: clInfoBk/clInfoText).</li>
+<li>Groesse und Schrift fuer die DPI des Monitors unter dem Mauszeiger.</li>
+<li>Schatten ueber CS_DROPSHADOW (vom THintWindow), kein Layered-Alpha.</li>
+<li>Screenreader: Rolle Tooltip und Name = Text (IAccPropServices), EVENT_OBJECT_SHOW beim Zeigen.</li>
+</ul>
+<p>TPPGCustomHint (TCustomHint):</p>
+<ul>
+<li>fuer die CustomHint-Property einzelner Controls (wie TBalloonHint): Title, Description, Images/ImageIndex; zeichnet wie TPPGHintWindow.</li>
+</ul>
+<p>Gemeinsam: TPPGHintContent misst und zeichnet den Inhalt (DRY).</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>AllowMarkup</code>, <code>MaxWidth</code>, <code>Style</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGCustomHint.md</code>.</p>
+</body></html>

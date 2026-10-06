@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 39;
+  PPGLangDeCount = 129;
 
 implementation
 
@@ -100,6 +100,186 @@ begin
     'Benachrichtigungen');
   PPGAddTranslation(PPGLangDeCode, @SPPGPercentFormat,
     '%d %%');
+  PPGAddTranslation(PPGLangDeCode, @SPPGInvalidValueList,
+    'Ung'#$00FC'ltige Werteliste "%s" beim Laden ignoriert');
+  PPGAddTranslation(PPGLangDeCode, @SPPGChartNoData,
+    'Keine Daten');
+  PPGAddTranslation(PPGLangDeCode, @SPPGSparklineSummary,
+    'Min %s, Max %s, letzter %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGaugeRangeInvalid,
+    'Minimum (%s) muss kleiner als Maximum (%s) sein');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKpiChange,
+    'Ver'#$00E4'nderung %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGChartSeriesDefault,
+    'Reihe %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGChartPointName,
+    '%s, %s: %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGChartSeriesName,
+    '%s, %d Punkte');
+  PPGAddTranslation(PPGLangDeCode, @SPPGChartSeriesHidden,
+    '%s (ausgeblendet)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGEditUndo,
+    '&R'#$00FC'ckg'#$00E4'ngig');
+  PPGAddTranslation(PPGLangDeCode, @SPPGEditCut,
+    '&Ausschneiden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGEditCopy,
+    '&Kopieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGEditPaste,
+    '&Einf'#$00FC'gen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGEditDelete,
+    '&L'#$00F6'schen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGEditSelectAll,
+    'Alles &markieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgOK,
+    'OK');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgCancel,
+    'Abbrechen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgYes,
+    '&Ja');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgNo,
+    '&Nein');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgAbort,
+    '&Abbrechen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgRetry,
+    '&Wiederholen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgIgnore,
+    '&Ignorieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgAll,
+    'A&lle');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgNoToAll,
+    'N&ein f'#$00FC'r alle');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgYesToAll,
+    'Ja f'#$00FC'r a&lle');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgHelp,
+    '&Hilfe');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgClose,
+    '&Schlie'#$00DF'en');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgWarning,
+    'Warnung');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgError,
+    'Fehler');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgInformation,
+    'Information');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgConfirm,
+    'Best'#$00E4'tigen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgShowDetails,
+    'Details einblenden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDlgHideDetails,
+    'Details ausblenden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGWizBack,
+    '< &Zur'#$00FC'ck');
+  PPGAddTranslation(PPGLangDeCode, @SPPGWizNext,
+    '&Weiter >');
+  PPGAddTranslation(PPGLangDeCode, @SPPGWizFinish,
+    '&Fertig stellen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGWizStep,
+    'Schritt %d von %d: %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNumberRequired,
+    'Ein Wert ist erforderlich');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNumberInvalid,
+    'Keine g'#$00FC'ltige Zahl');
+  PPGAddTranslation(PPGLangDeCode, @SPPGMaskInvalid,
+    'Eingabe passt nicht zur Maske');
+  PPGAddTranslation(PPGLangDeCode, @SPPGCapsLockOn,
+    'Feststelltaste ist aktiv');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFileNotFound,
+    'Datei nicht gefunden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFolderNotFound,
+    'Ordner nicht gefunden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorNone,
+    'Keine');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorDefault,
+    'Standard');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorMore,
+    'Weitere Farben...');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorRecent,
+    'Zuletzt verwendet');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorStandard,
+    'Standardfarben');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorTheme,
+    'Designfarben');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorSystem,
+    'Systemfarben');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorApply,
+    #$00DC'bernehmen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGSelectAll,
+    'Alle ausw'#$00E4'hlen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGCheckedCount,
+    '%d ausgew'#$00E4'hlt');
+  PPGAddTranslation(PPGLangDeCode, @SPPGAccRemove,
+    'Entfernen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridSortAsc,
+    'Aufsteigend sortieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridSortDesc,
+    'Absteigend sortieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridSortNone,
+    'Sortierung entfernen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridHideColumn,
+    'Spalte ausblenden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridColumnChooser,
+    'Spalten');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridShowAll,
+    'Alle Spalten einblenden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridBestFit,
+    'Optimale Breite');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridBestFitAll,
+    'Optimale Breite (alle Spalten)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridGroupBy,
+    'Nach dieser Spalte gruppieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridUngroup,
+    'Gruppierung aufheben');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridGroupPanelHint,
+    'Spaltenkopf hierher ziehen, um nach dieser Spalte zu gruppieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridExpandAll,
+    'Alle Gruppen aufklappen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridCollapseAll,
+    'Alle Gruppen zuklappen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridGroupName,
+    '%s: %s, %d Zeilen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPrintFooterDefault,
+    'Seite [Seite] von [Seiten]');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPrintNoPrinter,
+    'Es ist kein Drucker installiert');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPrinterNotFound,
+    'Drucker '#$201E'%s'#$201C' nicht gefunden');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPreviewTitle,
+    'Seitenansicht');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPreviewPrint,
+    'Drucken');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPreviewPageSetup,
+    'Seite einrichten...');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPreviewClose,
+    'Schlie'#$00DF'en');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPreviewPage,
+    'Seite %d von %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPreviewZoomPage,
+    'Ganze Seite');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPreviewZoomWidth,
+    'Seitenbreite');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupTitle,
+    'Seite einrichten');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupPortrait,
+    'Hochformat');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupLandscape,
+    'Querformat');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupFit,
+    'Auf Seitenbreite anpassen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupRepeat,
+    'Spaltenk'#$00F6'pfe auf jeder Seite wiederholen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupGridLines,
+    'Gitterlinien drucken');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupColors,
+    'Farben drucken');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupMargins,
+    'R'#$00E4'nder links, oben, rechts, unten (mm)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupHeader,
+    'Kopfzeile');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupFooter,
+    'Fu'#$00DF'zeile');
+  PPGAddTranslation(PPGLangDeCode, @SPPGXlsxInvalid,
+    'Keine g'#$00FC'ltige xlsx-Datei (%s fehlt)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPdfPrinterMissing,
+    'Der Drucker '#$201E'Microsoft Print to PDF'#$201C' ist nicht installiert (Windows-Features: '#$201E'Microsoft Print to PDF'#$201C')');
 end;
 
 initialization

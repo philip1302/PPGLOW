@@ -89,6 +89,8 @@
         <DCCReference Include="..\..\Source\DB\PPG.DB.Controls.pas"/>
         <DCCReference Include="..\..\Source\DB\PPG.DB.Lookup.pas"/>
         <DCCReference Include="..\..\Source\DB\PPG.DB.Grid.pas"/>
+        <DCCReference Include="..\..\Source\DB\PPG.DB.Chart.pas"/>
+        <DCCReference Include="..\..\Source\DB\PPG.DB.Fields.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
