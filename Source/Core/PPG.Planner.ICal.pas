@@ -125,12 +125,55 @@ begin
     Result := Name + ':' + PPGFormatICalDateTime(Stored, False, False);
 end;
 
+function ExportExDates(Items: TPPGAppointments; A: TPPGAppointment): string;
+var
+  Parts: TArray<string>;
+  I, K: Integer;
+  D: TDateTime;
+  IsUtc, IsDate, Skip: Boolean;
+  C: TPPGAppointment;
+  S: string;
+begin
+  Result := '';
+  Parts := PPGSplitString(A.ExDates, ',', True);
+  for I := 0 to High(Parts) do
+  begin
+    S := Trim(Parts[I]);
+    if not PPGParseICalDateTime(S, D, IsUtc, IsDate) then
+      Continue;
+    // Herausgeloeste Vorkommen stehen als eigenes VEVENT mit RECURRENCE-ID
+    // in der Datei. Als EXDATE wuerden Clients sie mit loeschen.
+    Skip := False;
+    if A.Id <> 0 then
+      for K := 0 to Items.Count - 1 do
+      begin
+        C := Items[K];
+        if (C = A) or (C.RecurrenceParent <> A.Id) then
+          Continue;
+        if A.AllDay then
+          Skip := Trunc(C.RecurrenceStart) = Trunc(D)
+        else
+          Skip := Abs(C.RecurrenceStart - D) < 1 / SecsPerDay;
+        if Skip then
+          Break;
+      end;
+    if Skip then
+      Continue;
+    // Ganztaegig nur das Datum (VALUE=DATE), auch fuer Eintraege mit Uhrzeit
+    if A.AllDay then
+      S := PPGFormatICalDateTime(Trunc(D), False, True);
+    if Result <> '' then
+      Result := Result + ',';
+    Result := Result + S;
+  end;
+end;
+
 function PPGICalText(Items: TPPGAppointments; const CalendarName: string): string;
 var
   SB: TStringBuilder;
   I: Integer;
   A, P: TPPGAppointment;
-  Uid: string;
+  Uid, ExDates: string;
 begin
   SB := TStringBuilder.Create;
   try
@@ -164,12 +207,13 @@ begin
         AddFolded(SB, 'DESCRIPTION:' + Escape(PPGStripMarkup(A.Body)));
       if A.Recurrence <> '' then
         AddFolded(SB, 'RRULE:' + A.Recurrence);
-      if A.ExDates <> '' then
+      ExDates := ExportExDates(Items, A);
+      if ExDates <> '' then
       begin
         if A.AllDay then
-          AddFolded(SB, 'EXDATE;VALUE=DATE:' + A.ExDates)
+          AddFolded(SB, 'EXDATE;VALUE=DATE:' + ExDates)
         else
-          AddFolded(SB, 'EXDATE:' + A.ExDates);
+          AddFolded(SB, 'EXDATE:' + ExDates);
       end;
       if A.Category >= 0 then
         AddFolded(SB, 'X-PPG-CATEGORY:' + IntToStr(A.Category));

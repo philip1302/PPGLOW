@@ -380,7 +380,11 @@ begin
       UIA_HasKeyboardFocusPropertyId:
         begin
           F := Src.UiaFocused;
-          pRetVal := (not IsRoot) and PPGUiaSame(F, FId);
+          // Wurzel ohne fokussiertes Kind (leere Liste, Control ohne Fokus):
+          // leer lassen, dann antwortet der Host-Provider des Fensters. Ein
+          // festes False wuerde dessen Wert ueberdecken.
+          if not (IsRoot and PPGUiaIsRoot(F)) then
+            pRetVal := (not IsRoot) and PPGUiaSame(F, FId);
         end;
       UIA_IsOffscreenPropertyId:
         if not IsRoot then

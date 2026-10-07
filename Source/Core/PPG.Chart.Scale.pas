@@ -70,6 +70,22 @@ const
   TenD: Double = 10;
   Eps = 1E-9;
 
+// Floor/Ceil aus System.Math liefern Integer und laufen ab 2^31 ueber
+// (z.B. Werte um 1e10 mit Schrittweite 2). Hier ohne Ganzzahl-Umweg.
+function FloorF(X: Double): Double;
+begin
+  Result := Int(X);
+  if Result > X then
+    Result := Result - 1;
+end;
+
+function CeilF(X: Double): Double;
+begin
+  Result := Int(X);
+  if Result < X then
+    Result := Result + 1;
+end;
+
 function IsUsable(V: Double): Boolean;
 begin
   Result := not IsNan(V) and not IsInfinite(V);
@@ -166,8 +182,8 @@ begin
   // Achse oft doppelt so hoch wie die Daten, z.B. 0..40 fuer 23)
   Range := Hi - Lo;
   Result.Step := PPGNiceNumber(Range / (MaxTicks - 1), True);
-  Result.Min := Floor(Lo / Result.Step + Eps) * Result.Step;
-  Result.Max := Ceil(Hi / Result.Step - Eps) * Result.Step;
+  Result.Min := FloorF(Lo / Result.Step + Eps) * Result.Step;
+  Result.Max := CeilF(Hi / Result.Step - Eps) * Result.Step;
   if Result.Max <= Result.Min then
     Result.Max := Result.Min + Result.Step;
   Result.Decimals := DecimalsFor(Result.Step);
@@ -192,18 +208,15 @@ begin
   if S.Step <= 0 then
     Exit(0);
   // Striche liegen auf Vielfachen der Schrittweite innerhalb [Min, Max]
-  First := Ceil(S.Min / S.Step - Eps) * S.Step;
+  First := CeilF(S.Min / S.Step - Eps) * S.Step;
   Result := Floor((S.Max - First) / S.Step + Eps) + 1;
   if Result < 0 then
     Result := 0;
 end;
 
 function PPGScaleTick(const S: TPPGAxisScale; Index: Integer): Double;
-var
-  K: Int64;
 begin
-  K := Ceil(S.Min / S.Step - Eps) + Index;
-  Result := K * S.Step;
+  Result := (CeilF(S.Min / S.Step - Eps) + Index) * S.Step;
   // Rundungsreste weg (0.1 * 3 = 0.30000000000000004)
   Result := RoundTo(Result, -System.Math.Min(S.Decimals + 2, 15));
   if Abs(Result) < S.Step * Eps then

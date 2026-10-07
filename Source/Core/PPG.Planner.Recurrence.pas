@@ -563,6 +563,21 @@ begin
     W := (7 + IsoDow(D0) - WeekStart) mod 7;
     Week0 := D0 - W;
     P := 0;
+    // Ohne COUNT haengt kein Vorkommen von den frueheren ab: direkt bis kurz
+    // vor AFrom springen, statt bei jedem Aufruf ab DTSTART zu zaehlen. Die
+    // uebersprungenen Zeitraeume enden alle vor AFrom.
+    if (Count = 0) and (Interval > 0) and (AFrom > D0 + 1) then
+    begin
+      case Freq of
+        rfDaily: P := Trunc((AFrom - D0) / Interval) - 1;
+        rfWeekly: P := Trunc((AFrom - Week0) / (7 * Interval)) - 1;
+        rfMonthly: P := ((YearOf(AFrom) * 12 + MonthOf(AFrom) - 1) - (Y0 * 12 + M0 - 1)) div
+          Interval - 1;
+        rfYearly: P := (YearOf(AFrom) - Y0) div Interval - 1;
+      end;
+      if P < 0 then
+        P := 0;
+    end;
     Guard := 0;
     PStart := D0;
     while not Stop and (Guard < 200000) do
@@ -610,6 +625,12 @@ begin
             end
             else if (Length(ByDay) > 0) and (Length(ByMonthDay) = 0) then
               YearDaysByWeekday(Yr)
+            else if Length(ByMonthDay) > 0 then
+            begin
+              // RFC 5545: BYMONTHDAY ohne BYMONTH gilt in jedem Monat
+              for Mo := 1 to 12 do
+                MonthDays(Yr, Mo);
+            end
             else
               MonthDays(Yr, M0);
           end;

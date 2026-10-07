@@ -59,6 +59,7 @@ type
     procedure SetResourceId(const Value: Integer);
     procedure SetRecurrence(const Value: string);
     procedure SetExDates(const Value: string);
+    procedure SetId(const Value: Integer);
   protected
     function GetDisplayName: string; override;
   public
@@ -76,7 +77,7 @@ type
     function ExceptionDates: TArray<TDateTime>;
   published
     /// Eindeutige Nummer (vergibt die Collection).
-    property Id: Integer read FId write FId default 0;
+    property Id: Integer read FId write SetId default 0;
     /// Gespeicherter Beginn/Ende: UTC bei TimeZoneMode = tzmUtc.
     property StartTime: TDateTime read FStartTime write SetStartTime;
     property FinishTime: TDateTime read FFinishTime write SetFinishTime;
@@ -128,6 +129,8 @@ type
     procedure Update(Item: TCollectionItem); override;
   public
     constructor Create(AOwner: TPersistent);
+    /// Kopiert auch die Ids, damit RecurrenceParent weiter stimmt.
+    procedure Assign(Source: TPersistent); override;
     function Add: TPPGAppointment;
     /// Neuer Termin in Anzeige-Zeit.
     function AddAppointment(AStart, AFinish: TDateTime; const ASubject: string): TPPGAppointment;
@@ -355,6 +358,14 @@ begin
   end;
 end;
 
+procedure TPPGAppointment.SetId(const Value: Integer);
+begin
+  FId := Value;
+  // Geladene oder kopierte Ids: neue Termine bekommen eine groessere
+  if (Owner <> nil) and (Value > Owner.FNextId) then
+    Owner.FNextId := Value;
+end;
+
 procedure TPPGAppointment.SetExDates(const Value: string);
 begin
   if FExDates <> Value then
@@ -386,7 +397,7 @@ function TPPGAppointment.ExceptionDates: TArray<TDateTime>;
 var
   Parts: TArray<string>;
   I, N: Integer;
-  D: TDateTime;
+  D, U, W: TDateTime;
   IsUtc, IsDate: Boolean;
 begin
   Parts := PPGSplitString(FExDates, ',', True);
@@ -398,7 +409,18 @@ begin
       if IsDate then
         D := D + Frac(Start); // nur Datum: Uhrzeit der Serie
       if IsUtc and not FAllDay and (Owner <> nil) and (Owner.TimeZoneMode = tzmUtc) then
-        D := Owner.DisplayZone.ToLocal(D);
+      begin
+        U := D;
+        D := Owner.DisplayZone.ToLocal(U);
+        // Vorkommen in der Sommerzeit-Luecke (z.B. 02:30 am Umstellungstag):
+        // AddException hat die Wanduhrzeit per ToUtc gespeichert, ToLocal
+        // liefert eine Stunde spaeter. Die Uhrzeit der Serie an diesem Tag
+        // gilt, wenn sie auf denselben UTC-Wert fuehrt.
+        W := Trunc(D) + Frac(Start);
+        if (Abs(W - D) > 1 / SecsPerDay) and
+          (Abs(Owner.DisplayZone.ToUtc(W) - U) < 1 / SecsPerDay) then
+          D := W;
+      end;
       Result[N] := D;
       Inc(N);
     end;
@@ -411,7 +433,9 @@ var
   Utc: Boolean;
 begin
   Utc := not FAllDay and (Owner <> nil) and (Owner.TimeZoneMode = tzmUtc);
-  if Utc then
+  if FAllDay then
+    S := PPGFormatICalDateTime(Trunc(OccurrenceStart), False, True) // EXDATE;VALUE=DATE
+  else if Utc then
     S := PPGFormatICalDateTime(Owner.DisplayZone.ToUtc(OccurrenceStart), True, False)
   else
     S := PPGFormatICalDateTime(OccurrenceStart, False, False);
@@ -428,6 +452,22 @@ end;
 constructor TPPGAppointments.Create(AOwner: TPersistent);
 begin
   inherited Create(AOwner, TPPGAppointment);
+end;
+
+procedure TPPGAppointments.Assign(Source: TPersistent);
+var
+  I: Integer;
+begin
+  BeginUpdate;
+  try
+    inherited Assign(Source);
+    // TCollection.Assign legt neue Termine mit neuen Ids an
+    if Source is TPPGAppointments then
+      for I := 0 to Count - 1 do
+        Items[I].Id := TPPGAppointments(Source).Items[I].Id;
+  finally
+    EndUpdate;
+  end;
 end;
 
 function TPPGAppointments.Add: TPPGAppointment;
@@ -479,13 +519,8 @@ end;
 procedure TPPGAppointments.Update(Item: TCollectionItem);
 var
   H: IPPGAppointmentsHost;
-  I: Integer;
 begin
   inherited Update(Item);
-  // Ids nach dem Laden: hoechste merken
-  for I := 0 to Count - 1 do
-    if Items[I].FId > FNextId then
-      FNextId := Items[I].FId;
   if (GetOwner is TComponent) and (csLoading in TComponent(GetOwner).ComponentState) then
     Exit;
   if Supports(GetOwner, IPPGAppointmentsHost, H) then
@@ -535,7 +570,7 @@ begin
         Continue;
       end;
       // UNTIL mit Z: in die Anzeige-Zone (die Serie laeuft auf der Wanduhr)
-      if R.UntilUtc and (TimeZoneMode = tzmUtc) and not A.AllDay then
+      if R.UntilUtc and not A.AllDay then
         R.UntilDate := DisplayZone.ToLocal(R.UntilDate);
       Starts := R.Expand(S, AFrom - Dur, ATo, A.ExceptionDates);
       for K := 0 to High(Starts) do
