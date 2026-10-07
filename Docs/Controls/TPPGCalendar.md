@@ -19,6 +19,7 @@ TPPGCalendar - Monatskalender mit Jahres- und Dekadenansicht (Phase 7b).
 - Tastatur: Pfeile (Tag/Woche), Bild auf/ab (Monat), Strg+Bild (Jahr), Pos1/Ende (Monatsanfang/-ende), Enter/Leertaste waehlen, Strg+Oben/Unten zoomen. RTL gespiegelt.
 - Code (Date := ...) loest kein OnChange aus; der Anwender schon.
 - Screenreader: Tabelle, Kinder sind die Tage (bzw. Monate/Jahre) mit Langdatum als Name, Zustaenden gewaehlt/fokussiert/gesperrt.
+- Link (Phase 14a): ein verbundener Planer (IPPGCalendarLink) markiert Tage mit Terminen fett und erfaehrt die Auswahl des Anwenders.
 
 ## PPGlow-Eigenschaften
 

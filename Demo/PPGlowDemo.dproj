@@ -208,6 +208,21 @@
         <DCCReference Include="..\Source\Controls\PPG.ToolBar.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.StatusBar.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Notifications.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Planner.Print.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.KeyTips.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Ribbon.Layout.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Ribbon.Items.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Ribbon.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Kanban.Layout.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Kanban.Items.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Kanban.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Print.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Planner.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.TimeZones.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Planner.Recurrence.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Planner.Layout.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Planner.Model.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.Planner.ICal.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Xlsx.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Grid.Export.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Grid.Print.pas"/>
@@ -249,6 +264,8 @@
         <DCCReference Include="..\Source\DB\PPG.DB.Lookup.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Grid.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Chart.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Planner.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Kanban.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Fields.pas"/>
         <DCCReference Include="DemoKit.pas"/>
         <DCCReference Include="DemoPages1.pas"/>
@@ -257,6 +274,9 @@
         <DCCReference Include="DemoPages4.pas"/>
         <DCCReference Include="DemoPages5.pas"/>
         <DCCReference Include="DemoPages6.pas"/>
+        <DCCReference Include="DemoPages7.pas"/>
+        <DCCReference Include="DemoPages8.pas"/>
+        <DCCReference Include="DemoPages9.pas"/>
         <DCCReference Include="DemoMain.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

@@ -84,6 +84,21 @@ uses
   PPG.ToolBar in '..\Source\Controls\PPG.ToolBar.pas',
   PPG.StatusBar in '..\Source\Controls\PPG.StatusBar.pas',
   PPG.Notifications in '..\Source\Controls\PPG.Notifications.pas',
+  PPG.Planner.Print in '..\Source\Controls\PPG.Planner.Print.pas',
+  PPG.KeyTips in '..\Source\Core\PPG.KeyTips.pas',
+  PPG.Ribbon.Layout in '..\Source\Core\PPG.Ribbon.Layout.pas',
+  PPG.Ribbon.Items in '..\Source\Controls\PPG.Ribbon.Items.pas',
+  PPG.Ribbon in '..\Source\Controls\PPG.Ribbon.pas',
+  PPG.Kanban.Layout in '..\Source\Core\PPG.Kanban.Layout.pas',
+  PPG.Kanban.Items in '..\Source\Controls\PPG.Kanban.Items.pas',
+  PPG.Kanban in '..\Source\Controls\PPG.Kanban.pas',
+  PPG.Print in '..\Source\Controls\PPG.Print.pas',
+  PPG.Planner in '..\Source\Controls\PPG.Planner.pas',
+  PPG.TimeZones in '..\Source\Core\PPG.TimeZones.pas',
+  PPG.Planner.Recurrence in '..\Source\Core\PPG.Planner.Recurrence.pas',
+  PPG.Planner.Layout in '..\Source\Core\PPG.Planner.Layout.pas',
+  PPG.Planner.Model in '..\Source\Core\PPG.Planner.Model.pas',
+  PPG.Planner.ICal in '..\Source\Core\PPG.Planner.ICal.pas',
   PPG.Xlsx in '..\Source\Controls\PPG.Xlsx.pas',
   PPG.Grid.Export in '..\Source\Controls\PPG.Grid.Export.pas',
   PPG.Grid.Print in '..\Source\Controls\PPG.Grid.Print.pas',
@@ -127,6 +142,8 @@ uses
   PPG.DB.Lookup in '..\Source\DB\PPG.DB.Lookup.pas',
   PPG.DB.Grid in '..\Source\DB\PPG.DB.Grid.pas',
   PPG.DB.Chart in '..\Source\DB\PPG.DB.Chart.pas',
+  PPG.DB.Planner in '..\Source\DB\PPG.DB.Planner.pas',
+  PPG.DB.Kanban in '..\Source\DB\PPG.DB.Kanban.pas',
   PPG.DB.Fields in '..\Source\DB\PPG.DB.Fields.pas',
   PPG.Tests.Core in 'PPG.Tests.Core.pas',
   PPG.Tests.Controls in 'PPG.Tests.Controls.pas',
@@ -169,7 +186,15 @@ uses
   PPG.Tests.Phase13d in 'PPG.Tests.Phase13d.pas',
   PPG.Tests.Phase13e in 'PPG.Tests.Phase13e.pas',
   PPG.Tests.Phase13f in 'PPG.Tests.Phase13f.pas',
-  PPG.Tests.Phase13g in 'PPG.Tests.Phase13g.pas';
+  PPG.Tests.Phase13g in 'PPG.Tests.Phase13g.pas',
+  PPG.Tests.Phase14a in 'PPG.Tests.Phase14a.pas',
+  PPG.Tests.Phase14aPlanner in 'PPG.Tests.Phase14aPlanner.pas',
+  PPG.Tests.Phase14aDB in 'PPG.Tests.Phase14aDB.pas',
+  PPG.Tests.Phase14b in 'PPG.Tests.Phase14b.pas',
+  PPG.Tests.Phase14bRibbon in 'PPG.Tests.Phase14bRibbon.pas',
+  PPG.Tests.Phase14c in 'PPG.Tests.Phase14c.pas',
+  PPG.Tests.Phase14cKanban in 'PPG.Tests.Phase14cKanban.pas',
+  PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;

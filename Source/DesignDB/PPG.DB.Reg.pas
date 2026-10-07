@@ -9,6 +9,7 @@ unit PPG.DB.Reg;
     ueber die FieldDefs).
   - DB-Grid: Spalten-Editor und "Alle Felder als Spalten".
   - DB-Chart: Auswahl fuer LabelField/XField, Serien-Editor.
+  - DB-Planer: Auswahl fuer alle Feld-Properties, Ressourcen-Editor.
   Die gemeinsamen Verben (Preset, Appearance, Galerie) kommen von
   TPPGComponentEditor aus dclPPGlow. }
 
@@ -60,7 +61,8 @@ implementation
 
 uses
   System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, Data.DB, ColnEdit,
-  PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Fields;
+  PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Fields,
+  PPG.DB.Planner, PPG.DB.Kanban;
 
 resourcestring
   SPPGDBPalette = 'PPGlow DB';
@@ -196,9 +198,17 @@ begin
 end;
 
 procedure Register;
+const
+  PlannerFields: array[0..11] of string = ('KeyField', 'StartField', 'FinishField',
+    'SubjectField', 'LocationField', 'BodyField', 'AllDayField', 'CategoryField',
+    'ResourceField', 'RecurrenceField', 'ExDatesField', 'ParentField');
+  KanbanFields: array[0..10] of string = ('KeyField', 'ColumnField', 'LaneField', 'OrderField',
+    'TitleField', 'TextField', 'LabelsField', 'AssigneeField', 'DueField', 'ProgressField', 'ColorField');
+var
+  I: Integer;
 begin
   RegisterComponents(SPPGDBPalette, [TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
-    TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart,
+    TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart, TPPGDBPlanner, TPPGDBKanban,
     TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit]);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBEdit, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBMemo, 'DataField', TPPGDataFieldProperty);
@@ -216,7 +226,13 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TPPGDBChart, 'LabelField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBChart, 'XField', TPPGDataFieldProperty);
   RegisterComponentEditor(TPPGDBGrid, TPPGDBGridEditor);
+  for I := Low(PlannerFields) to High(PlannerFields) do
+    RegisterPropertyEditor(TypeInfo(string), TPPGDBPlanner, PlannerFields[I], TPPGDataFieldProperty);
   RegisterComponentEditor(TPPGDBChart, TPPGCollectionEditor);
+  RegisterComponentEditor(TPPGDBPlanner, TPPGCollectionEditor);
+  for I := Low(KanbanFields) to High(KanbanFields) do
+    RegisterPropertyEditor(TypeInfo(string), TPPGDBKanban, KanbanFields[I], TPPGDataFieldProperty);
+  RegisterComponentEditor(TPPGDBKanban, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGDBComboBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGDBLookupComboBox, TPPGComponentEditor);
 end;

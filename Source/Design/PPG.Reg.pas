@@ -81,12 +81,23 @@ type
     procedure Edit; override;
   end;
 
-  /// Grid-Drucker: Seitenansicht und Seite einrichten im Designer.
+  /// Grid- und Planer-Drucker: Seitenansicht und Seite einrichten im Designer.
   TPPGGridPrinterEditor = class(TDefaultEditor)
   public
     function GetVerbCount: Integer; override;
     function GetVerb(Index: Integer): string; override;
     procedure ExecuteVerb(Index: Integer); override;
+    procedure Edit; override;
+  end;
+
+  /// Ribbon: Registerkarten, Gruppen der aktiven Karte und Schnellzugriff
+  /// bearbeiten, Karte anlegen, zwischen den Karten wechseln.
+  TPPGRibbonEditor = class(TPPGComponentEditor)
+  protected
+    function OwnVerbCount: Integer; override;
+    function OwnVerb(Index: Integer): string; override;
+    procedure ExecuteOwnVerb(Index: Integer); override;
+  public
     procedure Edit; override;
   end;
 
@@ -162,6 +173,7 @@ uses
   PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
   PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit,
+  PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
   PPG.Editors.Logic, PPG.Editors.Forms;
 
 resourcestring
@@ -181,12 +193,20 @@ resourcestring
   SVerbToolItems = 'Edit buttons...';
   SVerbSeries = 'Edit series...';
   SVerbRanges = 'Edit ranges...';
+  SVerbResources = 'Edit resources...';
   SVerbComboColumns = 'Edit columns...';
   SVerbNavItems = 'Edit items...';
   SVerbConnectPage = 'Connect to %s';
   SVerbDisconnectPage = 'Disconnect page control';
   SVerbTreeNodes = 'Edit nodes...';
   SVerbTestToast = 'Show test toast';
+  SVerbRibbonTabs = 'Edit tabs...';
+  SVerbRibbonGroups = 'Edit groups of the active tab...';
+  SVerbRibbonQuick = 'Edit Quick Access items...';
+  SVerbRibbonNewTab = 'Ne&w Tab';
+  SVerbRibbonNextTab = 'Ne&xt Tab';
+  SVerbRibbonPrevTab = '&Previous Tab';
+  SVerbKanbanColumns = 'Edit columns...';
   STestToastTitle = 'PPGlow';
   STestToastText = 'This is how notifications look with the current settings.';
   SGalleryDone = '%d components changed to "%s".';
@@ -540,8 +560,8 @@ end;
 procedure TPPGGridPrinterEditor.ExecuteVerb(Index: Integer);
 begin
   if Index = 0 then
-    TPPGGridPrinter(Component).Preview
-  else if TPPGGridPrinter(Component).PageSetup then
+    TPPGCustomPrinter(Component).Preview
+  else if TPPGCustomPrinter(Component).PageSetup then
     Designer.Modified;
 end;
 
@@ -581,6 +601,18 @@ begin
   begin
     PropName := 'Ranges';
     Verb := SVerbRanges;
+  end
+  else if Component is TPPGCustomKanban then
+  begin
+    PropName := 'Columns';
+    Verb := SVerbKanbanColumns;
+    OpenOnDblClick := False; // Doppelklick oeffnet eine Karte (OnCardOpen)
+  end
+  else if Component is TPPGCustomPlanner then
+  begin
+    PropName := 'Resources';
+    Verb := SVerbResources;
+    OpenOnDblClick := False; // Doppelklick: Termin anlegen gibt es nur zur Laufzeit
   end
   else if Component is TPPGColumnComboBox then
   begin
@@ -792,13 +824,94 @@ begin
   TPPGNotificationCenter(Component).Show(STestToastTitle, STestToastText, psInformational);
 end;
 
+{ TPPGRibbonEditor }
+
+function TPPGRibbonEditor.OwnVerbCount: Integer;
+begin
+  Result := 6;
+end;
+
+function TPPGRibbonEditor.OwnVerb(Index: Integer): string;
+begin
+  case Index of
+    0: Result := SVerbRibbonTabs;
+    1: Result := SVerbRibbonGroups;
+    2: Result := SVerbRibbonQuick;
+    3: Result := SVerbRibbonNewTab;
+    4: Result := SVerbRibbonNextTab;
+  else
+    Result := SVerbRibbonPrevTab;
+  end;
+end;
+
+procedure TPPGRibbonEditor.ExecuteOwnVerb(Index: Integer);
+var
+  R: TPPGRibbon;
+  T: TPPGRibbonTab;
+  I, K, N, Dir: Integer;
+begin
+  if not (Component is TPPGRibbon) then
+    Exit;
+  R := TPPGRibbon(Component);
+  case Index of
+    0: ShowCollectionEditor(Designer, R, R.Tabs, 'Tabs');
+    1:
+      if R.ActiveTab <> nil then
+        ShowCollectionEditor(Designer, R, R.ActiveTab.Groups, 'Groups');
+    2: ShowCollectionEditor(Designer, R, R.QuickAccess, 'QuickAccess');
+    3:
+      begin
+        T := R.Tabs.AddTab('Tab' + IntToStr(R.Tabs.Count + 1));
+        T.Groups.AddGroup('Group1');
+        R.TabIndex := T.Index;
+        Designer.Modified;
+      end;
+    4, 5:
+      begin
+        // Nur sichtbare Karten; eine Kontext-Karte zum Bearbeiten im
+        // Objektinspektor auf Visible = True stellen
+        N := R.Tabs.Count;
+        if N = 0 then
+          Exit;
+        if Index = 4 then
+          Dir := 1
+        else
+          Dir := -1;
+        I := R.TabIndex;
+        if I < 0 then
+          I := 0;
+        for K := 1 to N do
+        begin
+          I := (I + Dir + N) mod N;
+          if R.Tabs[I].Visible then
+          begin
+            R.TabIndex := I;
+            Designer.Modified;
+            Break;
+          end;
+        end;
+      end;
+  end;
+end;
+
+procedure TPPGRibbonEditor.Edit;
+begin
+  try
+    ExecuteOwnVerb(0);
+  except
+    on E: Exception do
+      ShowError(E);
+  end;
+end;
+
 { TPPGSelectionEditor }
 
 procedure TPPGSelectionEditor.RequiresUnits(Proc: TGetStrProc);
 var
   I: Integer;
   C: TComponent;
-  NeedItems, NeedGrids, NeedComCtrls, NeedExtCtrls, NeedFeedback, NeedChart: Boolean;
+  NeedItems, NeedGrids, NeedComCtrls, NeedExtCtrls, NeedFeedback, NeedChart, NeedPlanner,
+    NeedRibbon, NeedKanban: Boolean;
 begin
   inherited RequiresUnits(Proc);
   NeedItems := False;
@@ -807,6 +920,9 @@ begin
   NeedExtCtrls := False;
   NeedFeedback := False;
   NeedChart := False;
+  NeedPlanner := False;
+  NeedRibbon := False;
+  NeedKanban := False;
   for I := 0 to Designer.GetRoot.ComponentCount - 1 do
   begin
     C := Designer.GetRoot.Components[I];
@@ -822,6 +938,12 @@ begin
       NeedFeedback := True;
     if C is TPPGCustomChart then
       NeedChart := True;
+    if C is TPPGCustomPlanner then
+      NeedPlanner := True;
+    if C is TPPGCustomRibbon then
+      NeedRibbon := True;
+    if C is TPPGCustomKanban then
+      NeedKanban := True;
   end;
   // Typen der Ereignis-Signaturen (z.B. TPPGCheckState, TPPGItemData,
   // TGridDrawState, TNodeAttachMode, TSysLinkType, TPPGSeverity)
@@ -839,6 +961,18 @@ begin
   // OnGetPoint: TPPGChartPoint
   if NeedChart then
     Proc('PPG.Chart.Series');
+  // Planer-Ereignisse: TPPGAppointment, TPPGAppointmentChangeKind
+  if NeedPlanner then
+    Proc('PPG.Planner.Model');
+  // Ribbon-Ereignisse: TPPGRibbonItem, TPPGRibbonGroup, TPPGRibbonTab, TPPGItemData
+  if NeedRibbon then
+  begin
+    Proc('PPG.Ribbon.Items');
+    Proc('PPG.Items');
+  end;
+  // Kanban-Ereignisse: TPPGKanbanColumn, TPPGKanbanCard, TPPGKanbanCardData
+  if NeedKanban then
+    Proc('PPG.Kanban.Items');
 end;
 
 procedure Register;
@@ -850,12 +984,12 @@ begin
     TPPGLabel, TPPGLinkLabel, TPPGBadge, TPPGProgressRing, TPPGInfoBar, TPPGExpander,
     TPPGSplitter, TPPGRating, TPPGSearchEdit, TPPGCalendar, TPPGDatePicker, TPPGTimePicker,
     TPPGNavigationView, TPPGBreadcrumb, TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
-    TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart,
+    TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart, TPPGPlanner, TPPGRibbon, TPPGKanban,
     TPPGPopupMenu, TPPGMenuBar, TPPGHintManager, TPPGCustomHint, TPPGTeachingTip,
     TPPGTaskDialog, TPPGWizard,
     TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
     TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit,
-    TPPGGridPrinter, TPPGStyleManager]);
+    TPPGGridPrinter, TPPGPlannerPrinter, TPPGStyleManager]);
   // Seiten entstehen ueber den Komponenteneditor, nicht ueber die Palette
   RegisterClass(TPPGTabSheet);
   RegisterNoIcon([TPPGTabSheet]);
@@ -879,6 +1013,7 @@ begin
   RegisterComponentEditor(TPPGWizardPage, TPPGWizardEditor);
   RegisterComponentEditor(TPPGTaskDialog, TPPGTaskDialogEditor);
   RegisterComponentEditor(TPPGGridPrinter, TPPGGridPrinterEditor);
+  RegisterComponentEditor(TPPGPlannerPrinter, TPPGGridPrinterEditor);
   RegisterComponentEditor(TPPGListBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGCheckListBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGComboBox, TPPGCollectionEditor);
@@ -887,9 +1022,12 @@ begin
   RegisterComponentEditor(TPPGStatusBar, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGToolBar, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGChart, TPPGCollectionEditor);
+  RegisterComponentEditor(TPPGPlanner, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGGauge, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGColumnComboBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGNavigationView, TPPGNavigationViewEditor);
+  RegisterComponentEditor(TPPGRibbon, TPPGRibbonEditor);
+  RegisterComponentEditor(TPPGKanban, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGTreeView, TPPGTreeViewEditor);
   RegisterComponentEditor(TPPGNotificationCenter, TPPGNotificationCenterEditor);
   RegisterSelectionEditor(TPPGCustomControl, TPPGSelectionEditor);

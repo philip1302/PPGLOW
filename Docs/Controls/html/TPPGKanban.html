@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGKanban</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGKanban</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Kanban</code> - Basis <code>TPPGCustomKanban</code></p>
+<p><strong>Vorbild:</strong> Trello, TMS FNC Kanban Board</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Spalten (<code>Columns</code>: Titel, Farbe der Kopfleiste, <code>WipLimit</code>, <code>Collapsed</code>, eigene <code>Width</code>), optional Swimlanes (<code>Lanes</code>) und Karten (<code>Cards</code>). Eine Karte geh&#246;rt &#252;ber <code>ColumnId</code> und <code>LaneId</code> zu einer Zelle; die Reihenfolge in der Zelle ist die Reihenfolge in der Collection.</li>
+<li>Karteninhalt: <code>Title</code> (h&#246;chstens zwei Zeilen), <code>Text</code> mit Markup (h&#246;chstens <code>MaxTextLines</code> Zeilen), <code>Labels</code> („Bug, UI“ als farbige Plaketten), <code>Due</code> (&#252;berf&#228;llig rot), <code>Assignee</code> (Initialen im Kreis), <code>Progress</code> (Balken, 100 = gr&#252;n), <code>Color</code> (Streifen links).</li>
+<li><strong>Ohne Swimlanes</strong> scrollt jede Spalte f&#252;r sich (Mausrad &#252;ber der Spalte, Daumen ziehen), das Board waagerecht. <strong>Mit Swimlanes</strong> scrollt das ganze Board, die Spaltenk&#246;pfe bleiben stehen; ein Klick auf den Kopf einer Swimlane klappt sie ein.</li>
+<li><strong>Virtuelle Spalten:</strong> <code>Column.VirtualCount</code> &gt; 0 und <code>OnGetCard</code>. Karten haben dann feste H&#246;he (<code>VirtualCardHeight</code>), Lage und Treffer in O(1); abgefragt wird nur Sichtbares. Verschieben meldet <code>OnCardMoved</code> mit Indizes (<code>Card = nil</code>), die Daten verschiebt die Anwendung. Zwischen virtuellen und normalen Spalten wird nicht verschoben.</li>
+<li><strong>Ziehen:</strong> Die Karte folgt der Maus, am Ziel &#246;ffnet sich ein Platzhalter, die anderen Karten weichen animiert aus. Am Rand scrollt das Board bzw. die Spalte. Esc bricht ab. Auf einer eingeklappten Spalte landet die Karte am Ende.</li>
+<li><strong>WIP-Limit:</strong> Die Kopfzeile zeigt „3 / 5“; voll = Warnfarbe, dar&#252;ber = rot get&#246;nte Spalte. <code>WipMode = kwmBlock</code> lehnt Karten f&#252;r volle Spalten ab (Umsortieren in der Spalte bleibt erlaubt). <code>OnCardMoving</code> kann jede Bewegung ablehnen.</li>
+<li><strong>Tastatur:</strong> Pfeile wandern zwischen den Karten (leere Spalten werden &#252;bersprungen), Strg+Pfeile verschieben die gew&#228;hlte Karte (auch in eine leere Spalte; Strg+Oben/Unten am Rand in die n&#228;chste Swimlane), Pos1/Ende, Bild auf/ab, Enter = <code>OnCardOpen</code>.</li>
+<li><strong>Screenreader:</strong> Bereich; Kinder sind je Spalte der Kopf („Spalte X, n Karten, Limit m“) und die Karten („Titel, Spalte X, Position Y von N, f&#228;llig …, Person, Labels“). Nach einem Verschieben steht „Verschoben nach Spalte X, Position Y von N“ vor dem Namen der fokussierten Karte (<code>Announcement</code>).</li>
+<li>Code setzt Werte ohne Ereignisse (<code>Cards</code>, <code>Collapsed</code>, <code>SelectedCard</code>); Anwenderaktionen l&#246;sen <code>OnCardMoving</code>/<code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code> (Doppelklick, Enter), <code>OnSelectionChange</code> und <code>OnColumnCollapse</code> aus. <code>MoveCard</code> verschiebt wie der Anwender (mit Ereignissen).</li>
+<li>Ziehen zwischen Anwendungen (OLE) gibt es nicht.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>uses PPG.Kanban.Items;
+
+var
+  Todo, Doing: TPPGKanbanColumn;
+begin
+  Todo := PPGKanban1.Columns.AddColumn(&#39;Offen&#39;);
+  Doing := PPGKanban1.Columns.AddColumn(&#39;In Arbeit&#39;, 3);   // WIP-Limit 3
+  with PPGKanban1.Cards.AddCard(Todo.Id, &#39;Login-Seite&#39;, &#39;Mit &lt;b&gt;Passkey&lt;/b&gt;&#39;) do
+  begin
+    Labels := &#39;Feature, UI&#39;;
+    Assignee := &#39;Anna Berg&#39;;
+    Due := Date + 3;
+    Progress := 20;
+  end;
+  PPGKanban1.WipMode := kwmBlock;
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGKanban - Kanban-Board (Phase 14c, Vorbild Trello / TMS FNC Kanban).</p>
+<ul>
+<li>Spalten (Titel, Farbe, WIP-Limit mit Warnfarbe, einklappbar) und Karten (Titel, Text mit Markup, Plaketten, Faelligkeit, Person als Initialen, Fortschritt, Farbstreifen). Optional Swimlanes (Zeilen).</li>
+<li>Ohne Swimlanes scrollt jede Spalte fuer sich (Mausrad, Daumen); das Board scrollt waagerecht. Mit Swimlanes scrollt das ganze Board, die Spaltenkoepfe bleiben stehen.</li>
+<li>Virtuelle Spalten (Column.VirtualCount + OnGetCard): Karten fester Hoehe, Lage in O(1), es wird nur Sichtbares abgefragt und gezeichnet.</li>
+<li>Ziehen innerhalb und zwischen Spalten (und Swimlanes): die Karte folgt der Maus, am Ziel oeffnet sich ein Platzhalter, die anderen Karten weichen animiert aus (gemeinsamer Animator). Am Rand scrollt das Board bzw. die Spalte. OnCardMoving (abbrechbar, z.B. WIP-Limit) und OnCardMoved; WipMode = kwmBlock lehnt Karten fuer volle Spalten ab.</li>
+<li>Tastatur: Pfeile zwischen Karten, Strg+Pfeile verschieben die Karte (auch in die naechste Spalte bzw. Swimlane), Enter oeffnet, Esc bricht das Ziehen ab. Der Screenreader hoert &quot;verschoben nach Spalte X, Position Y&quot;.</li>
+<li>Code (Cards, Column.Collapsed, SelectedCard) loest keine Ereignisse aus.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Columns</code>, <code>Lanes</code>, <code>Cards</code>, <code>ColumnWidth</code>, <code>CardGap</code>, <code>MaxTextLines</code>, <code>VirtualCardHeight</code>, <code>AllowDrag</code>, <code>ReadOnly</code>, <code>WipMode</code>, <code>ShowCardCount</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnCardMoving</code>, <code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code>, <code>OnGetCard</code>, <code>OnSelectionChange</code>, <code>OnColumnCollapse</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnScroll</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGKanban.md</code>.</p>
+</body></html>

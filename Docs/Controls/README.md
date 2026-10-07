@@ -45,6 +45,9 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten und `Docs\Controls\notes`.
 | [TPPGGauge](TPPGGauge.md) | `PPG.Gauge` | Dashboard-Bausteine (Phase 10c): TPPGGauge und TPPGKpiTile. |
 | [TPPGKpiTile](TPPGKpiTile.md) | `PPG.Gauge` | Dashboard-Bausteine (Phase 10c): TPPGGauge und TPPGKpiTile. |
 | [TPPGChart](TPPGChart.md) | `PPG.Chart` | Diagramm im Stil der Suite (Phase 10d). |
+| [TPPGPlanner](TPPGPlanner.md) | `PPG.Planner` | Terminplaner (Phase 14a). |
+| [TPPGRibbon](TPPGRibbon.md) | `PPG.Ribbon` | Menueband im Stil von Office (Phase 14b). |
+| [TPPGKanban](TPPGKanban.md) | `PPG.Kanban` | Kanban-Board (Phase 14c, Vorbild Trello / TMS FNC Kanban). |
 | [TPPGPopupMenu](TPPGPopupMenu.md) | `PPG.Menus` | Menues im Stil der Suite (Phase 11b). |
 | [TPPGMenuBar](TPPGMenuBar.md) | `PPG.MenuBar` | Hauptmenue als Control im Stil der Suite (Phase 11c). |
 | [TPPGHintManager](TPPGHintManager.md) | `PPG.Hints` | Hints im Stil der Suite (Phase 11e). |
@@ -61,6 +64,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten und `Docs\Controls\notes`.
 | [TPPGColumnComboBox](TPPGColumnComboBox.md) | `PPG.ColumnComboBox` | mehrspaltige Auswahl mit Kopfzeile (Phase 12e, Vorbild TMS TAdvMultiColumnComboBox). |
 | [TPPGTagEdit](TPPGTagEdit.md) | `PPG.TagEdit` | Stichwoerter als Chips (Phase 12f, Vorbild Outlook-Empfaenger, WinUI TokenizingTextBox). |
 | [TPPGGridPrinter](TPPGGridPrinter.md) | `PPG.Grid.Print` | Drucken von Tabellen (Phase 13e). |
+| [TPPGPlannerPrinter](TPPGPlannerPrinter.md) | `PPG.Planner.Print` | Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
 | [TPPGStyleManager](TPPGStyleManager.md) | `PPG.StyleManager` | Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster). |
 
 ## Palette PPGlow DB
@@ -75,6 +79,8 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten und `Docs\Controls\notes`.
 | [TPPGDBDatePicker](TPPGDBDatePicker.md) | `PPG.DB.Controls` | Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker. |
 | [TPPGDBGrid](TPPGDBGrid.md) | `PPG.DB.Grid` | Tabelle einer Datenmenge (Phase 9c), wie TDBGrid. |
 | [TPPGDBChart](TPPGDBChart.md) | `PPG.DB.Chart` | Diagramm aus einer Datenmenge (Phase 10e, Paket PPGlowDBR). |
+| [TPPGDBPlanner](TPPGDBPlanner.md) | `PPG.DB.Planner` | Terminplaner auf einer Datenmenge (Phase 14a, Paket PPGlowDBR). |
+| [TPPGDBKanban](TPPGDBKanban.md) | `PPG.DB.Kanban` | Kanban-Board auf einer Datenmenge (Phase 14c, Paket PPGlowDBR). |
 | [TPPGDBMaskEdit](TPPGDBMaskEdit.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
 | [TPPGDBNumberEdit](TPPGDBNumberEdit.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
 | [TPPGDBColorPicker](TPPGDBColorPicker.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |

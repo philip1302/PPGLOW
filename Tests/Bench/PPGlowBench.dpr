@@ -90,6 +90,21 @@ uses
   PPG.ToolBar in '..\..\Source\Controls\PPG.ToolBar.pas',
   PPG.StatusBar in '..\..\Source\Controls\PPG.StatusBar.pas',
   PPG.Notifications in '..\..\Source\Controls\PPG.Notifications.pas',
+  PPG.Planner.Print in '..\..\Source\Controls\PPG.Planner.Print.pas',
+  PPG.KeyTips in '..\..\Source\Core\PPG.KeyTips.pas',
+  PPG.Ribbon.Layout in '..\..\Source\Core\PPG.Ribbon.Layout.pas',
+  PPG.Ribbon.Items in '..\..\Source\Controls\PPG.Ribbon.Items.pas',
+  PPG.Ribbon in '..\..\Source\Controls\PPG.Ribbon.pas',
+  PPG.Kanban.Layout in '..\..\Source\Core\PPG.Kanban.Layout.pas',
+  PPG.Kanban.Items in '..\..\Source\Controls\PPG.Kanban.Items.pas',
+  PPG.Kanban in '..\..\Source\Controls\PPG.Kanban.pas',
+  PPG.Print in '..\..\Source\Controls\PPG.Print.pas',
+  PPG.Planner in '..\..\Source\Controls\PPG.Planner.pas',
+  PPG.TimeZones in '..\..\Source\Core\PPG.TimeZones.pas',
+  PPG.Planner.Recurrence in '..\..\Source\Core\PPG.Planner.Recurrence.pas',
+  PPG.Planner.Layout in '..\..\Source\Core\PPG.Planner.Layout.pas',
+  PPG.Planner.Model in '..\..\Source\Core\PPG.Planner.Model.pas',
+  PPG.Planner.ICal in '..\..\Source\Core\PPG.Planner.ICal.pas',
   PPG.Xlsx in '..\..\Source\Controls\PPG.Xlsx.pas',
   PPG.Grid.Export in '..\..\Source\Controls\PPG.Grid.Export.pas',
   PPG.Grid.Print in '..\..\Source\Controls\PPG.Grid.Print.pas',
@@ -797,6 +812,81 @@ begin
           end;
         finally
           C.Free;
+        end;
+      end);
+
+    // Phase 14a: Planer (Ziel aus dem Plan: 50 000 Termine im Jahr)
+    Measure('Planer 50 000 Termine: 20 Wochen abfragen, anordnen, zeichnen', 2500,
+      procedure
+      var
+        P: TPPGPlanner;
+        A: TPPGAppointment;
+        I: Integer;
+      begin
+        P := TPPGPlanner.Create(Form);
+        try
+          P.Parent := Form;
+          P.SetBounds(0, 0, 1000, 700);
+          P.ShowNowLine := False;
+          P.Appointments.BeginUpdate;
+          try
+            for I := 0 to 49999 do
+            begin
+              A := P.Appointments.Add;
+              A.StartTime := EncodeDate(2026, 1, 1) + (I mod 365) + (8 + I mod 10) / 24;
+              A.FinishTime := A.StartTime + (1 + I mod 3) / 48;
+              A.Subject := 'Termin ' + IntToStr(I);
+            end;
+          finally
+            P.Appointments.EndUpdate;
+          end;
+          P.Date := EncodeDate(2026, 3, 2);
+          for I := 1 to 20 do
+          begin
+            P.NextPage;
+            PaintToBitmap(P);
+          end;
+        finally
+          P.Free;
+        end;
+      end);
+
+    Measure('Planer: 500 Serien, 12 Monate in der Monatsansicht', 2500,
+      procedure
+      var
+        P: TPPGPlanner;
+        A: TPPGAppointment;
+        I: Integer;
+      begin
+        P := TPPGPlanner.Create(Form);
+        try
+          P.Parent := Form;
+          P.SetBounds(0, 0, 1000, 700);
+          P.View := pvMonth;
+          P.Appointments.BeginUpdate;
+          try
+            for I := 0 to 499 do
+            begin
+              A := P.Appointments.AddAppointment(EncodeDate(2026, 1, 1) + I mod 28 + (8 + I mod 9) / 24,
+                EncodeDate(2026, 1, 1) + I mod 28 + (9 + I mod 9) / 24, 'Serie ' + IntToStr(I));
+              case I mod 3 of
+                0: A.Recurrence := 'FREQ=DAILY;INTERVAL=3';
+                1: A.Recurrence := 'FREQ=WEEKLY;BYDAY=MO,WE,FR';
+              else
+                A.Recurrence := 'FREQ=MONTHLY;BYDAY=2TU';
+              end;
+            end;
+          finally
+            P.Appointments.EndUpdate;
+          end;
+          P.Date := EncodeDate(2026, 1, 15);
+          for I := 1 to 12 do
+          begin
+            P.NextPage;
+            PaintToBitmap(P);
+          end;
+        finally
+          P.Free;
         end;
       end);
 

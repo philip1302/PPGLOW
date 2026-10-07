@@ -80,6 +80,20 @@ In den Tests prüft `PPG.Tests.Gaps` drei Stellen direkt mit `CompilerVersion >=
 - Kästchen-Spalten setzen ihren Wert jetzt über `OnValidateCell` (wie der Editor).
 - DB-Grid: mit `dgColumnResize` lassen sich Spalten verschieben (wie `TDBGrid`); Boolean-Felder sind auch in eigenen `Columns` Kästchen.
 
+## Neue Stellen aus Phase 14a mit Versionsrisiko
+
+| Bereich | Risiko | Prüfen unter XE2 |
+|---|---|---|
+| `PPG.TimeZones` | Registry-Wert `TZI` (Aufbau `REG_TZI_FORMAT`), `GetTimeZoneInformation` | Suite **Phase14a** (TTimeZoneTests) |
+| `PPG.Planner.Model`, `PPG.Planner` | `TTimeZone.Local` (System.DateUtils, ab XE), `TArray.Sort<TPPGOccurrence>` mit anonymem Vergleicher, `TDictionary` | Suiten **Phase14a** |
+| `PPG.Planner.ICal` | `TEncoding.UTF8.GetBytes` (Faltung nach 75 Bytes) | Suite **Phase14a** (ICalFolding) |
+| `PPG.Planner.Print` | `StyleElements` nur unter `PPG_HAS_STYLEELEMENTS` (XE2: Druckfarben folgen ggf. dem Dark Mode der Anwendung) | Druckvorschau von Hand |
+| `PPG.Print` | aus `PPG.Grid.Print` herausgelöst; alte Namen dort als Typ-Aliase | Suite **Phase13e** |
+
+**Verhaltensänderungen in Phase 14a** (bestehender Code):
+- `TPPGGdiCanvas.PushClipRoundRect` berücksichtigt einen verschobenen Ursprung (`SetViewportOrgEx`/`SetWindowOrgEx`). Ohne verschobenen Ursprung ändert sich nichts.
+- `TPPGGridPrinter` erbt von `TPPGCustomPrinter` (`PPG.Print`); `TPPGPageSetupForm` zeigt die Optionen des jeweiligen Druckers.
+
 ## Bekannte Grenzen (kein Fehler)
 
 - Die Demo (`Demo\PPGlowDemo`) verwendet den Styles-Ordner von Delphi 13 und ist nur dafür gedacht.

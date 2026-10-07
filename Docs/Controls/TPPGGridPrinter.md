@@ -1,6 +1,6 @@
 # TPPGGridPrinter
 
-Palette **PPGlow** - Unit `PPG.Grid.Print` - Basis `TComponent`
+Palette **PPGlow** - Unit `PPG.Grid.Print` - Basis `TPPGCustomPrinter`
 
 **Vorbild:** TMS TAdvGridPrintSettings / Vorschau, DevExpress Printing
 
@@ -30,10 +30,10 @@ PPGExportPdf(PPGGridPrinter1, 'Lagerliste.pdf');
 Drucken von Tabellen (Phase 13e).
 
 - TPPGGridPrinter (Komponente fuer den Formular-Designer) druckt eine IPPGTableSource: das Grid, das DB-Grid oder eine eigene Quelle. Er kennt das Control nicht (DIP); Darstellung (bedingte Formate, Zellarten) kommt ueber das schmale IPPGGridPrintSource.
-- Seite: Ausrichtung, Raender (mm), Kopf-/Fusszeile mit Platzhaltern [Seite]/[Page], [Seiten]/[Pages], [Datum]/[Date], [Titel]/[Title]. Spaltenkoepfe auf jeder Seite, auf Seitenbreite einpassen oder Spalten auf mehrere Seiten verteilen, Gitterlinien und Farben abschaltbar.
+- Seite (Ausrichtung, Raender, Kopf-/Fusszeile), Drucken, PDF, Vorschau und "Seite einrichten" kommen aus TPPGCustomPrinter (PPG.Print, seit Phase 14a gemeinsam mit dem Planer). Hier: Spaltenkoepfe auf jeder Seite, auf Seitenbreite einpassen oder Spalten auf mehrere Seiten verteilen, Gitterlinien und Farben abschaltbar.
 - Gezeichnet wird mit dem GDI-Canvas in der Aufloesung des Druckers (GDI+ rastert Alpha-Flaechen auf Drucker-DCs zu grossen Bitmaps). Alle Masse sind logisch (96 dpi) und werden mit der Drucker-PPI umgerechnet; die Schrift wird ueber Font.Height mit der Drucker-PPI neu gesetzt.
 - Zeilen holt der Drucker seitenweise aus der Quelle (virtuelle Daten).
-- Vorschau: TPPGPrintPreviewForm (PPGlow-Controls) zeichnet nur sichtbare Seiten in Metafiles (mit Zwischenspeicher fuer wenige Seiten).
+- Die frueher hier deklarierten Typen (TPPGPrintDevice, TPPGPrintMargins, Vorschau- und Seiten-Formular) gibt es weiter unter demselben Namen.
 
 ## PPGlow-Eigenschaften
 

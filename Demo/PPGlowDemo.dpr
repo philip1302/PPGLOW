@@ -17,6 +17,7 @@ program PPGlowDemo;
     /style <Name>            VCL-Style aktivieren (z.B. Windows10Dark)
     /datepopup <datei.png>   DatePicker aufklappen, Bildschirmpixel speichern
     /toastcapture <datei.png> drei Toasts zeigen, Bildschirmecke speichern
+    /ribboncapture <modus> <datei.png>  Ribbon: keytips, keytips2, minimized, group, gallery
     /mica [/screencapture <datei.png>]  Prototyp Mica-Hintergrund
     /selftest <datei.txt>    Szenarien aller Seiten pruefen, Exit-Code = Fehlerzahl }
 
@@ -99,6 +100,21 @@ uses
   PPG.ToolBar in '..\Source\Controls\PPG.ToolBar.pas',
   PPG.StatusBar in '..\Source\Controls\PPG.StatusBar.pas',
   PPG.Notifications in '..\Source\Controls\PPG.Notifications.pas',
+  PPG.Planner.Print in '..\Source\Controls\PPG.Planner.Print.pas',
+  PPG.KeyTips in '..\Source\Core\PPG.KeyTips.pas',
+  PPG.Ribbon.Layout in '..\Source\Core\PPG.Ribbon.Layout.pas',
+  PPG.Ribbon.Items in '..\Source\Controls\PPG.Ribbon.Items.pas',
+  PPG.Ribbon in '..\Source\Controls\PPG.Ribbon.pas',
+  PPG.Kanban.Layout in '..\Source\Core\PPG.Kanban.Layout.pas',
+  PPG.Kanban.Items in '..\Source\Controls\PPG.Kanban.Items.pas',
+  PPG.Kanban in '..\Source\Controls\PPG.Kanban.pas',
+  PPG.Print in '..\Source\Controls\PPG.Print.pas',
+  PPG.Planner in '..\Source\Controls\PPG.Planner.pas',
+  PPG.TimeZones in '..\Source\Core\PPG.TimeZones.pas',
+  PPG.Planner.Recurrence in '..\Source\Core\PPG.Planner.Recurrence.pas',
+  PPG.Planner.Layout in '..\Source\Core\PPG.Planner.Layout.pas',
+  PPG.Planner.Model in '..\Source\Core\PPG.Planner.Model.pas',
+  PPG.Planner.ICal in '..\Source\Core\PPG.Planner.ICal.pas',
   PPG.Xlsx in '..\Source\Controls\PPG.Xlsx.pas',
   PPG.Grid.Export in '..\Source\Controls\PPG.Grid.Export.pas',
   PPG.Grid.Print in '..\Source\Controls\PPG.Grid.Print.pas',
@@ -140,6 +156,8 @@ uses
   PPG.DB.Lookup in '..\Source\DB\PPG.DB.Lookup.pas',
   PPG.DB.Grid in '..\Source\DB\PPG.DB.Grid.pas',
   PPG.DB.Chart in '..\Source\DB\PPG.DB.Chart.pas',
+  PPG.DB.Planner in '..\Source\DB\PPG.DB.Planner.pas',
+  PPG.DB.Kanban in '..\Source\DB\PPG.DB.Kanban.pas',
   PPG.DB.Fields in '..\Source\DB\PPG.DB.Fields.pas',
   DemoKit in 'DemoKit.pas',
   DemoPages1 in 'DemoPages1.pas',
@@ -148,6 +166,9 @@ uses
   DemoPages4 in 'DemoPages4.pas',
   DemoPages5 in 'DemoPages5.pas',
   DemoPages6 in 'DemoPages6.pas',
+  DemoPages7 in 'DemoPages7.pas',
+  DemoPages8 in 'DemoPages8.pas',
+  DemoPages9 in 'DemoPages9.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}
@@ -231,6 +252,15 @@ begin
       Application.ProcessMessages;
       if not Form.SaveChartPng(ParamStr(I + 2), ParamStr(I + 3)) then
         ExitCode := 1;
+      Exit;
+    end;
+
+  // /ribboncapture modus datei.png: Ribbon-Zustand (KeyTips, Popups), Bildschirmpixel
+  for I := 1 to ParamCount - 2 do
+    if SameText(ParamStr(I), '/ribboncapture') then
+    begin
+      Form.Show;
+      Form.SaveRibbonCapture(ParamStr(I + 1), ParamStr(I + 2));
       Exit;
     end;
 

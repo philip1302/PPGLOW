@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGRibbon</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGRibbon</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Ribbon</code> - Basis <code>TPPGCustomRibbon</code></p>
+<p><strong>Vorbild:</strong> TMS AdvToolBar / Office-Ribbon, Windows Ribbon Framework</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Aufbau: <code>Tabs</code> → <code>Groups</code> → <code>Items</code>, alles im Objektinspektor und in der DFM pflegbar. Das Ribbon liegt unter der normalen Titelleiste (kein Zeichnen im Nicht-Client-Bereich, damit VCL-Styles, DPI und Snap-Layouts funktionieren).</li>
+<li>Item-Arten (<code>Kind</code>): Button, Split-Button (<code>DropDownMenu</code>), Umschalt-Button (<code>Down</code>, <code>GroupIndex</code> gilt im ganzen Ribbon), Galerie, eingebettetes Control (<code>Control</code>, z. B. eine <code>TPPGComboBox</code>; das Ribbon wird ihr Parent) und Trenner.</li>
+<li>Gr&#246;&#223;e: <code>Size</code> (gro&#223; = Symbol &#252;ber Text, mittel = kleines Symbol mit Text, klein = nur Symbol) und <code>MinSize</code>. Kleine Items stapeln sich zu drei Zeilen; <code>BeginColumn</code> beginnt einen neuen Stapel, <code>SameRow</code> stellt ein Item rechts neben das vorige (z. B. Fett, Kursiv, Unterstrichen in einer Zeile).</li>
+<li>Symbole: <code>ImageIndex</code> aus <code>Images</code> (16 px), <code>LargeImageIndex</code> aus <code>LargeImages</code> (32 px) oder <code>IconChar</code> (Zeichen der Symbolschrift, z. B. <code>$E8C8</code> f&#252;r Kopieren).</li>
+<li><strong>Schrumpfen:</strong> Passt die Breite nicht, schrumpfen die Gruppen in fester Reihenfolge: erst alle auf „mittel“, dann „nur Symbol“, dann „als Dropdown“. Innerhalb einer Stufe zuerst die Gruppen mit kleinerem <code>ReduceOrder</code>, bei Gleichstand von rechts. Ein Schritt, der eine Gruppe nicht schmaler macht, wird &#252;bersprungen; eine Gruppe aus lauter kleinen Items wird deshalb nicht zum Dropdown, wenn das Dropdown breiter w&#228;re. Die Galerie zeigt erst weniger Spalten, dann einen Dropdown-Button.</li>
+<li>Eine als Dropdown geschrumpfte Gruppe &#246;ffnet ein Popup mit der voll aufgeklappten Gruppe; eingebettete Controls wandern mit. Symbol der geschrumpften Gruppe: <code>ImageIndex</code>/<code>IconChar</code> der Gruppe, sonst das erste Item mit Symbol.</li>
+<li><code>ShowLauncher</code> zeigt unten rechts in der Gruppe den Startknopf f&#252;r einen Dialog (<code>OnLauncherClick</code>).</li>
+<li>Galerie: Eintr&#228;ge aus <code>GalleryItems</code> oder virtuell (<code>GalleryCount</code> + <code>OnGetGalleryItem</code>, auch mit Farbfeld), eigenes Zeichnen &#252;ber <code>OnDrawGalleryItem</code>. In der Leiste bl&#228;ttern die Pfeile rechts zeilenweise (auch mit dem Mausrad), der untere klappt die Galerie auf (Pfeile, Enter, Esc). Auswahl: <code>GalleryIndex</code>, <code>OnGalleryClick</code>.</li>
+<li><strong>Actions</strong> (<code>Item.Action</code>) liefern Caption, Hint, Enabled, Checked, Visible, ImageIndex und OnExecute, wie bei Men&#252; und ToolBar.</li>
+<li><strong>KeyTips:</strong> Alt bzw. F10 zeigt Plaketten &#252;ber „Datei“, Schnellzugriff (1, 2, …) und Registerkarten; Alt+Buchstabe springt direkt in eine Karte. Danach zeigen die Befehle der Karte ihre Plaketten; Esc geht eine Ebene zur&#252;ck. Vergeben werden sie automatisch aus der Beschriftung (<code>&amp;</code>-Buchstabe, Wortanf&#228;nge, sonst zwei Zeichen); eigene &#252;ber <code>KeyTip</code>. Die Plaketten zeichnet ein eigenes Overlay-Fenster je Monitor, auch &#252;ber Popups.</li>
+<li><strong>Tastatur ohne Maus:</strong> Nach Alt wechseln die Pfeiltasten in die Tastaturbedienung (Fokusrahmen; links/rechts innerhalb der Zeile, hoch/runter zwischen Karten und Band, Enter/Leertaste l&#246;st aus, Esc verl&#228;sst).</li>
+<li><strong>Einklappen:</strong> <code>Minimized</code>, Doppelklick auf eine Registerkarte, Strg+F1 oder der Knopf rechts. Eingeklappt &#246;ffnet ein Klick auf eine Karte sie als Popup.</li>
+<li><strong>Schnellzugriff:</strong> <code>QuickAccess</code> (&#252;ber oder unter dem Band, <code>QuickAccessPosition</code>). Rechtsklick auf einen Befehl f&#252;gt ihn hinzu, Rechtsklick im Schnellzugriff entfernt ihn (<code>QuickAccessCustomizable</code>, <code>OnQuickAccessChange</code>). Ein Schnellzugriff-Item wirkt auf das Item im Band mit gleicher Action bzw. gleicher Beschriftung, Art und Symbol (<code>QuickSource</code>).</li>
+<li><strong>Kontext-Registerkarten:</strong> <code>ContextName</code> und <code>ContextColor</code> (farbige Leiste und T&#246;nung). Die Anwendung schaltet <code>Visible</code> und <code>TabIndex</code> je nach Auswahl.</li>
+<li><strong>Datei:</strong> Ist <code>Backstage</code> gesetzt (ein beliebiges Control, z. B. ein Panel oder PageControl), legt „Datei“ es &#252;ber das ganze Formular bzw. seinen Parent; Esc oder <code>HideBackstage</code> schlie&#223;t. Ohne Backstage &#246;ffnet „Datei“ <code>ApplicationMenu</code>. Vorher kommt immer <code>OnApplicationButtonClick</code>.</li>
+<li>Code setzt Werte ohne Ereignisse (<code>TabIndex</code>, <code>Minimized</code>, <code>Down</code>, <code>GalleryIndex</code>); Anwenderaktionen l&#246;sen <code>OnTabChanging</code>/<code>OnTabChange</code>, <code>OnItemClick</code>, <code>OnGalleryClick</code>, <code>OnMinimizedChange</code> usw. aus.</li>
+<li>Im Designer wechselt ein Klick auf eine Registerkarte die Karte; das Kontextmen&#252; bietet „Edit tabs…“, „Edit groups of the active tab…“, „Edit Quick Access items…“, „New Tab“, „Next/Previous Tab“. Eingebettete Controls legt man auf das Ribbon und weist sie einem Item zu.</li>
+<li>Screenreader: Gruppierung „Men&#252;band“; Kinder sind Datei, Schnellzugriff, Registerkarten (gew&#228;hlt) und die Befehle der aktiven Karte mit Rolle (Button, Split-Button, Umschalt-Button, Men&#252;-Button). RTL gespiegelt.</li>
+<li>Nicht unterst&#252;tzt: Ribbon in der Titelleiste, MDI-Zusammenf&#252;hrung, Speichern des Schnellzugriffs (die Anwendung tut das in <code>OnQuickAccessChange</code>).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>uses PPG.Ribbon.Items, PPG.Ribbon.Layout;
+
+var
+  T: TPPGRibbonTab;
+  G: TPPGRibbonGroup;
+begin
+  T := PPGRibbon1.Tabs.AddTab(&#39;Start&#39;);
+  G := T.Groups.AddGroup(&#39;Zwischenablage&#39;);
+  G.Items.Add.Action := EditPaste1;          // Standard-Action
+  G.Items[0].IconChar := $E77F;
+  G.Items.AddButton(&#39;Kopieren&#39;, $E8C8, rsMedium, CopyClick);
+  G := T.Groups.AddGroup(&#39;Schriftart&#39;);
+  G.Items.Add.Control := FontCombo;          // eingebettetes Control
+  G.Items.AddCheck(&#39;Fett&#39;, $E8DD);
+  G.Items.AddCheck(&#39;Kursiv&#39;, $E8DB).SameRow := True;
+  PPGRibbon1.QuickAccess.AddButton(&#39;Speichern&#39;, $E74E, rsSmall, SaveClick);
+  PPGRibbon1.Backstage := BackstagePanel;
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGRibbon - Menueband im Stil von Office (Phase 14b).</p>
+<p>Aufbau (von oben): Schnellzugriffsleiste (wahlweise ueber oder unter dem Band), Registerkartenzeile mit &quot;Datei&quot;-Button und Einklapp-Knopf, Band mit den Gruppen der aktiven Registerkarte. Das Ribbon liegt unter der normalen Titelleiste (kein Zeichnen im Nicht-Client-Bereich).</p>
+<ul>
+<li>Modell: PPG.Ribbon.Items (Tabs -&gt; Groups -&gt; Items, Actions als Quelle).</li>
+<li>Layout: PPG.Ribbon.Layout (reine Funktionen). Reicht die Breite nicht, schrumpfen die Gruppen in fester Reihenfolge: gross -&gt; klein -&gt; nur Symbol -&gt; Gruppe als Dropdown. Die Geometrie einer Registerkarte haelt ein TPPGRibbonView; dieselbe Klasse dient dem Band, dem Popup des eingeklappten Bands und dem Popup einer geschrumpften Gruppe.</li>
+<li>Eingebettete Controls (Item.Control) sind Kinder des Ribbons bzw. des offenen Popups. Ihre Lage wird nie im Paint gesetzt, sondern per geposteter Nachricht (UpdateLayout erzwingt es sofort).</li>
+<li>KeyTips: Alt (bzw. F10) zeigt Plaketten ueber Registerkarten, &quot;Datei&quot; und Schnellzugriff, ein Buchstabe waehlt die Karte und zeigt die Plaketten ihrer Befehle; Esc geht eine Ebene zurueck. Die Plaketten zeichnet ein eigenes Overlay-Fenster je Monitor (auch ueber Popups). Tasten kommen ueber PPG.AppHooks, der Fokus bleibt im Formular.</li>
+<li>Tastatur ohne Maus: nach Alt wechseln die Pfeiltasten in die Tastaturbedienung (Fokusrahmen, Enter/Leertaste loest aus).</li>
+<li>Einklappen: Doppelklick auf eine Registerkarte, Strg+F1 oder der Knopf rechts; eingeklappt oeffnet ein Klick die Karte als Popup.</li>
+<li>Schnellzugriff anpassbar ueber das Kontextmenue (hinzufuegen, entfernen, ueber/unter dem Band); Kontext-Registerkarten farbig hervorgehoben.</li>
+<li>&quot;Datei&quot; zeigt den Backstage-Bereich (ein beliebiges Control, z.B. ein PageControl, ueber dem ganzen Formular) oder ein Anwendungsmenue.</li>
+<li>Code setzt Werte ohne Ereignisse; Anwenderaktionen loesen sie aus.</li>
+<li>Screenreader: Gruppierung &quot;Menueband&quot; mit Datei, Schnellzugriff, Registerkarten und den Befehlen der aktiven Karte als Kindern.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Images</code>, <code>LargeImages</code>, <code>Tabs</code>, <code>TabIndex</code>, <code>QuickAccess</code>, <code>QuickAccessPosition</code>, <code>ShowQuickAccess</code>, <code>QuickAccessCustomizable</code>, <code>ShowApplicationButton</code>, <code>ApplicationButtonCaption</code>, <code>ApplicationMenu</code>, <code>Backstage</code>, <code>Minimized</code>, <code>KeyTipsEnabled</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnItemClick</code>, <code>OnTabChange</code>, <code>OnTabChanging</code>, <code>OnGalleryClick</code>, <code>OnGetGalleryItem</code>, <code>OnDrawGalleryItem</code>, <code>OnLauncherClick</code>, <code>OnMinimizedChange</code>, <code>OnQuickAccessChange</code>, <code>OnApplicationButtonClick</code>, <code>OnBackstageChange</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGRibbon.md</code>.</p>
+</body></html>

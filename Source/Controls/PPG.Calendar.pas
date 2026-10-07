@@ -17,7 +17,9 @@ unit PPG.Calendar;
     zoomen. RTL gespiegelt.
   - Code (Date := ...) loest kein OnChange aus; der Anwender schon.
   - Screenreader: Tabelle, Kinder sind die Tage (bzw. Monate/Jahre) mit
-    Langdatum als Name, Zustaenden gewaehlt/fokussiert/gesperrt. }
+    Langdatum als Name, Zustaenden gewaehlt/fokussiert/gesperrt.
+  - Link (Phase 14a): ein verbundener Planer (IPPGCalendarLink) markiert Tage
+    mit Terminen fett und erfaehrt die Auswahl des Anwenders. }
 
 {$I ..\PPG.inc}
 
@@ -36,6 +38,16 @@ type
   TPPGDateDisabledEvent = procedure(Sender: TObject; ADate: TDate; var Disabled: Boolean) of object;
 
   TPPGCalendarPart = (cpNone, cpTitle, cpPrev, cpNext, cpCell);
+
+  /// Verbindung Kalender -> Planer (Phase 14a). Der Kalender kennt nur dieses
+  /// Interface, nicht den Planer.
+  IPPGCalendarLink = interface
+    ['{B83E1F52-6C0A-4D97-8E24-5A19F7C3D061}']
+    /// Tag fett zeichnen (z. B. Termine an diesem Tag).
+    function CalendarDateMarked(ADate: TDate): Boolean;
+    /// Anwender hat einen Tag gewaehlt.
+    procedure CalendarDateSelected(Sender: TObject; ADate: TDate);
+  end;
 
   TPPGCustomCalendar = class(TPPGCustomControl, IPPGAccessibleChildren)
   private
@@ -62,6 +74,7 @@ type
     FBoldFont: TFont;
     FTodayOverride: TDate;
     FShowFocusAlways: Boolean;
+    FLink: TComponent;
     FOnChange: TNotifyEvent;
     FOnIsDateDisabled: TPPGDateDisabledEvent;
     FOnViewChange: TNotifyEvent;
@@ -94,6 +107,7 @@ type
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
   protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure WndProc(var Message: TMessage); override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
@@ -168,6 +182,9 @@ type
     /// DatePickers: die Tastatur bleibt beim Feld).
     property ShowFocusAlways: Boolean read FShowFocusAlways write FShowFocusAlways;
     property HotCell: Integer read FHotCell;
+    /// Verbundener Planer (muss IPPGCalendarLink unterstuetzen; nil = keiner).
+    procedure SetLink(Value: TComponent);
+    property Link: TComponent read FLink;
   end;
 
   TPPGCalendar = class(TPPGCustomCalendar)
@@ -311,6 +328,30 @@ begin
     Result := PPGLocaleFirstDayOfWeek
   else
     Result := Ord(FFirstDayOfWeek); // fdMonday = 1
+end;
+
+procedure TPPGCustomCalendar.SetLink(Value: TComponent);
+begin
+  if (Value <> nil) and not Supports(Value, IPPGCalendarLink) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGInvalidPropertyValue), ['Link', Value.ClassName]);
+  if FLink = Value then
+    Exit;
+  if FLink <> nil then
+    FLink.RemoveFreeNotification(Self);
+  FLink := Value;
+  if FLink <> nil then
+    FLink.FreeNotification(Self);
+  Invalidate;
+end;
+
+procedure TPPGCustomCalendar.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (AComponent = FLink) then
+  begin
+    FLink := nil;
+    Invalidate;
+  end;
 end;
 
 { ---- Geometrie ---- }
@@ -841,7 +882,11 @@ begin
 end;
 
 procedure TPPGCustomCalendar.Change;
+var
+  L: IPPGCalendarLink;
 begin
+  if (FLink <> nil) and (FDate <> 0) and Supports(FLink, IPPGCalendarLink, L) then
+    L.CalendarDateSelected(Self, FDate);
   NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
   if Assigned(FOnChange) then
     FOnChange(Self);
@@ -1186,6 +1231,8 @@ var
   DC: HDC;
   LastColor: TColor;
   LastBold: Boolean;
+  Link: IPPGCalendarLink;
+  Marked: Boolean;
 
   procedure AddText(const AR: TRect; const AS_: string; AC: TColor; ABold: Boolean);
   begin
@@ -1201,6 +1248,8 @@ var
 begin
   NText := 0;
   PPI := ScalePPI;
+  if (FLink = nil) or not Supports(FLink, IPPGCalendarLink, Link) then
+    Link := nil;
   T := Tokens;
   A := EffectiveAppearance;
   HC := HighContrastSupport and PPGIsHighContrast;
@@ -1328,6 +1377,7 @@ begin
       OffsetRect(CR, 0, Off);
       Dt := CellDate(I);
       DecodeDate(Dt, Y, M, D);
+      Marked := False;
       case FView of
         cvYear:
           begin
@@ -1356,6 +1406,7 @@ begin
         Other := M <> FDisplayMonth;
         Dis := IsDateDisabled(Dt);
         InRange := (FSelectionMode = dsmRange) and (FRangeEnd <> 0) and Sel;
+        Marked := (Link <> nil) and Link.CalendarDateMarked(Dt);
       end;
       Diam := Min(CR.Right - CR.Left, CR.Bottom - CR.Top) - PPGScale(4, PPI);
       if FView = cvMonth then
@@ -1414,7 +1465,7 @@ begin
       if IsToday and not Sel then
         AddText(CR, S, Accent, True)
       else
-        AddText(CR, S, C, False);
+        AddText(CR, S, C, Marked);
       if ((FocusVisible and Focused) or FShowFocusAlways) and (I = FocusI) then
         ACanvas.FrameRoundRect(Rect(R.Left - 2, R.Top - 2, R.Right + 2, R.Bottom + 2), Rad + 2,
           PPGScale(2, PPI), PPGColorToRGB(A.FocusColor), 255);

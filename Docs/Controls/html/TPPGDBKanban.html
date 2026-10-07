@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBKanban</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBKanban</h1>
+<p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Kanban</code> - Basis <code>TPPGCustomDBKanban</code></p>
+<p><strong>Vorbild:</strong> TMS FNC Kanban Board mit Datenbank-Anbindung</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Feldzuordnung: <code>KeyField</code> (ganze Zahl, Pflicht zum Schreiben), <code>ColumnField</code> (Wert = <code>Column.Key</code>, sonst <code>Column.Id</code>), <code>OrderField</code> (Reihenfolge), <code>TitleField</code>; optional <code>LaneField</code> (Wert = <code>Lane.Key</code> bzw. <code>Id</code>), <code>TextField</code>, <code>LabelsField</code>, <code>AssigneeField</code>, <code>DueField</code>, <code>ProgressField</code>, <code>ColorField</code>.</li>
+<li>Spalten und Swimlanes legt man wie beim <code>TPPGKanban</code> an; die Karten kommen aus der Datenmenge (h&#246;chstens <code>MaxRecords</code>), sortiert nach <code>OrderField</code>. Datens&#228;tze mit unbekanntem Spaltenwert erscheinen nicht.</li>
+<li>Nach jedem Verschieben durch den Anwender schreibt das Board Spalte (und Swimlane) der Karte und nummeriert die Karten von Quell- und Zielzelle in Zehnerschritten neu (nur ge&#228;nderte Datens&#228;tze).</li>
+<li>Ohne <code>KeyField</code> ist das Board schreibgesch&#252;tzt (Verschieben wird abgelehnt).</li>
+<li>&#196;nderungen von au&#223;en laden nach <code>ReloadDelay</code> neu; die Auswahl bleibt an der Karte. <code>SyncRecord</code>: die gew&#228;hlte Karte wird zum aktuellen Datensatz.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGDBKanban1.Columns.AddColumn(&#39;Offen&#39;).Key := &#39;todo&#39;;
+PPGDBKanban1.Columns.AddColumn(&#39;In Arbeit&#39;, 3).Key := &#39;doing&#39;;
+PPGDBKanban1.Columns.AddColumn(&#39;Fertig&#39;).Key := &#39;done&#39;;
+PPGDBKanban1.KeyField := &#39;ID&#39;;
+PPGDBKanban1.ColumnField := &#39;Status&#39;;
+PPGDBKanban1.OrderField := &#39;Reihe&#39;;
+PPGDBKanban1.TitleField := &#39;Titel&#39;;
+PPGDBKanban1.DataSource := DataSource1;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGDBKanban - Kanban-Board auf einer Datenmenge (Phase 14c, Paket PPGlowDBR).</p>
+<ul>
+<li>Feldzuordnung: KeyField (ganze Zahl, Pflicht zum Schreiben), ColumnField (Wert = Column.Key, sonst Column.Id), OrderField (Reihenfolge in der Spalte), TitleField sowie optional LaneField (Wert = Lane.Key bzw. Id), TextField, LabelsField, AssigneeField, DueField, ProgressField, ColorField.</li>
+<li>Laden: alle Datensaetze (hoechstens MaxRecords) werden in Cards gespiegelt, sortiert nach OrderField. Bestehende Karten werden per Schluessel aktualisiert (Auswahl bleibt).</li>
+<li>Schreiben: nach jedem Verschieben durch den Anwender bekommt die Karte Spalte und Swimlane, die Karten von Quell- und Zielzelle werden in Zehnerschritten neu nummeriert (nur geaenderte Datensaetze).</li>
+<li>Ohne KeyField ist das Board schreibgeschuetzt.</li>
+<li>Datenaenderungen von aussen laden verzoegert neu (ReloadDelay ueber den Animator); eigenes Lesen und Schreiben loest kein Neuladen aus.</li>
+<li>SyncRecord: die gewaehlte Karte wird zum aktuellen Datensatz.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>DataSource</code>, <code>KeyField</code>, <code>ColumnField</code>, <code>LaneField</code>, <code>OrderField</code>, <code>TitleField</code>, <code>TextField</code>, <code>LabelsField</code>, <code>AssigneeField</code>, <code>DueField</code>, <code>ProgressField</code>, <code>ColorField</code>, <code>MaxRecords</code>, <code>ReloadDelay</code>, <code>SyncRecord</code>, <code>Columns</code>, <code>Lanes</code>, <code>ColumnWidth</code>, <code>CardGap</code>, <code>MaxTextLines</code>, <code>AllowDrag</code>, <code>ReadOnly</code>, <code>WipMode</code>, <code>ShowCardCount</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnCardMoving</code>, <code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code>, <code>OnSelectionChange</code>, <code>OnColumnCollapse</code>, <code>OnEnter</code>, <code>OnExit</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBKanban.md</code>.</p>
+</body></html>

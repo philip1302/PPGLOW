@@ -41,6 +41,8 @@ contains
   PPG.DB.Lookup in '..\..\Source\DB\PPG.DB.Lookup.pas',
   PPG.DB.Grid in '..\..\Source\DB\PPG.DB.Grid.pas',
   PPG.DB.Chart in '..\..\Source\DB\PPG.DB.Chart.pas',
+  PPG.DB.Planner in '..\..\Source\DB\PPG.DB.Planner.pas',
+  PPG.DB.Kanban in '..\..\Source\DB\PPG.DB.Kanban.pas',
   PPG.DB.Fields in '..\..\Source\DB\PPG.DB.Fields.pas';
 
 end.

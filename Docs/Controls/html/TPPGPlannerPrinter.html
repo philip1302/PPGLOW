@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGPlannerPrinter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGPlannerPrinter</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Planner.Print</code> - Basis <code>TPPGCustomPrinter</code></p>
+<p><strong>Vorbild:</strong> TMS TPlanner.Print, Outlook „Wochenkalender drucken“</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Druckt einen <code>TPPGPlanner</code> (<code>Planner</code>) &#252;ber denselben Weg wie der Grid-Drucker: Vorschau, „Seite einrichten“, PDF (<code>PrintToFile</code> mit „Microsoft Print to PDF“), Kopf-/Fu&#223;zeile mit Platzhaltern.</li>
+<li>Eine Seite je Zeitraum der Ansicht <code>View</code>: Tag, Arbeitswoche, Woche, Monat oder Agenda (7 Tage je Seite); die Zeitleiste wird als Woche gedruckt. <code>PrintFrom</code>/<code>PrintTo</code> = 0: nur die Seite um <code>Planner.Date</code>. <code>TakeFromPlanner</code> &#252;bernimmt die Ansicht des Planers.</li>
+<li>Gezeichnet wird mit demselben Code wie auf dem Bildschirm, in der Aufl&#246;sung des Druckers, mit hellen Farben, ohne Auswahl und „Jetzt“-Linie.</li>
+<li><code>WorkHoursOnly</code> (Vorgabe): das Raster zeigt nur die Arbeitszeit (<code>WorkStart</code>..<code>WorkEnd</code>) und wird so hoch, dass es die Seite f&#252;llt. Die Option steht auch im Dialog „Seite einrichten“.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGPlannerPrinter1.Planner := PPGPlanner1;
+PPGPlannerPrinter1.Title := &#39;Team&#39;;
+PPGPlannerPrinter1.HeaderText := &#39;[Titel]&#39;;
+PPGPlannerPrinter1.Orientation := poLandscape;
+PPGPlannerPrinter1.View := pvWeek;
+PPGPlannerPrinter1.PrintFrom := EncodeDate(2026, 6, 1);
+PPGPlannerPrinter1.PrintTo := EncodeDate(2026, 6, 30);
+PPGPlannerPrinter1.Preview;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten).</p>
+<ul>
+<li>Eine Seite je Zeitraum: Tag (DayCount Tage), Arbeitswoche, Woche, Monat oder Agenda (7 Tage je Seite); die Zeitleiste wird als Woche gedruckt. PrintFrom/PrintTo = 0: nur der Zeitraum um Planner.Date.</li>
+<li>Gezeichnet wird mit demselben Code wie auf dem Bildschirm: ein unsichtbarer Planer in Druckeraufloesung (ScalePPI = Drucker-PPI) mit den Einstellungen und Terminen des Planers, helle Farben, ohne Auswahl und &quot;Jetzt&quot;-Linie. Das Raster wird so hoch, dass die Stunden auf die Seite passen (WorkHoursOnly: nur die Arbeitszeit).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Planner</code>, <code>View</code>, <code>PrintFrom</code>, <code>PrintTo</code>, <code>WorkHoursOnly</code>, <code>Title</code>, <code>HeaderText</code>, <code>FooterText</code>, <code>Orientation</code>, <code>Margins</code>, <code>PrinterName</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPlannerPrinter.md</code>.</p>
+</body></html>

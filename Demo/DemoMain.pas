@@ -78,6 +78,9 @@ type
     function EnableMica: Boolean;
     procedure SaveScreenCapture(const FileName: string);
     procedure SaveToastCapture(const FileName: string);
+    /// Ribbon in einem Zustand zeigen (keytips, keytips2, minimized, group, gallery)
+    /// und die Bildschirmpixel des Fensters speichern.
+    procedure SaveRibbonCapture(const Mode, FileName: string);
     procedure SaveDatePopupCapture(const FileName: string);
     /// Registriertes Diagramm (Key) ueber SaveToPng speichern. False = unbekannt.
     function SaveChartPng(const Key, FileName: string): Boolean;
@@ -104,6 +107,9 @@ const
   PgDatabase = 12;
   PgCharts = 13;
   PgMenus = 14;
+  PgPlanner = 15;
+  PgRibbon = 16;
+  PgKanban = 17;
 
 implementation
 
@@ -111,8 +117,8 @@ uses
   Winapi.Messages, Winapi.DwmApi, System.Types, System.Math, Vcl.Imaging.pngimage,
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
-  PPG.Chart, PPG.IconFont, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
-  DemoPages5, DemoPages6, PPG.Hints;
+  PPG.Chart, PPG.IconFont, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
+  DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, PPG.Hints;
 
 type
   TPageDef = record
@@ -123,7 +129,7 @@ type
   end;
 
 const
-  PageDefs: array[0..14] of TPageDef = (
+  PageDefs: array[0..17] of TPageDef = (
     (Caption: 'Start'; Icon: $E80F; Group: ''; Footer: False),
     (Caption: 'Buttons & Befehle'; Icon: $E8B0; Group: 'Grundlagen'; Footer: False),
     (Caption: 'Auswahl & Regler'; Icon: $E9E9; Group: ''; Footer: False),
@@ -138,12 +144,15 @@ const
     (Caption: 'Ereignisse'; Icon: $E81C; Group: ''; Footer: True),
     (Caption: 'Datenbank'; Icon: $E8F1; Group: ''; Footer: False),
     (Caption: 'Diagramme'; Icon: $E9D2; Group: ''; Footer: False),
-    (Caption: 'Men{ue}s & Dialoge'; Icon: $E8BD; Group: ''; Footer: False));
+    (Caption: 'Men{ue}s & Dialoge'; Icon: $E8BD; Group: ''; Footer: False),
+    (Caption: 'Planer'; Icon: $E8BF; Group: ''; Footer: False),
+    (Caption: 'Ribbon'; Icon: $E8A1; Group: ''; Footer: False),
+    (Caption: 'Kanban'; Icon: $E8A9; Group: ''; Footer: False));
 
   // Reihenfolge in der Navigation (neue Seiten haengen hinten an, damit die
   // Nummern fuer /page gleich bleiben)
-  NavOrder: array[0..14] of Integer = (PgStart, PgButtons, PgChoice, PgForm, PgLists,
-    PgExplorer, PgGrid, PgDatabase, PgCharts, PgMenus, PgDates, PgLayout, PgFeedback, PgAppearance, PgEvents);
+  NavOrder: array[0..17] of Integer = (PgStart, PgButtons, PgChoice, PgForm, PgLists,
+    PgExplorer, PgGrid, PgDatabase, PgCharts, PgPlanner, PgRibbon, PgKanban, PgMenus, PgDates, PgLayout, PgFeedback, PgAppearance, PgEvents);
 
 type
   TCatalogEntry = record
@@ -154,7 +163,7 @@ type
 
 const
   // Katalog fuer die Suche oben: Control, Stichworte, Seite
-  Catalog: array[0..54] of TCatalogEntry = (
+  Catalog: array[0..60] of TCatalogEntry = (
     (Name: 'TPPGButton'; Keywords: 'Schaltfl{ae}che, Befehl, Split, Akzent'; Page: PgButtons),
     (Name: 'TPPGToolBar'; Keywords: 'Werkzeugleiste, Symbolleiste'; Page: PgButtons),
     (Name: 'TPPGCheckBox'; Keywords: 'Kontrollk{ae}stchen, Haken'; Page: PgChoice),
@@ -209,7 +218,13 @@ const
     (Name: 'TPPGTeachingTip'; Keywords: 'Sprechblase, Tipp, Tour, Einf{ue}hrung'; Page: PgMenus),
     (Name: 'TPPGTaskDialog'; Keywords: 'Dialog, TTaskDialog, Command-Link'; Page: PgMenus),
     (Name: 'PPGMessageDlg'; Keywords: 'Meldung, MessageDlg, ShowMessage, InputQuery'; Page: PgMenus),
-    (Name: 'TPPGWizard'; Keywords: 'Assistent, Schritte, Wizard'; Page: PgMenus));
+    (Name: 'TPPGWizard'; Keywords: 'Assistent, Schritte, Wizard'; Page: PgMenus),
+    (Name: 'TPPGPlanner'; Keywords: 'Terminplaner, Kalender, Outlook, Ressourcen, Scheduler'; Page: PgPlanner),
+    (Name: 'TPPGDBPlanner'; Keywords: 'Datenbank, Planer aus Datenmenge'; Page: PgPlanner),
+    (Name: 'TPPGPlannerPrinter'; Keywords: 'Drucken, Wochenplan, iCalendar, ics'; Page: PgPlanner),
+    (Name: 'TPPGRibbon'; Keywords: 'Men{ue}band, Office, Registerkarten, KeyTips, Schnellzugriff, Backstage'; Page: PgRibbon),
+    (Name: 'TPPGKanban'; Keywords: 'Kanban, Board, Trello, Aufgaben, WIP, Swimlanes'; Page: PgKanban),
+    (Name: 'TPPGDBKanban'; Keywords: 'Datenbank, Board aus Datenmenge'; Page: PgKanban));
 
 function CatalogText(Index: Integer): string;
 begin
@@ -233,6 +248,9 @@ begin
     PgDatabase: Result := TDemoDatabasePage;
     PgCharts: Result := TDemoChartsPage;
     PgMenus: Result := TDemoMenusPage;
+    PgPlanner: Result := TDemoPlannerPage;
+    PgRibbon: Result := TDemoRibbonPage;
+    PgKanban: Result := TDemoKanbanPage;
   else
     Result := TDemoEventsPage;
   end;
@@ -916,6 +934,55 @@ begin
   WaitMs(1200);
   WA := Screen.MonitorFromWindow(Handle).WorkareaRect;
   SaveScreenRect(Rect(WA.Right - 440, WA.Bottom - 520, WA.Right, WA.Bottom), FileName);
+end;
+
+procedure TDemoForm.SaveRibbonCapture(const Mode, FileName: string);
+var
+  C: TControl;
+  R: TPPGRibbon;
+  P: TPoint;
+  G: Integer;
+begin
+  ShowPage(PgRibbon);
+  SetForegroundWindow(Handle);
+  WaitMs(300);
+  C := SpecialControl('ribbon');
+  if not (C is TPPGRibbon) then
+    Exit;
+  R := TPPGRibbon(C);
+  R.UpdateLayout;
+  if SameText(Mode, 'keytips') then
+    R.ShowKeyTips
+  else if SameText(Mode, 'keytips2') then
+  begin
+    R.ShowKeyTips;
+    R.HandleKeyTipChar('S');
+  end
+  else if SameText(Mode, 'minimized') then
+  begin
+    R.Minimized := True;
+    R.UpdateLayout;
+    P := CenterPoint(R.TabRect(0));
+    R.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(P.X, P.Y));
+    R.Perform(WM_LBUTTONUP, 0, MakeLParam(P.X, P.Y));
+  end
+  else if SameText(Mode, 'group') then
+  begin
+    R.Width := 520;
+    R.UpdateLayout;
+    for G := 0 to R.GroupCount - 1 do
+      if R.GroupState(G) = rgsCollapsed then
+      begin
+        P := CenterPoint(R.GroupRect(G));
+        R.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(P.X, P.Y));
+        R.Perform(WM_LBUTTONUP, 0, MakeLParam(P.X, P.Y));
+        Break;
+      end;
+  end
+  else if SameText(Mode, 'gallery') then
+    R.OpenGallery(R.Tabs[0].Groups[3].Items[0]);
+  WaitMs(700);
+  SaveScreenCapture(FileName);
 end;
 
 procedure TDemoForm.SaveScreenCapture(const FileName: string);

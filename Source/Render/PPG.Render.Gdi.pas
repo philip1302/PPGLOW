@@ -659,13 +659,21 @@ end;
 procedure TPPGGdiCanvas.PushClipRoundRect(const R: TRect; Radius: Integer);
 var
   Rgn: HRGN;
+  P: array[0..1] of TPoint;
 begin
   SaveDC(FDC);
   Inc(FClipDepth);
+  // Regionen sind in Geraetekoordinaten: ein verschobener Ursprung
+  // (SetViewportOrgEx/SetWindowOrgEx, z.B. beim Drucken) muss umgerechnet werden
   if Radius <= 0 then
-    Rgn := CreateRectRgn(R.Left, R.Top, R.Right, R.Bottom)
-  else
-    Rgn := CreateRoundRectRgn(R.Left, R.Top, R.Right + 1, R.Bottom + 1, Radius * 2, Radius * 2);
+  begin
+    IntersectClipRect(FDC, R.Left, R.Top, R.Right, R.Bottom);
+    Exit;
+  end;
+  P[0] := R.TopLeft;
+  P[1] := Point(R.Right + 1, R.Bottom + 1);
+  LPtoDP(FDC, P, 2);
+  Rgn := CreateRoundRectRgn(P[0].X, P[0].Y, P[1].X, P[1].Y, Radius * 2, Radius * 2);
   if Rgn = 0 then
     Exit; // ohne Clipping weiterzeichnen ist besser als ein Abbruch
   try

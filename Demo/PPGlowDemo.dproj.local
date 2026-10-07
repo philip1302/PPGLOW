@@ -171,6 +171,13 @@
     <File Path="..\Source\Controls\PPG.Grid.Print.pas"/>
     <File Path="..\Source\Controls\PPG.Grid.Styles.pas"/>
     <File Path="..\Source\Controls\PPG.Xlsx.pas"/>
+    <File Path="..\Source\Controls\PPG.Planner.pas"/>
+    <File Path="..\Source\Controls\PPG.Print.pas"/>
+    <File Path="..\Source\Controls\PPG.Planner.Print.pas"/>
+    <File Path="..\Source\Controls\PPG.Ribbon.Items.pas"/>
+    <File Path="..\Source\Controls\PPG.Ribbon.pas"/>
+    <File Path="..\Source\Controls\PPG.Kanban.Items.pas"/>
+    <File Path="..\Source\Controls\PPG.Kanban.pas"/>
     <File Path="..\Source\Core"/>
     <File Path="..\Source\Core\PPG.Animation.pas"/>
     <File Path="..\Source\Core\PPG.Appearance.pas"/>
@@ -190,12 +197,22 @@
     <File Path="..\Source\Core\PPG.Types.pas"/>
     <File Path="..\Source\Core\PPG.ColorSpace.pas"/>
     <File Path="..\Source\Core\PPG.NumberFormat.pas"/>
+    <File Path="..\Source\Core\PPG.Planner.ICal.pas"/>
+    <File Path="..\Source\Core\PPG.Planner.Layout.pas"/>
+    <File Path="..\Source\Core\PPG.Planner.Model.pas"/>
+    <File Path="..\Source\Core\PPG.Planner.Recurrence.pas"/>
+    <File Path="..\Source\Core\PPG.TimeZones.pas"/>
+    <File Path="..\Source\Core\PPG.KeyTips.pas"/>
+    <File Path="..\Source\Core\PPG.Ribbon.Layout.pas"/>
+    <File Path="..\Source\Core\PPG.Kanban.Layout.pas"/>
     <File Path="..\Source\DB"/>
     <File Path="..\Source\DB\PPG.DB.Chart.pas"/>
     <File Path="..\Source\DB\PPG.DB.Controls.pas"/>
     <File Path="..\Source\DB\PPG.DB.Grid.pas"/>
     <File Path="..\Source\DB\PPG.DB.Lookup.pas"/>
     <File Path="..\Source\DB\PPG.DB.Fields.pas"/>
+    <File Path="..\Source\DB\PPG.DB.Planner.pas"/>
+    <File Path="..\Source\DB\PPG.DB.Kanban.pas"/>
     <File Path="..\Source\Render"/>
     <File Path="..\Source\Render\PPG.IconFont.pas"/>
     <File Path="..\Source\Render\PPG.Markup.pas"/>
@@ -220,5 +237,8 @@
     <File Path="DemoPages4.pas"/>
     <File Path="DemoPages5.pas"/>
     <File Path="DemoPages6.pas"/>
+    <File Path="DemoPages7.pas"/>
+    <File Path="DemoPages8.pas"/>
+    <File Path="DemoPages9.pas"/>
   </ProjectSortOrder>
 </BorlandProject>

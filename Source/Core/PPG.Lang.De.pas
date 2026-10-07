@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 129;
+  PPGLangDeCount = 157;
 
 implementation
 
@@ -280,6 +280,62 @@ begin
     'Keine g'#$00FC'ltige xlsx-Datei (%s fehlt)');
   PPGAddTranslation(PPGLangDeCode, @SPPGPdfPrinterMissing,
     'Der Drucker '#$201E'Microsoft Print to PDF'#$201C' ist nicht installiert (Windows-Features: '#$201E'Microsoft Print to PDF'#$201C')');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRRuleInvalid,
+    'Ung'#$00FC'ltige Wiederholungsregel '#$201E'%s'#$201C);
+  PPGAddTranslation(PPGLangDeCode, @SPPGICalInvalid,
+    'Keine iCalendar-Datei (BEGIN:VCALENDAR fehlt)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerAllDay,
+    'Ganzt'#$00E4'gig');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerMore,
+    '+%d weitere');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerNone,
+    'Keine Termine');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerNoSubject,
+    '(Kein Betreff)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerAccItem,
+    '%s, %s bis %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerAccSlot,
+    '%s bis %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerPrintWorkHours,
+    'Nur die Arbeitszeit drucken');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonName,
+    'Men'#$00FC'band');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonFile,
+    'Datei');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonCustomizeQat,
+    'Symbolleiste f'#$00FC'r den Schnellzugriff anpassen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonAddToQat,
+    'Zur Symbolleiste f'#$00FC'r den Schnellzugriff hinzuf'#$00FC'gen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonRemoveFromQat,
+    'Aus der Symbolleiste f'#$00FC'r den Schnellzugriff entfernen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonQatBelow,
+    'Symbolleiste f'#$00FC'r den Schnellzugriff unter dem Men'#$00FC'band anzeigen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonQatAbove,
+    'Symbolleiste f'#$00FC'r den Schnellzugriff '#$00FC'ber dem Men'#$00FC'band anzeigen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonMinimize,
+    'Men'#$00FC'band reduzieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonExpand,
+    'Men'#$00FC'band anheften');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonGalleryUp,
+    'Vorherige Zeile');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonGalleryDown,
+    'N'#$00E4'chste Zeile');
+  PPGAddTranslation(PPGLangDeCode, @SPPGRibbonContextTab,
+    '%s: %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanAccCard,
+    '%s, Spalte %s, Position %d von %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanAccDue,
+    'f'#$00E4'llig %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanAccColumn,
+    'Spalte %s, %d Karten');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanAccLimit,
+    'Limit %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanAccCollapsed,
+    'eingeklappt');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanMoved,
+    'Verschoben nach Spalte %s, Position %d von %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanMoveRejected,
+    'Verschieben in die Spalte %s ist nicht erlaubt');
 end;
 
 initialization

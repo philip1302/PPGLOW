@@ -615,6 +615,52 @@ Das Popup (`TPPGDropPopup`) antwortet auf Maus und Tasten mit einer Aktion (`pda
 
 **DB-Grid.** Gruppieren und eigene Summen gibt es nicht (`CanGroup` = False): die Summenzeile kommt aus der Datenmenge (`FooterField`, z. B. `TAggregateField`) oder `OnGetFooterText`. Druck und Export lesen die Datenmenge einmal mit `DisableControls` und Lesezeichen (höchstens `ExportMaxRecords`); der Schnappschuss verfällt mit jeder Datenänderung.
 
+## Phase 14a: Terminplaner
+
+*Plan, Umsetzung und Abweichungen: `Docs\Phase14-Plan.md`.*
+
+**Schichten.** Wie beim Grid kennt der Kern das Control nicht:
+- `PPG.TimeZones`: `IPPGTimeZone` (`ToUtc`, `ToLocal`, `OffsetMinutes`). Regeln aus der Registry (`TZI`), Umstellungstage selbst berechnet. Lücke im Frühjahr: Winter-Abstand (02:30 → 03:30); doppelte Stunde im Herbst: die erste. Grenzvergleiche mit einer halben Millisekunde Toleranz (`TDateTime` ist nicht exakt).
+- `PPG.Planner.Recurrence`: RRULE als Record (`TPPGRecurrence`), aufgelöst auf der Wanduhr und nur für den angefragten Zeitraum. DTSTART zählt immer als erstes Vorkommen; nicht vorhandene Tage (31., 29.02.) fallen nach RFC 5545 weg (`MonthEnd = mebLastDay` verschiebt stattdessen).
+- `PPG.Planner.Layout`: reine Funktionen. `PPGLayoutColumns` (Gruppen sich überschneidender Termine, gierige Spalten, `ColSpan` in freie Spalten rechts) und `PPGLayoutRows` (Bänder).
+- `PPG.Planner.Model`: Termine in UTC (`StartTime`/`FinishTime`), Anzeige über `DisplayZone` (`Start`/`Finish`). `GetOccurrences(Von, Bis)` ist die einzige Abfrage des Controls; `IPPGAppointmentSource` ersetzt die Collection (DB, eigene Quellen).
+- `PPG.Planner.ICal`: Export/Import ohne das Control.
+- `PPG.Planner`: das Control. Es kennt den Kalender nur über `IPPGCalendarLink` (in `PPG.Calendar`) und schreibt Änderungen über überschreibbare Methoden (`DoCreateAppointment`, `DoDeleteAppointment`, `AppointmentWritten`), die der DB-Planer nutzt.
+
+**Layout im Control.** `EnsureLayout` holt die Vorkommen des Zeitraums und legt „Stücke“ (`TPPGPlannerPiece`) an: ein Termin über drei Tage hat drei Stücke. Lage je Stück: fest (Kopf, Band, Monat), nur senkrecht gescrollt (Raster, Agenda) oder in beide Richtungen (Zeitleiste). Zeichnen und Trefferprüfung rechnen dieselben Rechtecke um; RTL spiegelt erst ganz am Ende. Texte gehen gesammelt in einem GDI-Block raus (wie im Kalender).
+
+**Auswahl** merkt sich Termin und Beginn des Vorkommens, nicht den Index: nach jedem Neuaufbau (Daten, Zeitraum, DB-Reload) wird sie wiedergefunden.
+
+**Drucken.** `PPG.Print` ist seit 14a die gemeinsame Basis (`TPPGCustomPrinter`: Seite, Kopf/Fuß, Drucker, PDF, Vorschau, Seite einrichten mit Ja/Nein-Optionen des Druckers). Grid- und Planer-Drucker liefern nur Seitenzahl und Seiteninhalt. Der Planer-Drucker zeichnet über einen unsichtbaren Planer mit `ScalePPI` = Drucker-PPI; deshalb sieht Papier aus wie der Bildschirm.
+
+## Phase 14b: Ribbon
+
+*Plan, Umsetzung und Abweichungen: `Docs\Phase14-Plan.md`.*
+
+**Schichten.**
+- `PPG.Ribbon.Layout` (Kern): `PPGRibbonLayoutGroup` legt die Zellen einer Gruppe in einem Zustand aus (große Items und Galerien als Spalte über drei Zeilen, kleine Items und Controls in Stapeln, `SameRow` in derselben Zeile). `PPGRibbonReduce` wählt die Zustände aller Gruppen: Stufe für Stufe über alle Gruppen (mittel → nur Symbol → Dropdown), innerhalb einer Stufe nach `ReduceOrder`, bei Gleichstand von rechts; Schritte ohne Gewinn werden übersprungen. Die Breiten misst das Control, die Funktionen rechnen nur.
+- `PPG.KeyTips` (Kern): Vergabe je Ebene (eigene, `&`-Buchstabe, Wortanfänge, sonst zwei Zeichen mit einem Präfix, das kein Einzelzeichen ist) und Präfix-Abgleich.
+- `PPG.Ribbon.Items`: Modell ohne Control-Bezug; Änderungen und Komponenten-Referenzen gehen über `IPPGRibbonHost` an den Besitzer der obersten Collection.
+- `PPG.Ribbon`: das Control. Die Geometrie einer Registerkarte steckt in `TPPGRibbonView` (Gruppen, Zustände, Item-Rechtecke in Koordinaten des Fensters). Dieselbe Klasse dient dem Band, dem Popup des eingeklappten Bands und dem Popup einer geschrumpften Gruppe; Zeichnen, Trefferprüfung und Mausbehandlung arbeiten auf einer Ansicht und sind deshalb für alle drei gleich. Treffer sind Werte (`TPPGRibbonHit`: Teil, Ansicht, Gruppe, Item, Kachel).
+
+**Layout und Controls.** `EnsureLayout` ist reine Geometrie und darf auch aus Paint kommen; es prüft Breite, DPI und Sprache selbst (ohne Fensterhandle kommt kein `Resize`, ein Sprachwechsel zeichnet nur neu). Die Lage eingebetteter Controls setzt `ApplyControlLayout` nie im Paint, sondern nach einer geposteten Nachricht (`UpdateLayout` sofort). Controls in Popups werden umgehängt und per `ShowWindow(SW_SHOWNA)` gezeigt, weil die VCL ein per API gezeigtes Fenster ohne Parent für unsichtbar hält. Im Designer werden Controls inaktiver Karten verschoben statt verborgen, damit `Visible` nicht in der DFM landet.
+
+**Tasten und Klicks.** Ein Haken in `PPG.AppHooks` sieht die Tasten des Formulars (Fokus bleibt im Formular): Alt allein/F10 zeigt die KeyTips, Alt+Buchstabe springt direkt (nur wenn eine Plakette passt, sonst bleibt die Taste beim Formular), Zeichen werden im KeyTip-Modus per `TranslateMessage` zu `WM_CHAR` und dort abgefangen. Klicks außerhalb eines Popups schließen es und alle darüber (Galerie → Gruppe → Band); Klicks auf das Ribbon selbst entscheidet `MouseDown` (zweiter Klick auf Karte oder Gruppe schließt). Menüs laufen modal; währenddessen ruht der Haken (`FBusy`).
+
+**KeyTip-Overlay.** Ein Fenster je Monitor (`WS_EX_LAYERED` mit Farbschlüssel, `WS_EX_TRANSPARENT`, `WS_EX_NOACTIVATE`), so groß wie die Plaketten darauf. Gezeichnet ohne Kantenglättung, weil Mischpixel mit dem Farbschlüssel sichtbare Ränder ergäben.
+
+## Phase 14c: Kanban
+
+*Plan, Umsetzung und Abweichungen: `Docs\Phase14-Plan.md`.*
+
+**Schichten.** `PPG.Kanban.Layout` (reine Funktionen: Stapel, Einfügeposition, Zielindex, Initialen, Labels, WIP), `PPG.Kanban.Items` (Modell ohne Control-Bezug, Änderungen über `IPPGKanbanHost`), `PPG.Kanban` (Control auf `TPPGCustomScrollControl`), `PPG.DB.Kanban` (Datenmenge ↔ Karten).
+
+**Layout.** `EnsureLayout` verteilt die Karten in Zellen (Spalte × Swimlane, Reihenfolge = Collection), misst ihre Höhe einmal (Cache je Karte, verworfen bei jeder Modelländerung) und legt Stapel an. Adressen sind Werte `(Spalte, Swimlane, Position)` der sichtbaren Spalten, keine Zeiger. Ohne Swimlanes hat jede Spalte einen eigenen Bildlauf (gemerkt je Spalten-Id), das Board nur einen waagerechten; mit Swimlanes scrollt das Board senkrecht, die Spaltenköpfe bleiben stehen und die Swimlane-Köpfe liegen als Band über den Spalten. Virtuelle Spalten haben feste Kartenhöhe: Lage, Treffer und erste sichtbare Karte sind Arithmetik. RTL spiegelt nur die Umrechnung Inhalt ↔ Client.
+
+**Ziehen.** Ab 4 px Bewegung. Das Ziel ist eine Einfügeposition, gezählt ohne die gezogene Karte (`PPGKanbanDropIndex` mit Skip), deshalb springt beim Ziehen innerhalb der Spalte nichts. Ausweichen: Verschiebung je Karte als Funktion des Ziels; zwischen altem und neuem Ziel blendet eine Animation des gemeinsamen Animators über. Bildlauf am Rand: Board über `AutoScrollAt`, Spalte über eine eigene Schleife des Animators. `MoveCard` ist der einzige Weg für Maus, Tastatur und Code: WIP-Sperre, `OnCardMoving`, dann `DoMoveCard` (überschreibbar, DB: nur mit Schlüssel), dann `CardMoved` (DB: schreiben) und `OnCardMoved`.
+
+**Tastatur und Screenreader.** Die Scroll-Basis darf die Pfeile nicht nehmen (`KeyboardScrolling := False`), sie gehören der Kartenauswahl. Kinder für MSAA sind je Spalte der Kopf und ihre Karten; die Ansage nach einem Verschieben steht vor dem Namen der fokussierten Karte und wird per `NAMECHANGE` gemeldet.
+
 ## VCL-Styles
 
 Ist ein VCL-Style aktiv, verwendet ein Control beim Zeichnen `EffectiveAppearance`: Die Formen (Rundung, Rahmen, Glow-Größe und -Intensität) kommen aus dem Preset, die Farben aus dem Style. Das Classic-Preset bleibt dabei glänzend. Die gespeicherte `Appearance` wird nie verändert, Style-Farben landen also nicht in der DFM. Ab XE3 lässt sich das pro Control abschalten, indem `seClient` aus `StyleElements` entfernt wird.

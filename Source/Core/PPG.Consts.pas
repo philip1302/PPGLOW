@@ -162,6 +162,40 @@ resourcestring
   SPPGXlsxInvalid = 'Not a valid xlsx file (%s missing)';
   SPPGPdfPrinterMissing = 'The printer "Microsoft Print to PDF" is not installed (Windows features: "Microsoft Print to PDF")';
 
+  // Planer (Phase 14a)
+  SPPGRRuleInvalid = 'Invalid recurrence rule "%s"';
+  SPPGICalInvalid = 'Not an iCalendar file (BEGIN:VCALENDAR missing)';
+  SPPGPlannerAllDay = 'All day';
+  SPPGPlannerMore = '+%d more';
+  SPPGPlannerNone = 'No appointments';
+  SPPGPlannerNoSubject = '(No subject)';
+  SPPGPlannerAccItem = '%s, %s to %s';
+  SPPGPlannerAccSlot = '%s to %s';
+  SPPGPlannerPrintWorkHours = 'Print working hours only';
+
+  // Ribbon (Phase 14b)
+  SPPGRibbonName = 'Ribbon';
+  SPPGRibbonFile = 'File';
+  SPPGRibbonCustomizeQat = 'Customize Quick Access Toolbar';
+  SPPGRibbonAddToQat = 'Add to Quick Access Toolbar';
+  SPPGRibbonRemoveFromQat = 'Remove from Quick Access Toolbar';
+  SPPGRibbonQatBelow = 'Show Quick Access Toolbar below the Ribbon';
+  SPPGRibbonQatAbove = 'Show Quick Access Toolbar above the Ribbon';
+  SPPGRibbonMinimize = 'Collapse the Ribbon';
+  SPPGRibbonExpand = 'Pin the Ribbon';
+  SPPGRibbonGalleryUp = 'Previous row';
+  SPPGRibbonGalleryDown = 'Next row';
+  SPPGRibbonContextTab = '%s: %s';
+
+  // Kanban (Phase 14c)
+  SPPGKanbanAccCard = '%s, column %s, position %d of %d';
+  SPPGKanbanAccDue = 'due %s';
+  SPPGKanbanAccColumn = 'Column %s, %d cards';
+  SPPGKanbanAccLimit = 'limit %d';
+  SPPGKanbanAccCollapsed = 'collapsed';
+  SPPGKanbanMoved = 'Moved to column %s, position %d of %d';
+  SPPGKanbanMoveRejected = 'Moving to column %s is not allowed';
+
 implementation
 
 end.
