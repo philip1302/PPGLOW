@@ -43,7 +43,8 @@ type
     class var FInHandler: Boolean;
     class function GetLogger: IPPGLogger; static;
     class procedure SetLogger(const Value: IPPGLogger); static;
-    class procedure NotifyError(Sender: TObject; E: Exception; const Context: string); static;
+    class procedure NotifyError(Sender: TObject; E: Exception; const Context: string;
+      LogSender: Boolean); static;
   public
     /// Fehler beim Zeichnen: protokollieren, nie weiterwerfen.
     class procedure ReportPaintError(Sender: TObject; E: Exception); static;
@@ -99,7 +100,9 @@ begin
 end;
 
 class procedure TPPGErrorHandler.NotifyError(Sender: TObject; E: Exception;
-  const Context: string);
+  const Context: string; LogSender: Boolean);
+var
+  Msg: string;
 begin
   // Ein fehlerhafter Fehler-Handler darf keine Rekursion und keinen
   // Folgefehler im aufrufenden Paint/Timer ausloesen. Das ist die einzige
@@ -110,8 +113,12 @@ begin
   FInHandler := True;
   try
     try
-      GetLogger.Log(llError, Format('%s: %s (%s: %s)',
-        [SenderText(Sender), Context, E.ClassName, E.Message]));
+      // Context enthaelt die Fehlermeldung schon (SPPGPaintFailed/SPPGCallbackFailed),
+      // beim Zeichnen auch den Sender - hier nicht noch einmal anhaengen.
+      Msg := Format('%s (%s)', [Context, E.ClassName]);
+      if LogSender then
+        Msg := SenderText(Sender) + ': ' + Msg;
+      GetLogger.Log(llError, Msg);
       if Assigned(FOnError) then
         FOnError(Sender, E, Context);
     except
@@ -125,13 +132,13 @@ end;
 
 class procedure TPPGErrorHandler.ReportPaintError(Sender: TObject; E: Exception);
 begin
-  NotifyError(Sender, E, Format(PPGStr(@SPPGPaintFailed), [SenderText(Sender), E.Message]));
+  NotifyError(Sender, E, Format(PPGStr(@SPPGPaintFailed), [SenderText(Sender), E.Message]), False);
 end;
 
 class procedure TPPGErrorHandler.HandleCallbackError(Sender: TObject;
   E: Exception; const Context: string);
 begin
-  NotifyError(Sender, E, Format(PPGStr(@SPPGCallbackFailed), [Context, E.Message]));
+  NotifyError(Sender, E, Format(PPGStr(@SPPGCallbackFailed), [Context, E.Message]), True);
   // Wie die VCL selbst: Anwendung zeigt bzw. protokolliert die Exception
   // (madExcept/EurekaLog haengen sich hier ein), Programm laeuft weiter.
   if (Application <> nil) and not Application.Terminated then

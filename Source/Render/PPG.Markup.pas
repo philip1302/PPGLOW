@@ -51,8 +51,11 @@ type
     FFonts: array[0..15] of TFont;
     FBaseFont: TFont;
     FImages: TCustomImageList;
+    FRunLink: array of Integer;
+    FLinkCount: Integer;
     function StyleFont(Style: TFontStyles): TFont;
     procedure ResetFonts;
+    procedure IndexLinks;
   public
     constructor Create;
     destructor Destroy; override;
@@ -595,6 +598,54 @@ begin
   end;
   SetLength(FFrags, FragCount);
   FSize.cy := LineTop;
+  IndexLinks;
+end;
+
+procedure TPPGMarkupLayout.IndexLinks;
+var
+  Shown: array of Boolean;
+  I, J, K, Idx: Integer;
+  Visible: Boolean;
+begin
+  // Link-Nummern einmal je Layout berechnen (sonst O(n^2) bei jeder Abfrage).
+  // Ein Link ohne Fragment (nur <img> ohne ImageList oder nur <br>) bekommt
+  // keine Nummer, sonst landet der Tastaturfokus auf einem Link ohne Flaeche.
+  SetLength(Shown, Length(FRuns));
+  for I := 0 to High(Shown) do
+    Shown[I] := False;
+  for I := 0 to High(FFrags) do
+    Shown[FFrags[I].Run] := True;
+  SetLength(FRunLink, Length(FRuns));
+  FLinkCount := 0;
+  I := 0;
+  while I <= High(FRuns) do
+  begin
+    if FRuns[I].Link = '' then
+    begin
+      FRunLink[I] := -1;
+      Inc(I);
+      Continue;
+    end;
+    // Zusammenhaengende Abschnitte mit gleichem Ziel bilden einen Link
+    J := I;
+    Visible := False;
+    while (J <= High(FRuns)) and (FRuns[J].Link = FRuns[I].Link) do
+    begin
+      if Shown[J] then
+        Visible := True;
+      Inc(J);
+    end;
+    if Visible then
+    begin
+      Idx := FLinkCount;
+      Inc(FLinkCount);
+    end
+    else
+      Idx := -1;
+    for K := I to J - 1 do
+      FRunLink[K] := Idx;
+    I := J;
+  end;
 end;
 
 procedure TPPGMarkupLayout.Draw(const Canvas: IPPGCanvas; X, Y: Integer;
@@ -646,35 +697,21 @@ begin
 end;
 
 function TPPGMarkupLayout.HasLinks: Boolean;
-var
-  I: Integer;
 begin
-  for I := 0 to High(FRuns) do
-    if FRuns[I].Link <> '' then
-      Exit(True);
-  Result := False;
+  Result := FLinkCount > 0;
 end;
 
 function TPPGMarkupLayout.RunLinkIndex(Run: Integer): Integer;
-var
-  I: Integer;
 begin
-  Result := -1;
-  if (Run < 0) or (Run > High(FRuns)) or (FRuns[Run].Link = '') then
-    Exit;
-  for I := 0 to Run do
-    if (FRuns[I].Link <> '') and ((I = 0) or (FRuns[I - 1].Link <> FRuns[I].Link)) then
-      Inc(Result);
+  if (Run < 0) or (Run > High(FRunLink)) then
+    Result := -1
+  else
+    Result := FRunLink[Run];
 end;
 
 function TPPGMarkupLayout.LinkCount: Integer;
-var
-  I: Integer;
 begin
-  Result := 0;
-  for I := 0 to High(FRuns) do
-    if (FRuns[I].Link <> '') and ((I = 0) or (FRuns[I - 1].Link <> FRuns[I].Link)) then
-      Inc(Result);
+  Result := FLinkCount;
 end;
 
 function TPPGMarkupLayout.LinkTarget(Index: Integer): string;

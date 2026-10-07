@@ -606,8 +606,8 @@ begin
     PaintPolygon(FDC, Points, Color);
 end;
 
-procedure TPPGGdiCanvas.DrawDashedPolyline(const Points: array of TPoint;
-  Width, Dash, Gap: Integer; Color: TColor; Alpha: Byte);
+procedure PaintDashes(DC: HDC; const Points: array of TPoint;
+  Width, Dash, Gap: Integer; Color: TColor);
 var
   I: Integer;
   SegLen, Pos, Phase, Take: Double;
@@ -616,12 +616,6 @@ var
   A, B: TPoint;
 begin
   // GDI-Stifte koennen Muster nur bei 1 px Breite; deshalb selbst zerlegen
-  if (Alpha = 0) or (Width <= 0) or (Length(Points) < 2) then
-    Exit;
-  if Dash < 1 then
-    Dash := 1;
-  if Gap < 1 then
-    Gap := 1;
   OnDash := True;
   Phase := Dash; // Rest des aktuellen Abschnitts (Strich oder Luecke)
   for I := 0 to High(Points) - 1 do
@@ -640,7 +634,7 @@ begin
         A := Point(Points[I].X + Round(DX * Pos / SegLen), Points[I].Y + Round(DY * Pos / SegLen));
         B := Point(Points[I].X + Round(DX * (Pos + Take) / SegLen),
           Points[I].Y + Round(DY * (Pos + Take) / SegLen));
-        DrawPolyline([A, B], Width, Color, Alpha);
+        PaintPolyline(DC, [A, B], Width, Color);
       end;
       Pos := Pos + Take;
       Phase := Phase - Take;
@@ -654,6 +648,30 @@ begin
       end;
     end;
   end;
+end;
+
+procedure TPPGGdiCanvas.DrawDashedPolyline(const Points: array of TPoint;
+  Width, Dash, Gap: Integer; Color: TColor; Alpha: Byte);
+var
+  L: TPPGGdiLayer;
+begin
+  if (Alpha = 0) or (Width <= 0) or (Length(Points) < 2) then
+    Exit;
+  if Dash < 1 then
+    Dash := 1;
+  if Gap < 1 then
+    Gap := 1;
+  // Eine Ebene fuer die ganze Linie statt einer je Strich: sonst entsteht
+  // pro Strich ein Speicher-DC mit Bitmap, und Striche, die sich an Ecken
+  // ueberlappen, wuerden doppelt geblendet.
+  if (Alpha < 255) and BeginLayer(PointsBounds(Points, Width + 1), L) then
+    try
+      PaintDashes(L.DC, Points, Width, Dash, Gap, Color);
+    finally
+      EndLayer(L, Alpha);
+    end
+  else
+    PaintDashes(FDC, Points, Width, Dash, Gap, Color);
 end;
 
 procedure TPPGGdiCanvas.PushClipRoundRect(const R: TRect; Radius: Integer);

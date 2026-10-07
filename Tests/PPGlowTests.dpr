@@ -194,7 +194,8 @@ uses
   PPG.Tests.Phase14bRibbon in 'PPG.Tests.Phase14bRibbon.pas',
   PPG.Tests.Phase14c in 'PPG.Tests.Phase14c.pas',
   PPG.Tests.Phase14cKanban in 'PPG.Tests.Phase14cKanban.pas',
-  PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas';
+  PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas',
+  PPG.Tests.Review in 'PPG.Tests.Review.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;

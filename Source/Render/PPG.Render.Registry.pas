@@ -553,23 +553,20 @@ begin
   DrawFieldGlyph(Canvas, R, Glyph, Style.TextColor, PPI);
 end;
 
-procedure TPPGRendererBase.DrawFieldGlyph(const Canvas: IPPGCanvas; const R: TRect;
-  Glyph: TPPGFieldGlyph; Color: TColor; PPI: Integer);
+// Gemeinsame Groesse der Chevrons und Pfeile (Feld-Buttons, Aufklapp-,
+// Tab- und Baum-Pfeile): 42 % der kuerzeren Seite, hoechstens 10 px
+// (skaliert). False, wenn der Platz fuer ein erkennbares Zeichen fehlt.
+function PPGGlyphGeometry(const R: TRect; PPI: Integer;
+  out CX, CY, Half, Quarter, W: Integer): Boolean;
 var
-  CX, CY, S, Half, Quarter, W: Integer;
-  Pts: array[0..2] of TPoint;
-  Line: array[0..1] of TPoint;
+  S: Integer;
 begin
-  if (Glyph = fgNone) or IsRectEmpty(R) then
-    Exit;
   S := R.Right - R.Left;
   if R.Bottom - R.Top < S then
     S := R.Bottom - R.Top;
   S := Round(S * 0.42);
   if S > PPGScale(10, PPI) then
     S := PPGScale(10, PPI);
-  if S < 4 then
-    Exit;
   CX := (R.Left + R.Right) div 2;
   CY := (R.Top + R.Bottom) div 2;
   Half := S div 2;
@@ -577,6 +574,20 @@ begin
   W := Round(1.5 * PPI / 96);
   if W < 1 then
     W := 1;
+  Result := S >= 4;
+end;
+
+procedure TPPGRendererBase.DrawFieldGlyph(const Canvas: IPPGCanvas; const R: TRect;
+  Glyph: TPPGFieldGlyph; Color: TColor; PPI: Integer);
+var
+  CX, CY, Half, Quarter, W: Integer;
+  Pts: array[0..2] of TPoint;
+  Line: array[0..1] of TPoint;
+begin
+  if (Glyph = fgNone) or IsRectEmpty(R) then
+    Exit;
+  if not PPGGlyphGeometry(R, PPI, CX, CY, Half, Quarter, W) then
+    Exit;
   case Glyph of
     fgClear:
       begin
@@ -703,7 +714,7 @@ end;
 procedure TPPGRendererBase.DrawDropArrow(const Canvas: IPPGCanvas; const R: TRect; Color: TColor;
   Rotation: Single; PPI: Integer);
 var
-  CX, CY, S, Half, Quarter, W, I: Integer;
+  CX, CY, Half, Quarter, W, I: Integer;
   Src: array[0..2] of TPoint;
   Pts: array[0..2] of TPoint;
   A, C, Sn: Double;
@@ -711,21 +722,8 @@ begin
   if IsRectEmpty(R) then
     Exit;
   // Gleiche Groesse wie die Chevrons der Feld-Buttons (DrawFieldGlyph)
-  S := R.Right - R.Left;
-  if R.Bottom - R.Top < S then
-    S := R.Bottom - R.Top;
-  S := Round(S * 0.42);
-  if S > PPGScale(10, PPI) then
-    S := PPGScale(10, PPI);
-  if S < 4 then
+  if not PPGGlyphGeometry(R, PPI, CX, CY, Half, Quarter, W) then
     Exit;
-  CX := (R.Left + R.Right) div 2;
-  CY := (R.Top + R.Bottom) div 2;
-  Half := S div 2;
-  Quarter := S div 4;
-  W := Round(1.5 * PPI / 96);
-  if W < 1 then
-    W := 1;
   Src[0] := Point(-Half, -Quarter);
   Src[1] := Point(0, Quarter);
   Src[2] := Point(Half, -Quarter);
@@ -814,7 +812,7 @@ end;
 procedure TPPGRendererBase.DrawTabScrollArrow(const Canvas: IPPGCanvas; const R: TRect;
   Color: TColor; Forward, Hot, Enabled: Boolean; PPI: Integer);
 var
-  CX, CY, S, Half, Quarter, W: Integer;
+  CX, CY, Half, Quarter, W: Integer;
   Pts: array[0..2] of TPoint;
   Alpha: Byte;
 begin
@@ -822,21 +820,8 @@ begin
     Exit;
   if Hot and Enabled then
     Canvas.FillRoundRect(R, PPGCapRounding(R, PPGScale(4, PPI)), Color, 28);
-  S := R.Right - R.Left;
-  if R.Bottom - R.Top < S then
-    S := R.Bottom - R.Top;
-  S := Round(S * 0.42);
-  if S > PPGScale(10, PPI) then
-    S := PPGScale(10, PPI);
-  if S < 4 then
+  if not PPGGlyphGeometry(R, PPI, CX, CY, Half, Quarter, W) then
     Exit;
-  CX := (R.Left + R.Right) div 2;
-  CY := (R.Top + R.Bottom) div 2;
-  Half := S div 2;
-  Quarter := S div 4;
-  W := Round(1.5 * PPI / 96);
-  if W < 1 then
-    W := 1;
   if Forward then
   begin
     Pts[0] := Point(CX - Quarter, CY - Half);
@@ -1017,28 +1002,15 @@ end;
 procedure TPPGRendererBase.DrawExpander(const Canvas: IPPGCanvas; const R: TRect;
   Color: TColor; Expanded: Single; RightToLeft: Boolean; PPI: Integer);
 var
-  CX, CY, S, Half, Quarter, W, I: Integer;
+  CX, CY, Half, Quarter, W, I: Integer;
   Src: array[0..2] of TPoint;
   Pts: array[0..2] of TPoint;
   A, C, Sn: Double;
 begin
   if IsRectEmpty(R) then
     Exit;
-  S := R.Right - R.Left;
-  if R.Bottom - R.Top < S then
-    S := R.Bottom - R.Top;
-  S := Round(S * 0.42);
-  if S > PPGScale(10, PPI) then
-    S := PPGScale(10, PPI);
-  if S < 4 then
+  if not PPGGlyphGeometry(R, PPI, CX, CY, Half, Quarter, W) then
     Exit;
-  CX := (R.Left + R.Right) div 2;
-  CY := (R.Top + R.Bottom) div 2;
-  Half := S div 2;
-  Quarter := S div 4;
-  W := Round(1.5 * PPI / 96);
-  if W < 1 then
-    W := 1;
   // Chevron nach rechts; zugeklappt 0 Grad, aufgeklappt 90 Grad (nach unten).
   // RTL: nach links, Drehung gegen den Uhrzeigersinn.
   Src[0] := Point(-Quarter, -Half);

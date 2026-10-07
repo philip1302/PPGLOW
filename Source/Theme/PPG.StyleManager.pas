@@ -180,8 +180,18 @@ begin
     if (FClients.IndexOf(Snapshot[I]) >= 0) and
       Supports(Snapshot[I], IPPGStyleClient, Client) then
     begin
-      Client.StyleManagerChanged(Self);
-      Client := nil; // Interface nicht laenger als noetig halten
+      // Jeder Client einzeln abgesichert: ein fehlerhafter Client darf die
+      // Aenderung fuer die uebrigen nicht abbrechen.
+      try
+        try
+          Client.StyleManagerChanged(Self);
+        except
+          on E: Exception do
+            TPPGErrorHandler.HandleCallbackError(Self, E, 'StyleManager.Changed');
+        end;
+      finally
+        Client := nil; // Interface nicht laenger als noetig halten
+      end;
     end;
 end;
 

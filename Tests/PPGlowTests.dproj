@@ -333,6 +333,7 @@
         <DCCReference Include="PPG.Tests.Phase14c.pas"/>
         <DCCReference Include="PPG.Tests.Phase14cKanban.pas"/>
         <DCCReference Include="PPG.Tests.Phase14cDB.pas"/>
+        <DCCReference Include="PPG.Tests.Review.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

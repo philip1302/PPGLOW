@@ -431,10 +431,22 @@ class procedure TPPGTheme.Changed;
 var
   Copy: TList;
   I: Integer;
+  Form: TCustomForm;
 begin
+  // Jeder Empfaenger einzeln abgesichert (wie TPPGAnimator.TimerTick):
+  // ein fehlerhaftes Form/Control darf den Wechsel fuer die uebrigen nicht
+  // abbrechen, sonst steht die Anwendung halb im alten, halb im neuen Theme.
   if FStyleForms then
     for I := 0 to Screen.FormCount - 1 do
-      ApplyToForm(Screen.Forms[I]);
+    begin
+      Form := Screen.Forms[I];
+      try
+        ApplyToForm(Form);
+      except
+        on E: Exception do
+          TPPGErrorHandler.HandleCallbackError(Form, E, 'Theme.ApplyToForm');
+      end;
+    end;
   if GClients <> nil then
   begin
     // Kopie: ein Control darf im Handler andere Controls erzeugen/freigeben
@@ -443,7 +455,16 @@ begin
       Copy.Assign(GClients);
       for I := 0 to Copy.Count - 1 do
         if GClients.IndexOf(Copy[I]) >= 0 then
-          TControl(Copy[I]).Perform(PPGThemeChangedMessage, 0, 0);
+          try
+            TControl(Copy[I]).Perform(PPGThemeChangedMessage, 0, 0);
+          except
+            on E: Exception do
+              // Sender nur, solange das Control noch angemeldet ist
+              if GClients.IndexOf(Copy[I]) >= 0 then
+                TPPGErrorHandler.HandleCallbackError(TControl(Copy[I]), E, 'Theme.Changed')
+              else
+                TPPGErrorHandler.HandleCallbackError(nil, E, 'Theme.Changed');
+          end;
     finally
       Copy.Free;
     end;
