@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGColumnComboBox</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGColumnComboBox</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.ColumnComboBox</code> - Basis <code>TPPGCustomDropDownField</code></p>
+<p><strong>Vorbild:</strong> TMS TAdvMultiColumnComboBox</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>Columns</code> enth&#228;lt Titel, Breite in logischen Pixeln, Ausrichtung und Sichtbarkeit. Die Zeilen kommen aus <code>Items</code>, jede Zeile mit den Zellen getrennt durch <code>ColumnDelimiter</code> (<code>1001|Albers|Hamburg</code>).</li>
+<li>Virtuell: <code>VirtualRowCount</code> &gt; 0 und <code>OnGetCellText</code> liefern die Zellen. Auch 100 000 Zeilen klappen ohne Kopie auf.</li>
+<li>Ein Klick auf die Kopfzeile sortiert die Ansicht, ein zweiter Klick kehrt die Richtung um. Die Daten bleiben unver&#228;ndert.</li>
+<li><code>KeyColumn</code>/<code>KeyValue</code> liefern den Schl&#252;ssel, <code>DisplayColumn</code> den Text im Feld. Die Tippsuche arbeitet in der Anzeigespalte, offen und geschlossen.</li>
+<li>Geschlossen bl&#228;ttern die Pfeile die Auswahl (wie eine DropDownList).</li>
+<li>Abweichung vom Plan: Die Zeilen liegen in <code>Items</code> mit Trennzeichen statt in <code>ItemsEx</code> mit <code>SubItems</code>, weil die Eintr&#228;ge der Suite keine Unterspalten haben.</li>
+<li>Die Zeile zeichnet das Control selbst, schlank. Die Zellroutine des Grids aus Phase 13 soll das &#252;bernehmen.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGColumnComboBox1.Columns.Add.Title := &#39;Nr&#39;;
+PPGColumnComboBox1.Columns.Add.Title := &#39;Name&#39;;
+PPGColumnComboBox1.Items.Add(&#39;1001|Albers GmbH&#39;);
+PPGColumnComboBox1.DisplayColumn := 1;
+PPGColumnComboBox1.KeyValue := &#39;1001&#39;;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGColumnComboBox - mehrspaltige Auswahl mit Kopfzeile (Phase 12e, Vorbild TMS TAdvMultiColumnComboBox).</p>
+<ul>
+<li>Columns (Titel, Breite in logischen px, Ausrichtung) und Zeilen aus Items: jede Zeile enthaelt die Zellen getrennt durch ColumnDelimiter (&quot;1001|Mueller|Berlin&quot;). Virtuell: VirtualRowCount &gt; 0 und OnGetCellText liefern die Zellen (z.B. 100 000 Zeilen ohne Kopie).</li>
+<li>Kopfzeile im Popup; Klick sortiert (aufsteigend/absteigend), die Reihenfolge der Daten bleibt unveraendert (nur die Ansicht).</li>
+<li>KeyColumn/KeyValue fuer den Schluessel (DB-Anbindung), DisplayColumn fuer den Text im Feld. Tippsuche in der Anzeigespalte (offen und geschlossen).</li>
+<li>Zeichnen: schlanke eigene Zeile; die Zellroutine des Grids (TPPGCellPainter, Phase 13) soll das spaeter uebernehmen.</li>
+<li>OnChange nur bei Auswahl durch den Anwender; ItemIndex/KeyValue aus Code ohne Ereignis.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Columns</code>, <code>Items</code>, <code>ColumnDelimiter</code>, <code>VirtualRowCount</code>, <code>KeyColumn</code>, <code>DisplayColumn</code>, <code>DropDownCount</code>, <code>DropDownWidth</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>TextHint</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnGetCellText</code>, <code>OnChange</code>, <code>OnCloseUp</code>, <code>OnDropDown</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGColumnComboBox.md</code>.</p>
+</body></html>

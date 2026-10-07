@@ -1,0 +1,31 @@
+unit Unit1;
+
+interface
+
+uses
+  Winapi.Windows, System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Buttons,
+  Vcl.DBGrids, Data.DB,
+  PPG.Button, PPG.Edit, PPG.ToggleSwitch, PPG.StatusBar, PPG.DB.Grid, PPG.Memo;
+
+type
+  TForm1 = class(TForm)
+    Button1: TPPGButton;
+    BitBtn1: TPPGButton;
+    Edit1: TPPGEdit;
+    Switch1: TPPGToggleSwitch;
+    StatusBar1: TPPGStatusBar;
+    Grid1: TPPGDBGrid;
+    Memo1: TPPGMemo;
+    DataSource1: TDataSource;
+    procedure Grid1TitleClick(Column: TPPGDBGridColumn);
+  end;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm1.Grid1TitleClick(Column: TPPGDBGridColumn);
+begin
+end;
+
+end.

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSpinEdit</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGSpinEdit</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.SpinEdit</code> - Basis <code>TPPGCustomSpinEdit</code></p>
+<p><strong>Vorbild:</strong> TSpinEdit (Vcl.Samples.Spin)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>MinValue &gt; MaxValue</code> wirft <strong>nicht</strong> (wie <code>TSpinEdit</code>), sonst scheitert <code>MinValue := 10; MaxValue := 100</code>.</li>
+<li>Wiederholung beim Halten der Buttons &#252;ber den Animator.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGSpinEdit - Zahlenfeld mit Auf-/Ab-Buttons in der Optik des Presets.</p>
+<ul>
+<li>Verhalten wie Vcl.Samples.Spin.TSpinEdit (gleiche Property-Namen, DFM per Suchen/Ersetzen umstellbar): * MinValue = MaxValue bedeutet &quot;keine Grenze&quot;, sonst wird Value auf den Bereich begrenzt (still, wie TSpinEdit; auch MinValue &gt; MaxValue wirft nicht, damit &quot;MinValue := 10; MaxValue := 100&quot; in jeder Reihenfolge geht) * Ungueltige Eingabe wird beim Verlassen und mit Enter auf Value gesetzt * EditorEnabled = False: nur ueber Buttons, Tasten und Mausrad aenderbar</li>
+<li>Buttons im Feld; gedrueckt halten wiederholt (400 ms, dann alle 50 ms). Der Takt kommt vom gemeinsamen Animator (kein eigener Timer).</li>
+<li>Pfeiltasten (+/- Increment), Bild auf/ab (+/- 10 * Increment), Mausrad.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>TextHint</code>, <code>UseSystemContextMenu</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Alignment</code>, <code>Anchors</code>, <code>AutoSelect</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>EditorEnabled</code>, <code>Enabled</code>, <code>Font</code>, <code>Increment</code>, <code>MaxLength</code>, <code>MaxValue</code>, <code>MinValue</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Value</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnMouseWheel</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSpinEdit.md</code>.</p>
+</body></html>

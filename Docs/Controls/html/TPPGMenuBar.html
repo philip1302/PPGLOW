@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGMenuBar</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGMenuBar</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.MenuBar</code> - Basis <code>TPPGCustomMenuBar</code></p>
+<p><strong>Vorbild:</strong> TMS TAdvMainMenu, Men&#252;leiste von Windows 11</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Zeigt ein normales <code>TMainMenu</code> (Property <code>Menu</code>) als Control, standardm&#228;&#223;ig mit <code>Align = alTop</code> und automatischer H&#246;he.</li>
+<li>Ist <code>Menu</code> zugleich das Men&#252; des Formulars, wird <code>Form.Menu</code> zur Laufzeit geleert (sonst g&#228;be es zwei Leisten) und beim Freigeben wiederhergestellt. Im Designer bleibt alles unver&#228;ndert.</li>
+<li>Tastatur wie bei Windows: Alt oder F10 aktiviert die Leiste, Alt+Buchstabe &#246;ffnet ein Men&#252;, Pfeile wechseln, Esc verl&#228;sst die Leiste. Tastenk&#252;rzel der Eintr&#228;ge (Strg+S …) wirken auch ohne ge&#246;ffnetes Men&#252;.</li>
+<li>Zwischen offenen Men&#252;s wechselt die Maus ohne erneuten Klick; ein zweiter Klick auf dasselbe Men&#252; schlie&#223;t es.</li>
+<li>MDI-Men&#252;s (<code>Merge</code>/<code>Unmerge</code>) werden noch nicht zusammengef&#252;hrt.</li>
+<li>Screenreader: Rolle Men&#252;leiste, Ereignisse <code>EVENT_SYSTEM_MENUSTART/END</code>.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGMenuBar1.Menu := MainMenu1;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGMenuBar - Hauptmenue als Control im Stil der Suite (Phase 11c).</p>
+<ul>
+<li>Modell ist ein normales TMainMenu (Menue-Designer, Actions, DFM). Die Leiste zeigt seine Eintraege; Untermenues kommen aus PPG.Menus.</li>
+<li>Zur Laufzeit wird Form.Menu geleert (die Menue-Leiste im Nicht-Client- Bereich laesst sich weder stylen noch auf Dark Mode umstellen); beim Freigeben der Leiste wird es wiederhergestellt. Zur Entwurfszeit bleibt das Formular-Menue sichtbar.</li>
+<li>Weil Form.Menu leer ist, loest die VCL die Tastenkuerzel der Eintraege nicht mehr aus: das uebernimmt die Leiste (TMenu.IsShortCut, wie TCustomForm.IsShortCut).</li>
+<li>Tastatur wie Windows: Alt allein bzw. F10 markiert die Leiste, Alt+ Buchstabe oeffnet den Eintrag, Pfeile wechseln, Esc verlaesst. Haken in PPG.AppHooks, nur fuer Nachrichten des eigenen Formulars.</li>
+<li>Barrierefreiheit: Rolle MENUBAR mit Eintraegen als Kindern, EVENT_SYSTEM_MENUSTART/END.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Menu</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>Visible</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGMenuBar.md</code>.</p>
+</body></html>

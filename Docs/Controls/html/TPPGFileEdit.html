@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGFileEdit</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGFileEdit</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.FileEdit</code> - Basis <code>TPPGCustomFileEdit</code></p>
+<p><strong>Vorbild:</strong> TMS TAdvFileNameEdit / TAdvDirectoryEdit</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>Kind</code>: Datei &#246;ffnen, Datei speichern oder Ordner.</li>
+<li>Der Knopf im Feld (oder Alt+Pfeil runter, F4) &#246;ffnet ab Vista <code>TFileOpenDialog</code>/<code>TFileSaveDialog</code>. Davor gibt es <code>TOpenDialog</code>/<code>TSaveDialog</code>, f&#252;r Ordner <code>SHBrowseForFolder</code>. <code>Filter</code> im VCL-Format wird in Dateitypen umgesetzt.</li>
+<li>Dateien aus dem Explorer lassen sich ablegen: Es z&#228;hlt die erste Datei bzw. der erste Ordner, der zu <code>Kind</code> passt.</li>
+<li>Die Autovervollst&#228;ndigung von Pfaden kommt von Windows (<code>SHAutoComplete</code>).</li>
+<li><code>MustExist</code>: Eine fehlende Datei bzw. ein fehlender Ordner steht beim Verlassen als Fehler am Feld. Ein leeres Feld ist g&#252;ltig.</li>
+<li><code>OnBeforeDialog</code> kann den Dialog abbrechen, <code>OnAfterDialog</code> den gew&#228;hlten Namen &#228;ndern oder ablehnen.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGFileEdit1.Kind := fkOpenFile;
+PPGFileEdit1.Filter := &#39;Dokumente|*.pdf;*.docx|Alle Dateien|*.*&#39;;
+PPGFileEdit1.MustExist := True;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGFileEdit - Feld fuer eine Datei oder einen Ordner (Phase 12c).</p>
+<ul>
+<li>Kind: Datei oeffnen, Datei speichern oder Ordner. Der Knopf im Feld oeffnet ab Vista TFileOpenDialog/TFileSaveDialog (Ordner ueber fdoPickFolders), davor TOpenDialog/TSaveDialog bzw. SHBrowseForFolder (Laufzeitpruefung, XE2 auf XP).</li>
+<li>Ablegen aus dem Explorer (DragAcceptFiles/WM_DROPFILES): die erste Datei bzw. der erste Ordner passend zu Kind.</li>
+<li>Autovervollstaendigung von Pfaden ueber SHAutoComplete auf dem inneren Edit (dynamisch geladen; ohne Shell-Funktion einfach ohne).</li>
+<li>MustExist: fehlende Datei bzw. fehlender Ordner beim Verlassen als ValidationState (kein Dialog). Leeres Feld ist gueltig.</li>
+<li>Ereignisse: OnBeforeDialog (abbrechbar, Dialog vorbereiten), OnAfterDialog (Name pruefen/aendern), OnChange wie beim Edit.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Kind</code>, <code>Filter</code>, <code>FilterIndex</code>, <code>InitialDir</code>, <code>DefaultExt</code>, <code>DialogTitle</code>, <code>MustExist</code>, <code>AcceptDrop</code>, <code>AutoComplete</code>, <code>ShowClearButton</code>, <code>TextHint</code>, <code>TextHintVisibleOnFocus</code>, <code>UseSystemContextMenu</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>MaxLength</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnAfterDialog</code>, <code>OnBeforeDialog</code>, <code>OnChange</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGFileEdit.md</code>.</p>
+</body></html>

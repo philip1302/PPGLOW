@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PPGlow-Hilfe</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>PPGlow - Hilfe pro Control</h1>
+<p>Erzeugt von <code>Build\make-docs.ps1</code> aus den Quelltexten und <code>Docs\Controls\notes</code>. HTML-Fassung: <code>Docs\Controls\html\index.html</code>.</p>
+<h2>Palette PPGlow</h2>
+<table>
+<tr><th>Control</th><th>Unit</th><th>Kurzbeschreibung</th></tr>
+<tr><td><a href="TPPGButton.html">TPPGButton</a></td><td><code>PPG.Button</code></td><td>Glow-Button mit Bild, ModalResult, Default/Cancel, Toggle-Gruppen (GroupIndex/Down), DropDownMenu und Action-Unterstuetzung.</td></tr>
+<tr><td><a href="TPPGCheckBox.html">TPPGCheckBox</a></td><td><code>PPG.CheckBox</code></td><td>Kontrollkaestchen mit optionalem dritten Zustand (AllowGrayed).</td></tr>
+<tr><td><a href="TPPGRadioButton.html">TPPGRadioButton</a></td><td><code>PPG.RadioButton</code></td><td>Optionsfeld.</td></tr>
+<tr><td><a href="TPPGToggleSwitch.html">TPPGToggleSwitch</a></td><td><code>PPG.ToggleSwitch</code></td><td>Ein/Aus-Schalter mit gleitendem Knopf (animiert ueber dieselbe Zustandslogik wie CheckBox/RadioButton).</td></tr>
+<tr><td><a href="TPPGProgressBar.html">TPPGProgressBar</a></td><td><code>PPG.ProgressBar</code></td><td>Fortschrittsbalken in der Optik des Presets.</td></tr>
+<tr><td><a href="TPPGTrackBar.html">TPPGTrackBar</a></td><td><code>PPG.TrackBar</code></td><td>Schieberegler mit Glow-Griff.</td></tr>
+<tr><td><a href="TPPGPanel.html">TPPGPanel</a></td><td><code>PPG.Panel</code></td><td>Container-Flaeche in der Optik des Presets (abgerundet, Rahmen, im Classic-Preset mit dezentem Verlauf).</td></tr>
+<tr><td><a href="TPPGGroupBox.html">TPPGGroupBox</a></td><td><code>PPG.GroupBox</code></td><td>Gruppierung mit Rahmen und Beschriftung.</td></tr>
+<tr><td><a href="TPPGEdit.html">TPPGEdit</a></td><td><code>PPG.Edit</code></td><td>einzeiliges Eingabefeld in der Optik des Presets.</td></tr>
+<tr><td><a href="TPPGMemo.html">TPPGMemo</a></td><td><code>PPG.Memo</code></td><td>mehrzeiliges Eingabefeld in der Optik des Presets.</td></tr>
+<tr><td><a href="TPPGSpinEdit.html">TPPGSpinEdit</a></td><td><code>PPG.SpinEdit</code></td><td>Zahlenfeld mit Auf-/Ab-Buttons in der Optik des Presets.</td></tr>
+<tr><td><a href="TPPGComboBox.html">TPPGComboBox</a></td><td><code>PPG.ComboBox</code></td><td>Auswahlfeld mit eigener Aufklappliste in der Optik des Presets.</td></tr>
+<tr><td><a href="TPPGTabControl.html">TPPGTabControl</a></td><td><code>PPG.TabControl</code></td><td>Reiter-Controls der Suite.</td></tr>
+<tr><td><a href="TPPGPageControl.html">TPPGPageControl</a></td><td><code>PPG.PageControl</code></td><td>TPPGPageControl + TPPGTabSheet - Seiten mit Reitern, DFM-kompatibel zu TPageControl/TTabSheet (ActivePage, TabPosition, TabWidth, TabHeight, HotTrack, Images...</td></tr>
+<tr><td><a href="TPPGListBox.html">TPPGListBox</a></td><td><code>PPG.ListBox</code></td><td>Liste im Stil der Suite, DFM-kompatibel zu TListBox.</td></tr>
+<tr><td><a href="TPPGCheckListBox.html">TPPGCheckListBox</a></td><td><code>PPG.CheckListBox</code></td><td>ListBox mit Kaestchen, DFM-kompatibel zu TCheckListBox.</td></tr>
+<tr><td><a href="TPPGTreeView.html">TPPGTreeView</a></td><td><code>PPG.TreeView</code></td><td>Baum im Stil der Suite (Phase 6b).</td></tr>
+<tr><td><a href="TPPGGrid.html">TPPGGrid</a></td><td><code>PPG.Grid</code></td><td>Tabelle im Stil der Suite (Phase 6c).</td></tr>
+<tr><td><a href="TPPGLabel.html">TPPGLabel</a></td><td><code>PPG.Labels</code></td><td>TPPGLabel und TPPGLinkLabel (Phase 7a).</td></tr>
+<tr><td><a href="TPPGLinkLabel.html">TPPGLinkLabel</a></td><td><code>PPG.Labels</code></td><td>TPPGLabel und TPPGLinkLabel (Phase 7a).</td></tr>
+<tr><td><a href="TPPGBadge.html">TPPGBadge</a></td><td><code>PPG.Feedback</code></td><td>Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar.</td></tr>
+<tr><td><a href="TPPGProgressRing.html">TPPGProgressRing</a></td><td><code>PPG.Feedback</code></td><td>Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar.</td></tr>
+<tr><td><a href="TPPGInfoBar.html">TPPGInfoBar</a></td><td><code>PPG.Feedback</code></td><td>Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar.</td></tr>
+<tr><td><a href="TPPGExpander.html">TPPGExpander</a></td><td><code>PPG.Expander</code></td><td>Container mit Kopfzeile, auf- und zuklappbar (Phase 7a).</td></tr>
+<tr><td><a href="TPPGSplitter.html">TPPGSplitter</a></td><td><code>PPG.Splitter</code></td><td>Ziehgriff zwischen ausgerichteten Controls (Phase 7a).</td></tr>
+<tr><td><a href="TPPGRating.html">TPPGRating</a></td><td><code>PPG.Rating</code></td><td>Sternebewertung (Phase 7a).</td></tr>
+<tr><td><a href="TPPGSearchEdit.html">TPPGSearchEdit</a></td><td><code>PPG.SearchEdit</code></td><td>Suchfeld mit Vorschlagsliste (Phase 7a, wie WinUI AutoSuggestBox).</td></tr>
+<tr><td><a href="TPPGCalendar.html">TPPGCalendar</a></td><td><code>PPG.Calendar</code></td><td>Monatskalender mit Jahres- und Dekadenansicht (Phase 7b).</td></tr>
+<tr><td><a href="TPPGDatePicker.html">TPPGDatePicker</a></td><td><code>PPG.DatePicker</code></td><td>Datumsfeld mit Kalender-Popup (Phase 7b).</td></tr>
+<tr><td><a href="TPPGTimePicker.html">TPPGTimePicker</a></td><td><code>PPG.TimePicker</code></td><td>Uhrzeitfeld (Phase 7b).</td></tr>
+<tr><td><a href="TPPGNavigationView.html">TPPGNavigationView</a></td><td><code>PPG.NavigationView</code></td><td>Seitenleiste wie WinUI NavigationView (Phase 7c).</td></tr>
+<tr><td><a href="TPPGBreadcrumb.html">TPPGBreadcrumb</a></td><td><code>PPG.Breadcrumb</code></td><td>Pfadleiste aus Segmenten (Phase 7c, wie WinUI BreadcrumbBar).</td></tr>
+<tr><td><a href="TPPGToolBar.html">TPPGToolBar</a></td><td><code>PPG.ToolBar</code></td><td>Befehlsleiste (Phase 7c, wie WinUI CommandBar).</td></tr>
+<tr><td><a href="TPPGStatusBar.html">TPPGStatusBar</a></td><td><code>PPG.StatusBar</code></td><td>Statusleiste (Phase 7c).</td></tr>
+<tr><td><a href="TPPGNotificationCenter.html">TPPGNotificationCenter</a></td><td><code>PPG.Notifications</code></td><td>Benachrichtigungen (&quot;Toasts&quot;) der Anwendung (Phase 7d).</td></tr>
+<tr><td><a href="TPPGSparkline.html">TPPGSparkline</a></td><td><code>PPG.Sparkline</code></td><td>kleiner Werteverlauf ohne Achsen (Phase 10b).</td></tr>
+<tr><td><a href="TPPGGauge.html">TPPGGauge</a></td><td><code>PPG.Gauge</code></td><td>Dashboard-Bausteine (Phase 10c): TPPGGauge und TPPGKpiTile.</td></tr>
+<tr><td><a href="TPPGKpiTile.html">TPPGKpiTile</a></td><td><code>PPG.Gauge</code></td><td>Dashboard-Bausteine (Phase 10c): TPPGGauge und TPPGKpiTile.</td></tr>
+<tr><td><a href="TPPGChart.html">TPPGChart</a></td><td><code>PPG.Chart</code></td><td>Diagramm im Stil der Suite (Phase 10d).</td></tr>
+<tr><td><a href="TPPGPlanner.html">TPPGPlanner</a></td><td><code>PPG.Planner</code></td><td>Terminplaner (Phase 14a).</td></tr>
+<tr><td><a href="TPPGRibbon.html">TPPGRibbon</a></td><td><code>PPG.Ribbon</code></td><td>Menueband im Stil von Office (Phase 14b).</td></tr>
+<tr><td><a href="TPPGKanban.html">TPPGKanban</a></td><td><code>PPG.Kanban</code></td><td>Kanban-Board (Phase 14c, Vorbild Trello / TMS FNC Kanban).</td></tr>
+<tr><td><a href="TPPGPopupMenu.html">TPPGPopupMenu</a></td><td><code>PPG.Menus</code></td><td>Menues im Stil der Suite (Phase 11b).</td></tr>
+<tr><td><a href="TPPGMenuBar.html">TPPGMenuBar</a></td><td><code>PPG.MenuBar</code></td><td>Hauptmenue als Control im Stil der Suite (Phase 11c).</td></tr>
+<tr><td><a href="TPPGHintManager.html">TPPGHintManager</a></td><td><code>PPG.Hints</code></td><td>Hints im Stil der Suite (Phase 11e).</td></tr>
+<tr><td><a href="TPPGCustomHint.html">TPPGCustomHint</a></td><td><code>PPG.Hints</code></td><td>Fuer die CustomHint-Property einzelner Controls (wie TBalloonHint).</td></tr>
+<tr><td><a href="TPPGTeachingTip.html">TPPGTeachingTip</a></td><td><code>PPG.TeachingTip</code></td><td>TeachingTip (Phase 11f): Sprechblase mit Pfeil, an ein Control geheftet (wie WinUI TeachingTip).</td></tr>
+<tr><td><a href="TPPGTaskDialog.html">TPPGTaskDialog</a></td><td><code>PPG.Dialogs</code></td><td>Dialoge im Stil der Suite (Phase 11g).</td></tr>
+<tr><td><a href="TPPGWizard.html">TPPGWizard</a></td><td><code>PPG.Wizard</code></td><td>TPPGWizard + TPPGWizardPage - Schritt-Assistent (Phase 11g).</td></tr>
+<tr><td><a href="TPPGNumberEdit.html">TPPGNumberEdit</a></td><td><code>PPG.NumberEdit</code></td><td>ein Feld fuer Ganzzahl, Kommazahl, Waehrung und Prozent (Phase 12b; Vorbild TMS TAdvEdit EditType, WinUI NumberBox).</td></tr>
+<tr><td><a href="TPPGMaskEdit.html">TPPGMaskEdit</a></td><td><code>PPG.MaskEdit</code></td><td>Eingabe mit Maske (Phase 12b, Vorbild TMaskEdit).</td></tr>
+<tr><td><a href="TPPGPasswordEdit.html">TPPGPasswordEdit</a></td><td><code>PPG.PasswordEdit</code></td><td>Kennwortfeld (Phase 12b, Vorbild WinUI PasswordBox).</td></tr>
+<tr><td><a href="TPPGFileEdit.html">TPPGFileEdit</a></td><td><code>PPG.FileEdit</code></td><td>Feld fuer eine Datei oder einen Ordner (Phase 12c).</td></tr>
+<tr><td><a href="TPPGColorPicker.html">TPPGColorPicker</a></td><td><code>PPG.ColorPicker</code></td><td>Farbauswahl mit Palette (Phase 12d).</td></tr>
+<tr><td><a href="TPPGCheckComboBox.html">TPPGCheckComboBox</a></td><td><code>PPG.CheckComboBox</code></td><td>Mehrfachauswahl im Aufklappfeld (Phase 12e, Vorbild TMS TCheckListEdit).</td></tr>
+<tr><td><a href="TPPGColumnComboBox.html">TPPGColumnComboBox</a></td><td><code>PPG.ColumnComboBox</code></td><td>mehrspaltige Auswahl mit Kopfzeile (Phase 12e, Vorbild TMS TAdvMultiColumnComboBox).</td></tr>
+<tr><td><a href="TPPGTagEdit.html">TPPGTagEdit</a></td><td><code>PPG.TagEdit</code></td><td>Stichwoerter als Chips (Phase 12f, Vorbild Outlook-Empfaenger, WinUI TokenizingTextBox).</td></tr>
+<tr><td><a href="TPPGGridPrinter.html">TPPGGridPrinter</a></td><td><code>PPG.Grid.Print</code></td><td>Drucken von Tabellen (Phase 13e).</td></tr>
+<tr><td><a href="TPPGPlannerPrinter.html">TPPGPlannerPrinter</a></td><td><code>PPG.Planner.Print</code></td><td>Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten).</td></tr>
+<tr><td><a href="TPPGStyleManager.html">TPPGStyleManager</a></td><td><code>PPG.StyleManager</code></td><td>Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster).</td></tr>
+</table>
+<h2>Palette PPGlow DB</h2>
+<table>
+<tr><th>Control</th><th>Unit</th><th>Kurzbeschreibung</th></tr>
+<tr><td><a href="TPPGDBEdit.html">TPPGDBEdit</a></td><td><code>PPG.DB.Controls</code></td><td>Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker.</td></tr>
+<tr><td><a href="TPPGDBMemo.html">TPPGDBMemo</a></td><td><code>PPG.DB.Controls</code></td><td>Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker.</td></tr>
+<tr><td><a href="TPPGDBCheckBox.html">TPPGDBCheckBox</a></td><td><code>PPG.DB.Controls</code></td><td>Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker.</td></tr>
+<tr><td><a href="TPPGDBComboBox.html">TPPGDBComboBox</a></td><td><code>PPG.DB.Controls</code></td><td>Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker.</td></tr>
+<tr><td><a href="TPPGDBLookupComboBox.html">TPPGDBLookupComboBox</a></td><td><code>PPG.DB.Lookup</code></td><td>Auswahl eines Schluessels aus einer zweiten Datenmenge (Phase 9c), wie TDBLookupComboBox.</td></tr>
+<tr><td><a href="TPPGDBDatePicker.html">TPPGDBDatePicker</a></td><td><code>PPG.DB.Controls</code></td><td>Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker.</td></tr>
+<tr><td><a href="TPPGDBGrid.html">TPPGDBGrid</a></td><td><code>PPG.DB.Grid</code></td><td>Tabelle einer Datenmenge (Phase 9c), wie TDBGrid.</td></tr>
+<tr><td><a href="TPPGDBChart.html">TPPGDBChart</a></td><td><code>PPG.DB.Chart</code></td><td>Diagramm aus einer Datenmenge (Phase 10e, Paket PPGlowDBR).</td></tr>
+<tr><td><a href="TPPGDBPlanner.html">TPPGDBPlanner</a></td><td><code>PPG.DB.Planner</code></td><td>Terminplaner auf einer Datenmenge (Phase 14a, Paket PPGlowDBR).</td></tr>
+<tr><td><a href="TPPGDBKanban.html">TPPGDBKanban</a></td><td><code>PPG.DB.Kanban</code></td><td>Kanban-Board auf einer Datenmenge (Phase 14c, Paket PPGlowDBR).</td></tr>
+<tr><td><a href="TPPGDBMaskEdit.html">TPPGDBMaskEdit</a></td><td><code>PPG.DB.Fields</code></td><td>DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit.</td></tr>
+<tr><td><a href="TPPGDBNumberEdit.html">TPPGDBNumberEdit</a></td><td><code>PPG.DB.Fields</code></td><td>DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit.</td></tr>
+<tr><td><a href="TPPGDBColorPicker.html">TPPGDBColorPicker</a></td><td><code>PPG.DB.Fields</code></td><td>DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit.</td></tr>
+<tr><td><a href="TPPGDBCheckComboBox.html">TPPGDBCheckComboBox</a></td><td><code>PPG.DB.Fields</code></td><td>DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit.</td></tr>
+<tr><td><a href="TPPGDBTagEdit.html">TPPGDBTagEdit</a></td><td><code>PPG.DB.Fields</code></td><td>DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit.</td></tr>
+</table>
+</body></html>

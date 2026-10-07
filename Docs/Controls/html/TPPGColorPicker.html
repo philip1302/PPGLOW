@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGColorPicker</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGColorPicker</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.ColorPicker</code> - Basis <code>TPPGCustomDropDownField</code></p>
+<p><strong>Vorbild:</strong> <code>TColorBox</code>, TMS TAdvColorPickerDropDown</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Das Feld zeigt Farbfeld und Namen bzw. Hexwert (<code>ShowHex</code>).</li>
+<li>Das Popup hat diese Abschnitte:</li>
+<li>Designfarben (Diagramm-Palette des Presets, <code>ShowThemeColors</code>)</li>
+<li>Standardfarben und erweiterte Farben</li>
+<li>Systemfarben</li>
+<li>zuletzt benutzte Farben (<code>RecentColors</code>, im DFM gespeichert)</li>
+<li>„Keine“ und „Standard“</li>
+<li><code>Style</code> hat den Typ von <code>TColorBox.Style</code> (<code>cbStandardColors</code>, <code>cbExtendedColors</code>, <code>cbSystemColors</code>, <code>cbIncludeNone</code>, <code>cbIncludeDefault</code>, <code>cbCustomColor</code>, <code>cbPrettyNames</code>).</li>
+<li>„Weitere Farben…“ &#246;ffnet ein eigenes HSV-Feld (Fl&#228;che f&#252;r S&#228;ttigung und Helligkeit, Farbton-Leiste) mit Hex-Eingabe, ohne Windows-<code>ChooseColor</code>. Es folgt deshalb Preset und Dark Mode.</li>
+<li>Tastatur:</li>
+<li>Leertaste, Alt+Pfeil oder F4 &#246;ffnen.</li>
+<li>Pfeile wandern im Raster.</li>
+<li>Enter &#252;bernimmt, Esc verwirft.</li>
+<li>Im HSV-Teil Hexwert tippen und mit Enter &#252;bernehmen.</li>
+<li>Farbnamen kommen aus der VCL („Red“) und sind nicht &#252;bersetzt; andere Farben erscheinen als <code>#RRGGBB</code>.</li>
+<li>Systemfarben bleiben in „zuletzt benutzt“ Systemfarben (sie folgen dem Windows-Design).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGColorPicker1.Style := PPGColorPicker1.Style + [cbIncludeNone];
+PPGColorPicker1.Selected := clNone;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGColorPicker - Farbauswahl mit Palette (Phase 12d).</p>
+<ul>
+<li>Feld mit Farbfeld und Namen bzw. Hexwert; das Popup (TPPGColorPopup) nutzt die Aufklapp-Basis (PPG.Controls.DropDown) und PPG.Popup.Placement.</li>
+<li>Abschnitte: Designfarben (Akzent, Signalfarben, Diagramm-Palette des Presets), Standardfarben (16 + erweiterte), Systemfarben, zuletzt benutzt (RecentColors, im DFM gespeichert), &quot;Keine&quot;/&quot;Standard&quot;.</li>
+<li>&quot;Weitere Farben...&quot;: eigenes HSV-Feld (Saettigung/Helligkeit-Flaeche, Farbton-Leiste) mit Hex-Eingabe im Popup - kein Windows-ChooseColor, damit es dem Preset und dem Dark Mode folgt. Die Hex-Eingabe laeuft ueber die Tastatur des Felds (das Popup wird nie aktiviert).</li>
+<li>Style wie TColorBox.Style (TColorBoxStyle, cbStandardColors, ...), Selected: TColor, clNone/clDefault fuer &quot;keine&quot;/&quot;Standard&quot;.</li>
+<li>Tastatur: Pfeile im Raster, Enter uebernimmt, Esc verwirft; im HSV-Teil Hex tippen, Enter uebernimmt. Screenreader: Farben als Kinder mit Namen.</li>
+<li>OnChange nur bei Auswahl durch den Anwender; Selected aus Code ohne.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Selected</code>, <code>Style</code>, <code>ShowThemeColors</code>, <code>RecentColors</code>, <code>MaxRecent</code>, <code>ShowHex</code>, <code>NoneColorColor</code>, <code>DefaultColorColor</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnCloseUp</code>, <code>OnDropDown</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGColorPicker.md</code>.</p>
+</body></html>

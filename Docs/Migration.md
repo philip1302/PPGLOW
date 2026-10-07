@@ -1,0 +1,93 @@
+# Migration: VCL bzw. TMS → PPGlow
+
+*Stand 04.10.2026 (Phase 9f). Werkzeug: `Build\migrate.ps1`.*
+
+## Kurz
+
+```powershell
+# Vorschau (schreibt nichts):
+powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path C:\Projekte\MeineApp -Recurse -WhatIf
+# Umstellen (mit Sicherung *.bak und Bericht migrate-report.txt):
+powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path C:\Projekte\MeineApp -Recurse
+# Nur bestimmte Klassen:
+powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path .\Main.dfm -Only TButton,TEdit
+```
+
+Voraussetzungen: Die Formulare sind als **Text** gespeichert (in der IDE: Rechtsklick aufs Formular → „Text-DFM“), und die PPGlow-Packages sind installiert. Danach das Projekt öffnen, kompilieren und den Bericht durchgehen.
+
+## Was das Skript macht
+
+1. **Klassen** in der DFM (`object Button1: TButton` → `TPPGButton`) und in der Unit (`Button1: TButton;`) ersetzen.
+2. **Units** der neuen Klassen in die `uses`-Liste des interface-Teils eintragen (die alten bleiben stehen).
+3. **Properties umbenennen**, wo die Bedeutung gleich ist (Tabelle unten).
+4. **Properties entfernen**, die die PPGlow-Klasse nicht hat. Welche es gibt, liest das Skript aus den PPGlow-Quelltexten (published-Abschnitte), damit es immer zum aktuellen Stand passt. Jede Entfernung steht im Bericht.
+5. **Ereignis-Handler** anpassen, deren Parametertyp sich ändert (DB-Grid: `TColumn` → `TPPGDBGridColumn`).
+6. **Sicherung** jeder geänderten Datei als `*.bak`; Bericht `migrate-report.txt` im Zielordner.
+
+Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate-tests`.
+
+## Ersetzungstabelle
+
+| Alt (VCL) | Alt (TMS) | PPGlow | Unit |
+|---|---|---|---|
+| TButton, TBitBtn, TSpeedButton | TAdvGlowButton | TPPGButton | PPG.Button |
+| TCheckBox | TAdvOfficeCheckBox | TPPGCheckBox | PPG.CheckBox |
+| TRadioButton | TAdvOfficeRadioButton | TPPGRadioButton | PPG.RadioButton |
+| TToggleSwitch | | TPPGToggleSwitch | PPG.ToggleSwitch |
+| TProgressBar | | TPPGProgressBar | PPG.ProgressBar |
+| TTrackBar | | TPPGTrackBar | PPG.TrackBar |
+| TPanel | | TPPGPanel | PPG.Panel |
+| TGroupBox | | TPPGGroupBox | PPG.GroupBox |
+| TEdit | TAdvEdit | TPPGEdit | PPG.Edit |
+| TMemo | | TPPGMemo | PPG.Memo |
+| TSpinEdit | | TPPGSpinEdit | PPG.SpinEdit |
+| TComboBox | TAdvComboBox | TPPGComboBox | PPG.ComboBox |
+| TTabControl | | TPPGTabControl | PPG.TabControl |
+| TPageControl, TTabSheet | TAdvPageControl | TPPGPageControl, TPPGTabSheet | PPG.PageControl |
+| TListBox | | TPPGListBox | PPG.ListBox |
+| TCheckListBox | | TPPGCheckListBox | PPG.CheckListBox |
+| TTreeView | | TPPGTreeView | PPG.TreeView |
+| TStringGrid | TAdvStringGrid | TPPGGrid | PPG.Grid |
+| TLabel | | TPPGLabel | PPG.Labels |
+| TLinkLabel | | TPPGLinkLabel | PPG.Labels |
+| TSplitter | | TPPGSplitter | PPG.Splitter |
+| TSearchBox | | TPPGSearchEdit | PPG.SearchEdit |
+| TMonthCalendar | | TPPGCalendar | PPG.Calendar |
+| TDateTimePicker | | TPPGDatePicker (bei `Kind = dtkTime`: TPPGTimePicker, von Hand) | PPG.DatePicker |
+| TStatusBar | | TPPGStatusBar | PPG.StatusBar |
+| TDBEdit | | TPPGDBEdit | PPG.DB.Controls |
+| TDBMemo | | TPPGDBMemo | PPG.DB.Controls |
+| TDBCheckBox | | TPPGDBCheckBox | PPG.DB.Controls |
+| TDBComboBox | | TPPGDBComboBox | PPG.DB.Controls |
+| TDBLookupComboBox | | TPPGDBLookupComboBox | PPG.DB.Lookup |
+| TDBGrid | | TPPGDBGrid | PPG.DB.Grid |
+
+## Umbenennungen und Sonderfälle
+
+| Klasse | Alt | Neu |
+|---|---|---|
+| TAdvEdit, TAdvComboBox | `EmptyText` | `TextHint` |
+| TToggleSwitch | `State = tssOn/tssOff` | `Checked = True/False` |
+| TSearchBox | `OnInvokeSearch` | `OnSearch` |
+| TDBGrid-Spalten | `Title.Caption` | `Title` |
+| TDBGrid-Spalten | `Expanded`, `Visible`, `Title.Font.*`, `Color` … | entfernt |
+| TBitBtn | `Kind`, `Glyph`, `NumGlyphs`, `Layout` | entfernt (Bilder über `Images`/`ImageIndex`) |
+| TSpeedButton | `Glyph`, `NumGlyphs`, `Flat`, `Layout` | entfernt |
+
+## Was von Hand bleibt
+
+- **Bilder:** `Glyph` gibt es nicht; eine ImageList (bzw. ab 10.4 `TVirtualImageList`) zuweisen und `ImageIndex`/`ImageName` setzen.
+- **TTreeView-Knoten:** sind in der DFM binär gespeichert und gehen verloren; im Designer über „Edit nodes...“ neu anlegen (oder im Code füllen).
+- **TToolBar/TToolButton:** andere Struktur (Einträge statt Kind-Buttons) – `TPPGToolBar` von Hand aufbauen.
+- **TMS-Erscheinungsbild:** Die `Appearance`-Werte von TMS passen nicht zu PPGlow und werden entfernt; das Preset (Standard ModernFlat) bestimmt die Optik. Ein `TPPGStyleManager` auf dem Formular stellt alle Controls auf einmal um („Apply preset to form...“).
+- **TAdvStringGrid:** Nur die Grundfunktionen (Zellen, feste Zeilen/Spalten, Sortieren, Filter, Editoren) sind abgedeckt; TMS-spezifische Properties werden entfernt.
+- **Code:** Aufrufe, die es nur bei der alten Klasse gibt (z. B. `TBitBtn.Glyph.LoadFromFile`), meldet der Compiler.
+
+## Verhalten, das sich bewusst unterscheidet
+
+- `Checked`/`State`/`Value` im **Code** setzen löst bei PPGlow nur `OnChange` aus, kein `OnClick` (Ausnahme wie VCL: `TPPGTreeView.Selected` löst `OnChange` aus).
+- `ItemHeight` ist bei Combo, Liste und Baum eine **Mindesthöhe** (alte DFMs speichern 13).
+- Grid: `Row`/`Cells[]` meinen Datenzeilen, `Selection` sichtbare Zeilen (Sortierung, Filter).
+- DB-Controls: ungültige Werte erscheinen als Fehlerzustand am Feld statt als Dialog.
+
+Die vollständige Liste je Control steht in der Hilfe: `Docs\Controls\README.md`.

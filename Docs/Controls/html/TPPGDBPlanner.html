@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBPlanner</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBPlanner</h1>
+<p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Planner</code> - Basis <code>TPPGCustomDBPlanner</code></p>
+<p><strong>Vorbild:</strong> TMS TDBPlanner</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Feldzuordnung: <code>KeyField</code> (ganze Zahl, n&#246;tig zum Schreiben), <code>StartField</code>, <code>FinishField</code>, <code>SubjectField</code>, optional <code>LocationField</code>, <code>BodyField</code>, <code>AllDayField</code>, <code>CategoryField</code>, <code>ResourceField</code>, <code>RecurrenceField</code> (RRULE-Text), <code>ExDatesField</code> und <code>ParentField</code> (ge&#228;nderter Einzeltermin einer Serie).</li>
+<li>Zeiten in der Datenmenge wie <code>TimeZoneMode</code>: UTC (Vorgabe) oder Ortszeit.</li>
+<li>Gelesen werden alle Datens&#228;tze (h&#246;chstens <code>MaxRecords</code>) und in <code>Appointments</code> gespiegelt. Bestehende Termine werden per Schl&#252;ssel aktualisiert, nicht neu angelegt: Auswahl und Zeiger bleiben g&#252;ltig.</li>
+<li>Gro&#223;e Kalender: <code>OnGetRange(Sender, AFrom, ATo)</code> meldet den sichtbaren Zeitraum, bevor gelesen wird. Dort Filter oder Parameter der Abfrage setzen; Serien mit Wiederholung m&#252;ssen dabei immer dabei sein.</li>
+<li>Jede &#196;nderung durch den Anwender (Ziehen, Dauer, Betreff, Anlegen, L&#246;schen, Kopieren, Herausl&#246;sen) wird sofort geschrieben: <code>Locate</code> per <code>KeyField</code>, sonst <code>Append</code>. Von der Datenbank vergebene Schl&#252;ssel (AutoInc) werden nach <code>Post</code> &#252;bernommen.</li>
+<li>&#196;nderungen von au&#223;en laden verz&#246;gert neu (<code>ReloadDelay</code>, &#252;ber den Animator). Eigenes Lesen und Schreiben l&#246;sen kein Neuladen aus. W&#228;hrend ein anderes Control die Datenmenge bearbeitet (Edit/Insert), wird nicht gelesen.</li>
+<li><code>SyncRecord</code>: der gew&#228;hlte Termin wird zum aktuellen Datensatz (z. B. f&#252;r ein Formular daneben).</li>
+<li>Ohne <code>KeyField</code> sind die Termine schreibgesch&#252;tzt.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGDBPlanner1.DataSource := dsTermine;
+PPGDBPlanner1.KeyField := &#39;ID&#39;;
+PPGDBPlanner1.StartField := &#39;BEGINN_UTC&#39;;
+PPGDBPlanner1.FinishField := &#39;ENDE_UTC&#39;;
+PPGDBPlanner1.SubjectField := &#39;BETREFF&#39;;
+PPGDBPlanner1.RecurrenceField := &#39;REGEL&#39;;
+PPGDBPlanner1.OnGetRange := PlannerGetRange;
+
+procedure TForm1.PlannerGetRange(Sender: TObject; AFrom, ATo: TDateTime);
+begin
+  qTermine.Close;
+  qTermine.ParamByName(&#39;VON&#39;).AsDateTime := AFrom - 1; // Zonenrand
+  qTermine.ParamByName(&#39;BIS&#39;).AsDateTime := ATo + 1;
+  qTermine.Open;
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGDBPlanner - Terminplaner auf einer Datenmenge (Phase 14a, Paket PPGlowDBR).</p>
+<ul>
+<li>Feldzuordnung: KeyField (Pflicht zum Schreiben, ganze Zahl), StartField, FinishField, SubjectField sowie optional LocationField, BodyField, AllDayField, CategoryField, ResourceField, RecurrenceField (RRULE-Text), ExDatesField und ParentField (geaenderter Einzeltermin einer Serie).</li>
+<li>Zeiten in der Datenmenge wie TimeZoneMode: UTC (Vorgabe) oder Ortszeit.</li>
+<li>Laden: alle Datensaetze (hoechstens MaxRecords) werden in Appointments gespiegelt. Bestehende Termine werden per Schluessel aktualisiert statt neu angelegt (Auswahl und Zeiger bleiben gueltig).</li>
+<li>Grosse Kalender: OnGetRange meldet den sichtbaren Zeitraum, bevor gelesen wird; die Anwendung setzt dort Filter bzw. Parameter der Abfrage (Serien mit Wiederholung muessen dabei immer dabei sein).</li>
+<li>Schreiben: jede Aenderung durch den Anwender (Ziehen, Groesse, Betreff, Anlegen, Loeschen, Kopieren, Herausloesen eines Vorkommens) wird sofort in die Datenmenge geschrieben (Locate per KeyField, sonst Append). Selbst vergebene Schluessel (AutoInc) werden nach Post uebernommen.</li>
+<li>Datenaenderungen von aussen laden verzoegert neu (ReloadDelay ueber den Animator); eigenes Lesen und Schreiben loest kein Neuladen aus.</li>
+<li>SyncRecord: der gewaehlte Termin wird zum aktuellen Datensatz.</li>
+<li>Waehrend Edit/Insert durch andere Controls wird nicht gelesen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>DataSource</code>, <code>KeyField</code>, <code>StartField</code>, <code>FinishField</code>, <code>SubjectField</code>, <code>LocationField</code>, <code>BodyField</code>, <code>AllDayField</code>, <code>CategoryField</code>, <code>ResourceField</code>, <code>RecurrenceField</code>, <code>ExDatesField</code>, <code>ParentField</code>, <code>MaxRecords</code>, <code>ReloadDelay</code>, <code>SyncRecord</code>, <code>Resources</code>, <code>View</code>, <code>Date</code>, <code>DayCount</code>, <code>FirstDayOfWeek</code>, <code>WorkDays</code>, <code>WorkStart</code>, <code>WorkEnd</code>, <code>DayStartHour</code>, <code>DayEndHour</code>, <code>SlotMinutes</code>, <code>SlotHeight</code>, <code>SlotWidth</code>, <code>TimelineDays</code>, <code>AgendaDays</code>, <code>GroupByResource</code>, <code>ShowNowLine</code>, <code>ReadOnly</code>, <code>TimeZone</code>, <code>TimeZoneMode</code>, <code>Calendar</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnGetRange</code>, <code>OnAppointmentChanging</code>, <code>OnAppointmentChanged</code>, <code>OnAppointmentCreated</code>, <code>OnAppointmentOpen</code>, <code>OnDeleting</code>, <code>OnCreateAppointment</code>, <code>OnGetAppointmentColor</code>, <code>OnSelectionChange</code>, <code>OnRangeChange</code>, <code>OnScroll</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnMouseDown</code>, <code>OnMouseUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBPlanner.md</code>.</p>
+</body></html>

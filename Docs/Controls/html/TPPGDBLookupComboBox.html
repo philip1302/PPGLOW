@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBLookupComboBox</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBLookupComboBox</h1>
+<p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Lookup</code> - Basis <code>TPPGDBComboBox</code></p>
+<p><strong>Vorbild:</strong> TDBLookupComboBox</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>ListField</code> mit mehreren Feldern (<code>Ort;PLZ</code>): das erste ist der Text, die weiteren erscheinen als Detailzeile.</li>
+<li>Die Liste wird einmal vollst&#228;ndig gelesen (Lesezeichen bleibt); f&#252;r sehr gro&#223;e Tabellen die Abfrage filtern.</li>
+<li>Nachschlagefelder (<code>FieldKind = fkLookup</code>) als <code>DataField</code> werden nicht unterst&#252;tzt – <code>ListSource</code>/<code>KeyField</code>/<code>ListField</code> direkt setzen.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGDBLookupComboBox1.ListSource := OrteSource;
+PPGDBLookupComboBox1.KeyField := &#39;ID&#39;;
+PPGDBLookupComboBox1.ListField := &#39;Ort;PLZ&#39;;
+PPGDBLookupComboBox1.DataSource := KundenSource;
+PPGDBLookupComboBox1.DataField := &#39;OrtID&#39;;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGDBLookupComboBox - Auswahl eines Schluessels aus einer zweiten Datenmenge (Phase 9c), wie TDBLookupComboBox.</p>
+<ul>
+<li>ListSource/KeyField/ListField: die Liste kommt aus ListSource.DataSet; angezeigt wird das erste Feld aus ListField, weitere Felder (durch Semikolon getrennt) erscheinen als Detailzeile (ItemsEx).</li>
+<li>DataSource/DataField: das Schluesselfeld der Haupt-Datenmenge. Auswahl schreibt KeyField des gewaehlten Eintrags hinein.</li>
+<li>Die Liste wird beim Oeffnen bzw. Aendern der Listen-Datenmenge einmal vollstaendig gelesen (DisableControls, Lesezeichen wird wiederhergestellt). Fuer sehr grosse Nachschlage-Tabellen ist ein Filter in der Abfrage der bessere Weg.</li>
+<li>Immer csDropDownList: Tippen sucht wie bei der ComboBox (Tippsuche).</li>
+<li>Nicht unterstuetzt: Nachschlagefelder (TField.FieldKind = fkLookup) als DataField - dafuer ListSource/KeyField/ListField direkt setzen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>KeyField</code>, <code>ListField</code>, <code>ListSource</code>, <code>Items</code>, <code>ItemsEx</code>, <code>Style</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBLookupComboBox.md</code>.</p>
+</body></html>

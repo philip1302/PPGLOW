@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGNavigationView</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGNavigationView</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.NavigationView</code> - Basis <code>TPPGCustomControl</code></p>
+<p><strong>Vorbild:</strong> WinUI NavigationView, TMS AdvNavBar</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>Selected</code> im Code l&#246;st kein Ereignis aus; Elterneintr&#228;ge klappen nur auf (werden nicht gew&#228;hlt).</li>
+<li><code>pdmAuto</code> beobachtet die Breite des Parents; kompakt &#246;ffnet ein Klick auf einen Elterneintrag die Leiste.</li>
+<li>Mit <code>PageControl</code> verbunden zeigt die Auswahl die Seite <code>Item.PageIndex</code> (Verb „Connect to ...“).</li>
+<li>Eintr&#228;ge im Designer &#252;ber „Edit items...“ (Baum-Editor mit Einr&#252;cken/Ausr&#252;cken).</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGNavigationView - Seitenleiste wie WinUI NavigationView (Phase 7c).</p>
+<ul>
+<li>Eintraege (Items, verschachtelt): Symbol (Icon-Schrift-Zeichen oder ImageIndex), Text, Plakette (Zahl oder Punkt), Gruppenueberschrift, Trenner, Untereintraege (aufklappbar), Fussbereich (Footer = True, z.B. Einstellungen).</li>
+<li>Hamburger-Knopf klappt die Leiste zwischen voller Breite (OpenPaneLength) und kompakter Symbolleiste (CompactPaneLength) um; die Breite ist animiert. DisplayMode pdmAuto wechselt nach der Breite des Parents (CompactModeThresholdWidth). Kompakt zeigt einen Tooltip mit dem Text des Eintrags.</li>
+<li>Der Auswahl-Indikator gleitet zum gewaehlten Eintrag (ekDecelerate). Ist der gewaehlte Eintrag verborgen (zugeklappter Elterneintrag, kompakt), steht der Indikator am sichtbaren Vorfahren.</li>
+<li>PageControl: Ist eins verbunden, zeigt die Auswahl die Seite Item.PageIndex.</li>
+<li>Tastatur: Oben/Unten, Pos1/Ende, Enter/Leertaste waehlen, Rechts/Links klappen auf/zu (bzw. springen zum Elterneintrag).</li>
+<li>Code (Selected := ...) loest kein Ereignis aus; der Anwender loest OnItemInvoked und bei geaenderter Auswahl OnSelectionChange aus.</li>
+<li>Screenreader: Gliederung; Kinder sind die sichtbaren Zeilen und der Menue-Knopf.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Images</code>, <code>Items</code>, <code>IsPaneOpen</code>, <code>DisplayMode</code>, <code>OpenPaneLength</code>, <code>CompactPaneLength</code>, <code>CompactModeThresholdWidth</code>, <code>PaneTitle</code>, <code>ShowMenuButton</code>, <code>PageControl</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnEnter</code>, <code>OnExit</code>, <code>OnItemInvoked</code>, <code>OnPaneChange</code>, <code>OnSelectionChange</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGNavigationView.md</code>.</p>
+</body></html>

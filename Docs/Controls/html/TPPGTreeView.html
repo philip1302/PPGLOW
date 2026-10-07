@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGTreeView</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGTreeView</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.TreeView</code> - Basis <code>TPPGCustomTreeView</code></p>
+<p><strong>Vorbild:</strong> TTreeView</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>ItemHeight</code> ist eine Mindesth&#246;he.</li>
+<li><code>Selected := X</code> l&#246;st wie <code>TTreeView</code> <code>OnChange</code> aus (anders als die &#252;brigen PPGlow-Controls).</li>
+<li>Lazy Loading &#252;ber <code>HasChildren</code> + <code>OnExpanding</code>; nur der Pfeil dreht sich animiert.</li>
+<li>Knoten aus <code>TTreeView</code>-DFMs (bin&#228;r) werden nicht gelesen; Knoten im Designer &#252;ber „Edit nodes...“ anlegen.</li>
+<li>UI Automation: Hierarchie, Auf-/Zuklappen, Ebene und Position im Satz.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>N := PPGTreeView1.Items.AddChild(nil, &#39;Dokumente&#39;);
+N.HasChildren := True;  // Kinder erst in OnExpanding
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGTreeView - Baum im Stil der Suite (Phase 6b).</p>
+<p>Aufbau: Die sichtbaren Knoten bilden eine flache Zeilenliste; sie ist die IPPGItemSource der Listen-Basis. Zeichnen, Scrollen, Auswahl, Tippsuche und Barrierefreiheit kommen damit aus TPPGCustomItemList; der Baum fuegt Einzug, Auf-/Zuklapp-Pfeil, Linien, Kaestchen und das Umbenennen hinzu.</p>
+<ul>
+<li>Knoten: TPPGTreeNode/TPPGTreeNodes mit einer API wie TTreeNode/TTreeNodes (Add, AddChild, Insert, MoveTo, Expand, Collapse, GetNext, ...).</li>
+<li>Lazy Loading wie bei TTreeView: HasChildren := True zeigt den Pfeil ohne Kinder; OnExpanding fuellt die Kinder beim ersten Aufklappen.</li>
+<li>Kaestchen (CheckBoxes) mit drei Zustaenden; AutoCheck gibt den Zustand an Kinder weiter und berechnet die Eltern (alle an / alle aus / gemischt).</li>
+<li>Umbenennen (ReadOnly = False) mit F2 bzw. EditText ueber ein natives Edit: Enter uebernimmt, Esc verwirft, Fokusverlust und Scrollen uebernehmen.</li>
+<li>Knoten ziehen (AllowReorder): oberes/unteres Viertel = davor/danach, Mitte = hinein; OnNodeDrop kann ablehnen.</li>
+<li>Ereignisse: OnChange auch bei Selected im Code (wie TTreeView); Aufklappen ruft OnExpanding auch aus dem Code (noetig fuer Lazy Loading).</li>
+<li>Streaming: Items als lesbare Zeilenliste (&quot;Items.Nodes&quot;); binaere TTreeView-Knoten aus alten DFMs werden nicht gelesen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>AllowMarkup</code>, <code>AllowReorder</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Anchors</code>, <code>AutoCheck</code>, <code>AutoExpand</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CheckBoxes</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HideSelection</code>, <code>Indent</code>, <code>ItemHeight</code>, <code>Items</code>, <code>MultiSelect</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>RowSelect</code>, <code>ShowButtons</code>, <code>ShowHint</code>, <code>ShowLines</code>, <code>ShowRoot</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnChanging</code>, <code>OnChecked</code>, <code>OnClick</code>, <code>OnCollapsed</code>, <code>OnCollapsing</code>, <code>OnCompare</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDeletion</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEdited</code>, <code>OnEditing</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnExpanded</code>, <code>OnExpanding</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnNodeDrop</code>, <code>OnScroll</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGTreeView.md</code>.</p>
+</body></html>

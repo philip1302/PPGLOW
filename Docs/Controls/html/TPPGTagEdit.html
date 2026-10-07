@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGTagEdit</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGTagEdit</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.TagEdit</code> - Basis <code>TPPGCustomDropDownField</code></p>
+<p><strong>Vorbild:</strong> Empf&#228;ngerfeld von Outlook, WinUI TokenizingTextBox</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Chips (Text mit &#215;) stehen vor dem Eingabebereich und brechen &#252;ber mehrere Zeilen um. Mit <code>AutoSize</code> w&#228;chst die H&#246;he mit. Das Layout wird nur bei &#196;nderung der Tags, der Breite oder der Schrift neu berechnet.</li>
+<li>Ein Tag entsteht:</li>
+<li>mit Enter</li>
+<li>mit einem Zeichen aus <code>Delimiters</code> (<code>;</code> <code>,</code>)</li>
+<li>beim Verlassen (<code>AddOnExit</code>)</li>
+<li>eingef&#252;gtes <code>a; b; c</code> ergibt drei Tags</li>
+<li>R&#252;cktaste im leeren Feld markiert zuerst das letzte Tag und l&#246;scht es beim zweiten Druck (wie Outlook). Pfeil links/rechts wandert zwischen den Chips, Entf l&#246;scht das markierte.</li>
+<li><code>Suggestions</code> erscheinen w&#228;hrend des Tippens. Mit <code>AllowNew = False</code> sind nur Vorschl&#228;ge erlaubt. Doppelte sind ausgeschlossen (<code>AllowDuplicates</code>, <code>CaseSensitive</code>); <code>MaxTags</code> begrenzt die Anzahl.</li>
+<li><code>OnTagAdding</code> kann ablehnen oder den Text &#228;ndern (z. B. eine E-Mail pr&#252;fen). Dazu kommen <code>OnTagRemoved</code> und <code>OnTagClick</code>. Code (<code>Tags</code>, <code>TagsText</code>) l&#246;st nichts aus.</li>
+<li>Screenreader: Die Chips sind Kinder; die Standardaktion ist Entfernen.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGTagEdit1.Suggestions.CommaText := &#39;Delphi,VCL,Windows&#39;;
+PPGTagEdit1.TagsText := &#39;Delphi;VCL&#39;;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGTagEdit - Stichwoerter als Chips (Phase 12f, Vorbild Outlook-Empfaenger, WinUI TokenizingTextBox).</p>
+<ul>
+<li>Chips (Text mit x) vor dem Eingabebereich, Umbruch ueber mehrere Zeilen; mit AutoSize waechst die Hoehe mit. Das Layout wird nur bei Aenderung der Tags, der Breite oder der Schrift berechnet (nicht je Tastendruck).</li>
+<li>Ein Tag entsteht mit Enter, mit einem der Delimiters (&quot;;&quot; &quot;,&quot;) oder beim Verlassen (AddOnExit). Eingefuegtes &quot;a; b; c&quot; ergibt drei Tags.</li>
+<li>Ruecktaste im leeren Feld markiert zuerst das letzte Tag und loescht es beim zweiten Druck (wie Outlook); Pfeil links/rechts wandert zwischen den Chips, Entf loescht das markierte.</li>
+<li>Vorschlaege (Suggestions) im Aufklapp-Fenster waehrend des Tippens; AllowNew = False erlaubt nur Vorschlaege. MaxTags, CaseSensitive, keine Doppelten.</li>
+<li>Ereignisse nur bei Anwenderaktionen: OnTagAdding (abbrechbar, Text aenderbar - z.B. E-Mail pruefen), OnTagRemoved, OnTagClick, OnChange. Tags aus Code (Tags.Add, TagsText) loesen nichts aus.</li>
+<li>Screenreader: Chips als Kinder, Standardaktion Entfernen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Tags</code>, <code>Suggestions</code>, <code>Delimiters</code>, <code>Delimiter</code>, <code>AllowNew</code>, <code>AllowDuplicates</code>, <code>CaseSensitive</code>, <code>MaxTags</code>, <code>AddOnExit</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>TextHint</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnTagAdding</code>, <code>OnTagRemoved</code>, <code>OnTagClick</code>, <code>OnChange</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGTagEdit.md</code>.</p>
+</body></html>

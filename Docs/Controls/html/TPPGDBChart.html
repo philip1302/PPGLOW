@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBChart</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBChart</h1>
+<p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Chart</code> - Basis <code>TPPGCustomDBChart</code></p>
+<p><strong>Vorbild:</strong> TDBChart (TeeChart)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Felder auf Diagramm-Ebene: <code>ValueFields</code> (<code>&quot;Umsatz;Kosten&quot;</code>, je Feld eine Serie in der Reihenfolge von <code>Series</code>), <code>LabelField</code>, <code>XField</code>. Fehlende Serien werden angelegt und nach <code>DisplayLabel</code> benannt.</li>
+<li>Anbinden, &#214;ffnen und Schlie&#223;en laden sofort; Daten&#228;nderungen laden nach <code>ReloadDelay</code> ms (viele &#196;nderungen = ein Laden).</li>
+<li>W&#228;hrend <code>Edit</code>/<code>Insert</code> wird nicht gelesen (sonst w&#252;rde die Eingabe gespeichert); das Laden folgt nach <code>Post</code>/<code>Cancel</code>.</li>
+<li><code>MaxRecords</code> begrenzt das Lesen; eindirektionale Datenmengen werden nicht gelesen.</li>
+<li><code>ShowCurrentRecord</code> markiert den aktuellen Datensatz, <code>JumpToRecord</code> springt beim Klick auf einen Punkt (&#252;ber <code>RecNo</code>).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGDBChart1.DataSource := DataSource1;
+PPGDBChart1.LabelField := &#39;Monat&#39;;
+PPGDBChart1.ValueFields := &#39;Umsatz;Kosten&#39;;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGDBChart - Diagramm aus einer Datenmenge (Phase 10e, Paket PPGlowDBR).</p>
+<ul>
+<li>DataSource, ValueFields (&quot;Umsatz;Kosten&quot;: je Feld eine Serie, in der Reihenfolge der Series; fehlende Serien werden angelegt und nach Field.DisplayLabel benannt), LabelField (Kategorie-Text) und XField (X-Wert fuer Zahl-/Datumsachse).</li>
+<li>Gelesen wird die ganze Datenmenge (hoechstens MaxRecords) mit DisableControls und Lesezeichen; der aktuelle Datensatz bleibt stehen.</li>
+<li>Anbinden, Oeffnen und Schliessen laden sofort. Datenaenderungen laden verzoegert neu (ReloadDelay ueber den gemeinsamen Animator, nie im Paint): viele Aenderungen hintereinander = ein Laden. Die Ereignisse des eigenen Lesens werden ignoriert.</li>
+<li>ShowCurrentRecord markiert den aktuellen Datensatz (MarkedIndex); Klick auf einen Punkt springt zum Datensatz (JumpToRecord).</li>
+<li>Eindirektionale Datenmengen werden nicht gelesen (kein Zurueckspringen).</li>
+<li>Waehrend Edit/Insert wird nicht gelesen (First wuerde die Eingabe des Anwenders speichern); das Laden folgt nach Post bzw. Cancel.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>DataSource</code>, <code>ValueFields</code>, <code>LabelField</code>, <code>XField</code>, <code>MaxRecords</code>, <code>ReloadDelay</code>, <code>ShowCurrentRecord</code>, <code>JumpToRecord</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Title</code>, <code>Series</code>, <code>Categories</code>, <code>XAxis</code>, <code>YAxis</code>, <code>Y2Axis</code>, <code>ReferenceLines</code>, <code>Stacking</code>, <code>LegendPosition</code>, <code>ShowTooltips</code>, <code>LegendToggle</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>Hint</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnClick</code>, <code>OnDblClick</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnPointClick</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBChart.md</code>.</p>
+</body></html>

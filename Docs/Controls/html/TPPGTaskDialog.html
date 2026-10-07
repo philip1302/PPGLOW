@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGTaskDialog</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGTaskDialog</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Dialogs</code> - Basis <code>TCustomTaskDialog</code></p>
+<p><strong>Vorbild:</strong> <code>Vcl.Dialogs.TTaskDialog</code>, TMS TAdvTaskDialog</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Erbt von <code>TCustomTaskDialog</code>: alle Properties, <code>Buttons</code>/<code>RadioButtons</code>, <code>Flags</code> und Ereignisse sind die des Originals. Ein <code>TTaskDialog</code> wird durch Tauschen des Klassennamens umgestellt; DFMs laden unver&#228;ndert.</li>
+<li>Statt <code>TaskDialogIndirect</code> erscheint ein echtes Formular aus Suite-Controls. Es folgt Preset, Dark Mode und Hochkontrast und l&#228;uft auch ohne Vista-API.</li>
+<li>Wie das Original: Esc und das Schlie&#223;en-Kreuz gibt es nur mit <code>tfAllowDialogCancellation</code> oder einem Abbrechen-Button. <code>OnButtonClicked</code> kann das Schlie&#223;en verhindern. Nach <code>Execute</code> stehen <code>ModalResult</code>, <code>Button</code>, <code>RadioButton</code>, <code>Expanded</code> und <code>tfVerificationFlagChecked</code> bereit.</li>
+<li>Strg+C kopiert den Text im Windows-Format, F1 &#246;ffnet <code>HelpContext</code>. Der Ton richtet sich nach dem Symbol.</li>
+<li>&#196;nderungen aus Ereignissen (<code>ProgressBar.Position</code>, <code>Buttons[i].Enabled</code>, <code>Text</code>, <code>Title</code>) werden nach jedem Ereignis &#252;bernommen.</li>
+<li><code>OnTimer</code> (mit <code>tfCallbackTimer</code>) l&#228;uft alle 200 ms &#252;ber einen <code>TTimer</code>.</li>
+<li>Zus&#228;tzlich gibt es <code>Preset</code>/<code>StyleManager</code>, <code>AllowMarkup</code> und <code>ContentControl</code> (ein eigenes Control im Dialog, das danach zur&#252;ckgegeben wird).</li>
+<li>Dazu die Funktionen <code>PPGMessageDlg</code>, <code>PPGMessageDlgPos</code>, <code>PPGShowMessage</code>, <code>PPGInputQuery</code> (mit Pr&#252;fung) und <code>PPGInputBox</code> mit den Signaturen der VCL. Der Aufruf aus einem Thread l&#246;st <code>EPPGError</code> aus statt zu h&#228;ngen.</li>
+<li>F&#252;r Tests und Automatisierung: <code>PPGOnDialogShow</code> und <code>DialogForm.ClickButton</code>.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>if PPGMessageDlg(&#39;&#196;nderungen speichern?&#39;, mtConfirmation, mbYesNoCancel, 0) = mrYes then
+  Save;
+
+PPGTaskDialog1.Title := &#39;Speichern?&#39;;
+PPGTaskDialog1.Flags := [tfUseCommandLinks, tfAllowDialogCancellation];
+if PPGTaskDialog1.Execute and (PPGTaskDialog1.ModalResult = 101) then
+  Save;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Dialoge im Stil der Suite (Phase 11g).</p>
+<p>TPPGTaskDialog erbt von Vcl.Dialogs.TCustomTaskDialog und ersetzt nur DoExecute: alle Properties, Collections (Buttons, RadioButtons) und Ereignisse sind die des Originals - DFMs und Code eines TTaskDialog laufen unveraendert (Klassenname tauschen). Statt TaskDialogIndirect baut er ein echtes Formular aus PPGlow-Controls (Label, Button, RadioButton, CheckBox, ProgressBar): eine Zeichenlogik, Presets, Dark Mode, Hochkontrast und Tastatur kommen aus den Controls.</p>
+<p>Verhalten wie das Windows-Original:</p>
+<ul>
+<li>Ereignisse OnButtonClicked (CanClose), OnRadioButtonClicked, OnVerificationClicked, OnHyperlinkClicked, OnExpanded, OnTimer (200 ms, tfCallbackTimer), OnDialogCreated/Constructed/Destroyed. Nach Execute stehen ModalResult, Button, RadioButton, Expanded und tfVerificationFlagChecked wie beim Original.</li>
+<li>Esc und Schliessen-Kreuz nur mit tfAllowDialogCancellation oder einem Abbrechen-Button (Ergebnis mrCancel, OnButtonClicked wird gefragt).</li>
+<li>Strg+C kopiert Titel, Text und Buttons im Windows-Format, F1 = Hilfe.</li>
+<li>Ton je Symbol (MessageBeep), Fenster ueber dem Elternformular bzw. mittig auf dessen Monitor (tfPositionRelativeToWindow), DPI des Zielmonitors.</li>
+<li>Aenderungen aus Ereignissen (ProgressBar.Position, Buttons[i].Enabled, Text, Title) werden nach jedem Ereignis uebernommen - beim Original laufen sie ueber das Fensterhandle, das es hier nicht gibt.</li>
+</ul>
+<p>Zusaetzlich: Preset/StyleManager, AllowMarkup (Text mit &lt;b&gt;, &lt;i&gt;, ...) und ContentControl (eigenes Control im Dialog, wird danach zurueckgegeben).</p>
+<p>PPGMessageDlg/PPGMessageDlgPos/PPGShowMessage/PPGInputQuery/PPGInputBox: gleiche Signaturen wie die VCL-Funktionen, laufen ueber TPPGTaskDialog. Aufruf nur im Haupt-Thread (EPPGError statt Haenger).</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Buttons</code>, <code>Caption</code>, <code>CommonButtons</code>, <code>CustomFooterIcon</code>, <code>CustomMainIcon</code>, <code>DefaultButton</code>, <code>ExpandButtonCaption</code>, <code>ExpandedText</code>, <code>Flags</code>, <code>FooterIcon</code>, <code>FooterText</code>, <code>HelpContext</code>, <code>MainIcon</code>, <code>ProgressBar</code>, <code>RadioButtons</code>, <code>Text</code>, <code>Title</code>, <code>VerificationText</code>, <code>Preset</code>, <code>StyleManager</code>, <code>AllowMarkup</code>, <code>ContentControl</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnButtonClicked</code>, <code>OnDialogConstructed</code>, <code>OnDialogCreated</code>, <code>OnDialogDestroyed</code>, <code>OnExpanded</code>, <code>OnHyperlinkClicked</code>, <code>OnNavigated</code>, <code>OnRadioButtonClicked</code>, <code>OnTimer</code>, <code>OnVerificationClicked</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGTaskDialog.md</code>.</p>
+</body></html>

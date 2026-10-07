@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGEdit</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGEdit</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Edit</code> - Basis <code>TPPGCustomEdit</code></p>
+<p><strong>Vorbild:</strong> TEdit, TMS TAdvEdit</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Natives Edit (IME, Undo, Screenreader) ohne Rahmen im PPGlow-Rahmen.</li>
+<li><code>TextHint</code> wird selbst gezeichnet; <code>TextHintVisibleOnFocus</code> ist standardm&#228;&#223;ig <code>False</code>. TMS <code>EmptyText</code> wird zu <code>TextHint</code>.</li>
+<li>Zus&#228;tzlich: <code>ValidationState</code>/<code>ValidationHint</code>, <code>ShowClearButton</code>, <code>LeftButton</code>/<code>RightButton</code> (mit <code>DropDownMenu</code>).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGEdit1.TextHint := &#39;E-Mail-Adresse&#39;;
+PPGEdit1.ShowClearButton := True;
+PPGEdit1.ValidationState := pvsError;
+PPGEdit1.ValidationHint := &#39;Bitte eine g&#252;ltige Adresse eingeben&#39;;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGEdit - einzeiliges Eingabefeld in der Optik des Presets.</p>
+<ul>
+<li>Natives Edit ohne Rahmen im PPGlow-Rahmen (siehe PPG.Controls.Field)</li>
+<li>TextHint auch ohne Themes, ValidationState (Rahmen/Fokuslinie in Signalfarbe, ValidationHint als Tooltip und fuer Screenreader)</li>
+<li>ShowClearButton: Loesch-Button erscheint bei Text und Hover/Fokus</li>
+<li>LeftButton/RightButton: Bild-Buttons im Feld (wie TButtonedEdit), optional mit DropDownMenu</li>
+<li>Migration: Property-Namen von TEdit, eine DFM laesst sich per Suchen/Ersetzen (TEdit -&gt; TPPGEdit) umstellen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>LeftButton</code>, <code>RightButton</code>, <code>ShowClearButton</code>, <code>TextHint</code>, <code>UseSystemContextMenu</code>, <code>TextHintVisibleOnFocus</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Alignment</code>, <code>Anchors</code>, <code>AutoSelect</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CharCase</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HideSelection</code>, <code>MaxLength</code>, <code>NumbersOnly</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PasswordChar</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnLeftButtonClick</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnMouseWheel</code>, <code>OnRightButtonClick</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGEdit.md</code>.</p>
+</body></html>

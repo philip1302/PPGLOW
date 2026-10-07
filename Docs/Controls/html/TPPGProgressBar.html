@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGProgressBar</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGProgressBar</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.ProgressBar</code> - Basis <code>TPPGCustomProgressBar</code></p>
+<p><strong>Vorbild:</strong> TProgressBar</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>Position</code> wird wie in der VCL still auf <code>Min..Max</code> begrenzt; <code>Min &gt; Max</code> wirft <code>EPPGPropertyError</code>.</li>
+<li>Marquee (unbestimmt) &#252;ber den gemeinsamen Animator, Zust&#228;nde Error/Paused, Text im Balken.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGProgressBar - Fortschrittsbalken in der Optik des Presets.</p>
+<ul>
+<li>Spur = Appearance.Normal, Fuellung = Appearance.Checked (&quot;an&quot;-Farbe)</li>
+<li>State pbsError/pbsPaused faerbt die Fuellung rot bzw. gelb (wie Windows)</li>
+<li>Style pbstMarquee: unbestimmter Fortschritt, laeuft ueber den gemeinsamen Animator (kein eigener Timer) und nur, solange das Control sichtbar ist. Mit abgeschalteten Animationen (Systemeinstellung, Remote-Desktop) steht das Segment still in der Mitte.</li>
+<li>Positionswechsel werden weich animiert (Animation-Einstellungen).</li>
+<li>Migration: Typen und Property-Namen von TProgressBar (Vcl.ComCtrls), eine DFM laesst sich per Suchen/Ersetzen umstellen. Smooth wird nur zur Kompatibilitaet gelesen: PPGlow zeichnet immer einen durchgehenden Balken.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Min</code>, <code>Max</code>, <code>Position</code>, <code>Step</code>, <code>Orientation</code>, <code>Style</code>, <code>State</code>, <code>MarqueeInterval</code>, <code>Smooth</code>, <code>ShowText</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Caption</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>Hint</code>, <code>ParentBackground</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGProgressBar.md</code>.</p>
+</body></html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGLabel</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGLabel</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Labels</code> - Basis <code>TCustomLabel</code></p>
+<p><strong>Vorbild:</strong> TLabel</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Grafisches Control (kein Fenster) mit Markup (<code>AllowMarkup</code>) und Token-Farben (Dark Mode).</li>
+<li>Ellipse, <code>ShowAccelChar</code>, <code>FocusControl</code> kommen von <code>TCustomLabel</code>.</li>
+</ul>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGLabel und TPPGLinkLabel (Phase 7a).</p>
+<p>TPPGLabel - grafisches Control wie TLabel (kein Fensterhandle), DFM-kompatibel:</p>
+<ul>
+<li>Textfarbe folgt dem Dark Mode (TPPGTheme): die Standardfarben (clWindowText/clBtnText/clBlack) werden im Dunkeln zu TextPrimary, deaktiviert zu TextDisabled. Eigene Farben bleiben.</li>
+<li>Secondary = dezente Farbe (TextSecondary), z.B. fuer Hinweise.</li>
+<li>AllowMarkup: Mini-Markup (fett, kursiv, Farbe, Bilder); Links sind hier nur Darstellung - klickbare Links bietet TPPGLinkLabel.</li>
+<li>Bei aktivem VCL-Style zeichnet die VCL wie bei TLabel (Style-Farben).</li>
+</ul>
+<p>TPPGLinkLabel - Fenster-Control mit Fokus fuer Text mit Links (wie TLinkLabel):</p>
+<ul>
+<li>Links per Markup (&lt;a href=&quot;...&quot;&gt;Text&lt;/a&gt;), Hand-Cursor und Hover-Flaeche.</li>
+<li>Tastatur: Pfeile wechseln den Link, Enter/Leertaste loest ihn aus.</li>
+<li>OnLinkClick(Sender, Link, LinkType) wie TLinkLabel.</li>
+<li>Screenreader: jeder Link ist ein Kind mit Rolle Link.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>AllowMarkup</code>, <code>Secondary</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Align</code>, <code>Alignment</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Caption</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>EllipsisPosition</code>, <code>Enabled</code>, <code>FocusControl</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowAccelChar</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>Transparent</code>, <code>Layout</code>, <code>Visible</code>, <code>WordWrap</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnMouseActivate</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGLabel.md</code>.</p>
+</body></html>

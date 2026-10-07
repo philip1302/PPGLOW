@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGTeachingTip</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGTeachingTip</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.TeachingTip</code> - Basis <code>TComponent</code></p>
+<p><strong>Vorbild:</strong> WinUI TeachingTip</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Sprechblase mit Pfeil an <code>Target</code>. <code>Placement = tpAuto</code> versucht oben, unten, links, rechts und nimmt die erste Seite, auf die die Blase ganz passt. Ohne <code>Target</code> erscheint sie unten rechts im Formular, ohne Pfeil.</li>
+<li>Folgt dem Ziel, wenn es oder sein Formular sich bewegt. Ist das Ziel unsichtbar oder das Formular minimiert, wird sie nur ausgeblendet und kommt danach wieder.</li>
+<li>Das Fenster wird nie aktiviert: Der Fokus bleibt im Formular. Ein fester Tipp (<code>LightDismiss = False</code>) nimmt trotzdem die Tastatur: Tab wechselt zwischen den Buttons, Enter/Leertaste l&#246;st aus, Esc schlie&#223;t.</li>
+<li><code>LightDismiss = True</code>: Ein Klick daneben oder der Wechsel in eine andere Anwendung schlie&#223;t; der Klick geht trotzdem an sein Ziel.</li>
+<li>Ereignisse nur bei Anwenderaktionen: <code>OnActionClick</code>, <code>OnLinkClick</code>, <code>OnClosing</code> (abbrechbar), <code>OnClose</code> mit Grund. <code>Show</code>/<code>Hide</code> aus Code l&#246;sen keine aus.</li>
+<li>Der Aktions-Button schlie&#223;t nicht selbst (wie WinUI); die Anwendung entscheidet, z. B. n&#228;chster Schritt einer Tour. Ein Ereignis darf den Tipp freigeben.</li>
+<li>Das Kreuz oben rechts erscheint nur ohne <code>CloseButtonText</code>.</li>
+<li>Nicht enthalten: Bild oben (Hero), Links per Tab.</li>
+<li>Screenreader: Rolle Dialog, <code>EVENT_SYSTEM_ALERT</code> beim Zeigen, Buttons als Kinder.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGTeachingTip1.Title := &#39;Neu: Teilen&#39;;
+PPGTeachingTip1.Text := &#39;Mit &lt;b&gt;Teilen&lt;/b&gt; schicken Sie einen Link.&#39;;
+PPGTeachingTip1.ActionButtonText := &#39;&amp;Weiter&#39;;
+PPGTeachingTip1.ShowFor(ShareButton);
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TeachingTip (Phase 11f): Sprechblase mit Pfeil, an ein Control geheftet (wie WinUI TeachingTip). Grundlage der gefuehrten Tour (Phase 16).</p>
+<ul>
+<li>Inhalt: Symbol, Titel, Untertitel, Text mit Markup und Links, bis zu zwei Buttons (Aktion = Akzent, Schliessen) und ein Schliessen-Kreuz.</li>
+<li>Anheften: Target (FreeNotification) und Placement (Auto: oben, unten, links, rechts - die erste Seite, auf die die Blase ganz passt). Bewegt sich das Ziel oder sein Formular, folgt die Blase (PPGWatchControl). Ist das Ziel unsichtbar oder das Formular minimiert, wird sie nur ausgeblendet und kommt danach wieder. Ohne Target: unten rechts im Formular, ohne Pfeil.</li>
+<li>Modi: LightDismiss = Klick daneben oder Wechsel der Anwendung schliesst (der Klick geht trotzdem an sein Ziel); sonst nur Buttons oder Esc. Ein fester TeachingTip nimmt die Tastatur: Tab/Umschalt+Tab wechselt zwischen den Buttons, Enter/Leertaste loest aus (ueber PPG.AppHooks, das Fenster wird nie aktiviert - der Fokus bleibt im Formular).</li>
+<li>Ereignisse nur bei Anwenderaktionen (Suite-Regel): OnActionClick, OnLinkClick, OnClosing (abbrechbar), OnClose. Show/Hide aus Code loesen keine Ereignisse aus. Der Aktions-Button schliesst nicht selbst (wie WinUI); die Anwendung entscheidet (z.B. Tour: naechster Schritt).</li>
+<li>Ein Ereignis darf den TeachingTip freigeben: danach wird Self nicht mehr angefasst, das Fenster gibt sich bei Bedarf verzoegert frei (CM_RELEASE).</li>
+<li>Screenreader: Rolle Dialog, Name = Titel, Buttons als Kinder; EVENT_SYSTEM_ALERT beim Zeigen.</li>
+</ul>
+<p>Nicht umgesetzt (bewusst): Bild oben (Hero), Links per Tab, Scrollen innerhalb verschobener ScrollBoxen ohne WM_WINDOWPOSCHANGED.</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Target</code>, <code>Title</code>, <code>Subtitle</code>, <code>Text</code>, <code>ActionButtonText</code>, <code>CloseButtonText</code>, <code>Icon</code>, <code>ShowCloseButton</code>, <code>LightDismiss</code>, <code>Placement</code>, <code>MaxWidth</code>, <code>Preset</code>, <code>StyleManager</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnActionClick</code>, <code>OnLinkClick</code>, <code>OnClosing</code>, <code>OnClose</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGTeachingTip.md</code>.</p>
+</body></html>

@@ -1,0 +1,64 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 300
+  ClientWidth = 500
+  object Button1: TPPGButton
+    Left = 8
+    Top = 8
+    Width = 75
+    Height = 25
+    Caption = 'OK'
+    ModalResult = 1
+    TabOrder = 0
+    WordWrap = True
+  end
+  object BitBtn1: TPPGButton
+    Left = 8
+    Top = 40
+    Caption = 'Hilfe'
+  end
+  object Edit1: TPPGEdit
+    Left = 8
+    Top = 80
+    TextHint = 'Name'
+    Text = 'abc'
+  end
+  object Switch1: TPPGToggleSwitch
+    Left = 8
+    Top = 120
+    Checked = True
+  end
+  object StatusBar1: TPPGStatusBar
+    Panels = <
+      item
+        Text = 'Bereit'
+        Width = 100
+      end
+      item
+        Width = 50
+      end>
+  end
+  object Grid1: TPPGDBGrid
+    Left = 8
+    Top = 160
+    DataSource = DataSource1
+    OnTitleClick = Grid1TitleClick
+    Columns = <
+      item
+        FieldName = 'Name'
+        Title = 'Kunde'
+        Width = 120
+      end>
+  end
+  object Memo1: TPPGMemo
+    Lines.Strings = (
+      'Zeile 1'
+      'Zeile 2')
+    TabOrder = 3
+  end
+  object DataSource1: TDataSource
+    Left = 300
+  end
+end

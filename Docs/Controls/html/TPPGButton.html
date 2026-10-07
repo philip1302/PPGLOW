@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGButton</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGButton</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Button</code> - Basis <code>TPPGCustomButton</code></p>
+<p><strong>Vorbild:</strong> TButton, TBitBtn, TSpeedButton, TMS TAdvGlowButton</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Ein Fenster-Control (auch als Ersatz f&#252;r <code>TSpeedButton</code>): bekommt den Fokus, wenn <code>TabStop</code> gesetzt ist.</li>
+<li>Umschalt-Gruppen wie <code>TSpeedButton</code>: <code>GroupIndex</code> + <code>Down</code> + <code>AllowAllUp</code>.</li>
+<li>Split-Button: <code>Style = bsSplitButton</code> mit <code>DropDownMenu</code>; Klick auf den Pfeil &#246;ffnet das Men&#252; ohne <code>OnClick</code>.</li>
+<li>Bilder kommen aus <code>Images</code>/<code>ImageIndex</code> (ab 10.4 auch <code>ImageName</code>), nicht aus <code>Glyph</code>.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGButton1.Caption := &#39;&amp;Speichern&#39;;
+PPGButton1.ModalResult := mrOk;
+PPGButton1.Default := True;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGButton - Glow-Button mit Bild, ModalResult, Default/Cancel, Toggle-Gruppen (GroupIndex/Down), DropDownMenu und Action-Unterstuetzung.</p>
+<p>Stolpersteine:</p>
+<ul>
+<li>CS_DBLCLKS wird entfernt: sonst wird bei schnellem Doppelklick der zweite Klick als DblClick geliefert und &quot;verschluckt&quot;.</li>
+<li>Default/Cancel folgen exakt der Logik von TButton (CM_FOCUSCHANGED / CM_DIALOGKEY), damit gemischte Formulare konsistent reagieren.</li>
+<li>GroupIndex wird vor Down gestreamt (Deklarationsreihenfolge!).</li>
+<li>Gruppen-Benachrichtigung nutzt eine EIGENE registrierte Nachricht statt CM_BUTTONPRESSED: TSpeedButton castet LParam von CM_BUTTONPRESSED blind auf TSpeedButton und wuerde bei gleichem GroupIndex unseren Speicher als TSpeedButton lesen/schreiben.</li>
+<li>Split-Button: Das Menue oeffnet beim Druecken auf den Pfeil (wie Windows). csClicked wird dabei entfernt, damit beim Loslassen KEIN OnClick folgt.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ImageIndex</code>, <code>ImageName</code>, <code>HotImageIndex</code>, <code>DisabledImageIndex</code>, <code>ImagePosition</code>, <code>Spacing</code>, <code>WordWrap</code>, <code>ShowFocusRect</code>, <code>HighContrastSupport</code>, <code>ModalResult</code>, <code>Default</code>, <code>Cancel</code>, <code>Style</code>, <code>DropDownMenu</code>, <code>GroupIndex</code>, <code>AllowAllUp</code>, <code>Down</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Action</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Caption</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBackground</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnDropDownClick</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGButton.md</code>.</p>
+</body></html>

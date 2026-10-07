@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGCheckBox</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGCheckBox</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.CheckBox</code> - Basis <code>TPPGCustomCheckBox</code></p>
+<p><strong>Vorbild:</strong> TCheckBox</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>Checked</code>/<code>State</code> im Code setzen l&#246;st nur <code>OnChange</code> aus, nicht <code>OnClick</code> (bewusst anders als die VCL).</li>
+<li>Der gemischte Zustand (<code>cbGrayed</code>) ist ein Akzent-Strich; Anwender erreichen ihn nur mit <code>AllowGrayed = True</code>.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGCheckBox1.AllowGrayed := True;
+PPGCheckBox1.State := cbGrayed;  // OnChange, kein OnClick
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGCheckBox - Kontrollkaestchen mit optionalem dritten Zustand (AllowGrayed). Ereignis-Semantik siehe PPG.Controls.Check.</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Alignment</code>, <code>AllowGrayed</code>, <code>State</code>, <code>Spacing</code>, <code>WordWrap</code>, <code>ShowFocusRect</code>, <code>HighContrastSupport</code></p>
+<h2>Eigenschaften wie in der VCL</h2>
+<p><code>Action</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Caption</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBackground</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGCheckBox.md</code>.</p>
+</body></html>

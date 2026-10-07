@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGridPrinter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGGridPrinter</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Grid.Print</code> - Basis <code>TPPGCustomPrinter</code></p>
+<p><strong>Vorbild:</strong> TMS TAdvGridPrintSettings / Vorschau, DevExpress Printing</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Druckt eine <code>IPPGTableSource</code>: das Grid (<code>Grid</code>), das DB-Grid oder eine eigene Quelle (<code>SetSource</code>), z. B. <code>TPPGStringTableSource</code>.</li>
+<li>Seite: <code>Orientation</code>, <code>Margins</code> (mm), <code>HeaderText</code>/<code>FooterText</code> mit Platzhaltern <code>[Seite]</code>/<code>[Page]</code>, <code>[Seiten]</code>/<code>[Pages]</code>, <code>[Datum]</code>/<code>[Date]</code>, <code>[Titel]</code>/<code>[Title]</code>.</li>
+<li><code>RepeatHeader</code> (Spaltenk&#246;pfe auf jeder Seite), <code>FitToPageWidth</code> (sonst Spalten auf mehrere Seiten), <code>PrintGridLines</code>, <code>PrintColors</code> (bedingte Formate, Kopf-Hintergrund).</li>
+<li>Gezeichnet wird mit GDI in der Aufl&#246;sung des Druckers; Zeilen werden seitenweise aus der Quelle geholt.</li>
+<li><code>Preview</code> zeigt die Seitenansicht (Seitenliste, Zoom, Seite einrichten, Drucken); nur sichtbare Seiten werden gezeichnet.</li>
+<li><code>PrintToFile(Drucker, Datei)</code> druckt ohne Dialog in eine Datei; <code>PPGExportPdf</code> nutzt damit „Microsoft Print to PDF“.</li>
+<li>Im Designer: „Print preview...“ und „Page setup...“.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGGridPrinter1.Grid := PPGGrid1;
+PPGGridPrinter1.Title := &#39;Lagerliste&#39;;
+PPGGridPrinter1.HeaderText := &#39;[Titel] - [Datum]&#39;;
+if PPGGridPrinter1.Preview then
+  ShowMessage(&#39;Gedruckt&#39;);
+PPGExportPdf(PPGGridPrinter1, &#39;Lagerliste.pdf&#39;);
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Drucken von Tabellen (Phase 13e).</p>
+<ul>
+<li>TPPGGridPrinter (Komponente fuer den Formular-Designer) druckt eine IPPGTableSource: das Grid, das DB-Grid oder eine eigene Quelle. Er kennt das Control nicht (DIP); Darstellung (bedingte Formate, Zellarten) kommt ueber das schmale IPPGGridPrintSource.</li>
+<li>Seite (Ausrichtung, Raender, Kopf-/Fusszeile), Drucken, PDF, Vorschau und &quot;Seite einrichten&quot; kommen aus TPPGCustomPrinter (PPG.Print, seit Phase 14a gemeinsam mit dem Planer). Hier: Spaltenkoepfe auf jeder Seite, auf Seitenbreite einpassen oder Spalten auf mehrere Seiten verteilen, Gitterlinien und Farben abschaltbar.</li>
+<li>Gezeichnet wird mit dem GDI-Canvas in der Aufloesung des Druckers (GDI+ rastert Alpha-Flaechen auf Drucker-DCs zu grossen Bitmaps). Alle Masse sind logisch (96 dpi) und werden mit der Drucker-PPI umgerechnet; die Schrift wird ueber Font.Height mit der Drucker-PPI neu gesetzt.</li>
+<li>Zeilen holt der Drucker seitenweise aus der Quelle (virtuelle Daten).</li>
+<li>Die frueher hier deklarierten Typen (TPPGPrintDevice, TPPGPrintMargins, Vorschau- und Seiten-Formular) gibt es weiter unter demselben Namen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Grid</code>, <code>Title</code>, <code>HeaderText</code>, <code>FooterText</code>, <code>Orientation</code>, <code>Margins</code>, <code>RepeatHeader</code>, <code>FitToPageWidth</code>, <code>PrintGridLines</code>, <code>PrintColors</code>, <code>PrinterName</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGGridPrinter.md</code>.</p>
+</body></html>

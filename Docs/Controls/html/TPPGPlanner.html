@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGPlanner</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGPlanner</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Planner</code> - Basis <code>TPPGCustomPlanner</code></p>
+<p><strong>Vorbild:</strong> TMS TPlanner / TDBPlanner, Outlook-Kalender</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Ansichten &#252;ber <code>View</code>: Tag (<code>DayCount</code> Tage), Arbeitswoche (<code>WorkDays</code>), Woche, Monat (6 Wochen), Zeitleiste (waagerecht, Zeilen = <code>Resources</code>) und Agenda (<code>AgendaDays</code> Tage als Liste).</li>
+<li>Termine liegen in <code>Appointments</code> (im DFM) oder kommen aus einer eigenen <code>IPPGAppointmentSource</code> (<code>Source</code>). Abgefragt wird nur der sichtbare Zeitraum. Wiederholungen (<code>Recurrence</code>, RRULE nach RFC 5545) werden nur f&#252;r diesen Zeitraum aufgel&#246;st.</li>
+<li><strong>Zeiten:</strong> gespeichert in UTC (<code>TimeZoneMode = tzmUtc</code>, Vorgabe) bzw. Ortszeit; angezeigt in <code>TimeZone</code> (&#39;&#39; = Zone des Rechners, sonst Windows- oder IANA-Name, z. B. <code>Europe/Berlin</code>). <code>Start</code>/<code>Finish</code> eines Termins sind Anzeige-Zeit, <code>StartTime</code>/<code>FinishTime</code> die gespeicherte Zeit.</li>
+<li>Das Raster ist die Wanduhr: Am Tag der Sommerzeit-Umstellung hat jede Spalte 24 Stunden (wie Outlook).</li>
+<li>Ganzt&#228;gige und mehrt&#228;gige Termine stehen im Band &#252;ber dem Raster. Termine &#252;ber Mitternacht werden auf die Tage geteilt und bekommen Fortsetzungsmarken.</li>
+<li><code>Resources</code> + <code>GroupByResource</code>: Spaltengruppen je Person/Raum (Tages- und Wochenansichten) bzw. Zeilen der Zeitleiste. Die Farbe kommt aus <code>Category</code> (Diagramm-Palette), sonst aus <code>Resource.Color</code>, sonst aus dem Akzent; <code>OnGetAppointmentColor</code> &#252;berschreibt.</li>
+<li>Bedienung: Ziehen verschiebt (Strg kopiert), die Kante &#228;ndert die Dauer. Alles rastet an <code>SlotMinutes</code>. Ein Vorkommen einer Serie wird beim &#196;ndern herausgel&#246;st (<code>RecurrenceParent</code>), die Serie bekommt eine Ausnahme. Ziehen auf freier Fl&#228;che w&#228;hlt Zeitfelder; Doppelklick, Enter oder Tippen legt einen Termin an und &#246;ffnet die Bearbeitung des Betreffs (Esc verwirft einen neuen, leeren Termin).</li>
+<li>Ereignisse: <code>OnAppointmentChanging</code> (abbrechbar, neue Werte &#228;nderbar), <code>OnAppointmentChanged</code>, <code>OnAppointmentCreated</code>, <code>OnCreateAppointment</code> (abbrechbar), <code>OnDeleting</code>, <code>OnAppointmentOpen</code>, <code>OnSelectionChange</code>, <code>OnRangeChange</code>. Zuweisungen im Code (<code>Date := ...</code>) l&#246;sen nur <code>OnRangeChange</code> aus.</li>
+<li>Tastatur: Pfeile wandern durch die Felder (Umschalt erweitert), Tab durch die Termine, Strg+Pfeile verschieben den gew&#228;hlten Termin, Strg+Umschalt+Oben/Unten &#228;ndern die Dauer, Enter &#246;ffnet bzw. legt an, F2 bearbeitet den Betreff, Entf l&#246;scht, Bild auf/ab bl&#228;ttert, Pos1 springt zu heute.</li>
+<li><code>Calendar</code>: ein verbundener <code>TPPGCalendar</code> zeigt Tage mit Terminen fett, seine Auswahl stellt den Zeitraum ein.</li>
+<li>„Jetzt“-Linie (<code>ShowNowLine</code>) &#252;ber den gemeinsamen Animator, ohne eigenen Timer.</li>
+<li>Drucken &#252;ber <code>TPPGPlannerPrinter</code>, iCalendar &#252;ber <code>PPGSaveICal</code>/<code>PPGLoadICal</code> (Unit <code>PPG.Planner.ICal</code>).</li>
+<li>Screenreader: Tabelle, Kinder sind die sichtbaren Termine („Betreff, Beginn bis Ende, Ort“). RTL gespiegelt.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>uses PPG.Planner.Model, PPG.Planner.ICal;
+
+PPGPlanner1.TimeZone := &#39;Europe/Berlin&#39;;
+PPGPlanner1.Resources.AddResource(1, &#39;Anna&#39;);
+with PPGPlanner1.Appointments.AddAppointment(EncodeDateTime(2026, 6, 1, 9, 0, 0, 0),
+  EncodeDateTime(2026, 6, 1, 9, 15, 0, 0), &#39;Standup&#39;) do
+begin
+  Recurrence := &#39;FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR&#39;;
+  ResourceId := 1;
+end;
+PPGPlanner1.Calendar := PPGCalendar1;
+PPGSaveICal(PPGPlanner1.Appointments, &#39;Team.ics&#39;, &#39;Team&#39;);
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGPlanner - Terminplaner (Phase 14a).</p>
+<ul>
+<li>Ansichten: Tag (DayCount Tage), Arbeitswoche (WorkDays), Woche, Monat (6 Wochen), Zeitleiste (waagerecht, Zeilen = Ressourcen) und Agenda (Liste nach Tagen).</li>
+<li>Termine kommen aus Appointments (Collection, im DFM) oder einer eigenen IPPGAppointmentSource (Source); abgefragt wird nur der sichtbare Zeitraum.</li>
+<li>Zeiten: Anzeige in der Zone TimeZone (&#39;&#39; = Rechner), gespeichert nach TimeZoneMode (Vorgabe UTC). Das Zeitraster ist die Wanduhr: am Tag der Sommerzeit-Umstellung hat jede Spalte 24 Felder (wie Outlook); ein Termin 02:00-04:00 Ortszeit belegt zwei Stunden, dauert aber nur eine.</li>
+<li>Ganztaegige und mehrtaegige Termine (Dauer &gt;= 1 Tag) liegen im Band ueber dem Raster; Termine ueber Mitternacht werden auf die Tage geteilt und bekommen Fortsetzungsmarken.</li>
+<li>Ressourcen (Resources) werden als Spaltengruppen (GroupByResource) bzw. als Zeilen der Zeitleiste gezeigt.</li>
+<li>Bedienung: Ziehen verschiebt (Strg kopiert), die Kanten aendern die Dauer, alles rastet am Raster (SlotMinutes). Ziehen auf freier Flaeche waehlt Zeitfelder; Doppelklick, Enter oder Tippen legt einen Termin an (OnCreateAppointment, abbrechbar) und oeffnet die Bearbeitung des Betreffs. Vorkommen einer Serie werden beim Aendern herausgeloest.</li>
+<li>Ereignisse: OnAppointmentChanging (abbrechbar, Werte aenderbar), OnAppointmentChanged, OnAppointmentCreated, OnDeleting, OnAppointmentOpen, OnSelectionChange, OnRangeChange. Code (Date := ...) loest nur OnRangeChange aus (die DB-Variante laedt darueber nach).</li>
+<li>Tastatur: Pfeile wandern durch die Zeitfelder (Umschalt erweitert), Tab durch die Termine, Strg+Pfeile verschieben den gewaehlten Termin, Strg+Umschalt+Oben/Unten aendern die Dauer, Enter oeffnet bzw. legt an, F2 bearbeitet den Betreff, Entf loescht, Bild auf/ab blaettert, Pos1 springt zu heute.</li>
+<li>&quot;Jetzt&quot;-Linie ueber den Animator (Schleife, neu gezeichnet nur bei einer neuen Minute), kein eigener Timer.</li>
+<li>Calendar: verbundener TPPGCalendar zeigt Tage mit Terminen fett, seine Auswahl stellt den Zeitraum ein.</li>
+<li>Screenreader: Tabelle, Kinder sind die sichtbaren Termine (&quot;Betreff, Beginn bis Ende, Ort&quot;). RTL gespiegelt.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Appointments</code>, <code>Resources</code>, <code>View</code>, <code>Date</code>, <code>DayCount</code>, <code>FirstDayOfWeek</code>, <code>WorkDays</code>, <code>WorkStart</code>, <code>WorkEnd</code>, <code>DayStartHour</code>, <code>DayEndHour</code>, <code>SlotMinutes</code>, <code>SlotHeight</code>, <code>SlotWidth</code>, <code>TimelineDays</code>, <code>AgendaDays</code>, <code>GroupByResource</code>, <code>ShowNowLine</code>, <code>ReadOnly</code>, <code>TimeZone</code>, <code>TimeZoneMode</code>, <code>Calendar</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnAppointmentChanging</code>, <code>OnAppointmentChanged</code>, <code>OnAppointmentCreated</code>, <code>OnAppointmentOpen</code>, <code>OnDeleting</code>, <code>OnCreateAppointment</code>, <code>OnGetAppointmentColor</code>, <code>OnSelectionChange</code>, <code>OnRangeChange</code>, <code>OnScroll</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnMouseDown</code>, <code>OnMouseUp</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPlanner.md</code>.</p>
+</body></html>

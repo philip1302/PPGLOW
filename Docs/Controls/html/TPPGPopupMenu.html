@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGPopupMenu</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGPopupMenu</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Menus</code> - Basis <code>TPopupMenu</code></p>
+<p><strong>Vorbild:</strong> TMS TAdvPopupMenu, Windows-11-Kontextmen&#252;</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>TPPGPopupMenu</code> ist ein <code>TPopupMenu</code>: Men&#252;-Designer, Actions, <code>OnPopup</code>, <code>AutoCheck</code>, <code>RadioItem</code>, <code>Break</code>, Tastenk&#252;rzel und <code>OwnerDraw</code> funktionieren wie gewohnt. Ersetzt wird nur die Darstellung.</li>
+<li>Zum Umstellen gen&#252;gt der Klassenname in DFM und <code>uses</code> (bzw. <code>migrate.ps1</code>).</li>
+<li><code>Popup(X, Y)</code> ist modal wie bei der VCL: Der Aufruf kehrt erst nach dem Schlie&#223;en zur&#252;ck. Der Klick auf einen Eintrag wird erst danach ausgef&#252;hrt (wie <code>WM_COMMAND</code>), damit ein Handler das Formular gefahrlos schlie&#223;en oder freigeben kann.</li>
+<li>Ein Klick neben das Men&#252; schlie&#223;t es und wird verbraucht (wie bei Windows).</li>
+<li><code>OnDrawItem</code>/<code>OnAdvancedDrawItem</code> werden unter derselben Bedingung wie bei der VCL aufgerufen (<code>OwnerDraw</code> oder <code>Images</code> gesetzt).</li>
+<li>Felder der Suite (Edit, Memo, ComboBox, …) zeigen ohne eigenes <code>PopupMenu</code> ein &#252;bersetztes Bearbeiten-Men&#252; in diesem Stil. <code>UseSystemContextMenu = True</code> stellt das Windows-Men&#252; wieder her.</li>
+<li>Screenreader: Ereignisse <code>EVENT_SYSTEM_MENUPOPUPSTART/END</code>, Eintr&#228;ge als Kinder mit Rolle Men&#252;eintrag.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGPopupMenu1.Preset := &#39;Fluent11&#39;;
+Panel1.PopupMenu := PPGPopupMenu1;   // Rechtsklick oder Umschalt+F10
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Menues im Stil der Suite (Phase 11b).</p>
+<p>Modell bleibt die VCL: TPopupMenu/TMainMenu mit TMenuItem (Menue-Designer, Actions, ShortCut, ImageIndex, Checked/RadioItem, Default, Break, Hint, OnClick, DFM). Ersetzt wird nur die Darstellung:</p>
+<ul>
+<li>TPPGMenuWindow: eine Menue-Ebene als Popup ohne Aktivierung (wie die ComboBox-Liste). Spalten Bild/Haken | Text mit Mnemonic | Tastenkuerzel | Pfeil; Trenner, Break-Spalten, Blaettern bei sehr langen Menues.</li>
+<li>TPPGMenuLoop: steuert alle offenen Ebenen. Solange ein Menue offen ist, leitet ein Haken in PPG.AppHooks Tasten und Mausklicks an das Menue (Fokus und Titelleiste bleiben beim Formular, wie bei Windows-Menues). Klick ausserhalb schliesst (und wird verbraucht, wie bei Windows), Deaktivieren der Anwendung schliesst.</li>
+<li>Ausloesen: erst alles schliessen, dann TMenuItem.Click ueber eine gepostete Nachricht - wie die VCL (WM_COMMAND nach TrackPopupMenu). So laeuft Anwender-Code nie mit offenem Menue oder aus einem Menuefenster.</li>
+<li>TPPGPopupMenu = TPopupMenu mit eigener Darstellung: bestehende PopupMenu-Properties, Split-Button-DropDownMenu usw. funktionieren unveraendert. Popup(X, Y) kehrt wie bei der VCL erst nach dem Schliessen zurueck.</li>
+<li>Barrierefreiheit: ROLE_SYSTEM_MENUPOPUP/MENUITEM, EVENT_SYSTEM_MENUPOPUPSTART /END, EVENT_OBJECT_FOCUS fuer den hervorgehobenen Eintrag - nur damit lesen Narrator und NVDA eigene Menues vor.</li>
+<li>Owner-Draw fremder Menues (OnDrawItem/OnAdvancedDrawItem) wird weiter aufgerufen.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>StyleManager</code>, <code>Preset</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPopupMenu.md</code>.</p>
+</body></html>

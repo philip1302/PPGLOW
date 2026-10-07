@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGauge</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGGauge</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Gauge</code> - Basis <code>TPPGCustomGauge</code></p>
+<p><strong>Vorbild:</strong> TMS FNC Widget Gauge, WinUI RadialGauge</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>Min</code>/<code>Max</code>/<code>Value</code> sind <code>Double</code>. <code>Min &gt;= Max</code> wirft zur Laufzeit; beim Laden aus dem DFM wird <code>Max</code> korrigiert. <code>Value</code> wird still auf den Bereich begrenzt.</li>
+<li><code>StartAngle</code>/<code>SweepAngle</code> in Grad, 0 = oben, im Uhrzeigersinn (Vorgabe 270&#176;, halbrund: -90/180).</li>
+<li><code>Ranges</code> f&#228;rbt die Spur; mit <code>ValueColorFromRange</code> nimmt der Wertbogen die Farbe seines Abschnitts an.</li>
+<li>Wertwechsel gleiten &#252;ber den gemeinsamen Animator; ein Abschalten von <code>Animation</code> beendet einen laufenden Wechsel sofort.</li>
+<li><code>ReadOnly = True</code> (Vorgabe): Anzeige ohne Tabstopp. Sonst Schieberegler (Ziehen, Pfeile, Bild, Pos1/Ende); <code>OnChange</code> nur bei Anwender-&#196;nderungen.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGGauge1.Ranges.Add.EndValue := 60;          // gr&#252;n (grcSuccess)
+with PPGGauge1.Ranges.Add do
+begin
+  StartValue := 85;
+  EndValue := 100;
+  RangeColor := grcDanger;
+end;
+PPGGauge1.Value := Auslastung;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Dashboard-Bausteine (Phase 10c): TPPGGauge und TPPGKpiTile.</p>
+<p>TPPGGauge - Bogenanzeige fuer einen Wert:</p>
+<ul>
+<li>Min/Max/Value (Double), Bogen ueber StartAngle/SweepAngle (0 Grad = oben, im Uhrzeigersinn; Vorgabe 270 Grad, halbrund = -90/180).</li>
+<li>Ranges: farbige Abschnitte der Spur (Signalfarben aus den Tokens). Mit ValueColorFromRange nimmt der Wertbogen die Farbe seines Abschnitts an.</li>
+<li>Zielmarke (ShowTarget/TargetValue), Werttext mit ValueFormat und Units, Beschriftung (Caption) darunter.</li>
+<li>Wertwechsel gleitet ueber den gemeinsamen Animator (ekDecelerate), der Text zaehlt dabei mit. Code setzt Werte ohne OnChange.</li>
+<li>ReadOnly (Vorgabe): reine Anzeige ohne Fokus. Sonst Schieberegler: Ziehen auf dem Bogen, Pfeile/Bild/Pos1/Ende; OnChange nur bei Anwender- Aenderungen.</li>
+<li>Screenreader: Rolle Fortschritt (ReadOnly) bzw. Schieberegler.</li>
+</ul>
+<p>TPPGKpiTile - Kennzahl-Kachel:</p>
+<ul>
+<li>Title, Wert (Value/ValueFormat oder freier ValueText) mit Units, Veraenderung (Change/ChangeFormat) mit Trendpfeil: gruen = gut, rot = schlecht (InvertTrend: weniger ist besser).</li>
+<li>Eingebettete Sparkline (SparklineText/SetSparkline) ueber PPGDrawSparkline.</li>
+<li>Flaeche wie ein Container (IPPGContainerRenderer), Hover; Klick, Enter und Leertaste loesen OnClick aus.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Min</code>, <code>Max</code>, <code>Value</code>, <code>StartAngle</code>, <code>SweepAngle</code>, <code>Thickness</code>, <code>Ranges</code>, <code>ValueColorFromRange</code>, <code>ShowTarget</code>, <code>TargetValue</code>, <code>ShowValue</code>, <code>ValueFormat</code>, <code>Units</code>, <code>ValueColor</code>, <code>ReadOnly</code>, <code>Increment</code>, <code>Caption</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>Hint</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnChange</code>, <code>OnClick</code>, <code>OnEnter</code>, <code>OnExit</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGGauge.md</code>.</p>
+</body></html>
