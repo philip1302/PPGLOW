@@ -155,6 +155,12 @@ resourcestring
   SPPGPageSetupGridLines = 'Print grid lines';
   SPPGPageSetupColors = 'Print colors';
   SPPGPageSetupGridLook = 'Look like the grid (colors, bands, groups, totals)';
+  SPPGTileEmpty = 'No items';
+  SPPGTileNoMatch = 'No matches';
+  SPPGTileColText = 'Title';
+  SPPGTileColDetail = 'Detail';
+  SPPGTileColBadge = 'Badge';
+  SPPGTileColGroup = 'Group';
   SPPGPageSetupMargins = 'Margins left, top, right, bottom (mm)';
   SPPGPageSetupHeader = 'Header';
   SPPGPageSetupFooter = 'Footer';

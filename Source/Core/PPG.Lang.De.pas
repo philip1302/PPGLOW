@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 162;
+  PPGLangDeCount = 168;
 
 implementation
 
@@ -272,6 +272,18 @@ begin
     'Farben drucken');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupGridLook,
     'Wie im Grid (Farben, B'#$00E4'nder, Gruppen, Summen)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTileEmpty,
+    'Keine Eintr'#$00E4'ge');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTileNoMatch,
+    'Keine Treffer');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTileColText,
+    'Titel');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTileColDetail,
+    'Detail');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTileColBadge,
+    'Plakette');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTileColGroup,
+    'Gruppe');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupMargins,
     'R'#$00E4'nder links, oben, rechts, unten (mm)');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupHeader,

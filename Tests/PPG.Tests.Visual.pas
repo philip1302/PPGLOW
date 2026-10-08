@@ -63,7 +63,7 @@ uses
   System.Math, System.StrUtils, System.DateUtils, PPG.Consts, PPG.Theme, PPG.Tokens,
   PPG.Controls.ItemList,
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar,
-  PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
+  PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.TileView, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
   PPG.TabControl, PPG.PageControl, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid,
   PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NavigationView, PPG.Breadcrumb,
@@ -74,24 +74,24 @@ type
   TCCV = class(TPPGCustomControl);
 
 const
-  ControlCount = 42;
-  ToastIndex = 40; // eigenes Fenster (Sonderweg in Render und den RTL-/DPI-Galerien)
+  ControlCount = 43;
+  ToastIndex = 41; // eigenes Fenster (Sonderweg in Render und den RTL-/DPI-Galerien)
   ControlNames: array[0..ControlCount - 1] of string = ('Button', 'CheckBox', 'RadioButton',
     'ToggleSwitch', 'ProgressBar', 'TrackBar', 'Panel', 'GroupBox', 'Edit', 'Memo', 'SpinEdit',
     'ComboBox', 'TabControl', 'PageControl', 'ListBox', 'CheckListBox', 'TreeView', 'Grid',
     'Label', 'LinkLabel', 'Badge', 'ProgressRing', 'InfoBar', 'Expander', 'Splitter', 'Rating',
     'SearchEdit', 'Calendar', 'DatePicker', 'TimePicker', 'NavigationView', 'Breadcrumb',
     'ToolBar', 'StatusBar', 'Sparkline', 'Gauge', 'KpiTile', 'Chart',
-    'RadioGroup', 'CheckGroup', 'Toast', 'StyleTitle');
+    'RadioGroup', 'CheckGroup', 'TileView', 'Toast', 'StyleTitle');
   // Welche Zustaende sichtbar anders sein muessen
   HasHover: array[0..ControlCount - 1] of Boolean = (True, True, True, True, False, True,
     False, False, True, True, True, True, True, True, True, True, True, False, // Grid: kein Hover
     False, True, False, False, True, True, True, True, True, True, True, True, True, True,
-    True, False, False, False, True, True, True, True, True, False);
+    True, False, False, False, True, True, True, True, True, True, False);
   HasFocus: array[0..ControlCount - 1] of Boolean = (True, True, True, True, False, True,
     False, False, True, True, True, True, True, True, True, True, True, True,
     False, True, False, False, True, True, True, True, True, True, True, True, True, True,
-    True, False, False, False, True, True, True, True, False, False);
+    True, False, False, False, True, True, True, True, True, False, False);
   VariantNames: array[TVisualVariant] of string = ('ModernFlat hell', 'ModernFlat dunkel',
     'Classic', 'Fluent11 hell', 'Fluent11 dunkel', 'GDI');
   StateNames: array[TVisualState] of string = ('Normal', 'Hover', 'Gedrueckt', 'Fokus',
@@ -101,7 +101,7 @@ const
   HasDisabled: array[0..ControlCount - 1] of Boolean = (True, True, True, True, True, True,
     False, True, True, True, True, True, True, True, True, True, True, True,
     True, True, True, True, True, True, False, True, True, True, True, True, True, True,
-    True, True, True, True, True, True, True, True, False, False);
+    True, True, True, True, True, True, True, True, True, False, False);
 
 function PPGPixelDiff(A, B: TBitmap; Tol: Integer): Integer;
 var
@@ -622,6 +622,15 @@ begin
         TPPGCheckGroup(Result).Checked[0] := True;
         Result.SetBounds(8, 8, 180, 140);
       end;
+    40:
+      begin
+        Result := TPPGTileView.Create(FForm);
+        TPPGTileView(Result).Items.Add('Bericht').Detail := 'PDF, 2 MB';
+        TPPGTileView(Result).Items.Add('Tabelle').Detail := 'xlsx';
+        TPPGTileView(Result).Items[1].Badge := 'Neu';
+        TPPGTileView(Result).ItemIndex := 1;
+        Result.SetBounds(8, 8, 300, 180);
+      end;
   end;
   if (Result <> nil) and (Result.Parent = nil) then
     Result.Parent := P;
@@ -679,6 +688,11 @@ begin
       begin
         R := TPPGCustomChoiceGroup(C).ItemRect(0);
         Result := Point(R.Left + 8, (R.Top + R.Bottom) div 2);
+      end;
+    40:
+      begin
+        R := TPPGTileView(C).ItemRect(0);
+        Result := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
       end;
   end;
 end;

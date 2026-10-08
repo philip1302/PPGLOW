@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..161] of PResStringRec = (
+  AllTexts: array[0..167] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -65,6 +65,8 @@ const
     @SPPGPreviewZoomPage, @SPPGPreviewZoomWidth, @SPPGPageSetupTitle, @SPPGPageSetupPortrait,
     @SPPGPageSetupLandscape, @SPPGPageSetupFit, @SPPGPageSetupRepeat, @SPPGPageSetupGridLines,
     @SPPGPageSetupColors, @SPPGPageSetupGridLook, @SPPGPageSetupMargins,
+    @SPPGTileEmpty, @SPPGTileNoMatch, @SPPGTileColText, @SPPGTileColDetail, @SPPGTileColBadge,
+    @SPPGTileColGroup,
     @SPPGPageSetupHeader, @SPPGPageSetupFooter,
     @SPPGXlsxInvalid, @SPPGPdfPrinterMissing,
     @SPPGRRuleInvalid, @SPPGICalInvalid, @SPPGPlannerAllDay,

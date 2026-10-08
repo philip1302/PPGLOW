@@ -69,6 +69,7 @@ uses
   PPG.Panel in '..\Source\Controls\PPG.Panel.pas',
   PPG.GroupBox in '..\Source\Controls\PPG.GroupBox.pas',
   PPG.RadioGroup in '..\Source\Controls\PPG.RadioGroup.pas',
+  PPG.TileView in '..\Source\Controls\PPG.TileView.pas',
   PPG.Controls.Field in '..\Source\Controls\PPG.Controls.Field.pas',
   PPG.Edit in '..\Source\Controls\PPG.Edit.pas',
   PPG.Memo in '..\Source\Controls\PPG.Memo.pas',
@@ -176,6 +177,7 @@ uses
   DemoPages8 in 'DemoPages8.pas',
   DemoPages9 in 'DemoPages9.pas',
   DemoPages10 in 'DemoPages10.pas',
+  DemoPages11 in 'DemoPages11.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}

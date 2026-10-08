@@ -23,6 +23,6 @@ dcc32 Befehlszeile für "PPGlowTests.dpr"
   C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files (x86)\embarcadero\studio\37.0\include" -K00400000 
   -NBC:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp -NHC:\Users\Public\Documents\Embarcadero\Studio\37.0\hpp\Win32 -NO.\Win32\Debug\dcu  
   PPGlowTests.dpr   
-[dcc32 Warnung] PPGlowTests.dpr(215): W1002 Symbol 'GetMemoryManagerState' ist plattformspezifisch
+[dcc32 Warnung] PPGlowTests.dpr(216): W1002 Symbol 'GetMemoryManagerState' ist plattformspezifisch
 Erfolg
-Verstrichene Zeit: 00:00:02.3
+Verstrichene Zeit: 00:00:02.1

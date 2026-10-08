@@ -182,6 +182,7 @@
     <File Path="..\Source\Controls\PPG.Kanban.Print.pas"/>
     <File Path="..\Source\Controls\PPG.Grid.Look.pas"/>
     <File Path="..\Source\Controls\PPG.RadioGroup.pas"/>
+    <File Path="..\Source\Controls\PPG.TileView.pas"/>
     <File Path="..\Source\Core"/>
     <File Path="..\Source\Core\PPG.Animation.pas"/>
     <File Path="..\Source\Core\PPG.Appearance.pas"/>
@@ -247,5 +248,6 @@
     <File Path="DemoPages8.pas"/>
     <File Path="DemoPages9.pas"/>
     <File Path="DemoPages10.pas"/>
+    <File Path="DemoPages11.pas"/>
   </ProjectSortOrder>
 </BorlandProject>

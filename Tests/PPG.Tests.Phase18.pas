@@ -9,7 +9,8 @@ interface
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, Vcl.Graphics, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
-  PPG.Types, PPG.Controls.Field, PPG.RadioGroup, PPG.Tests.Controls;
+  PPG.Types, PPG.Controls.Field, PPG.RadioGroup, PPG.Items, PPG.Controls.Scroll, PPG.TileView,
+  PPG.Grid.Data, PPG.Grid.Export, PPG.Tests.Controls;
 
 type
   TChoiceGroupTests = class(TControlTestCase)
@@ -49,13 +50,64 @@ type
     procedure RightToLeftMirrorsColumns;
   end;
 
+  TTileViewTests = class(TControlTestCase)
+  private
+    FChanges, FClicks: Integer;
+    FLastClick: Integer;
+    procedure ViewChange(Sender: TObject);
+    procedure ViewItemClick(Sender: TObject; Index: Integer);
+    procedure GetVirtual(Sender: TObject; Index: Integer; var Data: TPPGItemData);
+    procedure GetIcon(Sender: TObject; Index: Integer; var CodePoint: Word);
+    function NewView(Count: Integer; Groups: Boolean = False): TPPGTileView;
+    procedure ClickAt(V: TPPGTileView; X, Y: Integer; Keys: Integer = 0);
+    procedure ClickItem(V: TPPGTileView; Index: Integer; Keys: Integer = 0);
+  protected
+    procedure SetUp; override;
+  published
+    procedure GridLayoutFillsRows;
+    procedure StylesChangeTileSize;
+    procedure FilterHidesAndCountsMatches;
+    procedure GroupsCollapse;
+    procedure VirtualHundredThousand;
+    procedure CodeSelectsWithoutEvents;
+    procedure ClickSelectsAndFiresEvents;
+    procedure MultiSelectCtrlShiftAndSelectAll;
+    procedure KeyboardMovesInTwoDimensions;
+    procedure RubberBandSelects;
+    procedure CtrlWheelZooms;
+    procedure CheckboxClickToggles;
+    procedure RenameWithF2;
+    procedure TypeAheadFindsItem;
+    procedure ExportsAsTable;
+    procedure AccessibleChildren;
+    procedure PaintsAllStylesGdiPlusAndGdi;
+    procedure StreamsItemsAndStyle;
+  end;
+
 implementation
 
 uses
-  Winapi.oleacc, PPG.Exceptions, PPG.Accessibility, PPG.Render.Registry, PPG.Tokens;
+  Vcl.Imaging.pngimage, Winapi.oleacc, PPG.Exceptions, PPG.Accessibility, PPG.Render.Registry, PPG.Tokens;
 
 type
   TGroupAccess = class(TPPGCustomChoiceGroup);
+
+/// Bild zur Sichtpruefung nach Tests\Visual\Gallery (wie die Sichttests).
+procedure SaveGalleryPng(B: TBitmap; const FileName: string);
+var
+  Png: TPngImage;
+  Dir: string;
+begin
+  Dir := ExtractFilePath(ParamStr(0)) + 'Visual\Gallery\';
+  ForceDirectories(Dir);
+  Png := TPngImage.Create;
+  try
+    Png.Assign(B);
+    Png.SaveToFile(Dir + FileName);
+  finally
+    Png.Free;
+  end;
+end;
 
 { TChoiceGroupTests }
 
@@ -602,7 +654,462 @@ begin
   CheckTrue(G.ItemRect(0).Left > G.ItemRect(2).Left, 'erste Spalte rechts');
 end;
 
+{ TTileViewTests }
+
+procedure TTileViewTests.SetUp;
+begin
+  inherited SetUp;
+  FChanges := 0;
+  FClicks := 0;
+  FLastClick := -1;
+end;
+
+procedure TTileViewTests.ViewChange(Sender: TObject);
+begin
+  Inc(FChanges);
+end;
+
+procedure TTileViewTests.ViewItemClick(Sender: TObject; Index: Integer);
+begin
+  Inc(FClicks);
+  FLastClick := Index;
+end;
+
+procedure TTileViewTests.GetVirtual(Sender: TObject; Index: Integer; var Data: TPPGItemData);
+begin
+  Data.Text := 'Datei ' + IntToStr(Index);
+  Data.Detail := IntToStr(Index * 3) + ' KB';
+end;
+
+procedure TTileViewTests.GetIcon(Sender: TObject; Index: Integer; var CodePoint: Word);
+begin
+  CodePoint := $E8A5;
+end;
+
+function TTileViewTests.NewView(Count: Integer; Groups: Boolean): TPPGTileView;
+var
+  I: Integer;
+  It: TPPGItem;
+begin
+  Result := TPPGTileView.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 600, 400);
+  Result.ScrollBarMode := sbmNever;
+  for I := 0 to Count - 1 do
+  begin
+    It := Result.Items.Add('Eintrag ' + IntToStr(I));
+    It.Detail := 'Detail ' + IntToStr(I);
+    if Groups then
+      if I mod 2 = 0 then
+        It.Group := 'Gerade'
+      else
+        It.Group := 'Ungerade';
+  end;
+  Result.OnChange := ViewChange;
+  Result.OnItemClick := ViewItemClick;
+  Result.OnGetItemIcon := GetIcon;
+end;
+
+procedure TTileViewTests.ClickAt(V: TPPGTileView; X, Y: Integer; Keys: Integer);
+begin
+  V.Perform(WM_MOUSEMOVE, Keys, MakeLParam(X, Y));
+  V.Perform(WM_LBUTTONDOWN, MK_LBUTTON or Keys, MakeLParam(X, Y));
+  V.Perform(WM_LBUTTONUP, Keys, MakeLParam(X, Y));
+end;
+
+procedure TTileViewTests.ClickItem(V: TPPGTileView; Index: Integer; Keys: Integer);
+var
+  R: TRect;
+begin
+  R := V.ItemRect(Index);
+  ClickAt(V, (R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2, Keys);
+end;
+
+procedure TTileViewTests.GridLayoutFillsRows;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(5);
+  V.TileStyle := tsTiles;
+  // 600 px: zwei Kacheln (280 + Abstand) je Zeile, die die Breite fuellen
+  CheckEquals(V.ItemRect(0).Top, V.ItemRect(1).Top, 'Nachbar rechts');
+  CheckTrue(V.ItemRect(1).Left > V.ItemRect(0).Right);
+  CheckTrue(V.ItemRect(2).Top > V.ItemRect(0).Bottom, 'dritte Kachel in der naechsten Zeile');
+  CheckEquals(V.ItemRect(0).Left, V.ItemRect(2).Left);
+  CheckTrue(V.ItemRect(1).Right > 560, 'Kacheln fuellen die Breite');
+  CheckEquals(3, V.ItemAt((V.ItemRect(3).Left + V.ItemRect(3).Right) div 2, V.ItemRect(3).Top + 4));
+  CheckEquals(-1, V.ItemAt(V.ItemRect(4).Right + 20, V.ItemRect(4).Top + 4), 'Luecke rechts');
+  V.BiDiMode := bdRightToLeft;
+  CheckTrue(V.ItemRect(0).Left > V.ItemRect(1).Left, 'RTL: erste Kachel rechts');
+end;
+
+procedure TTileViewTests.StylesChangeTileSize;
+var
+  V: TPPGTileView;
+  H: array[TPPGTileStyle] of Integer;
+  S: TPPGTileStyle;
+begin
+  V := NewView(3);
+  for S := Low(TPPGTileStyle) to High(TPPGTileStyle) do
+  begin
+    V.TileStyle := S;
+    H[S] := V.ItemRect(0).Bottom - V.ItemRect(0).Top;
+  end;
+  CheckTrue(H[tsCards] > H[tsIcons], 'Karten hoeher als Symbole');
+  CheckTrue(H[tsIcons] > H[tsTiles], 'Symbole hoeher als Kacheln');
+  V.TileStyle := tsIcons;
+  CheckTrue(V.ItemRect(4 - 2).Top = V.ItemRect(0).Top, 'Symbole: mehrere je Zeile');
+  V.Zoom := 200;
+  CheckEquals(H[tsIcons] * 2, V.ItemRect(0).Bottom - V.ItemRect(0).Top, 1, 'Zoom 200 %');
+  try
+    V.Zoom := 300;
+    Fail('Zoom ausserhalb muss werfen');
+  except
+    on EPPGError do
+  end;
+  CheckEquals(200, V.Zoom, 'unveraendert');
+end;
+
+procedure TTileViewTests.FilterHidesAndCountsMatches;
+var
+  V: TPPGTileView;
+  B: TBitmap;
+begin
+  V := NewView(12);
+  V.FilterText := 'eintrag 1';
+  CheckEquals(3, V.VisibleCount, 'Eintrag 1, 10, 11');
+  CheckTrue(IsRectEmpty(V.ItemRect(2)), 'ausgefiltert');
+  CheckFalse(IsRectEmpty(V.ItemRect(10)));
+  V.FilterText := 'detail 7';
+  CheckEquals(1, V.VisibleCount, 'auch im Detail gesucht');
+  B := RenderToBitmap(V);
+  B.Free;
+  // Auswahl haengt am Eintrag, nicht an der Position (Regression)
+  V.FilterText := 'eintrag 1';
+  V.ItemIndex := 11;
+  V.FilterText := 'eintrag 11';
+  CheckTrue(V.Selected[11], 'Auswahl bleibt am Eintrag');
+  CheckEquals(11, V.ItemIndex);
+  V.FilterText := 'detail 7';
+  CheckEquals(0, V.SelCount, 'ausgefiltert: nicht mehr gewaehlt');
+  V.FilterText := 'gibt es nicht';
+  CheckEquals(0, V.VisibleCount);
+  B := RenderToBitmap(V);
+  B.Free;
+  V.FilterText := '';
+  CheckEquals(12, V.VisibleCount);
+  CheckEquals(0, FChanges, 'Filter im Code ohne OnChange');
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TTileViewTests.GroupsCollapse;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(6, True);
+  CheckTrue(V.ItemRect(1).Top > V.ItemRect(4).Top, 'gruppiert: erst alle geraden');
+  V.GroupCollapsed['Gerade'] := True;
+  CheckEquals(3, V.VisibleCount);
+  CheckTrue(IsRectEmpty(V.ItemRect(0)));
+  CheckTrue(V.GroupCollapsed['gerade'], 'ohne Gross/klein');
+  V.GroupCollapsed['Gerade'] := False;
+  CheckEquals(6, V.VisibleCount);
+  V.GroupView := False;
+  CheckTrue(V.ItemRect(1).Top < V.ItemRect(4).Top, 'ohne Gruppen in Reihenfolge');
+end;
+
+procedure TTileViewTests.VirtualHundredThousand;
+var
+  V: TPPGTileView;
+  T0: Cardinal;
+  B: TBitmap;
+begin
+  V := NewView(0);
+  V.OnGetItem := GetVirtual;
+  V.OwnerData := True;
+  T0 := GetTickCount;
+  V.ItemCount := 100000;
+  CheckEquals(100000, V.VisibleCount);
+  CheckTrue(GetTickCount - T0 < 3000, 'Layout von 100 000 Eintraegen');
+  V.ScrollTo(0, MaxInt);
+  T0 := GetTickCount;
+  B := RenderToBitmap(V);
+  B.Free;
+  CheckTrue(GetTickCount - T0 < 500, 'Zeichnen nur des sichtbaren Teils');
+  V.ItemIndex := 99999;
+  CheckEquals(99999, V.ItemIndex);
+  V.FilterText := 'Datei 9999';
+  CheckEquals(11, V.VisibleCount, '9999 und 99990..99999');
+  V.ItemCount := 10;
+  CheckEquals(0, V.VisibleCount, 'Filter trifft keinen der 10');
+end;
+
+procedure TTileViewTests.CodeSelectsWithoutEvents;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(5);
+  V.ItemIndex := 3;
+  CheckEquals(3, V.ItemIndex);
+  CheckTrue(V.Selected[3]);
+  CheckEquals(1, V.SelCount);
+  V.Selected[1] := True;
+  CheckFalse(V.Selected[3], 'ohne MultiSelect nur einer');
+  CheckEquals(0, FChanges);
+  try
+    V.ItemIndex := 9;
+    Fail('ItemIndex ausserhalb muss werfen');
+  except
+    on EPPGError do
+  end;
+  V.ItemIndex := -1;
+  CheckEquals(0, V.SelCount);
+end;
+
+procedure TTileViewTests.ClickSelectsAndFiresEvents;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(5);
+  ClickItem(V, 2);
+  CheckEquals(2, V.ItemIndex);
+  CheckEquals(1, FChanges);
+  CheckEquals(2, FLastClick);
+  ClickAt(V, V.ItemRect(4).Right + 30, V.ItemRect(4).Top + 5);
+  CheckEquals(-1, V.ItemIndex, 'Klick ins Leere hebt die Auswahl auf');
+end;
+
+procedure TTileViewTests.MultiSelectCtrlShiftAndSelectAll;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(6);
+  V.MultiSelect := True;
+  ClickItem(V, 1);
+  ClickItem(V, 4, MK_CONTROL);
+  CheckEquals(2, V.SelCount, 'Strg fuegt hinzu');
+  ClickItem(V, 1);
+  ClickItem(V, 3, MK_SHIFT);
+  CheckTrue(V.Selected[1] and V.Selected[2] and V.Selected[3] and not V.Selected[4], 'Umschalt: Bereich');
+  V.Perform(WM_KEYDOWN, Ord('A'), 0);
+  CheckEquals(3, V.SelCount, 'A ohne Strg waehlt nicht alles');
+  V.SelectAll;
+  CheckEquals(6, V.SelCount);
+end;
+
+procedure TTileViewTests.KeyboardMovesInTwoDimensions;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(7);
+  V.ItemIndex := 0;
+  V.Perform(WM_KEYDOWN, VK_RIGHT, 0);
+  CheckEquals(1, V.ItemIndex, 'rechts');
+  V.Perform(WM_KEYDOWN, VK_DOWN, 0);
+  CheckEquals(3, V.ItemIndex, 'runter: gleiche Spalte');
+  V.Perform(WM_KEYDOWN, VK_UP, 0);
+  CheckEquals(1, V.ItemIndex);
+  V.Perform(WM_KEYDOWN, VK_END, 0);
+  CheckEquals(6, V.ItemIndex);
+  V.Perform(WM_KEYDOWN, VK_DOWN, 0);
+  CheckEquals(6, V.ItemIndex, 'am Ende bleibt es stehen');
+  V.Perform(WM_KEYDOWN, VK_HOME, 0);
+  CheckEquals(0, V.ItemIndex);
+  CheckTrue(FChanges >= 5, 'Anwender-Aktion meldet OnChange');
+end;
+
+procedure TTileViewTests.RubberBandSelects;
+var
+  V: TPPGTileView;
+  P0, P1: TPoint;
+begin
+  V := NewView(3);
+  V.MultiSelect := True;
+  // Leere Flaeche rechts neben der dritten Kachel bis zur ersten ziehen
+  P0 := Point(V.ItemRect(1).Left + 20, V.ItemRect(2).Top + 10);
+  P1 := Point(V.ItemRect(0).Left + 10, V.ItemRect(0).Top + 10);
+  CheckEquals(-1, V.ItemAt(P0.X, P0.Y), 'Start im Leeren');
+  V.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(P0.X, P0.Y));
+  V.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(P1.X, P1.Y));
+  V.Perform(WM_LBUTTONUP, 0, MakeLParam(P1.X, P1.Y));
+  CheckEquals(3, V.SelCount, 'alle drei im Rahmen');
+end;
+
+procedure TTileViewTests.CtrlWheelZooms;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(3);
+  V.Perform(WM_MOUSEWHEEL, MakeWParam(MK_CONTROL, 120), MakeLParam(10, 10));
+  CheckEquals(110, V.Zoom);
+  V.Perform(WM_MOUSEWHEEL, MakeWParam(MK_CONTROL, Word(-120)), MakeLParam(10, 10));
+  CheckEquals(100, V.Zoom);
+end;
+
+procedure TTileViewTests.CheckboxClickToggles;
+var
+  V: TPPGTileView;
+  R: TRect;
+begin
+  V := NewView(3);
+  V.Checkboxes := True;
+  R := V.ItemRect(1);
+  ClickAt(V, R.Left + 12, R.Top + 12);
+  CheckTrue(V.Items[1].Checked = cbChecked, 'Klick aufs Kaestchen');
+  CheckEquals(-1, V.ItemIndex, 'Kaestchen waehlt nicht');
+  V.ItemIndex := 1;
+  V.Perform(WM_KEYDOWN, VK_SPACE, 0);
+  CheckTrue(V.Items[1].Checked = cbUnchecked, 'Leertaste');
+end;
+
+procedure TTileViewTests.RenameWithF2;
+var
+  V: TPPGTileView;
+  E: TWinControl;
+  I: Integer;
+begin
+  V := NewView(3);
+  FForm.Show;
+  V.SetFocus;
+  V.ItemIndex := 1;
+  V.Perform(WM_KEYDOWN, VK_F2, 0);
+  E := nil;
+  for I := 0 to V.ControlCount - 1 do
+    if V.Controls[I] is TEdit then
+      E := TEdit(V.Controls[I]);
+  CheckNotNull(E, 'Editor sichtbar');
+  CheckEquals('Eintrag 1', TEdit(E).Text);
+  TEdit(E).Text := 'Neu';
+  E.Perform(WM_KEYDOWN, VK_RETURN, 0);
+  CheckEquals('Neu', V.Items[1].Text);
+  CheckFalse(E.Visible);
+end;
+
+procedure TTileViewTests.TypeAheadFindsItem;
+var
+  V: TPPGTileView;
+begin
+  V := NewView(0);
+  V.Items.Add('Apfel');
+  V.Items.Add('Birne');
+  V.Items.Add('Banane');
+  V.Perform(WM_CHAR, Ord('b'), 0);
+  CheckEquals(1, V.ItemIndex);
+  V.Perform(WM_CHAR, Ord('a'), 0);
+  CheckEquals(2, V.ItemIndex, 'ba -> Banane');
+end;
+
+procedure TTileViewTests.ExportsAsTable;
+var
+  V: TPPGTileView;
+  T: IPPGTableSource;
+  H: string;
+begin
+  V := NewView(4, True);
+  V.Items[0].Badge := 'Neu';
+  V.FilterText := 'eintrag';
+  CheckTrue(Supports(V, IPPGTableSource, T));
+  CheckEquals(4, T.TableRowCount);
+  CheckEquals(4, T.TableColCount);
+  CheckEquals('Eintrag 0', T.TableCellText(0, 0), 'Ansichts-Reihenfolge');
+  CheckEquals('Eintrag 2', T.TableCellText(0, 1), 'gruppiert: zweite gerade');
+  CheckEquals('Neu', T.TableCellText(2, 0));
+  CheckEquals('Gerade', T.TableCellText(3, 0));
+  H := PPGExportHtmlText(T);
+  CheckTrue(Pos('Eintrag 3', H) > 0);
+end;
+
+procedure TTileViewTests.AccessibleChildren;
+var
+  V: TPPGTileView;
+  A: IPPGAccessibleChildren;
+begin
+  V := NewView(3);
+  V.Items[2].Badge := '5';
+  V.ItemIndex := 2;
+  CheckTrue(Supports(V, IPPGAccessibleChildren, A));
+  CheckEquals(3, A.AccChildCount);
+  CheckEquals('Eintrag 2, Detail 2, 5', A.AccChildName(3));
+  CheckEquals(ROLE_SYSTEM_LISTITEM, A.AccChildRole(1));
+  CheckTrue(A.AccChildState(3) and STATE_SYSTEM_SELECTED <> 0);
+  CheckEquals(3, A.AccSelectedChild);
+  CheckEquals(2, A.AccChildAt(V.ItemRect(1).Left + 3, V.ItemRect(1).Top + 3));
+end;
+
+procedure TTileViewTests.PaintsAllStylesGdiPlusAndGdi;
+var
+  V: TPPGTileView;
+  S: TPPGTileStyle;
+  Gdi: Boolean;
+  B: TBitmap;
+begin
+  V := NewView(8, True);
+  V.Items[1].Badge := '3';
+  V.Items[2].Enabled := False;
+  V.Checkboxes := True;
+  V.MultiSelect := True;
+  V.Selected[0] := True;
+  V.Selected[3] := True;
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      for S := Low(TPPGTileStyle) to High(TPPGTileStyle) do
+      begin
+        V.TileStyle := S;
+        V.FilterText := '';
+        B := RenderToBitmap(V);
+        B.Free;
+        V.FilterText := 'trag 1';
+        B := RenderToBitmap(V);
+        // Sichtpruefung: je Ansicht mit Suchtreffern in die Galerie
+        if not Gdi then
+          SaveGalleryPng(B, 'TileView_' + IntToStr(Ord(S)) + '_Suche.png');
+        B.Free;
+      end;
+      V.Enabled := False;
+      B := RenderToBitmap(V);
+      B.Free;
+      V.Enabled := True;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TTileViewTests.StreamsItemsAndStyle;
+var
+  V, V2: TPPGTileView;
+  M: TMemoryStream;
+begin
+  V := NewView(2);
+  V.Items[1].Badge := 'B';
+  V.Items[1].Group := 'G';
+  V.TileStyle := tsCards;
+  V.Zoom := 120;
+  V.MultiSelect := True;
+  V.EmptyText := 'leer';
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(V);
+    M.Position := 0;
+    V2 := TPPGTileView.Create(FForm);
+    M.ReadComponent(V2);
+    CheckEquals(2, V2.Items.Count);
+    CheckEquals('B', V2.Items[1].Badge);
+    CheckEquals('G', V2.Items[1].Group);
+    CheckTrue(V2.TileStyle = tsCards);
+    CheckEquals(120, V2.Zoom);
+    CheckTrue(V2.MultiSelect);
+    CheckEquals('leer', V2.EmptyText);
+  finally
+    M.Free;
+  end;
+end;
+
 initialization
   RegisterTest('Phase18', TChoiceGroupTests.Suite);
+  RegisterTest('Phase18', TTileViewTests.Suite);
 
 end.

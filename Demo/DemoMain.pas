@@ -114,6 +114,7 @@ const
   PgRibbon = 16;
   PgKanban = 17;
   PgCustom = 18;
+  PgTiles = 19;
 
 implementation
 
@@ -122,7 +123,7 @@ uses
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
   PPG.Chart, PPG.IconFont, PPG.Grid.Data, PPG.Grid.Export, PPG.Grid.Print, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
-  DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, PPG.Hints;
+  DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, DemoPages11, PPG.Hints;
 
 type
   TPageDef = record
@@ -133,7 +134,7 @@ type
   end;
 
 const
-  PageDefs: array[0..18] of TPageDef = (
+  PageDefs: array[0..19] of TPageDef = (
     (Caption: 'Start'; Icon: $E80F; Group: ''; Footer: False),
     (Caption: 'Buttons & Befehle'; Icon: $E8B0; Group: 'Grundlagen'; Footer: False),
     (Caption: 'Auswahl & Regler'; Icon: $E9E9; Group: ''; Footer: False),
@@ -152,12 +153,13 @@ const
     (Caption: 'Planer'; Icon: $E8BF; Group: ''; Footer: False),
     (Caption: 'Ribbon'; Icon: $E8A1; Group: ''; Footer: False),
     (Caption: 'Kanban'; Icon: $E8A9; Group: ''; Footer: False),
-    (Caption: 'Anpassung'; Icon: $E790; Group: ''; Footer: False));
+    (Caption: 'Anpassung'; Icon: $E790; Group: ''; Footer: False),
+    (Caption: 'Kacheln'; Icon: $ECA5; Group: ''; Footer: False));
 
   // Reihenfolge in der Navigation (neue Seiten haengen hinten an, damit die
   // Nummern fuer /page gleich bleiben)
-  NavOrder: array[0..18] of Integer = (PgStart, PgButtons, PgChoice, PgForm, PgLists,
-    PgExplorer, PgGrid, PgDatabase, PgCharts, PgPlanner, PgRibbon, PgKanban, PgMenus, PgDates, PgLayout, PgFeedback, PgAppearance, PgCustom, PgEvents);
+  NavOrder: array[0..19] of Integer = (PgStart, PgButtons, PgChoice, PgForm, PgLists,
+    PgExplorer, PgTiles, PgGrid, PgDatabase, PgCharts, PgPlanner, PgRibbon, PgKanban, PgMenus, PgDates, PgLayout, PgFeedback, PgAppearance, PgCustom, PgEvents);
 
 type
   TCatalogEntry = record
@@ -168,7 +170,7 @@ type
 
 const
   // Katalog fuer die Suche oben: Control, Stichworte, Seite
-  Catalog: array[0..61] of TCatalogEntry = (
+  Catalog: array[0..64] of TCatalogEntry = (
     (Name: 'TPPGButton'; Keywords: 'Schaltfl{ae}che, Befehl, Split, Akzent'; Page: PgButtons),
     (Name: 'TPPGToolBar'; Keywords: 'Werkzeugleiste, Symbolleiste'; Page: PgButtons),
     (Name: 'TPPGCheckBox'; Keywords: 'Kontrollk{ae}stchen, Haken'; Page: PgChoice),
@@ -229,6 +231,9 @@ const
     (Name: 'TPPGPlannerPrinter'; Keywords: 'Drucken, Wochenplan, iCalendar, ics'; Page: PgPlanner),
     (Name: 'TPPGRibbon'; Keywords: 'Men{ue}band, Office, Registerkarten, KeyTips, Schnellzugriff, Backstage'; Page: PgRibbon),
     (Name: 'TPPGKanban'; Keywords: 'Kanban, Board, Trello, Aufgaben, WIP, Swimlanes'; Page: PgKanban),
+    (Name: 'TPPGTileView'; Keywords: 'Kacheln, Karten, Galerie, Symbole, ListView, Explorer'; Page: PgTiles),
+    (Name: 'TPPGRadioGroup'; Keywords: 'Optionsgruppe, Segment, Umschalter, Auswahlkacheln'; Page: PgChoice),
+    (Name: 'TPPGCheckGroup'; Keywords: 'Kontrollk{ae}stchen-Gruppe, Mehrfachauswahl'; Page: PgChoice),
     (Name: 'TPPGDBKanban'; Keywords: 'Datenbank, Board aus Datenmenge'; Page: PgKanban),
     (Name: 'TPPGElementStyle'; Keywords: 'Anpassung, Markenfarbe, Akzent, Zebra, Kopf, Custom-Draw, Schatten, Ecken'; Page: PgCustom));
 
@@ -258,6 +263,7 @@ begin
     PgRibbon: Result := TDemoRibbonPage;
     PgKanban: Result := TDemoKanbanPage;
     PgCustom: Result := TDemoCustomPage;
+    PgTiles: Result := TDemoTilesPage;
   else
     Result := TDemoEventsPage;
   end;
