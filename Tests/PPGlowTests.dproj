@@ -275,6 +275,7 @@
         <DCCReference Include="..\Source\Controls\PPG.Controls.Container.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Panel.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.GroupBox.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.RadioGroup.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Controls.Field.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Edit.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Memo.pas"/>
@@ -330,6 +331,7 @@
         <DCCReference Include="PPG.Tests.Phase13e.pas"/>
         <DCCReference Include="PPG.Tests.Phase13f.pas"/>
         <DCCReference Include="PPG.Tests.Phase17.pas"/>
+        <DCCReference Include="PPG.Tests.Phase18.pas"/>
         <DCCReference Include="PPG.Tests.Phase13g.pas"/>
         <DCCReference Include="PPG.Tests.Phase14a.pas"/>
         <DCCReference Include="PPG.Tests.Phase14aPlanner.pas"/>

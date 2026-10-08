@@ -10,7 +10,7 @@ uses
   Vcl.Controls, Vcl.Menus, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.Forms, Vcl.ExtCtrls,
   PPG.Types, PPG.Consts, PPG.Theme, PPG.Render.Registry, PPG.Controls.Base,
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar,
-  PPG.TrackBar, PPG.Panel, PPG.Labels, PPG.Controls.Field, PPG.Edit, PPG.Memo,
+  PPG.TrackBar, PPG.Panel, PPG.RadioGroup, PPG.Labels, PPG.Controls.Field, PPG.Edit, PPG.Memo,
   PPG.NumberFormat, PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit,
   PPG.ColorPicker, PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit,
   PPG.SpinEdit, PPG.ComboBox, PPG.Feedback, PPG.Rating, PPG.ToolBar,
@@ -81,6 +81,10 @@ type
     FVolumeValue: TPPGLabel;
     FQualityValue: TPPGLabel;
     FRangeResult: TPPGLabel;
+    FPeriod: TPPGRadioGroup;
+    FDays: TPPGCheckGroup;
+    FShipping: TPPGRadioGroup;
+    FGroupResult: TPPGLabel;
     FUpdating: Boolean;
     procedure MasterClick(Sender: TObject);
     procedure ChildClick(Sender: TObject);
@@ -90,6 +94,7 @@ type
     procedure AirplaneChange(Sender: TObject);
     procedure RatingChange(Sender: TObject);
     procedure RangeChange(Sender: TObject);
+    procedure GroupsChange(Sender: TObject);
   protected
     procedure Build; override;
   public
@@ -712,6 +717,54 @@ begin
   FQualityValue := NewLabel(Own, Card, CardPad + 410, Y + 56, 0, '', tkStrong);
   FRangeResult := NewResult(Own, Card, 'Einstellung');
   RangeChange(nil);
+
+  // Auswahlgruppen (Phase 18): Segmente, Liste mit Spalten nach Breite, Kacheln
+  Card := NewCard(Own, Sheet, PageX, PageContentTop + 252 + 196 + 196 + 3 * CardGap, FullW, 330,
+    'Auswahlgruppen', 'RadioGroup und CheckGroup als Segment-Umschalter, als Liste (Spalten ' +
+    'nach Breite) und als Kacheln mit Symbol und Beschreibung {-} DFM wie TRadioGroup.');
+  Y := Card.Tag;
+  FPeriod := TPPGRadioGroup.Create(Own);
+  FPeriod.Parent := Card;
+  FPeriod.ChoiceStyle := csSegmented;
+  FPeriod.ShowFrame := False;
+  FPeriod.SetBounds(CardPad, Y, 360, 36);
+  FPeriod.Items.CommaText := 'Tag,Woche,Monat,Jahr';
+  FPeriod.ItemIndex := 1;
+  FPeriod.OnChange := GroupsChange;
+  FDays := TPPGCheckGroup.Create(Own);
+  FDays.Parent := Card;
+  FDays.Caption := 'Liefertage';
+  FDays.Columns := 0;
+  FDays.SetBounds(CardPad, Y + 52, 360, 120);
+  FDays.Items.CommaText := 'Mo,Di,Mi,Do,Fr,Sa,So';
+  FDays.Value := 'Mo,Mi,Fr';
+  FDays.ItemEnabled[6] := False;
+  FDays.ItemsEx[6].Hint := L('Sonntags keine Zustellung');
+  FDays.ShowHint := True;
+  FDays.OnChange := GroupsChange;
+  FShipping := TPPGRadioGroup.Create(Own);
+  FShipping.Parent := Card;
+  FShipping.ChoiceStyle := csCards;
+  FShipping.ShowFrame := False;
+  FShipping.Columns := 3;
+  FShipping.SetBounds(CardPad + 390, Y, FullW - 2 * CardPad - 390, 172);
+  for I := 0 to 2 do
+  begin
+    FShipping.ItemsEx.Add.Caption := L(RadioCaptions[I]);
+    FShipping.ItemsEx[I].Description := L(RadioDetails[I]);
+  end;
+  FShipping.ItemsEx[0].Icon := $E715;
+  FShipping.ItemsEx[1].Icon := $E916;
+  FShipping.ItemsEx[2].Icon := $E80F;
+  FShipping.ItemIndex := 0;
+  FShipping.OnChange := GroupsChange;
+  FGroupResult := NewResult(Own, Card, 'Auswahl');
+  GroupsChange(nil);
+end;
+
+procedure TDemoChoicePage.GroupsChange(Sender: TObject);
+begin
+  SetResult(FGroupResult, FPeriod.Value + ' {.} ' + FDays.Value + ' {.} ' + FShipping.Value);
 end;
 
 procedure TDemoChoicePage.UpdateMaster;
@@ -1244,6 +1297,11 @@ begin
   FVolume.Position := 30;
   Check('Auswahl: Regler steuert Balken und Ring', (FVolumeBar.Position = 30) and
     (FVolumeRing.Value = 30));
+  FPeriod.ItemIndex := 3;
+  FDays.Checked[1] := True;
+  GroupsChange(nil);
+  Check('Auswahl: Gruppen liefern Werte', (FPeriod.Value = 'Jahr') and
+    (FDays.Value = 'Mo,Di,Mi,Fr') and (Pos('Standard', FGroupResult.Caption) > 0));
 end;
 
 procedure TDemoFormPage.BuildSpecialFields;

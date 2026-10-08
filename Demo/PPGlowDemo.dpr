@@ -68,6 +68,7 @@ uses
   PPG.Controls.Container in '..\Source\Controls\PPG.Controls.Container.pas',
   PPG.Panel in '..\Source\Controls\PPG.Panel.pas',
   PPG.GroupBox in '..\Source\Controls\PPG.GroupBox.pas',
+  PPG.RadioGroup in '..\Source\Controls\PPG.RadioGroup.pas',
   PPG.Controls.Field in '..\Source\Controls\PPG.Controls.Field.pas',
   PPG.Edit in '..\Source\Controls\PPG.Edit.pas',
   PPG.Memo in '..\Source\Controls\PPG.Memo.pas',
@@ -210,6 +211,9 @@ begin
       Form.ApplyTheme(ParamStr(I + 1));
     if SameText(ParamStr(I), '/page') then
       Form.ShowPage(StrToIntDef(ParamStr(I + 1), 0));
+    // /height n  -> Fensterhoehe (Screenshots von Karten weiter unten)
+    if SameText(ParamStr(I), '/height') then
+      Form.ClientHeight := StrToIntDef(ParamStr(I + 1), Form.ClientHeight);
   end;
 
   if ShotFile <> '' then

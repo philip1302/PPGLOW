@@ -10,7 +10,7 @@ uses
   TestFramework, System.Classes, System.SysUtils, System.TypInfo, Vcl.Controls,
   Vcl.Forms, Vcl.Graphics,
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar, PPG.TrackBar,
-  PPG.Panel, PPG.GroupBox, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox, PPG.TabControl,
+  PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox, PPG.TabControl,
   PPG.PageControl, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid,
   PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NavigationView, PPG.Breadcrumb,
@@ -30,14 +30,14 @@ type
 implementation
 
 const
-  ControlClasses: array[0..38] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
+  ControlClasses: array[0..40] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
     TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGGroupBox, TPPGEdit,
     TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl, TPPGListBox,
     TPPGCheckListBox, TPPGTreeView, TPPGGrid, TPPGLabel, TPPGLinkLabel, TPPGBadge,
     TPPGProgressRing, TPPGInfoBar, TPPGExpander, TPPGSplitter, TPPGRating, TPPGSearchEdit,
     TPPGCalendar, TPPGDatePicker, TPPGTimePicker, TPPGNavigationView, TPPGBreadcrumb,
     TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
-    TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart);
+    TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart, TPPGRadioGroup, TPPGCheckGroup);
 
   // Layout-, Eltern- und Verweis-Properties gehoeren nicht zum Einzeltest
   SkipProps: array[0..24] of string = ('Name', 'Left', 'Top', 'Width', 'Height', 'Align',

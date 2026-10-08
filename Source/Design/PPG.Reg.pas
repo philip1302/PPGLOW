@@ -164,7 +164,7 @@ uses
   System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, ColnEdit,
   PPG.Consts, PPG.Render.Registry, PPG.Presets, PPG.StyleManager,
   PPG.Controls.Base, PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch,
-  PPG.ProgressBar, PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
+  PPG.ProgressBar, PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
   PPG.TabControl, PPG.Controls.ItemList, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid, PPG.Grid.Print,
   PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker,
@@ -978,7 +978,8 @@ end;
 procedure Register;
 begin
   RegisterComponents(PPGPaletteName, [TPPGButton, TPPGCheckBox, TPPGRadioButton,
-    TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGGroupBox,
+    TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGGroupBox, TPPGRadioGroup,
+    TPPGCheckGroup,
     TPPGEdit, TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl,
     TPPGListBox, TPPGCheckListBox, TPPGTreeView, TPPGGrid,
     TPPGLabel, TPPGLinkLabel, TPPGBadge, TPPGProgressRing, TPPGInfoBar, TPPGExpander,
