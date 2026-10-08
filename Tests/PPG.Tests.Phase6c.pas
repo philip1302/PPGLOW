@@ -19,6 +19,7 @@ type
     FSorted: Integer;
     FAllowSelect: Boolean;
     FRejectValue: string;
+    FFailSetEdit: Boolean;
   protected
     procedure SetUp; override;
   private
@@ -44,6 +45,10 @@ type
     procedure MouseSelectsAndOnSelectCellRefuses;
     procedure EditTextCommitAndCancel;
     procedure ValidationKeepsEditorOpen;
+    procedure FailedWriteKeepsEditorOpen;
+    procedure RejectedEditorClosesBeforeSort;
+    procedure LoadLayoutKeepsNarrowColumns;
+    procedure FixedRowsBeforeRowCountInDfm;
     procedure TypingStartsEditor;
     procedure ComboAndSpinEditors;
     procedure CheckColumnToggles;
@@ -118,11 +123,14 @@ begin
   FSorted := 0;
   FAllowSelect := False;
   FRejectValue := '';
+  FFailSetEdit := False;
 end;
 
 procedure TGridTests.SetEditText(Sender: TObject; ACol, ARow: Integer; const Value: string);
 begin
   Inc(FSetEdits);
+  if FFailSetEdit then
+    raise EPPGError.Create('Schreiben abgelehnt');
 end;
 
 procedure TGridTests.Sorted(Sender: TObject);
@@ -501,6 +509,121 @@ begin
     CheckEquals('richtig', G.Cells[2, 1]);
   finally
     FForm.Hide;
+  end;
+end;
+
+procedure TGridTests.FailedWriteKeepsEditorOpen;
+var
+  G: TPPGGrid;
+  Raised: Boolean;
+begin
+  // Audit 08.10.2026: Der Editor wurde vor dem Schreiben geschlossen; warf
+  // das Schreiben, war die Eingabe weg.
+  FForm.Show;
+  try
+    G := SampleGrid;
+    G.Options := G.Options + [goEditing];
+    G.Row := 1;
+    G.Col := 2;
+    G.SetFocus;
+    G.ShowEditor;
+    TPPGGridEdit(G.InplaceEditor).Text := 'neu';
+    FFailSetEdit := True;
+    Raised := False;
+    try
+      G.HideEditor(True);
+    except
+      on E: EPPGError do
+        Raised := True;
+    end;
+    CheckTrue(Raised, 'Fehler kommt beim Aufrufer an');
+    CheckTrue(G.EditorMode, 'Editor bleibt offen');
+    CheckEquals('neu', TPPGGridEdit(G.InplaceEditor).Text, 'Eingabe bleibt erhalten');
+    FFailSetEdit := False;
+    G.HideEditor(True);
+    CheckFalse(G.EditorMode);
+    CheckEquals('neu', G.Cells[2, 1]);
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TGridTests.RejectedEditorClosesBeforeSort;
+var
+  G: TPPGGrid;
+  I: Integer;
+begin
+  // Audit 08.10.2026: Nach abgelehnter Validierung blieb der Editor offen,
+  // Sortieren baute trotzdem um, und der Editor zeigte auf eine andere Zeile.
+  FForm.Show;
+  try
+    G := SampleGrid;
+    G.Options := G.Options + [goEditing];
+    G.OnValidateCell := ValidateCell;
+    FRejectValue := 'falsch';
+    G.Row := 1;
+    G.Col := 2;
+    G.SetFocus;
+    G.ShowEditor;
+    TPPGGridEdit(G.InplaceEditor).Text := 'falsch';
+    G.SortBy(0);
+    CheckFalse(G.EditorMode, 'Umbau verwirft den abgelehnten Editor');
+    for I := 1 to 6 do
+      CheckEquals('T' + IntToStr(I), G.Cells[2, I], 'keine Zeile beschrieben');
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TGridTests.LoadLayoutKeepsNarrowColumns;
+var
+  G: TPPGGrid;
+  S: string;
+begin
+  // Audit 08.10.2026: LoadLayout warf bei Breiten unter MinColWidth mitten im
+  // Laden; Sortierung und folgende Spalten fehlten danach.
+  G := SampleGrid;
+  G.ColWidths[0] := 5;
+  G.SortBy(1, False);
+  S := G.SaveLayout;
+  G.SortBy(-1);
+  G.ColWidths[0] := 80;
+  G.LoadLayout(S);
+  CheckEquals(5, G.ColWidths[0], 'schmale Spalte wieder da');
+  CheckEquals(1, G.SortColumn, 'Rest des Layouts geladen');
+end;
+
+procedure TGridTests.FixedRowsBeforeRowCountInDfm;
+var
+  G, G2: TPPGGrid;
+  M: TMemoryStream;
+begin
+  // Audit 08.10.2026: FixedRows wurde vor RowCount gestreamt und beim Laden
+  // gegen RowCount = 5 auf 4 geklemmt.
+  G := LoadDfm(
+    'object Grid1: TPPGGrid'#13#10 +
+    '  FixedRows = 6'#13#10 +
+    '  RowCount = 20'#13#10 +
+    'end') as TPPGGrid;
+  try
+    CheckEquals(20, G.RowCount);
+    CheckEquals(6, G.FixedRows, 'alte Reihenfolge in der DFM');
+    M := TMemoryStream.Create;
+    try
+      M.WriteComponent(G);
+      M.Position := 0;
+      G2 := TPPGGrid(M.ReadComponent(nil));
+      try
+        CheckEquals(20, G2.RowCount);
+        CheckEquals(6, G2.FixedRows, 'neue Reihenfolge');
+      finally
+        G2.Free;
+      end;
+    finally
+      M.Free;
+    end;
+  finally
+    G.Free;
   end;
 end;
 

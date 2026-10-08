@@ -61,6 +61,7 @@ type
     FDropRow: Integer;        // Einfuegen vor dieser Zeile (0..Count), -1 = keine
     FMouseSelecting: Boolean;
     FSelChanges: Cardinal;
+    FStructChanges: Cardinal; // Einfuegen/Loeschen/Neuaufbau der Eintraege
     FUserLevel: Integer;
     FUserStartChanges: Cardinal;
     FLastFocus: Integer;
@@ -70,6 +71,7 @@ type
     FListStyles: TPPGListStyles;
     FOnCustomDrawItem: TPPGCustomDrawItemEvent;
     FDrawCanvas: TCanvas;
+    procedure ReleaseDownIndex;
     procedure SetListStyles(const Value: TPPGListStyles);
     procedure ListStylesChanged(Sender: TObject);
     procedure SetItemHeight(const Value: Integer);
@@ -389,8 +391,21 @@ begin
     ItemsReset;
 end;
 
+procedure TPPGCustomItemList.ReleaseDownIndex;
+begin
+  CancelDrag;
+  FDownIndex := -1;
+end;
+
 procedure TPPGCustomItemList.ItemsInserted(Index, ACount: Integer);
 begin
+  // Audit 08.10.2026: Der gedrueckte bzw. gezogene Eintrag behaelt nach
+  // Einfuegen/Loeschen nicht seinen Index (z. B. OnClick ruft Items.Clear,
+  // der Anwender zieht weiter -> FItems.Move wirft). Index nachfuehren bzw.
+  // das Ziehen abbrechen.
+  Inc(FStructChanges);
+  if (FDownIndex >= 0) and (FDownIndex >= Index) then
+    Inc(FDownIndex, ACount);
   FSelection.ItemsInserted(Index, ACount);
   if FHotIndex >= Index then
     FHotIndex := -1;
@@ -400,6 +415,11 @@ end;
 
 procedure TPPGCustomItemList.ItemsDeleted(Index, ACount: Integer);
 begin
+  Inc(FStructChanges);
+  if FDownIndex >= Index + ACount then
+    Dec(FDownIndex, ACount)
+  else if FDownIndex >= Index then
+    ReleaseDownIndex; // der gezogene Eintrag ist weg
   FSelection.ItemsDeleted(Index, ACount);
   if FHotIndex >= Index then
     FHotIndex := -1;
@@ -409,6 +429,12 @@ end;
 
 procedure TPPGCustomItemList.ItemsReset;
 begin
+  // Neu aufgebaut (Clear, Neuladen, Baum auf-/zuklappen): Ein Index
+  // ausserhalb der Liste ist sicher ungueltig. Innerhalb bleibt er, damit
+  // z. B. AutoExpand beim Klick das Ziehen desselben Knotens nicht abbricht.
+  Inc(FStructChanges);
+  if FDownIndex >= ItemCount then
+    ReleaseDownIndex;
   FSelection.Count := ItemCount;
   FHotIndex := -1;
   InvalidateLayout;
@@ -1205,6 +1231,7 @@ procedure TPPGCustomItemList.ContentMouseDown(Button: TMouseButton; Shift: TShif
   X, Y: Integer);
 var
   I: Integer;
+  Changes: Cardinal;
 begin
   // CanFocus allein genuegt nicht (unsichtbarer Vorfahr): Fenster pruefen
   if (Button = mbLeft) and CanFocus and not Focused and HandleAllocated and
@@ -1230,7 +1257,12 @@ begin
   end;
   BeginUserAction;
   try
+    Changes := FStructChanges;
     if ItemMouseDown(I, Shift, X, Y) then
+      Exit;
+    // ItemMouseDown kann Anwender-Code ausgeloest haben (CheckListBox:
+    // OnClickCheck), der die Eintraege aendert: I gilt dann nicht mehr
+    if (Changes <> FStructChanges) or (I >= ItemCount) then
       Exit;
     if not CanSelectItem(I) then
       Exit;
@@ -1365,19 +1397,26 @@ function TPPGCustomItemList.DoDropAt(FromIndex, TargetRow: Integer; Inside: Bool
 var
   Target: Integer;
   Allow: Boolean;
+  Changes: Cardinal;
 begin
   Result := False;
   if Inside then
     Exit; // Listen kennen kein "hinein"
+  if (FromIndex < 0) or (FromIndex >= ItemCount) or (TargetRow < 0) or (TargetRow > ItemCount) then
+    Exit;
   // Einfuegen vor TargetRow -> Endposition des verschobenen Eintrags
   Target := TargetRow;
   if Target > FromIndex then
     Dec(Target);
   if Target = FromIndex then
     Exit;
+  Changes := FStructChanges;
   Allow := True;
   if Assigned(FOnReorder) then
     FOnReorder(Self, FromIndex, Target, Allow);
+  // OnReorder kann die Eintraege geaendert haben
+  if Changes <> FStructChanges then
+    Exit;
   if Allow and DoReorder(FromIndex, Target) then
   begin
     Result := True;

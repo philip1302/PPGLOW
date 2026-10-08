@@ -98,6 +98,68 @@ $Renames = @{
   'TSearchBox'   = @{ 'OnInvokeSearch' = 'OnSearch' }
 }
 
+# VCL-Vorgaben, die bei PPGlow anders sind. Die IDE schreibt Vorgabewerte
+# nicht in die DFM; fehlt eine dieser Properties, gilt in der VCL der Wert
+# hier, in PPGlow aber die PPGlow-Vorgabe. Damit sich das Verhalten nicht
+# still aendert, schreibt das Skript den VCL-Wert ausdruecklich hinein.
+# (Docs\Migration.md, Abschnitt "Abweichende Vorgaben")
+$VclDefaults = @{
+  'TTreeView'      = [ordered]@{ 'ShowLines' = 'True'; 'RowSelect' = 'False'; 'HideSelection' = 'True' }
+  'TTabControl'    = [ordered]@{ 'HotTrack' = 'False' }
+  'TPageControl'   = [ordered]@{ 'HotTrack' = 'False' }
+  'TProgressBar'   = [ordered]@{ 'Smooth' = 'False' }
+  'TRadioButton'   = [ordered]@{ 'TabStop' = 'False' }
+  'TLinkLabel'     = [ordered]@{ 'TabStop' = 'False' }
+  'TMonthCalendar' = [ordered]@{ 'TabStop' = 'False' }
+  'TSplitter'      = [ordered]@{ 'ResizeStyle' = 'rsPattern' }
+  'TTabSheet'      = [ordered]@{ 'ImageIndex' = '0' }
+}
+
+# Werte, die bei PPGlow anders heissen: Klasse -> Property -> alt -> neu
+# ('' = entfernen und melden)
+$ValueMap = @{
+  'TButton' = @{ 'Style' = @{ 'bsPushButton' = 'pbsPushButton'; 'bsSplitButton' = 'pbsSplitButton'; 'bsCommandLink' = '' } }
+}
+
+# DB-Grid-Optionen ohne Wirkung in TPPGDBGrid (werden gemeldet)
+$DBGridNoEffect = @('dgAlwaysShowEditor', 'dgAlwaysShowSelection', 'dgThumbTracking', 'dgMultiSelect')
+
+# --- Dateien mit ihrer Kodierung lesen und schreiben -------------------------
+# Kundenquellen sind oft ANSI (cp1252). Ohne Angabe wuerde .NET sie als UTF-8
+# lesen und Umlaute als U+FFFD zurueckschreiben.
+
+function Read-SourceFile([string]$File) {
+  $bytes = [IO.File]::ReadAllBytes($File)
+  if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+    $enc = New-Object System.Text.UTF8Encoding($true)
+    return @{ Text = $enc.GetString($bytes, 3, $bytes.Length - 3); Encoding = $enc }
+  }
+  if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+    $enc = New-Object System.Text.UnicodeEncoding($false, $true)
+    return @{ Text = $enc.GetString($bytes, 2, $bytes.Length - 2); Encoding = $enc }
+  }
+  # Ohne BOM: gueltiges UTF-8 bleibt UTF-8, sonst ANSI-Codepage des Systems
+  $strict = New-Object System.Text.UTF8Encoding($false, $true)
+  try {
+    return @{ Text = $strict.GetString($bytes); Encoding = (New-Object System.Text.UTF8Encoding($false)) }
+  }
+  catch [System.Text.DecoderFallbackException] {
+    $enc = [System.Text.Encoding]::Default
+    return @{ Text = $enc.GetString($bytes); Encoding = $enc }
+  }
+}
+
+function Write-SourceFile([string]$File, [string]$Text, $Encoding) {
+  # WriteAllText schreibt das BOM, wenn die Kodierung eines vorsieht
+  [IO.File]::WriteAllText($File, $Text, $Encoding)
+}
+
+function Backup-File([string]$File) {
+  # Nie ueberschreiben: beim zweiten Lauf waere sonst das Original weg
+  $bak = $File + '.bak'
+  if (-not (Test-Path $bak)) { Copy-Item $File $bak }
+}
+
 # Eigenschaften, die TControl/TComponent immer veroeffentlichen bzw. die IDE schreibt
 $AlwaysAllowed = @('Left', 'Top', 'Width', 'Height', 'Tag', 'Hint', 'Cursor', 'HelpType',
   'HelpKeyword', 'HelpContext', 'Margins', 'AlignWithMargins', 'CustomHint', 'ExplicitLeft',
@@ -182,8 +244,26 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
     $report.Add("$File : binaere DFM - zuerst in der IDE als Text speichern (uebersprungen)")
     return $null
   }
-  $lines = [IO.File]::ReadAllLines($File)
+  $src = Read-SourceFile $File
+  $lines = [regex]::Split($src.Text, "`r?`n")
+  if ($lines.Count -gt 1 -and $lines[$lines.Count - 1] -eq '') { $lines = $lines[0..($lines.Count - 2)] }
   $out = New-Object System.Collections.Generic.List[string]
+
+  # Abweichende VCL-Vorgaben eines Objekts ausdruecklich schreiben (vor dem
+  # ersten Kind-Objekt bzw. vor "end"; Properties stehen in der DFM vor Kindern)
+  function Add-VclDefaults($e) {
+    if ($null -eq $e -or $e.Done) { return }
+    $e.Done = $true
+    if ($null -eq $e.Allowed -or -not $VclDefaults.ContainsKey($e.Old)) { return }
+    foreach ($p in $VclDefaults[$e.Old].Keys) {
+      if (-not $e.Seen.Contains($p)) {
+        $out.Add((' ' * ($e.Indent + 2)) + "$p = $($VclDefaults[$e.Old][$p])")
+        $report.Add("$File :   $($e.Name).$p = $($VclDefaults[$e.Old][$p]) (VCL-Vorgabe, bei $($e.New) anders)")
+        $script:changedByDefaults = $true
+      }
+    }
+  }
+  $script:changedByDefaults = $false
   # Stapel der Objekte: alte Klasse, neue Klasse, erlaubte Properties
   $stack = New-Object System.Collections.Generic.List[object]
   $usedUnits = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -198,7 +278,9 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
 
     if ($t -match '^(object|inherited|inline)\s+(\w+)\s*:\s*(\w+)(.*)$') {
       $kw = $Matches[1]; $name = $Matches[2]; $cls = $Matches[3]; $rest = $Matches[4]
-      $entry = @{ Old = $cls; New = $cls; Allowed = $null; Name = $name }
+      if ($stack.Count -gt 0) { Add-VclDefaults $stack[$stack.Count - 1] }
+      $entry = @{ Old = $cls; New = $cls; Allowed = $null; Name = $name; Indent = $indent; Done = $false
+        Seen = (New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)) }
       if ($ClassMap.Contains($cls) -and (($Only.Count -eq 0) -or ($Only -contains $cls))) {
         $new = $ClassMap[$cls][0]
         [void]$usedUnits.Add($ClassMap[$cls][1])
@@ -214,13 +296,19 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
       continue
     }
     if ($t -eq 'end' -and $null -eq $collection) {
-      if ($stack.Count -gt 0) { $stack.RemoveAt($stack.Count - 1) }
+      if ($stack.Count -gt 0) {
+        Add-VclDefaults $stack[$stack.Count - 1]
+        $stack.RemoveAt($stack.Count - 1)
+      }
       $out.Add($line)
       continue
     }
 
     $cur = $null
     if ($stack.Count -gt 0) { $cur = $stack[$stack.Count - 1] }
+    if ($null -ne $cur -and $null -eq $collection -and $t -match '^([\w.]+)\s*=') {
+      [void]$cur.Seen.Add(($Matches[1] -split '\.')[0])
+    }
 
     # Collection-Elemente (item ... end) einer migrierten Klasse
     if ($null -ne $collection) {
@@ -283,6 +371,28 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         $top = ($prop -split '\.')[0]
         $changed = $true
       }
+      # Werte mit anderem Namen (z. B. TButton.Style bsSplitButton)
+      if ($ValueMap.ContainsKey($cur.Old) -and $ValueMap[$cur.Old].ContainsKey($prop)) {
+        $mapped = $ValueMap[$cur.Old][$prop][$value.Trim()]
+        if ($null -ne $mapped) {
+          if ($mapped -eq '') {
+            $report.Add("$File :   $($cur.Name).$prop = $($value.Trim()) gibt es bei $($cur.New) nicht (entfernt)")
+            $changed = $true
+            continue
+          }
+          $line = (' ' * $indent) + "$prop = $mapped"
+          $changed = $true
+        }
+      }
+      # DB-Grid-Optionen ohne Wirkung melden (bleiben stehen)
+      if ($cur.Old -eq 'TDBGrid' -and $prop -eq 'Options') {
+        $optText = $value
+        $k = $i
+        while ($optText -notmatch '\]' -and ($k + 1) -lt $lines.Count) { $k++; $optText += $lines[$k] }
+        foreach ($o in $DBGridNoEffect) {
+          if ($optText -match "\b$o\b") { $report.Add("$File :   $($cur.Name).Options: $o wirkt bei TPPGDBGrid nicht") }
+        }
+      }
       if ($cur.Old -eq 'TDateTimePicker' -and $prop -eq 'Kind' -and $value.Trim() -eq 'dtkTime') {
         $report.Add("$File :   $($cur.Name) ist eine Zeitauswahl - TPPGTimePicker verwenden (von Hand)")
       }
@@ -320,13 +430,13 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
     }
     $out.Add($line)
   }
-  return @{ Lines = $out; Units = $usedUnits; Changed = $changed }
+  return @{ Lines = $out; Units = $usedUnits; Changed = ($changed -or $script:changedByDefaults); Encoding = $src.Encoding }
 }
 
 # --- PAS ---------------------------------------------------------------------
 
 function Convert-Pas([string]$File, $Units, [hashtable]$Handlers) {
-  $text = [IO.File]::ReadAllText($File)
+  $text = (Read-SourceFile $File).Text
   $orig = $text
   foreach ($cls in $ClassMap.Keys) {
     if (($Only.Count -gt 0) -and ($Only -notcontains $cls)) { continue }
@@ -403,11 +513,12 @@ foreach ($dfm in $dfms) {
   if (Test-Path $pas) { $newPas = Convert-Pas $pas $res.Units $handlers }
   if (-not $WhatIf) {
     if (-not $NoBackup) {
-      Copy-Item $dfm.FullName ($dfm.FullName + '.bak') -Force
-      if ($null -ne $newPas) { Copy-Item $pas ($pas + '.bak') -Force }
+      Backup-File $dfm.FullName
+      if ($null -ne $newPas) { Backup-File $pas }
     }
-    [IO.File]::WriteAllText($dfm.FullName, (($res.Lines -join "`r`n") + "`r`n"))
-    if ($null -ne $newPas) { [IO.File]::WriteAllText($pas, $newPas) }
+    # In der Kodierung der Quelle zurueckschreiben (ANSI bleibt ANSI)
+    Write-SourceFile $dfm.FullName (($res.Lines -join "`r`n") + "`r`n") $res.Encoding
+    if ($null -ne $newPas) { Write-SourceFile $pas $newPas (Read-SourceFile $pas).Encoding }
   }
 }
 

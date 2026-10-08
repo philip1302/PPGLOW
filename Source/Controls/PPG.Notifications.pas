@@ -118,11 +118,15 @@ type
     FRespectQuietHours: Boolean;
     FPoll: TPPGAnimation;
     FWnd: HWND;
+    // Beendete Toasts, deren Freigabe gepostet ist. Der Destruktor gibt sie
+    // selbst frei: DeallocateHWnd verwirft die ausstehenden Nachrichten.
+    FReleasing: TList<TPPGToast>;
     FOnAction: TPPGToastActionEvent;
     FOnToastClick: TPPGToastEvent;
     FOnClose: TPPGToastCloseEvent;
     FOnShow: TPPGToastEvent;
     procedure SetMaxVisible(const Value: Integer);
+    procedure ReleaseLater(Toast: TPPGToast);
     procedure SetToastWidth(const Value: Integer);
     procedure SetDuration(const Value: Integer);
     procedure SetStyleManager(const Value: TPPGStyleManager);
@@ -660,6 +664,7 @@ begin
   inherited Create(AOwner);
   FToasts := TList<TPPGToast>.Create;
   FQueue := TList<TPPGToast>.Create;
+  FReleasing := TList<TPPGToast>.Create;
   FDuration := 5000;
   FMaxVisible := 3;
   FToastWidth := 360;
@@ -689,6 +694,10 @@ begin
       T.FCenter := nil;
       T.Free;
     end;
+  if FReleasing <> nil then
+    for T in FReleasing do
+      T.Free;
+  FreeAndNil(FReleasing);
   FreeAndNil(FToasts);
   FreeAndNil(FQueue);
   if FWnd <> 0 then
@@ -969,12 +978,11 @@ begin
   if I >= 0 then
   begin
     FQueue.Delete(I);
+    // Zustand vor dem Anwender-Ereignis: die Freigabe steht auch dann fest,
+    // wenn OnClose wirft
+    ReleaseLater(Toast);
     if Assigned(FOnClose) then
       FOnClose(Self, Toast, Toast.FCloseReason);
-    Toast.FCenter := nil;
-    if FWnd = 0 then
-      FWnd := AllocateHWnd(WndMethod);
-    PostMessage(FWnd, MsgReleaseToast, 0, LPARAM(Toast));
     Exit;
   end;
   // Die anderen ruecken nach; wartende kommen dazu
@@ -992,19 +1000,33 @@ begin
   FToasts.Delete(I);
   if Toast.HandleAllocated then
     ShowWindow(Toast.Handle, SW_HIDE);
+  // Freigabe ausserhalb des Animator-Takts bzw. des Mausereignisses; vor
+  // dem Anwender-Ereignis festgelegt (wirft OnClose, bleibt kein Leck)
+  ReleaseLater(Toast);
   if Assigned(FOnClose) then
     FOnClose(Self, Toast, Toast.FCloseReason);
-  // Freigabe ausserhalb des Animator-Takts bzw. des Mausereignisses
+end;
+
+procedure TPPGNotificationCenter.ReleaseLater(Toast: TPPGToast);
+begin
   Toast.FCenter := nil;
+  FReleasing.Add(Toast);
   if FWnd = 0 then
     FWnd := AllocateHWnd(WndMethod);
   PostMessage(FWnd, MsgReleaseToast, 0, LPARAM(Toast));
 end;
 
 procedure TPPGNotificationCenter.WndMethod(var Msg: TMessage);
+var
+  T: TPPGToast;
 begin
   if Msg.Msg = MsgReleaseToast then
-    TObject(Msg.LParam).Free
+  begin
+    T := TPPGToast(Msg.LParam);
+    // Nur freigeben, was noch aussteht (sonst doppelt)
+    if FReleasing.Remove(T) >= 0 then
+      T.Free;
+  end
   else
     Msg.Result := DefWindowProc(FWnd, Msg.Msg, Msg.WParam, Msg.LParam);
 end;

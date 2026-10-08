@@ -92,11 +92,22 @@ function PPGCheckRange(Sender: TPersistent; const PropName: string;
 /// True, wenn Sender (oder sein Besitzer) gerade aus einem Stream geladen wird.
 function PPGIsLoading(Sender: TPersistent): Boolean;
 
+/// True fuer endliche Zahlen (weder NaN noch +-Unendlich).
+function PPGIsFinite(const Value: Double): Boolean;
+/// Wirft EPPGPropertyError, wenn Value nicht endlich ist (NaN, +-Unendlich).
+/// Solche Werte liessen spaeter Round/Trunc in Layout oder Paint scheitern.
+procedure PPGCheckFinite(Sender: TPersistent; const PropName: string; const Value: Double);
+/// Prueft einen Gleitkomma-Property-Wert wie PPGCheckRange: Ist Value nicht
+/// endlich oder Valid False, wirft es zur Laufzeit EPPGPropertyError; beim
+/// DFM-Laden wird protokolliert und Fallback geliefert (Formular oeffnet sich).
+function PPGCheckFloat(Sender: TPersistent; const PropName: string; const Value: Double;
+  Valid: Boolean; const Fallback: Double): Double;
+
 implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, Winapi.Windows, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler;
+  System.SysUtils, System.Math, Winapi.Windows, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler;
 
 type
   TPersistentAccess = class(TPersistent);
@@ -192,6 +203,29 @@ begin
     P := TPersistentAccess(P).GetOwner;
     Inc(Depth);
   end;
+end;
+
+function PPGIsFinite(const Value: Double): Boolean;
+begin
+  Result := not IsNan(Value) and not IsInfinite(Value);
+end;
+
+procedure PPGCheckFinite(Sender: TPersistent; const PropName: string; const Value: Double);
+begin
+  if not PPGIsFinite(Value) then
+    raise EPPGPropertyError.CreateInvalid(Sender, PropName, FloatToStr(Value));
+end;
+
+function PPGCheckFloat(Sender: TPersistent; const PropName: string; const Value: Double;
+  Valid: Boolean; const Fallback: Double): Double;
+begin
+  if Valid and PPGIsFinite(Value) then
+    Exit(Value);
+  if not PPGIsLoading(Sender) then
+    raise EPPGPropertyError.CreateInvalid(Sender, PropName, FloatToStr(Value));
+  Result := Fallback;
+  TPPGErrorHandler.LogWarning(Sender, Format(PPGStr(@SPPGInvalidPropertyValue),
+    [FloatToStr(Value), PPGDisplayName(Sender), PropName]));
 end;
 
 function PPGCheckRange(Sender: TPersistent; const PropName: string;

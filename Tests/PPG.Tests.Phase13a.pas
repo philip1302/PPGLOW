@@ -387,6 +387,7 @@ begin
   CheckTrue(TPPGCellPainter.IsCheckedText('1'));
   CheckTrue(TPPGCellPainter.IsCheckedText('true'));
   CheckTrue(TPPGCellPainter.IsCheckedText('Ja'));
+  CheckTrue(TPPGCellPainter.IsCheckedText('Yes'), 'Audit 08.10.2026: nicht nur deutsch');
   CheckFalse(TPPGCellPainter.IsCheckedText('0'));
   CheckFalse(TPPGCellPainter.IsCheckedText(''));
   CheckTrue(TPPGCellPainter.TextFlags(taRightJustify) and DT_RIGHT <> 0);

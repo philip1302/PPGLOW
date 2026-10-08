@@ -96,7 +96,7 @@ end;
 
 procedure TPPGLookupListLink.DataSetChanged;
 begin
-  if FOwner <> nil then
+  if (FOwner <> nil) and not PPGDBReading then
     FOwner.BuildList;
 end;
 
@@ -195,6 +195,10 @@ var
 begin
   if FBuilding or (csLoading in ComponentState) or (FListLink = nil) then
     Exit;
+  // Offene Bearbeitung der Listenmenge: First wuerde sie still speichern.
+  // Die alte Liste bleibt; nach Post/Cancel kommt DataSetChanged.
+  if FListLink.Active and (FListLink.DataSet.State in dsEditModes) then
+    Exit;
   FBuilding := True;
   try
     SetLength(FKeys, 0);
@@ -217,6 +221,7 @@ begin
           Fields.Add(DS.FindField(Trim(Names[I])));
       if Fields.Count = 0 then
         Exit;
+      PPGDBBeginRead;
       DS.DisableControls;
       try
         B := DS.Bookmark;
@@ -246,6 +251,7 @@ begin
         end;
       finally
         DS.EnableControls;
+        PPGDBEndRead;
       end;
     finally
       Names.Free;

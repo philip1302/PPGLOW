@@ -142,7 +142,8 @@ type
 
   /// TStrings als Quelle: Text = Zeile, Data = Objects[]. Aenderungen kommen
   /// nur an, wenn die Liste ein TStringList ist (OnChange) oder der Besitzer
-  /// NotifyChanged aufruft.
+  /// NotifyChanged aufruft. Die Quelle haelt die Liste nicht: Wird sie vor
+  /// der letzten Interface-Referenz freigegeben, vorher Detach aufrufen.
   TPPGStringsSource = class(TPPGItemSourceBase)
   private
     FStrings: TStrings;
@@ -151,6 +152,9 @@ type
   public
     constructor Create(AStrings: TStrings);
     destructor Destroy; override;
+    /// Loest die Quelle von der Liste (alter OnChange zurueck); danach
+    /// Count = 0. Noetig, wenn die Liste vor der Quelle freigegeben wird.
+    procedure Detach;
     procedure NotifyChanged;
     function Count: Integer; override;
     procedure GetItem(Index: Integer; var Data: TPPGItemData); override;
@@ -489,10 +493,17 @@ end;
 
 destructor TPPGStringsSource.Destroy;
 begin
+  Detach;
+  inherited Destroy;
+end;
+
+procedure TPPGStringsSource.Detach;
+begin
   if (FStrings is TStringList) and
     (TMethod(TStringList(FStrings).OnChange).Data = Self) then
     TStringList(FStrings).OnChange := FOldOnChange;
-  inherited Destroy;
+  FStrings := nil;
+  FOldOnChange := nil;
 end;
 
 procedure TPPGStringsSource.StringsChanged(Sender: TObject);
@@ -517,6 +528,8 @@ end;
 
 procedure TPPGStringsSource.GetItem(Index: Integer; var Data: TPPGItemData);
 begin
+  if FStrings = nil then
+    Exit;
   Data.Text := FStrings[Index];
   Data.Data := FStrings.Objects[Index];
 end;

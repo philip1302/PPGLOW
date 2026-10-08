@@ -10,7 +10,7 @@ uses
   TestFramework, Winapi.Windows, System.Classes, System.SysUtils, System.Types,
   System.Variants, Vcl.Graphics, Vcl.Forms, Vcl.Printers, Vcl.Controls,
   PPG.Grid, PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.Print,
-  PPG.Tests.Controls;
+  PPG.Tests.Controls, PPG.Exceptions;
 
 type
   /// Virtuelle Quelle, die zaehlt, welche Zeilen gelesen werden.
@@ -48,6 +48,8 @@ type
     procedure PreviewForm;
     procedure PageSetupApplies;
     procedure DfmRoundTrip;
+    procedure MarginsClampWhileLoading;
+    procedure FreedSourceComponentIsDropped;
   end;
 
 implementation
@@ -429,6 +431,53 @@ begin
     P2.Free;
     M.Free;
   end;
+end;
+
+procedure TGridPrintTests.MarginsClampWhileLoading;
+var
+  Src, Bin: TStringStream;
+  P2: TPPGGridPrinter;
+begin
+  // Audit 08.10.2026: TPPGPrintMargins hatte keinen Owner; PPGCheckRange
+  // erkannte das DFM-Laden nicht und warf, das Formular liess sich nicht oeffnen.
+  Src := TStringStream.Create('object Prn: TPPGGridPrinter'#13#10'  Margins.Left = 500'#13#10'end'#13#10);
+  Bin := TStringStream.Create('');
+  P2 := TPPGGridPrinter.Create(nil);
+  try
+    ObjectTextToBinary(Src, Bin);
+    Bin.Position := 0;
+    Bin.ReadComponent(P2);
+    CheckEquals(100, P2.Margins.Left, 'beim Laden geklemmt');
+  finally
+    P2.Free;
+    Bin.Free;
+    Src.Free;
+  end;
+  // Zur Laufzeit bleibt es bei der Exception
+  try
+    FPrn.Margins.Left := 500;
+    Fail('Exception erwartet');
+  except
+    on E: EPPGPropertyError do
+      CheckEquals(15, FPrn.Margins.Left, 'unveraendert');
+  end;
+end;
+
+procedure TGridPrintTests.FreedSourceComponentIsDropped;
+var
+  G: TPPGGrid;
+  S: IPPGTableSource;
+begin
+  // Audit 08.10.2026: Source hielt ein Grid als rohe Interface-Referenz;
+  // nach dessen Freigabe trafen Druck und _Release freigegebenen Speicher.
+  G := TPPGGrid.Create(nil);
+  Supports(G, IPPGTableSource, S);
+  FPrn.SetSource(S);
+  S := nil;
+  CheckNotNull(FPrn.Source);
+  G.Free;
+  CheckNull(FPrn.Source, 'Quelle nach Freigabe weg');
+  CheckEquals(1, FPrn.PageCount(TPPGPrintDevice.A4(300, False)), 'leere Seite statt Zugriff auf Freigegebenes');
 end;
 
 initialization

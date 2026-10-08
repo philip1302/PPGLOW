@@ -45,6 +45,7 @@ type
     procedure CloseAllAndFreeCenter;
     procedure PaintAllPresetsAndAccessibility;
     procedure NoHandleOrMemoryLeaks;
+    procedure FreeCenterReleasesClosedToasts;
   end;
 
 implementation
@@ -54,6 +55,21 @@ uses
 
 type
   TToastAccess = class(TPPGToast);
+
+  // Zaehlt freigegebene Komponenten (FreeNotification)
+  TFreeProbe = class(TComponent)
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    Freed: Integer;
+  end;
+
+procedure TFreeProbe.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if Operation = opRemove then
+    Inc(Freed);
+end;
 
 const
   ReasonNames: array[TPPGToastCloseReason] of string = ('timeout', 'user', 'action', 'click', 'code');
@@ -328,6 +344,34 @@ begin
   C.Free;
   Pump(50);
   CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TNotificationTests.FreeCenterReleasesClosedToasts;
+var
+  C: TPPGNotificationCenter;
+  T1, T2: TPPGToast;
+  P: TFreeProbe;
+begin
+  // Audit 08.10.2026: Beendete Toasts wurden nur per PostMessage zur
+  // Freigabe vorgemerkt; DeallocateHWnd im Destruktor verwarf die Nachricht.
+  P := TFreeProbe.Create(nil);
+  try
+    C := NewCenter;
+    C.MaxVisible := 1;
+    T1 := C.Show('A', '1', psInformational, 0);
+    T2 := C.Show('B', '2', psInformational, 0);
+    T1.FreeNotification(P);
+    T2.FreeNotification(P);
+    T2.Close(tcrUser); // wartender Toast: Freigabe gepostet
+    CheckEquals(0, P.Freed, 'noch nicht freigegeben');
+    C.OnClose := nil;
+    C.Free; // ohne Nachrichtenschleife dazwischen
+    CheckEquals(2, P.Freed, 'beide Toasts freigegeben');
+    Pump(50);
+    CheckEquals(0, FErrors.Count, FErrors.Text);
+  finally
+    P.Free;
+  end;
 end;
 
 procedure TNotificationTests.PaintAllPresetsAndAccessibility;

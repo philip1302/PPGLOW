@@ -282,8 +282,43 @@ begin
   end;
 end;
 
+/// Ungefaehre Schrittweite in Tagen (obere Schranke).
+function StepDays(const S: TPPGDateScale): Double;
+var
+  N: Integer;
+begin
+  N := System.Math.Max(S.Count, 1);
+  case S.DateUnit of
+    duSecond: Result := N / 86400;
+    duMinute: Result := N / 1440;
+    duHour: Result := N / 24;
+    duDay: Result := N;
+    duWeek: Result := 7 * N;
+    duMonth: Result := 31 * N;
+  else
+    Result := 366 * N;
+  end;
+end;
+
+/// Liegt V im Bereich, den TDateTime-Routinen kodieren koennen (Jahr 1..9999)?
+function InDateRange(V: Double): Boolean;
+begin
+  Result := IsUsable(V) and (V >= MinDateTime) and (V <= MaxDateTime);
+end;
+
 function PPGNextDateTick(const S: TPPGDateScale; Value: TDateTime): TDateTime;
 begin
+  // Audit 08.10.2026: Ausserhalb von Jahr 1..9999 (z. B. Unix-Zeitstempel als
+  // Datum) warfen IncYear/IncMonth EConvertError in Layout und Paint. Dort
+  // nur noch rechnen, nicht kodieren; die Schleifen enden trotzdem.
+  if not InDateRange(Value) or not InDateRange(Value + StepDays(S)) then
+  begin
+    if IsUsable(Value) then
+      Result := Value + StepDays(S)
+    else
+      Result := MaxDateTime + 1;
+    Exit;
+  end;
   case S.DateUnit of
     duSecond: Result := IncSecond(Value, S.Count);
     duMinute: Result := IncMinute(Value, S.Count);
@@ -303,6 +338,13 @@ var
 begin
   if MaxTicks < 2 then
     MaxTicks := 2;
+  // Auf den kodierbaren Bereich begrenzen (FloorToUnit kodiert)
+  if not IsUsable(AMin) then
+    AMin := 0;
+  if not IsUsable(AMax) then
+    AMax := AMin;
+  AMin := System.Math.Min(System.Math.Max(AMin, MinDateTime), MaxDateTime);
+  AMax := System.Math.Min(System.Math.Max(AMax, MinDateTime), MaxDateTime);
   if AMax < AMin then
   begin
     T := AMin;
@@ -342,16 +384,28 @@ end;
 function PPGDateTicks(const S: TPPGDateScale): TArray<TDateTime>;
 var
   T: TDateTime;
-  N: Integer;
+  N, Guard: Integer;
 begin
   SetLength(Result, 0);
   N := 0;
   T := S.Min;
-  while (T <= S.Max + 1E-7) and (N < 10000) do
+  if not IsUsable(T) or not IsUsable(S.Max) then
+    Exit;
+  if T < MinDateTime then
+    T := MinDateTime;
+  Guard := 0;
+  while (T <= S.Max + 1E-7) and (N < 10000) and (Guard < 100000) do
   begin
-    SetLength(Result, N + 1);
-    Result[N] := T;
-    Inc(N);
+    Inc(Guard);
+    // Nur beschriftbare Zeitpunkte liefern (FormatDateTime kodiert)
+    if InDateRange(T) then
+    begin
+      SetLength(Result, N + 1);
+      Result[N] := T;
+      Inc(N);
+    end
+    else if T > MaxDateTime then
+      Break;
     T := PPGNextDateTick(S, T);
   end;
 end;
@@ -381,11 +435,13 @@ end;
 function PPGFormatDateTick(Value: TDateTime; const S: TPPGDateScale;
   const FS: TFormatSettings): string;
 begin
+  if not InDateRange(Value) then
+    Exit('');
   case S.DateUnit of
     duSecond: Result := FormatDateTime(FS.LongTimeFormat, Value, FS);
     duMinute, duHour: Result := FormatDateTime(FS.ShortTimeFormat, Value, FS);
     duDay, duWeek:
-      if YearOf(S.Min) = YearOf(S.Max) then
+      if InDateRange(S.Min) and InDateRange(S.Max) and (YearOf(S.Min) = YearOf(S.Max)) then
         Result := FormatDateTime(PPGStripYearFormat(FS.ShortDateFormat), Value, FS)
       else
         Result := FormatDateTime(FS.ShortDateFormat, Value, FS);

@@ -104,8 +104,11 @@ type
     constructor Create(Collection: TCollection); override;
     procedure Assign(Source: TPersistent); override;
   published
-    /// Wert von TPPGAppointment.ResourceId.
-    property Id: Integer read FId write SetId default 0;
+    /// Wert von TPPGAppointment.ResourceId. Neue Ressourcen (Collection-
+    /// Editor, Add) bekommen die naechste freie Nummer; beim Laden gilt der
+    /// gespeicherte Wert (fehlt er in alten DFMs, bleibt es 0). Ohne
+    /// default, damit auch 0 gespeichert wird.
+    property Id: Integer read FId write SetId;
     property Caption: string read FCaption write SetCaption;
     /// Farbe der Termine ohne Kategorie (clDefault = Akzent).
     property Color: TColor read FColor write SetColor default clDefault;
@@ -414,6 +417,7 @@ type
     function AppointmentColor(A: TPPGAppointment): TColor; virtual;
     { IPPGAppointmentsHost }
     procedure AppointmentsChanged;
+    procedure AppointmentRemoving(A: TPPGAppointment);
     { IPPGCalendarLink }
     function CalendarDateMarked(ADate: TDate): Boolean;
     procedure CalendarDateSelected(Sender: TObject; ADate: TDate);
@@ -820,8 +824,23 @@ end;
 { TPPGPlannerResource }
 
 constructor TPPGPlannerResource.Create(Collection: TCollection);
+var
+  I, MaxId: Integer;
+  Loading: Boolean;
 begin
   FColor := clDefault;
+  // Audit 08.10.2026: Vorher hatten alle neuen Ressourcen Id 0, dadurch
+  // funktionierten IndexOfId, ResourceId und GroupByResource nicht.
+  Loading := (Collection <> nil) and (Collection.Owner is TComponent) and
+    (csLoading in TComponent(Collection.Owner).ComponentState);
+  if (Collection <> nil) and not Loading then
+  begin
+    MaxId := 0;
+    for I := 0 to Collection.Count - 1 do
+      if TPPGPlannerResource(Collection.Items[I]).FId > MaxId then
+        MaxId := TPPGPlannerResource(Collection.Items[I]).FId;
+    FId := MaxId + 1;
+  end;
   inherited Create(Collection);
 end;
 
@@ -1101,8 +1120,14 @@ begin
 end;
 
 procedure TPPGCustomPlanner.SetDayCount(const Value: Integer);
+var
+  V: Integer;
 begin
-  FDayCount := PPGCheckRange(Self, 'DayCount', Value, 1, 31);
+  V := PPGCheckRange(Self, 'DayCount', Value, 1, 31);
+  // Gleicher Wert: kein RangeChanged (der DB-Planer laedt dabei neu)
+  if V = FDayCount then
+    Exit;
+  FDayCount := V;
   InvalidateLayout;
   RangeChanged;
 end;
@@ -1129,12 +1154,18 @@ end;
 procedure TPPGCustomPlanner.SetWorkStart(const Value: Integer);
 begin
   FWorkStart := PPGCheckRange(Self, 'WorkStart', Value, 0, MinsPerDay);
+  // Wie DayStartHour/DayEndHour: die Gegenseite folgt, damit nie
+  // WorkStart > WorkEnd gilt (beim Laden kommen beide nacheinander)
+  if FWorkEnd < FWorkStart then
+    FWorkEnd := FWorkStart;
   Invalidate;
 end;
 
 procedure TPPGCustomPlanner.SetWorkEnd(const Value: Integer);
 begin
   FWorkEnd := PPGCheckRange(Self, 'WorkEnd', Value, 0, MinsPerDay);
+  if FWorkStart > FWorkEnd then
+    FWorkStart := FWorkEnd;
   Invalidate;
 end;
 
@@ -1180,16 +1211,26 @@ begin
 end;
 
 procedure TPPGCustomPlanner.SetTimelineDays(const Value: Integer);
+var
+  V: Integer;
 begin
-  FTimelineDays := PPGCheckRange(Self, 'TimelineDays', Value, 1, 366);
+  V := PPGCheckRange(Self, 'TimelineDays', Value, 1, 366);
+  if V = FTimelineDays then
+    Exit;
+  FTimelineDays := V;
   InvalidateLayout;
   if FView = pvTimeline then
     RangeChanged;
 end;
 
 procedure TPPGCustomPlanner.SetAgendaDays(const Value: Integer);
+var
+  V: Integer;
 begin
-  FAgendaDays := PPGCheckRange(Self, 'AgendaDays', Value, 1, 366);
+  V := PPGCheckRange(Self, 'AgendaDays', Value, 1, 366);
+  if V = FAgendaDays then
+    Exit;
+  FAgendaDays := V;
   InvalidateLayout;
   if FView = pvAgenda then
     RangeChanged;
@@ -3320,6 +3361,34 @@ begin
   InvalidateLayout;
 end;
 
+procedure TPPGCustomPlanner.AppointmentRemoving(A: TPPGAppointment);
+begin
+  // Kommt vor der Freigabe von A (Delete, Free, Clear, DB-Reload). Danach
+  // darf kein Feld mehr auf A zeigen.
+  if csDestroying in ComponentState then
+    Exit;
+  if A = FEditAppt then
+  begin
+    FEditAppt := nil;
+    FEditNew := False;
+    if FEditor <> nil then
+      FEditor.Visible := False;
+  end;
+  if A = FSelAppt then
+  begin
+    FSelAppt := nil;
+    FSelItem := -1;
+  end;
+  if (FDrag in [pdMove, pdResizeStart, pdResizeEnd, pdPending]) and (FDragOcc.Appointment = A) then
+  begin
+    FDrag := pdNone;
+    StopAutoScroll;
+    MouseCapture := False;
+  end;
+  // Die Vorkommen in FItems zeigen ebenfalls auf A
+  FLayoutValid := False;
+end;
+
 { ---- Navigation ---- }
 
 procedure TPPGCustomPlanner.UserSetDate(D: TDate);
@@ -3488,6 +3557,7 @@ var
   A: TPPGAppointment;
   Occ: TPPGOccurrence;
   Allow: Boolean;
+  ResId: Integer;
 begin
   Result := False;
   EnsureLayout;
@@ -3500,8 +3570,11 @@ begin
   Allow := True;
   if Assigned(FOnDeleting) then
     FOnDeleting(Self, A, Allow);
-  if not Allow then
+  // OnDeleting kann den Termin selbst entfernt haben
+  if not Allow or (FSelAppt <> A) then
     Exit;
+  // Vor dem Loeschen sichern: DoDeleteAppointment gibt A frei
+  ResId := A.ResourceId;
   FSelItem := -1;
   FSelAppt := nil;
   if Occ.Recurring then
@@ -3512,7 +3585,7 @@ begin
   end
   else
     DoDeleteAppointment(A);
-  SetSlotSelection(Occ.Start, Occ.Start + CurrentSlotLength, Occ.Appointment.ResourceId, False);
+  SetSlotSelection(Occ.Start, Occ.Start + CurrentSlotLength, ResId, False);
   InvalidateLayout;
   NotifyAccessibility(EVENT_OBJECT_REORDER);
   SelectionChanged;

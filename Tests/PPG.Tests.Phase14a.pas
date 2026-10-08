@@ -8,7 +8,7 @@ interface
 uses
   TestFramework, Winapi.Windows, System.Classes, System.SysUtils, System.DateUtils,
   PPG.TimeZones, PPG.Planner.Recurrence, PPG.Planner.Layout, PPG.Planner.Model,
-  PPG.Planner.ICal;
+  PPG.Planner.ICal, PPG.Markup;
 
 type
   TTimeZoneTests = class(TTestCase)
@@ -68,6 +68,7 @@ type
     procedure ICalRoundTrip;
     procedure ICalImportZonesAndDuration;
     procedure ICalFolding;
+    procedure ICalImportIsPlainTextAndComplete;
   end;
 
 implementation
@@ -586,6 +587,24 @@ begin
     on E: EPPGError do
       CheckTrue(E.Message <> '');
   end;
+end;
+
+procedure TModelTests.ICalImportIsPlainTextAndComplete;
+const
+  Ics =
+    'BEGIN:VCALENDAR'#13#10'VERSION:2.0'#13#10 +
+    'BEGIN:VEVENT'#13#10'UID:a'#13#10'DTSTART:20260701T090000'#13#10 +
+    'DTEND:20260701T100000'#13#10'SUMMARY:A'#13#10 +
+    'DESCRIPTION:a<b>c</b> & d'#13#10'END:VEVENT'#13#10 +
+    // abgeschnittene Datei: kein END:VEVENT
+    'BEGIN:VEVENT'#13#10'UID:b'#13#10'SUMMARY:halb'#13#10;
+begin
+  // Audit 08.10.2026: DESCRIPTION landete unmaskiert im Markup-Body; ein
+  // Termin ohne END:VEVENT blieb als leerer Termin am 30.12.1899 stehen.
+  CheckEquals(1, PPGLoadICalText(FItems, Ics));
+  CheckEquals(1, FItems.Count, 'abgeschnittener Termin verworfen');
+  CheckEquals('a<b>c</b> & d', PPGStripMarkup(FItems[0].Body), 'Text bleibt Text');
+  CheckTrue(Pos('<b>', FItems[0].Body) = 0, 'kein Fett-Tag im Markup');
 end;
 
 procedure TModelTests.ICalFolding;

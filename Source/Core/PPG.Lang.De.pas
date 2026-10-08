@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 168;
+  PPGLangDeCount = 169;
 
 implementation
 
@@ -80,6 +80,8 @@ begin
     'Absteigend sortiert');
   PPGAddTranslation(PPGLangDeCode, @SPPGDBGridConfirmDelete,
     'Datensatz l'#$00F6'schen?');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDBEditPending,
+    'Die Datenmenge wird gerade an anderer Stelle bearbeitet. Diese Bearbeitung zuerst speichern oder verwerfen.');
   PPGAddTranslation(PPGLangDeCode, @SPPGAccJump,
     'Springen');
   PPGAddTranslation(PPGLangDeCode, @SPPGAccExpand,

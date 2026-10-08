@@ -23,6 +23,10 @@ type
     FAllowReorder: Boolean;
     FDraws: Integer;
     FDrawCanvasOk: Boolean;
+    // 1 = Items.Clear, 2 = ersten Eintrag loeschen (im OnClick/OnClickCheck)
+    FMutateOnClick: Integer;
+    FMutateOnCheck: Integer;
+    procedure Mutate(Sender: TObject; Mode: Integer);
     procedure SetUp; override;
     procedure CountClick(Sender: TObject);
     procedure CountCheck(Sender: TObject);
@@ -52,6 +56,7 @@ type
     procedure TypeAheadFindsItem;
     procedure ReorderByDragging;
     procedure ReorderCanBeRefused;
+    procedure ReorderAfterItemsChangeInClick;
     procedure VirtualMillionItems;
     procedure ItemsExGroupsAndDetail;
     procedure OwnerDrawGetsCanvas;
@@ -69,6 +74,7 @@ type
     procedure HeaderIsNotSelectable;
     procedure CheckAllRespectsDisabled;
     procedure StateMovesWithItems;
+    procedure ClickCheckClearingItems;
     procedure ItemsExStates;
     procedure LoadsTCheckListBoxDfm;
     procedure AccessibilityRoles;
@@ -82,6 +88,8 @@ type
     procedure FilterContains;
     procedure FilterWithoutMatchClosesList;
     procedure FilterClearedOnDropDown;
+    procedure SortedItemsExKeepsIndices;
+    procedure FilterFollowsItemChanges;
   end;
 
 implementation
@@ -158,16 +166,34 @@ begin
   FAllowReorder := False;
   FDraws := 0;
   FDrawCanvasOk := False;
+  FMutateOnClick := 0;
+  FMutateOnCheck := 0;
+end;
+
+procedure TListTestCase.Mutate(Sender: TObject; Mode: Integer);
+var
+  S: TStrings;
+begin
+  if Sender is TPPGCheckListBox then
+    S := TPPGCheckListBox(Sender).Items
+  else
+    S := TPPGListBox(Sender).Items;
+  case Mode of
+    1: S.Clear;
+    2: S.Delete(0);
+  end;
 end;
 
 procedure TListTestCase.CountClick(Sender: TObject);
 begin
   Inc(FClicks);
+  Mutate(Sender, FMutateOnClick);
 end;
 
 procedure TListTestCase.CountCheck(Sender: TObject);
 begin
   Inc(FChecks);
+  Mutate(Sender, FMutateOnCheck);
 end;
 
 procedure TListTestCase.DoReorder(Sender: TObject; FromIndex, ToIndex: Integer;
@@ -551,6 +577,47 @@ begin
   end;
 end;
 
+procedure TListBoxTests.ReorderAfterItemsChangeInClick;
+var
+  L: TPPGListBox;
+  P0, P2: TPoint;
+  R: TRect;
+begin
+  // Audit 08.10.2026: OnClick aendert die Eintraege, der Anwender zieht
+  // weiter. Vorher zeigte der gemerkte Index ins Leere (FItems.Move warf).
+  FForm.Show;
+  try
+    L := NewList('A,B,C,D');
+    L.AllowReorder := True;
+    L.OnReorder := DoReorder;
+    FAllowReorder := True;
+    FMutateOnClick := 1;
+    P0 := CenterOf(L.ItemRect(1));
+    L.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MouseLParam(P0.X, P0.Y));
+    CheckEquals(0, L.Items.Count, 'OnClick hat geleert');
+    L.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(P0.X, P0.Y + 30));
+    L.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(P0.X, P0.Y + 60));
+    L.Perform(WM_LBUTTONUP, 0, MouseLParam(P0.X, P0.Y + 60));
+    CheckEquals(0, FReorders, 'kein Verschieben ohne Eintrag');
+    CheckEquals(-1, L.DropRow);
+    // Loeschen vor dem gezogenen Eintrag: der Index wandert mit
+    L.Items.CommaText := 'A,B,C,D';
+    FMutateOnClick := 2;
+    P0 := CenterOf(L.ItemRect(2));
+    L.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MouseLParam(P0.X, P0.Y));
+    FMutateOnClick := 0;
+    CheckEquals('B,C,D', L.Items.CommaText);
+    R := L.ItemRect(2);
+    P2 := Point(P0.X, R.Bottom - 2); // untere Haelfte von D
+    L.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(P0.X, P0.Y + 20));
+    L.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(P2.X, P2.Y));
+    L.Perform(WM_LBUTTONUP, 0, MouseLParam(P2.X, P2.Y));
+    CheckEquals('B,D,C', L.Items.CommaText, 'C (jetzt Index 1) ans Ende');
+  finally
+    FForm.Hide;
+  end;
+end;
+
 procedure TListBoxTests.VirtualMillionItems;
 var
   L: TPPGListBox;
@@ -782,6 +849,27 @@ begin
   end;
 end;
 
+procedure TCheckListBoxTests.ClickCheckClearingItems;
+var
+  C: TPPGCheckListBox;
+  R: TRect;
+begin
+  // Audit 08.10.2026: OnClickCheck leert die Liste; danach arbeitete die
+  // Maus-Behandlung mit dem alten Index weiter (Auswahl, Ziehen).
+  FForm.Show;
+  try
+    C := NewCheckList('A,B,C');
+    FMutateOnCheck := 1;
+    R := C.ItemRect(2);
+    ClickAt(C, R.Left + 12 + 8, (R.Top + R.Bottom) div 2);
+    CheckEquals(1, FChecks);
+    CheckEquals(0, C.Items.Count);
+    CheckEquals(-1, C.ItemIndex, 'kein Eintrag gewaehlt');
+  finally
+    FForm.Hide;
+  end;
+end;
+
 procedure TCheckListBoxTests.SpaceTogglesWithGrayedCycle;
 var
   C: TPPGCheckListBox;
@@ -978,6 +1066,60 @@ begin
     CheckFalse(C.DroppedDown);
     CheckEquals(2, C.ItemIndex);
     CheckEquals('Deutschland', C.Text);
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TComboExTests.SortedItemsExKeepsIndices;
+var
+  C: TPPGComboBox;
+  I: Integer;
+begin
+  // Audit 08.10.2026: Sorted sortierte nur Items; ItemsEx blieb unsortiert
+  // (Bilder an falschen Zeilen), Aendern eines Eintrags warf EStringListError.
+  C := NewCombo(csDropDownList);
+  C.Sorted := True;
+  C.ItemsEx.Add('Zeta', 1);
+  C.ItemsEx.Add('<b>Alpha</b>', 2);
+  C.ItemsEx.Add('Mitte', 3);
+  CheckEquals('Alpha,Mitte,Zeta', C.Items.CommaText);
+  for I := 0 to C.Items.Count - 1 do
+    CheckEquals(C.Items[I], StringReplace(StringReplace(C.ItemsEx[I].Text, '<b>', '', []),
+      '</b>', '', []), 'gleiche Reihenfolge ' + IntToStr(I));
+  CheckEquals(2, C.ItemsEx[0].ImageIndex, 'Bild bleibt beim Eintrag');
+  C.ItemIndex := 1; // Mitte
+  C.ItemsEx[0].Text := 'Zulu';
+  CheckEquals('Mitte,Zeta,Zulu', C.Items.CommaText);
+  CheckEquals('Zulu', C.ItemsEx[2].Text);
+  CheckEquals(2, C.ItemsEx[2].ImageIndex);
+  CheckEquals(0, C.ItemIndex, 'Auswahl folgt dem Eintrag');
+  C.Sorted := False;
+  C.ItemsEx.Add('Anfang');
+  CheckEquals('Mitte,Zeta,Zulu,Anfang', C.Items.CommaText, 'unsortiert: angehaengt');
+end;
+
+procedure TComboExTests.FilterFollowsItemChanges;
+var
+  C: TPPGComboBox;
+begin
+  // Audit 08.10.2026: Die Filter-Zuordnung der offenen Liste blieb nach
+  // einer Aenderung der Eintraege stehen und zeigte auf falsche Eintraege.
+  FForm.Show;
+  try
+    C := NewCombo(csDropDown);
+    C.Items.CommaText := 'Belgien,Daenemark,Deutschland,Estland';
+    C.FilterMode := fmPrefix;
+    C.SetFocus;
+    TypeChar(C, 'D');
+    CheckTrue(C.PopupList.Filtered);
+    CheckEquals(2, C.PopupList.RowCount);
+    C.Items.Delete(0);
+    CheckEquals(2, C.PopupList.RowCount, 'weiter beide D-Laender');
+    CheckEquals(0, C.PopupList.ItemOfRow(0), 'Daenemark jetzt Index 0');
+    CheckEquals(1, C.PopupList.ItemOfRow(1));
+    C.Items.Clear;
+    CheckFalse(C.DroppedDown, 'keine Treffer mehr: zu');
   finally
     FForm.Hide;
   end;

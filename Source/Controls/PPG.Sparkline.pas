@@ -51,7 +51,7 @@ type
 function PPGDefaultSparklineOptions(const Tokens: TPPGTokens; Background: TColor;
   PPI: Integer): TPPGSparklineOptions;
 procedure PPGDrawSparkline(const Canvas: IPPGCanvas; const R: TRect;
-  const Values: array of Double; const Options: TPPGSparklineOptions);
+  const AValues: array of Double; const Options: TPPGSparklineOptions);
 /// Bequemer Weg fuer OnDrawCell u.ae.: zeichnet auf einen TCanvas (GDI+,
 /// sonst GDI-Fallback).
 procedure PPGDrawSparklineOnCanvas(ACanvas: TCanvas; const R: TRect;
@@ -193,7 +193,7 @@ begin
   N := 0;
   for I := 0 to High(Parts) do
   begin
-    if not TryStrToFloat(Trim(Parts[I]), V, GInvariant) then
+    if not TryStrToFloat(Trim(Parts[I]), V, GInvariant) or not PPGIsFinite(V) then
     begin
       SetLength(Values, 0);
       Exit(False);
@@ -250,8 +250,9 @@ begin
 end;
 
 procedure PPGDrawSparkline(const Canvas: IPPGCanvas; const R: TRect;
-  const Values: array of Double; const Options: TPPGSparklineOptions);
+  const AValues: array of Double; const Options: TPPGSparklineOptions);
 var
+  Values: TArray<Double>;
   N, I, Pad, W, H, Cols, Col, Base, X0, X1, Y, K: Integer;
   Lo, Hi, Span, Slot: Double;
   Plot, Bar: TRect;
@@ -277,7 +278,17 @@ var
   end;
 
 begin
-  N := Length(Values);
+  // Audit 08.10.2026: NaN/Unendlich (z. B. aus Grid-Zellen) machten Lo/Hi
+  // zu NaN, Round warf im Paint. Nicht endliche Werte auslassen.
+  SetLength(Values, Length(AValues));
+  N := 0;
+  for I := 0 to High(AValues) do
+    if PPGIsFinite(AValues[I]) then
+    begin
+      Values[N] := AValues[I];
+      Inc(N);
+    end;
+  SetLength(Values, N);
   if (N = 0) or IsRectEmpty(R) then
     Exit;
   // Bereich
@@ -290,7 +301,8 @@ begin
     if Values[I] > Values[MaxIdx] then
       MaxIdx := I;
   end;
-  if Options.UseRange and (Options.RangeMax > Options.RangeMin) then
+  if Options.UseRange and PPGIsFinite(Options.RangeMin) and PPGIsFinite(Options.RangeMax) and
+    (Options.RangeMax > Options.RangeMin) then
   begin
     Lo := Options.RangeMin;
     Hi := Options.RangeMax;
@@ -299,7 +311,7 @@ begin
   begin
     Lo := Values[MinIdx];
     Hi := Values[MaxIdx];
-    if Options.ShowReference then
+    if Options.ShowReference and PPGIsFinite(Options.Reference) then
     begin
       Lo := System.Math.Min(Lo, Options.Reference);
       Hi := System.Math.Max(Hi, Options.Reference);
@@ -528,6 +540,8 @@ procedure TPPGCustomSparkline.SetValues(const AValues: array of Double);
 var
   I: Integer;
 begin
+  for I := 0 to High(AValues) do
+    PPGCheckFinite(Self, 'Values', AValues[I]);
   SetLength(FValues, Length(AValues));
   for I := 0 to High(AValues) do
     FValues[I] := AValues[I];
@@ -539,6 +553,7 @@ procedure TPPGCustomSparkline.AddValue(const AValue: Double);
 var
   N: Integer;
 begin
+  PPGCheckFinite(Self, 'Value', AValue);
   N := Length(FValues);
   SetLength(FValues, N + 1);
   FValues[N] := AValue;
@@ -636,6 +651,7 @@ end;
 
 procedure TPPGCustomSparkline.SetRangeMin(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'RangeMin', Value);
   if FRangeMin <> Value then
   begin
     FRangeMin := Value;
@@ -645,6 +661,7 @@ end;
 
 procedure TPPGCustomSparkline.SetRangeMax(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'RangeMax', Value);
   if FRangeMax <> Value then
   begin
     FRangeMax := Value;
@@ -663,6 +680,7 @@ end;
 
 procedure TPPGCustomSparkline.SetReferenceValue(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'ReferenceValue', Value);
   if FReferenceValue <> Value then
   begin
     FReferenceValue := Value;

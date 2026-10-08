@@ -64,6 +64,8 @@ type
     FStyle: TPPGElementStyle;
     FTitleStyle: TPPGElementStyle;
     FTitleAlignment: TPPGGridTitleAlignment;
+    procedure SetMinValue(const Value: Integer);
+    procedure SetMaxValue(const Value: Integer);
     procedure SetStyle(const Value: TPPGElementStyle);
     procedure SetTitleStyle(const Value: TPPGElementStyle);
     procedure SetTitleAlignment(const Value: TPPGGridTitleAlignment);
@@ -96,8 +98,10 @@ type
     property EditorKind: TPPGGridEditorKind read FEditorKind write FEditorKind default gekText;
     property PickList: TStrings read FPickList write SetPickList;
     property ReadOnly: Boolean read FReadOnly write FReadOnly default False;
-    property MinValue: Integer read FMinValue write FMinValue default 0;
-    property MaxValue: Integer read FMaxValue write FMaxValue default 0;
+    /// Bereich fuer Zellarten (0/0 = Vorgabe der Zellart). Nie MinValue >
+    /// MaxValue: die Gegenseite folgt (wie DayStartHour/DayEndHour im Planer).
+    property MinValue: Integer read FMinValue write SetMinValue default 0;
+    property MaxValue: Integer read FMaxValue write SetMaxValue default 0;
     property Sortable: Boolean read FSortable write FSortable default True;
     property Visible: Boolean read FVisible write SetVisible default True;
     /// Position in der Anzeige unter den beweglichen Spalten (-1 = wie Index).
@@ -281,6 +285,29 @@ begin
     gtaRight: Result := taRightJustify;
   else
     Result := FAlignment;
+  end;
+end;
+
+procedure TPPGGridColumn.SetMinValue(const Value: Integer);
+begin
+  if FMinValue <> Value then
+  begin
+    FMinValue := Value;
+    // Audit 08.10.2026: ein vertauschter Bereich wurde still angenommen
+    if FMaxValue < FMinValue then
+      FMaxValue := FMinValue;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGGridColumn.SetMaxValue(const Value: Integer);
+begin
+  if FMaxValue <> Value then
+  begin
+    FMaxValue := Value;
+    if FMinValue > FMaxValue then
+      FMinValue := FMaxValue;
+    Changed(False);
   end;
 end;
 

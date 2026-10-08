@@ -60,9 +60,15 @@ type
     procedure PaintDoesNotTouchDataSet;
     procedure EmptyDataSetKeepsFillerRow;
     procedure StreamingKeepsColumnsAndOptions;
+    procedure EditorDiscardedOnRecordChange;
+    procedure SnapshotRefusesWhileEditing;
+    procedure TitlesToggleOnEmptyDataSet;
   end;
 
 implementation
+
+uses
+  PPG.Exceptions;
 
 type
   TEditAccess = class(TPPGDBEdit);
@@ -521,6 +527,73 @@ begin
   CheckEquals(1, TGridAccess(G).FixedRows);
   CheckEquals(2, TGridAccess(G).RowCount, 'Titel + leere Zeile');
   CheckFalse(TGridAccess(G).CanEditCell(2, 1), 'Fuellzeile nicht bearbeitbar');
+end;
+
+procedure TDBGridTests.EditorDiscardedOnRecordChange;
+var
+  G: TPPGDBGrid;
+begin
+  // Audit 08.10.2026: Ein offener Zell-Editor blieb beim Datensatzwechsel
+  // stehen; die Eingabe landete im neuen Datensatz oder ging verloren.
+  FillData(50);
+  FForm.Show;
+  try
+    G := NewGrid;
+    G.Col := 2;
+    G.ShowEditor;
+    CheckTrue(G.EditorMode, 'Editor offen');
+    FData.Last; // ueber den Puffer hinaus: ActiveRecord bleibt gleich
+    CheckFalse(G.EditorMode, 'Editor des alten Datensatzes verworfen');
+    CheckEquals('Name1', VarToStr(FData.Lookup('ID', 1, 'Name')), 'nichts geschrieben');
+    CheckEquals('Name50', FData.FieldByName('Name').AsString);
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TDBGridTests.SnapshotRefusesWhileEditing;
+var
+  G: TPPGDBGrid;
+  Raised: Boolean;
+begin
+  // Audit 08.10.2026: Export/Druck lief mit First durch die Datenmenge und
+  // buchte dabei eine offene Bearbeitung still.
+  FillData(5);
+  G := NewGrid;
+  FData.Edit;
+  FData.FieldByName('Name').AsString := 'offen';
+  Raised := False;
+  try
+    TGridAccess(G).TableRowCount;
+  except
+    on E: EPPGError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, 'PPG-Exception statt stillem Post');
+  CheckTrue(FData.State = dsEdit, 'Bearbeitung bleibt offen');
+  FData.Cancel;
+  CheckEquals('Name1', FData.FieldByName('Name').AsString, 'nicht gebucht');
+  CheckEquals(5, TGridAccess(G).TableRowCount, 'danach normal');
+end;
+
+procedure TDBGridTests.TitlesToggleOnEmptyDataSet;
+var
+  G: TPPGDBGrid;
+begin
+  // Audit 08.10.2026: dgTitles wieder einschalten bei leerer bzw. inaktiver
+  // Datenmenge warf (FixedRows := 1 bei RowCount = 1).
+  FillData(0);
+  G := NewGrid;
+  G.Options := G.Options - [dgTitles];
+  CheckEquals(0, TGridAccess(G).FixedRows);
+  G.Options := G.Options + [dgTitles];
+  CheckEquals(1, TGridAccess(G).FixedRows);
+  CheckTrue(dgTitles in G.Options);
+  FData.Close;
+  G.Options := G.Options - [dgTitles];
+  G.Options := G.Options + [dgTitles];
+  CheckEquals(1, TGridAccess(G).FixedRows, 'auch inaktiv');
+  CheckTrue(TGridAccess(G).RowCount > TGridAccess(G).FixedRows);
 end;
 
 procedure TDBGridTests.StreamingKeepsColumnsAndOptions;

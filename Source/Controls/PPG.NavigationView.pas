@@ -2084,10 +2084,16 @@ var
 begin
   if (GMsgNavAction <> 0) and (Message.Msg = GMsgNavAction) then
   begin
+    // LParam: das gemeinte Item (0 = Umschalter). Haben sich die Zeilen bis
+    // hierher geaendert, steht an der Stelle ein anderes Item: nichts tun.
+    // Nur Zeiger vergleichen, LParam nie dereferenzieren.
     Id := Integer(Message.WParam);
-    if Id = RowCountAll + 1 then
-      TogglePane
-    else
+    if Message.LParam = 0 then
+    begin
+      if Id = RowCountAll + 1 then
+        TogglePane;
+    end
+    else if (Id >= 1) and (NativeInt(RowItem(Id - 1)) = NativeInt(Message.LParam)) then
       InvokeItem(RowItem(Id - 1));
     Exit;
   end;
@@ -2199,9 +2205,19 @@ begin
 end;
 
 procedure TPPGNavigationView.AccChildDoDefault(Id: Integer);
+var
+  It: TPPGNavItem;
 begin
-  if HandleAllocated then
-    PostMessage(Handle, GMsgNavAction, WPARAM(Id), 0);
+  if not HandleAllocated then
+    Exit;
+  if Id = RowCountAll + 1 then
+    PostMessage(Handle, GMsgNavAction, WPARAM(Id), 0)
+  else
+  begin
+    It := RowItem(Id - 1);
+    if It <> nil then
+      PostMessage(Handle, GMsgNavAction, WPARAM(Id), LPARAM(It));
+  end;
 end;
 
 function TPPGNavigationView.AccFocusedChild: Integer;

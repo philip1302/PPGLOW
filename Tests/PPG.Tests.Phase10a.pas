@@ -22,6 +22,7 @@ type
     procedure DateScaleMonthsAndYearChange;
     procedure DateScaleWeeksStartMonday;
     procedure StripYearFromDateFormat;
+    procedure DateScaleOutsideYearRange;
   end;
 
   TChartPaletteTests = class(TTestCase)
@@ -185,6 +186,33 @@ begin
   for I := 0 to High(T) do
     CheckEquals(1, DayOfTheWeek(T[I]), 'Montag');
   CheckTrue(S.Max >= EncodeDate(2026, 11, 6));
+end;
+
+procedure TChartScaleTests.DateScaleOutsideYearRange;
+var
+  S: TPPGDateScale;
+  T: TArray<TDateTime>;
+  I: Integer;
+  Txt: string;
+begin
+  // Audit 08.10.2026: Unix-Zeitstempel (Sekunden) als Datum lagen weit
+  // hinter dem Jahr 9999; IncYear/FormatDateTime warfen EConvertError.
+  S := PPGNiceDateScale(1.7E9, 1.8E9, 6);
+  T := PPGDateTicks(S);
+  for I := 0 to High(T) do
+    Txt := PPGFormatDateTick(T[I], S, Invariant);
+  S := PPGNiceDateScale(-1E9, 10, 6);
+  T := PPGDateTicks(S);
+  CheckTrue(Length(T) < 10000);
+  S.Min := 1E12;
+  S.Max := 2E12;
+  S.DateUnit := duDay;
+  S.Count := 1;
+  T := PPGDateTicks(S);
+  CheckEquals(0, Length(T), 'ausserhalb: keine Ticks');
+  CheckEquals('', PPGFormatDateTick(1E12, S, Invariant));
+  S := PPGNiceDateScale(NaN, Infinity, 6);
+  CheckTrue(Txt = Txt);
 end;
 
 procedure TChartScaleTests.StripYearFromDateFormat;

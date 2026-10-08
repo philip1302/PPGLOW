@@ -62,6 +62,10 @@ type
     FItemsExSource: IPPGItemSource;
     FFilterMode: TPPGFilterMode;
     FSyncingItems: Boolean;
+    // Sorted gilt fuer Items oder (bei ItemsEx) fuer ItemsEx; Items bleibt
+    // dann unsortiert, damit die Indizes beider Listen gleich bleiben.
+    FSorted: Boolean;
+    FSortingEx: Boolean;
     FOnSelect: TNotifyEvent;
     FOnDropDown: TNotifyEvent;
     FOnCloseUp: TNotifyEvent;
@@ -92,6 +96,8 @@ type
     procedure SetItemsEx(const Value: TPPGItems);
     procedure ItemsExChange(Sender: TObject; Index: Integer);
     procedure SyncItemsFromEx;
+    procedure SortItemsEx;
+    procedure ApplySorted;
     procedure PlacePopup(Duration: Cardinal);
     function UseItemsEx: Boolean;
     function ItemsExHasDetail: Boolean;
@@ -385,8 +391,7 @@ var
   I: Integer;
 begin
   inherited Loaded;
-  if UseItemsEx then
-    SyncItemsFromEx;
+  ApplySorted;
   SetInnerVisible(EditableStyle);
   // ItemIndex wird erst jetzt angewendet: Items koennen in der DFM spaeter kommen
   I := FLoadedItemIndex;
@@ -525,12 +530,81 @@ end;
 
 function TPPGCustomComboBox.GetSorted: Boolean;
 begin
-  Result := FItems.Sorted;
+  Result := FSorted;
 end;
 
 procedure TPPGCustomComboBox.SetSorted(const Value: Boolean);
 begin
-  FItems.Sorted := Value; // ItemsChanged findet den gewaehlten Eintrag wieder
+  if FSorted = Value then
+    Exit;
+  FSorted := Value;
+  if csLoading in ComponentState then
+  begin
+    // Ohne ItemsEx sortiert Items schon beim Lesen; Loaded gleicht ab
+    FItems.Sorted := Value;
+    Exit;
+  end;
+  ApplySorted; // ItemsChanged findet den gewaehlten Eintrag wieder
+end;
+
+procedure TPPGCustomComboBox.ApplySorted;
+begin
+  if UseItemsEx then
+  begin
+    // Audit 08.10.2026: Sortiert wird ItemsEx, Items folgt in derselben
+    // Reihenfolge. Ein sortiertes Items wuerde die Indizes beider Listen
+    // trennen (Bilder an falschen Zeilen, EStringListError beim Aendern).
+    if FSorted then
+      SortItemsEx
+    else
+      SyncItemsFromEx;
+  end
+  else
+    FItems.Sorted := FSorted;
+end;
+
+procedure TPPGCustomComboBox.SortItemsEx;
+type
+  TKeyed = record
+    Item: TPPGItem;
+    Key: string;
+  end;
+var
+  Arr: array of TKeyed;
+  T: TKeyed;
+  I, J: Integer;
+begin
+  // Stabil (Einfuegen), damit gleiche Texte ihre Reihenfolge behalten
+  SetLength(Arr, FItemsEx.Count);
+  for I := 0 to FItemsEx.Count - 1 do
+  begin
+    Arr[I].Item := FItemsEx[I];
+    Arr[I].Key := PPGStripMarkup(FItemsEx[I].Text);
+  end;
+  for I := 1 to High(Arr) do
+  begin
+    T := Arr[I];
+    J := I - 1;
+    while (J >= 0) and (AnsiCompareText(Arr[J].Key, T.Key) > 0) do
+    begin
+      Arr[J + 1] := Arr[J];
+      Dec(J);
+    end;
+    Arr[J + 1] := T;
+  end;
+  FSortingEx := True;
+  try
+    FItemsEx.BeginUpdate;
+    try
+      for I := 0 to High(Arr) do
+        Arr[I].Item.Index := I;
+    finally
+      FItemsEx.EndUpdate; // meldet -1: ItemsExChange baut Items neu auf
+    end;
+  finally
+    FSortingEx := False;
+  end;
+  SyncItemsFromEx;
 end;
 
 procedure TPPGCustomComboBox.ItemsChanged(Sender: TObject);
@@ -552,6 +626,15 @@ begin
   end;
   if FPopup <> nil then
   begin
+    // Audit 08.10.2026: Die Filter-Zuordnung (Zeile -> Eintrag) zeigt nach
+    // einer Aenderung der Eintraege auf falsche oder fehlende Indizes
+    if FPopup.Filtered then
+    begin
+      if FDroppedDown then
+        ApplyFilter
+      else
+        FPopup.ClearFilter;
+    end;
     FPopup.ItemIndex := FItemIndex;
     if FPopup.Highlight >= FItems.Count then
       FPopup.SetHighlight(-1);
@@ -592,6 +675,8 @@ begin
   try
     FItems.BeginUpdate;
     try
+      // Bei ItemsEx sortiert SortItemsEx; Items folgt unsortiert
+      FItems.Sorted := FSorted and (FItemsEx.Count = 0);
       FItems.Clear;
       for I := 0 to FItemsEx.Count - 1 do
         FItems.Add(PPGStripMarkup(FItemsEx[I].Text));
@@ -607,11 +692,12 @@ procedure TPPGCustomComboBox.ItemsExChange(Sender: TObject; Index: Integer);
 begin
   if (csLoading in ComponentState) or (csDestroying in ComponentState) then
     Exit; // Loaded gleicht ab
-  if Index >= 0 then
-  begin
-    if (Index < FItems.Count) then
-      FItems[Index] := PPGStripMarkup(FItemsEx[Index].Text);
-  end
+  if FSortingEx then
+    Exit; // SortItemsEx baut Items danach selbst auf
+  if FSorted then
+    SortItemsEx // neuer oder geaenderter Text: Reihenfolge neu
+  else if (Index >= 0) and (Index < FItems.Count) and (FItems.Count = FItemsEx.Count) then
+    FItems[Index] := PPGStripMarkup(FItemsEx[Index].Text)
   else
     SyncItemsFromEx;
   if FPopup <> nil then

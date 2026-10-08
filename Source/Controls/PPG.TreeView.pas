@@ -1260,13 +1260,22 @@ end;
 
 procedure TPPGTreeNodes.FreeNode(Node: TPPGTreeNode);
 var
-  I: Integer;
+  Child: TPPGTreeNode;
 begin
-  // Kinder zuerst (OnDeletion von innen nach aussen, wie TTreeView)
-  for I := Node.Count - 1 downto 0 do
-    FreeNode(TPPGTreeNode(Node.FChildren[I]));
+  // Kinder zuerst (OnDeletion von innen nach aussen, wie TTreeView).
+  // Audit 08.10.2026: Jedes Kind verlaesst die Liste vor seiner Freigabe;
+  // vorher sah OnDeletion (Anwendercode) bereits freigegebene Geschwister.
+  // Parent bleibt im OnDeletion lesbar.
+  while Node.Count > 0 do
+  begin
+    Child := TPPGTreeNode(Node.FChildren[Node.Count - 1]);
+    Node.FChildren.Delete(Node.Count - 1);
+    FreeNode(Child);
+  end;
+  FCacheNode := nil;
   if FOwner <> nil then
     FOwner.NodeDeleting(Node);
+  FCacheNode := nil;
   Dec(FCount);
   Node.FOwner := nil;
   Node.Free;
@@ -1288,16 +1297,21 @@ end;
 
 procedure TPPGTreeNodes.Clear;
 var
-  I: Integer;
+  N: TPPGTreeNode;
 begin
   if FRoots = nil then
     Exit;
   BeginUpdate;
   try
-    for I := FRoots.Count - 1 downto 0 do
-      FreeNode(TPPGTreeNode(FRoots[I]));
-    FRoots.Clear;
+    // Wurzel vor der Freigabe aus FRoots nehmen (siehe FreeNode)
+    while FRoots.Count > 0 do
+    begin
+      N := TPPGTreeNode(FRoots[FRoots.Count - 1]);
+      FRoots.Delete(FRoots.Count - 1);
+      FreeNode(N);
+    end;
     FCount := 0;
+    FCacheNode := nil;
   finally
     EndUpdate;
   end;

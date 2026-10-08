@@ -65,10 +65,8 @@ end;
 
 function HtmlEscape(const S: string): string;
 begin
-  Result := StringReplace(S, '&', '&amp;', [rfReplaceAll]);
-  Result := StringReplace(Result, '<', '&lt;', [rfReplaceAll]);
-  Result := StringReplace(Result, '>', '&gt;', [rfReplaceAll]);
-  Result := StringReplace(Result, '"', '&quot;', [rfReplaceAll]);
+  // Wie fuer xlsx: maskiert Sonderzeichen und entfernt ungueltige Steuerzeichen
+  Result := PPGXmlEscape(S);
 end;
 
 function CssColor(C: TColor): string;
@@ -433,24 +431,33 @@ begin
   end;
 end;
 
-procedure SaveText(const S, FileName: string);
+procedure SaveText(const S, FileName: string; WithBom: Boolean);
 var
-  L: TStringList;
+  FS: TFileStream;
+  B: TBytes;
 begin
-  L := TStringList.Create;
+  // Unveraendert schreiben (TStringList.Text wuerde Zeilenumbrueche in
+  // Feldern angleichen). Excel erkennt UTF-8 in CSV nur am BOM.
+  FS := TFileStream.Create(FileName, fmCreate);
   try
-    L.Text := S;
-    L.WriteBOM := False;
-    L.SaveToFile(FileName, TEncoding.UTF8);
+    if WithBom then
+    begin
+      B := TEncoding.UTF8.GetPreamble;
+      if Length(B) > 0 then
+        FS.WriteBuffer(B[0], Length(B));
+    end;
+    B := TEncoding.UTF8.GetBytes(S);
+    if Length(B) > 0 then
+      FS.WriteBuffer(B[0], Length(B));
   finally
-    L.Free;
+    FS.Free;
   end;
 end;
 
 procedure PPGExportHtml(const Source: IPPGTableSource; const FileName: string;
   const Title: string);
 begin
-  SaveText(PPGExportHtmlText(Source, Title), FileName);
+  SaveText(PPGExportHtmlText(Source, Title), FileName, False);
 end;
 
 function PPGExportCsvText(const Source: IPPGTableSource; Separator: Char): string;
@@ -458,8 +465,16 @@ var
   SB: TStringBuilder;
   C, R: Integer;
 
-  procedure Field(const F: string);
+  procedure Field(const AText: string);
+  var
+    F: string;
+    D: Double;
   begin
+    F := AText;
+    // Formel-Einschleusung: Excel fuehrt Felder mit = + - @ (bzw. Tab/CR
+    // am Anfang) als Formel aus. Zahlen wie -5 bleiben unveraendert.
+    if (F <> '') and CharInSet(F[1], ['=', '+', '-', '@', #9, #13]) and not TryStrToFloat(F, D) then
+      F := '''' + F;
     // RFC 4180: Felder mit Trenner, Anfuehrungszeichen oder Zeilenumbruch
     if (Pos(Separator, F) > 0) or (Pos('"', F) > 0) or (Pos(#13, F) > 0) or (Pos(#10, F) > 0) then
       SB.Append('"' + StringReplace(F, '"', '""', [rfReplaceAll]) + '"')
@@ -495,7 +510,7 @@ end;
 
 procedure PPGExportCsv(const Source: IPPGTableSource; const FileName: string; Separator: Char);
 begin
-  SaveText(PPGExportCsvText(Source, Separator), FileName);
+  SaveText(PPGExportCsvText(Source, Separator), FileName, True);
 end;
 
 function PPGFindPdfPrinter: string;

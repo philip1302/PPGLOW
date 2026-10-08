@@ -603,6 +603,9 @@ begin
   if Source is TPPGKanbanCard then
   begin
     S := TPPGKanbanCard(Source);
+    // Audit 08.10.2026: Id mitkopieren (wie Spalten und Bahnen), sonst
+    // nummeriert Cards := X neu und der Druck meldet andere Ids.
+    Id := S.FId;
     FTitle := S.FTitle;
     FText := S.FText;
     FColumnId := S.FColumnId;

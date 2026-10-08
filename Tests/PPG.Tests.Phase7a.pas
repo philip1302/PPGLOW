@@ -51,6 +51,7 @@ type
     procedure LinkLabelKeyboard;
     procedure LinkLabelClick;
     procedure LinkLabelAccessibility;
+    procedure LinkLabelDropsFreedImageList;
   end;
 
   TFeedbackTests = class(TPhase7aTestCase)
@@ -84,6 +85,7 @@ type
     procedure KeyboardMoves;
     procedure LoadsTSplitterDfm;
     procedure BeveledOnPaintAndCursor;
+    procedure FreeWhileDraggingLine;
   end;
 
   TRatingTests = class(TPhase7aTestCase)
@@ -92,6 +94,7 @@ type
     procedure HalfStars;
     procedure KeyboardAndReadOnly;
     procedure CodeSetsWithoutEvent;
+    procedure HugeAndNonFiniteValues;
   end;
 
   TSearchEditTests = class(TPhase7aTestCase)
@@ -114,7 +117,7 @@ type
 implementation
 
 uses
-  Winapi.oleacc, PPG.Theme, PPG.Tokens;
+  System.Math, Winapi.oleacc, PPG.Theme, PPG.Tokens;
 
 type
   TLinkAccess = class(TPPGLinkLabel);
@@ -402,6 +405,37 @@ begin
   CheckTrue(L.LinkRect(1).Left > L.LinkRect(0).Right, 'B rechts von A');
   CheckTrue(L.AutoSize);
   CheckTrue(L.Width > 50, 'AutoSize misst den Text');
+end;
+
+procedure TLabelTests.LinkLabelDropsFreedImageList;
+var
+  L: TPPGLinkLabel;
+  IL: TImageList;
+  Bmp: TBitmap;
+  W: Integer;
+begin
+  // Audit 08.10.2026: Das Markup-Layout hielt die ImageList in seinen
+  // Bild-Fragmenten; nach deren Freigabe zeichnete es mit der alten Liste.
+  IL := TImageList.Create(FForm);
+  IL.Width := 32;
+  IL.Height := 32;
+  Bmp := TBitmap.Create;
+  try
+    Bmp.SetSize(32, 32);
+    IL.Add(Bmp, nil);
+  finally
+    Bmp.Free;
+  end;
+  L := TPPGLinkLabel.Create(FForm);
+  L.Parent := FForm;
+  L.Images := IL;
+  L.Caption := '<img=0> <a href="x">Link</a>';
+  L.HandleNeeded;
+  W := L.Width;
+  IL.Free;
+  CheckNull(L.Images);
+  CheckTrue(L.Width < W, 'Layout ohne Bild neu berechnet');
+  L.Repaint;
 end;
 
 procedure TLabelTests.LinkLabelKeyboard;
@@ -994,6 +1028,58 @@ begin
   end;
 end;
 
+procedure TSplitterTests.FreeWhileDraggingLine;
+var
+  Host, P, Rest: TPanel;
+  S: TPPGSplitter;
+begin
+  // Audit 08.10.2026: Mit rsLine hielt der Splitter beim Ziehen einen
+  // gesperrten DC; wurde das Ziel-Control oder der Parent freigegeben, blieb
+  // er liegen bzw. HideLine griff im Destruktor auf Parent = nil zu.
+  FForm.SetBounds(0, 0, 600, 400);
+  FForm.Show;
+  try
+    Host := TPanel.Create(nil);
+    try
+      Host.Parent := FForm;
+      Host.Align := alClient;
+      P := TPanel.Create(nil);
+      P.Parent := Host;
+      P.Width := 150;
+      P.Align := alLeft;
+      S := TPPGSplitter.Create(Host);
+      S.Parent := Host;
+      S.Left := 500;
+      S.Align := alLeft;
+      S.ResizeStyle := rsLine;
+      Rest := TPanel.Create(Host);
+      Rest.Parent := Host;
+      Rest.Align := alClient;
+      // Ziel-Control waehrend des Ziehens freigegeben
+      S.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MouseLParam(2, 50));
+      S.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(40, 50));
+      CheckTrue(S.IsDragging);
+      P.Free;
+      CheckFalse(S.IsDragging, 'Ziehen beendet');
+      // Parent waehrend des Ziehens freigegeben (Splitter mit)
+      P := TPanel.Create(Host);
+      P.Parent := Host;
+      P.Width := 150;
+      P.Align := alLeft;
+      P.Left := 0;
+      S.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MouseLParam(2, 50));
+      S.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(40, 50));
+    finally
+      Host.Free;
+    end;
+    // Fenster wieder normal zeichenbar (kein gesperrtes Update)
+    FForm.Repaint;
+  finally
+    FForm.Hide;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
 procedure TSplitterTests.BeveledOnPaintAndCursor;
 var
   S: TPPGSplitter;
@@ -1126,6 +1212,27 @@ begin
   R.MaxValue := 10;
   CheckEquals(4, R.Value, 0);
   CheckEquals(0, FEvents.Count);
+end;
+
+procedure TRatingTests.HugeAndNonFiniteValues;
+var
+  R: TPPGRating;
+  Raised: Boolean;
+begin
+  // Audit 08.10.2026: Round(1E20) warf EInvalidOp aus der RTL
+  R := NewRating(FForm);
+  R.Value := 1E20;
+  CheckEquals(R.MaxValue, R.Value, 1E-12, 'auf MaxValue begrenzt');
+  R.Value := -1E20;
+  CheckEquals(0, R.Value, 1E-12);
+  Raised := False;
+  try
+    R.Value := NaN;
+  except
+    on E: EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, 'NaN abgelehnt');
 end;
 
 { TSearchEditTests }

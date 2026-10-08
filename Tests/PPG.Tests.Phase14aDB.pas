@@ -35,9 +35,15 @@ type
     procedure SelectionMovesRecord;
     procedure WithoutKeyIsReadOnly;
     procedure ClosedDataSetClears;
+    procedure NewAppointmentKeepsUnloadedRecords;
+    procedure ForeignEditIsNotPosted;
+    procedure TwoControlsDoNotReloadEachOther;
   end;
 
 implementation
+
+uses
+  PPG.Exceptions;
 
 const
   Mon = 46174; // 01.06.2026
@@ -270,6 +276,95 @@ begin
   P.Perform(WM_KEYDOWN, VK_TAB, 0);
   CheckEquals('B', P.SelectedAppointment.Subject);
   CheckEquals(2, FData.FieldByName('ID').AsInteger, 'Datensatz folgt der Auswahl');
+end;
+
+procedure TDBPlannerTests.NewAppointmentKeepsUnloadedRecords;
+var
+  P: TPPGDBPlanner;
+  A: TPPGAppointment;
+begin
+  // Audit 08.10.2026: Ein neuer Termin bekam die Id aus der Sammlung und
+  // ueberschrieb per Locate+Edit einen nicht geladenen Satz.
+  AddRow(5, DT(Mon + 1, 9), DT(Mon + 1, 10), 'A');
+  FData.Append;
+  FData.FieldByName('ID').AsInteger := 6;
+  FData.FieldByName('Betreff').AsString := 'ohne Beginn';
+  FData.Post;
+  // Satz ohne Schluessel: nicht laden, nicht mit Schluessel 0 vermischen
+  FData.Append;
+  FData.FieldByName('Beginn').AsDateTime := DT(Mon + 1, 11);
+  FData.FieldByName('Betreff').AsString := 'ohne ID';
+  FData.Post;
+  P := NewPlanner;
+  CheckEquals(1, P.Appointments.Count, 'ohne Beginn und ohne ID nicht geladen');
+  A := P.CreateAppointment(DT(Mon + 3, 14), DT(Mon + 3, 15));
+  CheckNotNull(A);
+  CheckEquals(4, FData.RecordCount, 'angehaengt, nichts ueberschrieben');
+  CheckTrue(A.Id <> 6, 'Id 6 ist vergeben');
+  CheckTrue(FData.Locate('ID', 6, []));
+  CheckEquals('ohne Beginn', FData.FieldByName('Betreff').AsString);
+  CheckTrue(FData.FieldByName('Beginn').IsNull);
+  CheckTrue(FData.Locate('ID', A.Id, []));
+  CheckEquals(DT(Mon + 3, 14), FData.FieldByName('Beginn').AsDateTime, 1E-6);
+  // Loeschen eines nie gespeicherten Termins trifft keinen fremden Satz
+  P.EndEditSubject(True);
+  A := P.Appointments.AddAppointment(DT(Mon + 4, 9), DT(Mon + 4, 10), 'lokal');
+  A.Id := 6;
+  P.SelectAppointment(A);
+  CheckTrue(P.DeleteSelected);
+  CheckTrue(FData.Locate('ID', 6, []), 'Satz 6 bleibt');
+end;
+
+procedure TDBPlannerTests.ForeignEditIsNotPosted;
+var
+  P: TPPGDBPlanner;
+  Raised: Boolean;
+begin
+  // Audit 08.10.2026: Schreiben postete die offene Bearbeitung eines
+  // anderen Controls still mit.
+  AddRow(1, DT(Mon + 1, 9), DT(Mon + 1, 10), 'A');
+  P := NewPlanner;
+  P.SelectAppointment(P.Appointments[0]);
+  CheckTrue(FData.Locate('ID', 1, []));
+  FData.Edit;
+  FData.FieldByName('Betreff').AsString := 'fremd';
+  Raised := False;
+  try
+    P.MoveSelected(60, 0);
+  except
+    on E: EPPGError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, 'PPG-Exception statt stillem Post');
+  CheckTrue(FData.State = dsEdit, 'fremde Bearbeitung bleibt offen');
+  FData.Cancel;
+  P.FlushReload;
+  CheckEquals('A', FData.FieldByName('Betreff').AsString, 'nicht gespeichert');
+  CheckEquals(DT(Mon + 1, 9), FData.FieldByName('Beginn').AsDateTime, 1E-6);
+  CheckEquals(DT(Mon + 1, 9), P.Appointments[0].Start, 1E-6, 'Anzeige wieder wie die Daten');
+end;
+
+procedure TDBPlannerTests.TwoControlsDoNotReloadEachOther;
+var
+  P1, P2: TPPGDBPlanner;
+begin
+  // Audit 08.10.2026: EnableControls am Ende des Lesens meldete allen Links
+  // deDataSetChange; zwei Planer (bzw. Diagramm, Kanban) an derselben
+  // Datenmenge luden sich so alle ReloadDelay ms gegenseitig neu.
+  AddRow(1, DT(Mon + 1, 9), DT(Mon + 1, 10), 'A');
+  P1 := NewPlanner;
+  P2 := NewPlanner;
+  P2.ReloadDelay := 100;
+  CheckFalse(P2.ReloadPending, 'Ausgangslage');
+  P1.Reload;
+  CheckFalse(P2.ReloadPending, 'Lesen von P1 loest bei P2 nichts aus');
+  // Echte Aenderung von aussen kommt weiterhin an
+  FData.Edit;
+  FData.FieldByName('Betreff').AsString := 'B';
+  FData.Post;
+  CheckTrue(P2.ReloadPending, 'Aenderung laedt neu');
+  P2.FlushReload;
+  CheckEquals('B', P2.Appointments[0].Subject);
 end;
 
 procedure TDBPlannerTests.WithoutKeyIsReadOnly;

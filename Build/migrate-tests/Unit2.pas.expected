@@ -1,0 +1,26 @@
+unit Unit2;
+
+// Formular für die Übersicht (ANSI)
+
+interface
+
+uses
+  Vcl.Forms, Vcl.ComCtrls, Vcl.StdCtrls, Vcl.DBGrids,
+  PPG.TreeView, PPG.PageControl, PPG.Button, PPG.ProgressBar, PPG.DB.Grid;
+
+type
+  TForm2 = class(TForm)
+    Tree1: TPPGTreeView;
+    Pages1: TPPGPageControl;
+    Sheet1: TPPGTabSheet;
+    Split1: TPPGButton;
+    Link1: TPPGButton;
+    Bar1: TPPGProgressBar;
+    Grid1: TPPGDBGrid;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

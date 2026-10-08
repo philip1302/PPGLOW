@@ -223,6 +223,14 @@ begin
   else if ((FormatSettings.TimeAMString <> '') and (Pos(AnsiUpperCase(FormatSettings.TimeAMString), Rest) > 0)) or
     (Pos('AM', Rest) > 0) then
     AM := True;
+  // AM/PM-Text vor dem Ziffernfilter entfernen: Punkte darin ("a.m.", en-CA)
+  // wuerden sonst zu Trennern
+  if FormatSettings.TimePMString <> '' then
+    Str := StringReplace(Str, FormatSettings.TimePMString, '', [rfReplaceAll, rfIgnoreCase]);
+  if FormatSettings.TimeAMString <> '' then
+    Str := StringReplace(Str, FormatSettings.TimeAMString, '', [rfReplaceAll, rfIgnoreCase]);
+  Str := StringReplace(Str, 'PM', '', [rfReplaceAll, rfIgnoreCase]);
+  Str := StringReplace(Str, 'AM', '', [rfReplaceAll, rfIgnoreCase]);
   // Nur Ziffern und Trenner behalten
   Digits := '';
   for I := 1 to Length(Str) do
@@ -230,6 +238,8 @@ begin
       Digits := Digits + Str[I]
     else if CharInSet(Str[I], [':', '.']) or (Str[I] = FormatSettings.TimeSeparator) then
       Digits := Digits + ':';
+  while (Digits <> '') and (Digits[Length(Digits)] = ':') do
+    Delete(Digits, Length(Digits), 1);
   if Digits = '' then
     Exit;
   Sec := 0;

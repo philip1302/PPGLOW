@@ -18,6 +18,7 @@ type
   TChartTestCase = class(TControlTestCase)
   protected
     FLog: TStringList;
+    FNaNPoints: Boolean;
     procedure SetUp; override;
     procedure TearDown; override;
     procedure LogPoint(Sender: TObject; SeriesIndex, PointIndex: Integer);
@@ -36,6 +37,7 @@ type
     procedure StreamingKeepsSeriesAxesAndLines;
     procedure VirtualModeAsksHost;
     procedure SeriesVisibilityAnimates;
+    procedure NonFiniteValuesAreSafe;
   end;
 
   TChartLayoutTests = class(TChartTestCase)
@@ -82,7 +84,7 @@ type
 implementation
 
 uses
-  Winapi.oleacc, PPG.Lang, PPG.Theme;
+  System.Math, Winapi.oleacc, PPG.Lang, PPG.Theme;
 
 type
   TChartAccess = class(TPPGChart);
@@ -128,6 +130,7 @@ procedure TChartTestCase.SetUp;
 begin
   inherited SetUp;
   FLog := TStringList.Create;
+  FNaNPoints := False;
   FForm.SetBounds(0, 0, 500, 360);
 end;
 
@@ -146,6 +149,8 @@ procedure TChartTestCase.VirtualPoint(Sender: TObject; SeriesIndex, Index: Integ
   var Point: TPPGChartPoint);
 begin
   Point.Y := Index * 2;
+  if FNaNPoints and (Index mod 3 = 1) then
+    Point.Y := NaN;
   Point.Text := 'V' + IntToStr(Index);
 end;
 
@@ -342,6 +347,71 @@ begin
   CheckFalse(IsStoredProp(S, 'ValuesText'), 'virtuell: keine Werte im DFM');
   S.VirtualCount := 0;
   CheckEquals(1, S.Count);
+end;
+
+procedure TChartSeriesTests.NonFiniteValuesAreSafe;
+var
+  C: TPPGChart;
+  S: TPPGChartSeries;
+  B: TBitmap;
+  P: TPoint;
+  Raised: Integer;
+begin
+  // Audit 08.10.2026: NaN ueberstand die Klemmung, Round warf in Layout,
+  // Paint und bei Mausbewegung (HitTest/PointPos); Kreis mit Summe NaN.
+  C := NewChart;
+  S := C.Series.Add;
+  S.Add(1);
+  S.Add(2);
+  Raised := 0;
+  try
+    S.Add(NaN);
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    S.AddXY(Infinity, 1);
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    S.Y[0] := NegInfinity;
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    S.Append(NaN, 0);
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    C.YAxis.Min := NaN;
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  CheckEquals(5, Raised, 'nicht endliche Werte abgelehnt');
+  CheckEquals(2, S.Count, 'Reihe unveraendert');
+  CheckEquals(1, S.Y[0], 1E-12);
+  // Virtuell: das Ereignis liefert NaN, nichts darf werfen
+  FNaNPoints := True;
+  C.OnGetPoint := VirtualPoint;
+  S.VirtualCount := 12;
+  C.Layout;
+  C.PointPos(0, 4, P);
+  C.HitTest(200, 100);
+  B := RenderToBitmap(C);
+  B.Free;
+  S.Kind := cskPie;
+  C.Layout;
+  C.HitTest(200, 100);
+  B := RenderToBitmap(C);
+  B.Free;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 
 procedure TChartSeriesTests.SeriesVisibilityAnimates;

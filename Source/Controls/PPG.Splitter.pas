@@ -36,6 +36,8 @@ type
     FMaxSize: Integer;
     FLineVisible: Boolean;
     FLineDC: HDC;
+    // Fenster, von dem FLineDC stammt: beim Zerstoeren ist Parent schon nil
+    FLineWnd: HWND;
     FLinePos: Integer;     // Parent-Koordinate der invertierten Linie
     FBrush: HBRUSH;
     FOnCanResize: TCanResizeEvent;
@@ -159,6 +161,12 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (AComponent = FControl) then
   begin
+    // Waehrend des Ziehens freigegeben: Linie und gesperrten DC freigeben
+    if FDragging then
+    begin
+      HideLine;
+      MouseCapture := False;
+    end;
     FControl := nil;
     FDragging := False;
   end;
@@ -374,7 +382,10 @@ begin
       FBrush := CreateSolidBrush(ColorToRGB(clWhite));
   end;
   if FLineDC = 0 then
-    FLineDC := GetDCEx(Parent.Handle, 0, DCX_CACHE or DCX_CLIPSIBLINGS or DCX_LOCKWINDOWUPDATE);
+  begin
+    FLineWnd := Parent.Handle;
+    FLineDC := GetDCEx(FLineWnd, 0, DCX_CACHE or DCX_CLIPSIBLINGS or DCX_LOCKWINDOWUPDATE);
+  end;
   if FLineVisible then
     DrawLine;
   case Align of
@@ -391,10 +402,12 @@ procedure TPPGCustomSplitter.HideLine;
 begin
   if FLineDC <> 0 then
   begin
-    if FLineVisible then
+    // Linie nur zuruecknehmen, solange das Fenster noch besteht
+    if FLineVisible and IsWindow(FLineWnd) then
       DrawLine;
-    ReleaseDC(Parent.Handle, FLineDC);
+    ReleaseDC(FLineWnd, FLineDC);
     FLineDC := 0;
+    FLineWnd := 0;
   end;
   FLineVisible := False;
 end;

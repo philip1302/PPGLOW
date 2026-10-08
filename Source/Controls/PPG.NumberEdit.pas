@@ -58,6 +58,9 @@ type
     procedure SetValue(const Value: Double);
     function GetAsCurrency: Currency;
     procedure SetAsCurrency(const Value: Currency);
+    /// Currency-Wert nur fuer nkCurrency, sonst 0 (Double kann den
+    /// Currency-Bereich von +-9,2E14 sprengen).
+    function CurrValue: Currency;
     function GetAsInteger: Int64;
     procedure SetAsInteger(const Value: Int64);
     procedure SetIsNull(const Value: Boolean);
@@ -78,6 +81,7 @@ type
     procedure ReadIsNull(Reader: TReader);
     procedure WriteIsNull(Writer: TWriter);
     procedure SpinSteps(Steps: Integer);
+    procedure SpinBy(const Delta: Double);
     procedure SetError(const Hint: string);
     procedure ClearError;
     function EffectiveDecimals: Integer;
@@ -223,6 +227,12 @@ begin
   Result := SimpleRoundTo(V, -Decimals);
 end;
 
+/// Passt V in den Currency-Bereich (und ist endlich)?
+function InCurrRange(const V: Double): Boolean;
+begin
+  Result := PPGIsFinite(V) and (Abs(V) <= 922337203685477.0);
+end;
+
 /// Currency exakt auf Decimals (0..4) runden: Currency ist Int64 * 10^-4.
 function RoundCurr(C: Currency; Decimals: Integer): Currency;
 var
@@ -330,7 +340,9 @@ end;
 function TPPGCustomNumberEdit.Clamp(V: Double): Double;
 begin
   Result := V;
-  if FMinValue <> FMaxValue then
+  // Nur ein stimmiger Bereich begrenzt (gleich oder vertauscht = ohne Grenze);
+  // so stoeren Zwischenstaende beim Setzen von MinValue/MaxValue nicht
+  if FMinValue < FMaxValue then
   begin
     if Result < FMinValue then
       Result := FMinValue
@@ -384,7 +396,7 @@ begin
     begin
       // In Currency rechnen; Grenzen gelten auch hier
       FCurr := NewCurr;
-      if FMinValue <> FMaxValue then
+      if FMinValue < FMaxValue then
       begin
         if FCurr < FMinValue then
           FCurr := FMinValue
@@ -431,17 +443,38 @@ end;
 
 procedure TPPGCustomNumberEdit.SetValue(const Value: Double);
 begin
+  // Audit 08.10.2026: NaN bzw. Werte ausserhalb des Currency-Bereichs warfen
+  // EInvalidOp aus der RTL (auch bei nkFloat, weil immer nach Currency
+  // gewandelt wurde)
+  PPGCheckFinite(Self, 'Value', Value);
   // Aus Code: ohne OnChange
   ClearError;
-  StoreValue(Value, Value, False, False);
+  if FKind = nkCurrency then
+  begin
+    if not InCurrRange(Value) then
+      raise EPPGPropertyError.CreateInvalid(Self, 'Value', FloatToStr(Value));
+    StoreValue(Value, Value, False, False);
+  end
+  else
+    StoreValue(Value, 0, False, False);
 end;
 
 function TPPGCustomNumberEdit.GetAsCurrency: Currency;
 begin
   if FKind = nkCurrency then
     Result := FCurr
+  else if InCurrRange(FValue) then
+    Result := FValue
   else
-    Result := FValue;
+    raise EPPGPropertyError.CreateInvalid(Self, 'AsCurrency', FloatToStr(FValue));
+end;
+
+function TPPGCustomNumberEdit.CurrValue: Currency;
+begin
+  if FKind = nkCurrency then
+    Result := FCurr
+  else
+    Result := 0;
 end;
 
 procedure TPPGCustomNumberEdit.SetAsCurrency(const Value: Currency);
@@ -488,43 +521,47 @@ begin
   if FKind = Value then
     Exit;
   V := GetValue;
+  if (Value = nkCurrency) and not InCurrRange(V) then
+    raise EPPGPropertyError.CreateInvalid(Self, 'Kind', FloatToStr(V));
   FKind := Value;
-  StoreValue(V, V, FIsNull, False);
+  if Value = nkCurrency then
+    StoreValue(V, V, FIsNull, False)
+  else
+    StoreValue(V, 0, FIsNull, False);
 end;
 
 procedure TPPGCustomNumberEdit.SetDecimals(const Value: Integer);
 begin
   FDecimals := PPGCheckRange(Self, 'Decimals', Value, 0, 10);
-  StoreValue(GetValue, GetAsCurrency, FIsNull, False);
+  StoreValue(GetValue, CurrValue, FIsNull, False);
 end;
 
 procedure TPPGCustomNumberEdit.SetMinValue(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'MinValue', Value);
   FMinValue := Value;
   // Wie SpinEdit: nur bei stimmigem Bereich anpassen
   if FMinValue <= FMaxValue then
-    StoreValue(GetValue, GetAsCurrency, FIsNull, False);
+    StoreValue(GetValue, CurrValue, FIsNull, False);
 end;
 
 procedure TPPGCustomNumberEdit.SetMaxValue(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'MaxValue', Value);
   FMaxValue := Value;
   if FMinValue <= FMaxValue then
-    StoreValue(GetValue, GetAsCurrency, FIsNull, False);
+    StoreValue(GetValue, CurrValue, FIsNull, False);
 end;
 
 procedure TPPGCustomNumberEdit.SetIncrement(const Value: Double);
 begin
-  if Value <= 0 then
-    raise EPPGPropertyError.CreateInvalid(Self, 'Increment', FloatToStr(Value));
-  FIncrement := Value;
+  // Zur Laufzeit Exception, beim DFM-Laden protokollieren und Wert behalten
+  FIncrement := PPGCheckFloat(Self, 'Increment', Value, Value > 0, FIncrement);
 end;
 
 procedure TPPGCustomNumberEdit.SetLargeIncrement(const Value: Double);
 begin
-  if Value <= 0 then
-    raise EPPGPropertyError.CreateInvalid(Self, 'LargeIncrement', FloatToStr(Value));
-  FLargeIncrement := Value;
+  FLargeIncrement := PPGCheckFloat(Self, 'LargeIncrement', Value, Value > 0, FLargeIncrement);
 end;
 
 procedure TPPGCustomNumberEdit.SetShowSpinButtons(const Value: Boolean);
@@ -540,13 +577,13 @@ end;
 procedure TPPGCustomNumberEdit.SetThousandSeparator(const Value: Boolean);
 begin
   FThousandSeparator := Value;
-  StoreValue(GetValue, GetAsCurrency, FIsNull, False);
+  StoreValue(GetValue, CurrValue, FIsNull, False);
 end;
 
 procedure TPPGCustomNumberEdit.SetCurrencyString(const Value: string);
 begin
   FCurrencyString := Value;
-  StoreValue(GetValue, GetAsCurrency, FIsNull, False);
+  StoreValue(GetValue, CurrValue, FIsNull, False);
 end;
 
 procedure TPPGCustomNumberEdit.SetError(const Hint: string);
@@ -593,9 +630,20 @@ begin
   else
   begin
     Result := (FAllowExpressions or not PPGIsExpression(S)) and
-      PPGEvalNumber(S, FormatSettings, V);
+      PPGEvalNumber(S, FormatSettings, V) and PPGIsFinite(V);
+    // Currency nur fuer nkCurrency bilden; "1000000000000000" ist als Zahl
+    // gueltig, sprengt aber Currency (EInvalidOp beim Verlassen des Felds)
     if Result then
-      C := RoundHalfUp(V, 4);
+    begin
+      if FKind = nkCurrency then
+      begin
+        Result := InCurrRange(V);
+        if Result then
+          C := RoundHalfUp(V, 4);
+      end
+      else
+        C := 0;
+    end;
   end;
   if not Result then
   begin
@@ -631,14 +679,15 @@ begin
     end
     else if not FieldFocused and FEditing then
     begin
-      // Verlassen: uebernehmen; ungueltig = letzter gueltiger Wert
+      // Verlassen: uebernehmen; ungueltig = letzter gueltiger Wert.
+      // FEditing vorher zuruecksetzen: OnChange aus Commit sieht schon den
+      // fertigen Zustand (Anzeigeformat), nicht mehr die Bearbeitung.
+      FEditing := False;
       if not Commit then
       begin
         ClearError;
-        FEditing := False;
-        StoreValue(GetValue, GetAsCurrency, FIsNull, False);
+        StoreValue(GetValue, CurrValue, FIsNull, False);
       end;
-      FEditing := False;
       SetTextSilent(DisplayText);
     end;
   end;
@@ -660,24 +709,38 @@ begin
 end;
 
 procedure TPPGCustomNumberEdit.Spin(Steps: Integer);
+begin
+  if Steps <> 0 then
+    SpinBy(Steps * FIncrement);
+end;
+
+procedure TPPGCustomNumberEdit.SpinBy(const Delta: Double);
 var
   Base: Double;
   BaseC: Currency;
+  NewC: Currency;
 begin
-  if ReadOnly or not Enabled or (Steps = 0) then
+  if ReadOnly or not Enabled or (Delta = 0) then
     Exit;
   // Laufende Eingabe zuerst lesen (ungueltig: vom letzten Wert aus)
   if FEditing and (Trim(Text) <> EditText) then
     Commit;
   ClearError;
   Base := GetValue;
-  BaseC := GetAsCurrency;
+  BaseC := CurrValue;
   if FIsNull then
   begin
     Base := 0;
     BaseC := 0;
   end;
-  StoreValue(Base + Steps * FIncrement, BaseC + Steps * FIncrement, False, True);
+  NewC := 0;
+  if FKind = nkCurrency then
+  begin
+    if not InCurrRange(BaseC + Delta) then
+      Exit; // am Rand des Currency-Bereichs: kein Schritt
+    NewC := BaseC + Delta;
+  end;
+  StoreValue(Base + Delta, NewC, False, True);
   if FEditing then
     SelectAll;
 end;
@@ -688,8 +751,10 @@ begin
   case Key of
     VK_UP: Spin(1);
     VK_DOWN: Spin(-1);
-    VK_PRIOR: Spin(Round(FLargeIncrement / FIncrement));
-    VK_NEXT: Spin(-Round(FLargeIncrement / FIncrement));
+    // Direkt um LargeIncrement (Round(Large / Increment) Schritte ergab bei
+    // 0,4/1 keinen Schritt und bei 10/3 nur 9)
+    VK_PRIOR: SpinBy(FLargeIncrement);
+    VK_NEXT: SpinBy(-FLargeIncrement);
   else
     Exit;
   end;

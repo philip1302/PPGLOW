@@ -71,6 +71,14 @@ begin
   end;
 end;
 
+/// Klartext als Markup (Body): & < > maskieren.
+function MarkupText(const S: string): string;
+begin
+  Result := StringReplace(S, '&', '&amp;', [rfReplaceAll]);
+  Result := StringReplace(Result, '<', '&lt;', [rfReplaceAll]);
+  Result := StringReplace(Result, '>', '&gt;', [rfReplaceAll]);
+end;
+
 /// Zeile falten: hoechstens 75 Bytes (UTF-8), Fortsetzung mit Leerzeichen.
 procedure AddFolded(SB: TStringBuilder; const Line: string);
 var
@@ -508,7 +516,8 @@ begin
       else if P.Name = 'LOCATION' then
         A.Location := Unescape(P.Value)
       else if P.Name = 'DESCRIPTION' then
-        A.Body := Unescape(P.Value)
+        // Body ist Markup: Text aus der Datei darf keine Tags ausloesen
+        A.Body := MarkupText(Unescape(P.Value))
       else if P.Name = 'RRULE' then
         A.Recurrence := P.Value
       else if P.Name = 'EXDATE' then
@@ -537,6 +546,10 @@ begin
       else if P.Name = 'X-PPG-RESOURCE' then
         A.ResourceId := StrToIntDef(P.Value, 0);
     end;
+    // Datei endet mitten im Termin (abgeschnitten): nicht als leeren Termin
+    // am 30.12.1899 stehen lassen
+    if InEvent and (A <> nil) then
+      A.Free;
     // Geaenderte Einzeltermine der Serie zuordnen
     for Pair in Pending do
       if Uids.TryGetValue(Pair.Value, Parent) then

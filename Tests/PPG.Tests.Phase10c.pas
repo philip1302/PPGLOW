@@ -27,6 +27,7 @@ type
     procedure GaugeDefaultsAndClamping;
     procedure GaugeMinMaxValidation;
     procedure GaugeLoadingFixesInvalidRange;
+    procedure GaugeRejectsNonFiniteValues;
     procedure GaugeAnglesAndValueAtPoint;
     procedure GaugeRangeColors;
     procedure GaugeAnimatesValueChange;
@@ -44,7 +45,7 @@ type
 implementation
 
 uses
-  Winapi.oleacc, PPG.Lang;
+  System.Math, Winapi.oleacc, PPG.Lang;
 
 type
   TGaugeAccess = class(TPPGGauge);
@@ -227,6 +228,58 @@ begin
     '  Max = 200.000000000000000000'#13#10 + 'end') as TPPGGauge;
   try
     CheckEquals(150, G.Value, 1E-12, 'Value vor Max gelesen');
+  finally
+    G.Free;
+  end;
+end;
+
+procedure TGaugeTests.GaugeRejectsNonFiniteValues;
+var
+  G: TPPGGauge;
+  B: TBitmap;
+  Raised: Integer;
+begin
+  // Audit 08.10.2026: NaN ueberstand alle Vergleiche (Round(Cos(NaN)) im
+  // Paint); Increment warf beim DFM-Laden statt zu klemmen.
+  G := NewGauge;
+  G.Value := 40;
+  Raised := 0;
+  try
+    G.Value := NaN;
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    G.Min := NaN;
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    G.Max := Infinity;
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    G.Increment := 0;
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  CheckEquals(4, Raised);
+  CheckEquals(40, G.Value, 1E-12, 'Wert unveraendert');
+  CheckEquals(0, G.Min, 1E-12);
+  CheckEquals(100, G.Max, 1E-12);
+  B := RenderToBitmap(G);
+  B.Free;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+  RegisterClass(TPPGGauge);
+  G := LoadDfm('object Gauge1: TPPGGauge'#13#10 +
+    '  Increment = -2.000000000000000000'#13#10 + 'end') as TPPGGauge;
+  try
+    CheckEquals(1, G.Increment, 1E-12, 'beim Laden behalten statt werfen');
   finally
     G.Free;
   end;

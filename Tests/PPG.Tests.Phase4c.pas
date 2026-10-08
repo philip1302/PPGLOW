@@ -20,6 +20,8 @@ type
     FAllowChange: Boolean;
     FCanClose: Boolean;
     FCloseAction: TCloseAction;
+    // Schliessen-Ereignis entfernt den Reiter bzw. die Seite selbst
+    FSelfDelete: Boolean;
     procedure SetUp; override;
     procedure TearDown; override;
     procedure LogChange(Sender: TObject);
@@ -50,6 +52,8 @@ type
     procedure OverflowShowsArrowsAndScrolls;
     procedure DisplayRectAndChildAlignment;
     procedure LoadsTTabControlDfm;
+    procedure CloseHandlerDeletingTabIsSafe;
+    procedure FreedImageListLeavesStrip;
   end;
 
   TPageControlTests = class(TTabsTestCase)
@@ -65,6 +69,8 @@ type
     procedure ShowControlActivatesPage;
     procedure DesignHitTestOnTabsOnly;
     procedure LoadsTPageControlDfmAndRoundTrips;
+    procedure CloseHandlerFreeingPageIsSafe;
+    procedure FreedImageListLeavesStrip;
   end;
 
   TTabsAccessibilityTests = class(TTabsTestCase)
@@ -169,6 +175,7 @@ begin
   FAllowChange := True;
   FCanClose := True;
   FCloseAction := caHide;
+  FSelfDelete := False;
 end;
 
 procedure TTabsTestCase.TearDown;
@@ -210,6 +217,8 @@ procedure TTabsTestCase.TabClose(Sender: TObject; Index: Integer; var Action: TC
 begin
   FLog.Add('Close:' + IntToStr(Index));
   Action := FCloseAction;
+  if FSelfDelete then
+    TPPGTabControl(Sender).Tabs.Delete(Index);
 end;
 
 procedure TTabsTestCase.PageCloseQuery(Sender: TObject; Page: TPPGTabSheet;
@@ -224,6 +233,8 @@ procedure TTabsTestCase.PageClose(Sender: TObject; Page: TPPGTabSheet;
 begin
   FLog.Add('Close:' + Page.Caption);
   Action := FCloseAction;
+  if FSelfDelete then
+    Page.Free;
 end;
 
 function TTabsTestCase.NewTabControl(const Tabs: string): TPPGTabControl;
@@ -475,6 +486,43 @@ begin
   finally
     FForm.Hide;
   end;
+end;
+
+procedure TTabControlTests.CloseHandlerDeletingTabIsSafe;
+var
+  T: TPPGTabControl;
+begin
+  // Audit 08.10.2026: OnClose loeschte den Reiter selbst und liess caFree
+  // stehen -> der Nachbar wurde mitgeloescht, beim letzten Reiter
+  // EStringListError.
+  T := NewTabControl('Eins,Zwei,Drei');
+  T.OnClose := TabClose;
+  T.TabIndex := 1;
+  FSelfDelete := True;
+  FCloseAction := caFree;
+  TTabsAccess(T).CloseTab(1);
+  CheckEquals('Eins,Drei', T.Tabs.CommaText, 'nur der eigene Reiter weg');
+  TTabsAccess(T).CloseTab(1);
+  CheckEquals('Eins', T.Tabs.CommaText, 'letzter Reiter ohne Exception');
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TTabControlTests.FreedImageListLeavesStrip;
+var
+  T: TPPGTabControl;
+  IL: TImageList;
+begin
+  // Audit 08.10.2026: Die Reiterleiste hielt nach der Freigabe der
+  // ImageList noch den alten Zeiger und las ihn beim Zeichnen.
+  T := NewTabControl('Eins,Zwei');
+  IL := TImageList.Create(FForm);
+  T.Images := IL;
+  CheckSame(IL, T.Strip.Images);
+  IL.Free;
+  CheckNull(T.Images);
+  CheckNull(T.Strip.Images, 'Leiste zeigt nicht mehr auf die freigegebene Liste');
+  T.Repaint;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 
 procedure TTabControlTests.OverflowShowsArrowsAndScrolls;
@@ -752,6 +800,40 @@ begin
   finally
     FForm.Hide;
   end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TPageControlTests.CloseHandlerFreeingPageIsSafe;
+var
+  PC: TPPGPageControl;
+begin
+  // Audit 08.10.2026: OnClose gab die Seite selbst frei -> Zugriff auf die
+  // freigegebene Seite (caHide) bzw. doppelte Freigabe (caFree).
+  PC := NewPageControl(3);
+  PC.OnClose := PageClose;
+  FSelfDelete := True;
+  FCloseAction := caHide;
+  TTabsAccess(PC).CloseTab(0);
+  CheckEquals(2, PC.PageCount, 'caHide nach Free im Ereignis');
+  FCloseAction := caFree;
+  TTabsAccess(PC).CloseTab(0);
+  CheckEquals(1, PC.PageCount, 'caFree nach Free im Ereignis');
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TPageControlTests.FreedImageListLeavesStrip;
+var
+  PC: TPPGPageControl;
+  IL: TImageList;
+begin
+  // Audit 08.10.2026: wie beim TabControl
+  PC := NewPageControl(2);
+  IL := TImageList.Create(FForm);
+  PC.Images := IL;
+  CheckSame(IL, PC.Strip.Images);
+  IL.Free;
+  CheckNull(PC.Strip.Images);
+  PC.Repaint;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

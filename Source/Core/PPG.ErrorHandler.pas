@@ -147,12 +147,24 @@ end;
 
 class procedure TPPGErrorHandler.LogWarning(Sender: TObject; const Msg: string);
 begin
-  GetLogger.Log(llWarning, SenderText(Sender) + ': ' + Msg);
+  // Wird auch aus Fehlergrenzen (Paint, COM, Drucken) gerufen: ein werfender
+  // Logger darf von dort keine Exception hinaustragen (wie NotifyError).
+  try
+    GetLogger.Log(llWarning, SenderText(Sender) + ': ' + Msg);
+  except
+    on Inner: Exception do
+      OutputDebugString(PChar('[PPGlow ERROR] Logger failed: ' + Inner.Message));
+  end;
 end;
 
 class procedure TPPGErrorHandler.LogInfo(Sender: TObject; const Msg: string);
 begin
-  GetLogger.Log(llInfo, SenderText(Sender) + ': ' + Msg);
+  try
+    GetLogger.Log(llInfo, SenderText(Sender) + ': ' + Msg);
+  except
+    on Inner: Exception do
+      OutputDebugString(PChar('[PPGlow ERROR] Logger failed: ' + Inner.Message));
+  end;
 end;
 
 initialization

@@ -64,6 +64,9 @@ type
 
 var
   GHost: THookHost = nil;
+  // Nach der Finalisierung nicht neu anlegen (Formulare werden spaeter
+  // abgebaut und melden sich dabei ab bzw. an): sonst Leck
+  GFinalized: Boolean = False;
 
 function SameMethod(const A, B: TMethod): Boolean;
 begin
@@ -113,7 +116,7 @@ end;
 
 function Host: THookHost;
 begin
-  if GHost = nil then
+  if (GHost = nil) and not GFinalized then
     GHost := THookHost.Create(nil);
   Result := GHost;
 end;
@@ -148,6 +151,8 @@ procedure PPGAddMessageHook(const Hook: TPPGMessageHook);
 var
   L: TArray<TMethod>;
 begin
+  if Host = nil then
+    Exit;
   L := Host.FMessageHooks;
   AddMethod(L, TMethod(Hook));
   Host.FMessageHooks := L;
@@ -168,6 +173,8 @@ procedure PPGAddDeactivateHook(const Hook: TNotifyEvent);
 var
   L: TArray<TMethod>;
 begin
+  if Host = nil then
+    Exit;
   L := Host.FDeactivateHooks;
   AddMethod(L, TMethod(Hook));
   Host.FDeactivateHooks := L;
@@ -309,6 +316,7 @@ end;
 initialization
 
 finalization
+  GFinalized := True;
   FreeAndNil(GHost);
 
 end.

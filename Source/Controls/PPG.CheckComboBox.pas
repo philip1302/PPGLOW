@@ -35,6 +35,8 @@ type
     FCombo: TPPGCheckComboBox;
     FMap: TArray<Integer>;   // Zeile -> Eintrag; -1 = "Alle auswaehlen"
     procedure BuildMap;
+    /// Eintraege haben sich bei offener Liste geaendert.
+    procedure ItemsChanged;
   protected
     function RowCount: Integer; override;
     procedure PaintRow(const ACanvas: IPPGCanvas; Index: Integer; const R: TRect;
@@ -65,6 +67,11 @@ type
   private
     FItems: TStrings;
     FChecked: TArray<Boolean>;
+    // Stand vor einer Aenderung der Eintraege (OnChanging), damit die Haken
+    // nach Insert/Delete/Sort beim selben Eintrag bleiben
+    FSnapTexts: TArray<string>;
+    FSnapChecked: TArray<Boolean>;
+    FSnapValid: Boolean;
     FDelimiter: Char;
     FDisplayDelimiter: string;
     FDisplayMode: TPPGCheckComboDisplay;
@@ -75,6 +82,7 @@ type
     FPendingText: string;
     FOnItemCheck: TPPGCheckItemEvent;
     procedure SetItems(const Value: TStrings);
+    procedure ItemsChanging(Sender: TObject);
     procedure ItemsChanged(Sender: TObject);
     function GetChecked(Index: Integer): Boolean;
     procedure SetChecked(Index: Integer; const Value: Boolean);
@@ -216,6 +224,13 @@ begin
   BuildMap;
 end;
 
+procedure TPPGCheckListPopup.ItemsChanged;
+begin
+  BuildMap;
+  SetFocusRow(FocusRow); // auf den neuen Bereich begrenzen
+  Invalidate;
+end;
+
 function TPPGCheckListPopup.RowCount: Integer;
 begin
   Result := Length(FMap);
@@ -242,7 +257,13 @@ var
   TextColor: TColor;
 begin
   PPI := ScalePPI;
+  // Audit 08.10.2026: Eintraege koennen sich bei offener Liste aendern
+  // (z. B. OnItemCheck loescht); Paint wirft nie
+  if (Index < 0) or (Index > High(FMap)) then
+    Exit;
   Item := FMap[Index];
+  if Item >= FCombo.Items.Count then
+    Exit;
   if Item < 0 then
   begin
     Caption := PPGStr(@SPPGSelectAll);
@@ -408,6 +429,7 @@ constructor TPPGCheckComboBox.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FItems := TStringList.Create;
+  TStringList(FItems).OnChanging := ItemsChanging;
   TStringList(FItems).OnChange := ItemsChanged;
   FDelimiter := ';';
   FDisplayDelimiter := ', ';
@@ -438,15 +460,74 @@ begin
   FItems.Assign(Value);
 end;
 
-procedure TPPGCheckComboBox.ItemsChanged(Sender: TObject);
+procedure TPPGCheckComboBox.ItemsChanging(Sender: TObject);
 var
-  Old: Integer;
   I: Integer;
 begin
+  if FSnapValid then
+    Exit;
+  SetLength(FSnapTexts, FItems.Count);
+  for I := 0 to FItems.Count - 1 do
+    FSnapTexts[I] := FItems[I];
+  FSnapChecked := Copy(FChecked, 0, Length(FChecked));
+  FSnapValid := True;
+end;
+
+procedure TPPGCheckComboBox.ItemsChanged(Sender: TObject);
+var
+  Old, I, J, K, N, Start: Integer;
+  Same: Boolean;
+  Claimed: TArray<Boolean>;
+  NewChecked: TArray<Boolean>;
+begin
+  // Audit 08.10.2026: Die Haken hingen nur an der Position und wanderten
+  // nach Insert/Delete/Sort auf andere Eintraege. Jetzt werden sie ueber
+  // den Text (bei gleichen Texten in Reihenfolge) neu zugeordnet.
+  if FSnapValid then
+  begin
+    FSnapValid := False;
+    N := Length(FSnapTexts);
+    Same := N = FItems.Count;
+    if Same then
+      for I := 0 to N - 1 do
+        if FItems[I] <> FSnapTexts[I] then
+        begin
+          Same := False;
+          Break;
+        end;
+    if not Same then
+    begin
+      SetLength(NewChecked, FItems.Count);
+      SetLength(Claimed, N);
+      // Suche ab dem letzten Treffer: bei gleichbleibender Reihenfolge
+      // (Add, Insert, Delete) linear statt quadratisch
+      Start := 0;
+      for I := 0 to FItems.Count - 1 do
+      begin
+        NewChecked[I] := False;
+        for K := 0 to N - 1 do
+        begin
+          J := (Start + K) mod N;
+          if not Claimed[J] and (FSnapTexts[J] = FItems[I]) then
+          begin
+            Claimed[J] := True;
+            NewChecked[I] := (J < Length(FSnapChecked)) and FSnapChecked[J];
+            Start := J + 1;
+            Break;
+          end;
+        end;
+      end;
+      FChecked := NewChecked;
+    end;
+    FSnapTexts := nil;
+    FSnapChecked := nil;
+  end;
   Old := Length(FChecked);
   SetLength(FChecked, FItems.Count);
   for I := Old to High(FChecked) do
     FChecked[I] := False;
+  if DroppedDown and (Popup is TPPGCheckListPopup) then
+    TPPGCheckListPopup(Popup).ItemsChanged;
   Invalidate;
 end;
 

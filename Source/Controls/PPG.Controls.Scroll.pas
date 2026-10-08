@@ -184,14 +184,19 @@ begin
   Result := True;
   R := TRegistry.Create(KEY_READ);
   try
-    R.RootKey := HKEY_CURRENT_USER;
-    if R.OpenKeyReadOnly('Control Panel\Accessibility') and
-      R.ValueExists('DynamicScrollbars') then
-      Result := R.ReadInteger('DynamicScrollbars') <> 0;
-  except
-    Result := True; // Registry gesperrt: Standard
+    try
+      R.RootKey := HKEY_CURRENT_USER;
+      if R.OpenKeyReadOnly('Control Panel\Accessibility') and
+        R.ValueExists('DynamicScrollbars') then
+        Result := R.ReadInteger('DynamicScrollbars') <> 0;
+    except
+      // Registry gesperrt bzw. Wert mit falschem Typ: Standard
+      on ERegistryException do
+        Result := True;
+    end;
+  finally
+    R.Free;
   end;
-  R.Free;
 end;
 
 { TPPGCustomScrollControl }

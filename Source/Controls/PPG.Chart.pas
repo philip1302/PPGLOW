@@ -1328,6 +1328,9 @@ begin
     Exit((L.PlotR.Top + L.PlotR.Bottom) div 2);
   V := (V - Sc.Min) / Span;
   // Weit ausserhalb liegende Werte begrenzen (GDI-Koordinaten)
+  // NaN uebersteht die Vergleiche unten und liesse Round werfen
+  if IsNan(V) then
+    V := 0;
   if V < -10 then
     V := -10;
   if V > 10 then
@@ -1344,6 +1347,8 @@ begin
   if Span <= 0 then
     Exit((L.PlotR.Left + L.PlotR.Right) div 2);
   V := (V - L.YScale.Min) / Span;
+  if IsNan(V) then
+    V := 0;
   if V < -10 then
     V := -10;
   if V > 10 then
@@ -1375,6 +1380,8 @@ begin
   if Hi <= Lo then
     Exit((L.PlotR.Left + L.PlotR.Right) div 2);
   X := (X - Lo) / (Hi - Lo);
+  if IsNan(X) then
+    X := 0;
   if X < -10 then
     X := -10;
   if X > 10 then

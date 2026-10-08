@@ -29,6 +29,8 @@ type
     FPrintTo: TDate;
     FWorkHoursOnly: Boolean;
     procedure SetPlanner(const Value: TPPGCustomPlanner);
+    procedure SetPrintFrom(const Value: TDate);
+    procedure SetPrintTo(const Value: TDate);
     function Base: TDate;
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -50,8 +52,8 @@ type
     property Planner: TPPGCustomPlanner read FPlanner write SetPlanner;
     property View: TPPGPlannerView read FView write FView default pvWeek;
     /// Zeitraum (0 = nur die Seite um Planner.Date).
-    property PrintFrom: TDate read FPrintFrom write FPrintFrom;
-    property PrintTo: TDate read FPrintTo write FPrintTo;
+    property PrintFrom: TDate read FPrintFrom write SetPrintFrom;
+    property PrintTo: TDate read FPrintTo write SetPrintTo;
     property WorkHoursOnly: Boolean read FWorkHoursOnly write FWorkHoursOnly default True;
     property Title;
     property HeaderText;
@@ -130,6 +132,22 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (AComponent = FPlanner) then
     FPlanner := nil;
+end;
+
+procedure TPPGPlannerPrinter.SetPrintFrom(const Value: TDate);
+begin
+  FPrintFrom := Trunc(Value);
+  // Wie DayStartHour/DayEndHour im Planer: die Gegenseite folgt, damit nie
+  // PrintFrom > PrintTo gilt (0 = nicht gesetzt). Audit 08.10.2026.
+  if (FPrintFrom <> 0) and (FPrintTo <> 0) and (FPrintTo < FPrintFrom) then
+    FPrintTo := FPrintFrom;
+end;
+
+procedure TPPGPlannerPrinter.SetPrintTo(const Value: TDate);
+begin
+  FPrintTo := Trunc(Value);
+  if (FPrintFrom <> 0) and (FPrintTo <> 0) and (FPrintFrom > FPrintTo) then
+    FPrintFrom := FPrintTo;
 end;
 
 procedure TPPGPlannerPrinter.SetPlanner(const Value: TPPGCustomPlanner);

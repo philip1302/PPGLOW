@@ -34,6 +34,7 @@ type
     procedure CheckKindClickAndSpace;
     procedure RatingClickKeyAndAcc;
     procedure ProgressAcc;
+    procedure ColumnRangeStaysOrdered;
     procedure LinkKind;
     procedure ButtonKind;
     procedure MarkupKindLink;
@@ -288,6 +289,23 @@ begin
   G.Cells[2, 1] := '999';
   CheckEquals(Format(PPGStr(@SPPGPercentFormat), [100]), TGridAccess(G).UiaValue(PPGUiaId(PPGUiaKindGridCell, 1, 2)),
     'begrenzt');
+end;
+
+procedure TGridCellTests.ColumnRangeStaysOrdered;
+var
+  G: TPPGGrid;
+  C: TPPGGridColumn;
+begin
+  // Audit 08.10.2026: MinValue > MaxValue wurde still angenommen
+  G := SampleGrid;
+  C := G.Columns[2];
+  C.MinValue := 10;
+  CheckEquals(10, C.MaxValue, 'MaxValue folgt MinValue');
+  C.MaxValue := 50;
+  CheckEquals(10, C.MinValue);
+  C.MaxValue := 5;
+  CheckEquals(5, C.MinValue, 'MinValue folgt MaxValue');
+  CheckTrue(C.MinValue <= C.MaxValue);
 end;
 
 procedure TGridCellTests.LinkKind;

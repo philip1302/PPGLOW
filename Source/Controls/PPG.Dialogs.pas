@@ -40,7 +40,8 @@ uses
   System.UITypes, Vcl.Controls, Vcl.Graphics, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
   Vcl.StdCtrls,
   PPG.Types, PPG.Tokens, PPG.Render.Intf, PPG.StyleManager, PPG.Controls.Base,
-  PPG.Button, PPG.Labels, PPG.CheckBox, PPG.RadioButton, PPG.ProgressBar, PPG.Edit;
+  PPG.Button, PPG.Labels, PPG.CheckBox, PPG.RadioButton, PPG.ProgressBar, PPG.Edit,
+  PPG.Animation;
 
 type
   TPPGTaskDialog = class;
@@ -105,8 +106,11 @@ type
     FButtons: TList;          // TPPGButton, Tag = ModalResult
     FExpandButton: TPPGButton;
     FVerify: TPPGCheckBox;
-    FTimer: TTimer;
+    // Takt fuer tfCallbackTimer ueber den gemeinsamen Animator (Regel: kein
+    // eigener TTimer); OnTimer alle TimerPeriodMs wie beim TTaskDialog
+    FTimer: TPPGAnimation;
     FTimerStart: Cardinal;
+    FTimerLast: Cardinal;
     FResult: TModalResult;
     FClosing: Boolean;
     FContentParent: TWinControl;
@@ -277,6 +281,8 @@ uses
   PPG.Accessibility, PPG.VclStyles, PPG.Hints;
 
 const
+  // Takt von OnTimer bei tfCallbackTimer (wie TTaskDialog)
+  TimerPeriodMs = 200;
   // Reihenfolge der Standard-Buttons wie Windows (Retry vor Cancel)
   CommonOrder: array[0..5] of TTaskDialogCommonButton =
     (tcbOk, tcbYes, tcbNo, tcbRetry, tcbCancel, tcbClose);
@@ -818,10 +824,8 @@ begin
   // Zeitgeber
   if tfCallbackTimer in FDialog.Flags then
   begin
-    FTimer := TTimer.Create(nil);
-    FTimer.Enabled := False;
-    FTimer.Interval := 200;
-    FTimer.OnTimer := TimerTick;
+    FTimer := TPPGAnimation.Create(Self);
+    FTimer.OnStep := TimerTick;
   end;
   SyncState;
 end;
@@ -1113,7 +1117,8 @@ begin
   if FTimer <> nil then
   begin
     FTimerStart := GetTickCount;
-    FTimer.Enabled := True;
+    FTimerLast := FTimerStart;
+    FTimer.StartLoop(TimerPeriodMs);
   end;
   FDialog.InternalCreated;
   if Assigned(FDialog.FOnFormShow) then
@@ -1246,6 +1251,10 @@ var
 begin
   if FClosing then
     Exit;
+  // Der Animator tickt haeufiger; OnTimer nur alle TimerPeriodMs
+  if GetTickCount - FTimerLast < TimerPeriodMs then
+    Exit;
+  FTimerLast := GetTickCount;
   Reset := False;
   FDialog.InternalTimer(GetTickCount - FTimerStart, Reset);
   if Reset then
@@ -1503,7 +1512,7 @@ begin
   finally
     FForm := nil;
     if F.FTimer <> nil then
-      F.FTimer.Enabled := False;
+      F.FTimer.Stop;
     // Eigenes Control zurueckgeben
     CC := FContentControl;
     if (CC <> nil) and (CC.Parent = F.FContent) then

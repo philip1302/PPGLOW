@@ -475,6 +475,12 @@ begin
     H := Host;
     if H <> nil then
       H.ChartGetPoint(Self, Index, Result);
+    // Werte aus dem Ereignis: nicht endliche wie 0 bzw. Index behandeln,
+    // sonst scheitern Round in Layout, Paint und Hit-Test
+    if not PPGIsFinite(Result.X) then
+      Result.X := Index;
+    if not PPGIsFinite(Result.Y) then
+      Result.Y := 0;
     Exit;
   end;
   Result.X := FXs[FStart + Index];
@@ -514,6 +520,9 @@ procedure TPPGChartSeries.SetY(Index: Integer; const Value: Double);
 begin
   if (Index < 0) or (Index >= FCount) then
     raise EPPGPropertyError.CreateRange(Self, 'Y', Index, 0, FCount - 1);
+  // Audit 08.10.2026: NaN/Unendlich liessen Round in Layout und Hit-Test
+  // scheitern (auch bei Mausbewegung) -> erst pruefen, dann aendern
+  PPGCheckFinite(Self, 'Y', Value);
   BeforeChange;
   FYs[FStart + Index] := Value;
   AfterChange;
@@ -526,6 +535,8 @@ end;
 
 function TPPGChartSeries.AddXY(const X, Y: Double; const Text: string; Color: TColor): Integer;
 begin
+  PPGCheckFinite(Self, 'X', X);
+  PPGCheckFinite(Self, 'Y', Y);
   BeforeChange;
   Reserve(FCount + 1);
   StoreAt(FStart + FCount, X, Y, Text, Color);
@@ -587,6 +598,8 @@ procedure TPPGChartSeries.SetValues(const AValues: array of Double);
 var
   I: Integer;
 begin
+  for I := 0 to High(AValues) do
+    PPGCheckFinite(Self, 'Values', AValues[I]);
   BeforeChange;
   FStart := 0;
   FCount := Length(AValues);
@@ -608,6 +621,7 @@ procedure TPPGChartSeries.Append(const Y: Double; MaxCount: Integer);
 var
   X: Double;
 begin
+  PPGCheckFinite(Self, 'Y', Y);
   BeforeChange;
   if FCount > 0 then
     X := FXs[FStart + FCount - 1] + 1
@@ -850,6 +864,7 @@ end;
 
 procedure TPPGChartAxis.SetMin(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'Min', Value);
   if FMin <> Value then
   begin
     FMin := Value;
@@ -859,6 +874,7 @@ end;
 
 procedure TPPGChartAxis.SetMax(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'Max', Value);
   if FMax <> Value then
   begin
     FMax := Value;
@@ -942,6 +958,7 @@ end;
 
 procedure TPPGChartReferenceLine.SetValue(const AValue: Double);
 begin
+  PPGCheckFinite(Self, 'Value', AValue);
   if FValue <> AValue then
   begin
     FValue := AValue;
