@@ -141,6 +141,8 @@ type
     FRowCount: Integer;
     FFixedCols: Integer;
     FFixedRows: Integer;
+    // FixedRows aus der DFM, das (alte Reihenfolge) vor RowCount kam
+    FLoadFixedRows: Integer;
     FDefaultColWidth: Integer;
     FDefaultRowHeight: Integer;
     FColWidths: array of Integer;   // logisch, 0 = Standard (ohne Spalte)
@@ -388,6 +390,9 @@ type
     /// Pixel-Rechteck eines Anzeige-Bereichs (ohne Sichtbarkeitspruefung).
     function RangeRect(C0, R0, C1, R1: Integer): TRect;
     procedure ComputeCondStats;
+    /// Summen oder Statistiken fuer bedingte Formate muessen nach einer
+    /// Zellaenderung neu gerechnet werden.
+    function StatsNeeded: Boolean;
     { Zeilen-Abbildung (Sortieren/Filtern) }
     procedure RebuildMap;
     function CompareDataRows(ACol, R1, R2: Integer): Integer; virtual;
@@ -426,6 +431,11 @@ type
     function GetCellText(ACol, ARow: Integer): string; virtual;
     /// Wert setzen (Editor, Einfuegen): Cells + OnSetEditText.
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); virtual;
+    /// Editor ist sichtbar geworden (ARow = Datenzeile, FilterRowMark = Filter).
+    procedure EditorOpened(ACol, ARow: Integer); virtual;
+    /// Vor einem Umbau der Ansicht: offenen Editor uebernehmen, bei
+    /// abgelehnter Validierung verwerfen (sonst zeigt er auf eine andere Zeile).
+    procedure EndEditorForRebuild;
     /// Text fuer den Editor (Standard: Zelltext + OnGetEditText). Das DB-Grid
     /// liefert Field.Text statt des Anzeigetexts.
     function GetEditText(ACol, ARow: Integer): string; virtual;
@@ -724,6 +734,8 @@ type
     property DragMode;
     property Enabled;
     property FixedCols;
+    // Streaming-Reihenfolge: RowCount vor FixedRows (wie ColCount vor FixedCols)
+    property RowCount;
     property FixedRows;
     property Font;
     property Options;
@@ -732,7 +744,6 @@ type
     property ParentFont;
     property ParentShowHint;
     property PopupMenu;
-    property RowCount;
     property ShowHint;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
@@ -848,6 +859,7 @@ begin
   FSortOnHeaderClick := True;
   FSizingCol := -1;
   FHeaderDown := -1;
+  FLoadFixedRows := -1;
   FEditC := -1;
   FEditV := -1;
   FLastFocusRow := -1;
@@ -909,6 +921,12 @@ end;
 
 procedure TPPGCustomGrid.Loaded;
 begin
+  if FLoadFixedRows >= 0 then
+  begin
+    // noch im Ladezustand: klemmt mit Warnung statt zu werfen
+    FFixedRows := PPGCheckRange(Self, 'FixedRows', FLoadFixedRows, 0, FRowCount - 1);
+    FLoadFixedRows := -1;
+  end;
   inherited Loaded;
   ColumnsChanged;
   RebuildColumnMap;
@@ -1105,7 +1123,15 @@ procedure TPPGCustomGrid.SetFixedRows(const Value: Integer);
 var
   V: Integer;
 begin
-  V := PPGCheckRange(Self, 'FixedRows', Value, 0, FRowCount - 1);
+  // Aeltere DFMs streamen FixedRows vor RowCount: Wert merken und in
+  // Loaded gegen die dann bekannte Zeilenzahl pruefen
+  if (csLoading in ComponentState) and (Value >= FRowCount) then
+  begin
+    FLoadFixedRows := Value;
+    V := FRowCount - 1;
+  end
+  else
+    V := PPGCheckRange(Self, 'FixedRows', Value, 0, FRowCount - 1);
   if V <> FFixedRows then
   begin
     HideEditor(False);
@@ -1263,7 +1289,7 @@ begin
   if FStore.Put(ACol, ARow, Value) then
   begin
     Invalidate;
-    if Length(FAggCols) > 0 then
+    if StatsNeeded then
       AggregatesChanged;
   end;
 end;
@@ -1305,7 +1331,7 @@ begin
   if Assigned(FOnSetEditText) then
     FOnSetEditText(Self, ACol, ARow, Value);
   Invalidate;
-  if Length(FAggCols) > 0 then
+  if StatsNeeded then
     AggregatesChanged;
 end;
 
@@ -1428,6 +1454,7 @@ var
 begin
   if FLayout = nil then
     Exit;
+  EndEditorForRebuild;
   FocusData := DataRow(FFocusV);
   Filtered := False;
   for I := 0 to High(FFilters) do
@@ -1865,8 +1892,7 @@ var
   C: TPPGGridColumn;
   Sorted: Boolean;
 begin
-  if (FEditor <> nil) and FEditor.Visible then
-    HideEditor(True);
+  EndEditorForRebuild;
   // Fokus und Anker bleiben an ihrer Datenspalte
   FD := DataCol(FFocusC);
   AD := DataCol(FAnchorC);
@@ -2533,8 +2559,11 @@ begin
             C.DisplayIndex := N;
             C.Visible := Copy(Value, 1, P - 1) <> '0';
           end;
+          // Klemmen statt werfen: Eine Ausnahme mitten im Laden liesse den
+          // Rest (weitere Spalten, Gruppen, Sortierung) weg. Erlaubt ist, was
+          // SetColWidths erlaubt (auch schmaler als MinColWidth).
           if W > 0 then
-            SetColWidths(D, PPGCheckRange(Self, 'ColWidths', W, MinColWidth, 10000));
+            SetColWidths(D, EnsureRangeInt(W, 1, 10000));
           Inc(N);
         end
         else if Name = 'Group' then
@@ -3700,6 +3729,13 @@ end;
 function TPPGCustomGrid.RangeRect(C0, R0, C1, R1: Integer): TRect;
 begin
   UnionRect(Result, RawCellRect(C0, R0), RawCellRect(C1, R1));
+end;
+
+function TPPGCustomGrid.StatsNeeded: Boolean;
+begin
+  // Audit 08.10.2026: Farbskala, Datenbalken und Oben-N blieben ohne
+  // Summenspalte nach einer Zellaenderung veraltet
+  Result := (Length(FAggCols) > 0) or ((FCondFormats <> nil) and FCondFormats.NeedsStats);
 end;
 
 procedure TPPGCustomGrid.ComputeCondStats;
@@ -5610,7 +5646,7 @@ begin
   if (D < FFixedRows) or not CanEditCell(ACol, VRow) then
     Exit;
   S := GetCellText(ACol, D);
-  if (S = '1') or SameText(S, 'True') or SameText(S, 'Ja') then
+  if TPPGCellPainter.IsCheckedText(S) then
     SetCellByUser(ACol, D, '0')
   else
     SetCellByUser(ACol, D, '1');
@@ -5915,6 +5951,22 @@ begin
   FEditor.Visible := True;
   if FEditor.CanFocus then
     FEditor.SetFocus;
+  EditorOpened(DataCol(FEditC), D);
+end;
+
+procedure TPPGCustomGrid.EditorOpened(ACol, ARow: Integer);
+begin
+  // Erweiterungspunkt (DB-Grid merkt sich den Datensatz)
+end;
+
+procedure TPPGCustomGrid.EndEditorForRebuild;
+begin
+  // FEditV < 0 bei sichtbarem Editor: HideEditor schreibt gerade selbst
+  if (FEditor = nil) or not FEditor.Visible or (FEditV < 0) then
+    Exit;
+  HideEditor(True);
+  if (FEditor <> nil) and FEditor.Visible and (FEditV >= 0) then
+    HideEditor(False);
 end;
 
 function TPPGCustomGrid.EditorText: string;
@@ -5927,7 +5979,7 @@ end;
 
 procedure TPPGCustomGrid.HideEditor(Accept: Boolean);
 var
-  C, V, D: Integer;
+  C, V, D, EC: Integer;
   S: string;
   Ok, HadFocus: Boolean;
 begin
@@ -5937,7 +5989,8 @@ begin
     FEditV := -1;
     Exit;
   end;
-  C := DataCol(FEditC);
+  EC := FEditC;
+  C := DataCol(EC);
   V := FEditV;
   D := DataRow(V);
   S := EditorText;
@@ -5951,22 +6004,36 @@ begin
   // Zustand vor den Ereignissen zuruecksetzen (OnExit ruft erneut)
   FEditC := -1;
   FEditV := -1;
+  if Accept then
+  begin
+    // Erst schreiben, dann ausblenden: Lehnt das Schreiben ab (z. B. DB-Feld
+    // mit ungueltigem Text), bleibt der Editor mit der Eingabe offen.
+    try
+      if D = FilterRowMark then
+      begin
+        if (C >= 0) and (C < FColCount) and (FFilters[C] <> S) then
+        begin
+          FFilters[C] := S;
+          RebuildMap;
+        end;
+      end
+      else if (D >= FFixedRows) and (GetCellText(C, D) <> S) then
+        SetCellByUser(C, D, S);
+    except
+      if (FEditor <> nil) and FEditor.Visible then
+      begin
+        FEditC := EC;
+        FEditV := V;
+      end;
+      raise;
+    end;
+  end;
+  if (FEditor = nil) or not FEditor.Visible then
+    Exit;
   HadFocus := FEditor.Focused or FEditor.ContainsControl(FindControl(GetFocus));
   FEditor.Visible := False;
   if HadFocus and CanFocus and HandleAllocated and IsWindowVisible(Handle) then
     SetFocus;
-  if not Accept then
-    Exit;
-  if D = FilterRowMark then
-  begin
-    if (C >= 0) and (C < FColCount) and (FFilters[C] <> S) then
-    begin
-      FFilters[C] := S;
-      RebuildMap;
-    end;
-  end
-  else if (D >= FFixedRows) and (GetCellText(C, D) <> S) then
-    SetCellByUser(C, D, S);
 end;
 
 procedure TPPGCustomGrid.EditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -6757,7 +6824,7 @@ var
   S: string;
 begin
   S := UiaValue(Id);
-  if (S = '1') or SameText(S, 'True') or SameText(S, 'Ja') then
+  if TPPGCellPainter.IsCheckedText(S) then
     Result := ToggleState_On
   else
     Result := ToggleState_Off;

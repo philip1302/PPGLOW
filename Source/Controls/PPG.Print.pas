@@ -43,9 +43,14 @@ type
   private
     FLeft, FTop, FRight, FBottom: Integer;
     FOnChange: TNotifyEvent;
+    FOwner: TPersistent;
     procedure SetValue(Index: Integer; const Value: Integer);
+  protected
+    /// Ohne Owner erkennt PPGCheckRange das DFM-Laden nicht und wirft dann
+    /// statt zu klemmen.
+    function GetOwner: TPersistent; override;
   public
-    constructor Create;
+    constructor Create(AOwner: TPersistent = nil);
     procedure Assign(Source: TPersistent); override;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
@@ -243,9 +248,10 @@ end;
 
 { TPPGPrintMargins }
 
-constructor TPPGPrintMargins.Create;
+constructor TPPGPrintMargins.Create(AOwner: TPersistent);
 begin
   inherited Create;
+  FOwner := AOwner;
   FLeft := 15;
   FTop := 15;
   FRight := 15;
@@ -268,6 +274,11 @@ begin
   end
   else
     inherited Assign(Source);
+end;
+
+function TPPGPrintMargins.GetOwner: TPersistent;
+begin
+  Result := FOwner;
 end;
 
 procedure TPPGPrintMargins.SetValue(Index: Integer; const Value: Integer);
@@ -352,7 +363,7 @@ end;
 constructor TPPGCustomPrinter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FMargins := TPPGPrintMargins.Create;
+  FMargins := TPPGPrintMargins.Create(Self);
   FMargins.OnChange := MarginsChanged;
   FFooterText := PPGStr(@SPPGPrintFooterDefault);
 end;
@@ -638,18 +649,25 @@ begin
   Result := TMetafile.Create;
   Result.Width := FDevice.PhysWidth;
   Result.Height := FDevice.PhysHeight;
-  RefDC := GetDC(0);
   try
-    MC := TMetafileCanvas.Create(Result, RefDC);
+    RefDC := GetDC(0);
     try
-      // Metafile in Geraetepunkten des Druckers: Ursprung verschieben
-      SetWindowOrgEx(MC.Handle, -FDevice.OffsetX, -FDevice.OffsetY, nil);
-      FPrinter.RenderPage(Index, MC.Handle, FDevice);
+      MC := TMetafileCanvas.Create(Result, RefDC);
+      try
+        // Metafile in Geraetepunkten des Druckers: Ursprung verschieben
+        SetWindowOrgEx(MC.Handle, -FDevice.OffsetX, -FDevice.OffsetY, nil);
+        FPrinter.RenderPage(Index, MC.Handle, FDevice);
+      finally
+        MC.Free;
+      end;
     finally
-      MC.Free;
+      ReleaseDC(0, RefDC);
     end;
-  finally
-    ReleaseDC(0, RefDC);
+  except
+    // RenderPage wirft z. B. aus OnCustomDraw: sonst ginge das Metafile
+    // (mit HENHMETAFILE) bei jedem Neuzeichnen der Vorschau verloren
+    Result.Free;
+    raise;
   end;
   FCache.Add(Index, Result);
   FCacheOrder.Add(Index);

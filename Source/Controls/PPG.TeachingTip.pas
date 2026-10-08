@@ -1248,7 +1248,9 @@ begin
   begin
     if FWatchedForm <> FTarget then
       PPGUnwatchControl(FWatchedForm, WatchEvent);
-    if FWatchedForm <> Owner then
+    // Ist das Formular zugleich Target (oder Owner), gilt die
+    // Benachrichtigung auch dafuer: nicht abmelden
+    if (FWatchedForm <> Owner) and (FWatchedForm <> FTarget) then
       FWatchedForm.RemoveFreeNotification(Self);
     FWatchedForm := nil;
   end;

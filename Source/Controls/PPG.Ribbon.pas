@@ -344,6 +344,9 @@ type
     procedure ClosePanelPopup;
     procedure CloseGroupPopup;
     procedure CloseGalleryPopup;
+    /// Item steht (noch) im Band oder im Schnellzugriff. Vergleicht nur
+    /// Zeiger, darf also mit einem freigegebenen Item aufgerufen werden.
+    function IsLiveItem(Item: TPPGRibbonItem): Boolean;
     procedure ShowItemMenu(Item: TPPGRibbonItem; const ScreenR: TRect);
     procedure ShowContextMenuAt(const Hit: TPPGRibbonHit; const ScreenPt: TPoint);
     procedure ContextAddClick(Sender: TObject);
@@ -381,6 +384,7 @@ type
     procedure Resize; override;
     procedure AlignControls(AControl: TControl; var Rect: TRect); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    function ReferencesComponent(AComponent: TComponent): Boolean; override;
     procedure DoContextPopup(MousePos: TPoint; var Handled: Boolean); override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
@@ -1328,6 +1332,13 @@ begin
   end;
 end;
 
+function TPPGCustomRibbon.ReferencesComponent(AComponent: TComponent): Boolean;
+begin
+  // Images und LargeImages koennen dieselbe Liste sein: beim Umsetzen von
+  // Images darf die Basis die FreeNotification dann nicht entfernen
+  Result := inherited ReferencesComponent(AComponent) or (AComponent = FLargeImages);
+end;
+
 procedure TPPGCustomRibbon.SetLargeImages(const Value: TCustomImageList);
 begin
   if FLargeImages = Value then
@@ -1592,6 +1603,13 @@ procedure TPPGCustomRibbon.LayoutChanged;
 begin
   if (csDestroying in ComponentState) or (FTabs = nil) then
     Exit;
+  // Offene Galerie eines entfernten Items: schliessen, bevor Paint oder Maus
+  // im Popup auf das freigegebene Item zugreifen
+  if (FGalleryPopup <> nil) and (FGalleryPopup.FItem <> nil) and not IsLiveItem(FGalleryPopup.FItem) then
+  begin
+    FGalleryPopup.FItem := nil;
+    CloseGalleryPopup;
+  end;
   FLayoutValid := False;
   if FPanelPopup <> nil then
     FPanelPopup.View.Valid := False;
@@ -3344,7 +3362,9 @@ begin
           R := HitScreenRect(Hit);
           if Assigned(It.OnClick) or (It.Action <> nil) then
             ClickItem(It);
-          ShowItemMenu(It, R);
+          // OnClick darf das Item entfernt haben
+          if IsLiveItem(It) then
+            ShowItemMenu(It, R);
         end
         else if It.Kind = rikControl then
         begin
@@ -3404,6 +3424,13 @@ begin
     Item.ActionLink.Execute(Self)
   else if Assigned(Item.OnClick) then
     Item.OnClick(Item);
+  // Der Handler darf das eigene Item entfernen: dann kein OnItemClick mit
+  // freigegebenem Item
+  if not IsLiveItem(Item) then
+  begin
+    Invalidate;
+    Exit;
+  end;
   if Assigned(FOnItemClick) then
     FOnItemClick(Self, Item);
   Invalidate;
@@ -3786,6 +3813,24 @@ begin
     FGalleryPopup.FItem := nil;
     Invalidate;
   end;
+end;
+
+function TPPGCustomRibbon.IsLiveItem(Item: TPPGRibbonItem): Boolean;
+var
+  T, G, I: Integer;
+begin
+  Result := False;
+  if (Item = nil) or (FTabs = nil) then
+    Exit;
+  for T := 0 to FTabs.Count - 1 do
+    for G := 0 to FTabs[T].Groups.Count - 1 do
+      for I := 0 to FTabs[T].Groups[G].Items.Count - 1 do
+        if FTabs[T].Groups[G].Items[I] = Item then
+          Exit(True);
+  if FQuickAccess <> nil then
+    for I := 0 to FQuickAccess.Count - 1 do
+      if FQuickAccess[I] = Item then
+        Exit(True);
 end;
 
 procedure TPPGCustomRibbon.ClosePopups;

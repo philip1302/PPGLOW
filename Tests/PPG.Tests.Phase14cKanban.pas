@@ -44,6 +44,7 @@ type
     procedure DragToOtherColumn;
     procedure DragVetoAndWipBlock;
     procedure EscapeCancelsDrag;
+    procedure ModelChangeDuringDragAndAssignIds;
     procedure KeyboardMovesAndAnnounces;
     procedure ColumnScrollsOnItsOwn;
     procedure VirtualColumn;
@@ -437,6 +438,50 @@ begin
   CheckEquals(3, K.CardCount(1, 0));
   CheckTrue(K.WipState(1) = kwsOver);
   K.Repaint;
+  CheckEquals(0, FErrors.Count);
+end;
+
+procedure TKanbanTests.ModelChangeDuringDragAndAssignIds;
+var
+  K, K2: TPPGKanban;
+  A, B, A2: TPoint;
+  C, C3: TPPGKanbanCard;
+begin
+  // Audit 08.10.2026: Eine Modellaenderung (z. B. DB-Reload) waehrend des
+  // Ziehens liess die Quelle als alten Index stehen -> falsche Karte
+  // verschoben. Cards := X nummerierte die Ids neu.
+  K := NewBoard;
+  C := K.CardAt(0, 0, 1);
+  CheckEquals('A2', C.Title);
+  A := Center(K.CardRect(0, 0, 1));
+  B := Point(Center(K.ColumnRect(2)).X, K.HeaderRect(2).Bottom + 30);
+  K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(A.X, A.Y));
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(A.X + 10, A.Y + 10));
+  CheckTrue(K.CardDragging, 'Ziehen laeuft');
+  K.CardAt(0, 0, 0).Free; // A1 weg: A2 rutscht auf Index 0
+  CheckTrue(K.CardDragging, 'Ziehen laeuft weiter');
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(B.X, B.Y));
+  K.Perform(WM_LBUTTONUP, 0, MakeLParam(B.X, B.Y));
+  CheckEquals(3, C.ColumnId, 'A2 (nicht A3) in Review');
+  CheckEquals('A3,A4,A5', Titles(K, 0));
+  // Gezogene Karte verschwindet: Ziehen endet ohne Verschieben
+  C3 := K.CardAt(0, 0, 0);
+  A2 := Center(K.CardRect(0, 0, 0));
+  K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(A2.X, A2.Y));
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(A2.X + 10, A2.Y + 10));
+  CheckTrue(K.CardDragging);
+  C3.Free;
+  CheckFalse(K.CardDragging, 'Ziehen abgebrochen');
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(B.X, B.Y));
+  K.Perform(WM_LBUTTONUP, 0, MakeLParam(B.X, B.Y));
+  CheckEquals('A4,A5', Titles(K, 0));
+  CheckEquals('A2', Titles(K, 2));
+  // Assign behaelt die Ids
+  K2 := NewBoard;
+  K2.Cards := K.Cards;
+  CheckEquals(K.Cards.Count, K2.Cards.Count);
+  CheckEquals(K.Cards[0].Id, K2.Cards[0].Id, 'Id kopiert');
+  CheckTrue(K2.Cards[0].Id <> 1, 'nicht neu nummeriert');
   CheckEquals(0, FErrors.Count);
 end;
 

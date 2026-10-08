@@ -153,6 +153,11 @@ end;
 
 function TPPGCustomRating.NormalizeValue(V: Double): Double;
 begin
+  // Audit 08.10.2026: erst klemmen, dann runden (Round(1E20) warf EInvalidOp)
+  if not PPGIsFinite(V) or (V < 0) then
+    V := 0;
+  if V > FMaxValue then
+    V := FMaxValue;
   if FAllowHalf then
     Result := Round(V * 2) / 2
   else
@@ -167,6 +172,7 @@ procedure TPPGCustomRating.SetValue(const Value: Double);
 var
   V: Double;
 begin
+  PPGCheckFinite(Self, 'Value', Value);
   // Beim Laden roh merken: AllowHalf/MaxValue kommen evtl. erst danach (Loaded rundet)
   if csLoading in ComponentState then
   begin
@@ -364,15 +370,28 @@ begin
       try
         if Fill < 1 then
           IntersectClipRect(DC, Half.Left, Half.Top, Half.Right, Half.Bottom);
+        // Jedes Handle mit eigenem try/finally (Coding-Rules, Ressourcen)
         Brush := CreateSolidBrush(ColorToRGB(FillColor));
-        Pen := CreatePen(PS_SOLID, 1, ColorToRGB(FillColor));
-        OldBrush := SelectObject(DC, Brush);
-        OldPen := SelectObject(DC, Pen);
-        Polygon(DC, Pts, 10);
-        SelectObject(DC, OldPen);
-        SelectObject(DC, OldBrush);
-        DeleteObject(Pen);
-        DeleteObject(Brush);
+        try
+          Pen := CreatePen(PS_SOLID, 1, ColorToRGB(FillColor));
+          try
+            OldBrush := SelectObject(DC, Brush);
+            try
+              OldPen := SelectObject(DC, Pen);
+              try
+                Polygon(DC, Pts, 10);
+              finally
+                SelectObject(DC, OldPen);
+              end;
+            finally
+              SelectObject(DC, OldBrush);
+            end;
+          finally
+            DeleteObject(Pen);
+          end;
+        finally
+          DeleteObject(Brush);
+        end;
         if Fill < 1 then
           SelectClipRgn(DC, 0);
       finally

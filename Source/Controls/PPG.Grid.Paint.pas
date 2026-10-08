@@ -75,7 +75,7 @@ type
 implementation
 
 uses
-  System.SysUtils, Vcl.StdCtrls, PPG.Appearance, PPG.Render.Registry;
+  System.SysUtils, Vcl.StdCtrls, PPG.Appearance, PPG.Render.Registry, PPG.Consts, PPG.Lang;
 
 type
   /// Standard: Kaestchen und Pfeil aus den vorhandenen Preset-Renderern.
@@ -256,7 +256,10 @@ end;
 
 class function TPPGCellPainter.IsCheckedText(const S: string): Boolean;
 begin
-  Result := (S = '1') or SameText(S, 'True') or SameText(S, 'Ja');
+  // Wahr-Werte: 1, True, Yes, Ja (Bestand) und das uebersetzte "Ja" der
+  // Dialoge, damit Daten in der Sprache der Anwendung erkannt werden
+  Result := (S = '1') or SameText(S, 'True') or SameText(S, 'Yes') or SameText(S, 'Ja') or
+    SameText(S, StringReplace(PPGStr(@SPPGDlgYes), '&', '', [rfReplaceAll]));
 end;
 
 class function TPPGCellPainter.TextFlags(Alignment: TAlignment): Cardinal;

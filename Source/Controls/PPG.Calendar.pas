@@ -138,10 +138,12 @@ type
     procedure MoveFocusDays(Delta: Integer);
     procedure MoveFocusMonths(Delta: Integer);
     function ClampDate(D: TDate): TDate;
+    procedure ApplyDateRange;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
   protected
+    procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure WndProc(var Message: TMessage); override;
     function IsHot: Boolean; override;
@@ -739,15 +741,58 @@ begin
 end;
 
 procedure TPPGCustomCalendar.SetMinDate(const Value: TDate);
+var
+  V: TDate;
 begin
-  FMinDate := Trunc(Value);
+  V := Trunc(Value);
+  if V = FMinDate then
+    Exit;
+  FMinDate := V;
+  // Wie DayStartHour/DayEndHour im Planer: die Gegenseite folgt, damit nie
+  // MinDate > MaxDate gilt (0 = keine Grenze). Beim Laden kommen beide
+  // nacheinander, das Ergebnis stimmt danach wieder.
+  if (FMinDate <> 0) and (FMaxDate <> 0) and (FMaxDate < FMinDate) then
+    FMaxDate := FMinDate;
+  ApplyDateRange;
   Invalidate;
 end;
 
 procedure TPPGCustomCalendar.SetMaxDate(const Value: TDate);
+var
+  V: TDate;
 begin
-  FMaxDate := Trunc(Value);
+  V := Trunc(Value);
+  if V = FMaxDate then
+    Exit;
+  FMaxDate := V;
+  if (FMinDate <> 0) and (FMaxDate <> 0) and (FMinDate > FMaxDate) then
+    FMinDate := FMaxDate;
+  ApplyDateRange;
   Invalidate;
+end;
+
+procedure TPPGCustomCalendar.ApplyDateRange;
+var
+  D: TDate;
+begin
+  // Gewaehltes Datum und Fokus in den Bereich holen (Audit 08.10.2026:
+  // ein Datum ausserhalb von MinDate..MaxDate blieb stehen)
+  if csLoading in ComponentState then
+    Exit;
+  if FFocusDate <> 0 then
+    FFocusDate := ClampDate(FFocusDate);
+  if (FSelectionMode = dsmSingle) and (FDate <> 0) then
+  begin
+    D := ClampDate(FDate);
+    if D <> Trunc(FDate) then
+      SetDate(D);
+  end;
+end;
+
+procedure TPPGCustomCalendar.Loaded;
+begin
+  inherited Loaded;
+  ApplyDateRange;
 end;
 
 procedure TPPGCustomCalendar.SetShowWeekNumbers(const Value: Boolean);

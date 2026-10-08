@@ -99,6 +99,7 @@ type
     procedure UpdateText;
     procedure CalendarChange(Sender: TObject);
     function ClampToRange(D: TDate): TDate;
+    procedure ApplyDateRange;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
   protected
     procedure Loaded; override;
@@ -377,6 +378,7 @@ end;
 procedure TPPGCustomDatePicker.Loaded;
 begin
   inherited Loaded;
+  ApplyDateRange;
   UpdateText;
 end;
 
@@ -640,13 +642,46 @@ begin
 end;
 
 procedure TPPGCustomDatePicker.SetMinDate(const Value: TDate);
+var
+  V: TDate;
 begin
-  FMinDate := Trunc(Value);
+  V := Trunc(Value);
+  if V = FMinDate then
+    Exit;
+  FMinDate := V;
+  // Wie DayStartHour/DayEndHour im Planer: die Gegenseite folgt, damit nie
+  // MinDate > MaxDate gilt (0 = keine Grenze). Beim Laden kommen beide
+  // nacheinander, das Ergebnis stimmt danach wieder.
+  if (FMinDate <> 0) and (FMaxDate <> 0) and (FMaxDate < FMinDate) then
+    FMaxDate := FMinDate;
+  ApplyDateRange;
 end;
 
 procedure TPPGCustomDatePicker.SetMaxDate(const Value: TDate);
+var
+  V: TDate;
 begin
-  FMaxDate := Trunc(Value);
+  V := Trunc(Value);
+  if V = FMaxDate then
+    Exit;
+  FMaxDate := V;
+  if (FMinDate <> 0) and (FMaxDate <> 0) and (FMinDate > FMaxDate) then
+    FMinDate := FMaxDate;
+  ApplyDateRange;
+end;
+
+procedure TPPGCustomDatePicker.ApplyDateRange;
+var
+  D: TDate;
+begin
+  // Datum in den Bereich holen, die Uhrzeit bleibt (Audit 08.10.2026: ein
+  // Datum ausserhalb von MinDate..MaxDate blieb stehen). Reine Zeitfelder
+  // haben keinen Datumsbereich.
+  if (csLoading in ComponentState) or (FDateTime = 0) or TimeMode then
+    Exit;
+  D := ClampToRange(FDateTime);
+  if D <> Trunc(FDateTime) then
+    SetDateTime(D + Frac(FDateTime));
 end;
 
 procedure TPPGCustomDatePicker.SetShowCheckbox(const Value: Boolean);

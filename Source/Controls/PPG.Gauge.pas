@@ -416,6 +416,7 @@ end;
 
 procedure TPPGGaugeRange.SetStartValue(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'StartValue', Value);
   if FStartValue <> Value then
   begin
     FStartValue := Value;
@@ -425,6 +426,7 @@ end;
 
 procedure TPPGGaugeRange.SetEndValue(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'EndValue', Value);
   if FEndValue <> Value then
   begin
     FEndValue := Value;
@@ -590,6 +592,8 @@ end;
 
 procedure TPPGCustomGauge.SetMin(const Value: Double);
 begin
+  // Audit 08.10.2026: NaN uebersteht alle Vergleiche und liess Paint werfen
+  PPGCheckFinite(Self, 'Min', Value);
   if FMin = Value then
     Exit;
   if not PPGIsLoading(Self) and (Value >= FMax) then
@@ -603,6 +607,7 @@ end;
 
 procedure TPPGCustomGauge.SetMax(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'Max', Value);
   if FMax = Value then
     Exit;
   if not PPGIsLoading(Self) and (Value <= FMin) then
@@ -618,6 +623,7 @@ procedure TPPGCustomGauge.SetValue(const Value: Double);
 var
   V: Double;
 begin
+  PPGCheckFinite(Self, 'Value', Value);
   if csLoading in ComponentState then
   begin
     FValue := Value; // geklemmt wird in Loaded (Min/Max evtl. noch nicht gelesen)
@@ -702,6 +708,7 @@ end;
 
 procedure TPPGCustomGauge.SetTargetValue(const Value: Double);
 begin
+  PPGCheckFinite(Self, 'TargetValue', Value);
   if FTargetValue <> Value then
   begin
     FTargetValue := Value;
@@ -762,9 +769,8 @@ end;
 
 procedure TPPGCustomGauge.SetIncrement(const Value: Double);
 begin
-  if Value <= 0 then
-    raise EPPGPropertyError.CreateInvalid(Self, 'Increment', FloatToStr(Value));
-  FIncrement := Value;
+  // Zur Laufzeit Exception, beim DFM-Laden protokollieren und Wert behalten
+  FIncrement := PPGCheckFloat(Self, 'Increment', Value, Value > 0, FIncrement);
 end;
 
 function TPPGCustomGauge.IsMinStored: Boolean;

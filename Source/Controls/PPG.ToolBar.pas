@@ -659,7 +659,17 @@ procedure TPPGToolItems.Update(Item: TCollectionItem);
 begin
   inherited Update(Item);
   if Owner is TPPGToolBar then
+  begin
+    // Item = nil: Eintraege hinzugefuegt, geloescht oder umsortiert. Hover
+    // und gedrueckter Eintrag sind Positionen und zeigen dann auf andere
+    // Buttons (bzw. ins Leere).
+    if Item = nil then
+    begin
+      TPPGToolBar(Owner).FHotPart := -1;
+      TPPGToolBar(Owner).FDownPart := -1;
+    end;
     TPPGToolBar(Owner).ItemsChanged;
+  end;
 end;
 
 { TPPGToolBar }
@@ -942,6 +952,8 @@ begin
 end;
 
 procedure TPPGToolBar.ClickItem(Item: TPPGToolItem);
+var
+  ItemId: Integer;
 begin
   if (Item = nil) or (Item.Style = tisSeparator) or not Item.Enabled or not Enabled then
     Exit;
@@ -956,6 +968,7 @@ begin
         TCustomAction(Item.Action).Checked := Item.Down;
     end;
   // Wie TControl.Click: eigenes OnClick vor der Action, sonst Action.Execute
+  ItemId := Item.ID;
   if Assigned(Item.OnClick) and (Item.Action <> nil) and
     not SameMethod(Item.OnClick, Item.Action.OnExecute) then
     Item.OnClick(Item)
@@ -963,6 +976,10 @@ begin
     Item.ActionLink.Execute(Self)
   else if Assigned(Item.OnClick) then
     Item.OnClick(Item);
+  // Der Handler darf den eigenen Button entfernen: nur ein noch vorhandenes
+  // Item an OnItemClick geben (Suche ueber die Kennung, ohne Item anzufassen)
+  if FItems.FindItemID(ItemId) <> Item then
+    Exit;
   if Assigned(FOnItemClick) then
     FOnItemClick(Self, Item);
   NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
@@ -1351,11 +1368,16 @@ var
 begin
   if (GMsgToolAction <> 0) and (Message.Msg = GMsgToolAction) then
   begin
+    // LParam: Kennung (ID) des Items bzw. -1 fuer den Ueberlauf. Inzwischen
+    // geaenderte Leiste: nur das gemeinte Item ausloesen.
     Id := Integer(Message.WParam);
-    if Id = FItems.Count + 1 then
-      ShowOverflowMenu
-    else if (Id >= 1) and (Id <= FItems.Count) then
-      ClickItem(FItems[Id - 1]);
+    if Integer(Message.LParam) = -1 then
+    begin
+      if Id = FItems.Count + 1 then
+        ShowOverflowMenu;
+    end
+    else
+      ClickItem(TPPGToolItem(FItems.FindItemID(Integer(Message.LParam))));
     Exit;
   end;
   inherited WndProc(Message);
@@ -1453,8 +1475,12 @@ end;
 
 procedure TPPGToolBar.AccChildDoDefault(Id: Integer);
 begin
-  if HandleAllocated then
-    PostMessage(Handle, GMsgToolAction, WPARAM(Id), 0);
+  if not HandleAllocated then
+    Exit;
+  if (Id >= 1) and (Id <= FItems.Count) then
+    PostMessage(Handle, GMsgToolAction, WPARAM(Id), LPARAM(FItems[Id - 1].ID))
+  else if Id = FItems.Count + 1 then
+    PostMessage(Handle, GMsgToolAction, WPARAM(Id), LPARAM(-1));
 end;
 
 function TPPGToolBar.AccFocusedChild: Integer;

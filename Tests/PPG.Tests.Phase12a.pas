@@ -44,6 +44,7 @@ type
     FChanges: Integer;
     FDummy: TPPGEdit;
     FOldFS: TFormatSettings;
+    FChangeText: string;
     procedure Changed(Sender: TObject);
     function NewNumber: TPPGNumberEdit;
     procedure TypeText(E: TPPGNumberEdit; const S: string);
@@ -63,6 +64,8 @@ type
     procedure WheelOnlyWithFocus;
     procedure FieldValueInterface;
     procedure StreamingRoundTrip;
+    procedure HugeAndNonFiniteValues;
+    procedure PageKeysUseLargeIncrement;
   end;
 
   TMaskEditTests = class(TControlTestCase)
@@ -83,12 +86,13 @@ type
     procedure CapsLockHint;
     procedure AccessibleAsProtected;
     procedure PaintsInAllPresets;
+    procedure ZeroPasswordCharLoadsFromDfm;
   end;
 
 implementation
 
 uses
-  Winapi.oleacc, PPG.Theme, PPG.Lang, PPG.Consts;
+  System.Math, Winapi.oleacc, PPG.Theme, PPG.Lang, PPG.Consts;
 
 type
   TNumberAccess = class(TPPGNumberEdit);
@@ -174,6 +178,14 @@ begin
   CheckFalse(PPGParseNumber('1.2.3', FDE, V));
   CheckFalse(PPGParseNumber('--5', FDE, V));
   CheckFalse(PPGParseNumber(',', FDE, V));
+  // Audit 08.10.2026: Kuerzel und Ausdruecke sind keine Zahlen (Summen im Grid)
+  CheckFalse(PPGParseNumber('A-100', FDE, V), 'A-100');
+  CheckFalse(PPGParseNumber('1e3', FDE, V), '1e3');
+  CheckFalse(PPGParseNumber('3x4', FDE, V), '3x4');
+  CheckFalse(PPGParseNumber('100-5', FDE, V), '100-5');
+  CheckFalse(PPGParseNumber('1+2', FDE, V), '1+2');
+  CheckNum(Self, '100-', FDE, -100);
+  CheckNum(Self, 'EUR -5,00', FDE, -5);
 end;
 
 procedure TNumberFormatTests.EvalExpressions;
@@ -299,6 +311,7 @@ end;
 procedure TNumberEditTests.Changed(Sender: TObject);
 begin
   Inc(FChanges);
+  FChangeText := TPPGNumberEdit(Sender).Text;
 end;
 
 function TNumberEditTests.NewNumber: TPPGNumberEdit;
@@ -527,6 +540,71 @@ begin
   CheckEquals(0, FChanges);
 end;
 
+procedure TNumberEditTests.HugeAndNonFiniteValues;
+var
+  E: TPPGNumberEdit;
+  Raised: Integer;
+begin
+  // Audit 08.10.2026: Auch bei nkFloat wurde nach Currency gewandelt;
+  // 1E15 bzw. NaN warfen EInvalidOp beim Verlassen bzw. beim Setzen.
+  E := NewNumber;
+  E.NumberKind := nkFloat;
+  E.SetFocus;
+  TypeText(E, '1000000000000000');
+  FDummy.SetFocus;
+  Application.ProcessMessages;
+  CheckEquals(1E15, E.Value, 1, 'grosse Zahl uebernommen');
+  CheckEquals(1, FChanges);
+  CheckEquals(E.Text, FChangeText, 'OnChange sieht schon das Anzeigeformat');
+  Raised := 0;
+  try
+    E.Value := NaN;
+  except
+    on Ex: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  E.NumberKind := nkFloat;
+  E.Value := 5;
+  E.NumberKind := nkCurrency;
+  try
+    E.Value := 1E16;
+  except
+    on Ex: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    E.Increment := 0;
+  except
+    on Ex: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  CheckEquals(3, Raised);
+  CheckEquals(5, E.Value, 1E-9, 'Wert unveraendert');
+end;
+
+procedure TNumberEditTests.PageKeysUseLargeIncrement;
+var
+  E: TPPGNumberEdit;
+begin
+  // Audit 08.10.2026: Round(LargeIncrement / Increment) Schritte: 0,4/1 = kein
+  // Schritt, 10/3 = 9
+  E := NewNumber;
+  E.NumberKind := nkFloat;
+  E.Value := 0;
+  E.Increment := 1;
+  E.LargeIncrement := 0.4;
+  E.SetFocus;
+  Key(E, VK_PRIOR);
+  CheckEquals(0.4, E.Value, 1E-9, '0,4');
+  E.Value := 0;
+  E.Increment := 3;
+  E.LargeIncrement := 10;
+  Key(E, VK_PRIOR);
+  CheckEquals(10, E.Value, 1E-9, '10 statt 9');
+  Key(E, VK_NEXT);
+  CheckEquals(0, E.Value, 1E-9);
+end;
+
 procedure TNumberEditTests.StreamingRoundTrip;
 var
   E, E2: TPPGNumberEdit;
@@ -731,6 +809,27 @@ begin
   end;
   P.Clear;
   CheckEquals('', P.Text);
+end;
+
+procedure TPasswordEditTests.ZeroPasswordCharLoadsFromDfm;
+var
+  Src, Bin: TStringStream;
+  P: TPPGPasswordEdit;
+begin
+  // Audit 08.10.2026: PasswordChar = #0 in der DFM warf beim Laden
+  Src := TStringStream.Create('object Pw: TPPGPasswordEdit'#13#10'  PasswordChar = #0'#13#10'end'#13#10);
+  Bin := TStringStream.Create('');
+  P := TPPGPasswordEdit.Create(nil);
+  try
+    ObjectTextToBinary(Src, Bin);
+    Bin.Position := 0;
+    Bin.ReadComponent(P);
+    CheckTrue(P.PasswordChar = #$25CF, 'bisheriges Zeichen bleibt');
+  finally
+    P.Free;
+    Bin.Free;
+    Src.Free;
+  end;
 end;
 
 procedure TPasswordEditTests.NoCopyWhileHidden;

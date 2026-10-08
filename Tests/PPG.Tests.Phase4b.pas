@@ -63,6 +63,7 @@ type
     procedure ComboRoleAndExpandedState;
     procedure ListExposesItemsAsChildren;
     procedure ItemDefaultActionSelectsAsynchronously;
+    procedure PostedItemActionIgnoresChangedRows;
   end;
 
   TPhase4bPaintTests = class(TComboTestCase)
@@ -983,6 +984,32 @@ begin
     CheckEquals(1, C.ItemIndex);
     CheckFalse(C.DroppedDown);
     CheckEquals(1, FChanges);
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TComboAccessibilityTests.PostedItemActionIgnoresChangedRows;
+var
+  C: TPPGComboBox;
+  Acc: IAccessible;
+  F: TArray<Integer>;
+begin
+  // Audit 08.10.2026: Gepostet wurde nur die Zeile; stellte ein Filter die
+  // Zeilen bis zur Verarbeitung um, wurde ein anderer Eintrag gewaehlt.
+  FForm.Show;
+  try
+    C := NewCombo;
+    C.DroppedDown := True;
+    Acc := AccOf(C.PopupList);
+    CheckEquals(S_OK, Acc.accDoDefaultAction(2)); // Zeile 1 = Banane
+    SetLength(F, 2);
+    F[0] := 2;
+    F[1] := 0;
+    C.PopupList.SetFilter(F);                      // Zeile 1 = Apfel
+    PumpPosted(C.PopupList.Handle);
+    CheckEquals(-1, C.ItemIndex, 'veraltete Aktion verworfen');
+    CheckEquals(0, FChanges);
   finally
     FForm.Hide;
   end;

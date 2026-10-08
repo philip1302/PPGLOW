@@ -55,6 +55,9 @@ type
   TPPGTagEdit = class(TPPGCustomDropDownField, IPPGFieldValue, IPPGAccessibleChildren)
   private
     FTags: TStrings;
+    // Zaehlt jede Aenderung der Tags; gepostete Aktionen pruefen damit, ob
+    // der Index noch denselben Tag meint
+    FTagsVersion: Cardinal;
     FSuggestions: TStrings;
     FDelimiters: string;
     FDelimiter: Char;
@@ -313,6 +316,7 @@ end;
 
 procedure TPPGTagEdit.TagsChanged(Sender: TObject);
 begin
+  Inc(FTagsVersion);
   FLayoutValid := False;
   if FSelectedTag >= FTags.Count then
     FSelectedTag := -1;
@@ -979,12 +983,15 @@ procedure TPPGTagEdit.AccChildDoDefault(Id: Integer);
 begin
   // Nie im COM-Aufruf entfernen
   if HandleAllocated then
-    PostMessage(Handle, WM_REMOVETAG, Id - 1, 0);
+    PostMessage(Handle, WM_REMOVETAG, WPARAM(Id - 1), LPARAM(FTagsVersion));
 end;
 
 procedure TPPGTagEdit.WMRemoveTag(var Message: TMessage);
 begin
-  RemoveTag(Message.WParam);
+  // Tags inzwischen geaendert: der Index meint womoeglich einen anderen Tag
+  if Cardinal(Message.LParam) <> FTagsVersion then
+    Exit;
+  RemoveTag(Integer(Message.WParam));
 end;
 
 function TPPGTagEdit.AccFocusedChild: Integer;

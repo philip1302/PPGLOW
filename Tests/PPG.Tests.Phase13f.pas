@@ -44,6 +44,7 @@ type
     procedure LookOffAndPlainSource;
     procedure LookStylesAreShared;
     procedure ThousandSeparatorsStayNumbers;
+    procedure AuditTimesReaderAndCsvSafety;
   end;
 
 implementation
@@ -389,6 +390,62 @@ begin
   C := PPGExportCsvText(T);
   CheckEquals('A;B'#13#10'"x;y";"sagt ""hallo"""'#13#10'"1'#13#10'2";'#13#10, C);
   CheckEquals('A'#9'B', Copy(PPGExportCsvText(T, #9), 1, 3));
+end;
+
+procedure TExportTests.AuditTimesReaderAndCsvSafety;
+var
+  F: string;
+  Z: TZipFile;
+  Rd: TPPGXlsxReader;
+  S: TPPGStringTableSource;
+  T: IPPGTableSource;
+  B: TBytes;
+
+  procedure AddText(const Name, Text: string);
+  begin
+    Z.Add(TEncoding.UTF8.GetBytes(Text), Name);
+  end;
+
+begin
+  // Audit 08.10.2026: reine Uhrzeiten wurden negativ (Excel zeigte #####)
+  CheckEquals(0.5, PPGExcelSerial(0.5), 0, '12:00 ohne Datum');
+  CheckEquals(0.5, PPGFromExcelSerial(0.5), 0, 'zurueck');
+  CheckEquals(1, PPGExcelSerial(EncodeDate(1900, 1, 1)), 0, 'Datum unveraendert');
+  // Reader: r-Attribute sind optional; Inline-Text aus mehreren Laeufen
+  F := TempFile('.xlsx');
+  Z := TZipFile.Create;
+  try
+    Z.Open(F, zmWrite);
+    AddText('xl/workbook.xml', '<workbook><sheets><sheet name="S" sheetId="1"/></sheets></workbook>');
+    AddText('xl/sharedStrings.xml', '<sst></sst>');
+    AddText('xl/worksheets/sheet1.xml', '<worksheet><sheetData>' +
+      '<row><c t="inlineStr"><is><r><t>in</t></r><r><t>line</t></r></is></c><c><v>7</v></c></row>' +
+      '<row><c><v>8</v></c></row></sheetData></worksheet>');
+    Z.Close;
+  finally
+    Z.Free;
+  end;
+  Rd := TPPGXlsxReader.Create;
+  try
+    Rd.LoadFromFile(F);
+    CheckEquals('inline', Rd.Cells[0, 0], 'alle Laeufe');
+    CheckEquals(7, Double(Rd.Values[1, 0]), 0, 'Spalte ohne r');
+    CheckEquals(8, Double(Rd.Values[0, 1]), 0, 'Zeile ohne r');
+    CheckEquals(2, Rd.RowCount);
+  finally
+    Rd.Free;
+  end;
+  // CSV: Formel-Einschleusung abwehren, Zahlen bleiben Zahlen
+  S := TPPGStringTableSource.Create(['A', 'B']);
+  T := S;
+  S.AddRow(['=1+1', '-5']);
+  S.AddRow(['@x', '+49 30']);
+  CheckEquals('A;B'#13#10'''=1+1;-5'#13#10'''@x;''+49 30'#13#10, PPGExportCsvText(T));
+  // CSV-Datei mit BOM, damit Excel UTF-8 erkennt
+  F := TempFile('.csv');
+  PPGExportCsv(T, F);
+  B := TFile.ReadAllBytes(F);
+  CheckTrue((Length(B) > 3) and (B[0] = $EF) and (B[1] = $BB) and (B[2] = $BF), 'BOM');
 end;
 
 procedure TExportTests.PdfExport;

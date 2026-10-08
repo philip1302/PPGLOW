@@ -54,6 +54,9 @@ type
   private
     FGrid: TPPGCustomGrid;
     FSource: IPPGTableSource;
+    // Komponente hinter FSource (z. B. ein Grid oder DB-Grid), per
+    // FreeNotification gehalten
+    FSourceComp: TComponent;
     FRepeatHeader: Boolean;
     FFitToPageWidth: Boolean;
     FPrintGridLines: Boolean;
@@ -214,13 +217,21 @@ begin
     FLookSrc := nil;
     Invalidate;
   end;
+  if (Operation = opRemove) and (AComponent <> nil) and (AComponent = FSourceComp) then
+  begin
+    FSourceComp := nil;
+    FSource := nil;
+    FLookSrc := nil;
+    Invalidate;
+  end;
 end;
 
 procedure TPPGGridPrinter.SetGrid(const Value: TPPGCustomGrid);
 begin
   if FGrid <> Value then
   begin
-    if FGrid <> nil then
+    // Dieselbe Komponente kann zugleich Source sein
+    if (FGrid <> nil) and (FGrid <> FSourceComp) then
       FGrid.RemoveFreeNotification(Self);
     FGrid := Value;
     if FGrid <> nil then
@@ -230,7 +241,22 @@ begin
 end;
 
 procedure TPPGGridPrinter.SetSource(const Value: IPPGTableSource);
+var
+  Ref: IInterfaceComponentReference;
+  Comp: TComponent;
 begin
+  // Ist die Quelle eine Komponente (Grid, DB-Grid), haelt eine rohe
+  // Interface-Referenz sie ueber ihre Freigabe hinaus: beim naechsten
+  // Druck bzw. beim _Release traefe es freigegebenen Speicher.
+  Comp := nil;
+  if (Value <> nil) and Supports(Value, IInterfaceComponentReference, Ref) then
+    Comp := Ref.GetComponent;
+  Ref := nil;
+  if (FSourceComp <> nil) and (FSourceComp <> Comp) and (FSourceComp <> FGrid) then
+    FSourceComp.RemoveFreeNotification(Self);
+  FSourceComp := Comp;
+  if FSourceComp <> nil then
+    FSourceComp.FreeNotification(Self);
   FSource := Value;
   Invalidate;
 end;

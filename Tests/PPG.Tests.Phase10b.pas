@@ -30,12 +30,13 @@ type
     procedure DisabledHasNoAccent;
     procedure AccessibilitySummary;
     procedure IndexOutOfRangeRaises;
+    procedure NonFiniteValuesAreSafe;
   end;
 
 implementation
 
 uses
-  Winapi.oleacc, PPG.Lang;
+  System.Math, Winapi.oleacc, PPG.Lang;
 
 type
   TSparkAccess = class(TPPGSparkline);
@@ -315,6 +316,62 @@ begin
     end;
   finally
     FForm.Hide;
+  end;
+end;
+
+procedure TSparklineTests.NonFiniteValuesAreSafe;
+var
+  Sp: TPPGSparkline;
+  B: TBitmap;
+  O: TPPGSparklineOptions;
+  Raised: Integer;
+  K: TPPGSparklineKind;
+begin
+  // Audit 08.10.2026: NaN/Unendlich machten Lo/Hi zu NaN, Round warf im
+  // Paint (auch PPGDrawSparkline in Grid-Zellen).
+  Sp := TPPGSparkline.Create(FForm);
+  Sp.Parent := FForm;
+  Sp.SetValues([1, 2]);
+  Raised := 0;
+  try
+    Sp.AddValue(NaN);
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    Sp.RangeMax := Infinity;
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  try
+    Sp.ValuesText := '1;NAN;3';
+  except
+    on E: EPPGPropertyError do
+      Inc(Raised);
+  end;
+  CheckEquals(3, Raised);
+  CheckEquals(2, Sp.Count, 'Werte unveraendert');
+  O := PPGDefaultSparklineOptions(PPGDefaultTokens(False), clWhite, 96);
+  O.Color := clBlue;
+  B := TBitmap.Create;
+  try
+    B.PixelFormat := pf24bit;
+    B.SetSize(100, 30);
+    for K := Low(TPPGSparklineKind) to High(TPPGSparklineKind) do
+    begin
+      O.Kind := K;
+      PPGDrawSparklineOnCanvas(B.Canvas, Rect(0, 0, 100, 30), [NaN, 1, Infinity, 3, NegInfinity, 2], O);
+      PPGDrawSparklineOnCanvas(B.Canvas, Rect(0, 0, 100, 30), [NaN, NaN], O);
+    end;
+    O.Kind := skLine;
+    B.Canvas.Brush.Color := clWhite;
+    B.Canvas.FillRect(Rect(0, 0, 100, 30));
+    PPGDrawSparklineOnCanvas(B.Canvas, Rect(0, 0, 100, 30), [NaN, 1, 3, Infinity, 2], O);
+    CheckTrue(CountColor(B, clBlue, 30) > 20, 'endliche Werte gezeichnet');
+  finally
+    B.Free;
   end;
 end;
 

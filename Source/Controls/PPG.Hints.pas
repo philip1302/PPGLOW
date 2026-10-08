@@ -78,6 +78,7 @@ type
   TPPGHintWindow = class(THintWindow)
   private
     FContent: TPPGHintContent;
+    FPaintErrorReported: Boolean;
     procedure Parse(const AHint: string);
     function GetPPI: Integer;
     function GetHintText: string;
@@ -145,6 +146,7 @@ type
   TPPGCustomHint = class(TCustomHint)
   private
     FContent: TPPGHintContent;
+    FPaintErrorReported: Boolean;
     FPreset: string;
     FStyleManager: TPPGStyleManager;
     FAllowMarkup: Boolean;
@@ -515,10 +517,17 @@ begin
       FContent.Paint(Canvas, ClientRect, GManager.EffectivePreset)
     else
       FContent.Paint(Canvas, ClientRect, '');
+    FPaintErrorReported := False;
   except
-    // Grenze: Paint wirft nie (WM_PAINT-Schleife); Text trotzdem lesbar
-    on Exception do
+    // Grenze: Paint wirft nie (WM_PAINT-Schleife); einmal melden, Text
+    // trotzdem lesbar
+    on E: Exception do
     begin
+      if not FPaintErrorReported then
+      begin
+        FPaintErrorReported := True;
+        TPPGErrorHandler.ReportPaintError(Self, E);
+      end;
       Canvas.Brush.Color := clInfoBk;
       Canvas.FillRect(ClientRect);
       Canvas.Font.Color := clInfoText;
@@ -732,9 +741,22 @@ begin
     GetWindowRect(HintWindow.Handle, R);
     PrepareFor(HintWindow, PPIAtPoint(R.TopLeft));
     FContent.Paint(TCustomHintWindowAccess(HintWindow).Canvas, HintWindow.ClientRect, EffectivePreset);
+    FPaintErrorReported := False;
   except
+    // Grenze wie im Paint der Controls: kein Dialog (HandleCallbackError
+    // oeffnete einen je WM_PAINT), einmal melden, Notfall-Zustand zeichnen
     on E: Exception do
-      TPPGErrorHandler.HandleCallbackError(Self, E, 'TPPGCustomHint.PaintHint');
+    begin
+      if not FPaintErrorReported then
+      begin
+        FPaintErrorReported := True;
+        TPPGErrorHandler.ReportPaintError(Self, E);
+      end;
+      TCustomHintWindowAccess(HintWindow).Canvas.Brush.Color := clInfoBk;
+      TCustomHintWindowAccess(HintWindow).Canvas.FillRect(HintWindow.ClientRect);
+      TCustomHintWindowAccess(HintWindow).Canvas.Font.Color := clInfoText;
+      TCustomHintWindowAccess(HintWindow).Canvas.TextOut(4, 2, TCustomHintWindowAccess(HintWindow).Caption);
+    end;
   end;
 end;
 

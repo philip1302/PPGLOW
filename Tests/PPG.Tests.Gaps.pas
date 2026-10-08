@@ -62,6 +62,7 @@ type
     procedure ExceptionInDropDownLeavesNoPressedState;
     procedure ImageNameResolvesAndSurvivesReordering;
     procedure ImageNameIsStoredInsteadOfIndex;
+    procedure SharedPopupMenuKeepsNotification;
   end;
 
 implementation
@@ -491,6 +492,26 @@ begin
   B.Perform(WM_LBUTTONUP, 0, MakeLParam(15, 15));
   CheckEquals(1, FClicks);
   CheckEquals(0, FDropDowns);
+end;
+
+procedure TButtonFeatureTests.SharedPopupMenuKeepsNotification;
+var
+  B: TPPGButton;
+  M: TPopupMenu;
+begin
+  // Audit 08.10.2026: DropDownMenu := nil entfernte die FreeNotification
+  // auch fuer PopupMenu (gleiches Menue) -> PopupMenu zeigte nach dem
+  // Freigeben des Menues ins Leere.
+  B := NewButton('Menue');
+  M := TPopupMenu.Create(nil);
+  try
+    B.PopupMenu := M;
+    B.DropDownMenu := M;
+    B.DropDownMenu := nil;
+  finally
+    M.Free;
+  end;
+  CheckNull(B.PopupMenu, 'PopupMenu nach Freigabe nil');
 end;
 
 procedure TButtonFeatureTests.SplitArrowFiresOnlyDropDown;

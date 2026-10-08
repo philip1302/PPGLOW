@@ -161,7 +161,7 @@ implementation
 
 uses
   System.Math, System.Generics.Collections, System.Generics.Defaults, Vcl.Graphics,
-  PPG.Types, PPG.DB.Controls;
+  PPG.Types, PPG.DB.Controls, PPG.Consts, PPG.Lang, PPG.Exceptions;
 
 type
   TRow = record
@@ -186,7 +186,7 @@ end;
 
 procedure TPPGKanbanDataLink.DataSetChanged;
 begin
-  if FKanban <> nil then
+  if (FKanban <> nil) and not PPGDBReading then
     FKanban.ScheduleReload;
 end;
 
@@ -367,6 +367,7 @@ begin
     for I := 0 to Cards.Count - 1 do
       ById.AddOrSetValue(Cards[I].Id, Cards[I]);
     Bm := DS.Bookmark;
+    PPGDBBeginRead;
     DS.DisableControls;
     try
       DS.First;
@@ -377,6 +378,14 @@ begin
           Key := FKey.AsInteger
         else
           Key := N + 1;
+        // Ohne Schluessel bzw. doppelt: nicht zuordenbar. Mit Schluessel 0
+        // (NULL) fielen solche Saetze sonst zu einer Karte zusammen, und die
+        // Reihenfolge unten bekaeme mehr Zeilen als Karten.
+        if ((FKey <> nil) and FKey.IsNull) or Seen.ContainsKey(Key) then
+        begin
+          DS.Next;
+          Continue;
+        end;
         if not ById.TryGetValue(Key, Card) then
         begin
           Card := Cards.Add;
@@ -433,6 +442,7 @@ begin
       if DS.BookmarkValid(Bm) then
         DS.Bookmark := Bm;
       DS.EnableControls;
+      PPGDBEndRead;
     end;
     // nicht mehr vorhandene Karten entfernen
     for I := Cards.Count - 1 downto 0 do
@@ -449,7 +459,7 @@ begin
         else
           Result := A.Seq - B.Seq;
       end));
-    for I := 0 to Rows.Count - 1 do
+    for I := 0 to Min(Rows.Count, Cards.Count) - 1 do
       if ById.TryGetValue(Rows[I].Key, Card) and (Card.Collection <> nil) then
         Card.Index := I;
   finally
@@ -506,42 +516,62 @@ var
   Bm: TBookmark;
   FCol, FLane: TField;
   I, FromL: Integer;
+  Done: Boolean;
 begin
   inherited CardMoved(Move);
   if (Move.Card = nil) or not CanWrite then
     Exit;
   DS := FDataLink.DataSet;
+  // Offene Bearbeitung eines anderen Controls: Locate wuerde sie still
+  // speichern. Ablehnen, die Anzeige laedt den Datenstand neu.
+  if DS.State in dsEditModes then
+  begin
+    ScheduleReload;
+    raise EPPGError.Create(PPGStr(@SPPGDBEditPending));
+  end;
   FCol := Fld(1);
   FLane := Fld(2);
+  Done := False;
   Inc(FBusy);
   try
     Bm := DS.Bookmark;
     DS.DisableControls;
     try
-      if LocateKey(Move.Card.Id) then
-      begin
-        DS.Edit;
-        FCol.AsString := Move.ToColumn.MatchKey;
-        if (FLane <> nil) and (Move.ToLane <> nil) then
-          FLane.AsString := Move.ToLane.MatchKey;
-        DS.Post;
+      try
+        if LocateKey(Move.Card.Id) then
+        begin
+          DS.Edit;
+          FCol.AsString := Move.ToColumn.MatchKey;
+          if (FLane <> nil) and (Move.ToLane <> nil) then
+            FLane.AsString := Move.ToLane.MatchKey;
+          DS.Post;
+        end;
+        RenumberCell(ColumnIndexOf(Move.ToColumn), Focus.Lane);
+        if (Move.FromColumn <> Move.ToColumn) or (Move.FromLane <> Move.ToLane) then
+        begin
+          FromL := 0;
+          for I := 0 to LaneCount - 1 do
+            if LayoutLane(I) = Move.FromLane then
+              FromL := I;
+          RenumberCell(ColumnIndexOf(Move.FromColumn), FromL);
+        end;
+      except
+        // Vor dem Zuruecksetzen des Lesezeichens, das sonst erneut postet
+        if DS.State in dsEditModes then
+          DS.Cancel;
+        raise;
       end;
-      RenumberCell(ColumnIndexOf(Move.ToColumn), Focus.Lane);
-      if (Move.FromColumn <> Move.ToColumn) or (Move.FromLane <> Move.ToLane) then
-      begin
-        FromL := 0;
-        for I := 0 to LaneCount - 1 do
-          if LayoutLane(I) = Move.FromLane then
-            FromL := I;
-        RenumberCell(ColumnIndexOf(Move.FromColumn), FromL);
-      end;
+      Done := True;
     finally
-      if DS.BookmarkValid(Bm) then
+      if (Length(Bm) > 0) and DS.BookmarkValid(Bm) then
         DS.Bookmark := Bm;
       DS.EnableControls;
     end;
   finally
     Dec(FBusy);
+    // Fehlgeschlagen: Karte steht in der Anzeige schon am Ziel
+    if not Done then
+      ScheduleReload;
   end;
   if FSyncRecord then
     SelectionChanged;

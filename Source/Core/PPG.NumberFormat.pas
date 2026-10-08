@@ -76,11 +76,15 @@ function PPGNormalizeNumber(const S: string; const FS: TFormatSettings;
 var
   T, Digits: string;
   I, P, LastDot, LastComma, Count: Integer;
-  C, Dec: Char;
-  Neg, AllGroups3: Boolean;
+  C, Dec, Prev: Char;
+  Neg, AllGroups3, SeenDigit, LetterAfter, SignAfter: Boolean;
 begin
   Result := False;
   Invariant := '';
+  SeenDigit := False;
+  LetterAfter := False;
+  SignAfter := False;
+  Prev := #0;
   T := Trim(S);
   Neg := False;
   // Klammern wie in Buchhaltungsformaten: (12,50) = -12,50
@@ -93,28 +97,52 @@ begin
   if FS.CurrencyString <> '' then
     T := StringReplace(T, FS.CurrencyString, '', [rfReplaceAll, rfIgnoreCase]);
   Digits := '';
+  // Buchstaben (Waehrungskuerzel) nur vor oder hinter der Zahl, ein Minus nur
+  // davor oder ganz am Ende ("100-"). Sonst waeren "A-100" = -100,
+  // "1e3" = 13 oder "3x4" = 34 und verfaelschten Summen und Statistiken.
   for I := 1 to Length(T) do
   begin
     C := T[I];
     if IsDigit(C) or (C = '.') or (C = ',') then
-      Digits := Digits + C
+    begin
+      if IsDigit(C) then
+      begin
+        if LetterAfter or SignAfter then
+          Exit;
+        SeenDigit := True;
+      end;
+      Digits := Digits + C;
+    end
     else if (C = '-') or (C = #$2212) then
     begin
       if Neg then
         Exit; // zwei Vorzeichen
+      if (Prev >= 'A') and (Prev <= 'Z') or (Prev >= 'a') and (Prev <= 'z') then
+        Exit; // "A-100" ist ein Kuerzel, keine negative Zahl
+      if SeenDigit then
+        SignAfter := True;
       Neg := True;
     end
     else if C = '+' then
-      // Vorzeichen ohne Wirkung
+    begin
+      // Vorzeichen ohne Wirkung, aber nur vor der Zahl ("1+2" ist ein Ausdruck)
+      if SeenDigit then
+        Exit;
+    end
     else if (C = ' ') or (C = #$A0) or (C = #$202F) or (C = '''') or (C = #$2019) or
       (C = '%') or (C = #$20AC) or (C = '$') or (C = #$00A3) or (C = #$00A5) then
       // Leerzeichen, Apostroph (CH), Prozent und gaengige Waehrungszeichen
     else if (C = FS.ThousandSeparator) and (C <> #0) then
       Digits := Digits + '.'  // wird unten wie ein Punkt bewertet
     else if (C >= 'A') and (C <= 'Z') or (C >= 'a') and (C <= 'z') then
+    begin
       // Waehrungskuerzel (EUR, CHF, USD)
+      if SeenDigit then
+        LetterAfter := True;
+    end
     else
       Exit;
+    Prev := C;
   end;
   if Digits = '' then
     Exit;

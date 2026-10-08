@@ -103,8 +103,9 @@ var
 
 function PPGExcelSerial(D: TDateTime): Double;
 begin
-  // TDateTime 61 = 01.03.1900 = Excel 61; davor fehlt Excels 29.02.1900
-  if D < 61 then
+  // TDateTime 61 = 01.03.1900 = Excel 61; davor fehlt Excels 29.02.1900.
+  // Reine Uhrzeiten (0 <= D < 1) bleiben, Excel zaehlt sie ebenfalls ab 0.
+  if (D >= 1) and (D < 61) then
     Result := D - 1
   else
     Result := D;
@@ -112,7 +113,7 @@ end;
 
 function PPGFromExcelSerial(V: Double): TDateTime;
 begin
-  if V < 61 then
+  if (V >= 1) and (V < 61) then
     Result := V + 1
   else
     Result := V;
@@ -266,7 +267,8 @@ end;
 
 destructor TXmlOut.Destroy;
 begin
-  Flush;
+  // Kein Flush hier: Schreiben kann scheitern (Platte voll) und wuerde im
+  // Fehlerpfad die eigentliche Exception ueberdecken. Aufrufer rufen Flush.
   FreeAndNil(FSB);
   inherited Destroy;
 end;
@@ -552,6 +554,13 @@ var
 
   procedure NumCell(ACol: Integer; AValue: Double; Xf: Integer);
   begin
+    // NaN/Unendlich ergaeben <v>NAN</v>: Excel meldet unlesbaren Inhalt
+    if IsNan(AValue) or IsInfinite(AValue) then
+    begin
+      if Xf > 0 then
+        X.Add('<c r="' + CellRef(ACol) + '" s="' + IntToStr(Xf) + '"/>');
+      Exit;
+    end;
     X.Add('<c r="' + CellRef(ACol) + '"');
     if Xf > 0 then
       X.Add(' s="' + IntToStr(Xf) + '"');
@@ -804,7 +813,8 @@ var
       else
         Fmt := NumFmts[J];
       Xf := St.Xf(Fmt, FontId, FillId, HeadBorder, AlignOf(Info[J].Alignment));
-      if AggCode[Agg[J]] > 0 then
+      // Ohne Datenzeilen schloesse der Bereich die Kopfzeile ein
+      if (AggCode[Agg[J]] > 0) and (RowNo - 1 >= DataStart) then
       begin
         Ref := PPGXlsxColName(J);
         X.Add('<c r="' + CellRef(J) + '"');
@@ -1043,6 +1053,7 @@ begin
           if (Rows > 0) and (LastRow >= DataStart) then
             ConditionalRules;
           X.Add('</worksheet>');
+          X.Flush;
         finally
           X.Free;
         end;
@@ -1091,6 +1102,7 @@ begin
             for I := 0 to StrList.Count - 1 do
               X.Add('<si>' + StrList[I] + '</si>');
             X.Add('</sst>');
+            X.Flush;
           finally
             X.Free;
           end;
@@ -1288,13 +1300,28 @@ end;
 procedure TPPGXlsxReader.Parse(Zip: TObject);
 var
   Z: TZipFile;
-  S, Name, Attrs, SheetPath, RId, T, CellType, Ref: string;
-  P, I, Col, Row, Depth: Integer;
+  S, Name, Attrs, SheetPath, RId, T, CellType, Ref, InlineText: string;
+  P, I, Col, Row, Depth, NextCol: Integer;
   SC, InSi, InCell: Boolean;
   Shared: TStringList;
   SiText: TStringBuilder;
   V: Variant;
   D: Double;
+
+  procedure Store(const AValue: Variant);
+  begin
+    if (Row >= 0) and (Col >= 0) and (Row < 1048576) and (Col < 16384) then
+    begin
+      if Row >= Length(FCells) then
+        SetLength(FCells, Row + 1);
+      if Col >= Length(FCells[Row]) then
+        SetLength(FCells[Row], Col + 1);
+      FCells[Row][Col] := AValue;
+      if Col + 1 > FColCount then
+        FColCount := Col + 1;
+    end;
+  end;
+
 begin
   Z := TZipFile(Zip);
   FCells := nil;
@@ -1360,19 +1387,43 @@ begin
     P := 1;
     InCell := False;
     Col := 0;
-    Row := 0;
+    Row := -1;
+    NextCol := 0;
     CellType := '';
+    InlineText := '';
     while NextTag(S, P, Name, Attrs, SC) do
     begin
-      if Name = 'c' then
+      // Das Attribut r ist bei <row> und <c> optional: dann fortlaufend zaehlen
+      if Name = 'row' then
+      begin
+        Ref := Attr(Attrs, 'r');
+        if Ref <> '' then
+          Row := StrToIntDef(Ref, Row + 2) - 1
+        else
+          Inc(Row);
+        NextCol := 0;
+      end
+      else if Name = 'c' then
       begin
         Ref := Attr(Attrs, 'r');
         CellType := Attr(Attrs, 't');
-        SplitRef(Ref, Col, Row);
+        if Ref <> '' then
+          SplitRef(Ref, Col, Row)
+        else
+          Col := NextCol;
+        NextCol := Col + 1;
+        InlineText := '';
         InCell := not SC;
       end
       else if Name = '/c' then
-        InCell := False
+      begin
+        // Inline-Text kann aus mehreren Laeufen <r><t>..</t></r> bestehen
+        if InCell and (CellType = 'inlineStr') then
+          Store(InlineText);
+        InCell := False;
+      end
+      else if InCell and (CellType = 'inlineStr') and (Name = 't') and not SC then
+        InlineText := InlineText + TextUntilTag(S, P)
       else if InCell and ((Name = 'v') or (Name = 't')) and not SC then
       begin
         T := TextUntilTag(S, P);
@@ -1386,22 +1437,13 @@ begin
         end
         else if CellType = 'b' then
           V := T = '1'
-        else if (CellType = 'str') or (CellType = 'inlineStr') or (CellType = 'e') then
+        else if (CellType = 'str') or (CellType = 'e') then
           V := T
         else if TryStrToFloat(T, D, GInv) then
           V := D
         else
           V := T;
-        if (Row >= 0) and (Col >= 0) and (Row < 1048576) and (Col < 16384) then
-        begin
-          if Row >= Length(FCells) then
-            SetLength(FCells, Row + 1);
-          if Col >= Length(FCells[Row]) then
-            SetLength(FCells[Row], Col + 1);
-          FCells[Row][Col] := V;
-          if Col + 1 > FColCount then
-            FColCount := Col + 1;
-        end;
+        Store(V);
       end;
     end;
   finally

@@ -104,6 +104,8 @@ type
     FSnap: array of array of Variant;   // Export: Werte [Satz][Feld]
     FSnapText: array of array of string;
     FSnapValid: Boolean;
+    // Datensatz, auf dem der Zell-Editor geoeffnet wurde
+    FEditBm: TBookmark;
     function GetDataSource: TDataSource;
     procedure SetDataSource(Value: TDataSource);
     procedure SetDBOptions(const Value: TDBGridOptions);
@@ -159,6 +161,7 @@ type
     function GetCellText(ACol, ARow: Integer): string; override;
     function GetEditText(ACol, ARow: Integer): string; override;
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); override;
+    procedure EditorOpened(ACol, ARow: Integer); override;
     function CanEditCell(ACol, VRow: Integer): Boolean; override;
     function SelectCell(ACol, ARow: Integer): Boolean; override;
     procedure HeaderClicked(ACol, VRow: Integer); override;
@@ -283,7 +286,7 @@ implementation
 uses
   PPG.Lang,
   System.Math, System.UITypes, System.Variants, Vcl.Dialogs, PPG.Consts, PPG.Appearance,
-  PPG.Controls.Scroll;
+  PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls;
 
 const
   // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
@@ -658,7 +661,12 @@ begin
       ColCount := N + Length(FFields);
     FixedCols := N;
     if dgTitles in FDBOptions then
-      FixedRows := 1
+    begin
+      // Leere/inaktive Datenmenge: RowCount = 1, FixedRows = 1 waere ungueltig
+      if RowCount < 2 then
+        RowCount := 2;
+      FixedRows := 1;
+    end
     else
       FixedRows := 0;
     if Col < FixedCols then
@@ -782,8 +790,14 @@ begin
   FSnapValid := False;
   if (csDestroying in ComponentState) or FLayoutBusy then
     Exit;
-  if not EditorMode then
+  // Anderer Datensatz (Navigator, Code, Blaettern ueber den Puffer hinaus):
+  // der offene Editor gehoert zum alten und wird verworfen
+  if EditorMode and (Length(FEditBm) > 0) and FDataLink.Active and
+    (FDataLink.DataSet.State = dsBrowse) and
+    (FDataLink.DataSet.CompareBookmarks(FEditBm, FDataLink.DataSet.Bookmark) <> 0) then
     HideEditor(False);
+  if not EditorMode then
+    FEditBm := nil;
   RebuildCache;
   // Mindestens eine (ggf. leere) Datenzeile: RowCount > FixedRows
   N := Length(FCache);
@@ -892,8 +906,10 @@ begin
     try
       Result := F.DisplayText;
     except
-      // Aggregate noch nicht bereit (AggregatesActive = False): leer lassen
-      on E: Exception do
+      // Aggregate noch nicht bereit (AggregatesActive = False): leer lassen.
+      // Nur Datenbankfehler; alles andere (z. B. Zugriffsverletzung) ist ein
+      // echter Fehler und darf nicht verschwinden.
+      on E: EDatabaseError do
         Result := '';
     end;
   end;
@@ -918,9 +934,15 @@ begin
     Exit;
   end;
   DS := FDataLink.DataSet;
+  // First wuerde eine offene Bearbeitung still buchen (CheckBrowseMode)
+  if DS.State in dsEditModes then
+    raise EPPGError.Create(PPGStr(@SPPGDBEditPending));
   Cols := TableColCount;
   // Einmal durch die Datenmenge (Muster aus PPG.DB.Chart): ohne Anzeige-
   // Aktualisierung, Position danach wieder herstellen
+  // Andere PPGlow-Controls an derselben Datenmenge (Diagramm, Planer ...)
+  // sollen das EnableControls am Ende nicht als Aenderung werten
+  PPGDBBeginRead;
   DS.DisableControls;
   BM := DS.GetBookmark;
   try
@@ -928,8 +950,12 @@ begin
     N := 0;
     while not DS.Eof and (N < FExportMaxRecords) do
     begin
-      SetLength(FSnap, N + 1);
-      SetLength(FSnapText, N + 1);
+      // geometrisch wachsen statt je Zeile neu anlegen
+      if N >= Length(FSnap) then
+      begin
+        SetLength(FSnap, Max(16, Length(FSnap) * 2));
+        SetLength(FSnapText, Length(FSnap));
+      end;
       SetLength(FSnap[N], Cols);
       SetLength(FSnapText[N], Cols);
       for C := 0 to Cols - 1 do
@@ -947,8 +973,10 @@ begin
             FSnap[N][C] := VarFromDateTime(F.AsDateTime)
           else if F.DataType = ftBoolean then
             FSnap[N][C] := F.AsBoolean
+          else if F.DataType = ftLargeint then
+            FSnap[N][C] := F.AsLargeInt // exakt, AsFloat rundet ab 2^53
           else if F.DataType in [ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency, ftBCD,
-            ftLargeint, ftFMTBcd, ftAutoInc, ftShortint, ftByte, ftLongWord, ftExtended,
+            ftFMTBcd, ftAutoInc, ftShortint, ftByte, ftLongWord, ftExtended,
             ftSingle] then
             FSnap[N][C] := F.AsFloat
           else
@@ -958,11 +986,14 @@ begin
       Inc(N);
       DS.Next;
     end;
+    SetLength(FSnap, N);
+    SetLength(FSnapText, N);
   finally
     if DS.BookmarkValid(BM) then
       DS.GotoBookmark(BM);
     DS.FreeBookmark(BM);
     DS.EnableControls; // loest DataChanged aus (verwirft den Schnappschuss) ...
+    PPGDBEndRead;
   end;
   FSnapValid := True; // ... deshalb erst danach gueltig
 end;
@@ -1235,6 +1266,14 @@ begin
     F.AsBoolean := Value = '1'
   else
     F.Text := Value;
+end;
+
+procedure TPPGCustomDBGrid.EditorOpened(ACol, ARow: Integer);
+begin
+  inherited EditorOpened(ACol, ARow);
+  FEditBm := nil;
+  if FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
+    FEditBm := FDataLink.DataSet.Bookmark;
 end;
 
 function TPPGCustomDBGrid.SelectCell(ACol, ARow: Integer): Boolean;

@@ -43,7 +43,14 @@ type
   end;
 
   TMenuLoopTests = class(TMenuTestCase)
+  private
+    FLoopToClose: TPPGMenuLoop;
+    procedure CloseLoopOnClick(Sender: TObject);
+    procedure PopupClosed(Sender: TObject);
   published
+    procedure SubmenuDefaultActionIsPosted;
+    procedure SubmenuClickThatClosesLoopOpensNothing;
+    procedure PopupMenuFreedWhileOpen;
     procedure HookChainOrderAndRemoval;
     procedure OpenLoadsVisibleItemsAndReducesLines;
     procedure KeyboardNavigationAndSubmenu;
@@ -64,7 +71,10 @@ type
   private
     FMain: TMainMenu;
     function NewBar: TPPGMenuBar;
+    procedure HideOnClick(Sender: TObject);
   published
+    procedure ClickHandlerRebuildingMenuOpensNothing;
+    procedure DefaultActionIsPostedAndChecked;
     procedure HidesAndRestoresFormMenu;
     procedure KeyboardModeAndArrows;
     procedure AltKeyEntersKeyboardMode;
@@ -588,6 +598,118 @@ begin
   FForm.Hide;
 end;
 
+type
+  /// Gibt Target frei, sobald WM_USER + 79 durch die Nachrichtenschleife laeuft.
+  TMenuFreer = class
+  public
+    Target: TComponent;
+    procedure Hook(var Msg: TMsg; var Handled: Boolean);
+  end;
+
+procedure TMenuFreer.Hook(var Msg: TMsg; var Handled: Boolean);
+begin
+  if Msg.message = WM_USER + 79 then
+  begin
+    FreeAndNil(Target);
+    Handled := True;
+  end;
+end;
+
+procedure TMenuLoopTests.CloseLoopOnClick(Sender: TObject);
+begin
+  FLog.Add('closeloop');
+  FLoopToClose.CloseAll;
+end;
+
+procedure TMenuLoopTests.PopupClosed(Sender: TObject);
+begin
+  FLog.Add('closed');
+end;
+
+procedure TMenuLoopTests.SubmenuDefaultActionIsPosted;
+var
+  L: TPPGMenuLoop;
+  A: IPPGAccessibleChildren;
+begin
+  // Audit 08.10.2026: Die Standardaktion eines Untermenue-Eintrags rief
+  // OpenSubmenu (und damit OnClick) synchron im COM-Aufruf auf.
+  FForm.Show;
+  L := TPPGMenuLoop.Create;
+  try
+    L.OpenPopup(FMenu.Items, Rect(100, 100, 100, 100), ppsBelow, False);
+    CheckTrue(Supports(L.TopWindow, IPPGAccessibleChildren, A));
+    A.AccChildDoDefault(4); // Zuletzt
+    CheckEquals(1, L.OpenCount, 'nicht im COM-Aufruf');
+    Pump;
+    CheckEquals(2, L.OpenCount, 'gepostet geoeffnet');
+    // Inzwischen geschlossen: die gepostete Aktion verfaellt
+    L.CloseFrom(1);
+    A.AccChildDoDefault(4);
+    L.CloseAll;
+    Pump;
+    CheckEquals(0, L.OpenCount);
+    CheckFalse(L.Active);
+    A := nil;
+  finally
+    L.Free;
+    FForm.Hide;
+  end;
+end;
+
+procedure TMenuLoopTests.SubmenuClickThatClosesLoopOpensNothing;
+var
+  L: TPPGMenuLoop;
+begin
+  // Audit 08.10.2026: Beendete OnClick des Untermenue-Eintrags die Schleife,
+  // oeffnete OpenSubmenu trotzdem ein Fenster ohne Hooks.
+  FForm.Show;
+  L := TPPGMenuLoop.Create;
+  try
+    L.OpenPopup(FMenu.Items, Rect(100, 100, 100, 100), ppsBelow, False);
+    FLoopToClose := L;
+    FMenu.Items[4].OnClick := CloseLoopOnClick; // Zuletzt
+    L.OpenSubmenu(L.TopWindow, 3, False);
+    CheckEquals('closeloop', FLog.CommaText);
+    CheckFalse(L.Active);
+    CheckEquals(0, L.OpenCount, 'kein Untermenue geoeffnet');
+  finally
+    FMenu.Items[4].OnClick := nil;
+    FLoopToClose := nil;
+    L.Free;
+    FForm.Hide;
+  end;
+end;
+
+procedure TMenuLoopTests.PopupMenuFreedWhileOpen;
+var
+  M: TPPGPopupMenu;
+  Freer: TMenuFreer;
+begin
+  // Audit 08.10.2026: Wurde das Menue waehrend der modalen Schleife
+  // freigegeben, schrieb PopupAtRect danach in Self und rief DoClose.
+  FForm.Show;
+  FFocus.SetFocus;
+  M := TPPGPopupMenu.Create(FForm);
+  BuildMenu(M);
+  M.PopupComponent := FFocus;
+  M.OnClose := PopupClosed;
+  Freer := TMenuFreer.Create;
+  try
+    Freer.Target := M;
+    PPGAddMessageHook(Freer.Hook);
+    PostMessage(FFocus.Handle, WM_USER + 79, 0, 0);
+    M.Popup(100, 100);
+    CheckNull(Freer.Target, 'Menue in der Schleife freigegeben');
+    CheckEquals(-1, FLog.IndexOf('closed'), 'kein OnClose nach der Freigabe');
+    CheckNull(PPGActiveMenuLoop);
+  finally
+    PPGRemoveMessageHook(Freer.Hook);
+    Freer.Target.Free;
+    Freer.Free;
+    FForm.Hide;
+  end;
+end;
+
 procedure TMenuLoopTests.AccessibilityOfMenuWindow;
 var
   L: TPPGMenuLoop;
@@ -788,6 +910,54 @@ begin
   Result.Animation.Enabled := False;
   Result.Menu := FMain;
   Result.HandleNeeded;
+end;
+
+procedure TMenuBarTests.HideOnClick(Sender: TObject);
+begin
+  FLog.Add('hide');
+  TMenuItem(Sender).Visible := False;
+end;
+
+procedure TMenuBarTests.ClickHandlerRebuildingMenuOpensNothing;
+var
+  Bar: TPPGMenuBar;
+begin
+  // Audit 08.10.2026: OnClick beim Oeffnen darf das Menue umbauen; danach
+  // wurden Index und Eintrag ungeprueft weiterbenutzt.
+  FForm.Show;
+  Bar := NewBar;
+  FMain.Items[0].OnClick := HideOnClick; // Datei blendet sich aus
+  Bar.OpenItem(0, False);
+  CheckEquals('hide', FLog.CommaText);
+  CheckFalse(Bar.Loop.Active, 'umgebaut: nichts oeffnen');
+  CheckEquals(-1, Bar.OpenIndex);
+  CheckEquals(2, Bar.ItemCount);
+  FForm.Hide;
+end;
+
+procedure TMenuBarTests.DefaultActionIsPostedAndChecked;
+var
+  Bar: TPPGMenuBar;
+  A: IPPGAccessibleChildren;
+begin
+  // Audit 08.10.2026: Die Standardaktion oeffnete das Menue (mit OnClick)
+  // synchron im COM-Aufruf.
+  FForm.Show;
+  Bar := NewBar;
+  CheckTrue(Supports(Bar, IPPGAccessibleChildren, A));
+  A.AccChildDoDefault(1);
+  CheckFalse(Bar.Loop.Active, 'nicht im COM-Aufruf');
+  Pump;
+  CheckTrue(Bar.Loop.Active, 'gepostet geoeffnet');
+  CheckEquals(0, Bar.OpenIndex);
+  Bar.CloseMenus;
+  // Leiste inzwischen umgebaut: die gepostete Aktion verfaellt
+  A.AccChildDoDefault(1);
+  FMain.Items[0].Visible := False;
+  Pump;
+  CheckFalse(Bar.Loop.Active, 'anderer Eintrag an der Stelle');
+  A := nil;
+  FForm.Hide;
 end;
 
 procedure TMenuBarTests.HidesAndRestoresFormMenu;

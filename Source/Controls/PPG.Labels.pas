@@ -115,6 +115,7 @@ type
     procedure CMTextChanged(var Message: TMessage); message CM_TEXTCHANGED;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure Resize; override;
+    procedure ImagesChanged; override;
     function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
@@ -420,6 +421,15 @@ begin
   inherited Resize;
   if not AutoSize then
     FLayoutValid := False;
+end;
+
+procedure TPPGCustomLinkLabel.ImagesChanged;
+begin
+  inherited ImagesChanged;
+  // Bild-Fragmente des Layouts halten die Liste; nach Wechsel oder
+  // Freigabe neu aufbauen
+  FLayoutValid := False;
+  RequestAutoSize;
 end;
 
 function TPPGCustomLinkLabel.CalcAutoSize(out AWidth, AHeight: Integer): Boolean;

@@ -171,7 +171,7 @@ end;
 
 procedure TPPGChartDataLink.DataSetChanged;
 begin
-  if FChart <> nil then
+  if (FChart <> nil) and not PPGDBReading then
     FChart.ScheduleReload;
 end;
 
@@ -372,6 +372,7 @@ begin
       S.Clear;
     end;
     Inc(FReading);
+    PPGDBBeginRead;
     try
       Bm := DS.Bookmark;
       DS.DisableControls;
@@ -403,6 +404,7 @@ begin
         DS.EnableControls;
       end;
     finally
+      PPGDBEndRead;
       Dec(FReading);
     end;
   finally

@@ -1,0 +1,43 @@
+object Form2: TForm2
+  Left = 0
+  Top = 0
+  Caption = #220'bersicht'
+  object Tree1: TPPGTreeView
+    Left = 8
+    Top = 8
+    RowSelect = True
+    ShowLines = True
+    HideSelection = True
+  end
+  object Pages1: TPPGPageControl
+    Left = 8
+    Top = 100
+    ActivePage = Sheet1
+    HotTrack = False
+    object Sheet1: TPPGTabSheet
+      Caption = 'A'
+      ImageIndex = 0
+    end
+  end
+  object Split1: TPPGButton
+    Left = 8
+    Top = 200
+    Caption = 'Mehr'
+    Style = pbsSplitButton
+  end
+  object Link1: TPPGButton
+    Left = 100
+    Top = 200
+  end
+  object Bar1: TPPGProgressBar
+    Left = 8
+    Top = 240
+    Smooth = False
+  end
+  object Grid1: TPPGDBGrid
+    Left = 8
+    Top = 280
+    Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs,
+      dgMultiSelect]
+  end
+end

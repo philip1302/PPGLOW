@@ -1053,9 +1053,11 @@ var
 begin
   if (GMsgItemAction <> 0) and (Message.Msg = GMsgItemAction) then
   begin
-    // Aus AccChildDoDefault gepostet: Anwender-Code ausserhalb des COM-Aufrufs
+    // Aus AccChildDoDefault gepostet: Anwender-Code ausserhalb des COM-Aufrufs.
+    // WParam = Zeile, LParam = Eintrag zum Zeitpunkt des Postens. Hat der
+    // Filter die Zeilen inzwischen umgestellt, nichts ausloesen.
     I := ItemOfRow(Integer(Message.WParam));
-    if Assigned(FOnItemClick) and (I >= 0) then
+    if Assigned(FOnItemClick) and (I >= 0) and (I = Integer(Message.LParam)) then
       FOnItemClick(Self, I);
     Exit;
   end;
@@ -1138,8 +1140,8 @@ end;
 
 procedure TPPGPopupList.AccChildDoDefault(Id: Integer);
 begin
-  if HandleAllocated then
-    PostMessage(Handle, GMsgItemAction, WPARAM(Id - 1), 0);
+  if HandleAllocated and (ItemOfRow(Id - 1) >= 0) then
+    PostMessage(Handle, GMsgItemAction, WPARAM(Id - 1), LPARAM(ItemOfRow(Id - 1)));
 end;
 
 function TPPGPopupList.AccFocusedChild: Integer;

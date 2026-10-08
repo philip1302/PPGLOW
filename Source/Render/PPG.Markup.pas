@@ -96,7 +96,7 @@ function PPGStripMarkup(const S: string): string;
 implementation
 
 uses
-  System.SysUtils, System.UITypes, System.Generics.Collections, PPG.Render.Gdi;
+  System.SysUtils, System.UITypes, System.Generics.Collections, PPG.Render.Gdi, PPG.ErrorHandler;
 
 const
   MaxCache = 512;
@@ -368,15 +368,20 @@ begin
     end;
     Flush;
   except
-    // Fehlergrenze: Markup darf nie eine Exception ausloesen -> roh anzeigen
-    Count := 0;
-    Link := '';
-    SetLength(Colors, 0);
-    Bold := 0;
-    Ital := 0;
-    Under := 0;
-    Strike := 0;
-    AddRun(mrkText, S, -1);
+    // Fehlergrenze: Markup darf nie eine Exception ausloesen -> roh anzeigen.
+    // Protokollieren, damit ein Parserfehler nicht unbemerkt bleibt.
+    on E: Exception do
+    begin
+      TPPGErrorHandler.LogWarning(nil, 'PPGParseMarkup: ' + E.ClassName + ': ' + E.Message);
+      Count := 0;
+      Link := '';
+      SetLength(Colors, 0);
+      Bold := 0;
+      Ital := 0;
+      Under := 0;
+      Strike := 0;
+      AddRun(mrkText, S, -1);
+    end;
   end;
   SetLength(Result, Count);
 end;

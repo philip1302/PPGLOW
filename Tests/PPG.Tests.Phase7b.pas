@@ -45,6 +45,7 @@ type
     procedure CodeSetsWithoutEvents;
     procedure RightToLeftMirrors;
     procedure Accessibility;
+    procedure MinMaxStayOrderedAndClampDate;
   end;
 
   TDatePickerTests = class(TPhase7bTestCase)
@@ -56,6 +57,7 @@ type
     procedure PopupPicksDate;
     procedure PopupShowsCalendar;
     procedure CheckboxMeansNoDate;
+    procedure MinMaxStayOrderedAndClampDate;
   end;
 
   TTimePickerTests = class(TPhase7bTestCase)
@@ -455,6 +457,27 @@ begin
   CheckEquals(EncodeDate(2026, 10, 15), C.FocusDate, 0, 'Links = vorwaerts bei RTL');
 end;
 
+procedure TCalendarTests.MinMaxStayOrderedAndClampDate;
+var
+  C: TPPGCalendar;
+begin
+  // Audit 08.10.2026: MinDate > MaxDate wurde angenommen, ein gewaehltes
+  // Datum ausserhalb des Bereichs blieb stehen.
+  C := NewCalendar;
+  C.Date := EncodeDate(2026, 10, 15);
+  C.MaxDate := EncodeDate(2026, 10, 10);
+  CheckEquals(EncodeDate(2026, 10, 10), C.Date, 0, 'Date folgt MaxDate');
+  C.MinDate := EncodeDate(2026, 10, 12);
+  CheckEquals(EncodeDate(2026, 10, 12), C.MaxDate, 0, 'MaxDate folgt MinDate');
+  CheckEquals(EncodeDate(2026, 10, 12), C.Date, 0, 'Date folgt MinDate');
+  C.MaxDate := EncodeDate(2026, 10, 1);
+  CheckEquals(EncodeDate(2026, 10, 1), C.MinDate, 0, 'MinDate folgt MaxDate');
+  CheckTrue(C.MinDate <= C.MaxDate);
+  C.MinDate := 0;
+  C.MaxDate := 0;
+  CheckEquals(0, C.MinDate, 0, 'ohne Grenzen');
+end;
+
 procedure TCalendarTests.Accessibility;
 var
   C: TPPGCalendar;
@@ -584,6 +607,36 @@ begin
   K := VK_DOWN;
   TDateAccess(D).FieldKeyDown(K, []);
   CheckEquals(EncodeDate(2026, 9, 5), D.Date, 0, 'MinDate');
+end;
+
+procedure TDatePickerTests.MinMaxStayOrderedAndClampDate;
+var
+  D: TPPGDatePicker;
+begin
+  // Audit 08.10.2026: MinDate > MaxDate wurde angenommen, Date wurde weder
+  // im Setter noch in Loaded geklemmt.
+  D := NewPicker(FForm, Self);
+  D.Date := EncodeDate(2026, 10, 5);
+  D.Time := EncodeTime(14, 30, 0, 0);
+  D.MaxDate := EncodeDate(2026, 10, 1);
+  CheckEquals(EncodeDate(2026, 10, 1), D.Date, 0, 'Date folgt MaxDate');
+  CheckEquals(EncodeTime(14, 30, 0, 0), D.Time, 0.00001, 'Uhrzeit bleibt');
+  D.MinDate := EncodeDate(2026, 10, 20);
+  CheckEquals(EncodeDate(2026, 10, 20), D.MaxDate, 0, 'MaxDate folgt MinDate');
+  CheckEquals(EncodeDate(2026, 10, 20), D.Date, 0, 'Date folgt MinDate');
+  D := LoadDfm7b(
+    'object DateTimePicker2: TPPGDatePicker'#13#10 +
+    '  Date = 46350.000000000000000000'#13#10 +
+    '  MaxDate = 46300.000000000000000000'#13#10 +
+    '  MinDate = 46290.000000000000000000'#13#10 +
+    'end') as TPPGDatePicker;
+  try
+    CheckEquals(46290, D.MinDate, 0, 'MinDate aus DFM');
+    CheckEquals(46300, D.MaxDate, 0, 'MaxDate aus DFM');
+    CheckEquals(46300, D.Date, 0, 'Date in Loaded geklemmt');
+  finally
+    D.Free;
+  end;
 end;
 
 procedure TDatePickerTests.PopupPicksDate;
@@ -716,6 +769,13 @@ begin
   CheckFalse(P.ParseTime('13:00 PM', T));
   CheckFalse(P.ParseTime('abc', T));
   CheckFalse(P.ParseTime('', T));
+  // Audit 08.10.2026: AM/PM mit Punkten (en-CA) war nie lesbar
+  FormatSettings.TimeAMString := 'a.m.';
+  FormatSettings.TimePMString := 'p.m.';
+  CheckTrue(P.ParseTime('9:30 a.m.', T), 'a.m.');
+  CheckEquals(EncodeTime(9, 30, 0, 0), T, 0.000001);
+  CheckTrue(P.ParseTime('9:30 p.m.', T), 'p.m.');
+  CheckEquals(EncodeTime(21, 30, 0, 0), T, 0.000001);
 end;
 
 procedure TTimePickerTests.FormatsByClock;

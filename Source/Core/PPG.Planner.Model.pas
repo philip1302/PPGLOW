@@ -114,8 +114,11 @@ type
   end;
 
   IPPGAppointmentsHost = interface
-    ['{9B0E2C47-5D18-4F3A-B6C9-2E7A41D8F063}']
+    ['{0DE7899F-5F4E-4889-A751-94023A4F69BE}']
     procedure AppointmentsChanged;
+    /// Termin verlaesst die Sammlung (Delete, Free, Clear) und ist noch
+    /// nicht freigegeben. Der Host loest hier alle Verweise auf A.
+    procedure AppointmentRemoving(A: TPPGAppointment);
   end;
 
   TPPGAppointments = class(TOwnedCollection)
@@ -127,6 +130,7 @@ type
     procedure SetTimeZoneMode(const Value: TPPGTimeZoneMode);
   protected
     procedure Update(Item: TCollectionItem); override;
+    procedure Notify(Item: TCollectionItem; Action: TCollectionNotification); override;
   public
     constructor Create(AOwner: TPersistent);
     /// Kopiert auch die Ids, damit RecurrenceParent weiter stimmt.
@@ -525,6 +529,17 @@ begin
     Exit;
   if Supports(GetOwner, IPPGAppointmentsHost, H) then
     H.AppointmentsChanged;
+end;
+
+// System.Classes qualifiziert: In XE2 verdeckt die Generics-Unit aus dem
+// implementation-uses sonst den Typ und die Werte aus System.Classes.
+procedure TPPGAppointments.Notify(Item: TCollectionItem; Action: System.Classes.TCollectionNotification);
+var
+  H: IPPGAppointmentsHost;
+begin
+  inherited Notify(Item, Action);
+  if (Action = System.Classes.cnExtracting) and Supports(GetOwner, IPPGAppointmentsHost, H) then
+    H.AppointmentRemoving(TPPGAppointment(Item));
 end;
 
 function TPPGAppointments.FindById(AId: Integer): TPPGAppointment;

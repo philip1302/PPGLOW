@@ -140,6 +140,12 @@ type
     FPressPt: TPoint;
     FDragging: Boolean;
     FDragSrc: TPPGKanbanHit;
+    // Gezogene Karte (nicht virtuell): Id, damit eine Modellaenderung
+    // waehrend des Ziehens die Quelle wiederfindet statt den Index zu nutzen
+    FDragHasCard: Boolean;
+    FDragCardId: Integer;
+    FPressHasCard: Boolean;
+    FPressCardId: Integer;
     FDragH: Integer;
     FDragData: TPPGKanbanCardData;
     FGrab: TPoint;
@@ -206,6 +212,8 @@ type
     function DropAt(X, Y: Integer): TPPGKanbanHit;
     procedure UpdateDrop(X, Y: Integer);
     procedure EndDrag(Commit: Boolean);
+    procedure RelocateDragSource;
+    function RelocateCardHit(var H: TPPGKanbanHit; HasCard: Boolean; CardId: Integer): Boolean;
     procedure ColumnAutoScroll(X, Y: Integer);
     { Zeichnen }
     procedure PaintColumn(const ACanvas: IPPGCanvas; C: Integer; const View: TRect);
@@ -537,6 +545,46 @@ end;
 procedure TPPGCustomKanban.KanbanModelChanged;
 begin
   LayoutChanged;
+  if (csDestroying in ComponentState) or (FCards = nil) then
+    Exit;
+  // Audit 08.10.2026: Indizes aus der alten Anordnung gelten nicht mehr.
+  // Gedrueckte und gezogene Karte werden ueber ihre Id neu gesucht (sonst
+  // wuerde z. B. nach einem DB-Reload die Karte verschoben, die jetzt an der
+  // alten Stelle steht). Ist sie weg, zaehlt der Klick nicht bzw. das
+  // Ziehen endet ohne Verschieben.
+  if (FPress.Part = kpCard) and not RelocateCardHit(FPress, FPressHasCard, FPressCardId) then
+    FPress := NoHit;
+  if FDragging then
+    RelocateDragSource;
+end;
+
+function TPPGCustomKanban.RelocateCardHit(var H: TPPGKanbanHit; HasCard: Boolean;
+  CardId: Integer): Boolean;
+var
+  Card: TPPGKanbanCard;
+  C, L, I: Integer;
+begin
+  Result := False;
+  if not HasCard then
+    Exit;
+  Card := FCards.FindById(CardId);
+  if (Card = nil) or not FindCard(Card, C, L, I) then
+    Exit;
+  H.Col := C;
+  H.Lane := L;
+  H.Index := I;
+  Result := True;
+end;
+
+procedure TPPGCustomKanban.RelocateDragSource;
+begin
+  if RelocateCardHit(FDragSrc, FDragHasCard, FDragCardId) then
+  begin
+    FDragData := CardData(FDragSrc.Col, FDragSrc.Lane, FDragSrc.Index);
+    UpdateDrop(FMousePt.X, FMousePt.Y);
+  end
+  else
+    EndDrag(False);
 end;
 
 procedure TPPGCustomKanban.LayoutChanged;
@@ -2417,6 +2465,9 @@ begin
     SetFocus;
   H := HitTest(X, Y);
   FPress := H;
+  FPressHasCard := (H.Part = kpCard) and (CardAt(H.Col, H.Lane, H.Index) <> nil);
+  if FPressHasCard then
+    FPressCardId := CardAt(H.Col, H.Lane, H.Index).Id;
   FPressPt := Point(X, Y);
   if Button <> mbLeft then
     Exit;
@@ -2464,6 +2515,9 @@ begin
   begin
     R := RawCardRect(FPress.Col, FPress.Lane, FPress.Index);
     FDragSrc := FPress;
+    FDragHasCard := CardAt(FPress.Col, FPress.Lane, FPress.Index) <> nil;
+    if FDragHasCard then
+      FDragCardId := CardAt(FPress.Col, FPress.Lane, FPress.Index).Id;
     FDragH := R.Bottom - R.Top;
     FDragData := CardData(FPress.Col, FPress.Lane, FPress.Index);
     FGrab := Point(FPressPt.X - R.Left, FPressPt.Y - R.Top);

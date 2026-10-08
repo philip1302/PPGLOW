@@ -29,6 +29,7 @@ type
     procedure LogTool(Sender: TObject; Item: TPPGToolItem);
     procedure LogToolClick(Sender: TObject);
     procedure LogExecute(Sender: TObject);
+    procedure ToolFreesSelf(Sender: TObject);
     procedure DrawPanel(StatusBar: TPPGStatusBar; Panel: TPPGStatusPanel; const Rect: TRect);
     function NewNav: TPPGNavigationView;
     procedure Click7c(C: TWinControl; const R: TRect);
@@ -50,12 +51,16 @@ type
     procedure DeleteSelectedItemIsSafe;
     procedure RoundTripKeepsNestedItems;
     procedure Accessibility;
+    procedure PostedActionIgnoresChangedRows;
   end;
 
   TBreadcrumbTests = class(TPhase7cTestCase)
+  private
+    procedure NavigateCrumb(Sender: TObject; Index: Integer);
   published
     procedure PathAndClick;
     procedure TruncateOnClick;
+    procedure TruncateKeepsPathSetByHandler;
     procedure OverflowWhenNarrow;
     procedure KeyboardAndAccessibility;
   end;
@@ -67,6 +72,7 @@ type
     procedure OverflowWhenNarrow;
     procedure KeyboardAndAccessibility;
     procedure RoundTripKeepsItems;
+    procedure HandlerRemovesOwnButton;
   end;
 
   TStatusBarTests = class(TPhase7cTestCase)
@@ -168,6 +174,12 @@ end;
 procedure TPhase7cTestCase.LogCrumb(Sender: TObject; Index: Integer);
 begin
   FEvents.Add('crumb:' + IntToStr(Index));
+end;
+
+procedure TPhase7cTestCase.ToolFreesSelf(Sender: TObject);
+begin
+  FEvents.Add('free:' + TPPGToolItem(Sender).Caption);
+  TPPGToolItem(Sender).Free;
 end;
 
 procedure TPhase7cTestCase.LogTool(Sender: TObject; Item: TPPGToolItem);
@@ -489,6 +501,28 @@ begin
   CheckEquals(ROLE_SYSTEM_OUTLINE, TNavAccess(N).AccRole);
 end;
 
+procedure TNavigationViewTests.PostedActionIgnoresChangedRows;
+var
+  N: TPPGNavigationView;
+  A: IPPGAccessibleChildren;
+begin
+  // Audit 08.10.2026: Gepostet wurde nur die Zeile; aenderten sich die
+  // Zeilen bis zur Verarbeitung, wurde ein anderes Item ausgeloest.
+  N := NewNav;
+  CheckTrue(Supports(N, IPPGAccessibleChildren, A));
+  FEvents.Clear;
+  A.AccChildDoDefault(2); // Post
+  N.FindItem('Start').Free; // Zeile 2 ist jetzt der Kopf "Bereiche"
+  Application.ProcessMessages;
+  CheckEquals(-1, FEvents.IndexOf('inv:Post'), FEvents.Text);
+  CheckEquals(-1, FEvents.IndexOf('inv:Bereiche'), FEvents.Text);
+  // Unveraendert: wirkt wie bisher
+  A.AccChildDoDefault(1); // jetzt Post
+  Application.ProcessMessages;
+  CheckTrue(FEvents.IndexOf('inv:Post') >= 0, FEvents.Text);
+  A := nil;
+end;
+
 { TBreadcrumbTests }
 
 function NewCrumb(F: TForm; T: TPhase7cTestCase): TPPGBreadcrumb;
@@ -533,6 +567,30 @@ begin
   CheckEquals('crumb:1', FEvents.CommaText);
   CheckEquals(2, B.Items.Count, 'folgende Segmente entfernt');
   CheckEquals('Daten', B.Items[1]);
+end;
+
+procedure TBreadcrumbTests.NavigateCrumb(Sender: TObject; Index: Integer);
+begin
+  FEvents.Add('crumb:' + IntToStr(Index));
+  TPPGBreadcrumb(Sender).SetPath('X:\A\B\C\D');
+end;
+
+procedure TBreadcrumbTests.TruncateKeepsPathSetByHandler;
+var
+  B: TPPGBreadcrumb;
+begin
+  // Audit 08.10.2026: Setzte der Handler einen neuen Pfad, wurde dieser
+  // anschliessend mit dem alten Index gekuerzt.
+  B := NewCrumb(FForm, Self);
+  B.TruncateOnClick := True;
+  B.OnItemClick := NavigateCrumb;
+  Key7c(B, VK_HOME);
+  Key7c(B, VK_RIGHT);
+  Key7c(B, VK_RETURN);
+  CheckEquals('crumb:1', FEvents.CommaText);
+  CheckEquals(5, B.Items.Count, 'neuer Pfad bleibt vollstaendig');
+  CheckEquals('X:', B.Items[0]);
+  CheckEquals('D', B.Items[4]);
 end;
 
 procedure TBreadcrumbTests.OverflowWhenNarrow;
@@ -694,6 +752,27 @@ begin
   CheckTrue(A.AccChildState(3) and STATE_SYSTEM_CHECKED <> 0);
   CheckEquals(SPPGAccToggle, A.AccChildDefaultAction(2));
   CheckEquals(ROLE_SYSTEM_TOOLBAR, TToolAccess(T).AccRole);
+end;
+
+procedure TToolBarTests.HandlerRemovesOwnButton;
+var
+  T: TPPGToolBar;
+begin
+  // Audit 08.10.2026: OnItemClick bekam einen im OnClick freigegebenen
+  // Button; Hover/gedrueckt blieben nach dem Loeschen an der alten Position.
+  FForm.Show;
+  try
+    T := NewTool(FForm, Self);
+    T.Items[0].OnClick := ToolFreesSelf;
+    FEvents.Clear;
+    Click7c(T, T.ItemRect(0));
+    CheckEquals('free:Neu', FEvents.CommaText, 'kein OnItemClick mit freigegebenem Item');
+    CheckEquals(4, T.Items.Count);
+    CheckEquals(-1, T.HotPart, 'Hover nach dem Loeschen zurueckgesetzt');
+    RenderToBitmap(T).Free;
+  finally
+    FForm.Hide;
+  end;
 end;
 
 procedure TToolBarTests.RoundTripKeepsItems;

@@ -260,8 +260,19 @@ procedure PPGDBSetDataSource(Owner: TComponent; Link: TDataLink; Value: TDataSou
 /// Schreibt den Wert ins Feld (UpdateRecord). Bei einem Fehler: Feld als
 /// ungueltig markieren, Fokus behalten und still abbrechen (EAbort).
 procedure PPGDBCommitField(Ctrl: TPPGCustomField; Link: TFieldDataLink);
+/// Klammer um das Lesen einer ganzen Datenmenge (DisableControls ...
+/// EnableControls) durch ein PPGlow-Control. EnableControls meldet allen
+/// Links deDataSetChange; PPGlow-Links ignorieren diese Meldung, solange
+/// gelesen wird. Sonst laden sich zwei Controls an derselben Datenmenge
+/// (Diagramm, Planer, Kanban, Nachschlageliste) endlos gegenseitig neu.
+procedure PPGDBBeginRead;
+procedure PPGDBEndRead;
+function PPGDBReading: Boolean;
 
 implementation
+
+var
+  GReadDepth: Integer;
 
 type
   /// Zugriff auf die geschuetzten Validierungs-Properties der Feld-Basis.
@@ -272,6 +283,22 @@ const
   DefValueUnchecked = 'False';
 
 { Hilfen }
+
+procedure PPGDBBeginRead;
+begin
+  Inc(GReadDepth);
+end;
+
+procedure PPGDBEndRead;
+begin
+  if GReadDepth > 0 then
+    Dec(GReadDepth);
+end;
+
+function PPGDBReading: Boolean;
+begin
+  Result := GReadDepth > 0;
+end;
 
 procedure PPGDBSetDataSource(Owner: TComponent; Link: TDataLink; Value: TDataSource);
 begin

@@ -27,7 +27,7 @@ unit PPG.DB.Planner;
 interface
 
 uses
-  System.Classes, System.SysUtils, Data.DB,
+  System.Classes, System.SysUtils, System.Generics.Collections, Data.DB,
   PPG.Animation, PPG.Planner.Model, PPG.Planner;
 
 type
@@ -68,6 +68,9 @@ type
     FReloadPending: Boolean;
     FBusy: Integer;
     FLoadedCount: Integer;
+    // Schluessel der Saetze, die als Termin geladen oder vom Planer
+    // geschrieben wurden. Nur diese werden per Edit geaendert bzw. geloescht.
+    FDbKeys: TDictionary<Integer, Boolean>;
     FOnGetRange: TPPGPlannerRangeEvent;
     function GetDataSource: TDataSource;
     procedure SetDataSource(Value: TDataSource);
@@ -80,6 +83,7 @@ type
     function CanWrite: Boolean;
     function LocateKey(AId: Integer): Boolean;
     procedure WriteFields(A: TPPGAppointment);
+    procedure CheckNoForeignEdit;
   protected
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -203,7 +207,7 @@ type
 implementation
 
 uses
-  System.Variants, System.Generics.Collections, PPG.Types, PPG.DB.Controls;
+  System.Variants, PPG.Types, PPG.DB.Controls, PPG.Consts, PPG.Lang, PPG.Exceptions;
 
 { TPPGPlannerDataLink }
 
@@ -221,7 +225,7 @@ end;
 
 procedure TPPGPlannerDataLink.DataSetChanged;
 begin
-  if FPlanner <> nil then
+  if (FPlanner <> nil) and not PPGDBReading then
     FPlanner.ScheduleReload;
 end;
 
@@ -241,6 +245,7 @@ begin
   FSyncRecord := True;
   FReloadAnim := TPPGAnimation.Create(Self);
   FReloadAnim.OnStep := ReloadStep;
+  FDbKeys := TDictionary<Integer, Boolean>.Create;
   FDataLink := TPPGPlannerDataLink.Create(Self);
 end;
 
@@ -253,6 +258,7 @@ begin
     FReloadAnim.OnStep := nil;
   FreeAndNil(FReloadAnim);
   inherited Destroy;
+  FreeAndNil(FDbKeys);
 end;
 
 procedure TPPGCustomDBPlanner.Loaded;
@@ -395,6 +401,7 @@ begin
   if not FDataLink.Active or (FDataLink.DataSet = nil) or FDataLink.DataSet.IsUniDirectional then
   begin
     Appointments.Clear;
+    FDbKeys.Clear;
     FLoadedCount := 0;
     Exit;
   end;
@@ -435,12 +442,24 @@ begin
     for I := 0 to Appointments.Count - 1 do
       ById.AddOrSetValue(Appointments[I].Id, Appointments[I]);
     Bm := DS.Bookmark;
+    PPGDBBeginRead;
     DS.DisableControls;
     try
+      FDbKeys.Clear;
       DS.First;
       N := 0;
       while not DS.Eof and (N < FMaxRecords) do
       begin
+        if FKey <> nil then
+        begin
+          // Saetze ohne Schluessel lassen sich nicht zurueckschreiben und
+          // wuerden mit Schluessel 0 zusammenfallen
+          if FKey.IsNull then
+          begin
+            DS.Next;
+            Continue;
+          end;
+        end;
         if (FStart <> nil) and not FStart.IsNull then
         begin
           if FKey <> nil then
@@ -454,6 +473,8 @@ begin
             ById.Add(Key, A);
           end;
           Seen.AddOrSetValue(Key, True);
+          if FKey <> nil then
+            FDbKeys.AddOrSetValue(Key, True);
           if FAll <> nil then
             A.AllDay := FAll.AsBoolean
           else
@@ -491,6 +512,7 @@ begin
       if (Length(Bm) > 0) and DS.BookmarkValid(Bm) then
         DS.Bookmark := Bm;
       DS.EnableControls;
+      PPGDBEndRead;
     end;
     // Nicht mehr vorhandene Termine entfernen
     for I := Appointments.Count - 1 downto 0 do
@@ -550,23 +572,33 @@ procedure TPPGCustomDBPlanner.AppointmentWritten(A: TPPGAppointment);
 var
   DS: TDataSet;
   KeyF: TField;
+  NewKey: Integer;
+  KeyWritable, Done: Boolean;
 begin
   inherited AppointmentWritten(A);
   if not CanWrite then
     Exit;
   DS := FDataLink.DataSet;
   KeyF := Fld(FKeyField);
+  CheckNoForeignEdit;
+  Done := False;
   Inc(FBusy);
   try
-    if DS.State in dsEditModes then
-      DS.Post;
-    if LocateKey(A.Id) then
+    // Nur Saetze bearbeiten, die tatsaechlich gelesen wurden. Ein neuer
+    // Termin hat eine Id aus der Sammlung, die zufaellig einem nicht
+    // geladenen Satz (ohne Beginn, ueber MaxRecords, gefiltert) gehoeren kann.
+    if FDbKeys.ContainsKey(A.Id) and LocateKey(A.Id) then
       DS.Edit
     else
     begin
+      NewKey := A.Id;
+      KeyWritable := not KeyF.ReadOnly and (KeyF.DataType <> ftAutoInc);
+      if KeyWritable then
+        while LocateKey(NewKey) do
+          Inc(NewKey);
       DS.Append;
-      if not KeyF.ReadOnly and not (KeyF.DataType = ftAutoInc) then
-        KeyF.AsInteger := A.Id;
+      if KeyWritable then
+        KeyF.AsInteger := NewKey;
     end;
     try
       WriteFields(A);
@@ -575,22 +607,41 @@ begin
       DS.Cancel;
       raise;
     end;
-    // Von der Datenbank vergebener Schluessel
+    // Von der Datenbank (oder oben) vergebener Schluessel
     if not KeyF.IsNull and (KeyF.AsInteger <> A.Id) then
       A.Id := KeyF.AsInteger;
+    FDbKeys.AddOrSetValue(A.Id, True);
+    Done := True;
   finally
     Dec(FBusy);
+    // Fehlgeschlagen: Anzeige wieder an die Datenmenge angleichen
+    if not Done then
+      ScheduleReload;
+  end;
+end;
+
+procedure TPPGCustomDBPlanner.CheckNoForeignEdit;
+begin
+  // Eine offene Bearbeitung gehoert einem anderen Control (oder dem
+  // Anwendungscode). Sie still zu speichern oder durch Locate speichern zu
+  // lassen, waere Datenverlust bzw. ungewollte Buchung.
+  if FDataLink.DataSet.State in dsEditModes then
+  begin
+    ScheduleReload;
+    raise EPPGError.Create(PPGStr(@SPPGDBEditPending));
   end;
 end;
 
 procedure TPPGCustomDBPlanner.DoDeleteAppointment(A: TPPGAppointment);
 begin
-  if CanWrite then
+  if CanWrite and FDbKeys.ContainsKey(A.Id) then
   begin
+    CheckNoForeignEdit;
     Inc(FBusy);
     try
       if LocateKey(A.Id) then
         FDataLink.DataSet.Delete;
+      FDbKeys.Remove(A.Id);
     finally
       Dec(FBusy);
     end;

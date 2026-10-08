@@ -73,6 +73,9 @@ type
     procedure MoveFocus(DX, DY: Integer);
     procedure SetCustomFromColor(C: TColor);
     function CustomColor: TColor;
+    /// Puffer-Bitmaps (mit GDI-Handles) freigeben; EnsureBitmaps legt sie
+    /// beim naechsten Aufklappen neu an (Regel: keine dauerhaften Handles).
+    procedure ReleaseBitmaps;
     procedure UpdateSVFromPoint(X, Y: Integer);
     procedure UpdateHueFromPoint(X: Integer);
     procedure EnsureBitmaps;
@@ -140,6 +143,7 @@ type
     function CreatePopup: TPPGDropPopup; override;
     procedure PreparePopup(APopup: TPPGDropPopup); override;
     procedure AcceptPopup(APopup: TPPGDropPopup); override;
+    procedure DoCloseUp; override;
     procedure ClosedKeyDown(var Key: Word; Shift: TShiftState); override;
     procedure DoPaintField(const ACanvas: IPPGCanvas; const Style: TPPGSurfaceStyle); override;
     function AccValue: string; override;
@@ -260,6 +264,13 @@ begin
   FreeAndNil(FHueBitmap);
   FreeAndNil(FSmallFont);
   inherited Destroy;
+end;
+
+procedure TPPGColorPopup.ReleaseBitmaps;
+begin
+  FreeAndNil(FSVBitmap);
+  FreeAndNil(FHueBitmap);
+  FSVBitmapHue := -1;
 end;
 
 function TPPGColorPopup.S(V: Integer): Integer;
@@ -1022,6 +1033,14 @@ end;
 procedure TPPGColorPicker.PreparePopup(APopup: TPPGDropPopup);
 begin
   TPPGColorPopup(APopup).Prepare(Self);
+end;
+
+procedure TPPGColorPicker.DoCloseUp;
+begin
+  // Farbfeld und Farbton-Leiste nur waehrend das Popup offen ist
+  if Popup is TPPGColorPopup then
+    TPPGColorPopup(Popup).ReleaseBitmaps;
+  inherited DoCloseUp;
 end;
 
 procedure TPPGColorPicker.AcceptPopup(APopup: TPPGDropPopup);

@@ -20,6 +20,7 @@ type
   private
     FLog: TStringList;
     FVeto: Boolean;
+    FFreeInDeleting: Boolean;
     function NewPlanner: TPPGPlanner;
     procedure Click(P: TPPGPlanner; const Pt: TPoint; Keys: Integer = 0);
     procedure Drag(P: TPPGPlanner; const A, B: TPoint; Keys: Integer = 0);
@@ -52,6 +53,7 @@ type
     procedure TypingCreatesAndEditsSubject;
     procedure EscapeDropsNewAppointment;
     procedure KeyboardMovesAndDeletes;
+    procedure ReleasesRemovedAppointments;
     procedure TabWalksAppointments;
     procedure ResourcesAsColumns;
     procedure TimelineRowsAndResourceDrag;
@@ -60,6 +62,8 @@ type
     procedure AccessibleChildren;
     procedure CalendarLink;
     procedure StreamingRoundTrip;
+    procedure ResourcesGetUniqueIds;
+    procedure RangeSettersStayConsistent;
     procedure PaintsAllViews;
     procedure ManyAppointmentsStayFast;
     procedure PrintsPagesWithSameDrawing;
@@ -100,6 +104,7 @@ begin
   inherited SetUp;
   FLog := TStringList.Create;
   FVeto := False;
+  FFreeInDeleting := False;
   FForm.SetBounds(0, 0, 900, 700);
 end;
 
@@ -179,6 +184,8 @@ begin
   FLog.Add('deleting:' + Appointment.Subject);
   if FVeto then
     Allow := False;
+  if FFreeInDeleting then
+    Appointment.Free;
 end;
 
 procedure TPlannerTests.Creating(Sender: TObject; AStart, AFinish: TDateTime; AResourceId: Integer;
@@ -590,6 +597,81 @@ begin
   CheckEquals(Mon - 7, P.RangeStart, 'ueber den Rand: blaettern');
 end;
 
+procedure TPlannerTests.ReleasesRemovedAppointments;
+var
+  P: TPPGPlanner;
+  A: TPPGAppointment;
+begin
+  // Audit 08.10.2026: DeleteSelected las den Termin nach der Freigabe,
+  // Editor und Auswahl zeigten nach Clear/Reload auf freigegebene Termine.
+  P := NewPlanner;
+  FForm.Show;
+  P.View := pvDay;
+  P.Resources.AddResource(1, 'Anna');
+  P.Resources.AddResource(2, 'Ben');
+  A := P.Appointments.AddAppointment(DT(Mon + 2, 9), DT(Mon + 2, 10), 'A');
+  A.ResourceId := 2;
+  P.SelectAppointment(A);
+  Key(P, VK_DELETE);
+  CheckEquals(0, P.Appointments.Count);
+  CheckEquals(2, P.SelResourceId, 'Ressource des geloeschten Termins');
+  // Inline-Editor offen, dann Clear (wie DB-Reload)
+  A := P.Appointments.AddAppointment(DT(Mon + 2, 11), DT(Mon + 2, 12), 'B');
+  A.ResourceId := 1;
+  P.SelectAppointment(A);
+  P.BeginEditSubject;
+  CheckTrue(P.Editing, 'Editor offen');
+  P.Appointments.Clear;
+  CheckFalse(P.Editing, 'Editor nach Clear zu');
+  CheckNull(P.SelectedAppointment, 'Auswahl nach Clear leer');
+  P.EndEditSubject(True);
+  CheckEquals(0, P.Appointments.Count);
+  // OnDeleting gibt den Termin selbst frei
+  A := P.Appointments.AddAppointment(DT(Mon + 2, 13), DT(Mon + 2, 14), 'C');
+  A.ResourceId := 1;
+  P.SelectAppointment(A);
+  FFreeInDeleting := True;
+  CheckFalse(P.DeleteSelected, 'Termin schon weg');
+  FFreeInDeleting := False;
+  CheckEquals(0, P.Appointments.Count);
+  CheckNull(P.SelectedAppointment);
+  FForm.Hide;
+end;
+
+procedure TPlannerTests.RangeSettersStayConsistent;
+var
+  P: TPPGPlanner;
+  Prn: TPPGPlannerPrinter;
+begin
+  // Audit 08.10.2026: WorkStart > WorkEnd und PrintFrom > PrintTo wurden
+  // angenommen; DayCount/TimelineDays/AgendaDays loesten auch bei gleichem
+  // Wert RangeChanged aus (der DB-Planer las dabei alles neu).
+  P := NewPlanner;
+  P.WorkStart := 600;
+  P.WorkEnd := 900;
+  P.WorkStart := 1000;
+  CheckEquals(1000, P.WorkEnd, 'WorkEnd folgt WorkStart');
+  P.WorkEnd := 300;
+  CheckEquals(300, P.WorkStart, 'WorkStart folgt WorkEnd');
+  P.View := pvDay;
+  P.DayCount := 3;
+  FLog.Clear;
+  P.DayCount := 3;
+  P.TimelineDays := P.TimelineDays;
+  P.AgendaDays := P.AgendaDays;
+  CheckEquals(0, FLog.Count, 'gleicher Wert: kein RangeChanged');
+  P.DayCount := 4;
+  CheckTrue(FLog.IndexOf('range') >= 0, 'neuer Wert: RangeChanged');
+  Prn := TPPGPlannerPrinter.Create(FForm);
+  Prn.PrintFrom := Mon + 7;
+  Prn.PrintTo := Mon;
+  CheckEquals(Mon, Prn.PrintFrom, 0, 'PrintFrom folgt PrintTo');
+  Prn.PrintFrom := Mon + 3;
+  CheckEquals(Mon + 3, Prn.PrintTo, 0, 'PrintTo folgt PrintFrom');
+  Prn.PrintFrom := 0;
+  CheckEquals(Mon + 3, Prn.PrintTo, 0, '0 = nicht gesetzt, keine Kopplung');
+end;
+
 procedure TPlannerTests.TabWalksAppointments;
 var
   P: TPPGPlanner;
@@ -751,6 +833,43 @@ begin
   P.Calendar := C;
   P.Free;
   CheckNull(C.Link, 'Planer freigegeben');
+end;
+
+procedure TPlannerTests.ResourcesGetUniqueIds;
+var
+  P, Q: TPPGPlanner;
+  R1, R2: TPPGPlannerResource;
+  M: TMemoryStream;
+begin
+  // Audit 08.10.2026: Neue Ressourcen (Collection-Editor, Add) hatten alle
+  // Id 0; IndexOfId und GroupByResource funktionierten dann nicht.
+  P := NewPlanner;
+  R1 := P.Resources.Add;
+  R2 := P.Resources.Add;
+  CheckTrue(R1.Id > 0, 'erste Ressource hat eine Id');
+  CheckTrue(R2.Id <> R1.Id, 'eindeutig');
+  CheckEquals(1, P.Resources.IndexOfId(R2.Id));
+  P.Resources.AddResource(0, 'Null');
+  CheckEquals(0, P.Resources[2].Id, 'ausdrueckliche 0 bleibt');
+  CheckEquals(R2.Id + 1, P.Resources.Add.Id, 'naechste freie Nummer');
+  // Streaming: gespeicherte Ids (auch 0) bleiben, nichts wird neu vergeben
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(P);
+    M.Position := 0;
+    Q := TPPGPlanner(M.ReadComponent(nil));
+    try
+      CheckEquals(4, Q.Resources.Count);
+      CheckEquals(R1.Id, Q.Resources[0].Id);
+      CheckEquals(R2.Id, Q.Resources[1].Id);
+      CheckEquals(0, Q.Resources[2].Id, '0 gespeichert und geladen');
+      CheckEquals(P.Resources[3].Id, Q.Resources[3].Id);
+    finally
+      Q.Free;
+    end;
+  finally
+    M.Free;
+  end;
 end;
 
 procedure TPlannerTests.StreamingRoundTrip;

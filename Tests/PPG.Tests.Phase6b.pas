@@ -22,12 +22,15 @@ type
     FChecked: Integer;
     FEdited: Integer;
     FDrops: Integer;
+    FDeleted: TList;
+    FWalkTree: TPPGTreeView;
   protected
     procedure SetUp; override;
   private
     procedure OnChange(Sender: TObject; Node: TPPGTreeNode);
     procedure OnChanging(Sender: TObject; Node: TPPGTreeNode; var AllowChange: Boolean);
     procedure OnDeletion(Sender: TObject; Node: TPPGTreeNode);
+    procedure OnDeletionWalk(Sender: TObject; Node: TPPGTreeNode);
     procedure OnExpandingRefuse(Sender: TObject; Node: TPPGTreeNode; var AllowExpansion: Boolean);
     procedure OnExpandingLazy(Sender: TObject; Node: TPPGTreeNode; var AllowExpansion: Boolean);
     procedure OnChecked(Sender: TObject; Node: TPPGTreeNode);
@@ -45,6 +48,7 @@ type
   published
     procedure NodeApiLikeTTreeNodes;
     procedure DeleteFreesChildrenAndNotifies;
+    procedure OnDeletionSeesNoFreedNodes;
     procedure RowsFollowExpandAndCollapse;
     procedure SelectionStaysOnNode;
     procedure CollapseMovesSelectionToParent;
@@ -135,6 +139,25 @@ end;
 procedure TTreeTests.OnDeletion(Sender: TObject; Node: TPPGTreeNode);
 begin
   Inc(FDeletions);
+end;
+
+procedure TTreeTests.OnDeletionWalk(Sender: TObject; Node: TPPGTreeNode);
+var
+  N: TPPGTreeNode;
+  I: Integer;
+begin
+  Inc(FDeletions);
+  CheckEquals(0, Node.Count, Node.Text + ': Kinder vorher aus der Liste');
+  // Kein bereits geloeschter Knoten ist ueber die Struktur erreichbar
+  N := FWalkTree.Items.GetFirstNode;
+  while N <> nil do
+  begin
+    CheckTrue(FDeleted.IndexOf(N) < 0, 'geloeschter Knoten erreichbar');
+    N := N.GetNext;
+  end;
+  for I := 0 to FWalkTree.Items.Count - 1 do
+    CheckTrue(FDeleted.IndexOf(FWalkTree.Items[I]) < 0, 'Items[] liefert geloeschten Knoten');
+  FDeleted.Add(Node);
 end;
 
 procedure TTreeTests.OnExpandingRefuse(Sender: TObject; Node: TPPGTreeNode;
@@ -291,6 +314,34 @@ begin
   T.Items.Clear;
   CheckEquals(0, T.Items.Count);
   CheckEquals(0, T.RowCount);
+end;
+
+procedure TTreeTests.OnDeletionSeesNoFreedNodes;
+var
+  T: TPPGTreeView;
+begin
+  // Audit 08.10.2026: FreeNode/Clear gaben Kinder frei, liessen sie aber in
+  // FChildren/FRoots stehen, waehrend OnDeletion lief.
+  T := SampleTree;
+  FWalkTree := T;
+  FDeleted := TList.Create;
+  try
+    T.OnDeletion := OnDeletionWalk;
+    Find(T, 'A').Delete;
+    CheckEquals(4, FDeletions, 'A mit drei Nachfahren');
+    // Freigegebene Adressen koennen fuer neue Knoten wiederverwendet werden
+    FDeleted.Clear;
+    T.Items.AddChild(Find(T, 'B'), 'B2');
+    T.Items.Add(nil, 'C');
+    FDeletions := 0;
+    T.Items.Clear;
+    CheckEquals(4, FDeletions, 'B, B1, B2, C');
+    CheckEquals(0, T.Items.Count);
+    CheckNull(T.Items.GetFirstNode);
+  finally
+    T.OnDeletion := nil;
+    FreeAndNil(FDeleted);
+  end;
 end;
 
 procedure TTreeTests.RowsFollowExpandAndCollapse;

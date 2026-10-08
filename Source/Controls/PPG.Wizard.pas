@@ -1019,6 +1019,9 @@ var
   P: TPPGWizardPage;
 begin
   Result := False;
+  // Ohne aktive Seite lieferte FindNextPage(nil, False) die letzte Seite
+  if FActivePage = nil then
+    Exit;
   P := FindNextPage(FActivePage, False);
   if P = nil then
     Exit;

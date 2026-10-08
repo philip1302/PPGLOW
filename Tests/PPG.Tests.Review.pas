@@ -29,6 +29,7 @@ type
     procedure MarkupLinkWithoutFragmentIsNotCounted;
     procedure MarkupLinkIndexesStayInReadingOrder;
     procedure GdiDashedLineBlendsOnceWithGaps;
+    procedure FailingLoggerStaysInsideWarnings;
   end;
 
   // PR 5 (Fachlogik): Achsen, Planer, iCalendar, UIA
@@ -66,6 +67,11 @@ type
     procedure Log(Level: TPPGLogLevel; const Msg: string);
   end;
 
+  TFailingLogger = class(TInterfacedObject, IPPGLogger)
+  public
+    procedure Log(Level: TPPGLogLevel; const Msg: string);
+  end;
+
   // Meldet sich beim Theme an und zaehlt bzw. wirft beim Wechsel
   TThemeProbe = class(TControl)
   public
@@ -92,6 +98,11 @@ end;
 procedure TListLogger.Log(Level: TPPGLogLevel; const Msg: string);
 begin
   FList.Add(Msg);
+end;
+
+procedure TFailingLogger.Log(Level: TPPGLogLevel; const Msg: string);
+begin
+  raise Exception.Create('Logger kaputt');
 end;
 
 procedure TThemeProbe.WndProc(var Message: TMessage);
@@ -174,6 +185,16 @@ begin
     E.Free;
     C.Free;
   end;
+end;
+
+procedure TReviewTests.FailingLoggerStaysInsideWarnings;
+begin
+  // Audit 08.10.2026: LogWarning/LogInfo werden in Fehlergrenzen (Paint, COM,
+  // Drucken) gerufen; ein werfender Logger trug die Exception hinaus.
+  TPPGErrorHandler.Logger := TFailingLogger.Create;
+  TPPGErrorHandler.LogWarning(nil, 'Warnung');
+  TPPGErrorHandler.LogInfo(nil, 'Info');
+  CheckEquals(0, FAppExceptions, 'keine Anwendungs-Exception');
 end;
 
 procedure TReviewTests.ThemeChangeReachesClientsAfterFailingOne;

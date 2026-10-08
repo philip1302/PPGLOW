@@ -35,6 +35,7 @@ type
     function FindItem(R: TPPGRibbon; const ACaption: string): TPPGRibbonItem;
     procedure Click(C: TWinControl; const Pt: TPoint);
     procedure ItemOnClick(Sender: TObject);
+    procedure ItemFreesSelf(Sender: TObject);
     procedure RibbonItemClick(Sender: TObject; Item: TPPGRibbonItem);
     procedure TabChanging(Sender: TObject; NewTab: TPPGRibbonTab; var AllowChange: Boolean);
     procedure TabChange(Sender: TObject);
@@ -78,6 +79,7 @@ type
     procedure LanguageSwitchRelayouts;
     procedure PaintsAllStates;
     procedure ManyItemsStayFast;
+    procedure RemovedItemsAreReleased;
   end;
 
 implementation
@@ -122,6 +124,43 @@ end;
 procedure TRibbonTests.ItemOnClick(Sender: TObject);
 begin
   FLog.Add('click:' + TPPGRibbonItem(Sender).Caption);
+end;
+
+procedure TRibbonTests.ItemFreesSelf(Sender: TObject);
+begin
+  FLog.Add('free:' + TPPGRibbonItem(Sender).Caption);
+  TPPGRibbonItem(Sender).Free;
+end;
+
+procedure TRibbonTests.RemovedItemsAreReleased;
+var
+  R: TPPGRibbon;
+  It: TPPGRibbonItem;
+  GP: TPPGRibbonGalleryPopup;
+begin
+  // Audit 08.10.2026: OnItemClick bekam ein im OnClick freigegebenes Item;
+  // eine offene Galerie zeigte nach dem Loeschen ihres Items ins Leere.
+  R := NewRibbon;
+  It := FindItem(R, 'Kopieren');
+  It.OnClick := ItemFreesSelf;
+  R.ClickItem(It);
+  CheckEquals('free:Kopieren', FLog.CommaText, 'kein OnItemClick mit freigegebenem Item');
+  CheckNull(FindItem(R, 'Kopieren'));
+  FForm.Show;
+  try
+    R.Width := 1600;
+    R.UpdateLayout;
+    It := R.Tabs[0].Groups[3].Items[0];
+    R.OpenGallery(It);
+    GP := R.GalleryPopup;
+    CheckTrue((GP <> nil) and GP.IsOpen);
+    It.Free;
+    CheckFalse(GP.IsOpen, 'Galerie mit dem Item geschlossen');
+    RenderToBitmap(GP).Free;
+    RenderToBitmap(R).Free;
+  finally
+    FForm.Hide;
+  end;
 end;
 
 procedure TRibbonTests.RibbonItemClick(Sender: TObject; Item: TPPGRibbonItem);

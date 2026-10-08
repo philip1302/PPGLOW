@@ -98,6 +98,7 @@ type
     procedure Resize; override;
     procedure WndProc(var Message: TMessage); override;
     procedure AppearanceUpdated; override;
+    procedure ImagesChanged; override;
     procedure AdjustClientRect(var Rect: TRect); override;
     function GetBackgroundColor: TColor; override;
     function ChildSurface(out Body: TRect; out Style: TPPGSurfaceStyle): Boolean; override;
@@ -502,6 +503,18 @@ begin
   if not (csLoading in ComponentState) and not (csDestroying in ComponentState) then
     Realign;
   Invalidate;
+end;
+
+procedure TPPGCustomTabs.ImagesChanged;
+begin
+  inherited ImagesChanged;
+  // Die Leiste haelt eine Kopie des Zeigers. Nach der Freigabe der Liste
+  // (Images ist dann schon nil) darf sie nicht mehr darauf zeigen.
+  if FStrip = nil then
+    Exit;
+  FStrip.Images := Images;
+  if not (csDestroying in ComponentState) then
+    LayoutTabs;
 end;
 
 procedure TPPGCustomTabs.TabsChanged;
@@ -1251,18 +1264,30 @@ var
   CanClose: Boolean;
   Action: TCloseAction;
   WasActive: Boolean;
+  OldCount: Integer;
+  OldText: string;
+
+  // Hat ein Ereignis die Reiter selbst geaendert (z.B. den Reiter schon
+  // geloescht), gehoert Index nicht mehr zum geklickten Reiter.
+  function TabsUnchanged: Boolean;
+  begin
+    Result := (FTabs.Count = OldCount) and (FTabs[Index] = OldText);
+  end;
+
 begin
   if (Index < 0) or (Index >= FTabs.Count) then
     Exit;
+  OldCount := FTabs.Count;
+  OldText := FTabs[Index];
   CanClose := True;
   if Assigned(FOnCloseQuery) then
     FOnCloseQuery(Self, Index, CanClose);
-  if not CanClose then
+  if not CanClose or not TabsUnchanged then
     Exit;
   Action := caFree;
   if Assigned(FOnClose) then
     FOnClose(Self, Index, Action);
-  if Action = caNone then
+  if (Action = caNone) or not TabsUnchanged then
     Exit;
   WasActive := Index = FTabIndex;
   // Nachbar waehlen: der folgende Reiter rueckt nach, sonst der vorige

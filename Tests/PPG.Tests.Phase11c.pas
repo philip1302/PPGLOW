@@ -75,6 +75,7 @@ type
     procedure ClickOnDoneStepGoesBack;
     procedure StreamingRoundTrip;
     procedure WizardGallery;
+    procedure BackWithoutActivePageStays;
   end;
 
 implementation
@@ -746,6 +747,19 @@ end;
 procedure TWizardTests.Cancelled(Sender: TObject);
 begin
   FLog.Add('cancel');
+end;
+
+procedure TWizardTests.BackWithoutActivePageStays;
+var
+  W: TPPGWizard;
+begin
+  // Audit 08.10.2026: Back ohne aktive Seite sprang auf die letzte Seite
+  W := NewWizard;
+  W.ActivePage := nil;
+  FLog.Clear;
+  CheckFalse(W.Back, 'nichts zurueck');
+  CheckNull(W.ActivePage, 'keine Seite aktiviert');
+  CheckEquals(0, FLog.Count, 'kein Ereignis');
 end;
 
 procedure TWizardTests.StepsSkipInvisiblePages;

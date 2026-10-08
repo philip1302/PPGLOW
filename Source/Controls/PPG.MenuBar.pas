@@ -83,6 +83,7 @@ type
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
+    procedure WndProc(var Message: TMessage); override;
     function AccRole: Integer; override;
     function AccName: string; override;
     property Menu: TMainMenu read FMenu write SetMenu;
@@ -149,6 +150,11 @@ const
   ItemPadX = 10;   // logische px links/rechts im Eintrag
   BarPadY = 4;
 
+var
+  // Standardaktion des Screenreaders: wird gepostet, nie im COM-Aufruf
+  // ausgefuehrt (OpenItem ruft OnClick des Eintrags)
+  GMsgMenuBarAction: Cardinal = 0;
+
 { TPPGCustomMenuBar }
 
 constructor TPPGCustomMenuBar.Create(AOwner: TComponent);
@@ -164,6 +170,8 @@ begin
   FLoop := TPPGMenuLoop.Create;
   FLoop.Bar := Self;
   FMenuStyles := TPPGMenuStyles.Create(Self);
+  if GMsgMenuBarAction = 0 then
+    GMsgMenuBarAction := RegisterWindowMessage('PPGlow.MenuBarAction');
 end;
 
 procedure TPPGCustomMenuBar.SetMenuStyles(const Value: TPPGMenuStyles);
@@ -409,6 +417,11 @@ begin
     NotifyAccessibility(EVENT_SYSTEM_MENUSTART);
   // Wie bei Windows ruft das Oeffnen OnClick des Eintrags (dynamische Menues)
   It.Click;
+  // OnClick darf das Menue umbauen (MDI-Merge, Eintraege ausblenden oder
+  // loeschen): Index und Eintrag danach neu pruefen
+  if (FLoop = nil) or not HandleAllocated or (Index >= ItemCount) or (Item(Index) <> It) or
+    (It.Count = 0) then
+    Exit;
   FOpen := Index;
   SetHot(Index);
   R := ItemRect(Index);
@@ -885,8 +898,26 @@ end;
 
 procedure TPPGCustomMenuBar.AccChildDoDefault(Id: Integer);
 begin
-  if (Id >= 1) and (Id <= ItemCount) then
-    OpenItem(Id - 1, True);
+  // Nie im COM-Aufruf: OpenItem ruft OnClick und startet die Menueschleife.
+  // Gepostet wird die Kennung des Eintrags, nicht nur die Position.
+  if (Id >= 1) and (Id <= ItemCount) and HandleAllocated then
+    PostMessage(Handle, GMsgMenuBarAction, WPARAM(Id - 1), LPARAM(Item(Id - 1).Command));
+end;
+
+procedure TPPGCustomMenuBar.WndProc(var Message: TMessage);
+var
+  Index: Integer;
+begin
+  if (GMsgMenuBarAction <> 0) and (Message.Msg = GMsgMenuBarAction) then
+  begin
+    Index := Integer(Message.WParam);
+    // Inzwischen umgebaut: anderer Eintrag an der Stelle - nichts tun
+    if (Index >= 0) and (Index < ItemCount) and
+      (Item(Index).Command = Word(Message.LParam)) then
+      OpenItem(Index, True);
+    Exit;
+  end;
+  inherited WndProc(Message);
 end;
 
 function TPPGCustomMenuBar.AccFocusedChild: Integer;

@@ -704,11 +704,15 @@ begin
   CanClose := True;
   if Assigned(FOnCloseQuery) then
     FOnCloseQuery(Self, P, CanClose);
-  if not CanClose then
+  // Die Ereignisse duerfen die Seite selbst freigeben oder umhaengen; dann
+  // ist P nicht mehr gueltig bzw. nicht mehr unsere Seite.
+  if not CanClose or (FPages.IndexOf(P) < 0) then
     Exit;
   Action := caHide;
   if Assigned(FOnClose) then
     FOnClose(Self, P, Action);
+  if FPages.IndexOf(P) < 0 then
+    Exit;
   case Action of
     caHide, caMinimize:
       P.TabVisible := False; // aktive Seite: Nachbar wird aktiv

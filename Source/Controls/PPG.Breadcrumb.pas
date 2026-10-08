@@ -482,11 +482,16 @@ begin
 end;
 
 procedure TPPGCustomBreadcrumb.DoItemClick(Index: Integer);
+var
+  OldPath: string;
 begin
+  OldPath := FItems.Text;
   if Assigned(FOnItemClick) then
     FOnItemClick(Self, Index);
-  // Nach dem Ereignis kuerzen (der Anwender sieht noch den alten Pfad)
-  if FTruncateOnClick and (Index < FItems.Count - 1) then
+  // Nach dem Ereignis kuerzen (der Anwender sieht noch den alten Pfad).
+  // Hat der Handler selbst einen neuen Pfad gesetzt, gilt dieser: Index
+  // bezieht sich dann nicht mehr auf die aktuellen Segmente.
+  if FTruncateOnClick and (FItems.Text = OldPath) and (Index < FItems.Count - 1) then
   begin
     FItems.BeginUpdate;
     try

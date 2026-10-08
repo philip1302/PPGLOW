@@ -25,9 +25,12 @@ type
 
   TCheckComboTests = class(TDropTestCase)
   private
+    FDeleteOnCheck: Boolean;
     procedure ItemCheck(Sender: TObject; Index: Integer);
     function NewCombo: TPPGCheckComboBox;
   published
+    procedure ChecksFollowItems;
+    procedure ItemsChangeWhileOpen;
     procedure SpaceTogglesAndStaysOpen;
     procedure DisplayModes;
     procedure SelectAllRow;
@@ -70,6 +73,7 @@ type
     procedure CodeSetsTagsSilently;
     procedure ManyTagsLayoutFast;
     procedure AccessibilityChildren;
+    procedure PostedRemoveIgnoresChangedTags;
   end;
 
   TFieldsGalleryTests = class(TDropTestCase)
@@ -139,6 +143,8 @@ end;
 procedure TCheckComboTests.ItemCheck(Sender: TObject; Index: Integer);
 begin
   FLog.Add('check:' + IntToStr(Index));
+  if FDeleteOnCheck then
+    TPPGCheckComboBox(Sender).Items.Delete(Index);
 end;
 
 function TCheckComboTests.NewCombo: TPPGCheckComboBox;
@@ -150,6 +156,61 @@ begin
   Result.Items.CommaText := 'Rot,Gruen,Blau,Gelb';
   Result.OnChange := Changed;
   Result.OnItemCheck := ItemCheck;
+  FDeleteOnCheck := False;
+end;
+
+procedure TCheckComboTests.ChecksFollowItems;
+var
+  C: TPPGCheckComboBox;
+begin
+  // Audit 08.10.2026: Die Haken hingen am Index und sassen nach Insert,
+  // Delete oder Sortieren auf anderen Eintraegen.
+  C := NewCombo; // Rot,Gruen,Blau,Gelb
+  C.CheckedText := 'Blau';
+  C.Items.Insert(0, 'Weiss');
+  CheckTrue(C.Checked[3], 'Blau jetzt an Index 3');
+  CheckFalse(C.Checked[2]);
+  CheckEquals('Blau', C.CheckedText);
+  C.Items.Delete(0);
+  C.Items.Delete(0);
+  CheckEquals('Blau', C.CheckedText, 'nach Delete');
+  CheckTrue(C.Checked[1]);
+  TStringList(C.Items).Sort; // Blau,Gelb,Gruen
+  CheckEquals('Blau', C.CheckedText, 'nach Sort');
+  CheckTrue(C.Checked[0]);
+  C.Items.BeginUpdate;
+  try
+    C.Items.Add('Lila');
+    C.Items.Delete(1);
+  finally
+    C.Items.EndUpdate;
+  end;
+  CheckEquals('Blau', C.CheckedText, 'mehrere Aenderungen in einer Klammer');
+  CheckEquals(1, C.CheckedCount);
+end;
+
+procedure TCheckComboTests.ItemsChangeWhileOpen;
+var
+  C: TPPGCheckComboBox;
+  P: TPPGCheckListPopup;
+begin
+  // Audit 08.10.2026: OnItemCheck loescht den Eintrag bei offener Liste; die
+  // Zeilen-Zuordnung blieb stehen und Paint griff ueber das Ende hinaus.
+  C := NewCombo;
+  C.SetFocus;
+  C.DropDown;
+  P := TPPGCheckListPopup(C.Popup);
+  CheckEquals(4, TCheckPopupAccess(P).RowCount);
+  FDeleteOnCheck := True;
+  KeyTo(C, VK_SPACE); // hakt "Rot" an, der Handler loescht ihn
+  FDeleteOnCheck := False;
+  CheckEquals(3, C.Items.Count);
+  CheckEquals(3, TCheckPopupAccess(P).RowCount, 'Zuordnung neu aufgebaut');
+  CheckEquals(2, P.ItemOfRow(2));
+  CheckEquals(-2, P.ItemOfRow(3));
+  P.Repaint;
+  CheckEquals(0, C.CheckedCount);
+  C.CloseUp(False);
 end;
 
 procedure TCheckComboTests.SpaceTogglesAndStaysOpen;
@@ -691,6 +752,27 @@ begin
   CheckEquals(2, T.Tags.Count, 'nicht im COM-Aufruf');
   Application.ProcessMessages;
   CheckEquals('b', T.TagsText);
+  AC := nil;
+end;
+
+procedure TTagEditTests.PostedRemoveIgnoresChangedTags;
+var
+  T: TPPGTagEdit;
+  AC: IPPGAccessibleChildren;
+begin
+  // Audit 08.10.2026: Die gepostete Entfernen-Aktion trug nur den Index;
+  // aenderten sich die Tags bis zur Verarbeitung, traf sie einen anderen Tag.
+  T := NewTags;
+  T.TagsText := 'a;b;c';
+  CheckTrue(Supports(T, IPPGAccessibleChildren, AC));
+  AC.AccChildDoDefault(1);
+  T.Tags.Insert(0, 'x');
+  Application.ProcessMessages;
+  CheckEquals('x;a;b;c', T.TagsText, 'veraltete Aktion verworfen');
+  // Unveraendert: wirkt wie bisher
+  AC.AccChildDoDefault(2);
+  Application.ProcessMessages;
+  CheckEquals('x;b;c', T.TagsText);
   AC := nil;
 end;
 

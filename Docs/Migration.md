@@ -22,7 +22,9 @@ Voraussetzungen: Die Formulare sind als **Text** gespeichert (in der IDE: Rechts
 3. **Properties umbenennen**, wo die Bedeutung gleich ist (Tabelle unten).
 4. **Properties entfernen**, die die PPGlow-Klasse nicht hat. Welche es gibt, liest das Skript aus den PPGlow-Quelltexten (published-Abschnitte), damit es immer zum aktuellen Stand passt. Jede Entfernung steht im Bericht.
 5. **Ereignis-Handler** anpassen, deren Parametertyp sich ändert (DB-Grid: `TColumn` → `TPPGDBGridColumn`).
-6. **Sicherung** jeder geänderten Datei als `*.bak`; Bericht `migrate-report.txt` im Zielordner.
+6. **Abweichende Vorgaben** ausdrücklich schreiben: Wo PPGlow eine andere Vorgabe hat als die VCL, fehlt der Wert in der alten DFM (die IDE speichert Vorgaben nicht). Das Skript trägt dann den VCL-Wert ein, damit sich das Verhalten nicht still ändert (Tabelle unten).
+7. **Sicherung** jeder geänderten Datei als `*.bak`; eine vorhandene `*.bak` wird nie überschrieben (ein zweiter Lauf behält das Original). Bericht `migrate-report.txt` im Zielordner.
+8. **Kodierung** bleibt erhalten: ANSI-Dateien (cp1252, Umlaute) bleiben ANSI, UTF-8 bleibt UTF-8, ein vorhandenes BOM bleibt.
 
 Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate-tests`.
 
@@ -77,6 +79,26 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TDBGrid | `TitleFont`, `FixedColor` | bleiben (gleichnamig bei `TPPGDBGrid`) |
 | TBitBtn | `Kind`, `Glyph`, `NumGlyphs`, `Layout` | entfernt (Bilder über `Images`/`ImageIndex`) |
 | TSpeedButton | `Glyph`, `NumGlyphs`, `Flat`, `Layout` | entfernt |
+| TButton | `Style = bsPushButton/bsSplitButton` | `Style = pbsPushButton/pbsSplitButton` |
+| TButton | `Style = bsCommandLink` | entfernt (gemeldet) |
+| TDBGrid | `Options`: `dgAlwaysShowEditor`, `dgAlwaysShowSelection`, `dgThumbTracking`, `dgMultiSelect` | bleiben stehen, wirken aber nicht (gemeldet) |
+
+## Abweichende Vorgaben
+
+PPGlow behält seine eigenen Vorgaben (Entscheidung 08.10.2026). Fehlt eine dieser Properties in der alten DFM, schreibt das Skript den VCL-Wert hinein:
+
+| Klasse (alt) | Property | VCL-Vorgabe (wird geschrieben) | PPGlow-Vorgabe |
+|---|---|---|---|
+| TTreeView | `ShowLines` | `True` | `False` |
+| TTreeView | `RowSelect` | `False` | `True` |
+| TTreeView | `HideSelection` | `True` | `False` |
+| TTabControl, TPageControl | `HotTrack` | `False` | `True` |
+| TProgressBar | `Smooth` | `False` | `True` |
+| TRadioButton, TLinkLabel, TMonthCalendar | `TabStop` | `False` | `True` |
+| TSplitter | `ResizeStyle` | `rsPattern` | `rsUpdate` |
+| TTabSheet | `ImageIndex` | `0` | `-1` |
+
+Die Splitter-Breite (VCL 3, PPGlow 6) bleibt, weil die IDE `Width` immer speichert.
 
 ## Was von Hand bleibt
 

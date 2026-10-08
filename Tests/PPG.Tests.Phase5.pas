@@ -104,6 +104,7 @@ type
   published
     procedure CollectionSourceReflectsItems;
     procedure StringsSourceKeepsOldHandler;
+    procedure StringsSourceDetachBeforeFree;
     procedure VirtualSourceAsksOnDemand;
     procedure ItemsStreamRoundTrip;
   end;
@@ -818,6 +819,26 @@ begin
     O.Free;
     L.Free;
   end;
+end;
+
+procedure TItemSourceTests.StringsSourceDetachBeforeFree;
+var
+  L: TStringList;
+  S: TPPGStringsSource;
+  Src: IPPGItemSource;
+begin
+  // Audit 08.10.2026: Die Quelle griff im Destruktor auf die Liste zu, auch
+  // wenn diese schon freigegeben war. Detach loest sie vorher.
+  L := TStringList.Create;
+  L.Add('a');
+  S := TPPGStringsSource.Create(L);
+  Src := S;
+  CheckEquals(1, Src.Count);
+  S.Detach;
+  CheckFalse(Assigned(L.OnChange), 'Handler zurueckgegeben');
+  L.Free;
+  CheckEquals(0, Src.Count, 'nach Detach leer');
+  Src := nil; // Destruktor ohne Zugriff auf die freigegebene Liste
 end;
 
 procedure TItemSourceTests.VirtualSourceAsksOnDemand;

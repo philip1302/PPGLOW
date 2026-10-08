@@ -633,7 +633,9 @@ procedure TPPGCustomButton.SetDropDownMenu(const Value: TPopupMenu);
 begin
   if FDropDownMenu = Value then
     Exit;
-  if FDropDownMenu <> nil then
+  // Abmelden nur, wenn das Menue nicht zugleich PopupMenu ist: Die
+  // Benachrichtigung gilt fuer beide Referenzen (TControl.FPopupMenu)
+  if (FDropDownMenu <> nil) and (FDropDownMenu <> PopupMenu) then
     FDropDownMenu.RemoveFreeNotification(Self);
   FDropDownMenu := Value;
   if FDropDownMenu <> nil then

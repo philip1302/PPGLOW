@@ -159,6 +159,14 @@ type
     function AutoSizeWidth: Boolean; virtual;
     /// Loest bei AutoSize=True eine Neuberechnung der Groesse aus.
     procedure RequestAutoSize;
+    /// Images wurde gesetzt, freigegeben (dann schon nil) oder hat sich
+    /// geaendert. Nachfahren, die die Liste oder daraus abgeleitete Daten
+    /// zwischenspeichern (Reiterleiste, Markup-Layout), ziehen hier nach.
+    procedure ImagesChanged; virtual;
+    /// True, wenn das Control AComponent ausser ueber Images noch anders
+    /// haelt (z.B. LargeImages). Dann bleibt die FreeNotification beim
+    /// Wechsel von Images bestehen.
+    function ReferencesComponent(AComponent: TComponent): Boolean; virtual;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
@@ -682,6 +690,7 @@ begin
   if AComponent = FImages then
   begin
     FImages := nil;
+    ImagesChanged;
     Invalidate;
   end;
   if AComponent = FStyleManager then
@@ -959,7 +968,10 @@ begin
   if FImages <> nil then
   begin
     FImages.UnRegisterChanges(FImageChangeLink);
-    FImages.RemoveFreeNotification(Self);
+    // RemoveFreeNotification wirkt beidseitig: Haelt das Control dieselbe
+    // Liste noch anders (z.B. LargeImages), muss die Benachrichtigung bleiben.
+    if not ReferencesComponent(FImages) then
+      FImages.RemoveFreeNotification(Self);
   end;
   FImages := Value;
   if FImages <> nil then
@@ -968,6 +980,7 @@ begin
     FImages.FreeNotification(Self);
   end;
   ResolveImageName;
+  ImagesChanged;
   RequestAutoSize;
   Invalidate;
 end;
@@ -976,8 +989,19 @@ procedure TPPGCustomControl.ImageListChange(Sender: TObject);
 begin
   // Bilder koennen umsortiert worden sein -> Index ueber den Namen neu bestimmen
   ResolveImageName;
+  ImagesChanged;
   RequestAutoSize;
   Invalidate;
+end;
+
+procedure TPPGCustomControl.ImagesChanged;
+begin
+  // Basis: nichts zwischengespeichert
+end;
+
+function TPPGCustomControl.ReferencesComponent(AComponent: TComponent): Boolean;
+begin
+  Result := False;
 end;
 
 function TPPGCustomControl.CheckImageIndex(const PropName: string;

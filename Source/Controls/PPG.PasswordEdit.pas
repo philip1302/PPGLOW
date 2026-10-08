@@ -143,7 +143,7 @@ implementation
 
 uses
   System.Math, Winapi.oleacc, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.Exceptions,
-  PPG.Lang, PPG.Consts;
+  PPG.Lang, PPG.Consts, PPG.ErrorHandler;
 
 const
   WM_CAPSCHECK = WM_USER + $530;
@@ -209,7 +209,17 @@ end;
 procedure TPPGCustomPasswordEdit.SetMaskChar(const Value: Char);
 begin
   if Value = #0 then
+  begin
+    // Beim DFM-Laden nicht werfen (Formular liesse sich nicht oeffnen):
+    // protokollieren und das bisherige Zeichen behalten
+    if PPGIsLoading(Self) then
+    begin
+      TPPGErrorHandler.LogWarning(Self, Format(PPGStr(@SPPGInvalidPropertyValue),
+        ['#0', PPGDisplayName(Self), 'PasswordChar']));
+      Exit;
+    end;
     raise EPPGPropertyError.CreateInvalid(Self, 'PasswordChar', '#0');
+  end;
   FMaskChar := Value;
   ApplyMask;
 end;

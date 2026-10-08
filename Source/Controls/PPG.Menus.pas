@@ -107,6 +107,7 @@ type
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure WndProc(var Message: TMessage); override;
     function AccName: string; override;
     function AccRole: Integer; override;
     function AccState: Integer; override;
@@ -240,6 +241,9 @@ type
     FLoop: TPPGMenuLoop;
     FMenuStyles: TPPGMenuStyles;
     FOnCustomDrawItem: TPPGMenuCustomDrawEvent;
+    // Zeigt waehrend PopupAtRect auf eine lokale Variable: Destroy meldet
+    // dort, dass das Menue in der modalen Schleife freigegeben wurde
+    FDestroyedFlag: PBoolean;
     procedure SetStyleManager(const Value: TPPGStyleManager);
     procedure SetMenuStyles(const Value: TPPGMenuStyles);
     function StyleSourceControl: TPPGCustomControl;
@@ -312,11 +316,16 @@ type
 
 var
   GExecutor: TMenuExecutor = nil;
+  // Nach der Finalisierung nichts mehr anlegen (Formulare werden spaeter
+  // abgebaut, siehe PPG.Animation)
+  GFinalized: Boolean = False;
+  // Untermenue per Screenreader oeffnen: gepostet, nie im COM-Aufruf
+  GMsgMenuWindowAction: Cardinal = 0;
   GActiveLoop: TPPGMenuLoop = nil;
 
 function Executor: TMenuExecutor;
 begin
-  if GExecutor = nil then
+  if (GExecutor = nil) and not GFinalized then
     GExecutor := TMenuExecutor.Create(nil);
   Result := GExecutor;
 end;
@@ -439,6 +448,8 @@ begin
   FBoldFont := TFont.Create;
   FScrollAnim := TPPGAnimation.Create(Self);
   FScrollAnim.OnStep := ScrollStep;
+  if GMsgMenuWindowAction = 0 then
+    GMsgMenuWindowAction := RegisterWindowMessage('PPGlow.MenuWindowAction');
 end;
 
 destructor TPPGMenuWindow.Destroy;
@@ -1201,15 +1212,35 @@ end;
 
 procedure TPPGMenuWindow.AccChildDoDefault(Id: Integer);
 begin
-  // Ausloesen nie im COM-Aufruf: Execute postet den Klick ohnehin
+  // Ausloesen nie im COM-Aufruf: Execute postet den Klick ohnehin, das
+  // Oeffnen eines Untermenues (ruft OnClick) wird ebenfalls gepostet
   if (Id >= 1) and (Id <= Length(FItems)) and FItems[Id - 1].Enabled and
     not FItems[Id - 1].IsLine then
   begin
     if FItems[Id - 1].Count > 0 then
-      FLoop.OpenSubmenu(Self, Id - 1, True)
+    begin
+      if HandleAllocated then
+        PostMessage(Handle, GMsgMenuWindowAction, WPARAM(Id - 1), LPARAM(FItems[Id - 1].Command));
+    end
     else
       FLoop.Execute(FItems[Id - 1]);
   end;
+end;
+
+procedure TPPGMenuWindow.WndProc(var Message: TMessage);
+var
+  I: Integer;
+begin
+  if (GMsgMenuWindowAction <> 0) and (Message.Msg = GMsgMenuWindowAction) then
+  begin
+    I := Integer(Message.WParam);
+    // Menue inzwischen zu oder umgebaut: nichts tun
+    if (FLoop <> nil) and FLoop.Active and IsOpen and (I >= 0) and (I < Length(FItems)) and
+      (FItems[I].Command = Word(Message.LParam)) then
+      FLoop.OpenSubmenu(Self, I, True);
+    Exit;
+  end;
+  inherited WndProc(Message);
 end;
 
 function TPPGMenuWindow.AccFocusedChild: Integer;
@@ -1372,6 +1403,10 @@ begin
   Window.SetHot(Index);
   // Ein Eintrag mit OnClick und Untermenue: VCL ruft OnClick beim Oeffnen
   It.Click;
+  // OnClick kann die Schleife beendet haben (Dialog, CloseAll) oder das
+  // Untermenue geleert haben: dann kein Fenster ohne Hooks oeffnen
+  if not FActive or (It.Count = 0) then
+    Exit;
   InitiateActions(It);
   W := PrepareWindow(Window.Level + 1);
   Size := W.LoadItems(It);
@@ -1452,7 +1487,8 @@ begin
   FSelected := Item;
   Finish(False);
   // Wie die VCL: der Klick kommt nach dem Schliessen ueber die Nachrichtenschleife
-  Executor.Post(Item);
+  if Executor <> nil then
+    Executor.Post(Item);
 end;
 
 procedure TPPGMenuLoop.HoverItem(Window: TPPGMenuWindow; Index: Integer);
@@ -1736,6 +1772,8 @@ end;
 
 destructor TPPGPopupMenu.Destroy;
 begin
+  if FDestroyedFlag <> nil then
+    FDestroyedFlag^ := True;
   if FLoop <> nil then
     FLoop.CloseAll;
   FStyleManager := nil;
@@ -1803,6 +1841,8 @@ procedure TPPGPopupMenu.PopupAtRect(const Anchor: TRect; ShowAccelerators: Boole
 var
   Loop: TPPGMenuLoop;
   AlignEnd: Boolean;
+  Destroyed: Boolean;
+  OldFlag: PBoolean;
 begin
   if csDesigning in ComponentState then
   begin
@@ -1813,6 +1853,9 @@ begin
   DoPopup(Self);
   Loop := TPPGMenuLoop.Create;
   FLoop := Loop;
+  Destroyed := False;
+  OldFlag := FDestroyedFlag;
+  FDestroyedFlag := @Destroyed;
   try
     Loop.StyleSource := StyleSourceControl;
     Loop.StyleManager := FStyleManager;
@@ -1826,15 +1869,23 @@ begin
     Loop.OpenPopup(Items, Anchor, ppsBelow, AlignEnd);
     Loop.RunModal;
   finally
-    FLoop := nil;
+    // RunModal pumpt Nachrichten: das Menue (z.B. mit seinem Besitzer) kann
+    // dabei freigegeben worden sein. Dann kein Zugriff mehr auf Self.
+    if not Destroyed then
+    begin
+      FLoop := nil;
+      FDestroyedFlag := OldFlag;
+    end;
     Loop.Free;
   end;
-  DoClose;
+  if not Destroyed then
+    DoClose;
 end;
 
 initialization
 
 finalization
+  GFinalized := True;
   FreeAndNil(GExecutor);
 
 end.
