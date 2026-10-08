@@ -119,6 +119,7 @@ uses
   PPG.Planner.Layout in '..\Source\Core\PPG.Planner.Layout.pas',
   PPG.Planner.Model in '..\Source\Core\PPG.Planner.Model.pas',
   PPG.Planner.ICal in '..\Source\Core\PPG.Planner.ICal.pas',
+  PPG.Grid.Look in '..\Source\Controls\PPG.Grid.Look.pas',
   PPG.Xlsx in '..\Source\Controls\PPG.Xlsx.pas',
   PPG.Grid.Export in '..\Source\Controls\PPG.Grid.Export.pas',
   PPG.Grid.Print in '..\Source\Controls\PPG.Grid.Print.pas',
@@ -260,14 +261,15 @@ begin
       Exit;
     end;
 
-  // /xlsx seite key datei.xlsx: registrierte Tabelle exportieren (wie der Excel-Knopf)
+  // /export seite key datei.(xlsx|html|png): registrierte Tabelle exportieren
+  // (wie die Knoepfe Excel und HTML; png = erste Druckseite)
   for I := 1 to ParamCount - 3 do
-    if SameText(ParamStr(I), '/xlsx') then
+    if SameText(ParamStr(I), '/export') then
     begin
       Form.Show;
       Form.ShowPage(StrToIntDef(ParamStr(I + 1), 0));
       Application.ProcessMessages;
-      if not Form.SaveTableXlsx(ParamStr(I + 2), ParamStr(I + 3)) then
+      if not Form.SaveTableExport(ParamStr(I + 2), ParamStr(I + 3)) then
         ExitCode := 1;
       Exit;
     end;

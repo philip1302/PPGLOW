@@ -154,6 +154,7 @@ resourcestring
   SPPGPageSetupRepeat = 'Repeat column headers on every page';
   SPPGPageSetupGridLines = 'Print grid lines';
   SPPGPageSetupColors = 'Print colors';
+  SPPGPageSetupGridLook = 'Look like the grid (colors, bands, groups, totals)';
   SPPGPageSetupMargins = 'Margins left, top, right, bottom (mm)';
   SPPGPageSetupHeader = 'Header';
   SPPGPageSetupFooter = 'Footer';

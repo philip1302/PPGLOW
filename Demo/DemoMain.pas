@@ -84,8 +84,9 @@ type
     procedure SaveDatePopupCapture(const FileName: string);
     /// Registriertes Diagramm (Key) ueber SaveToPng speichern. False = unbekannt.
     function SaveChartPng(const Key, FileName: string): Boolean;
-    /// Registrierte Tabelle (Key: grid, dbgrid) als xlsx speichern. False = unbekannt.
-    function SaveTableXlsx(const Key, FileName: string): Boolean;
+    /// Registrierte Tabelle (Key: grid, dbgrid) nach Endung speichern: .xlsx, .html
+    /// oder .png (erste Druckseite mit 120 dpi). False = unbekannt.
+    function SaveTableExport(const Key, FileName: string): Boolean;
     /// Selbsttest aller Seiten (/selftest datei.txt). Ergebnis = Anzahl Fehler.
     function RunSelfTest(const FileName: string): Integer;
     /// Katalog: Seite zum Suchtext (Control-Name oder Stichwort), -1 = keine.
@@ -120,7 +121,7 @@ uses
   Winapi.Messages, Winapi.DwmApi, System.Types, System.Math, Vcl.Imaging.pngimage,
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
-  PPG.Chart, PPG.IconFont, PPG.Grid.Data, PPG.Grid.Export, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
+  PPG.Chart, PPG.IconFont, PPG.Grid.Data, PPG.Grid.Export, PPG.Grid.Print, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
   DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, PPG.Hints;
 
 type
@@ -679,12 +680,48 @@ begin
     TPPGCustomChart(C).SaveToPng(FileName);
 end;
 
-function TDemoForm.SaveTableXlsx(const Key, FileName: string): Boolean;
+function TDemoForm.SaveTableExport(const Key, FileName: string): Boolean;
 var
   T: IPPGTableSource;
+  Ext: string;
+  Prn: TPPGGridPrinter;
+  Dev: TPPGPrintDevice;
+  Bmp: TBitmap;
+  Png: TPngImage;
 begin
   Result := Supports(SpecialControl(Key), IPPGTableSource, T);
-  if Result then
+  if not Result then
+    Exit;
+  Ext := LowerCase(ExtractFileExt(FileName));
+  if Ext = '.html' then
+    PPGExportHtml(T, FileName, Key)
+  else if Ext = '.png' then
+  begin
+    // Erste Druckseite wie in der Vorschau (ohne Drucker)
+    Prn := TPPGGridPrinter.Create(nil);
+    Bmp := TBitmap.Create;
+    Png := TPngImage.Create;
+    try
+      Prn.SetSource(T);
+      Prn.Title := Key;
+      Prn.HeaderText := '[Titel]';
+      Prn.FooterText := 'Seite [Seite] von [Seiten]';
+      Dev := TPPGPrintDevice.A4(120, True);
+      Prn.PageCount(Dev);
+      Bmp.PixelFormat := pf24bit;
+      Bmp.SetSize(Dev.PageWidth, Dev.PageHeight);
+      Bmp.Canvas.Brush.Color := clWhite;
+      Bmp.Canvas.FillRect(Rect(0, 0, Dev.PageWidth, Dev.PageHeight));
+      Prn.RenderPage(0, Bmp.Canvas.Handle, Dev);
+      Png.Assign(Bmp);
+      Png.SaveToFile(FileName);
+    finally
+      Png.Free;
+      Bmp.Free;
+      Prn.Free;
+    end;
+  end
+  else
     PPGExportXlsx(T, FileName, Key);
 end;
 

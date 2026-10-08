@@ -9,6 +9,7 @@
 <li>Druckt eine <code>IPPGTableSource</code>: das Grid (<code>Grid</code>), das DB-Grid oder eine eigene Quelle (<code>SetSource</code>), z. B. <code>TPPGStringTableSource</code>.</li>
 <li>Seite: <code>Orientation</code>, <code>Margins</code> (mm), <code>HeaderText</code>/<code>FooterText</code> mit Platzhaltern <code>[Seite]</code>/<code>[Page]</code>, <code>[Seiten]</code>/<code>[Pages]</code>, <code>[Datum]</code>/<code>[Date]</code>, <code>[Titel]</code>/<code>[Title]</code>.</li>
 <li><code>RepeatHeader</code> (Spaltenk&#246;pfe auf jeder Seite), <code>FitToPageWidth</code> (sonst Spalten auf mehrere Seiten), <code>PrintGridLines</code>, <code>PrintColors</code> (bedingte Formate, Kopf-Hintergrund).</li>
+<li><code>UseGridLook</code> (Vorgabe): Ausdruck und PDF sehen aus wie das Grid in heller Darstellung, inklusive B&#228;nder, Gruppenzeilen, verbundener Zellen und Summenzeile (nur am Ende der letzten Seite). Ein Gruppenkopf bleibt nie allein am Seitenende. <code>Page(i).RowFirst/RowCount</code> z&#228;hlen dann Druckzeilen (Gruppenk&#246;pfe und Summe z&#228;hlen mit), <code>LayoutLineKind</code> sagt, welche Art eine Zeile ist.</li>
 <li>Gezeichnet wird mit GDI in der Aufl&#246;sung des Druckers; Zeilen werden seitenweise aus der Quelle geholt.</li>
 <li><code>Preview</code> zeigt die Seitenansicht (Seitenliste, Zoom, Seite einrichten, Drucken); nur sichtbare Seiten werden gezeichnet.</li>
 <li><code>PrintToFile(Drucker, Datei)</code> druckt ohne Dialog in eine Datei; <code>PPGExportPdf</code> nutzt damit „Microsoft Print to PDF“.</li>
@@ -23,9 +24,10 @@ if PPGGridPrinter1.Preview then
 PPGExportPdf(PPGGridPrinter1, &#39;Lagerliste.pdf&#39;);
 </code></pre>
 <h2>Verhalten (aus dem Quelltext)</h2>
-<p>Drucken von Tabellen (Phase 13e).</p>
+<p>Drucken von Tabellen (Phase 13e, Optik wie im Grid seit Phase 17).</p>
 <ul>
 <li>TPPGGridPrinter (Komponente fuer den Formular-Designer) druckt eine IPPGTableSource: das Grid, das DB-Grid oder eine eigene Quelle. Er kennt das Control nicht (DIP); Darstellung (bedingte Formate, Zellarten) kommt ueber das schmale IPPGGridPrintSource.</li>
+<li>UseGridLook (Vorgabe): mit IPPGTableLook wie am Bildschirm in heller Darstellung - Schrift, Kopf- und Bandzeilen, Spalten- und Zebra-Stile, bedingte Formate, Gruppenzeilen (TPPGTableLines), verbundene Zellen und die Summenzeile am Ende der letzten Seite. Ein Gruppenkopf bleibt nie allein am Seitenende stehen. Ohne IPPGTableLook bzw. mit False: grauer, fetter Kopf und nur Datenzeilen wie bisher.</li>
 <li>Seite (Ausrichtung, Raender, Kopf-/Fusszeile), Drucken, PDF, Vorschau und &quot;Seite einrichten&quot; kommen aus TPPGCustomPrinter (PPG.Print, seit Phase 14a gemeinsam mit dem Planer). Hier: Spaltenkoepfe auf jeder Seite, auf Seitenbreite einpassen oder Spalten auf mehrere Seiten verteilen, Gitterlinien und Farben abschaltbar.</li>
 <li>Gezeichnet wird mit dem GDI-Canvas in der Aufloesung des Druckers (GDI+ rastert Alpha-Flaechen auf Drucker-DCs zu grossen Bitmaps). Alle Masse sind logisch (96 dpi) und werden mit der Drucker-PPI umgerechnet; die Schrift wird ueber Font.Height mit der Drucker-PPI neu gesetzt.</li>
 <li>Zeilen holt der Drucker seitenweise aus der Quelle (virtuelle Daten).</li>
@@ -45,6 +47,7 @@ PPGExportPdf(PPGGridPrinter1, &#39;Lagerliste.pdf&#39;);
 <tr><td><code>FitToPageWidth</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Alle Spalten werden auf die Seitenbreite verkleinert; False: zu breite Tabellen gehen auf weiteren Seiten nebeneinander weiter.</td></tr>
 <tr><td><code>PrintGridLines</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Gitterlinien werden gedruckt.</td></tr>
 <tr><td><code>PrintColors</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Zellfarben (bedingte Formate, Zebra) werden mitgedruckt; False: nur Schwarz auf Wei&#223;.</td></tr>
+<tr><td><code>UseGridLook</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True (Vorgabe): Der Ausdruck sieht aus wie das Grid in heller Darstellung – Schrift, Kopf- und Bandzeilen, Spalten- und Zebra-Stile, bedingte Formate, Gruppenzeilen, verbundene Zellen und die Summenzeile am Ende der letzten Seite; ein Gruppenkopf bleibt nie allein am Seitenende. False: grauer, fetter Kopf und nur Datenzeilen wie fr&#252;her. Auch im Dialog „Seite einrichten“ umschaltbar.</td></tr>
 <tr><td><code>PrinterName</code></td><td><code>string</code></td><td></td><td>Name des Druckers; leer = Standarddrucker. F&#252;r PDF z. B. „Microsoft Print to PDF&quot; mit PrintToFile. Nutzung: <code>PPGGridPrinter1.PrintToFile(&#39;Microsoft Print to PDF&#39;, &#39;C:\Export\Liste.pdf&#39;);</code></td></tr>
 </table>
 <hr>

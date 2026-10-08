@@ -63,7 +63,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und
 | [TPPGCheckComboBox](TPPGCheckComboBox.md) | `PPG.CheckComboBox` | Mehrfachauswahl im Aufklappfeld (Phase 12e, Vorbild TMS TCheckListEdit). |
 | [TPPGColumnComboBox](TPPGColumnComboBox.md) | `PPG.ColumnComboBox` | mehrspaltige Auswahl mit Kopfzeile (Phase 12e, Vorbild TMS TAdvMultiColumnComboBox). |
 | [TPPGTagEdit](TPPGTagEdit.md) | `PPG.TagEdit` | Stichwoerter als Chips (Phase 12f, Vorbild Outlook-Empfaenger, WinUI TokenizingTextBox). |
-| [TPPGGridPrinter](TPPGGridPrinter.md) | `PPG.Grid.Print` | Drucken von Tabellen (Phase 13e). |
+| [TPPGGridPrinter](TPPGGridPrinter.md) | `PPG.Grid.Print` | Drucken von Tabellen (Phase 13e, Optik wie im Grid seit Phase 17). |
 | [TPPGPlannerPrinter](TPPGPlannerPrinter.md) | `PPG.Planner.Print` | Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
 | [TPPGKanbanPrinter](TPPGKanbanPrinter.md) | `PPG.Kanban.Print` | Drucken des Kanban-Boards ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
 | [TPPGStyleManager](TPPGStyleManager.md) | `PPG.StyleManager` | Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster). |

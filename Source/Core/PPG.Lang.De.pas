@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 161;
+  PPGLangDeCount = 162;
 
 implementation
 
@@ -270,6 +270,8 @@ begin
     'Gitterlinien drucken');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupColors,
     'Farben drucken');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupGridLook,
+    'Wie im Grid (Farben, B'#$00E4'nder, Gruppen, Summen)');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupMargins,
     'R'#$00E4'nder links, oben, rechts, unten (mm)');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupHeader,

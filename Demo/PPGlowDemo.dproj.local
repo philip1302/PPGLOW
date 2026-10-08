@@ -180,6 +180,7 @@
     <File Path="..\Source\Controls\PPG.Kanban.pas"/>
     <File Path="..\Source\Controls\PPG.CustomDraw.pas"/>
     <File Path="..\Source\Controls\PPG.Kanban.Print.pas"/>
+    <File Path="..\Source\Controls\PPG.Grid.Look.pas"/>
     <File Path="..\Source\Core"/>
     <File Path="..\Source\Core\PPG.Animation.pas"/>
     <File Path="..\Source\Core\PPG.Appearance.pas"/>

@@ -205,6 +205,7 @@
         <DCCReference Include="..\Source\Core\PPG.Planner.Layout.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Planner.Model.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Planner.ICal.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Grid.Look.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Xlsx.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Grid.Export.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Grid.Print.pas"/>
@@ -328,6 +329,7 @@
         <DCCReference Include="PPG.Tests.Phase13d.pas"/>
         <DCCReference Include="PPG.Tests.Phase13e.pas"/>
         <DCCReference Include="PPG.Tests.Phase13f.pas"/>
+        <DCCReference Include="PPG.Tests.Phase17.pas"/>
         <DCCReference Include="PPG.Tests.Phase13g.pas"/>
         <DCCReference Include="PPG.Tests.Phase14a.pas"/>
         <DCCReference Include="PPG.Tests.Phase14aPlanner.pas"/>

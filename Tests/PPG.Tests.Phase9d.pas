@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..160] of PResStringRec = (
+  AllTexts: array[0..161] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -64,7 +64,8 @@ const
     @SPPGPreviewPrint, @SPPGPreviewPageSetup, @SPPGPreviewClose, @SPPGPreviewPage,
     @SPPGPreviewZoomPage, @SPPGPreviewZoomWidth, @SPPGPageSetupTitle, @SPPGPageSetupPortrait,
     @SPPGPageSetupLandscape, @SPPGPageSetupFit, @SPPGPageSetupRepeat, @SPPGPageSetupGridLines,
-    @SPPGPageSetupColors, @SPPGPageSetupMargins, @SPPGPageSetupHeader, @SPPGPageSetupFooter,
+    @SPPGPageSetupColors, @SPPGPageSetupGridLook, @SPPGPageSetupMargins,
+    @SPPGPageSetupHeader, @SPPGPageSetupFooter,
     @SPPGXlsxInvalid, @SPPGPdfPrinterMissing,
     @SPPGRRuleInvalid, @SPPGICalInvalid, @SPPGPlannerAllDay,
     @SPPGPlannerMore, @SPPGPlannerNone, @SPPGPlannerNoSubject, @SPPGPlannerAccItem,

@@ -89,7 +89,7 @@ implementation
 
 uses
   Winapi.Windows, System.Zip, System.IOUtils, System.Math, Vcl.Graphics, PPG.Types, PPG.Tokens,
-  PPG.Markup, PPG.Grid.Styles, PPG.Grid.Paint, PPG.Grid.CellKinds, PPG.Exceptions, PPG.Lang,
+  PPG.Markup, PPG.Grid.Styles, PPG.Grid.CellKinds, PPG.Grid.Look, PPG.Exceptions, PPG.Lang,
   PPG.Consts;
 
 const
@@ -482,7 +482,7 @@ const
   // SUBTOTAL 1..9 statt 101..109: auch OpenOffice rechnet sie; gefilterte Zeilen
   // fallen trotzdem heraus, zugeklappte Gruppen zaehlen mit
   AggCode: array[TPPGGridAggregate] of Integer = (0, 9, 1, 5, 4, 3, 0);
-  SymbolFont = 'Segoe UI Symbol';
+  SymbolFont = PPGSymbolFont;
 var
   Ex: IPPGTableExport;
   LookSrc: IPPGTableLook;
@@ -512,6 +512,13 @@ var
   HasFooter, Alt: Boolean;
   DataBorder, HeadBorder, MDW: Integer;
 
+  /// Zahlenformat "Kaestchen": positiv und negativ angehakt, 0 leer.
+  function CheckFormat: string;
+  begin
+    Result := '"' + PPGCheckGlyph(True) + '";"' + PPGCheckGlyph(True) + '";"' +
+      PPGCheckGlyph(False) + '"';
+  end;
+
   function StrEntry(const Key, Inner: string): Integer;
   begin
     if not Strings.TryGetValue(Key, Result) then
@@ -528,14 +535,6 @@ var
       Result := StrEntry('T' + T, '<t xml:space="preserve">' + PPGXmlEscape(T) + '</t>')
     else
       Result := StrEntry('T' + T, '<t>' + PPGXmlEscape(T) + '</t>');
-  end;
-
-  /// Sterne wie im Grid (gefuellte, dann leere). Als einfacher Text in einer
-  /// Zellschrift: Rich-Text-Laeufe zeigt nicht jede Tabellenkalkulation richtig.
-  function Stars(Value, Count: Integer): string;
-  begin
-    Value := Max(0, Min(Value, Count));
-    Result := StringOfChar(#$2605, Value) + StringOfChar(#$2606, Count - Value);
   end;
 
   function CellRef(ACol: Integer): string;
@@ -623,14 +622,11 @@ var
         ckCheck:
           begin
             // 1/0 mit Zahlenformat "Kaestchen": bleibt in Excel filter- und zaehlbar
-            if VarType(V) = varBoolean then
-              Checked := Boolean(V)
-            else
-              Checked := TPPGCellPainter.IsCheckedText(VarToStr(V));
+            Checked := PPGValueChecked(V);
             Xf := CheckXf[J];
             if (Cs.Fill <> clNone) and (Cs.Fill <> Look.Fill) then
             begin
-              Xf := St.Xf(St.NumFmt('"' + #$2611 + '";"' + #$2611 + '";"' + #$2610 + '"'),
+              Xf := St.Xf(St.NumFmt(CheckFormat),
                 St.Font(SymbolFont, Look.FontSize + 2, Look.Accent, []), St.Fill(Cs.Fill),
                 DataBorder, xaCenter);
               if Xf < 0 then
@@ -641,16 +637,14 @@ var
           end;
         ckRating:
           begin
-            N := CL[J].MaxValue;
-            if N <= 0 then
-              N := 5;
-            if N > 20 then
-              N := 20;
+            // Sterne als einfacher Text in einer Zellschrift: Rich-Text-Laeufe
+            // zeigt nicht jede Tabellenkalkulation richtig
+            N := PPGRatingStars(CL[J].MaxValue);
             Xf := St.Xf(0, St.Font(SymbolFont, Look.FontSize, Look.Warning, []),
               St.Fill(Pick(Cs.Fill, Look.Fill)), DataBorder, AlignOf(Info[J].Alignment));
             if Xf < 0 then
               Xf := Base;
-            TextCell(J, Stars(StrToIntDef(VarToStr(V), 0), N), Xf);
+            TextCell(J, PPGStarsText(StrToIntDef(VarToStr(V), 0), N), Xf);
             Continue;
           end;
         ckColor:
@@ -933,7 +927,7 @@ begin
         DateXf[C] := St.Xf(14, St.Font(Look.FontName, Look.FontSize, Look.Text, []),
           St.Fill(Look.Fill), DataBorder, AlignOf(Info[C].Alignment));
       end;
-      CheckXf[C] := St.Xf(St.NumFmt('"' + #$2611 + '";"' + #$2611 + '";"' + #$2610 + '"'),
+      CheckXf[C] := St.Xf(St.NumFmt(CheckFormat),
         St.Font(SymbolFont, Look.FontSize + 2, Look.Accent, []), St.Fill(Look.Fill), DataBorder,
         xaCenter);
       Agg[C] := agNone;

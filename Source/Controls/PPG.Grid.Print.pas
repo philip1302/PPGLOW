@@ -1,11 +1,17 @@
 unit PPG.Grid.Print;
 
-{ Drucken von Tabellen (Phase 13e).
+{ Drucken von Tabellen (Phase 13e, Optik wie im Grid seit Phase 17).
 
   - TPPGGridPrinter (Komponente fuer den Formular-Designer) druckt eine
     IPPGTableSource: das Grid, das DB-Grid oder eine eigene Quelle. Er kennt
     das Control nicht (DIP); Darstellung (bedingte Formate, Zellarten) kommt
     ueber das schmale IPPGGridPrintSource.
+  - UseGridLook (Vorgabe): mit IPPGTableLook wie am Bildschirm in heller
+    Darstellung - Schrift, Kopf- und Bandzeilen, Spalten- und Zebra-Stile,
+    bedingte Formate, Gruppenzeilen (TPPGTableLines), verbundene Zellen und
+    die Summenzeile am Ende der letzten Seite. Ein Gruppenkopf bleibt nie
+    allein am Seitenende stehen. Ohne IPPGTableLook bzw. mit False: grauer,
+    fetter Kopf und nur Datenzeilen wie bisher.
   - Seite (Ausrichtung, Raender, Kopf-/Fusszeile), Drucken, PDF, Vorschau
     und "Seite einrichten" kommen aus TPPGCustomPrinter (PPG.Print, seit
     Phase 14a gemeinsam mit dem Planer). Hier: Spaltenkoepfe auf jeder Seite,
@@ -25,8 +31,8 @@ interface
 
 uses
   Winapi.Windows, System.Classes, System.SysUtils, System.Types, Vcl.Graphics, Vcl.Printers,
-  PPG.Types, PPG.Render.Intf, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds,
-  PPG.Grid.Paint, PPG.Grid, PPG.Print;
+  System.Generics.Collections, PPG.Types, PPG.Render.Intf, PPG.Grid.Data, PPG.Grid.Styles,
+  PPG.Grid.CellKinds, PPG.Grid.Paint, PPG.Grid.Look, PPG.Grid, PPG.Print;
 
 type
   // Seit Phase 14a in PPG.Print (Namen bleiben fuer bestehenden Code)
@@ -36,6 +42,8 @@ type
   TPPGPrintPreviewForm = PPG.Print.TPPGPrintPreviewForm;
   TPPGPageSetupForm = PPG.Print.TPPGPageSetupForm;
 
+  /// Seite: RowFirst/RowCount zaehlen Druckzeilen (ohne Gliederung =
+  /// Tabellenzeilen; mit Gliederung auch Gruppenkoepfe, am Ende die Summe).
   TPPGPrintPage = record
     RowFirst, RowCount: Integer;
     ColFirst, ColCount: Integer;
@@ -50,6 +58,7 @@ type
     FFitToPageWidth: Boolean;
     FPrintGridLines: Boolean;
     FPrintColors: Boolean;
+    FUseGridLook: Boolean;
     // Layout fuer ein Geraet
     FLayoutDevice: TPPGPrintDevice;
     FLayoutValid: Boolean;
@@ -57,10 +66,23 @@ type
     FColW: array of Integer;
     FRowH, FPageHeadH, FPageFootH: Integer;
     FContent: TRect;
+    FScale: Double;
     FFont, FBoldFont: TFont;
     FPainter: TPPGCellPainter;
+    // Optik (im Layout bestimmt)
+    FLookSrc: IPPGTableLook;
+    FLook: TPPGTableLook;
+    FColLook: array of TPPGTableColumnLook;
+    FBands: TArray<TPPGTableBand>;
+    FBandLevels: Integer;
+    FMerges: TArray<TRect>;
+    FLines: TPPGTableLines;
+    FFonts: TObjectDictionary<string, TFont>;
     procedure SetGrid(const Value: TPPGCustomGrid);
     function PrintSource: IPPGGridPrintSource;
+    procedure PrepareLook(const Src: IPPGTableSource);
+    function FontFor(Style: TFontStyles; const Name: string; Size: Integer): TFont;
+    function HeadRowCount: Integer;
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
@@ -80,6 +102,10 @@ type
     procedure SetOption(Index: Integer; Value: Boolean); override;
     /// Spaltenbreiten des Layouts (Geraetepunkte).
     function LayoutColWidth(ACol: Integer): Integer;
+    /// Art einer Druckzeile des Layouts (Daten, Gruppenkopf, Summe).
+    function LayoutLineKind(Index: Integer): TPPGTableLineKind;
+    /// Kopfzeilen je Seite (Baender + Spaltenkoepfe).
+    property LayoutHeadRows: Integer read HeadRowCount;
     property LayoutRowHeight: Integer read FRowH;
     property ContentRect: TRect read FContent;
   published
@@ -93,14 +119,22 @@ type
     property FitToPageWidth: Boolean read FFitToPageWidth write FFitToPageWidth default True;
     property PrintGridLines: Boolean read FPrintGridLines write FPrintGridLines default True;
     property PrintColors: Boolean read FPrintColors write FPrintColors default True;
+    /// Optik des Grids (Farben, Baender, Gruppen, Summen); False = grauer Kopf
+    /// und nur Datenzeilen wie vor Phase 17.
+    property UseGridLook: Boolean read FUseGridLook write FUseGridLook default True;
     property PrinterName;
   end;
 
 implementation
 
 uses
-  System.Math, System.UITypes, PPG.Lang, PPG.Consts, PPG.Exceptions, PPG.Render.Gdi,
-  PPG.Render.Registry;
+  System.Math, System.UITypes, PPG.Lang, PPG.Consts, PPG.Exceptions,
+  PPG.Render.Gdi, PPG.Render.Registry;
+
+const
+  // Ohne Optik der Quelle (wie vor Phase 17)
+  PlainHeadFill = $00F0F0F0;
+  PlainLineColor = $00A0A0A0;
 
 { TPPGGridPrinter }
 
@@ -111,13 +145,18 @@ begin
   FFitToPageWidth := True;
   FPrintGridLines := True;
   FPrintColors := True;
+  FUseGridLook := True;
+  FScale := 1;
   FFont := TFont.Create;
   FBoldFont := TFont.Create;
   FPainter := TPPGCellPainter.Create;
+  FFonts := TObjectDictionary<string, TFont>.Create([doOwnsValues]);
 end;
 
 destructor TPPGGridPrinter.Destroy;
 begin
+  FreeAndNil(FLines);
+  FreeAndNil(FFonts);
   FreeAndNil(FPainter);
   FreeAndNil(FBoldFont);
   FreeAndNil(FFont);
@@ -126,7 +165,7 @@ end;
 
 function TPPGGridPrinter.OptionCount: Integer;
 begin
-  Result := 4;
+  Result := 5;
 end;
 
 function TPPGGridPrinter.OptionCaption(Index: Integer): string;
@@ -135,8 +174,9 @@ begin
     0: Result := PPGStr(@SPPGPageSetupFit);
     1: Result := PPGStr(@SPPGPageSetupRepeat);
     2: Result := PPGStr(@SPPGPageSetupGridLines);
+    3: Result := PPGStr(@SPPGPageSetupColors);
   else
-    Result := PPGStr(@SPPGPageSetupColors);
+    Result := PPGStr(@SPPGPageSetupGridLook);
   end;
 end;
 
@@ -146,8 +186,9 @@ begin
     0: Result := FFitToPageWidth;
     1: Result := FRepeatHeader;
     2: Result := FPrintGridLines;
+    3: Result := FPrintColors;
   else
-    Result := FPrintColors;
+    Result := FUseGridLook;
   end;
 end;
 
@@ -157,8 +198,9 @@ begin
     0: FFitToPageWidth := Value;
     1: FRepeatHeader := Value;
     2: FPrintGridLines := Value;
+    3: FPrintColors := Value;
   else
-    FPrintColors := Value;
+    FUseGridLook := Value;
   end;
   Invalidate;
 end;
@@ -167,7 +209,11 @@ procedure TPPGGridPrinter.Notification(AComponent: TComponent; Operation: TOpera
 begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (AComponent = FGrid) then
+  begin
     FGrid := nil;
+    FLookSrc := nil;
+    Invalidate;
+  end;
 end;
 
 procedure TPPGGridPrinter.SetGrid(const Value: TPPGCustomGrid);
@@ -207,12 +253,106 @@ begin
   FLayoutValid := False;
 end;
 
+function TPPGGridPrinter.HeadRowCount: Integer;
+begin
+  Result := FBandLevels + 1;
+end;
+
+function TPPGGridPrinter.LayoutLineKind(Index: Integer): TPPGTableLineKind;
+begin
+  if (FLines = nil) or (Index < 0) or (Index >= FLines.Count) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, 0]);
+  Result := FLines.Kind(Index);
+end;
+
+procedure TPPGGridPrinter.PrepareLook(const Src: IPPGTableSource);
+var
+  C, N: Integer;
+  Ex: IPPGTableExport;
+begin
+  FLookSrc := nil;
+  SetLength(FBands, 0);
+  SetLength(FMerges, 0);
+  FBandLevels := 0;
+  N := 0;
+  if Src <> nil then
+    N := Src.TableColCount;
+  SetLength(FColLook, N);
+  if FUseGridLook and (Src <> nil) and Supports(Src, IPPGTableLook, FLookSrc) then
+  begin
+    FLook := FLookSrc.ExportLook;
+    // Weiss ist das Papier: keine Flaeche
+    if (FLook.Fill <> clNone) and (ColorToRGB(FLook.Fill) = $FFFFFF) then
+      FLook.Fill := clNone;
+    for C := 0 to N - 1 do
+      FColLook[C] := FLookSrc.ExportColumnLook(C);
+    FBands := FLookSrc.ExportBands;
+    FBandLevels := PPGTableBandLevels(FBands);
+  end
+  else
+  begin
+    // Wie vor Phase 17: grauer, fetter Kopf, schwarzer Text, graue Linien
+    FLook.Reset;
+    FLook.HeaderFill := PlainHeadFill;
+    FLook.HeaderText := clBlack;
+    FLook.HeaderFontStyle := [fsBold];
+    FLook.HeaderLine := PlainLineColor;
+    FLook.Line := PlainLineColor;
+    FLook.Text := clBlack;
+    FLook.FontName := FFont.Name;
+    FLook.FontSize := FFont.Size;
+    for C := 0 to N - 1 do
+    begin
+      FColLook[C].Reset;
+      FColLook[C].HeaderAlignment := Src.TableColumn(C).Alignment;
+    end;
+  end;
+  FreeAndNil(FLines);
+  FLines := TPPGTableLines.Create(Src, FLookSrc <> nil,
+    (FLookSrc <> nil) and PPGTableHasFooter(FLookSrc, N));
+  // Verbundene Zellen nur ohne Gliederung (dann ist Druckzeile = Tabellenzeile)
+  if (FLookSrc <> nil) and not FLines.Grouped and Supports(Src, IPPGTableExport, Ex) then
+    FMerges := Ex.ExportMerges;
+end;
+
+function TPPGGridPrinter.FontFor(Style: TFontStyles; const Name: string; Size: Integer): TFont;
+var
+  Key: string;
+begin
+  // Grundschrift (Drucker-PPI, eingepasst) mit anderem Stil/Namen/Groesse
+  if (Name = '') or SameText(Name, FFont.Name) then
+    Key := ''
+  else
+    Key := Name;
+  if (Size <= 0) or (Size = FLook.FontSize) then
+    Size := 0;
+  Key := Key + '|' + IntToStr(Size) + '|' + IntToStr(Byte(Style));
+  if FFonts.TryGetValue(Key, Result) then
+    Exit;
+  Result := TFont.Create;
+  try
+    Result.Assign(FFont);
+    if (Name <> '') and not SameText(Name, FFont.Name) then
+      Result.Name := Name;
+    if Size > 0 then
+    begin
+      Result.Height := Round(-MulDiv(Size, FLayoutDevice.PPI, 72) * FScale);
+      if Result.Height = 0 then
+        Result.Height := -1;
+    end;
+    Result.Style := Style;
+    FFonts.Add(Key, Result);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 procedure TPPGGridPrinter.Layout(const Device: TPPGPrintDevice);
 var
   Src: IPPGTableSource;
   PS: IPPGGridPrintSource;
-  I, N, PPI, Total, Avail, TH, Body, R, C0, W, RowsLeft, RowFirst, NP: Integer;
-  Scale: Double;
+  I, N, PPI, Total, Avail, TH, Body, R, C0, W, RowsLeft, RowFirst, NP, Lines: Integer;
   DC: HDC;
   Old: HGDIOBJ;
   TM: TTextMetric;
@@ -224,6 +364,7 @@ begin
   FLayoutDevice := Device;
   FLayoutValid := True;
   FPages := nil;
+  FFonts.Clear;
   Src := Source;
   PS := PrintSource;
   PPI := Device.PPI;
@@ -232,6 +373,7 @@ begin
   if PS <> nil then
     FFont.Assign(PS.PrintFont);
   FFont.Height := -MulDiv(FFont.Size, PPI, 72);
+  PrepareLook(Src);
   // Spaltenbreiten
   N := 0;
   if Src <> nil then
@@ -244,13 +386,13 @@ begin
     Inc(Total, FColW[I]);
   end;
   Avail := FContent.Right - FContent.Left;
-  Scale := 1;
+  FScale := 1;
   if FFitToPageWidth and (Total > Avail) and (Total > 0) then
   begin
-    Scale := Avail / Total;
+    FScale := Avail / Total;
     for I := 0 to N - 1 do
-      FColW[I] := Trunc(FColW[I] * Scale);
-    FFont.Height := Round(FFont.Height * Scale);
+      FColW[I] := Trunc(FColW[I] * FScale);
+    FFont.Height := Round(FFont.Height * FScale);
     if FFont.Height = 0 then
       FFont.Height := -1;
   end;
@@ -268,7 +410,7 @@ begin
   TH := TM.tmHeight;
   FRowH := Round(TH * 1.6);
   if PS <> nil then
-    FRowH := Max(FRowH, Round(MulDiv(PS.PrintRowHeight, PPI, 96) * Scale));
+    FRowH := Max(FRowH, Round(MulDiv(PS.PrintRowHeight, PPI, 96) * FScale));
   if FRowH < 1 then
     FRowH := 1;
   FPageHeadH := 0;
@@ -298,20 +440,23 @@ begin
     SetLength(ColPages, 1);
     ColPages[0] := Point(0, 0);
   end;
-  // Zeilen auf Seiten verteilen
-  RowsLeft := 0;
-  if Src <> nil then
-    RowsLeft := Src.TableRowCount;
+  // Druckzeilen auf Seiten verteilen
+  Lines := FLines.Count;
+  RowsLeft := Lines;
   RowFirst := 0;
   First := True;
   NP := 0;
   repeat
     Body := (FContent.Bottom - FContent.Top) - FPageHeadH - FPageFootH;
     if First or FRepeatHeader then
-      Dec(Body, FRowH);
+      Dec(Body, FRowH * HeadRowCount);
     R := Max(1, Body div FRowH);
     if R > RowsLeft then
       R := RowsLeft;
+    // Gruppenkopf nicht allein am Seitenende (auch verschachtelte Koepfe)
+    if R < RowsLeft then
+      while (R > 1) and (FLines.Kind(RowFirst + R - 1) = tlGroup) do
+        Dec(R);
     for I := 0 to High(ColPages) do
     begin
       SetLength(FPages, NP + 1);
@@ -347,25 +492,29 @@ begin
 end;
 
 procedure TPPGGridPrinter.RenderPage(PageIndex: Integer; DC: HDC; const Device: TPPGPrintDevice);
-const
-  HeadFill = $00F0F0F0;
-  LineColor = $00A0A0A0;
+type
+  TFrame = record
+    R: TRect;
+    Color: TColor;
+  end;
 var
   Src: IPPGTableSource;
   PS: IPPGGridPrintSource;
   Pg: TPPGPrintPage;
   Canvas: IPPGCanvas;
-  X, Y, C, R, Pad, LW: Integer;
+  X, Y, C, Li, Row, Pad, LW, B, First, LastLine, NF, M: Integer;
   CR, TR: TRect;
   Info: TPPGTableColumnInfo;
   S: string;
   St: TPPGGridCellStyle;
   K: IPPGCellKind;
   Ctx: TPPGCellKindContext;
-  Fl: Cardinal;
-  LineBrush: HBRUSH;
   Kinds: array of IPPGCellKind;
   KindCtx: array of TPPGCellKindContext;
+  ColX: array of Integer;     // linke Kante je Seitenspalte
+  Frames: array of TFrame;    // Zellen fuer die Gitterlinien
+  HasLook, Covered: Boolean;
+  TableTop: Integer;
 
   procedure Txt(const AText: string; ARect: TRect; AFont: TFont; AColor: TColor; AFlags: Cardinal);
   begin
@@ -373,20 +522,33 @@ var
       Exit;
     SelectObject(DC, AFont.Handle);
     SetBkMode(DC, TRANSPARENT);
+    if (AColor = clNone) or not FPrintColors then
+      AColor := clBlack;
     SetTextColor(DC, ColorToRGB(AColor));
     Winapi.Windows.DrawText(DC, PChar(AText), Length(AText), ARect, AFlags);
   end;
 
   procedure Fill(const ARect: TRect; AColor: TColor);
   var
-    B: HBRUSH;
+    Br: HBRUSH;
   begin
-    B := CreateSolidBrush(ColorToRGB(AColor));
+    if (AColor = clNone) or not FPrintColors then
+      Exit;
+    Br := CreateSolidBrush(ColorToRGB(AColor));
     try
-      Winapi.Windows.FillRect(DC, ARect, B);
+      Winapi.Windows.FillRect(DC, ARect, Br);
     finally
-      DeleteObject(B);
+      DeleteObject(Br);
     end;
+  end;
+
+  procedure AddFrame(const ARect: TRect; AColor: TColor);
+  begin
+    if NF >= Length(Frames) then
+      SetLength(Frames, NF * 2 + 32);
+    Frames[NF].R := ARect;
+    Frames[NF].Color := AColor;
+    Inc(NF);
   end;
 
   function AlignFlags(A: TAlignment): Cardinal;
@@ -398,6 +560,228 @@ var
     end;
   end;
 
+  function PageRight: Integer;
+  begin
+    Result := ColX[Pg.ColCount];
+  end;
+
+  /// Verbundene Zelle an (ACol, ARow): Index in FMerges, -1 = keine.
+  function MergeAt(ACol, ARow: Integer): Integer;
+  var
+    J: Integer;
+  begin
+    for J := 0 to High(FMerges) do
+      if (ACol >= FMerges[J].Left) and (ACol <= FMerges[J].Right) and
+        (ARow >= FMerges[J].Top) and (ARow <= FMerges[J].Bottom) then
+        Exit(J);
+    Result := -1;
+  end;
+
+  procedure HeaderRows;
+  var
+    J, C, L: Integer;
+    HF: TFont;
+  begin
+    HF := FontFor(FLook.HeaderFontStyle, '', 0);
+    // Baender: Laeufe gleicher Baender auf dieser Seite
+    for L := 0 to FBandLevels - 1 do
+    begin
+      J := Pg.ColFirst;
+      while J < Pg.ColFirst + Pg.ColCount do
+      begin
+        B := PPGTableBandAt(FBands, L, J);
+        First := J;
+        Inc(J);
+        while (J < Pg.ColFirst + Pg.ColCount) and (PPGTableBandAt(FBands, L, J) = B) do
+          Inc(J);
+        CR := Rect(ColX[First - Pg.ColFirst], Y, ColX[J - Pg.ColFirst], Y + FRowH);
+        Fill(CR, FLook.HeaderFill);
+        if B >= 0 then
+        begin
+          TR := CR;
+          InflateRect(TR, -Pad, 0);
+          Txt(FBands[B].Caption, TR, HF, FLook.HeaderText, AlignFlags(FBands[B].Alignment));
+        end;
+        AddFrame(CR, FLook.HeaderLine);
+      end;
+      Inc(Y, FRowH);
+    end;
+    // Spaltenkoepfe
+    for C := Pg.ColFirst to Pg.ColFirst + Pg.ColCount - 1 do
+    begin
+      CR := Rect(ColX[C - Pg.ColFirst], Y, ColX[C - Pg.ColFirst + 1], Y + FRowH);
+      if FColLook[C].Header.Fill <> clNone then
+        Fill(CR, FColLook[C].Header.Fill)
+      else
+        Fill(CR, FLook.HeaderFill);
+      Info := Src.TableColumn(C);
+      TR := CR;
+      InflateRect(TR, -Pad, 0);
+      if FColLook[C].Header.TextColor <> clNone then
+        Txt(Info.Title, TR, FontFor(FLook.HeaderFontStyle + FColLook[C].Header.FontStyle, '', 0),
+          FColLook[C].Header.TextColor, AlignFlags(FColLook[C].HeaderAlignment))
+      else
+        Txt(Info.Title, TR, FontFor(FLook.HeaderFontStyle + FColLook[C].Header.FontStyle, '', 0),
+          FLook.HeaderText, AlignFlags(FColLook[C].HeaderAlignment));
+      AddFrame(CR, FLook.HeaderLine);
+    end;
+    Inc(Y, FRowH);
+  end;
+
+  procedure GroupLine;
+  begin
+    // Eine Flaeche ueber alle Spalten der Seite, Text eingerueckt je Ebene
+    CR := Rect(ColX[0], Y, PageRight, Y + FRowH);
+    Fill(CR, FLook.GroupFill);
+    TR := CR;
+    InflateRect(TR, -Pad, 0);
+    Inc(TR.Left, FLines.Level(Li) * Pad * 4);
+    Txt(FLines.Text(Li), TR, FontFor(FLook.GroupFontStyle, '', 0), FLook.GroupText,
+      DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_END_ELLIPSIS);
+    AddFrame(CR, FLook.Line);
+  end;
+
+  procedure FooterLine;
+  var
+    C: Integer;
+    FF: TFont;
+  begin
+    FF := FontFor(FLook.FooterFontStyle, '', 0);
+    for C := Pg.ColFirst to Pg.ColFirst + Pg.ColCount - 1 do
+    begin
+      CR := Rect(ColX[C - Pg.ColFirst], Y, ColX[C - Pg.ColFirst + 1], Y + FRowH);
+      Fill(CR, FLook.FooterFill);
+      TR := CR;
+      InflateRect(TR, -Pad, 0);
+      Txt(FLookSrc.ExportFooterText(C), TR, FF, FLook.FooterText,
+        AlignFlags(Src.TableColumn(C).Alignment));
+      AddFrame(CR, FLook.HeaderLine);
+    end;
+  end;
+
+  procedure DataCell(ACol, ARow: Integer; const ARect: TRect; Alt: Boolean);
+  var
+    Cs: TPPGGridCellStyle;
+    BarR: TRect;
+  begin
+    S := Src.TableCellText(ACol, ARow);
+    Cs.Reset;
+    if HasLook then
+      Cs := FLookSrc.ExportCellStyle(ACol, ARow, S, Alt)
+    else if FPrintColors and (PS <> nil) then
+      Cs := PS.PrintCellStyle(ACol, ARow, S);
+    St := PPGResolveCellLook(FLook, Cs);
+    Fill(ARect, St.Fill);
+    if FPrintColors and (St.Bar >= 0) then
+    begin
+      BarR := ARect;
+      InflateRect(BarR, -Pad div 2, -FRowH div 5);
+      BarR.Right := BarR.Left + Round((BarR.Right - BarR.Left) * St.Bar);
+      if BarR.Right > BarR.Left then
+        Fill(BarR, PPGBlendColor(clWhite, St.BarColor, 0.45));
+    end;
+    K := Kinds[ACol - Pg.ColFirst];
+    if K <> nil then
+    begin
+      Ctx := KindCtx[ACol - Pg.ColFirst];
+      if St.Fill <> clNone then
+        Ctx.FillColor := St.Fill;
+      if St.TextColor <> clNone then
+        Ctx.TextColor := St.TextColor;
+      K.PaintCell(Ctx, ARect, S);
+    end
+    else
+    begin
+      Info := Src.TableColumn(ACol);
+      TR := ARect;
+      InflateRect(TR, -Pad, 0);
+      Txt(S, TR, FontFor(St.FontStyle, St.FontName, St.FontSize), St.TextColor,
+        AlignFlags(Info.Alignment));
+    end;
+    AddFrame(ARect, FLook.Line);
+  end;
+
+  procedure DataLine;
+  var
+    J, VR, VC: Integer;
+    MR: TRect;
+  begin
+    Row := FLines.Row(Li);
+    for J := Pg.ColFirst to Pg.ColFirst + Pg.ColCount - 1 do
+    begin
+      CR := Rect(ColX[J - Pg.ColFirst], Y, ColX[J - Pg.ColFirst + 1], Y + FRowH);
+      M := -1;
+      if Length(FMerges) > 0 then
+        M := MergeAt(J, Row);
+      if M < 0 then
+      begin
+        DataCell(J, Row, CR, FLines.Alternate(Li));
+        Continue;
+      end;
+      // Verbundene Zelle: einmal je Seite an ihrer ersten sichtbaren Zelle,
+      // ueber den sichtbaren Teil, mit Text und Stil der Ursprungszelle
+      VR := Max(FMerges[M].Top, Pg.RowFirst);
+      VC := Max(FMerges[M].Left, Pg.ColFirst);
+      Covered := (J <> VC) or (Row <> VR);
+      if Covered then
+        Continue;
+      MR.Left := CR.Left;
+      MR.Top := CR.Top;
+      MR.Right := ColX[Min(FMerges[M].Right, Pg.ColFirst + Pg.ColCount - 1) - Pg.ColFirst + 1];
+      MR.Bottom := Y + (Min(FMerges[M].Bottom, Pg.RowFirst + Pg.RowCount - 1) - Row + 1) * FRowH;
+      DataCell(FMerges[M].Left, FMerges[M].Top, MR, FLines.Alternate(FMerges[M].Top));
+    end;
+  end;
+
+  procedure GridLines;
+  var
+    J: Integer;
+    LB: HBRUSH;
+    Last: TColor;
+    Bottom: Integer;
+    FR: TRect;
+  begin
+    // Rechte und untere Kante jeder Zelle, dazu linke und obere Tabellenkante
+    if not FPrintGridLines or (NF = 0) then
+      Exit;
+    LB := 0;
+    Last := clNone;
+    Bottom := TableTop;
+    try
+      for J := 0 to NF - 1 do
+      begin
+        Bottom := Max(Bottom, Frames[J].R.Bottom);
+        if Frames[J].Color = clNone then
+          Continue;
+        if (LB = 0) or (Frames[J].Color <> Last) then
+        begin
+          if LB <> 0 then
+            DeleteObject(LB);
+          LB := CreateSolidBrush(ColorToRGB(Frames[J].Color));
+          Last := Frames[J].Color;
+        end;
+        FR := Frames[J].R;
+        Winapi.Windows.FillRect(DC, Rect(FR.Right, FR.Top, FR.Right + LW, FR.Bottom + LW), LB);
+        Winapi.Windows.FillRect(DC, Rect(FR.Left, FR.Bottom, FR.Right + LW, FR.Bottom + LW), LB);
+      end;
+      if LB <> 0 then
+        DeleteObject(LB);
+      LB := 0;
+      if FLook.HeaderLine <> clNone then
+        LB := CreateSolidBrush(ColorToRGB(FLook.HeaderLine))
+      else if FLook.Line <> clNone then
+        LB := CreateSolidBrush(ColorToRGB(FLook.Line));
+      if LB <> 0 then
+      begin
+        Winapi.Windows.FillRect(DC, Rect(ColX[0], TableTop, ColX[0] + LW, Bottom + LW), LB);
+        Winapi.Windows.FillRect(DC, Rect(ColX[0], TableTop, PageRight + LW, TableTop + LW), LB);
+      end;
+    finally
+      if LB <> 0 then
+        DeleteObject(LB);
+    end;
+  end;
+
 begin
   Layout(Device);
   if (PageIndex < 0) or (PageIndex > High(FPages)) then
@@ -405,8 +789,10 @@ begin
   Src := Source;
   PS := PrintSource;
   Pg := FPages[PageIndex];
+  HasLook := FLookSrc <> nil;
   Pad := MulDiv(4, Device.PPI, 96);
   LW := Max(1, Device.PPI div 200); // duenne Linien (bei 600 dpi 3 Punkte)
+  NF := 0;
   SaveDC(DC);
   try
     SetMapMode(DC, MM_TEXT);
@@ -419,8 +805,18 @@ begin
         DT_SINGLELINE or DT_TOP or DT_NOPREFIX or DT_END_ELLIPSIS);
     end;
     Y := FContent.Top + FPageHeadH;
+    TableTop := Y;
     if Src = nil then
       Exit;
+    // Spaltenkanten der Seite
+    SetLength(ColX, Pg.ColCount + 1);
+    X := FContent.Left;
+    for C := 0 to Pg.ColCount - 1 do
+    begin
+      ColX[C] := X;
+      Inc(X, FColW[Pg.ColFirst + C]);
+    end;
+    ColX[Pg.ColCount] := X;
     // Zellarten der Spalten (einmal je Seite)
     SetLength(Kinds, Pg.ColCount);
     SetLength(KindCtx, Pg.ColCount);
@@ -432,107 +828,45 @@ begin
         Kinds[C] := PS.PrintCellKind(Pg.ColFirst + C, KindCtx[C]);
         if Kinds[C] <> nil then
         begin
-          // Druckfarben: schwarzer Text auf weissem Papier
+          // Papier: Text, Akzent und Sterne wie im hellen Grid
           KindCtx[C].Canvas := Canvas;
           KindCtx[C].Painter := FPainter;
           KindCtx[C].PPI := Device.PPI;
           KindCtx[C].Font := FFont;
           KindCtx[C].TextColor := clBlack;
           KindCtx[C].FillColor := clWhite;
-          KindCtx[C].LineColor := LineColor;
+          KindCtx[C].LineColor := PlainLineColor;
           KindCtx[C].HintColor := $00808080;
           KindCtx[C].RightToLeft := False;
-        end;
-      end;
-    end;
-    // Spaltenkoepfe
-    if Pg.WithHeader then
-    begin
-      X := FContent.Left;
-      for C := Pg.ColFirst to Pg.ColFirst + Pg.ColCount - 1 do
-      begin
-        CR := Rect(X, Y, X + FColW[C], Y + FRowH);
-        if FPrintColors then
-          Fill(CR, HeadFill);
-        Info := Src.TableColumn(C);
-        TR := CR;
-        InflateRect(TR, -Pad, 0);
-        Txt(Info.Title, TR, FBoldFont, clBlack, AlignFlags(Info.Alignment));
-        Inc(X, FColW[C]);
-      end;
-      Inc(Y, FRowH);
-    end;
-    // Zeilen (seitenweise aus der Quelle)
-    for R := Pg.RowFirst to Pg.RowFirst + Pg.RowCount - 1 do
-    begin
-      X := FContent.Left;
-      for C := Pg.ColFirst to Pg.ColFirst + Pg.ColCount - 1 do
-      begin
-        CR := Rect(X, Y, X + FColW[C], Y + FRowH);
-        S := Src.TableCellText(C, R);
-        St.Reset;
-        if FPrintColors and (PS <> nil) then
-          St := PS.PrintCellStyle(C, R, S);
-        if St.Fill <> clNone then
-          Fill(CR, St.Fill);
-        if FPrintColors and (St.Bar >= 0) then
-        begin
-          TR := CR;
-          InflateRect(TR, -Pad div 2, -FRowH div 5);
-          TR.Right := TR.Left + Round((TR.Right - TR.Left) * St.Bar);
-          if TR.Right > TR.Left then
-            Fill(TR, PPGBlendColor(clWhite, St.BarColor, 0.45));
-        end;
-        K := Kinds[C - Pg.ColFirst];
-        if K <> nil then
-        begin
-          Ctx := KindCtx[C - Pg.ColFirst];
-          K.PaintCell(Ctx, CR, S);
-        end
-        else
-        begin
-          Info := Src.TableColumn(C);
-          TR := CR;
-          InflateRect(TR, -Pad, 0);
-          Fl := AlignFlags(Info.Alignment);
-          if St.TextColor <> clNone then
+          if HasLook then
           begin
-            if St.Bold or (fsBold in St.FontStyle) then
-              Txt(S, TR, FBoldFont, St.TextColor, Fl)
-            else
-              Txt(S, TR, FFont, St.TextColor, Fl);
-          end
-          else if St.Bold or (fsBold in St.FontStyle) then
-            Txt(S, TR, FBoldFont, clBlack, Fl)
-          else
-            Txt(S, TR, FFont, clBlack, Fl);
+            if FLook.Text <> clNone then
+              KindCtx[C].TextColor := FLook.Text;
+            if FLook.Line <> clNone then
+              KindCtx[C].LineColor := FLook.Line;
+            KindCtx[C].AccentColor := FLook.Accent;
+            KindCtx[C].HintColor := FLook.Hint;
+            KindCtx[C].Tokens.Accent := FLook.Accent;
+            KindCtx[C].Tokens.Warning := FLook.Warning;
+          end;
         end;
-        Inc(X, FColW[C]);
+      end;
+    end;
+    if Pg.WithHeader then
+      HeaderRows;
+    // Druckzeilen (seitenweise aus der Quelle)
+    LastLine := Pg.RowFirst + Pg.RowCount - 1;
+    for Li := Pg.RowFirst to LastLine do
+    begin
+      case FLines.Kind(Li) of
+        tlGroup: GroupLine;
+        tlFooter: FooterLine;
+      else
+        DataLine;
       end;
       Inc(Y, FRowH);
     end;
-    // Gitterlinien
-    if FPrintGridLines then
-    begin
-      LineBrush := CreateSolidBrush(LineColor);
-      try
-        R := FContent.Top + FPageHeadH;
-        X := FContent.Left;
-        for C := Pg.ColFirst to Pg.ColFirst + Pg.ColCount do
-        begin
-          Winapi.Windows.FillRect(DC, Rect(X, R, X + LW, Y), LineBrush);
-          if C < Pg.ColFirst + Pg.ColCount then
-            Inc(X, FColW[C]);
-        end;
-        while R <= Y do
-        begin
-          Winapi.Windows.FillRect(DC, Rect(FContent.Left, R, X + LW, R + LW), LineBrush);
-          Inc(R, FRowH);
-        end;
-      finally
-        DeleteObject(LineBrush);
-      end;
-    end;
+    GridLines;
     // Fusszeile
     if FPageFootH > 0 then
     begin

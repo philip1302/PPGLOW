@@ -416,6 +416,7 @@ type
     function ExportCellStyle(ACol, ARow: Integer; const Text: string;
       Alternate: Boolean): TPPGGridCellStyle;
     function ExportBands: TArray<TPPGTableBand>;
+    function ExportFooterText(ACol: Integer): string;
     /// Datenspalte einer Tabellen-Spalte (DB-Grid: ohne Indikator).
     function TableDataCol(ACol: Integer): Integer; virtual;
     /// Zeile fuer OnGetCellStyle beim Export (Grid: Datenzeile, DB-Grid: Satz).
@@ -1786,6 +1787,15 @@ begin
     Result.Fill := Fill;
   if Result.TextColor = clNone then
     Result.TextColor := TextColor;
+end;
+
+function TPPGCustomGrid.ExportFooterText(ACol: Integer): string;
+begin
+  // Nur mit sichtbarer Summenzeile (wie am Bildschirm)
+  if FShowFooter then
+    Result := FooterText(TableDataCol(ACol))
+  else
+    Result := '';
 end;
 
 function TPPGCustomGrid.ExportBands: TArray<TPPGTableBand>;

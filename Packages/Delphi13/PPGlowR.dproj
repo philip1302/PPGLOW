@@ -173,6 +173,7 @@
         <DCCReference Include="..\..\Source\Core\PPG.Planner.Layout.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Planner.Model.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Planner.ICal.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.Grid.Look.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Xlsx.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Grid.Export.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Grid.Print.pas"/>

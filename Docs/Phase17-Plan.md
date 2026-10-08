@@ -1,6 +1,6 @@
 # Phase 17 – Detailplan: Druck, PDF und HTML wie am Bildschirm
 
-*Stand 08.10.2026. Teil von `Docs\Roadmap3.md`. **Entwurf, wartet auf OK.***
+*Stand 08.10.2026. Teil von `Docs\Roadmap3.md`. **Freigegeben und umgesetzt (siehe Abschnitt Umsetzung).***
 
 ## Ausgangslage
 - Der xlsx-Export übernimmt seit dem 08.10.2026 die Optik des Grids über `IPPGTableLook`.
@@ -57,3 +57,22 @@ Ausdruck, PDF und HTML zeigen dasselbe wie das Grid in heller Darstellung, so wi
 3. **Verbundene Zellen im Druck** gleich mitbauen *(Empfehlung)*, oder später?
 4. **Vorgabe `UseGridLook = True`** *(Empfehlung)*. Bestehende Ausdrucke werden dadurch farbig wie das Grid, mit `False` lässt sich das alte Verhalten wiederherstellen.
 5. **Links im HTML** als echte `<a href>` *(Empfehlung)*, oder nur eingefärbt?
+
+## Umsetzung (08.10.2026)
+Freigegeben mit „ja leg los mit phase 17, nimm die Empfehlungen“ (alle fünf Entscheidungen wie empfohlen).
+
+- **17a:** `PPG.Grid.Look` (`TPPGTableLines`, `PPGTableBandLevels`/`PPGTableBandAt`, `PPGValueChecked`, `PPGCheckGlyph`, `PPGRatingStars`, `PPGStarsText`, `PPGResolveCellLook`, `PPGProgressFraction`). `IPPGTableLook.ExportFooterText` (Grid: nur mit `ShowFooter`). Der xlsx-Schreiber nutzt die gemeinsamen Helfer.
+- **17b:** `TPPGGridPrinter` neu gezeichnet. Neu sind `UseGridLook` (auch als fünfte Option in „Seite einrichten“, Text `SPPGPageSetupGridLook`), `LayoutLineKind` und `LayoutHeadRows`. `Page().RowFirst/RowCount` zählen Druckzeilen. Gitterlinien werden je Zelle gezeichnet, damit verbundene Zellen und Gruppenzeilen keine inneren Linien haben.
+- **17c:** HTML mit CSS-Vorgaben, `colgroup` (Spaltenbreiten), Bändern, Gruppen, `tfoot`, Zellarten, Verläufen und sicheren Links. Quellen ohne `IPPGTableLook` bekommen die bisherige einfache Tabelle.
+- **17d:**
+  - Tests in `Tests\PPG.Tests.Phase17.pas` (15). Insgesamt 1241 Tests Win32 und Win64, Leak-Lauf grün.
+  - Demo-Selbsttest 153/153 mit neuen Szenarien „Druck mit Gruppenkopf/Bandzeile“ und „HTML mit Gruppen und Summe“.
+  - Sichtprüfung: erste Druckseite der Lagerliste (`/export 6 grid datei.png`) und HTML in Edge headless. Beide sehen aus wie das Grid.
+- **Demo:** Schalter `/export seite key datei.(xlsx|html|png)` ersetzt `/xlsx`.
+
+**Abweichungen:**
+- Planer- und Kanban-Druck wurden nur im Code geprüft. Sie kopieren schon Kategorien bzw. `KanbanStyles` und sind unverändert.
+- Gruppenfüße (`GroupFooter`) und Symbolsätze (Pfeile) fehlen im Druck. In xlsx sind Symbolsätze native Regeln.
+- Ein echter PDF-Lauf über „Microsoft Print to PDF“ wurde nicht gemacht, weil er über dieselbe `RenderPage` läuft wie das geprüfte Bild.
+
+**Offen:** Gruppenfüße im Druck/HTML, Symbolsatz-Pfeile im Druck, Zwischensummen je Seite (bewusst nicht).

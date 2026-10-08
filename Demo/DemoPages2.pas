@@ -12,7 +12,7 @@ uses
   PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid, PPG.Splitter,
   PPG.Breadcrumb, PPG.ToolBar, PPG.Calendar, PPG.DatePicker, PPG.TimePicker,
   PPG.CheckBox, PPG.Feedback, PPG.Notifications,
-  PPG.Grid.Columns, PPG.Grid.Styles, PPG.Grid.Print, PPG.Grid.Export, PPG.Grid.Data, PPG.Xlsx,
+  PPG.Grid.Columns, PPG.Grid.Styles, PPG.Grid.Print, PPG.Grid.Export, PPG.Grid.Data, PPG.Xlsx, PPG.Grid.Look,
   Vcl.Dialogs,
   DemoKit;
 
@@ -1498,7 +1498,16 @@ begin
   FGrid.GroupBy([ColCategory]);
   Check('Tabelle: vier Kategorien gruppiert', FGrid.GroupCount = 4);
   Check('Tabelle: Gruppen-Summe', FGrid.GroupFooterText(0, ColValue) <> '');
+  // Druck und HTML wie das Grid (Phase 17): Gruppenkoepfe und Summe als Druckzeilen
+  FPrinter.Invalidate;
+  FPrinter.PageCount(TPPGPrintDevice.A4(96, False));
+  Check('Tabelle: Druck mit Gruppenkopf', FPrinter.LayoutLineKind(0) = tlGroup);
+  Check('Tabelle: Druck mit Bandzeile', FPrinter.LayoutHeadRows = 2);
+  Check('Tabelle: HTML mit Gruppen und Summe',
+    (Pos('<tr class="g">', PPGExportHtmlText(FGrid as IPPGTableSource)) > 0) and
+    (Pos('<tfoot>', PPGExportHtmlText(FGrid as IPPGTableSource)) > 0));
   FGrid.Ungroup;
+  FPrinter.Invalidate;
   Check('Tabelle: Druck hat Seiten', FPrinter.PageCount(TPPGPrintDevice.A4(96, False)) >= 1);
   Check('Tabelle: Export enthaelt alle Zeilen', Pos('<td', PPGExportHtmlText(FGrid as IPPGTableSource)) > 0);
   FGrid.MoveColumn(ColQty, ColName);

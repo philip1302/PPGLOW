@@ -132,6 +132,8 @@ type
       Alternate: Boolean): TPPGGridCellStyle;
     /// Baender ueber den Spalten; leer = keine.
     function ExportBands: TArray<TPPGTableBand>;
+    /// Text der Summenzeile wie im Grid ('' = keiner bzw. ohne Summenzeile).
+    function ExportFooterText(ACol: Integer): string;
   end;
 
   TPPGAggregateAcc = record
