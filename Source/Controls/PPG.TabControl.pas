@@ -79,6 +79,10 @@ type
     procedure SetHotTrack(const Value: Boolean);
     procedure SetShowCloseButtons(const Value: Boolean);
     function IsBottom: Boolean;
+    function IsVertical: Boolean;
+    /// ScrollOpposite: Bereich der Reihen auf der Gegenseite (leer = keiner).
+    function OppositeRect: TRect;
+    procedure SetScrollOpposite(const Value: Boolean);
     function InnermostTabsOf(Wnd: HWND): TPPGCustomTabs;
     procedure CMDialogKey(var Message: TCMDialogKey); message CM_DIALOGKEY;
     procedure CMDialogChar(var Message: TCMDialogChar); message CM_DIALOGCHAR;
@@ -162,8 +166,9 @@ type
     property MultiLine: Boolean read FMultiLine write SetMultiLine default False;
     /// Mit MultiLine: Reihen nicht auf volle Breite strecken.
     property RaggedRight: Boolean read FRaggedRight write SetRaggedRight default False;
-    /// Nur fuer DFM-Kompatibilitaet gespeichert (wirkt nicht).
-    property ScrollOpposite: Boolean read FScrollOpposite write FScrollOpposite default False;
+    /// Mit MultiLine: Reihen zwischen dem gewaehlten Reiter und der Seite wechseln auf
+    /// die Gegenseite (wie TPageControl.ScrollOpposite); nur oben/unten.
+    property ScrollOpposite: Boolean read FScrollOpposite write SetScrollOpposite default False;
     /// Reiter, Knoepfe oder flache Knoepfe (wie TTabControl.Style).
     property Style: TTabStyle read FStyle write SetStyle default tsTabs;
     /// Mit OnDrawTab zeichnet die Anwendung den Inhalt der Reiter.
@@ -366,14 +371,58 @@ end;
 
 function TPPGCustomTabs.IsBottom: Boolean;
 begin
-  // tpLeft/tpRight werden (noch) wie oben/unten dargestellt
+  // senkrecht: True = Leiste rechts
   Result := FTabPosition in [tpBottom, tpRight];
+end;
+
+function TPPGCustomTabs.IsVertical: Boolean;
+begin
+  Result := FTabPosition in [tpLeft, tpRight];
+end;
+
+function TPPGCustomTabs.OppositeRect: TRect;
+var
+  H: Integer;
+begin
+  Result := Rect(0, 0, 0, 0);
+  if (FStrip = nil) or IsVertical or not FScrollOpposite or not FMultiLine then
+    Exit;
+  H := FStrip.OppositeHeight;
+  if H <= 0 then
+    Exit;
+  if IsBottom then
+    Result := Rect(0, 0, Width, H)
+  else
+    Result := Rect(0, Height - H, Width, Height);
+end;
+
+procedure TPPGCustomTabs.SetScrollOpposite(const Value: Boolean);
+begin
+  if FScrollOpposite <> Value then
+  begin
+    FScrollOpposite := Value;
+    LayoutTabs;
+  end;
 end;
 
 function TPPGCustomTabs.StripRect: TRect;
 var
   H: Integer;
 begin
+  if IsVertical then
+  begin
+    // Leiste links bzw. rechts ueber die ganze Hoehe
+    H := FStrip.StripWidth;
+    if (FStrip.Count = 0) and not (csDesigning in ComponentState) then
+      H := 0;
+    if H > Width then
+      H := Width;
+    if IsBottom then
+      Result := Rect(Width - H, 0, Width, Height)
+    else
+      Result := Rect(0, 0, H, Height);
+    Exit;
+  end;
   // Width/Height statt ClientRect: kein Fensterhandle im Konstruktor erzwingen
   H := FStrip.StripHeight;
   // Keine sichtbaren Reiter (wie TPageControl): keine Leiste
@@ -389,13 +438,26 @@ end;
 
 function TPPGCustomTabs.PageRect: TRect;
 var
-  S: TRect;
+  S, O: TRect;
 begin
   S := StripRect;
+  if IsVertical then
+  begin
+    if IsBottom then
+      Result := Rect(0, 0, S.Left, Height)
+    else
+      Result := Rect(S.Right, 0, Width, Height);
+    Exit;
+  end;
+  O := OppositeRect;
   if IsBottom then
-    Result := Rect(0, 0, Width, S.Top)
+    Result := Rect(0, O.Bottom, Width, S.Top)
   else
+  begin
     Result := Rect(0, S.Bottom, Width, Height);
+    if not IsRectEmpty(O) then
+      Result.Bottom := O.Top;
+  end;
 end;
 
 function TPPGCustomTabs.DisplayRect: TRect;
@@ -428,11 +490,14 @@ begin
   FStrip.TabHeight := FTabHeight;
   FStrip.ShowClose := FShowCloseButtons;
   FStrip.Bottom := IsBottom;
+  FStrip.Vertical := IsVertical;
+  FStrip.ScrollOpposite := FScrollOpposite;
   FStrip.RightToLeft := UseRightToLeftAlignment;
   FStrip.MultiLine := FMultiLine;
   FStrip.RaggedRight := FRaggedRight;
   FStrip.ButtonStyle := TPPGTabButtonStyle(Ord(FStyle));
   FStrip.AvailWidth := Width;
+  FStrip.OppositeRect := OppositeRect;
   FStrip.Layout(StripRect);
   if not (csLoading in ComponentState) and not (csDestroying in ComponentState) then
     Realign;
@@ -463,6 +528,9 @@ begin
     IsWindowVisible(Handle) and not (csDesigning in ComponentState) then
     Duration := Animation.Duration;
   FStrip.Select(GetActiveTabIndex, Duration > 0, Duration);
+  // ScrollOpposite: andere Reihe gewaehlt = andere Aufteilung der Reihen und Seite
+  if FScrollOpposite and FMultiLine and not IsVertical then
+    LayoutTabs;
   Invalidate;
   Pos := FStrip.Selected;
   if Pos >= 0 then

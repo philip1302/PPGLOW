@@ -69,7 +69,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Items` | `TPPGTreeNodes` |  | Die Knoten (API wie TTreeNodes: Add, AddChild, Insert, Delete, Clear, BeginUpdate/EndUpdate). In der DFM als lesbare Zeilenliste gespeichert. Nutzung: `N := Tree.Items.Add(nil, 'Projekte'); Tree.Items.AddChild(N, 'PPGlow');` |
 | `MultiSelect` | `Boolean` | `False` | True: Mehrere Knoten sind gleichzeitig wählbar (Strg/Umschalt+Klick). |
 | `ReadOnly` | `Boolean` | `False` | True: Knoten können nicht umbenannt werden (F2 und Klick auf den gewählten Knoten bleiben wirkungslos). |
-| `RowSelect` | `Boolean` | `True` | Nur zur DFM-Kompatibilität mit TTreeView: Der Baum hebt immer die ganze Zeile hervor (Fluent-Standard). |
+| `RowSelect` | `Boolean` | `True` | True: Auswahl, Hover und Knotenfarbe reichen über die ganze Zeile (Fluent-Standard). False: nur hinter Bild und Text wie bei TTreeView ohne RowSelect. |
 | `ShowButtons` | `Boolean` | `True` | True: Knoten mit Kindern zeigen den Auf-/Zuklapp-Pfeil. |
 | `ShowLines` | `Boolean` | `False` | True: Verbindungslinien zwischen Eltern- und Kindknoten werden gezeichnet. |
 | `ShowRoot` | `Boolean` | `True` | True: Auch die Knoten der obersten Ebene haben Einzug, Pfeil und Linien. |

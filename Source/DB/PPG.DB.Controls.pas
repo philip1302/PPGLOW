@@ -28,7 +28,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, Vcl.Controls,
-  Vcl.StdCtrls, Data.DB, Vcl.DBCtrls,
+  Vcl.StdCtrls, Vcl.ComCtrls, Data.DB, Vcl.DBCtrls,
   PPG.Types, PPG.Controls.Field, PPG.Edit, PPG.Memo, PPG.CheckBox, PPG.ComboBox,
   PPG.DatePicker;
 
@@ -1255,7 +1255,11 @@ begin
     end
     else
     begin
-      Date := Int(F.AsDateTime);
+      // Kind = dtkDate: nur das Datum; Uhrzeit bzw. Datum+Uhrzeit: der ganze Wert
+      if Kind = dtkDate then
+        Date := Int(F.AsDateTime)
+      else
+        DateTime := F.AsDateTime;
       Checked := True;
     end;
   finally
@@ -1278,12 +1282,17 @@ begin
     F.Clear
   else
   begin
-    // Uhrzeit eines DateTime-Felds bleibt erhalten
-    if F.IsNull then
-      T := 0
+    if Kind <> dtkDate then
+      F.AsDateTime := DateTime
     else
-      T := Frac(F.AsDateTime);
-    F.AsDateTime := Int(Date) + T;
+    begin
+      // Uhrzeit eines DateTime-Felds bleibt erhalten
+      if F.IsNull then
+        T := 0
+      else
+        T := Frac(F.AsDateTime);
+      F.AsDateTime := Int(Date) + T;
+    end;
   end;
 end;
 

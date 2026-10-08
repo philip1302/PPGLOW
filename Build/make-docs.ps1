@@ -194,6 +194,7 @@ $VclEvents = @{
   TFixedCellClickEvent = '(Sender: TObject; ACol, ARow: Longint)'
   TTaskDlgClickEvent = '(Sender: TObject; ModalResult: TModalResult; var CanClose: Boolean)'
   TTaskDlgTimerEvent = '(Sender: TObject; TickCount: Cardinal; var Reset: Boolean)'
+  TDTParseInputEvent = '(Sender: TObject; const UserString: string; var DateAndTime: TDateTime; var AllowChange: Boolean)'
 }
 
 # --- Formatierung ------------------------------------------------------------

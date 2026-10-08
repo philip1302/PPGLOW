@@ -37,7 +37,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Style` | `TProgressBarStyle` | `pbstNormal` | pbstNormal = Fortschritt nach Position; pbstMarquee = unbestimmter Fortschritt (laufendes Segment), solange die Dauer unbekannt ist. |
 | `State` | `TProgressBarState` | `pbsNormal` | pbsNormal, pbsError (Füllung rot) oder pbsPaused (Füllung gelb), wie bei Windows. Nutzung: `ProgressBar1.State := pbsError;` nach einem Abbruch. |
 | `MarqueeInterval` | `Integer` | `10` | Bei Style = pbstMarquee: Millisekunden je Animationsschritt (1..1000, wie TProgressBar); ein Durchlauf hat 150 Schritte. Kleiner = schneller. |
-| `Smooth` | `Boolean` | `False` | Nur zur DFM-Kompatibilität mit TProgressBar; ohne Wirkung (PPGlow zeichnet immer einen durchgehenden Balken). |
+| `Smooth` | `Boolean` | `True` | True: durchgehender Balken. False: Balken aus Blöcken mit kleinen Lücken (klassisches TProgressBar), in jedem Preset. Gilt nicht für Marquee. Die Vorgabe ist True, damit bestehende Formulare glatt bleiben. |
 | `ShowText` | `Boolean` | `False` | True: Zeigt Caption bzw. ohne Caption den Fortschritt in Prozent im Balken. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
 

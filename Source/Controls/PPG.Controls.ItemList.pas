@@ -119,6 +119,14 @@ type
     function DefaultItemHeight: Integer; virtual;
     /// Zweizeilige Eintraege (Detailzeile) im festen Modus.
     function TwoLineItems: Boolean; virtual;
+    /// Mehrspaltig wie TListBox.Columns (0 = einspaltig; nur ohne Gruppen/Detailzeilen).
+    function ListColumns: Integer; virtual;
+    /// Breite fuer waagerechten Bildlauf in logischen px (0 = keiner), wie TListBox.ScrollWidth.
+    function ListScrollWidth: Integer; virtual;
+    /// Tabulatorbreite in Dialogeinheiten (0 = Tabs nicht aufloesen), wie TListBox.TabWidth.
+    function ListTabWidth: Integer; virtual;
+    /// Mehrspaltige Anordnung aktiv (nach EnsureLayout): Zeilen je Spalte, Spaltenbreite.
+    function MultiColumn(out RowsPerCol, ColW: Integer): Boolean;
     /// Eintrag kann gewaehlt/fokussiert werden (Ueberschriften, deaktivierte nicht).
     function CanSelectItem(Index: Integer): Boolean; virtual;
     { Zeichnen }
@@ -133,6 +141,8 @@ type
     function ItemPaintSelected(Index: Integer): Boolean; virtual;
     /// Einzug vor dem Inhalt (Baum, Kaestchen) in Pixeln.
     function ItemIndent(Index: Integer; const Data: TPPGItemData): Integer; virtual;
+    /// Flaeche fuer Auswahl, Hover und Zeilenfarbe (Standard: ganze Zeile).
+    function ItemHighlightRect(Index: Integer; const R: TRect; const Data: TPPGItemData): TRect; virtual;
     /// Eigenes Zeichnen eines Eintrags (OnCustomDrawItem); Ergebnis = DefaultDraw.
     /// Der Baum ueberschreibt das (Ereignis mit Knoten).
     function DoCustomDrawItem(const ACanvas: IPPGCanvas; Index: Integer; const R: TRect;
@@ -466,6 +476,41 @@ begin
     Result := Min;
 end;
 
+function TPPGCustomItemList.ListColumns: Integer;
+begin
+  Result := 0;
+end;
+
+function TPPGCustomItemList.ListScrollWidth: Integer;
+begin
+  Result := 0;
+end;
+
+function TPPGCustomItemList.ListTabWidth: Integer;
+begin
+  Result := 0;
+end;
+
+function TPPGCustomItemList.MultiColumn(out RowsPerCol, ColW: Integer): Boolean;
+var
+  V: TRect;
+  Cols, H: Integer;
+begin
+  RowsPerCol := 1;
+  ColW := 1;
+  Cols := ListColumns;
+  // Gruppen und Detailzeilen (variable Hoehen) bleiben einspaltig
+  Result := (Cols > 0) and (FHeaders.Size = 0);
+  if not Result then
+    Exit;
+  V := ViewRect;
+  H := FLayout.DefaultHeight;
+  if H < 1 then
+    H := 1;
+  RowsPerCol := Max(1, (V.Bottom - V.Top) div H);
+  ColW := Max(1, (V.Right - V.Left) div Cols);
+end;
+
 function TPPGCustomItemList.UseVariableRows: Boolean;
 begin
   Result := False;
@@ -478,7 +523,8 @@ end;
 
 procedure TPPGCustomItemList.EnsureLayout;
 var
-  N, I, H, W: Integer;
+  N, I, H, W, RPC, CW: Integer;
+  V: TRect;
   Data: TPPGItemData;
   Group: string;
   Variable: Boolean;
@@ -518,8 +564,17 @@ begin
         FLayout.SetRowHeight(I, H);
     end;
   end;
-  // Kein waagerechtes Scrollen: Inhalt so breit wie die Ansicht
-  W := 0;
+  // Mehrspaltig: Spalten nebeneinander, nur waagerechter Bildlauf
+  if MultiColumn(RPC, CW) then
+  begin
+    SetContentSize(((N + RPC - 1) div RPC) * CW, 0);
+    Exit;
+  end;
+  // Sonst waagerechter Bildlauf nur mit ScrollWidth (breiter als die Ansicht)
+  W := PPGScale(ListScrollWidth, ScalePPI);
+  V := ViewRect;
+  if W <= V.Right - V.Left then
+    W := 0;
   if FLayout.TotalHeight64 > MaxInt then
     SetContentSize(W, MaxInt)
   else
@@ -536,16 +591,31 @@ function TPPGCustomItemList.ItemRect(Index: Integer): TRect;
 var
   V: TRect;
   Top: Int64;
+  RPC, CW, X, Y: Integer;
 begin
   Result := Rect(0, 0, 0, 0);
   EnsureLayout;
   if (Index < 0) or (Index >= FLayout.Count) then
     Exit;
   V := ViewRect;
+  if MultiColumn(RPC, CW) then
+  begin
+    X := V.Left + (Index div RPC) * CW - ScrollX;
+    Y := V.Top + (Index mod RPC) * FLayout.DefaultHeight;
+    if (X >= V.Right) or (X + CW <= V.Left) then
+      Exit;
+    Exit(Rect(X, Y, X + CW, Y + FLayout.DefaultHeight));
+  end;
   Top := FLayout.RowTop(Index) - ScrollY + V.Top;
   if (Top > V.Bottom) or (Top + FLayout.RowHeight(Index) < V.Top) then
     Exit;
   Result := Rect(V.Left, Integer(Top), V.Right, Integer(Top) + FLayout.RowHeight(Index));
+  // Waagerechter Bildlauf (ScrollWidth): Zeile so breit wie der Inhalt
+  if ContentWidth > V.Right - V.Left then
+  begin
+    Result.Left := V.Left - ScrollX;
+    Result.Right := Result.Left + ContentWidth;
+  end;
   if ItemStartsGroup(Index) then
     Inc(Result.Top, FHeaderH);
 end;
@@ -553,7 +623,7 @@ end;
 function TPPGCustomItemList.ItemAtPos(X, Y: Integer): Integer;
 var
   V: TRect;
-  Row: Integer;
+  Row, RPC, CW, Col: Integer;
   CY: Int64;
 begin
   Result := -1;
@@ -561,6 +631,14 @@ begin
   V := ViewRect;
   if not PtInRect(V, Point(X, Y)) or (FLayout.Count = 0) then
     Exit;
+  if MultiColumn(RPC, CW) then
+  begin
+    Col := (X - V.Left + ScrollX) div CW;
+    Row := (Y - V.Top) div Max(1, FLayout.DefaultHeight);
+    if (Col >= 0) and (Row >= 0) and (Row < RPC) and (Int64(Col) * RPC + Row < FLayout.Count) then
+      Result := Col * RPC + Row;
+    Exit;
+  end;
   CY := Int64(Y - V.Top) + ScrollY;
   if CY >= FLayout.TotalHeight64 then
     Exit;
@@ -576,30 +654,48 @@ end;
 procedure TPPGCustomItemList.MakeItemVisible(Index: Integer; Animate: Boolean);
 var
   Top: Int64;
-  H: Integer;
+  H, RPC, CW: Integer;
 begin
   EnsureLayout;
   if (Index < 0) or (Index >= FLayout.Count) then
     Exit;
+  if MultiColumn(RPC, CW) then
+  begin
+    MakeVisible(Rect((Index div RPC) * CW, 0, (Index div RPC + 1) * CW, 1), Animate);
+    Exit;
+  end;
   Top := FLayout.RowTop(Index);
   H := FLayout.RowHeight(Index);
   if Top > MaxInt - H then
     Exit;
-  MakeVisible(Rect(0, Integer(Top), 1, Integer(Top) + H), Animate);
+  // waagerechte Lage beibehalten (ScrollWidth)
+  MakeVisible(Rect(ScrollX, Integer(Top), ScrollX + 1, Integer(Top) + H), Animate);
 end;
 
 function TPPGCustomItemList.GetTopIndex: Integer;
+var
+  RPC, CW: Integer;
 begin
   EnsureLayout;
   if FLayout.Count = 0 then
     Result := 0
+  else if MultiColumn(RPC, CW) then
+    Result := (ScrollX div CW) * RPC
   else
     Result := FLayout.RowAt(ScrollY);
 end;
 
 procedure TPPGCustomItemList.SetTopIndex(const Value: Integer);
+var
+  RPC, CW: Integer;
 begin
   EnsureLayout;
+  if MultiColumn(RPC, CW) then
+  begin
+    if (Value >= 0) and (Value < FLayout.Count) then
+      ScrollTo((Value div RPC) * CW, 0);
+    Exit;
+  end;
   if (Value >= 0) and (Value < FLayout.Count) and (FLayout.RowTop(Value) <= MaxInt) then
     ScrollTo(0, Integer(FLayout.RowTop(Value)));
 end;
@@ -607,7 +703,11 @@ end;
 procedure TPPGCustomItemList.Resize;
 begin
   inherited Resize;
-  Invalidate;
+  // Spalten und Bildlaufbreite haengen von der Groesse ab
+  if (ListColumns > 0) or (ListScrollWidth > 0) then
+    InvalidateLayout
+  else
+    Invalidate;
 end;
 
 procedure TPPGCustomItemList.SetItemHeight(const Value: Integer);
@@ -857,6 +957,9 @@ begin
   Result.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
   Result.Dark := UseDarkMode;
   Result.Focused := Focused;
+  Result.TabWidth := 0;
+  if ListTabWidth > 0 then
+    Result.TabWidth := TPPGItemPainter.TabUnitsToPixels(Font, ListTabWidth);
 end;
 
 function TPPGCustomItemList.GetScrollStyle: TPPGSurfaceStyle;
@@ -911,6 +1014,12 @@ end;
 function TPPGCustomItemList.ItemIndent(Index: Integer; const Data: TPPGItemData): Integer;
 begin
   Result := 0;
+end;
+
+function TPPGCustomItemList.ItemHighlightRect(Index: Integer; const R: TRect;
+  const Data: TPPGItemData): TRect;
+begin
+  Result := R;
 end;
 
 procedure TPPGCustomItemList.SetListStyles(const Value: TPPGListStyles);
@@ -989,7 +1098,7 @@ begin
       D.TextColor := DS.TextColor;
     D.FontStyle := D.FontStyle + DS.FontStyle;
   end;
-  FPainter.PaintItemBackground(ACanvas, IR, R, Info, D, Index, Sel, Foc, Hot);
+  FPainter.PaintItemBackground(ACanvas, IR, ItemHighlightRect(Index, R, D), Info, D, Index, Sel, Foc, Hot);
   C := R;
   Indent := ItemIndent(Index, Data);
   if Info.RightToLeft then
@@ -1003,7 +1112,7 @@ procedure TPPGCustomItemList.PaintViewport(const ACanvas: IPPGCanvas; const View
 var
   Info: TPPGItemPaintInfo;
   IR: IPPGItemRenderer;
-  I, N: Integer;
+  I, N, RPC, CW, X, RL, RR: Integer;
   Top: Int64;
   R, HR, DR: TRect;
   Data: TPPGItemData;
@@ -1016,13 +1125,38 @@ begin
   Info := GetPaintInfo;
   IR := PPGItemRendererOf(Renderer);
   try
+    if MultiColumn(RPC, CW) then
+    begin
+      // Spaltenweise: oben nach unten, dann die naechste Spalte
+      I := (ScrollX div CW) * RPC;
+      while I < N do
+      begin
+        X := View.Left + (I div RPC) * CW - ScrollX;
+        if X >= View.Right then
+          Break;
+        Y := View.Top + (I mod RPC) * FLayout.DefaultHeight;
+        R := Rect(X, Y, X + CW, Y + FLayout.DefaultHeight);
+        GetItemData(I, Data);
+        PaintItem(ACanvas, I, R, Data, Info);
+        Inc(I);
+      end;
+      Exit;
+    end;
+    // Waagerechter Bildlauf (ScrollWidth): Zeilen so breit wie der Inhalt
+    RL := View.Left;
+    RR := View.Right;
+    if ContentWidth > View.Right - View.Left then
+    begin
+      RL := View.Left - ScrollX;
+      RR := RL + ContentWidth;
+    end;
     I := FLayout.RowAt(ScrollY);
     while (I >= 0) and (I < N) do
     begin
       Top := FLayout.RowTop(I) - ScrollY + View.Top;
       if Top >= View.Bottom then
         Break;
-      R := Rect(View.Left, Integer(Top), View.Right, Integer(Top) + FLayout.RowHeight(I));
+      R := Rect(RL, Integer(Top), RR, Integer(Top) + FLayout.RowHeight(I));
       GetItemData(I, Data);
       if ItemStartsGroup(I) then
       begin
@@ -1125,7 +1259,7 @@ begin
   end;
   if not (ssLeft in Shift) or (FDownIndex < 0) then
     Exit;
-  if FAllowReorder then
+  if FAllowReorder and (ListColumns = 0) then
   begin
     if not FDragging and ((Abs(X - FDownPos.X) >= GetSystemMetrics(SM_CXDRAG)) or
       (Abs(Y - FDownPos.Y) >= GetSystemMetrics(SM_CYDRAG))) then
@@ -1372,9 +1506,12 @@ end;
 
 procedure TPPGCustomItemList.KeyDown(var Key: Word; Shift: TShiftState);
 var
-  N, F, T, Dir, PageRows: Integer;
+  N, F, T, Dir, PageRows, RPC, CW: Integer;
   V: TRect;
+  Horz: Boolean;
 begin
+  Horz := False;
+  EnsureLayout;
   N := ItemCount;
   F := FSelection.Focus;
   T := -1;
@@ -1394,6 +1531,15 @@ begin
       begin
         Key := 0;
         Exit;
+      end
+      else if MultiColumn(RPC, CW) then
+      begin
+        // Mehrspaltig: eine Spalte weiter bzw. zurueck
+        if Key = VK_LEFT then
+          T := Max(0, F - RPC)
+        else
+          T := Min(N - 1, F + RPC);
+        Horz := True;
       end;
     VK_SPACE:
       begin
@@ -1423,7 +1569,7 @@ begin
         Exit;
       end;
   end;
-  if (T <> -1) or (Key in [VK_UP, VK_DOWN, VK_PRIOR, VK_NEXT, VK_HOME, VK_END]) then
+  if (T <> -1) or Horz or (Key in [VK_UP, VK_DOWN, VK_PRIOR, VK_NEXT, VK_HOME, VK_END]) then
   begin
     if N = 0 then
     begin

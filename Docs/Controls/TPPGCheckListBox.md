@@ -49,19 +49,19 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `AllowGrayed` | `Boolean` | `False` | True: Ein Klick schaltet aus → an → gemischt (cbGrayed), z. B. für „teilweise". |
 | `AutoComplete` | `Boolean` | `True` | True: Tippen springt zum ersten Eintrag mit diesen Anfangsbuchstaben (wie TListBox.AutoComplete). |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen. |
-| `Columns` | `Integer` | `0` | Nur zum Lesen alter TListBox-DFMs; die Liste ist immer einspaltig (für Spalten das Grid verwenden). |
-| `Flat` | `Boolean` | `True` | Nur zum Lesen alter DFMs von TCheckListBox; ohne Wirkung, die Kästchen zeichnet das Preset. |
-| `HeaderColor` | `TColor` | `clInfoText` | Aus TCheckListBox übernommen, damit alte DFMs laden; die Textfarbe der Überschriften stellt man über Styles.GroupHeader.TextColor ein. |
-| `HeaderBackgroundColor` | `TColor` | `clInfoBk` | Aus TCheckListBox übernommen, damit alte DFMs laden; die Optik der Überschriften (Header[]) kommt aus Styles.GroupHeader. |
-| `IntegralHeight` | `Boolean` | `False` | Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung (die Liste scrollt weich, angeschnittene Zeilen sind erlaubt). |
+| `Columns` | `Integer` | `0` | Mehrspaltig wie TListBox.Columns: Die Einträge laufen von oben nach unten und dann in die nächste Spalte; so viele Spalten sind gleichzeitig sichtbar, weitere erreicht man waagerecht (Bildlauf, Pfeil links/rechts springt eine Spalte). 0 = einspaltig (0..1000). Mit Gruppen oder Detailzeilen bleibt die Liste einspaltig, Umsortieren per Ziehen ist dann aus. Nutzung: `ListBox1.Columns := 3;` |
+| `Flat` | `Boolean` | `True` | True: Kästchen im Stil des Presets. False: natives Windows-Kästchen (mit aktivem VCL-Style dessen Kästchen, ohne Themes das klassische 3D-Kästchen). Im Hochkontrast immer Preset-Stil. |
+| `HeaderColor` | `TColor` | `clInfoText` | Textfarbe der Überschriften (Header[]). Die Vorgabe clInfoText bedeutet „wie das Preset“; jede andere Farbe färbt die Überschriften, solange Styles.GroupHeader.TextColor nichts Eigenes setzt. Gilt im Hellen. Nutzung: `CheckListBox1.HeaderColor := clNavy;` |
+| `HeaderBackgroundColor` | `TColor` | `clInfoBk` | Hintergrund der Überschriften (Header[]). Die Vorgabe clInfoBk bedeutet „wie das Preset“; jede andere Farbe füllt die Überschriftszeilen, solange Styles.GroupHeader.Color nichts Eigenes setzt. Gilt im Hellen. Nutzung: `CheckListBox1.HeaderBackgroundColor := $00F0E6DC;` |
+| `IntegralHeight` | `Boolean` | `False` | True: Die Höhe wird auf ganze Zeilen abgerundet (mindestens eine), damit unten keine angeschnittene Zeile steht – beim Setzen der Höhe, nach Schriftwechsel und nach dem Laden. Nicht bei Align = alClient, alLeft oder alRight. |
 | `ItemHeight` | `Integer` | `0` | Zeilenhöhe in logischen Pixeln; 0 = aus der Schrift berechnet (mit Detailzeile entsprechend höher). |
 | `Items` | `TStrings` |  | Einträge als Textliste wie bei TListBox (Objects[] für eigene Daten). Quelle der Liste, solange ItemsEx leer ist und Style nicht virtuell ist. Nutzung: `List.Items.AddObject('Anna', Kunde);` |
 | `MultiSelect` | `Boolean` | `False` | True: Mehrere Einträge sind gleichzeitig wählbar (Art über ExtendedSelect); abfragen über Selected[] und SelCount. |
 | `ExtendedSelect` | `Boolean` | `True` | Nur mit MultiSelect: True = Mehrfachauswahl wie im Explorer (Umschalt für Bereiche, Strg für einzelne); False = jeder Klick schaltet einen Eintrag um. |
-| `ScrollWidth` | `Integer` | `0` | Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung (kein waagerechter Bildlauf). |
+| `ScrollWidth` | `Integer` | `0` | Breite in logischen Pixeln für waagerechten Bildlauf (0..100000): Ist sie größer als die Liste, werden die Zeilen so breit und die Liste lässt sich waagerecht scrollen. 0 = kein waagerechter Bildlauf. Nutzung: Für lange Einträge: `ListBox1.ScrollWidth := 600;` |
 | `Sorted` | `Boolean` | `False` | True: Items werden alphabetisch sortiert gehalten; neue Einträge landen an ihrer Sortierposition. |
 | `Style` | `TListBoxStyle` | `lbStandard` | Datenquelle und Zeichnen wie TListBox: lbStandard, Owner-Draw (lbOwnerDrawFixed, lbOwnerDrawVariable) oder virtuell (lbVirtual, lbVirtualOwnerDraw: Count + OnGetItem bzw. OnData, Daten bleiben beim Anwender). |
-| `TabWidth` | `Integer` | `0` | Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung. |
+| `TabWidth` | `Integer` | `0` | Tabulatorabstand in Dialogeinheiten (1/4 der mittleren Zeichenbreite, wie LB_SETTABSTOPS), 0..1000: Tabzeichen (#9) im Text springen zum nächsten Vielfachen. 0 = Tabs werden nicht aufgelöst. Nicht mit Markup und nicht bei Rechts-nach-links. Nutzung: `ListBox1.TabWidth := 64; ListBox1.Items.Add('Müller'#9'Berlin');` |
 | `ItemIndex` | `Integer` | `-1` | Index des gewählten bzw. fokussierten Eintrags; -1 = keiner. Nutzung: `List.ItemIndex := List.Items.IndexOf('Berlin');` |
 
 ## Eigenschaften wie in der VCL

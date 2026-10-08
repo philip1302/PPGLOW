@@ -2552,6 +2552,7 @@ begin
   Info.UseColors := False;
   Info.Dark := UseDarkMode;
   Info.Focused := Focused;
+  Info.TabWidth := 0;
   First := TopRow * Cols;
   Last := Min(Item.GalleryTotal, (TopRow + Rows) * Cols) - 1;
   for I := First to Last do

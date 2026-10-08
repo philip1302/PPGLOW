@@ -105,8 +105,18 @@ type
     procedure ScanItemsEx;
     function IsVirtualStyle: Boolean;
     function IsOwnerDraw: Boolean;
+    procedure SetColumns(const Value: Integer);
+    procedure SetIntegralHeight(const Value: Boolean);
+    procedure SetScrollWidth(const Value: Integer);
+    procedure SetTabWidth(const Value: Integer);
+    function IntegralHeightFor(AHeight: Integer): Integer;
+    procedure ApplyIntegralHeight;
+    procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
   protected
     procedure Loaded; override;
+    function ListColumns: Integer; override;
+    function ListScrollWidth: Integer; override;
+    function ListTabWidth: Integer; override;
     function Mode: TPPGListBoxMode;
     { Meldungen von Items }
     procedure StringsInserted(Index: Integer); virtual;
@@ -135,11 +145,18 @@ type
     property Sorted: Boolean read GetSorted write SetSorted default False;
     /// Tippsuche ueber die Anfangsbuchstaben (wie TListBox.AutoComplete).
     property AutoComplete: Boolean read GetAutoComplete write SetAutoComplete default True;
-    /// Nur zum Lesen alter DFMs (keine Mehrspaltigkeit - dafuer gibt es das Grid).
-    property Columns: Integer read FColumns write FColumns default 0;
-    property IntegralHeight: Boolean read FIntegralHeight write FIntegralHeight default False;
-    property ScrollWidth: Integer read FScrollWidth write FScrollWidth default 0;
-    property TabWidth: Integer read FTabWidth write FTabWidth default 0;
+    /// Wie TListBox.Columns: Eintraege in so vielen sichtbaren Spalten nebeneinander,
+    /// waagerechter Bildlauf (0 = einspaltig; Gruppen/Detailzeilen bleiben einspaltig).
+    property Columns: Integer read FColumns write SetColumns default 0;
+    /// Hoehe auf ganze Zeilen runden (nur ohne Align = alClient/alLeft/alRight).
+    property IntegralHeight: Boolean read FIntegralHeight write SetIntegralHeight default False;
+    /// Breite fuer waagerechten Bildlauf in px (0 = keiner).
+    property ScrollWidth: Integer read FScrollWidth write SetScrollWidth default 0;
+    /// Tabulatorabstand in Dialogeinheiten (1/4 mittlere Zeichenbreite); 0 = Tabs nicht aufloesen.
+    property TabWidth: Integer read FTabWidth write SetTabWidth default 0;
+  public
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
+  protected
     property OnData: TLBGetDataEvent read FOnData write FOnData;
     property OnDataObject: TLBGetDataObjectEvent read FOnDataObject write FOnDataObject;
     property OnDataFind: TLBFindDataEvent read FOnDataFind write FOnDataFind;
@@ -425,6 +442,101 @@ end;
 
 { TPPGCustomListBox }
 
+function TPPGCustomListBox.ListColumns: Integer;
+begin
+  Result := FColumns;
+end;
+
+function TPPGCustomListBox.ListScrollWidth: Integer;
+begin
+  Result := FScrollWidth;
+end;
+
+function TPPGCustomListBox.ListTabWidth: Integer;
+begin
+  Result := FTabWidth;
+end;
+
+procedure TPPGCustomListBox.SetColumns(const Value: Integer);
+var
+  V: Integer;
+begin
+  V := PPGCheckRange(Self, 'Columns', Value, 0, 1000);
+  if FColumns <> V then
+  begin
+    FColumns := V;
+    InvalidateLayout;
+  end;
+end;
+
+procedure TPPGCustomListBox.SetScrollWidth(const Value: Integer);
+var
+  V: Integer;
+begin
+  V := PPGCheckRange(Self, 'ScrollWidth', Value, 0, 100000);
+  if FScrollWidth <> V then
+  begin
+    FScrollWidth := V;
+    InvalidateLayout;
+  end;
+end;
+
+procedure TPPGCustomListBox.SetTabWidth(const Value: Integer);
+var
+  V: Integer;
+begin
+  V := PPGCheckRange(Self, 'TabWidth', Value, 0, 1000);
+  if FTabWidth <> V then
+  begin
+    FTabWidth := V;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomListBox.SetIntegralHeight(const Value: Boolean);
+begin
+  if FIntegralHeight <> Value then
+  begin
+    FIntegralHeight := Value;
+    ApplyIntegralHeight;
+  end;
+end;
+
+function TPPGCustomListBox.IntegralHeightFor(AHeight: Integer): Integer;
+var
+  Frame, RowH, N: Integer;
+begin
+  // Wie LBS_NOINTEGRALHEIGHT aus: nach unten auf ganze Zeilen, mindestens eine
+  Frame := 2 * FrameInset;
+  RowH := DefaultItemHeight;
+  if RowH < 1 then
+    Exit(AHeight);
+  N := (AHeight - Frame) div RowH;
+  if N < 1 then
+    N := 1;
+  Result := N * RowH + Frame;
+end;
+
+procedure TPPGCustomListBox.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+begin
+  if FIntegralHeight and not (csLoading in ComponentState) and
+    (Align in [alNone, alTop, alBottom, alCustom]) then
+    AHeight := IntegralHeightFor(AHeight);
+  inherited SetBounds(ALeft, ATop, AWidth, AHeight);
+end;
+
+procedure TPPGCustomListBox.ApplyIntegralHeight;
+begin
+  if FIntegralHeight and not (csLoading in ComponentState) then
+    SetBounds(Left, Top, Width, Height);
+end;
+
+procedure TPPGCustomListBox.CMFontChanged(var Message: TMessage);
+begin
+  inherited;
+  ApplyIntegralHeight;
+end;
+
 constructor TPPGCustomListBox.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -462,6 +574,7 @@ begin
   if FLoadedItemIndex >= 0 then
     SetListItemIndex(FLoadedItemIndex);
   FLoadedItemIndex := -1;
+  ApplyIntegralHeight;
 end;
 
 function TPPGCustomListBox.IsVirtualStyle: Boolean;

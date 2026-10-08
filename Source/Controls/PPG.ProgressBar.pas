@@ -41,6 +41,7 @@ type
     procedure SetState(const Value: TProgressBarState);
     procedure SetMarqueeInterval(const Value: Integer);
     procedure SetShowText(const Value: Boolean);
+    procedure SetSmooth(const Value: Boolean);
     procedure UpdateMarquee;
     procedure CMShowingChanged(var Message: TMessage); message CM_SHOWINGCHANGED;
   protected
@@ -60,6 +61,9 @@ type
     function GetFillRect(const Track: TRect): TRect;
     function DisplayText: string;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
+    /// Smooth = False: Fuellung in Bloecken.
+    procedure PaintBlocks(const ACanvas: IPPGCanvas; const Track, Fill: TRect;
+      const TrackStyle, FillStyle: TPPGSurfaceStyle);
     function AccRole: Integer; override;
     function AccState: Integer; override;
     function AccValue: string; override;
@@ -72,8 +76,9 @@ type
     property Step: Integer read FStep write FStep default 10;
     /// Wie TProgressBar: ms je Animationsschritt; ein Durchlauf hat 150 Schritte.
     property MarqueeInterval: Integer read FMarqueeInterval write SetMarqueeInterval default 10;
-    /// Nur zur DFM-Kompatibilitaet mit TProgressBar (ohne Wirkung).
-    property Smooth: Boolean read FSmooth write FSmooth default False;
+    /// True: durchgehender Balken; False: Balken aus Bloecken (wie das klassische
+    /// TProgressBar). Nicht bei Marquee.
+    property Smooth: Boolean read FSmooth write SetSmooth default True;
     /// Zeigt Caption bzw. (ohne Caption) den Fortschritt in Prozent.
     property ShowText: Boolean read FShowText write SetShowText default False;
   public
@@ -152,7 +157,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, Winapi.oleacc, PPG.Consts, PPG.Appearance, PPG.DpiUtils;
+  System.SysUtils, System.Math, Winapi.oleacc, PPG.Consts, PPG.Appearance, PPG.DpiUtils;
 
 const
   MarqueeSteps = 150;        // Schritte je Durchlauf (MarqueeInterval * 150 ms)
@@ -169,6 +174,7 @@ begin
   TabStop := False;
   FStep := 10;
   FMarqueeInterval := 10;
+  FSmooth := True;
   FPosAnim := TPPGAnimation.Create(Self);
   FPosAnim.OnStep := AnimStep;
   FMarqueeAnim := TPPGAnimation.Create(Self);
@@ -301,6 +307,15 @@ begin
   if FShowText <> Value then
   begin
     FShowText := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomProgressBar.SetSmooth(const Value: Boolean);
+begin
+  if FSmooth <> Value then
+  begin
+    FSmooth := Value;
     Invalidate;
   end;
 end;
@@ -483,6 +498,79 @@ begin
     Result := Format(PPGStr(@SPPGPercentFormat), [Percent]);
 end;
 
+procedure TPPGCustomProgressBar.PaintBlocks(const ACanvas: IPPGCanvas; const Track, Fill: TRect;
+  const TrackStyle, FillStyle: TPPGSurfaceStyle);
+var
+  Empty, Seg: TRect;
+  Thick, BlockW, Gap, P, Last: Integer;
+  Vert: Boolean;
+begin
+  // Erst nur die Spur, dann die Fuellung blockweise ueber Ausschnitte: so passen
+  // Form und Farben in jedem Preset
+  Empty := Fill;
+  Vert := FOrientation = pbVertical;
+  if Vert then
+    Empty.Top := Empty.Bottom
+  else
+    Empty.Right := Empty.Left;
+  RangeRenderer.DrawProgress(ACanvas, Track, Empty, TrackStyle, FillStyle, ScalePPI);
+  if Vert then
+    Thick := Fill.Right - Fill.Left
+  else
+    Thick := Fill.Bottom - Fill.Top;
+  BlockW := System.Math.Max(PPGScale(4, ScalePPI), Thick * 2 div 3);
+  Gap := System.Math.Max(1, PPGScale(2, ScalePPI));
+  if Vert then
+  begin
+    // von unten nach oben
+    P := Fill.Bottom;
+    Last := Fill.Top;
+    while P > Last do
+    begin
+      Seg := Rect(Track.Left, System.Math.Max(Last, P - BlockW), Track.Right, P);
+      ACanvas.PushClipRoundRect(Seg, 0);
+      try
+        RangeRenderer.DrawProgress(ACanvas, Track, Fill, TrackStyle, FillStyle, ScalePPI);
+      finally
+        ACanvas.PopClip;
+      end;
+      Dec(P, BlockW + Gap);
+    end;
+  end
+  else if UseRightToLeftAlignment then
+  begin
+    P := Fill.Right;
+    Last := Fill.Left;
+    while P > Last do
+    begin
+      Seg := Rect(System.Math.Max(Last, P - BlockW), Track.Top, P, Track.Bottom);
+      ACanvas.PushClipRoundRect(Seg, 0);
+      try
+        RangeRenderer.DrawProgress(ACanvas, Track, Fill, TrackStyle, FillStyle, ScalePPI);
+      finally
+        ACanvas.PopClip;
+      end;
+      Dec(P, BlockW + Gap);
+    end;
+  end
+  else
+  begin
+    P := Fill.Left;
+    Last := Fill.Right;
+    while P < Last do
+    begin
+      Seg := Rect(P, Track.Top, System.Math.Min(Last, P + BlockW), Track.Bottom);
+      ACanvas.PushClipRoundRect(Seg, 0);
+      try
+        RangeRenderer.DrawProgress(ACanvas, Track, Fill, TrackStyle, FillStyle, ScalePPI);
+      finally
+        ACanvas.PopClip;
+      end;
+      Inc(P, BlockW + Gap);
+    end;
+  end;
+end;
+
 procedure TPPGCustomProgressBar.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   Track, Fill, Rest: TRect;
@@ -494,7 +582,10 @@ begin
   TrackStyle := GetTrackStyle;
   FillStyle := GetFillStyle;
   Fill := GetFillRect(Track);
-  RangeRenderer.DrawProgress(ACanvas, Track, Fill, TrackStyle, FillStyle, ScalePPI);
+  if FSmooth or (FStyle = pbstMarquee) or IsRectEmpty(Fill) then
+    RangeRenderer.DrawProgress(ACanvas, Track, Fill, TrackStyle, FillStyle, ScalePPI)
+  else
+    PaintBlocks(ACanvas, Track, Fill, TrackStyle, FillStyle);
 
   if not FShowText or (FOrientation = pbVertical) then
     Exit;

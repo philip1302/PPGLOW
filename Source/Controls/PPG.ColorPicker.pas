@@ -129,6 +129,7 @@ type
     FNoneColorColor: TColor;
     FDefaultColorColor: TColor;
     FShowHex: Boolean;
+    procedure SetNoneColorColor(const Value: TColor);
     procedure SetSelected(const Value: TColor);
     procedure SetStyle(const Value: TColorBoxStyle);
     procedure SetRecent(const Value: TStrings);
@@ -168,7 +169,9 @@ type
     property MaxRecent: Integer read FMaxRecent write SetMaxRecent default 8;
     /// Hexwert statt Name anzeigen.
     property ShowHex: Boolean read FShowHex write SetShowHex default False;
-    property NoneColorColor: TColor read FNoneColorColor write FNoneColorColor default clBlack;
+    /// Fuellung des Feldes fuer "Keine" (clNone), wie TColorBox.NoneColorColor. Die
+    /// Vorgabe clBlack zeigt das Feld leer mit roter Diagonale (Preset-Optik).
+    property NoneColorColor: TColor read FNoneColorColor write SetNoneColorColor default clBlack;
     property DefaultColorColor: TColor read FDefaultColorColor write FDefaultColorColor
       default clBlack;
     property Preset;
@@ -666,8 +669,14 @@ begin
               X + PPGScale(18, PPI) - 2, R.Bottom - PPGScale(4, PPI) - 2), PPGScale(2, PPI),
               PPGColorToRGB(FPicker.DefaultColorColor), 255)
           else
+          begin
+            if FPicker.NoneColorColor <> clBlack then
+              ACanvas.FillRoundRect(Rect(X + 2, R.Top + PPGScale(4, PPI) + 2,
+                X + PPGScale(18, PPI) - 2, R.Bottom - PPGScale(4, PPI) - 2), PPGScale(2, PPI),
+                PPGColorToRGB(FPicker.NoneColorColor), 255);
             ACanvas.DrawPolyline([Point(X + 2, R.Bottom - PPGScale(6, PPI)),
               Point(X + PPGScale(16, PPI), R.Top + PPGScale(6, PPI))], 1, T.Danger, 255);
+          end;
           Inc(X, PPGScale(26, PPI));
         end;
         if C.Kind = cckApply then
@@ -1164,7 +1173,9 @@ begin
   end;
   SW := Rect(R.Left, R.Top, R.Left + Sz, R.Top + Sz);
   Frame := PPGBlendColor(Style.Color, Style.TextColor, 0.35);
-  if FSelected = clNone then
+  if (FSelected = clNone) and (FNoneColorColor <> clBlack) then
+    Fill := PPGColorToRGB(FNoneColorColor)
+  else if FSelected = clNone then
     Fill := Style.Color
   else if FSelected = clDefault then
     Fill := PPGColorToRGB(FDefaultColorColor)
@@ -1179,6 +1190,15 @@ begin
   ACanvas.DrawText(Rect(R.Left, ClientRect.Top, R.Right, ClientRect.Bottom),
     ColorName(FSelected), Font, Style.TextColor,
     DT_LEFT or DT_VCENTER or DT_SINGLELINE or DT_NOPREFIX or DT_END_ELLIPSIS);
+end;
+
+procedure TPPGColorPicker.SetNoneColorColor(const Value: TColor);
+begin
+  if FNoneColorColor <> Value then
+  begin
+    FNoneColorColor := Value;
+    Invalidate;
+  end;
 end;
 
 function TPPGColorPicker.AccValue: string;

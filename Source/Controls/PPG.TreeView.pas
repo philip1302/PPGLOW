@@ -254,6 +254,7 @@ type
     FOnChecked: TPPGTVChangedEvent;
     FOnCompare: TPPGTVCompareEvent;
     FOnNodeDrop: TPPGTVNodeDropEvent;
+    procedure SetRowSelect(const Value: Boolean);
     procedure SetHotTrack(const Value: Boolean);
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure SetItems(const Value: TPPGTreeNodes);
@@ -298,6 +299,7 @@ type
     procedure GetItemData(Index: Integer; var Data: TPPGItemData); override;
     function TwoLineItems: Boolean; override;
     function ItemIndent(Index: Integer; const Data: TPPGItemData): Integer; override;
+    function ItemHighlightRect(Index: Integer; const R: TRect; const Data: TPPGItemData): TRect; override;
     function ItemPaintSelected(Index: Integer): Boolean; override;
     function HasCustomDraw: Boolean; override;
     function DoCustomDrawItem(const ACanvas: IPPGCanvas; Index: Integer; const R: TRect;
@@ -353,8 +355,9 @@ type
     property CheckBoxes: Boolean read FCheckBoxes write SetCheckBoxes default False;
     property AutoCheck: Boolean read FAutoCheck write FAutoCheck default True;
     property ReadOnly: Boolean read FReadOnly write FReadOnly default False;
-    /// Ganze Zeile hervorheben (Fluent-Standard; nur zur DFM-Kompatibilitaet).
-    property RowSelect: Boolean read FRowSelect write FRowSelect default True;
+    /// True: Auswahl und Hover ueber die ganze Zeile; False: nur hinter Bild und Text
+    /// (wie TTreeView ohne RowSelect).
+    property RowSelect: Boolean read FRowSelect write SetRowSelect default True;
     property HideSelection: Boolean read FHideSelection write SetHideSelection default False;
     /// Wie TTreeView: Knoten unter der Maus unterstrichen.
     property HotTrack: Boolean read FHotTrack write SetHotTrack default False;
@@ -495,7 +498,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, Winapi.oleacc, PPG.UIA.Intf,
+  System.SysUtils, System.Math, Winapi.oleacc, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Markup,
   PPG.Selection, PPG.Render.Registry, PPG.Render.Gdi, Vcl.Forms;
 
@@ -1800,6 +1803,49 @@ begin
   Result.Right := X + S;
   Result.Top := (Row.Top + Row.Bottom - S) div 2;
   Result.Bottom := Result.Top + S;
+end;
+
+procedure TPPGCustomTreeView.SetRowSelect(const Value: Boolean);
+begin
+  if FRowSelect <> Value then
+  begin
+    FRowSelect := Value;
+    Invalidate;
+  end;
+end;
+
+function TPPGCustomTreeView.ItemHighlightRect(Index: Integer; const R: TRect;
+  const Data: TPPGItemData): TRect;
+var
+  Indent, W, PPI: Integer;
+  F, Temp: TFont;
+begin
+  Result := R;
+  if FRowSelect then
+    Exit;
+  // Nur Bild und Text hervorheben: Breite wie der Zeichner sie belegt
+  PPI := ScalePPI;
+  Indent := ItemIndent(Index, Data);
+  Temp := nil;
+  try
+    F := PPGStyledFont(Font, Data.FontStyle, Temp);
+    W := PPGMeasureTextNoCanvas(PPGStripMarkup(Data.Text), F, 0, False).cx;
+  finally
+    Temp.Free;
+  end;
+  Inc(W, PPGScale(PPGItemPadX + 10, PPI));
+  if (Images <> nil) and (Data.ImageIndex >= 0) then
+    Inc(W, Images.Width + PPGScale(6, PPI));
+  if UseRightToLeftAlignment then
+  begin
+    Result.Right := R.Right - Indent;
+    Result.Left := Max(R.Left, Result.Right - W);
+  end
+  else
+  begin
+    Result.Left := R.Left + Indent;
+    Result.Right := Min(R.Right, Result.Left + W);
+  end;
 end;
 
 function TPPGCustomTreeView.ItemIndent(Index: Integer; const Data: TPPGItemData): Integer;

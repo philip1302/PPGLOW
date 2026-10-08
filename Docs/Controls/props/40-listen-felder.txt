@@ -56,9 +56,11 @@ TPPGCustomCalendar.View = Aktuelle Ansicht: Monat (Tage), Jahr (Monate) oder Dek
 
 # --- TPPGCustomCheckListBox ---
 TPPGCustomCheckListBox.AllowGrayed = True: Ein Klick schaltet aus → an → gemischt (cbGrayed), z. B. für „teilweise".
-TPPGCustomCheckListBox.Flat = Nur zum Lesen alter DFMs von TCheckListBox; ohne Wirkung, die Kästchen zeichnet das Preset.
-TPPGCustomCheckListBox.HeaderBackgroundColor = Aus TCheckListBox übernommen, damit alte DFMs laden; die Optik der Überschriften (Header[]) kommt aus Styles.GroupHeader.
-TPPGCustomCheckListBox.HeaderColor = Aus TCheckListBox übernommen, damit alte DFMs laden; die Textfarbe der Überschriften stellt man über Styles.GroupHeader.TextColor ein.
+TPPGCustomCheckListBox.Flat = True: Kästchen im Stil des Presets. False: natives Windows-Kästchen (mit aktivem VCL-Style dessen Kästchen, ohne Themes das klassische 3D-Kästchen). Im Hochkontrast immer Preset-Stil.
+TPPGCustomCheckListBox.HeaderBackgroundColor = Hintergrund der Überschriften (Header[]). Die Vorgabe clInfoBk bedeutet „wie das Preset“; jede andere Farbe füllt die Überschriftszeilen, solange Styles.GroupHeader.Color nichts Eigenes setzt. Gilt im Hellen.
+> `CheckListBox1.HeaderBackgroundColor := $00F0E6DC;`
+TPPGCustomCheckListBox.HeaderColor = Textfarbe der Überschriften (Header[]). Die Vorgabe clInfoText bedeutet „wie das Preset“; jede andere Farbe färbt die Überschriften, solange Styles.GroupHeader.TextColor nichts Eigenes setzt. Gilt im Hellen.
+> `CheckListBox1.HeaderColor := clNavy;`
 TPPGCustomCheckListBox.OnClickCheck = Der Anwender hat ein Kästchen umgeschaltet (Klick, Leertaste, Screenreader). Setzen von Checked[] oder State[] im Code löst es nicht aus.
 > `lblAnzahl.Caption := IntToStr(ZaehleHaken);`
 TPPGCustomCheckListBox.OnSetChecked = Virtueller Stil (Style = lbVirtual): Der Anwender hat das Kästchen der Zeile Index auf Value umgeschaltet; die Anwendung speichert den Zustand selbst (und liefert ihn in OnGetItem über Data.Checked zurück).
@@ -79,9 +81,10 @@ TPPGCustomFileEdit.OnBeforeDialog = Bevor der Dialog öffnet: Allow := False bri
 
 # --- TPPGCustomListBox ---
 TPPGCustomListBox.AutoComplete = True: Tippen springt zum ersten Eintrag mit diesen Anfangsbuchstaben (wie TListBox.AutoComplete).
-TPPGCustomListBox.Columns = Nur zum Lesen alter TListBox-DFMs; die Liste ist immer einspaltig (für Spalten das Grid verwenden).
+TPPGCustomListBox.Columns = Mehrspaltig wie TListBox.Columns: Die Einträge laufen von oben nach unten und dann in die nächste Spalte; so viele Spalten sind gleichzeitig sichtbar, weitere erreicht man waagerecht (Bildlauf, Pfeil links/rechts springt eine Spalte). 0 = einspaltig (0..1000). Mit Gruppen oder Detailzeilen bleibt die Liste einspaltig, Umsortieren per Ziehen ist dann aus.
+> `ListBox1.Columns := 3;`
 TPPGCustomListBox.ExtendedSelect = Nur mit MultiSelect: True = Mehrfachauswahl wie im Explorer (Umschalt für Bereiche, Strg für einzelne); False = jeder Klick schaltet einen Eintrag um.
-TPPGCustomListBox.IntegralHeight = Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung (die Liste scrollt weich, angeschnittene Zeilen sind erlaubt).
+TPPGCustomListBox.IntegralHeight = True: Die Höhe wird auf ganze Zeilen abgerundet (mindestens eine), damit unten keine angeschnittene Zeile steht – beim Setzen der Höhe, nach Schriftwechsel und nach dem Laden. Nicht bei Align = alClient, alLeft oder alRight.
 TPPGCustomListBox.ItemIndex = Index des gewählten bzw. fokussierten Eintrags; -1 = keiner.
 > `List.ItemIndex := List.Items.IndexOf('Berlin');`
 TPPGCustomListBox.Items = Einträge als Textliste wie bei TListBox (Objects[] für eigene Daten). Quelle der Liste, solange ItemsEx leer ist und Style nicht virtuell ist.
@@ -97,10 +100,12 @@ TPPGCustomListBox.OnDrawItem = Owner-Draw wie TListBox (Style = lbOwnerDrawFixed
 TPPGCustomListBox.OnGetItem = Virtuell mit allen Angaben: füllt Data (Text, Detail, Bild, Plakette, Kästchen, Farben) für die Zeile Index. Anzahl über Count.
 > `Data.Text := Mails[Index].Betreff; Data.Detail := Mails[Index].Absender;`
 TPPGCustomListBox.OnMeasureItem = Bei Style = lbOwnerDrawVariable: liefert die Höhe der Zeile Index in den var-Parameter Height.
-TPPGCustomListBox.ScrollWidth = Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung (kein waagerechter Bildlauf).
+TPPGCustomListBox.ScrollWidth = Breite in logischen Pixeln für waagerechten Bildlauf (0..100000): Ist sie größer als die Liste, werden die Zeilen so breit und die Liste lässt sich waagerecht scrollen. 0 = kein waagerechter Bildlauf.
+> Für lange Einträge: `ListBox1.ScrollWidth := 600;`
 TPPGCustomListBox.Sorted = True: Items werden alphabetisch sortiert gehalten; neue Einträge landen an ihrer Sortierposition.
 TPPGCustomListBox.Style = Datenquelle und Zeichnen wie TListBox: lbStandard, Owner-Draw (lbOwnerDrawFixed, lbOwnerDrawVariable) oder virtuell (lbVirtual, lbVirtualOwnerDraw: Count + OnGetItem bzw. OnData, Daten bleiben beim Anwender).
-TPPGCustomListBox.TabWidth = Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung.
+TPPGCustomListBox.TabWidth = Tabulatorabstand in Dialogeinheiten (1/4 der mittleren Zeichenbreite, wie LB_SETTABSTOPS), 0..1000: Tabzeichen (#9) im Text springen zum nächsten Vielfachen. 0 = Tabs werden nicht aufgelöst. Nicht mit Markup und nicht bei Rechts-nach-links.
+> `ListBox1.TabWidth := 64; ListBox1.Items.Add('Müller'#9'Berlin');`
 
 # --- TPPGCustomPasswordEdit ---
 TPPGCustomPasswordEdit.CapsLockWarning = True: Bei aktiver Feststelltaste erscheint im Feld ein Hinweis, solange es den Fokus hat.
@@ -159,7 +164,7 @@ TPPGCustomTreeView.OnExpanding = Bevor ein Knoten aufklappt (auch aus dem Code);
 > `if Node.Count = 0 then LadeUnterordner(Node);`
 TPPGCustomTreeView.OnNodeDrop = Ein gezogener Knoten soll abgelegt werden (AllowReorder): Target und Mode nennen Ziel und Art (davor, danach, als Kind); Allow := False lehnt ab.
 TPPGCustomTreeView.ReadOnly = True: Knoten können nicht umbenannt werden (F2 und Klick auf den gewählten Knoten bleiben wirkungslos).
-TPPGCustomTreeView.RowSelect = Nur zur DFM-Kompatibilität mit TTreeView: Der Baum hebt immer die ganze Zeile hervor (Fluent-Standard).
+TPPGCustomTreeView.RowSelect = True: Auswahl, Hover und Knotenfarbe reichen über die ganze Zeile (Fluent-Standard). False: nur hinter Bild und Text wie bei TTreeView ohne RowSelect.
 TPPGCustomTreeView.ShowButtons = True: Knoten mit Kindern zeigen den Auf-/Zuklapp-Pfeil.
 TPPGCustomTreeView.ShowLines = True: Verbindungslinien zwischen Eltern- und Kindknoten werden gezeichnet.
 TPPGCustomTreeView.ShowRoot = True: Auch die Knoten der obersten Ebene haben Einzug, Pfeil und Linien.

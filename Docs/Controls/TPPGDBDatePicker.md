@@ -51,12 +51,12 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
 | `CalAlignment` | `TDTCalAlignment` | `dtaLeft` | Ausrichtung des aufklappenden Kalenders am Feld: dtaLeft = linke Kante, dtaRight = rechte Kante (bei RTL gespiegelt). |
 | `DateFormat` | `TDTDateFormat` | `dfShort` | dfShort (kurzes Datum, z. B. 08.10.2026) oder dfLong (langes Datum mit Wochentag) nach den Ländereinstellungen, wenn Format leer ist. |
-| `DateMode` | `TDTDateMode` | `dmComboBox` | Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts (immer Feld mit Kalender-Popup). |
+| `DateMode` | `TDTDateMode` | `dmComboBox` | dmComboBox: Kalender zum Aufklappen. dmUpDown: Auf/Ab-Knöpfe statt Kalender (Tag, mit Strg Monat), kein Aufklappen. |
 | `Format` | `string` |  | Eigenes Anzeigeformat nach FormatDateTime (z. B. „dd.mm.yyyy" oder „ddd, d. mmmm"); leer = DateFormat. |
-| `Kind` | `TDateTimeKind` | `dtkDate` | Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts. Für Uhrzeiten TPPGTimePicker verwenden. |
+| `Kind` | `TDateTimeKind` | `dtkDate` | dtkDate: Datum mit Kalender. dtkTime: Uhrzeit (LongTimeFormat bzw. Format), Auf/Ab-Knöpfe statt Kalender, Oben/Unten = Minute, Strg = Stunde; der Datumsteil bleibt erhalten. dtkDateTime (ab Delphi 10.4): Datum und Uhrzeit. Der DB-DatePicker überträgt bei Uhrzeit den ganzen Wert. Nutzung: `DatePicker1.Kind := dtkTime; DatePicker1.Time := EncodeTime(9, 30, 0, 0);` |
 | `MaxDate` | `TDate` |  | Spätestes wählbares Datum; 0 = keine Grenze. Spätere Tage sind im Kalender gesperrt, Eingaben werden begrenzt. |
 | `MinDate` | `TDate` |  | Frühestes wählbares Datum; 0 = keine Grenze. Nutzung: `DatePicker1.MinDate := Date;` (nur heute und später) |
-| `ParseInput` | `Boolean` | `False` | Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts (Eingaben werden immer geprüft). |
+| `ParseInput` | `Boolean` | `False` | True: Beim Übernehmen der Eingabe wird zuerst OnUserInput gefragt (eigene Auswertung, z. B. „morgen“ oder „+3“). DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert; AllowChange := False lehnt ab (ValidationState = pvsError). Ohne Ereignis gilt die normale Prüfung. Nutzung: `DatePicker1.ParseInput := True; DatePicker1.OnUserInput := Eingabe;` |
 | `ShowCheckbox` | `Boolean` | `False` | True: Links im Feld erscheint ein Kontrollkästchen; ohne Haken (Checked = False) gilt „kein Datum". |
 | `CalendarStyles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern). Nutzung: `DatePicker1.CalendarStyles.Weekend.TextColor := clRed;` |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
@@ -95,6 +95,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnCloseUp` | `TNotifyEvent` `(Sender: TObject)` | Der Kalender wurde geschlossen (mit oder ohne Übernahme). |
 | `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
 | `OnDropDown` | `TNotifyEvent` `(Sender: TObject)` | Der Kalender klappt gleich auf. |
+| `OnUserInput` | `TDTParseInputEvent` `(Sender: TObject; const UserString: string; var DateAndTime: TDateTime; var AllowChange: Boolean)` | Nur mit ParseInput = True: Die Eingabe wird übernommen (Enter, Fokusverlust). UserString ist der eingegebene Text, DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert und kann ersetzt werden; AllowChange := False lehnt ab (Feld wird rot markiert). Nutzung: `if SameText(UserString, 'morgen') then DateAndTime := Date + 1 else if UserString = '' then AllowChange := False;` |
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
 | `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` |

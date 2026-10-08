@@ -54,6 +54,7 @@ type
     UseColors: Boolean;  // False: Hochkontrast/VCL-Style (nur Schriften)
     Dark: Boolean;
     Focused: Boolean;    // Control hat den Fokus (Selection/SelectionInactive)
+    TabWidth: Integer;   // Tabulator-Abstand in px (0 = Tabs nicht aufloesen)
   end;
 
   TPPGItemPainter = class
@@ -65,6 +66,11 @@ type
     destructor Destroy; override;
     /// Hoehe einer Textzeile in Font (ohne Abstand).
     class function TextLineHeight(Font: TFont): Integer;
+    /// Text mit Tabulatoren: jedes Stueck beginnt am naechsten Vielfachen von TabPx.
+    class procedure DrawTabbedText(const Canvas: IPPGCanvas; const R: TRect; const Text: string;
+      Font: TFont; Color: TColor; Flags: Cardinal; TabPx: Integer);
+    /// Tabulatorbreite in Dialogeinheiten (wie TListBox.TabWidth) in px.
+    class function TabUnitsToPixels(Font: TFont; Units: Integer): Integer;
     /// Zeilenhoehe ohne Gruppen-Ueberschrift: Text (+ Detailzeile) + Abstand,
     /// mindestens Bildhoehe.
     class function RowHeight(Font: TFont; Images: TCustomImageList; TwoLines: Boolean;
@@ -137,6 +143,41 @@ begin
   FreeAndNil(FFonts);
   FreeAndNil(FMarkup);
   inherited Destroy;
+end;
+
+class procedure TPPGItemPainter.DrawTabbedText(const Canvas: IPPGCanvas; const R: TRect;
+  const Text: string; Font: TFont; Color: TColor; Flags: Cardinal; TabPx: Integer);
+var
+  Parts: TArray<string>;
+  I, X, W: Integer;
+  SR: TRect;
+begin
+  Parts := PPGSplitString(Text, #9, False);
+  X := R.Left;
+  for I := 0 to High(Parts) do
+  begin
+    if X >= R.Right then
+      Break;
+    SR := Rect(X, R.Top, R.Right, R.Bottom);
+    if Parts[I] <> '' then
+      Canvas.DrawText(SR, Parts[I], Font, Color, Flags);
+    W := Canvas.MeasureText(Parts[I], Font, 0, False).cx;
+    // naechster Tabstopp (mindestens ein Pixel weiter)
+    X := R.Left + ((X - R.Left + W) div TabPx + 1) * TabPx;
+  end;
+end;
+
+class function TPPGItemPainter.TabUnitsToPixels(Font: TFont; Units: Integer): Integer;
+const
+  Sample = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+var
+  Avg: Integer;
+begin
+  // Dialogeinheit = mittlere Zeichenbreite / 4 (wie LB_SETTABSTOPS)
+  Avg := (PPGMeasureTextNoCanvas(Sample, Font, 0, False).cx + Length(Sample) div 2) div Length(Sample);
+  Result := Units * Avg div 4;
+  if (Units > 0) and (Result < 1) then
+    Result := 1;
 end;
 
 class function TPPGItemPainter.TextLineHeight(Font: TFont): Integer;
@@ -458,6 +499,8 @@ begin
       Canvas.PopClip;
     end;
   end
+  else if (Info.TabWidth > 0) and not Info.RightToLeft and (Pos(#9, Data.Text) > 0) then
+    DrawTabbedText(Canvas, TextR, Data.Text, F, TextColor, Flags, Info.TabWidth)
   else
     Canvas.DrawText(TextR, Data.Text, F, TextColor, Flags);
 

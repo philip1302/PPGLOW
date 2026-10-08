@@ -1003,6 +1003,7 @@ begin
   Info.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
   Info.Dark := UseDarkMode;
   Info.Focused := True;
+  Info.TabWidth := 0;
   Last := FTopIndex + VisibleRows - 1;
   if Last > RowCount - 1 then
     Last := RowCount - 1;

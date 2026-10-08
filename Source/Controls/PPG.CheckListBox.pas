@@ -27,8 +27,14 @@ type
     FFlat: Boolean;
     FHeaderColor: TColor;
     FHeaderBackgroundColor: TColor;
+    FHeaderStyles: TPPGListStyles;
     FOnClickCheck: TNotifyEvent;
     FOnSetChecked: TPPGSetCheckedEvent;
+    procedure SetFlat(const Value: Boolean);
+    procedure SetHeaderColor(const Value: TColor);
+    procedure SetHeaderBackgroundColor(const Value: TColor);
+    procedure DrawNativeCheck(const ACanvas: IPPGCanvas; const R: TRect; AState: TCheckBoxState;
+      AEnabled, AHot: Boolean);
     function GetState(Index: Integer): TCheckBoxState;
     procedure SetState(Index: Integer; const Value: TCheckBoxState);
     function GetChecked(Index: Integer): Boolean;
@@ -60,16 +66,21 @@ type
     procedure ClickCheck; virtual;
 
     property AllowGrayed: Boolean read FAllowGrayed write FAllowGrayed default False;
-    /// Nur zum Lesen alter DFMs (PPGlow zeichnet die Kaestchen im Preset-Stil).
-    property Flat: Boolean read FFlat write FFlat default True;
-    property HeaderColor: TColor read FHeaderColor write FHeaderColor default clInfoText;
+    /// True: Kaestchen im Preset-Stil; False: natives Windows-Kaestchen (bzw. VCL-Style).
+    property Flat: Boolean read FFlat write SetFlat default True;
+    /// Textfarbe der Ueberschriften (Header[]); die Vorgabe clInfoText = wie das Preset.
+    /// Styles.GroupHeader.TextColor hat Vorrang. Gilt im Hellen.
+    property HeaderColor: TColor read FHeaderColor write SetHeaderColor default clInfoText;
+    /// Hintergrund der Ueberschriften; die Vorgabe clInfoBk = wie das Preset.
+    /// Styles.GroupHeader.Color hat Vorrang. Gilt im Hellen.
     property HeaderBackgroundColor: TColor read FHeaderBackgroundColor
-      write FHeaderBackgroundColor default clInfoBk;
+      write SetHeaderBackgroundColor default clInfoBk;
     property OnClickCheck: TNotifyEvent read FOnClickCheck write FOnClickCheck;
     /// Virtueller Stil: Anwender hat ein Kaestchen umgeschaltet.
     property OnSetChecked: TPPGSetCheckedEvent read FOnSetChecked write FOnSetChecked;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     /// Wie TCheckListBox.CheckAll: alle (bzw. nur aktivierte) Eintraege setzen.
     procedure CheckAll(AState: TCheckBoxState; AllowGrayed: Boolean = True;
       AllowDisabled: Boolean = True);
@@ -172,7 +183,7 @@ implementation
 uses
   PPG.Lang,
   System.SysUtils, Winapi.oleacc, PPG.UIA.Intf, PPG.Consts, PPG.Exceptions, PPG.Appearance,
-  PPG.DpiUtils, PPG.Render.Registry;
+  PPG.DpiUtils, PPG.Render.Registry, Vcl.Themes;
 
 const
   BoxSize = 16;  // logische px
@@ -186,6 +197,80 @@ begin
   FFlat := True;
   FHeaderColor := clInfoText;
   FHeaderBackgroundColor := clInfoBk;
+end;
+
+destructor TPPGCustomCheckListBox.Destroy;
+begin
+  FreeAndNil(FHeaderStyles);
+  inherited Destroy;
+end;
+
+procedure TPPGCustomCheckListBox.SetFlat(const Value: Boolean);
+begin
+  if FFlat <> Value then
+  begin
+    FFlat := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomCheckListBox.SetHeaderColor(const Value: TColor);
+begin
+  if FHeaderColor <> Value then
+  begin
+    FHeaderColor := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomCheckListBox.SetHeaderBackgroundColor(const Value: TColor);
+begin
+  if FHeaderBackgroundColor <> Value then
+  begin
+    FHeaderBackgroundColor := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomCheckListBox.DrawNativeCheck(const ACanvas: IPPGCanvas; const R: TRect;
+  AState: TCheckBoxState; AEnabled, AHot: Boolean);
+const
+  Themed: array[TCheckBoxState, 0..2] of TThemedButton = (
+    (tbCheckBoxUncheckedNormal, tbCheckBoxUncheckedHot, tbCheckBoxUncheckedDisabled),
+    (tbCheckBoxCheckedNormal, tbCheckBoxCheckedHot, tbCheckBoxCheckedDisabled),
+    (tbCheckBoxMixedNormal, tbCheckBoxMixedHot, tbCheckBoxMixedDisabled));
+var
+  DC: HDC;
+  K: Integer;
+  Flags: Cardinal;
+  CR: TRect;
+begin
+  if not AEnabled then
+    K := 2
+  else if AHot then
+    K := 1
+  else
+    K := 0;
+  CR := R;
+  DC := ACanvas.BeginGdi;
+  try
+    if StyleServices.Enabled then
+      StyleServices.DrawElement(DC, StyleServices.GetElementDetails(Themed[AState, K]), CR)
+    else
+    begin
+      // Klassisches Windows ohne Themes: 3D-Kaestchen wie TCheckListBox
+      Flags := DFCS_BUTTONCHECK;
+      if AState = cbChecked then
+        Flags := Flags or DFCS_CHECKED
+      else if AState = cbGrayed then
+        Flags := DFCS_BUTTON3STATE or DFCS_CHECKED;
+      if not AEnabled then
+        Flags := Flags or DFCS_INACTIVE;
+      DrawFrameControl(DC, CR, DFC_BUTTON, Flags);
+    end;
+  finally
+    ACanvas.EndGdi(DC);
+  end;
 end;
 
 procedure TPPGCustomCheckListBox.CheckIndex(Index: Integer);
@@ -351,10 +436,33 @@ var
   S: TPPGSurfaceStyle;
   PPI: Integer;
   ItemOn: Boolean;
+  HInfo: TPPGItemPaintInfo;
 begin
+  // Ueberschriften mit HeaderColor/HeaderBackgroundColor (wenn nicht Vorgabe und
+  // GroupHeader nichts Eigenes setzt)
+  if Data.IsHeader and Info.UseColors and (Info.Styles <> nil) and
+    ((FHeaderColor <> clInfoText) or (FHeaderBackgroundColor <> clInfoBk)) then
+  begin
+    if FHeaderStyles = nil then
+      FHeaderStyles := TPPGListStyles.Create(nil);
+    FHeaderStyles.Assign(Info.Styles);
+    if (FHeaderColor <> clInfoText) and (FHeaderStyles.GroupHeader.TextColor = clDefault) then
+      FHeaderStyles.GroupHeader.TextColor := FHeaderColor;
+    if (FHeaderBackgroundColor <> clInfoBk) and (FHeaderStyles.GroupHeader.Color = clDefault) then
+      FHeaderStyles.GroupHeader.Color := FHeaderBackgroundColor;
+    HInfo := Info;
+    HInfo.Styles := FHeaderStyles;
+    inherited PaintItem(ACanvas, Index, R, Data, HInfo);
+    Exit;
+  end;
   inherited PaintItem(ACanvas, Index, R, Data, Info);
   if Data.IsHeader then
     Exit;
+  if not FFlat and not (HighContrastSupport and PPGIsHighContrast) then
+  begin
+    DrawNativeCheck(ACanvas, IndicatorRect(R), Data.Checked, Enabled and Data.Enabled, Index = HotIndex);
+    Exit;
+  end;
   if not Supports(Renderer, IPPGIndicatorRenderer, IR) then
     Supports(TPPGRendererRegistry.Get(TPPGRendererRegistry.DefaultName),
       IPPGIndicatorRenderer, IR);

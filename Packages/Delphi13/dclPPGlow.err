@@ -1,25 +1,27 @@
 ﻿Abhängigkeiten des Projekts werden überprüft...
-Erzeugen von dclPPGlow.dproj (Release, Win64)
+Erzeugen von dclPPGlow.dproj (Debug, Win32)
 brcc32 Befehlszeile für "dclPPGlow.vrc"
   c:\program files (x86)\embarcadero\studio\37.0\bin64\cgrc.exe -c65001 -= resinator.exe dclPPGlow.vrc -fodclPPGlow.res 
-dcc64 Befehlszeile für "dclPPGlow.dpk"
-  c:\program files (x86)\embarcadero\studio\37.0\bin\dcc64.exe -$D0 -$L- -$Y- --no-config -B -Q -Z -TX.bpl 
+dcc32 Befehlszeile für "dclPPGlow.dpk"
+  c:\program files (x86)\embarcadero\studio\37.0\bin\dcc32.exe -$O- -$W+ -$R+ -$Q+ --no-config -B -Q -Z -TX.bpl 
   -AGenerics.Collections=System.Generics.Collections;Generics.Defaults=System.Generics.Defaults;WinTypes=Winapi.Windows;WinProcs=Winapi.Windows;
-  DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE -DRELEASE;;FRAMEWORK_VCL -I"c:\program files (x86)\embarcadero\studio\37.0\lib\Win64\release\DE";
-  ..\..\Lib\37.0\Win64\Release;"c:\program files (x86)\embarcadero\studio\37.0\lib\Win64\release";
-  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win64;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
-  C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Win64;"c:\program files (x86)\embarcadero\studio\37.0\include" -LE..\..\Lib\37.0\Win64\Release 
-  -LN..\..\Lib\37.0\Win64\Release -NU..\..\Lib\37.0\Win64\Release -NSWinapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;System;Xml;Data;
-  Datasnap;Web;Soap;Vcl;Vcl.Imaging; -O..\..\Lib\37.0\Win64\Release;"c:\program files (x86)\embarcadero\studio\37.0\lib\Win64\release";
-  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win64;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
-  C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Win64;"c:\program files (x86)\embarcadero\studio\37.0\include" -R"c:\program files 
-  (x86)\embarcadero\studio\37.0\lib\Win64\release\DE";..\..\Lib\37.0\Win64\Release;"c:\program files (x86)\embarcadero\studio\37.0\lib\Win64\release";
-  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win64;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
-  C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Win64;"c:\program files (x86)\embarcadero\studio\37.0\include" -U"c:\program files 
-  (x86)\embarcadero\studio\37.0\lib\Win64\release\DE";..\..\Lib\37.0\Win64\Release;"c:\program files (x86)\embarcadero\studio\37.0\lib\Win64\release";
-  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win64;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
-  C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Win64;"c:\program files (x86)\embarcadero\studio\37.0\include" -K00400000 --description:"PPGlow 
-  Components - Designtime" -NB..\..\Lib\37.0\Win64\Release -NHC:\Users\Public\Documents\Embarcadero\Studio\37.0\hpp\Win64 
-  -NO..\..\Lib\37.0\Win64\Release  dclPPGlow.dpk   
+  DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE -DDEBUG;;FRAMEWORK_VCL -I"c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release\DE";
+  ..\..\Lib\37.0\Win32\Debug;"c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release";
+  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program 
+  files (x86)\embarcadero\studio\37.0\Imports";C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files 
+  (x86)\embarcadero\studio\37.0\include" -LE..\..\Lib\37.0\Win32\Debug -LN..\..\Lib\37.0\Win32\Debug -NU..\..\Lib\37.0\Win32\Debug -NSWinapi;System.Win;
+  Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging; -O..\..\Lib\37.0\Win32\Debug;"c:\program files 
+  (x86)\embarcadero\studio\37.0\lib\Win32\release";C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;
+  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
+  C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files (x86)\embarcadero\studio\37.0\include" -R"c:\program files 
+  (x86)\embarcadero\studio\37.0\lib\Win32\release\DE";..\..\Lib\37.0\Win32\Debug;"c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release";
+  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program 
+  files (x86)\embarcadero\studio\37.0\Imports";C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files 
+  (x86)\embarcadero\studio\37.0\include" -U"c:\program files (x86)\embarcadero\studio\37.0\lib\Win32\release\DE";..\..\Lib\37.0\Win32\Debug;"c:\program 
+  files (x86)\embarcadero\studio\37.0\lib\Win32\release";C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports;
+  C:\Users\Administrator\Documents\Embarcadero\Studio\37.0\Imports\Win32;"c:\program files (x86)\embarcadero\studio\37.0\Imports";
+  C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp;"c:\program files (x86)\embarcadero\studio\37.0\include" -K00400000 --description:"PPGlow 
+  Components - Designtime" -NB..\..\Lib\37.0\Win32\Debug -NHC:\Users\Public\Documents\Embarcadero\Studio\37.0\hpp\Win32 -NO..\..\Lib\37.0\Win32\Debug  
+  dclPPGlow.dpk   
 Erfolg
 Verstrichene Zeit: 00:00:00.4

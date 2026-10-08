@@ -19,7 +19,8 @@ TPPGCheckComboBox.ShowSelectAll = True: Erste Zeile der Liste ist „Alle auswä
 # --- TPPGColorPicker ---
 TPPGColorPicker.DefaultColorColor = Farbe, mit der das Feld „Standard" (Selected = clDefault, mit cbIncludeDefault im Style) dargestellt wird.
 TPPGColorPicker.MaxRecent = Wie viele zuletzt benutzte Farben gemerkt und als eigener Abschnitt gezeigt werden (0..32; 0 = kein Abschnitt).
-TPPGColorPicker.NoneColorColor = Wie TColorBox.NoneColorColor; wird gespeichert, beeinflusst die Darstellung von „Keine" (clNone) im PPGlow-Popup aber nicht.
+TPPGColorPicker.NoneColorColor = Füllung des Farbfelds für „Keine“ (clNone) im Feld und im Popup, wie TColorBox.NoneColorColor. Die Vorgabe clBlack zeigt das Feld leer mit roter Diagonale (Preset-Optik); jede andere Farbe füllt es (die Diagonale bleibt).
+> `ColorPicker1.NoneColorColor := clWhite;`
 TPPGColorPicker.RecentColors = Zuletzt benutzte Farben als Hexwerte „#RRGGBB", die neueste zuerst. Wird beim Wählen automatisch fortgeschrieben und in der DFM gespeichert; kann zum Speichern in einer Einstellung gelesen und wieder gesetzt werden.
 > `Ini.WriteString('Farben', 'Zuletzt', PPGColorPicker1.RecentColors.CommaText);`
 TPPGColorPicker.Selected = Die gewählte Farbe. clNone = „Keine", clDefault = „Standard". Setzen aus Code löst kein OnChange aus.
@@ -74,9 +75,10 @@ TPPGCustomDatePicker.Checked = Nur mit ShowCheckbox: True = ein Datum ist gesetz
 TPPGCustomDatePicker.Date = Das gewählte Datum (ohne Uhrzeit). Setzen aus Code löst kein OnChange aus; Werte außerhalb MinDate/MaxDate werden begrenzt.
 > `DatePicker1.Date := IncDay(Date, 7);`
 TPPGCustomDatePicker.DateFormat = dfShort (kurzes Datum, z. B. 08.10.2026) oder dfLong (langes Datum mit Wochentag) nach den Ländereinstellungen, wenn Format leer ist.
-TPPGCustomDatePicker.DateMode = Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts (immer Feld mit Kalender-Popup).
+TPPGCustomDatePicker.DateMode = dmComboBox: Kalender zum Aufklappen. dmUpDown: Auf/Ab-Knöpfe statt Kalender (Tag, mit Strg Monat), kein Aufklappen.
 TPPGCustomDatePicker.Format = Eigenes Anzeigeformat nach FormatDateTime (z. B. „dd.mm.yyyy" oder „ddd, d. mmmm"); leer = DateFormat.
-TPPGCustomDatePicker.Kind = Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts. Für Uhrzeiten TPPGTimePicker verwenden.
+TPPGCustomDatePicker.Kind = dtkDate: Datum mit Kalender. dtkTime: Uhrzeit (LongTimeFormat bzw. Format), Auf/Ab-Knöpfe statt Kalender, Oben/Unten = Minute, Strg = Stunde; der Datumsteil bleibt erhalten. dtkDateTime (ab Delphi 10.4): Datum und Uhrzeit. Der DB-DatePicker überträgt bei Uhrzeit den ganzen Wert.
+> `DatePicker1.Kind := dtkTime; DatePicker1.Time := EncodeTime(9, 30, 0, 0);`
 TPPGCustomDatePicker.MaxDate = Spätestes wählbares Datum; 0 = keine Grenze. Spätere Tage sind im Kalender gesperrt, Eingaben werden begrenzt.
 TPPGCustomDatePicker.MinDate = Frühestes wählbares Datum; 0 = keine Grenze.
 > `DatePicker1.MinDate := Date;` (nur heute und später)
@@ -84,7 +86,8 @@ TPPGCustomDatePicker.OnCloseUp = Der Kalender wurde geschlossen (mit oder ohne �
 TPPGCustomDatePicker.OnCustomDrawDay = Vor dem Zeichnen jedes Tages im aufklappenden Kalender: Style für ADate ändern (z. B. Feiertage fett und rot) oder mit DefaultDraw := False selbst zeichnen.
 > `if IstFeiertag(ADate) then begin Style.TextColor := clRed; Style.FontStyle := [fsBold]; end;`
 TPPGCustomDatePicker.OnDropDown = Der Kalender klappt gleich auf.
-TPPGCustomDatePicker.ParseInput = Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts (Eingaben werden immer geprüft).
+TPPGCustomDatePicker.ParseInput = True: Beim Übernehmen der Eingabe wird zuerst OnUserInput gefragt (eigene Auswertung, z. B. „morgen“ oder „+3“). DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert; AllowChange := False lehnt ab (ValidationState = pvsError). Ohne Ereignis gilt die normale Prüfung.
+> `DatePicker1.ParseInput := True; DatePicker1.OnUserInput := Eingabe;`
 TPPGCustomDatePicker.ShowCheckbox = True: Links im Feld erscheint ein Kontrollkästchen; ohne Haken (Checked = False) gilt „kein Datum".
 TPPGCustomDatePicker.Time = Uhrzeitanteil des Werts (wie TDateTimePicker.Time); die Anzeige zeigt nur das Datum.
 
@@ -315,3 +318,5 @@ TPPGTagEdit.Suggestions = Vorschläge, die beim Tippen im Aufklappfenster ersche
 > `TagEdit1.Suggestions.CommaText := 'Vertrieb,Einkauf,Technik';`
 TPPGTagEdit.Tags = Die aktuellen Tags, je Zeile eines. Änderungen aus Code lösen keine Ereignisse aus.
 > `TagEdit1.Tags.Add('Wichtig');`
+TPPGCustomDatePicker.OnUserInput = Nur mit ParseInput = True: Die Eingabe wird übernommen (Enter, Fokusverlust). UserString ist der eingegebene Text, DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert und kann ersetzt werden; AllowChange := False lehnt ab (Feld wird rot markiert).
+> `if SameText(UserString, 'morgen') then DateAndTime := Date + 1 else if UserString = '' then AllowChange := False;`

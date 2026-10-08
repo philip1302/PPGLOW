@@ -57,7 +57,7 @@ TPPGCustomLinkLabel.OnLinkClick = Ein Link wurde geklickt oder per Enter/Leertas
 TPPGCustomProgressBar.MarqueeInterval = Bei Style = pbstMarquee: Millisekunden je Animationsschritt (1..1000, wie TProgressBar); ein Durchlauf hat 150 Schritte. Kleiner = schneller.
 TPPGCustomProgressBar.Orientation = Waagerechter (pbHorizontal) oder senkrechter (pbVertical, füllt von unten) Balken.
 TPPGCustomProgressBar.ShowText = True: Zeigt Caption bzw. ohne Caption den Fortschritt in Prozent im Balken.
-TPPGCustomProgressBar.Smooth = Nur zur DFM-Kompatibilität mit TProgressBar; ohne Wirkung (PPGlow zeichnet immer einen durchgehenden Balken).
+TPPGCustomProgressBar.Smooth = True: durchgehender Balken. False: Balken aus Blöcken mit kleinen Lücken (klassisches TProgressBar), in jedem Preset. Gilt nicht für Marquee. Die Vorgabe ist True, damit bestehende Formulare glatt bleiben.
 TPPGCustomProgressBar.State = pbsNormal, pbsError (Füllung rot) oder pbsPaused (Füllung gelb), wie bei Windows.
 > `ProgressBar1.State := pbsError;` nach einem Abbruch.
 TPPGCustomProgressBar.Step = Schrittweite für die Methode StepIt (wie TProgressBar).

@@ -19,7 +19,8 @@ uses
   PPG.Planner, PPG.Planner.Model, PPG.Kanban, PPG.Kanban.Items, PPG.Chart, PPG.Chart.Series,
   PPG.Expander, PPG.GroupBox, PPG.Gauge, PPG.Feedback, System.DateUtils, Vcl.ImgList,
   PPG.Render.Gdi, PPG.Render.GdiPlus, PPG.Ribbon, PPG.Ribbon.Items, PPG.Ribbon.Layout,
-  PPG.Print, PPG.Kanban.Print, PPG.Edit, PPG.Panel, System.TypInfo, Vcl.Imaging.pngimage;
+  PPG.Print, PPG.Kanban.Print, PPG.Edit, PPG.Panel, System.TypInfo, Vcl.Imaging.pngimage,
+  PPG.CheckListBox, PPG.ProgressBar, PPG.ColorPicker, PPG.Controls.Field;
 
 type
   TCustomThemeTests = class(TTestCase)
@@ -203,6 +204,30 @@ type
     procedure ShadowShrinksBodyAndDarkens;
     procedure PanelShadowKeepsChildrenInside;
     procedure CornersAndShadowStream;
+  end;
+
+  // Properties, die bisher nur fuer die DFM-Kompatibilitaet gespeichert wurden
+  TCustomVclPropTests = class(TControlTestCase)
+  private
+    FTomorrowAsked: Boolean;
+    procedure UserInput(Sender: TObject; const UserString: string; var DateAndTime: TDateTime;
+      var AllowChange: Boolean);
+    function NewList(N: Integer): TPPGListBox;
+    procedure Shot(C: TWinControl; const Name: string);
+  published
+    procedure ListBoxColumnsArrangeAndNavigate;
+    procedure ListBoxScrollWidthWidensRows;
+    procedure ListBoxIntegralHeightSnaps;
+    procedure ListBoxTabWidthExpandsTabs;
+    procedure CheckListBoxHeaderColorsAndFlat;
+    procedure TreeViewRowSelectFalseHighlightsText;
+    procedure ProgressBarSmoothFalseDrawsBlocks;
+    procedure TabsLeftAndRight;
+    procedure TabsScrollOpposite;
+    procedure ColorPickerNoneColorColor;
+    procedure DatePickerTimeKind;
+    procedure DatePickerUpDownMode;
+    procedure DatePickerParseInput;
   end;
 
 implementation
@@ -2594,6 +2619,472 @@ begin
   end;
 end;
 
+{ TCustomVclPropTests }
+
+type
+  TListAccess = class(TPPGListBox);
+  TDateAccess = class(TPPGDatePicker);
+
+procedure TCustomVclPropTests.Shot(C: TWinControl; const Name: string);
+var
+  B: TBitmap;
+  Png: TPngImage;
+begin
+  // Bild fuer die Sichtpruefung (nur mit PPG_SHOTS)
+  if GetEnvironmentVariable('PPG_SHOTS') = '' then
+    Exit;
+  B := RenderToBitmap(C);
+  Png := TPngImage.Create;
+  try
+    Png.Assign(B);
+    Png.SaveToFile(IncludeTrailingPathDelimiter(GetEnvironmentVariable('PPG_SHOTS')) + Name + '.png');
+  finally
+    Png.Free;
+    B.Free;
+  end;
+end;
+
+function TCustomVclPropTests.NewList(N: Integer): TPPGListBox;
+var
+  I: Integer;
+begin
+  Result := TPPGListBox.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 300, 120);
+  for I := 0 to N - 1 do
+    Result.Items.Add('Eintrag ' + IntToStr(I));
+  Result.HandleNeeded;
+end;
+
+procedure TCustomVclPropTests.ListBoxColumnsArrangeAndNavigate;
+var
+  L: TPPGListBox;
+  R0, R: TRect;
+  J: Integer;
+  Key: Word;
+begin
+  L := NewList(30);
+  L.Columns := 3;
+  Shot(L, 'vcl-list-columns');
+  R0 := L.ItemRect(0);
+  J := 1;
+  while (J < 30) and (L.ItemRect(J).Left = R0.Left) do
+    Inc(J);
+  CheckTrue((J > 1) and (J < 30), 'zweite Spalte ab Eintrag ' + IntToStr(J));
+  R := L.ItemRect(J);
+  CheckEquals(R0.Top, R.Top, 'neue Spalte beginnt oben');
+  CheckTrue(R.Left - R0.Left >= (R0.Right - R0.Left) - 2, 'Spalten nebeneinander');
+  CheckEquals(J, L.ItemAtPos((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+  L.ItemIndex := 0;
+  Key := VK_RIGHT;
+  TListAccess(L).KeyDown(Key, []);
+  CheckEquals(J, L.ItemIndex, 'Pfeil rechts = eine Spalte weiter');
+  Key := VK_LEFT;
+  TListAccess(L).KeyDown(Key, []);
+  CheckEquals(0, L.ItemIndex, 'Pfeil links zurueck');
+  try
+    L.Columns := -1;
+    Fail('EPPGPropertyError erwartet');
+  except
+    on E: EPPGPropertyError do
+      CheckEquals(3, L.Columns);
+  end;
+  L.Columns := 0;
+  CheckEquals(L.ItemRect(0).Top + (L.ItemRect(0).Bottom - L.ItemRect(0).Top), L.ItemRect(1).Top,
+    'wieder einspaltig');
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TCustomVclPropTests.ListBoxScrollWidthWidensRows;
+var
+  L: TPPGListBox;
+  W0: Integer;
+begin
+  L := NewList(5);
+  L.Width := 150;
+  W0 := L.ItemRect(0).Right - L.ItemRect(0).Left;
+  L.ScrollWidth := 500;
+  CheckTrue(L.ItemRect(0).Right - L.ItemRect(0).Left >= 500,
+    Format('Zeile so breit wie ScrollWidth: %d (vorher %d)', [L.ItemRect(0).Right - L.ItemRect(0).Left, W0]));
+  CheckTrue(L.ContentWidth >= 500, 'waagerechter Bildlauf');
+  L.ScrollWidth := 0;
+  CheckEquals(W0, L.ItemRect(0).Right - L.ItemRect(0).Left, 'ohne ScrollWidth');
+end;
+
+procedure TCustomVclPropTests.ListBoxIntegralHeightSnaps;
+var
+  L: TPPGListBox;
+  RowH, Frame: Integer;
+begin
+  L := NewList(20);
+  RowH := TListAccess(L).DefaultItemHeight;
+  Frame := 2 * TListAccess(L).FrameInset;
+  L.IntegralHeight := True;
+  L.Height := 5 * RowH + Frame + RowH div 2;
+  CheckEquals(5 * RowH + Frame, L.Height, 'auf ganze Zeilen gerundet');
+  L.Height := 10;
+  CheckEquals(RowH + Frame, L.Height, 'mindestens eine Zeile');
+  L.IntegralHeight := False;
+  L.Height := 5 * RowH + Frame + RowH div 2;
+  CheckEquals(5 * RowH + Frame + RowH div 2, L.Height, 'ohne IntegralHeight frei');
+end;
+
+procedure TCustomVclPropTests.ListBoxTabWidthExpandsTabs;
+var
+  L: TPPGListBox;
+  B0, B1: TBitmap;
+
+  function RightmostDark(B: TBitmap): Integer;
+  var
+    X, Y: Integer;
+  begin
+    Result := -1;
+    for Y := 0 to 30 do
+      for X := 0 to B.Width - 1 do
+        if PPGRelativeLuminance(B.Canvas.Pixels[X, Y]) < 0.3 then
+          if X > Result then
+            Result := X;
+  end;
+
+begin
+  L := NewList(0);
+  L.Items.Add('A'#9'B');
+  B0 := RenderToBitmap(L);
+  L.TabWidth := 120;
+  B1 := RenderToBitmap(L);
+  try
+    CheckTrue(RightmostDark(B1) > RightmostDark(B0) + 20,
+      Format('B rueckt an den Tabstopp: %d / %d', [RightmostDark(B1), RightmostDark(B0)]));
+  finally
+    B0.Free;
+    B1.Free;
+  end;
+  CheckTrue(TPPGItemPainter.TabUnitsToPixels(L.Font, 32) > 0);
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TCustomVclPropTests.CheckListBoxHeaderColorsAndFlat;
+var
+  C: TPPGCheckListBox;
+  B: TBitmap;
+  N0, N1: Integer;
+  S: string;
+begin
+  C := TPPGCheckListBox.Create(FForm);
+  C.Parent := FForm;
+  C.SetBounds(0, 0, 220, 120);
+  C.Items.Add('Gruppe');
+  C.Items.Add('Eins');
+  C.Header[0] := True;
+  C.HandleNeeded;
+  B := RenderToBitmap(C);
+  try
+    N0 := CountColor(B, clYellow);
+  finally
+    B.Free;
+  end;
+  C.HeaderBackgroundColor := clYellow;
+  B := RenderToBitmap(C);
+  try
+    N1 := CountColor(B, clYellow);
+  finally
+    B.Free;
+  end;
+  CheckEquals(0, N0, 'Vorgabe: Preset-Optik');
+  CheckTrue(N1 > 300, 'Ueberschrift gelb: ' + IntToStr(N1));
+  // GroupHeader hat Vorrang
+  C.Styles.GroupHeader.Color := clAqua;
+  B := RenderToBitmap(C);
+  try
+    CheckEquals(0, CountColor(B, clYellow), 'Styles.GroupHeader gewinnt');
+  finally
+    B.Free;
+  end;
+  C.Flat := False;
+  Shot(C, 'vcl-checklist-native');
+  B := RenderToBitmap(C);
+  B.Free;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+  S := ComponentToText(C);
+  CheckTrue(Pos('Flat = False', S) > 0, S);
+  CheckTrue(Pos('HeaderBackgroundColor = clYellow', S) > 0, S);
+end;
+
+procedure TCustomVclPropTests.TreeViewRowSelectFalseHighlightsText;
+var
+  T: TPPGTreeView;
+  R: TRect;
+  B: TBitmap;
+  Full, TextOnly: Integer;
+
+  function LimeAt(X, Y: Integer): Boolean;
+  begin
+    Result := B.Canvas.Pixels[X, Y] = clLime;
+  end;
+
+begin
+  T := TPPGTreeView.Create(FForm);
+  T.Parent := FForm;
+  T.SetBounds(0, 0, 300, 120);
+  T.Items.Add(nil, 'Knoten');
+  T.HandleNeeded;
+  T.Styles.Selection.Color := clLime;
+  T.Styles.SelectionInactive.Color := clLime;
+  T.Selected := T.Items[0];
+  R := T.ItemRect(0);
+  B := RenderToBitmap(T);
+  try
+    Full := Ord(LimeAt(R.Right - 12, (R.Top + R.Bottom) div 2));
+  finally
+    B.Free;
+  end;
+  T.RowSelect := False;
+  B := RenderToBitmap(T);
+  try
+    TextOnly := Ord(LimeAt(R.Right - 12, (R.Top + R.Bottom) div 2));
+    if GetEnvironmentVariable('PPG_SHOTS') <> '' then
+      B.SaveToFile(IncludeTrailingPathDelimiter(GetEnvironmentVariable('PPG_SHOTS')) + 'tree-rowselect.bmp');
+    CheckTrue(CountColor(B, clLime) > 100, 'Text weiter hervorgehoben: ' + IntToStr(CountColor(B, clLime)));
+  finally
+    B.Free;
+  end;
+  CheckEquals(1, Full, 'RowSelect: ganze Zeile');
+  CheckEquals(0, TextOnly, 'ohne RowSelect: rechts frei');
+end;
+
+procedure TCustomVclPropTests.ProgressBarSmoothFalseDrawsBlocks;
+var
+  P: TPPGProgressBar;
+  B: TBitmap;
+  Y, Changes0, Changes1: Integer;
+
+  function CountChanges(Bmp: TBitmap): Integer;
+  var
+    C, Last: TColor;
+    X: Integer;
+  begin
+    Result := 0;
+    Last := Bmp.Canvas.Pixels[0, Y];
+    for X := 1 to Bmp.Width - 1 do
+    begin
+      C := Bmp.Canvas.Pixels[X, Y];
+      if C <> Last then
+        Inc(Result);
+      Last := C;
+    end;
+  end;
+
+begin
+  P := TPPGProgressBar.Create(FForm);
+  P.Parent := FForm;
+  P.SetBounds(0, 0, 300, 20);
+  P.Animation.Enabled := False;
+  P.Position := 80;
+  CheckTrue(P.Smooth, 'Vorgabe glatt');
+  CheckEquals(0, Pos('Smooth', ComponentToText(P)));
+  Y := 10;
+  B := RenderToBitmap(P);
+  try
+    Changes0 := CountChanges(B);
+  finally
+    B.Free;
+  end;
+  P.Smooth := False;
+  Shot(P, 'vcl-progress-blocks');
+  B := RenderToBitmap(P);
+  try
+    Changes1 := CountChanges(B);
+  finally
+    B.Free;
+  end;
+  CheckTrue(Changes1 > Changes0 + 10, Format('Bloecke: %d / %d Farbwechsel', [Changes1, Changes0]));
+  CheckTrue(Pos('Smooth = False', ComponentToText(P)) > 0);
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TCustomVclPropTests.TabsLeftAndRight;
+var
+  PC: TPPGPageControl;
+  I: Integer;
+  R0, R1: TRect;
+  P: TPPGTabSheet;
+begin
+  PC := TPPGPageControl.Create(FForm);
+  PC.Parent := FForm;
+  PC.SetBounds(0, 0, 400, 240);
+  for I := 0 to 2 do
+  begin
+    P := TPPGTabSheet.Create(FForm);
+    P.PageControl := PC;
+    P.Caption := 'Seite ' + IntToStr(I);
+  end;
+  PC.ActivePageIndex := 0;
+  PC.HandleNeeded;
+  PC.TabPosition := tpLeft;
+  R0 := PC.TabRect(0);
+  R1 := PC.TabRect(1);
+  Shot(PC, 'vcl-tabs-left');
+  CheckTrue(R0.Left < 20, 'links');
+  CheckEquals(R0.Left, R1.Left, 'untereinander');
+  CheckTrue(R1.Top >= R0.Bottom, 'zweiter Reiter darunter');
+  CheckTrue(PC.ActivePage.Left >= R0.Right, 'Seite rechts der Leiste');
+  CheckTrue(PC.ActivePage.Height > 150, 'Seite ueber die ganze Hoehe');
+  PC.TabPosition := tpRight;
+  R0 := PC.TabRect(0);
+  Shot(PC, 'vcl-tabs-right');
+  CheckTrue(R0.Left > 200, 'rechts');
+  CheckTrue(PC.ActivePage.Left + PC.ActivePage.Width <= R0.Left, 'Seite links der Leiste');
+  RenderToBitmap(PC).Free;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TCustomVclPropTests.TabsScrollOpposite;
+var
+  T: TPPGTabControl;
+  I, Bottom0, Bottom1: Integer;
+
+  function LowestTab: Integer;
+  var
+    J: Integer;
+  begin
+    Result := 0;
+    for J := 0 to T.Tabs.Count - 1 do
+      if T.TabRect(J).Bottom > Result then
+        Result := T.TabRect(J).Bottom;
+  end;
+
+begin
+  T := TPPGTabControl.Create(FForm);
+  T.Parent := FForm;
+  T.SetBounds(0, 0, 260, 260);
+  for I := 0 to 11 do
+    T.Tabs.Add('Reiter ' + IntToStr(I));
+  T.MultiLine := True;
+  T.HandleNeeded;
+  T.TabIndex := 0;
+  Bottom0 := LowestTab;
+  CheckTrue(Bottom0 < 130, 'ohne ScrollOpposite: alle Reihen oben');
+  T.ScrollOpposite := True;
+  Shot(T, 'vcl-tabs-opposite');
+  Bottom1 := LowestTab;
+  CheckTrue(Bottom1 > 200, Format('Reihen hinter dem gewaehlten unten: %d', [Bottom1]));
+  // letzte Reihe waehlen: nichts mehr auf der Gegenseite
+  T.TabIndex := 11;
+  CheckTrue(LowestTab < 130, 'gewaehlte Reihe an der Seite');
+  RenderToBitmap(T).Free;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TCustomVclPropTests.ColorPickerNoneColorColor;
+var
+  C: TPPGColorPicker;
+  B: TBitmap;
+  N0, N1: Integer;
+begin
+  C := TPPGColorPicker.Create(FForm);
+  C.Parent := FForm;
+  C.SetBounds(0, 0, 200, 32);
+  C.Selected := clNone;
+  B := RenderToBitmap(C);
+  try
+    N0 := CountColor(B, clLime);
+  finally
+    B.Free;
+  end;
+  C.NoneColorColor := clLime;
+  B := RenderToBitmap(C);
+  try
+    N1 := CountColor(B, clLime);
+  finally
+    B.Free;
+  end;
+  CheckEquals(0, N0);
+  CheckTrue(N1 > 50, 'Feld "Keine" gefuellt: ' + IntToStr(N1));
+end;
+
+procedure TCustomVclPropTests.DatePickerTimeKind;
+var
+  D: TPPGDatePicker;
+  Key: Word;
+begin
+  D := TPPGDatePicker.Create(FForm);
+  D.Parent := FForm;
+  D.HandleNeeded;
+  D.DateTime := EncodeDateTime(2026, 10, 8, 14, 30, 0, 0);
+  D.Kind := dtkTime;
+  Shot(D, 'vcl-datepicker-time');
+  CheckEquals(FormatDateTime(FormatSettings.LongTimeFormat, D.DateTime), D.Text, 'Uhrzeit');
+  Key := VK_UP;
+  TDateAccess(D).FieldKeyDown(Key, []);
+  CheckEquals(EncodeDateTime(2026, 10, 8, 14, 31, 0, 0), D.DateTime, 'Minute +1');
+  Key := VK_DOWN;
+  TDateAccess(D).FieldKeyDown(Key, [ssCtrl]);
+  CheckEquals(EncodeDateTime(2026, 10, 8, 13, 31, 0, 0), D.DateTime, 'Stunde -1');
+  D.Text := '09:15:00';
+  TDateAccess(D).CommitText(True);
+  CheckEquals(EncodeDateTime(2026, 10, 8, 9, 15, 0, 0), D.DateTime, 'Eingabe der Uhrzeit');
+  D.DropDown;
+  CheckFalse(D.DroppedDown, 'kein Kalender');
+  CheckTrue(Pos('Kind = dtkTime', ComponentToText(D)) > 0);
+end;
+
+procedure TCustomVclPropTests.DatePickerUpDownMode;
+var
+  D: TPPGDatePicker;
+begin
+  D := TPPGDatePicker.Create(FForm);
+  D.Parent := FForm;
+  D.HandleNeeded;
+  D.Date := EncodeDate(2026, 10, 8);
+  D.DateMode := dmUpDown;
+  Shot(D, 'vcl-datepicker-updown');
+  CheckTrue(IsRectEmpty(TDateAccess(D).ButtonRect(40)), 'kein Kalender-Knopf');
+  CheckFalse(IsRectEmpty(TDateAccess(D).ButtonRect(42)), 'Auf-Knopf');
+  TDateAccess(D).ButtonClick(42);
+  CheckEquals(EncodeDate(2026, 10, 9), D.Date, 'Auf = naechster Tag');
+  TDateAccess(D).ButtonClick(43);
+  TDateAccess(D).ButtonClick(43);
+  CheckEquals(EncodeDate(2026, 10, 7), D.Date, 'Ab = Vortag');
+  D.DropDown;
+  CheckFalse(D.DroppedDown, 'kein Kalender');
+  RenderToBitmap(D).Free;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TCustomVclPropTests.UserInput(Sender: TObject; const UserString: string;
+  var DateAndTime: TDateTime; var AllowChange: Boolean);
+begin
+  FTomorrowAsked := True;
+  if SameText(UserString, 'morgen') then
+    DateAndTime := Date + 1
+  else
+    AllowChange := False;
+end;
+
+procedure TCustomVclPropTests.DatePickerParseInput;
+var
+  D: TPPGDatePicker;
+begin
+  FTomorrowAsked := False;
+  D := TPPGDatePicker.Create(FForm);
+  D.Parent := FForm;
+  D.HandleNeeded;
+  D.Date := EncodeDate(2026, 1, 1);
+  D.OnUserInput := UserInput;
+  D.Text := 'morgen';
+  TDateAccess(D).CommitText(True);
+  CheckFalse(FTomorrowAsked, 'ohne ParseInput nicht gefragt');
+  CheckEquals(EncodeDate(2026, 1, 1), D.Date);
+  D.ParseInput := True;
+  D.Text := 'morgen';
+  CheckTrue(TDateAccess(D).CommitText(True));
+  CheckTrue(FTomorrowAsked);
+  CheckEquals(Date + 1, D.Date, 'eigene Auswertung');
+  D.Text := 'quatsch';
+  CheckFalse(TDateAccess(D).CommitText(True), 'abgelehnt');
+  CheckTrue(D.ValidationState = pvsError);
+end;
+
 initialization
   RegisterTest('Anpassbarkeit', TCustomThemeTests.Suite);
   RegisterTest('Anpassbarkeit', TCustomAppearanceTests.Suite);
@@ -2603,5 +3094,6 @@ initialization
   RegisterTest('Anpassbarkeit', TCustomViewTests.Suite);
   RegisterTest('Anpassbarkeit', TCustomButtonTests.Suite);
   RegisterTest('Anpassbarkeit', TCustomRestTests.Suite);
+  RegisterTest('Anpassbarkeit', TCustomVclPropTests.Suite);
 
 end.

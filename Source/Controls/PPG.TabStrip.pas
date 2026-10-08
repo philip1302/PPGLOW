@@ -14,6 +14,10 @@ unit PPG.TabStrip;
     TTabControl.Style).
   - Element-Stile (TPPGTabStyles), Farben je Reiter und eigenes Zeichnen ueber
     OnDrawTab des Besitzers.
+  - Senkrecht (Vertical, TabPosition tpLeft/tpRight): Reiter untereinander,
+    Breite = breitester Reiter, Indikator an der Seitenkante, Pfeile hoch/runter.
+  - ScrollOpposite (MultiLine): Reihen zwischen gewaehltem Reiter und Seite
+    liegen auf der Gegenseite (OppositeRect), wie bei TPageControl.
   - Hit-Test fuer Reiter, Schliessen-Knopf und Pfeile, Hover-Zustand.
   - Unterstrich (Indikator) gleitet beim Wechsel ueber den gemeinsamen
     Animator von der alten zur neuen Position.
@@ -125,6 +129,12 @@ type
     FAvailWidth: Integer;
     FRowCount: Integer;
     FFonts: TPPGFontCache;
+    FVertical: Boolean;
+    FScrollOpposite: Boolean;
+    FOppRect: TRect;
+    FOppRow: array of Boolean;
+    procedure LayoutVertical(const StripRect: TRect);
+    function SelectedRow(const Starts: TArray<Integer>; RowsN: Integer): Integer;
     /// Reihen fuer MultiLine: Startposition je Reihe (Reihenfolge der Reiter).
     function PackRows(Avail: Integer; out Starts: TArray<Integer>): Integer;
     procedure LayoutMultiLine(const StripRect: TRect);
@@ -150,6 +160,13 @@ type
     function PosOf(OwnerIndex: Integer): Integer;
     /// Hoehe der Leiste in px (Reiter + Abstand zum Rand).
     function StripHeight: Integer;
+    /// Hoehe eines Reiters (eine Reihe) in px.
+    function TabRowHeight: Integer;
+    /// Senkrecht: Breite der Leiste (breitester Reiter + Abstand).
+    function StripWidth: Integer;
+    /// ScrollOpposite: Reihen auf der Gegenseite bzw. deren Hoehe (0 = keine).
+    function OppositeRows: Integer;
+    function OppositeHeight: Integer;
     /// Berechnet alle Rechtecke (Client-Koordinaten des Besitzers).
     procedure Layout(const StripRect: TRect);
     function HitTest(X, Y: Integer; out OwnerIndex: Integer): TPPGTabHit;
@@ -180,6 +197,11 @@ type
     property MultiLine: Boolean read FMultiLine write FMultiLine;
     property RaggedRight: Boolean read FRaggedRight write FRaggedRight;
     property ButtonStyle: TPPGTabButtonStyle read FButtonStyle write FButtonStyle;
+    /// Reiter untereinander (tpLeft/tpRight); Bottom = Leiste rechts.
+    property Vertical: Boolean read FVertical write FVertical;
+    property ScrollOpposite: Boolean read FScrollOpposite write FScrollOpposite;
+    /// Bereich fuer die Reihen auf der Gegenseite (setzt der Besitzer vor dem Layout).
+    property OppositeRect: TRect read FOppRect write FOppRect;
     /// Breite fuer StripHeight mit MultiLine (setzt der Besitzer vor dem Layout).
     property AvailWidth: Integer read FAvailWidth write FAvailWidth;
     property Overflow: Boolean read FOverflow;
@@ -321,10 +343,9 @@ begin
       Exit(I);
 end;
 
-function TPPGTabStrip.StripHeight: Integer;
+function TPPGTabStrip.TabRowHeight: Integer;
 var
   H: Integer;
-  Starts: TArray<Integer>;
 begin
   if FTabHeight > 0 then
     H := Scale(FTabHeight)
@@ -338,10 +359,68 @@ begin
     if (FImages <> nil) and (FImages.Height + 2 * Scale(4) > H) then
       H := FImages.Height + 2 * Scale(4);
   end;
+  Result := H;
+end;
+
+function TPPGTabStrip.StripHeight: Integer;
+var
+  H: Integer;
+  Starts: TArray<Integer>;
+begin
+  H := TabRowHeight;
   Result := H + Scale(StripPad);
-  // MultiLine: so viele Reihen, wie die Reiter bei AvailWidth brauchen
-  if FMultiLine and (FAvailWidth > 0) and (Length(FTabs) > 0) then
-    Result := Result + (PackRows(FAvailWidth - 2 * Scale(StripPad), Starts) - 1) * H;
+  // MultiLine: so viele Reihen, wie die Reiter bei AvailWidth brauchen (ohne
+  // die Reihen auf der Gegenseite)
+  if FMultiLine and not FVertical and (FAvailWidth > 0) and (Length(FTabs) > 0) then
+    Result := Result + (PackRows(FAvailWidth - 2 * Scale(StripPad), Starts) - 1 - OppositeRows) * H;
+end;
+
+function TPPGTabStrip.StripWidth: Integer;
+var
+  I, W: Integer;
+begin
+  W := Scale(40);
+  for I := 0 to High(FTabs) do
+    if TabWidthAt(I) > W then
+      W := TabWidthAt(I);
+  Result := W + Scale(StripPad);
+end;
+
+function TPPGTabStrip.SelectedRow(const Starts: TArray<Integer>; RowsN: Integer): Integer;
+var
+  I: Integer;
+begin
+  Result := RowsN - 1;
+  if FSelected < 0 then
+    Exit;
+  for I := 0 to RowsN - 1 do
+    if (FSelected >= Starts[I]) and ((I = RowsN - 1) or (FSelected < Starts[I + 1])) then
+      Exit(I);
+end;
+
+function TPPGTabStrip.OppositeRows: Integer;
+var
+  Starts: TArray<Integer>;
+  RowsN: Integer;
+begin
+  Result := 0;
+  if not FScrollOpposite or not FMultiLine or FVertical or (FAvailWidth <= 0) or
+    (Length(FTabs) = 0) then
+    Exit;
+  RowsN := PackRows(FAvailWidth - 2 * Scale(StripPad), Starts);
+  // Reihen hinter der gewaehlten (zwischen ihr und der Seite) wechseln die Seite
+  Result := RowsN - 1 - SelectedRow(Starts, RowsN);
+end;
+
+function TPPGTabStrip.OppositeHeight: Integer;
+var
+  N: Integer;
+begin
+  N := OppositeRows;
+  if N = 0 then
+    Result := 0
+  else
+    Result := N * TabRowHeight + Scale(StripPad);
 end;
 
 function TPPGTabStrip.TabWidthAt(Pos: Integer): Integer;
@@ -399,7 +478,7 @@ end;
 
 procedure TPPGTabStrip.LayoutMultiLine(const StripRect: TRect);
 var
-  N, I, J, X, TabH, Left0, Right0, RowsN, R0, R1, RowSel, Slot, Extra, Sum, CS: Integer;
+  N, I, J, X, TabH, Left0, Right0, RowsN, R0, R1, RowSel, Slot, Extra, Sum, CS, Opp: Integer;
   Starts: TArray<Integer>;
   W: array of Integer;
   Order: array of Integer;
@@ -416,6 +495,16 @@ begin
   SetLength(W, N);
   for I := 0 to N - 1 do
     W[I] := TabWidthAt(I);
+  Opp := 0;
+  if FScrollOpposite then
+  begin
+    // Reihen 0..gewaehlte bleiben (gewaehlte an der Seite), der Rest geht auf die
+    // Gegenseite; die Reihenhoehe kommt aus der eigenen Reihenzahl
+    Opp := RowsN - 1 - SelectedRow(Starts, RowsN);
+    TabH := (StripRect.Bottom - StripRect.Top - Scale(StripPad)) div (RowsN - Opp);
+    if TabH < 1 then
+      TabH := 1;
+  end;
   // Reihe des gewaehlten Reiters liegt an der Seite (unten bzw. bei Reitern
   // unten oben); die uebrigen Reihen behalten ihre Reihenfolge
   RowSel := RowsN - 1;
@@ -431,6 +520,9 @@ begin
       Inc(J);
     end;
   Order[RowsN - 1] := RowSel;
+  if Opp > 0 then
+    for I := 0 to RowsN - 1 do
+      Order[I] := I;
   CS := Scale(CloseSize);
   for Slot := 0 to RowsN - 1 do
   begin
@@ -455,7 +547,23 @@ begin
     X := Left0;
     for J := R0 to R1 do
     begin
-      if FBottom then
+      FOppRow[J] := (Opp > 0) and (I > RowsN - 1 - Opp);
+      if FOppRow[J] then
+      begin
+        // Gegenseite: Reihe direkt hinter der gewaehlten liegt an der Seite
+        if FBottom then
+          R.Top := FOppRect.Bottom - (I - (RowsN - 1 - Opp)) * TabH
+        else
+          R.Top := FOppRect.Top + (I - (RowsN - Opp)) * TabH;
+      end
+      else if Opp > 0 then
+      begin
+        if FBottom then
+          R.Top := StripRect.Top + (RowsN - 1 - Opp - I) * TabH
+        else
+          R.Top := StripRect.Top + Scale(StripPad) + I * TabH;
+      end
+      else if FBottom then
         R.Top := StripRect.Top + (RowsN - 1 - Slot) * TabH
       else
         R.Top := StripRect.Top + Scale(StripPad) + Slot * TabH;
@@ -484,6 +592,14 @@ begin
   FPrevRect := Rect(0, 0, 0, 0);
   FNextRect := Rect(0, 0, 0, 0);
   FTabArea := Rect(Left0, StripRect.Top, Right0, StripRect.Bottom);
+  if Opp > 0 then
+  begin
+    // Reiter auf beiden Seiten: Zeichenbereich ueber alles
+    if FOppRect.Top < FTabArea.Top then
+      FTabArea.Top := FOppRect.Top;
+    if FOppRect.Bottom > FTabArea.Bottom then
+      FTabArea.Bottom := FOppRect.Bottom;
+  end;
   if FRightToLeft then
   begin
     for I := 0 to N - 1 do
@@ -492,6 +608,72 @@ begin
       FCloseRects[I] := Mirror(FCloseRects[I]);
     end;
     FTabArea := Mirror(FTabArea);
+  end;
+end;
+
+procedure TPPGTabStrip.LayoutVertical(const StripRect: TRect);
+var
+  N, I, Y, TabH, Gap, Pad, X0, X1, Top0, Bottom0, ArrowH, K, CS: Integer;
+  R: TRect;
+begin
+  N := Length(FTabs);
+  TabH := TabRowHeight;
+  Gap := Scale(TabGap);
+  Pad := Scale(StripPad);
+  // Abstand nur zur Aussenkante; zur Seite hin beruehren die Reiter die Seite
+  if FBottom then
+  begin
+    X0 := StripRect.Left;
+    X1 := StripRect.Right - Pad;
+  end
+  else
+  begin
+    X0 := StripRect.Left + Pad;
+    X1 := StripRect.Right;
+  end;
+  Top0 := StripRect.Top + Pad;
+  Bottom0 := StripRect.Bottom - Pad;
+  FPrevRect := Rect(0, 0, 0, 0);
+  FNextRect := Rect(0, 0, 0, 0);
+  FOverflow := (N > 0) and (N * TabH + (N - 1) * Gap > Bottom0 - Top0);
+  if FOverflow then
+  begin
+    // Pfeile hoch/runter unten nebeneinander
+    ArrowH := TabH * 4 div 5;
+    FPrevRect := Rect(X0, Bottom0 - ArrowH, (X0 + X1) div 2, Bottom0);
+    FNextRect := Rect((X0 + X1) div 2, Bottom0 - ArrowH, X1, Bottom0);
+    Bottom0 := FPrevRect.Top - Gap;
+    K := (Bottom0 - Top0 + Gap) div (TabH + Gap);
+    if K < 1 then
+      K := 1;
+    FMaxFirst := N - K;
+    if FMaxFirst < 0 then
+      FMaxFirst := 0;
+  end
+  else
+    FMaxFirst := 0;
+  if FFirst > FMaxFirst then
+    FFirst := FMaxFirst;
+  if FFirst < 0 then
+    FFirst := 0;
+  FTabArea := Rect(StripRect.Left, Top0, StripRect.Right, Bottom0);
+  CS := Scale(CloseSize);
+  Y := Top0;
+  for I := 0 to N - 1 do
+  begin
+    FRects[I] := Rect(0, 0, 0, 0);
+    FCloseRects[I] := Rect(0, 0, 0, 0);
+    if I < FFirst then
+      Continue;
+    R := Rect(X0, Y, X1, Y + TabH);
+    Inc(Y, TabH + Gap);
+    // nur ganz sichtbare Reiter (kein Anschneiden in der Hoehe)
+    if R.Bottom > Bottom0 then
+      Continue;
+    FRects[I] := R;
+    if FShowClose then
+      FCloseRects[I] := Rect(R.Right - Scale(TabPadX) div 2 - CS, (R.Top + R.Bottom - CS) div 2,
+        R.Right - Scale(TabPadX) div 2, (R.Top + R.Bottom + CS) div 2);
   end;
 end;
 
@@ -505,8 +687,22 @@ begin
   N := Length(FTabs);
   SetLength(FRects, N);
   SetLength(FCloseRects, N);
+  SetLength(FOppRow, N);
+  for I := 0 to N - 1 do
+    FOppRow[I] := False;
   SetLength(W, N);
   FRowCount := 1;
+  if FVertical then
+  begin
+    LayoutVertical(StripRect);
+    if FHot > N - 1 then
+      FHot := -1;
+    if FHotClose > N - 1 then
+      FHotClose := -1;
+    if FSelected > N - 1 then
+      FSelected := -1;
+    Exit;
+  end;
   if FMultiLine and (N > 0) then
   begin
     LayoutMultiLine(StripRect);
@@ -701,6 +897,16 @@ begin
   if Inset < 0 then
     Inset := 0;
   H := Scale(IndicatorH);
+  if FVertical then
+  begin
+    // senkrechter Strich an der Kante zur Seite
+    Inset := (R.Bottom - R.Top) div 4;
+    if FBottom then
+      Result := Rect(R.Left, R.Top + Inset, R.Left + H, R.Bottom - Inset)
+    else
+      Result := Rect(R.Right - H, R.Top + Inset, R.Right, R.Bottom - Inset);
+    Exit;
+  end;
   if FBottom then
     Result := Rect(R.Left + Inset, R.Top, R.Right - Inset, R.Top + H)
   else
@@ -767,7 +973,7 @@ begin
   Guard := Length(FTabs);
   R := TabRectAt(Pos);
   while (Guard > 0) and (FFirst < Pos) and (FFirst < FMaxFirst) and
-    (IsRectEmpty(R) or (R.Right - R.Left < TabWidthAt(Pos))) do
+    (IsRectEmpty(R) or (not FVertical and (R.Right - R.Left < TabWidthAt(Pos)))) do
   begin
     Inc(FFirst);
     Layout(FStrip);
@@ -929,6 +1135,39 @@ var
     end;
   end;
 
+  procedure DrawVArrow(const R: TRect; Up, Hot, AEnabled: Boolean);
+  var
+    CX, CY, Half: Integer;
+    Pts: array[0..2] of TPoint;
+    Alpha: Byte;
+  begin
+    // Blaetterpfeil hoch/runter (senkrechte Leiste)
+    if IsRectEmpty(R) then
+      Exit;
+    if Hot and AEnabled then
+      Canvas.FillRoundRect(R, Scale(4), Info.Tab.TextColor, 28);
+    CX := (R.Left + R.Right) div 2;
+    CY := (R.Top + R.Bottom) div 2;
+    Half := Scale(4);
+    if Up then
+    begin
+      Pts[0] := Point(CX - Half, CY + Half div 2);
+      Pts[1] := Point(CX, CY - Half div 2);
+      Pts[2] := Point(CX + Half, CY + Half div 2);
+    end
+    else
+    begin
+      Pts[0] := Point(CX - Half, CY - Half div 2);
+      Pts[1] := Point(CX, CY + Half div 2);
+      Pts[2] := Point(CX + Half, CY - Half div 2);
+    end;
+    if AEnabled then
+      Alpha := 255
+    else
+      Alpha := 90;
+    Canvas.DrawPolyline(Pts, Scale(1) + 1, Info.Tab.TextColor, Alpha);
+  end;
+
   procedure PaintButton(Pos: Integer; const R: TRect; IsSelected, Hot: Boolean);
   var
     Body: TRect;
@@ -1007,8 +1246,15 @@ begin
       SS.ColorMirror := SS.Color;
       SS.ColorMirrorTo := SS.Color;
     end;
-    Renderer.DrawTabStrip(Canvas, FStrip, SS, FBottom, FPPI);
-    if FButtonStyle <> tbsTabs then
+    if not FVertical then
+    begin
+      Renderer.DrawTabStrip(Canvas, FStrip, SS, FBottom, FPPI);
+      if not IsRectEmpty(FOppRect) and (Length(FOppRow) > 0) then
+        Renderer.DrawTabStrip(Canvas, FOppRect, SS, not FBottom, FPPI);
+    end
+    else if Info.UseColors and (SS.Color <> clNone) then
+      Canvas.FillRoundRect(FStrip, 0, SS.Color, 255);
+    if FVertical or (FButtonStyle <> tbsTabs) then
     begin
       // Knoepfe: kein Hineinragen in die Seite, kein Unterstrich
       Canvas.PushClipRoundRect(FTabArea, 0);
@@ -1017,6 +1263,18 @@ begin
           if not IsRectEmpty(FRects[I]) then
             PaintButton(I, FRects[I], I = FSelected,
               Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot));
+        // Senkrechte Reiter: Indikator an der Kante zur Seite
+        if FVertical and (FButtonStyle = tbsTabs) then
+        begin
+          R := IndicatorRect;
+          if not IsRectEmpty(R) and Info.Enabled then
+          begin
+            Accent := Info.Accent;
+            if (St <> nil) and Info.UseColors then
+              Accent := St.Indicator.FillFor(Info.Dark, Accent);
+            Renderer.DrawTabIndicator(Canvas, R, Accent, FBottom, FPPI);
+          end;
+        end;
       finally
         Canvas.PopClip;
       end;
@@ -1048,9 +1306,9 @@ begin
             Canvas.FillRoundRect(Rect(R.Left + Scale(1), R.Top + Scale(2), R.Right - Scale(1),
               R.Bottom), Scale(4), SS.Color, 255);
           if Hot then
-            Renderer.DrawTab(Canvas, R, ApplyFill(Info.HotTab, I, E, DS), False, 1, FBottom, FPPI)
+            Renderer.DrawTab(Canvas, R, ApplyFill(Info.HotTab, I, E, DS), False, 1, FBottom xor FOppRow[I], FPPI)
           else
-            Renderer.DrawTab(Canvas, R, ApplyFill(Info.Tab, I, E, DS), False, 0, FBottom, FPPI);
+            Renderer.DrawTab(Canvas, R, ApplyFill(Info.Tab, I, E, DS), False, 0, FBottom xor FOppRow[I], FPPI);
           if not (Info.Enabled and FTabs[I].Enabled) then
             Color := Info.DisabledText
           else if Hot then
@@ -1092,7 +1350,12 @@ begin
         Canvas.PopClip;
       end;
     end;
-    if FOverflow then
+    if FOverflow and FVertical then
+    begin
+      DrawVArrow(FPrevRect, True, FHotArrow = thPrev, Info.Enabled and CanScroll(-1));
+      DrawVArrow(FNextRect, False, FHotArrow = thNext, Info.Enabled and CanScroll(1));
+    end
+    else if FOverflow then
     begin
       Renderer.DrawTabScrollArrow(Canvas, FPrevRect, Info.Tab.TextColor, FRightToLeft,
         FHotArrow = thPrev, Info.Enabled and CanScroll(-1), FPPI);

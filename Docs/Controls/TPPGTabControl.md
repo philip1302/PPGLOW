@@ -47,12 +47,12 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MultiLine` | `Boolean` | `False` | True: Passen nicht alle Reiter in eine Zeile, werden sie auf mehrere Reihen verteilt (wie TPageControl); die Reihe mit dem gewählten Reiter liegt an der Seite. False: eine Reihe mit Blätterpfeilen. |
 | `OwnerDraw` | `Boolean` | `False` | True: Der Inhalt der Reiter wird über OnDrawTab gezeichnet; Fläche und Rahmen kommen weiter aus dem Preset. |
 | `RaggedRight` | `Boolean` | `False` | Nur mit MultiLine: True = Reihen werden nicht auf die volle Breite gestreckt. |
-| `ScrollOpposite` | `Boolean` | `False` | Wird nur für die DFM-Kompatibilität mit TPageControl gespeichert und hat keine Wirkung. |
+| `ScrollOpposite` | `Boolean` | `False` | Nur mit MultiLine und Reitern oben oder unten: Die Reihen zwischen dem gewählten Reiter und der Seite wechseln auf die Gegenseite (unter bzw. über die Seite), wie bei TPageControl. Wechselt die Auswahl in eine andere Reihe, ändern sich Aufteilung und Seitengröße. Nutzung: `PageControl1.MultiLine := True; PageControl1.ScrollOpposite := True;` |
 | `Style` | `TTabStyle` | `tsTabs` | Darstellung wie TTabControl.Style: tsTabs (Reiter), tsButtons (Knöpfe) oder tsFlatButtons (flache Knöpfe). |
 | `HotTrack` | `Boolean` | `True` | True: Der Reiter unter der Maus wird hervorgehoben (TabStyles.HotTab). |
 | `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
 | `TabHeight` | `Integer` | `0` | Höhe der Reiter in Pixeln (0..1000); 0 = aus der Schrift berechnet. |
-| `TabPosition` | `TTabPosition` | `tpTop` | Lage der Reiterleiste: tpTop oder tpBottom; tpLeft und tpRight werden derzeit wie oben bzw. unten dargestellt. |
+| `TabPosition` | `TTabPosition` | `tpTop` | Lage der Reiterleiste: tpTop, tpBottom, tpLeft (Leiste links, Reiter untereinander) oder tpRight (rechts). Senkrecht ist die Leiste so breit wie der breiteste Reiter; der gewählte Reiter hat einen Indikator an der Kante zur Seite, bei zu vielen Reitern erscheinen Pfeile hoch/runter. MultiLine und ScrollOpposite gelten nur oben/unten. Nutzung: `PageControl1.TabPosition := tpLeft;` |
 | `Tabs` | `TStrings` |  | Beschriftungen der Reiter, eine je Zeile. Der Inhalt wechselt nicht selbst: Die Anwendung reagiert in OnChange auf den neuen TabIndex. Nutzung: `PPGTabControl1.Tabs.Add('Neu');` |
 | `TabIndex` | `Integer` | `-1` | Index des gewählten Reiters (-1 = keiner). Ungültige Werte werden wie bei TTabControl ignoriert; Setzen im Code löst kein OnChanging/OnChange aus. |
 | `TabWidth` | `Integer` | `0` | Feste Breite aller Reiter in Pixeln (0..1000); 0 = jeder Reiter so breit wie seine Beschriftung. |
