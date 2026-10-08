@@ -149,6 +149,9 @@ type
     function ExportAggregate(ACol: Integer): TPPGGridAggregate; override;
     function ExportMerges: TArray<TRect>; override;
     function ExportOutline: TArray<TPPGOutlineRow>; override;
+    function ExportColumnLook(ACol: Integer): TPPGTableColumnLook; override;
+    function TableDataCol(ACol: Integer): Integer; override;
+    function TableStyleRow(ARow: Integer): Integer; override;
     procedure ColumnsChanged; override;
     function RowScrollY: Integer; override;
     function RowsContentHeight: Integer; override;
@@ -1029,6 +1032,32 @@ end;
 function TPPGCustomDBGrid.ExportOutline: TArray<TPPGOutlineRow>;
 begin
   SetLength(Result, 0);
+end;
+
+function TPPGCustomDBGrid.ExportColumnLook(ACol: Integer): TPPGTableColumnLook;
+var
+  F: TField;
+begin
+  // Boolean-Felder als Kaestchen (wie KindOf)
+  Result := inherited ExportColumnLook(ACol);
+  if Result.Kind = ckText then
+  begin
+    F := FieldOfCol(TableDataCol(ACol));
+    if (F <> nil) and (F.DataType = ftBoolean) then
+      Result.Kind := ckCheck;
+  end;
+end;
+
+function TPPGCustomDBGrid.TableDataCol(ACol: Integer): Integer;
+begin
+  // ohne Indikator
+  Result := DataCol(ACol + FixedCols);
+end;
+
+function TPPGCustomDBGrid.TableStyleRow(ARow: Integer): Integer;
+begin
+  // OnGetCellStyle bekommt die Satznummer (0-basiert), wie beim Druck
+  Result := ARow;
 end;
 
 procedure TPPGCustomDBGrid.ColumnsChanged;

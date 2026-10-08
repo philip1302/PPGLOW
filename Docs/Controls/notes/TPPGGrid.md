@@ -11,6 +11,7 @@
 - Zellen: `Column.CellKind` (Kästchen, Fortschritt, Sparkline, Bewertung, Bild, Link, Button, Farbfeld, Markup; eigene über `PPGRegisterCellKindName`), `ConditionalFormats`, `OnGetCellStyle`, `MergeCells`.
 - Layout merken: `SaveLayout`/`LoadLayout` (Reihenfolge, Breiten, Sichtbarkeit, Sortierung, Gruppen).
 - Drucken mit `TPPGGridPrinter`; Export über `PPG.Grid.Export` (xlsx, PDF, HTML, CSV), Import `PPGLoadXlsx`.
+- Der xlsx-Export übernimmt die Optik des Grids in heller Darstellung: Schrift, Kopf- und Summenfarben, Bänder, Gitterlinien, Ausrichtung, Zeilenhöhe, Spalten- und Zebra-Stile, bedingte Formate, Kästchen (☑/☐ als 1/0), Sterne, Farb- und Linkzellen. Datenbalken, Fortschritt und Symbolsätze werden Excel-Regeln und rechnen beim Bearbeiten mit. Nur Werte: `TPPGXlsxWriter.Styled := False`.
 - UI Automation: Tabellen-Muster mit Kopfzeilen, Gruppenzeilen (Auf-/Zuklappen), Kästchen, Links und Buttons (Invoke).
 
 ## Anpassung

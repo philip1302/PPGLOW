@@ -203,6 +203,7 @@ begin
   FName.DataSource := FSource;
   FName.DataField := 'Name';
   Host.RegisterSpecial('dbedit', FName);
+  Host.RegisterSpecial('dbgrid', FGrid);
   AddCaption(X2, Y, 'Ort');
   FCity := TPPGDBComboBox.Create(Own);
   FCity.Parent := Card;

@@ -260,6 +260,18 @@ begin
       Exit;
     end;
 
+  // /xlsx seite key datei.xlsx: registrierte Tabelle exportieren (wie der Excel-Knopf)
+  for I := 1 to ParamCount - 3 do
+    if SameText(ParamStr(I), '/xlsx') then
+    begin
+      Form.Show;
+      Form.ShowPage(StrToIntDef(ParamStr(I + 1), 0));
+      Application.ProcessMessages;
+      if not Form.SaveTableXlsx(ParamStr(I + 2), ParamStr(I + 3)) then
+        ExitCode := 1;
+      Exit;
+    end;
+
   // /ribboncapture modus datei.png: Ribbon-Zustand (KeyTips, Popups), Bildschirmpixel
   for I := 1 to ParamCount - 2 do
     if SameText(ParamStr(I), '/ribboncapture') then

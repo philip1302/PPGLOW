@@ -75,6 +75,65 @@ type
     function PrintRowHeight: Integer;
   end;
 
+  /// Optik einer Tabelle fuer den Export (immer die helle Darstellung, Farben
+  /// als RGB; clNone = Standard der Zielanwendung).
+  TPPGTableLook = record
+    Fill, Text: TColor;
+    HeaderFill, HeaderText, HeaderLine: TColor;
+    HeaderFontStyle: TFontStyles;
+    /// Gitterlinien; clNone = keine.
+    Line: TColor;
+    GroupFill, GroupText: TColor;
+    GroupFontStyle: TFontStyles;
+    FooterFill, FooterText: TColor;
+    FooterFontStyle: TFontStyles;
+    /// Links, Kaestchen, Fortschritt bzw. gefuellte und leere Sterne.
+    Accent, Warning, Hint: TColor;
+    FontName: string;
+    /// Schriftgroesse in Punkt.
+    FontSize: Integer;
+    /// Zeilenhoehe in logischen Pixeln (96 dpi); 0 = Standard.
+    RowHeight: Integer;
+    /// Ohne Optik der Quelle: grauer, fetter Kopf, keine Linien.
+    procedure Reset;
+  end;
+
+  TPPGTableColumnLook = record
+    Kind: TPPGGridCellKind;
+    MinValue, MaxValue: Integer;
+    /// Spaltenkopf (Column.TitleStyle) und seine Ausrichtung.
+    Header: TPPGGridCellStyle;
+    HeaderAlignment: TAlignment;
+    /// Format der Summenzeile (FormatFloat-Muster); '' = Spaltenformat.
+    FooterFormat: string;
+    /// Bedingte Formate, die die Zielanwendung selbst rechnet.
+    DataBar: Boolean;
+    DataBarColor: TColor;
+    IconSet: Boolean;
+    procedure Reset;
+  end;
+
+  /// Band ueber mehreren Spalten (Tabellen-Spalten, Last inklusive).
+  TPPGTableBand = record
+    Caption: string;
+    Level: Integer; // 0 = oberste Reihe
+    ColFirst, ColLast: Integer;
+    Alignment: TAlignment;
+  end;
+
+  /// Zusatz fuer den Export (xlsx): Darstellung wie im Grid.
+  IPPGTableLook = interface
+    ['{6CA55C42-618F-4D28-9AA0-3C37443970FB}']
+    function ExportLook: TPPGTableLook;
+    function ExportColumnLook(ACol: Integer): TPPGTableColumnLook;
+    /// Fertiger Stil einer Datenzelle: Spaltenstil, Zebra (Alternate = jede
+    /// zweite angezeigte Zeile), bedingte Formate und OnGetCellStyle.
+    function ExportCellStyle(ACol, ARow: Integer; const Text: string;
+      Alternate: Boolean): TPPGGridCellStyle;
+    /// Baender ueber den Spalten; leer = keine.
+    function ExportBands: TArray<TPPGTableBand>;
+  end;
+
   TPPGAggregateAcc = record
     Count: Integer;     // nicht leere Werte
     NumCount: Integer;  // davon Zahlen
@@ -131,16 +190,119 @@ implementation
 uses
   PPG.NumberFormat;
 
+/// Zahl mit Tausendertrennern im aktuellen Format ("-1.234.567,89"): erste
+/// Gruppe 1-3 Ziffern, danach je genau 3. Streng, damit Text Text bleibt.
+function TryGroupedNumber(const S: string; out V: Double): Boolean;
+var
+  I, Digits, Groups: Integer;
+  T: string;
+  TS, DS: Char;
+begin
+  Result := False;
+  V := 0;
+  TS := FormatSettings.ThousandSeparator;
+  DS := FormatSettings.DecimalSeparator;
+  if (TS = #0) or (TS = DS) or (Pos(TS, S) = 0) then
+    Exit;
+  I := 1;
+  T := '';
+  if (S <> '') and CharInSet(S[1], ['-', '+']) then
+  begin
+    if S[1] = '-' then
+      T := '-';
+    Inc(I);
+  end;
+  Digits := 0;
+  Groups := 0;
+  while (I <= Length(S)) and (S[I] <> DS) do
+  begin
+    if CharInSet(S[I], ['0'..'9']) then
+    begin
+      T := T + S[I];
+      Inc(Digits);
+    end
+    else if S[I] = TS then
+    begin
+      // Gruppe davor: die erste 1-3 Ziffern, jede weitere genau 3
+      if (Digits = 0) or (Digits > 3) or ((Groups > 0) and (Digits <> 3)) then
+        Exit;
+      Inc(Groups);
+      Digits := 0;
+    end
+    else
+      Exit;
+    Inc(I);
+  end;
+  if (Groups = 0) or (Digits <> 3) then
+    Exit;
+  if I <= Length(S) then
+  begin
+    // Nachkommastellen: nur Ziffern, mindestens eine
+    T := T + '.';
+    Inc(I);
+    if I > Length(S) then
+      Exit;
+    while I <= Length(S) do
+    begin
+      if not CharInSet(S[I], ['0'..'9']) then
+        Exit;
+      T := T + S[I];
+      Inc(I);
+    end;
+  end;
+  Result := TryStrToFloat(T, V, PPGInvariantFormat);
+end;
+
 function PPGTableValueOf(const S: string): Variant;
 var
   D: Double;
 begin
   if S = '' then
     Result := Null
-  else if TryStrToFloat(S, D) then
+  else if TryStrToFloat(S, D) or TryGroupedNumber(S, D) then
     Result := D
   else
     Result := S;
+end;
+
+{ TPPGTableLook }
+
+procedure TPPGTableLook.Reset;
+begin
+  Fill := clNone;
+  Text := clNone;
+  HeaderFill := $00F0F0F0;
+  HeaderText := clNone;
+  HeaderLine := clNone;
+  HeaderFontStyle := [fsBold];
+  Line := clNone;
+  GroupFill := clNone;
+  GroupText := clNone;
+  GroupFontStyle := [fsBold];
+  FooterFill := clNone;
+  FooterText := clNone;
+  FooterFontStyle := [fsBold];
+  Accent := $00D77800;
+  Warning := $0000B9FF;
+  Hint := $00A0A0A0;
+  FontName := 'Calibri';
+  FontSize := 11;
+  RowHeight := 0;
+end;
+
+{ TPPGTableColumnLook }
+
+procedure TPPGTableColumnLook.Reset;
+begin
+  Kind := ckText;
+  MinValue := 0;
+  MaxValue := 0;
+  Header.Reset;
+  HeaderAlignment := taLeftJustify;
+  FooterFormat := '';
+  DataBar := False;
+  DataBarColor := clNone;
+  IconSet := False;
 end;
 
 { TPPGAggregateAcc }

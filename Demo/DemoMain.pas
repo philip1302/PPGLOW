@@ -84,6 +84,8 @@ type
     procedure SaveDatePopupCapture(const FileName: string);
     /// Registriertes Diagramm (Key) ueber SaveToPng speichern. False = unbekannt.
     function SaveChartPng(const Key, FileName: string): Boolean;
+    /// Registrierte Tabelle (Key: grid, dbgrid) als xlsx speichern. False = unbekannt.
+    function SaveTableXlsx(const Key, FileName: string): Boolean;
     /// Selbsttest aller Seiten (/selftest datei.txt). Ergebnis = Anzahl Fehler.
     function RunSelfTest(const FileName: string): Integer;
     /// Katalog: Seite zum Suchtext (Control-Name oder Stichwort), -1 = keine.
@@ -118,7 +120,7 @@ uses
   Winapi.Messages, Winapi.DwmApi, System.Types, System.Math, Vcl.Imaging.pngimage,
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
-  PPG.Chart, PPG.IconFont, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
+  PPG.Chart, PPG.IconFont, PPG.Grid.Data, PPG.Grid.Export, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
   DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, PPG.Hints;
 
 type
@@ -675,6 +677,15 @@ begin
   Result := C is TPPGCustomChart;
   if Result then
     TPPGCustomChart(C).SaveToPng(FileName);
+end;
+
+function TDemoForm.SaveTableXlsx(const Key, FileName: string): Boolean;
+var
+  T: IPPGTableSource;
+begin
+  Result := Supports(SpecialControl(Key), IPPGTableSource, T);
+  if Result then
+    PPGExportXlsx(T, FileName, Key);
 end;
 
 function TDemoForm.SpecialControl(const Key: string): TControl;

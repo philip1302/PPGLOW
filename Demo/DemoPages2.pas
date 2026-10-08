@@ -957,6 +957,7 @@ begin
   CF.Color := ccAccent;
   FPrinter := TPPGGridPrinter.Create(Own);
   FPrinter.Grid := FGrid;
+  Host.RegisterSpecial('grid', FGrid);
   FPrinter.Title := 'Lagerliste';
   FPrinter.HeaderText := '[Titel] - [Datum]';
   FGrid.OnSetEditText := CellSet;

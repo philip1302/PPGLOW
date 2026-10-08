@@ -134,7 +134,7 @@ type
 
   TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren, IPPGUiaSource,
     IPPGGridColumnsHost, IPPGGridViewHost, IPPGTableSource, IPPGGridStylesHost,
-    IPPGGridPrintSource, IPPGTableExport)
+    IPPGGridPrintSource, IPPGTableExport, IPPGTableLook)
   private
     FPaint: TPPGGridPaintColors;
     FColCount: Integer;
@@ -410,6 +410,16 @@ type
     function ExportAggregate(ACol: Integer): TPPGGridAggregate; virtual;
     function ExportMerges: TArray<TRect>; virtual;
     function ExportOutline: TArray<TPPGOutlineRow>; virtual;
+    { IPPGTableLook (xlsx: Optik wie im Grid, immer hell) }
+    function ExportLook: TPPGTableLook;
+    function ExportColumnLook(ACol: Integer): TPPGTableColumnLook; virtual;
+    function ExportCellStyle(ACol, ARow: Integer; const Text: string;
+      Alternate: Boolean): TPPGGridCellStyle;
+    function ExportBands: TArray<TPPGTableBand>;
+    /// Datenspalte einer Tabellen-Spalte (DB-Grid: ohne Indikator).
+    function TableDataCol(ACol: Integer): Integer; virtual;
+    /// Zeile fuer OnGetCellStyle beim Export (Grid: Datenzeile, DB-Grid: Satz).
+    function TableStyleRow(ARow: Integer): Integer; virtual;
     { Daten }
     /// Text einer Datenzelle (Cells bzw. OnGetCellText, Kopf aus Columns).
     function GetCellText(ACol, ARow: Integer): string; virtual;
@@ -1617,6 +1627,211 @@ begin
     G := FView.Group.Groups[G].Next;
   end;
   SetLength(Result, N);
+end;
+
+{ ---- IPPGTableLook: Optik fuer den xlsx-Export (helle Darstellung) ---- }
+
+/// Schriftstil eines Element-Stils (eigene Schrift bzw. Base, plus FontStyle).
+function ExportFontStyle(S: TPPGElementStyle; Base: TFont): TFontStyles;
+begin
+  if S.HasOwnFont then
+    Result := S.Font.Style + S.FontStyle
+  else
+    Result := Base.Style + S.FontStyle;
+end;
+
+function ExportTokens(const Renderer: IPPGRenderer): TPPGTokens;
+var
+  TR: IPPGThemeRenderer;
+begin
+  if Supports(Renderer, IPPGThemeRenderer, TR) then
+    Result := TR.Tokens(False)
+  else
+    Result := PPGDefaultTokens(False);
+end;
+
+function TPPGCustomGrid.TableDataCol(ACol: Integer): Integer;
+begin
+  Result := DataCol(ACol);
+end;
+
+function TPPGCustomGrid.TableStyleRow(ARow: Integer): Integer;
+begin
+  Result := FView.AllRow(ARow);
+end;
+
+function TPPGCustomGrid.ExportLook: TPPGTableLook;
+var
+  T: TPPGTokens;
+  Fill, Text, Head: TColor;
+begin
+  // Wie GetGridColors ohne Dark Mode, VCL-Style und Hochkontrast: die Datei
+  // soll auf weissem Papier bzw. in Excel hell aussehen
+  Result.Reset;
+  // Statistik der bedingten Formate (Oben-N, Farbskala) aktuell halten: der
+  // Export kann vor dem ersten Zeichnen kommen
+  if FAggDirty then
+    RecalcAggregates;
+  T := ExportTokens(Renderer);
+  Fill := PPGColorToRGB(Color);
+  Text := PPGColorToRGB(Font.Color);
+  Head := PPGBlendColor(Fill, Text, 0.05);
+  Result.Fill := Fill;
+  Result.Text := Text;
+  Result.HeaderFill := FStyles.Header.FillFor(False, Head);
+  Result.HeaderText := FStyles.Header.TextFor(False, Text);
+  Result.HeaderFontStyle := ExportFontStyle(FStyles.Header, Font);
+  if (goVertLine in FOptions) or (goHorzLine in FOptions) then
+    Result.Line := FStyles.GridLine.FillFor(False, PPGBlendColor(Fill, Text, 0.13))
+  else
+    Result.Line := clNone;
+  Result.HeaderLine := FStyles.Header.BorderFor(False, PPGBlendColor(Fill, Text, 0.13));
+  Result.GroupFill := FStyles.GroupRow.FillFor(False, PPGBlendColor(Fill, Head, 0.6));
+  Result.GroupText := FStyles.GroupRow.TextFor(False, Text);
+  Result.GroupFontStyle := ExportFontStyle(FStyles.GroupRow, Font);
+  Result.FooterFill := FStyles.Footer.FillFor(False, Result.HeaderFill);
+  Result.FooterText := FStyles.Footer.TextFor(False, Result.HeaderText);
+  Result.FooterFontStyle := Result.HeaderFontStyle + FStyles.Footer.FontStyle;
+  Result.Accent := T.Accent;
+  Result.Warning := T.Warning;
+  Result.Hint := PPGBlendColor(Text, Fill, 0.55);
+  Result.FontName := Font.Name;
+  Result.FontSize := Abs(Font.Size);
+  if Result.FontSize = 0 then
+    Result.FontSize := 9;
+  Result.RowHeight := FDefaultRowHeight;
+end;
+
+function TPPGCustomGrid.ExportColumnLook(ACol: Integer): TPPGTableColumnLook;
+var
+  C: TPPGGridColumn;
+  D, I: Integer;
+  R: TPPGGridConditionalFormat;
+begin
+  Result.Reset;
+  D := TableDataCol(ACol);
+  C := ColumnOf(D);
+  if C <> nil then
+  begin
+    if C.EditorKind = gekCheck then
+      Result.Kind := ckCheck
+    else
+      Result.Kind := C.CellKind;
+    Result.MinValue := C.MinValue;
+    Result.MaxValue := C.MaxValue;
+    Result.HeaderAlignment := C.EffectiveTitleAlignment;
+    Result.FooterFormat := C.FooterFormat;
+    Result.Header.Fill := C.TitleStyle.FillFor(False, clNone);
+    Result.Header.TextColor := C.TitleStyle.TextFor(False, clNone);
+    if C.TitleStyle.HasOwnFont then
+      Result.Header.FontStyle := C.TitleStyle.Font.Style + C.TitleStyle.FontStyle
+    else
+      Result.Header.FontStyle := C.TitleStyle.FontStyle;
+  end;
+  // Datenbalken und Symbolsatz rechnet Excel selbst (gleiche Skala: Min..Max
+  // der Spalte), damit sie nach dem Bearbeiten in Excel stimmen
+  for I := 0 to FCondFormats.Count - 1 do
+  begin
+    R := FCondFormats[I];
+    if not R.Enabled or (R.Column <> D) or (D < 0) then
+      Continue;
+    if (R.Rule = crDataBar) and not Result.DataBar then
+    begin
+      Result.DataBar := True;
+      Result.DataBarColor := R.RuleColor(ExportTokens(Renderer));
+    end
+    else if R.Rule = crIconSet then
+      Result.IconSet := True;
+  end;
+end;
+
+function TPPGCustomGrid.ExportCellStyle(ACol, ARow: Integer; const Text: string;
+  Alternate: Boolean): TPPGGridCellStyle;
+var
+  D: Integer;
+  C: TPPGGridColumn;
+  Fill, TextColor: TColor;
+begin
+  // Reihenfolge wie beim Zeichnen: Flaeche Zebra -> Spalte -> Zellstil,
+  // Text Spalte -> Zebra -> Zellstil
+  Result.Reset;
+  D := TableDataCol(ACol);
+  C := ColumnOf(D);
+  Fill := clNone;
+  TextColor := clNone;
+  if C <> nil then
+    TextColor := C.Style.TextFor(False, clNone);
+  if Alternate and FStyles.AlternateRow.HasFill(False) then
+  begin
+    Fill := FStyles.AlternateRow.FillFor(False, clNone);
+    TextColor := FStyles.AlternateRow.TextFor(False, TextColor);
+    Result.FontStyle := Result.FontStyle + FStyles.AlternateRow.FontStyle;
+  end;
+  if C <> nil then
+  begin
+    Fill := C.Style.FillFor(False, Fill);
+    if C.Style.HasOwnFont then
+    begin
+      Result.FontStyle := Result.FontStyle + C.Style.Font.Style;
+      Result.FontName := C.Style.Font.Name;
+      Result.FontSize := Abs(C.Style.Font.Size);
+    end;
+    Result.FontStyle := Result.FontStyle + C.Style.FontStyle;
+  end;
+  if FCondFormats.Count > 0 then
+    FCondFormats.Apply(D, Text, ExportTokens(Renderer), PPGColorToRGB(Color), Result);
+  if Assigned(FOnGetCellStyle) then
+    FOnGetCellStyle(Self, D, TableStyleRow(ARow), Result);
+  if Result.Fill = clNone then
+    Result.Fill := Fill;
+  if Result.TextColor = clNone then
+    Result.TextColor := TextColor;
+end;
+
+function TPPGCustomGrid.ExportBands: TArray<TPPGTableBand>;
+var
+  Levels, L, C, First, B, N, Cols: Integer;
+
+  function BandOf(ACol, ALevel: Integer): Integer;
+  var
+    Col: TPPGGridColumn;
+  begin
+    Col := ColumnOf(TableDataCol(ACol));
+    if Col = nil then
+      Result := -1
+    else
+      Result := FBands.BandAtLevel(Col.Band, ALevel);
+  end;
+
+begin
+  SetLength(Result, 0);
+  Levels := FBands.LevelCount;
+  if (FFixedRows = 0) or (Levels = 0) then
+    Exit;
+  Cols := TableColCount;
+  N := 0;
+  for L := 0 to Levels - 1 do
+  begin
+    // Laeufe gleicher Baender in Anzeige-Reihenfolge (wie PaintBands)
+    C := 0;
+    while C < Cols do
+    begin
+      B := BandOf(C, L);
+      First := C;
+      Inc(C);
+      while (C < Cols) and (BandOf(C, L) = B) do
+        Inc(C);
+      if B < 0 then
+        Continue;
+      SetLength(Result, N + 1);
+      Result[N].Caption := FBands[B].Caption;
+      Result[N].Level := L;
+      Result[N].ColFirst := First;
+      Result[N].ColLast := C - 1;
+      Result[N].Alignment := FBands[B].Alignment;
+      Inc(N);
+    end;
+  end;
 end;
 
 procedure TPPGCustomGrid.SortBy(ACol: Integer; Ascending: Boolean);
