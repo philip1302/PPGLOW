@@ -1,104 +1,102 @@
-# Phase 18 – Detailplan: VCL-Lücken für Umstellungen
+# Phase 18 – Detailplan: Controls mit echtem Mehrwert
 
-*Stand 08.10.2026. Teil von `Docs\Roadmap3.md` (freigegeben: komplett mit ListView). **Entscheidungen nach Empfehlung (vom User vorab übernommen: „nimm die Empfehlungen“). Umsetzung erst nach OK zum Plan.***
+*Stand 08.10.2026. Teil von `Docs\Roadmap3.md`. **Neu gefasst nach der Kritik des Users („was bringt uns das an Mehrwert, klonen wir hier einfach nur VCL-Komponenten?“), freigegeben mit „Nach Mehrwert umbauen“.** Der frühere Plan (reine VCL-Nachbauten) steht in der git-Historie (8fdce8e).*
 
-## Ziel
-Für die VCL-Controls, die in fast jedem Geschäftsformular stehen, gibt es bisher kein PPGlow-Gegenstück. Nach der Umstellung blieben sie Standard-VCL und fielen optisch heraus. Jedes neue Control soll:
-- im DFM kompatibel zum VCL-Vorbild sein (gleiche Property-Namen, Vorgaben und Ereignisse), damit `migrate.ps1` nur den Klassennamen tauschen muss
-- die bekannten Bausteine nutzen: Presets, Dark Mode, Element-Stile, Tokens, Zeichen-Ereignisse, MSAA/UIA, DPI, RTL, Übersetzung
-- Palettensymbol, Hilfe-Notiz, Property-Referenz, Demo-Szenario, Streaming- und Sichttests bekommen
+## Context
+Der Detailplan `Docs\Phase18-Plan.md` (Commit 8fdce8e) baut vor allem VCL-Controls nach (RadioGroup, ListView, DBText, DBListBox, …). Der User fragt zu Recht nach dem Mehrwert. Reine Nachbauten helfen nur bei Umstellungen, sie können nichts, was die VCL nicht kann. Er hat entschieden: **Phase 18 wird nach Mehrwert umgebaut.**
 
-## Teilschritte
+**Regel:** Ein neues Control kommt nur, wenn es mindestens zwei Dinge kann, die VCL und TMS nicht können. Es bleibt im DFM so kompatibel zum VCL-Vorbild, dass `migrate.ps1` es trotzdem einsetzen kann. Reine Nachbauten (DBText, DBListBox, DBLookupListBox, DBSpinEdit, DBToggleSwitch, eine 1:1-ListView) werden zurückgestellt, bis eine Inventur eines echten Projekts (`inventory.ps1`) sie verlangt.
 
-| Teil | Inhalt | Größe |
+## Neuer Umfang
+
+| Teil | Inhalt | Mehrwert gegenüber VCL/TMS |
 |---|---|---|
-| 18a | `TPPGRadioGroup`, `TPPGCheckGroup` | klein |
-| 18b | DB-Controls: `TPPGDBNavigator`, `TPPGDBText`, `TPPGDBRadioGroup`, `TPPGDBListBox`, `TPPGDBLookupListBox`, `TPPGDBSpinEdit`, `TPPGDBToggleSwitch` | mittel (viele kleine) |
-| 18c | `TPPGScrollBox` | mittel |
-| 18d | `TPPGListView` | groß |
-| 18e | `migrate.ps1`, Demo, Doku, Abschlussprüfung | klein |
+| 18a | `TPPGRadioGroup`/`TPPGCheckGroup` mit `ChoiceStyle` | Segment-Umschalter, Auswahl-Kacheln mit Symbol und Beschreibung, Spalten passen sich der Breite an |
+| 18b | `TPPGTileView` (Kachel-/Karten-/Galerie-Ansicht) | Explorer-/Galerie-Ansicht mit Kartenvorlage, Suche/Filter mit Hervorhebung, Zoom, virtuell, Export/Druck geschenkt |
+| 18c | `TPPGDBNavigator` | Zähler „12 von 340“, Suchfeld, Schnellfilter, Überlauf bei wenig Platz |
+| 18d | `TPPGPanel.AutoScroll` + `TPPGScrollBox` (dünne Ableitung) | weiches Scrollen, Overlay-Leisten, Rad über Kind-Controls, `ScrollInView` für die Tour |
+| 18e | Migration, Demo, Doku, Prüfung | – |
 
-Reihenfolge a → b → c → d → e. Die kleinen Controls kommen zuerst, damit früh etwas Nutzbares da ist. Die ListView als größtes Risiko kommt am Ende, aber vor der Migration.
+`TPPGDBRadioGroup` kommt mit, weil er auf 18a fast nichts kostet.
 
-## 18a – RadioGroup und CheckGroup (`PPG.RadioGroup`)
-- `TPPGRadioGroup` wie `TRadioGroup`:
-  - Properties: `Items`, `ItemIndex`, `Columns`, `Caption`
-  - Rahmen und Plakette wie `TPPGGroupBox` (gemeinsame Basis)
-  - Ereignisse: `OnClick`; `OnChange` nur bei Anwenderaktion (PPGlow-Regel: Code setzt ohne Ereignis)
-- **Selbst gezeichnete Einträge** in einem Fenster (wie die CheckListBox), statt je Eintrag ein `TPPGRadioButton`:
-  - schneller, keine Fensterflut, einheitlich gezeichnet
-  - Kreise kommen vom `IPPGIndicatorRenderer` des Presets
-  - Tastatur wie VCL: Pfeile wechseln die Auswahl, Tab geht in die Gruppe
-  - Accelerator `&` in den Einträgen
-  - Screenreader-Kinder über `IPPGAccessibleChildren` (Rolle Optionsfeld)
-- Zusätze: `ItemEnabled[i]`, `ItemHint[i]`, Element-Stile `Styles.Item`/`Styles.Selected`, `OnCustomDrawItem`
-- `TPPGCheckGroup` (wie `TcxCheckGroup`/TMS `TAdvOfficeCheckGroup`):
-  - `Checked[i]`, `State[i]` mit `AllowGrayed`
-  - `OnItemClick`
-  - Werte als Text (`Value` = Kommaliste, praktisch für DB und Einstellungen)
+## 18a – Auswahlgruppe (`PPG.RadioGroup`)
+- DFM wie `TRadioGroup` (`Items`, `ItemIndex`, `Columns`, `Caption`, `OnClick`), damit die Migration 1:1 bleibt.
+- **`ChoiceStyle`:**
+  - `csList`: Kreise wie VCL, aber selbst gezeichnet
+  - `csSegmented`: Umschalter in einer Zeile, gleitender Akzent-Indikator über den vorhandenen Animator und `TPPGEasing`
+  - `csCards`: Kacheln mit Symbol, Titel und Beschreibung, gewählte Kachel mit Akzentrahmen
+- **`ItemsEx`** (Collection): `Caption`, `Description`, `ImageIndex`/`ImageName`, `Enabled`, `Hint`, `Value`. `Items` bleibt als einfache Sicht.
+- **`Columns = 0`:** Spalten passen sich der Breite an (Umbruch wie bei Kacheln).
+- `ValidationState` wie die Felder (Pflichtauswahl rot markieren), Vorbereitung für den Validator aus Phase 19.
+- `TPPGCheckGroup`: dieselbe Basis mit Mehrfachauswahl, `Checked[i]`, `AllowGrayed`, `Value` als Kommaliste.
+- Wiederverwenden:
+  - Rahmen und Plakette aus `TPPGGroupBox`/`TPPGCustomContainer` (`Source\Controls\PPG.Controls.Container.pas`)
+  - Kreise und Kästchen über `IPPGIndicatorRenderer`, Text mit `PPG.Markup`
+  - Element-Stile (`PPG.ElementStyle`), Screenreader-Kinder (`IPPGAccessibleChildren`)
+  - Tastatur wie VCL (Pfeile innerhalb der Gruppe)
 
-## 18b – DB-Controls (`PPG.DB.Controls`, `PPG.DB.Lookup`, Paket `PPGlowDBR`)
-- **`TPPGDBNavigator`** wie `TDBNavigator`:
-  - Properties: `VisibleButtons`, `Hints`, `ConfirmDelete`, `Flat`
-  - Ereignisse: `BeforeAction`/`OnClick` mit `TNavigateBtn`
-  - Ein Control mit selbst gezeichneten Knöpfen und Fluent-Symbolen, Zustände aus dem DataLink (Anfang/Ende, Bearbeiten)
-  - Texte übersetzt, Tastatur innerhalb des Navigators, Screenreader-Kinder
-- **`TPPGDBText`** wie `TDBText`, auf `TPPGLabel` (`DataSource`, `DataField`, `AutoSize`, `WordWrap`)
-- **`TPPGDBRadioGroup`** wie `TDBRadioGroup` (`Values` neben `Items`, `ReadOnly`), auf 18a
-- **`TPPGDBListBox`** wie `TDBListBox`; **`TPPGDBLookupListBox`** wie `TDBLookupListBox` (`ListSource`, `KeyField`, `ListField`), Logik wie die vorhandene Lookup-Combo
-- **`TPPGDBSpinEdit`**, **`TPPGDBToggleSwitch`** (`ValueChecked`/`ValueUnchecked` wie `TDBCheckBox`)
-- Gemeinsam: der vorhandene `TPPGFieldDataLink`, Fehler am Feld statt Dialog (Phase-9-Regel), Feldauswahl im Objektinspektor
+## 18b – Kachelansicht `TPPGTileView` (`PPG.TileView`)
+Statt die `TListView` zu klonen: Deren Detailansicht kann das Grid schon besser. Neu ist eine Ansicht, die es in VCL und TMS so nicht gibt.
+- **Ansichten** (`TileStyle`):
+  - `tsIcons`: große Symbole mit Beschriftung darunter (Explorer)
+  - `tsTiles`: Symbol links, Titel und zwei Detailzeilen
+  - `tsCards`: Karte mit Vorschaubild, Titel, Untertitel, Plakette und Badge
+- **Daten:** `Items` (Collection) oder virtuell über `IPPGItemSource` (`OnGetItem`) für große Mengen, Gruppen mit Kopf (klappbar)
+- **Suche/Filter:** `FilterText` filtert und hebt Treffer im Text per Markup hervor, `OnFilterItem` für eigene Regeln
+- **Bedienung:**
+  - Zoom mit Strg+Rad
+  - Mehrfachauswahl (Windows-Semantik aus `TPPGSelection`), Gummiband-Auswahl
+  - Tastatur in zwei Dimensionen, Tippsuche, F2 benennt um
+  - Ziehen
+- **Bilder:** `Images`/`ImageName` oder `OnGetPicture` (Vorschaubild je Eintrag, zwischengespeichert)
+- **Ausgabe:** `IPPGTableSource` mit Titel und Detailfeldern. Damit gehen xlsx, HTML und Druck sofort über die Phase-17-Bausteine.
+- Wiederverwenden:
+  - `TPPGCustomItemList`/`TPPGCustomScrollControl` (Overlay-Scroll, weiches Scrollen)
+  - `TPPGItemPainter`/`IPPGItemRenderer`, `TPPGSelection`, `IPPGItemSource`, `PPG.Markup`, Badge-Zeichnung aus `PPG.Feedback`
+  - UIA-Muster der ListBox
+- **Migration:** `TListView` mit `vsIcon`/`vsSmallIcon` → `TPPGTileView` nur mit Meldung (die API unterscheidet sich). `vsReport` → Hinweis auf `TPPGGrid`. Keine automatische 1:1-Umstellung.
 
-## 18c – ScrollBox (`PPG.ScrollBox`)
-- `TPPGScrollBox` wie `TScrollBox`:
-  - Properties: `HorzScrollBar`/`VertScrollBar` (Range, Increment, Tracking, Visible), `AutoScroll`, `BorderStyle`
-  - Methode `ScrollInView`; DFM wie `TScrollBox`
-- **Echte Kind-Fenster scrollen** (anders als die bisherigen PPGlow-Scroll-Controls, die nur selbst gezeichneten Inhalt verschieben). Die Overlay-Scrollleisten der Phase-5-Basis bleiben in der Optik.
-  - Verschieben per `ScrollWindowEx` mit `SW_SCROLLCHILDREN`, kein Flackern
-  - Mausrad auch über Kind-Controls, die es nicht selbst brauchen (über den vorhandenen Nachrichten-Verteiler `PPG.AppHooks`)
-  - Fokuswechsel per Tab bringt das Control ins Bild (wie VCL)
-- Fläche wie `TPPGPanel` (Eltern-Hintergrund für Kinder, Dark Mode)
-- Die Tour aus Phase 16 bekommt damit ihr `ScrollInView`.
+## 18c – `TPPGDBNavigator` (`PPG.DB.Navigator`, Paket `PPGlowDBR`)
+- DFM wie `TDBNavigator` (`DataSource`, `VisibleButtons`, `Hints`, `ConfirmDelete`, `Flat`, `BeforeAction`, `OnClick` mit `TNavigateBtn`)
+- **Mehrwert:**
+  - `ShowCounter`: „Datensatz 12 von 340“ bzw. „neu“, auch für Screenreader
+  - `ShowSearch`: Suchfeld mit `SearchField`, `Locate` mit Teiltreffer, Enter springt zum nächsten Treffer
+  - `ShowFilter`: Schnellfilter auf das Suchfeld (`DataSet.Filter`/`OnFilterRecord`) mit Zurücksetzen
+  - Überlaufmenü bei wenig Platz
+  - Tastenkürzel (Strg+Pos1/Ende, Einfg, Strg+Entf)
+- Wiederverwenden: Knopf-Zeichnung und Überlauf wie `TPPGToolBar`, Suchfeld aus `TPPGSearchEdit`, `TDataLink`-Muster aus `PPG.DB.Controls`, Fluent-Symbole (`PPG.IconFont`)
 
-## 18d – ListView (`PPG.ListView`)
-**Eigenes Control auf der Listen-Basis** (`TPPGCustomItemList`, Item-Painter, Selection, Row-Layout), kein umgezeichnetes natives `TListView`. Nur so stimmen Presets, Dark Mode, Element-Stile und Barrierefreiheit wie bei den übrigen Listen.
-- API und DFM wie `TListView`:
-  - `ViewStyle` (`vsReport`, `vsList`, `vsSmallIcon`, `vsIcon`), `Items`/`TListItem`-ähnliches `TPPGListItem` (`Caption`, `SubItems`, `ImageIndex`, `Checked`, `Data`, `Selected`, `Focused`)
-  - `Columns` (`Caption`, `Width`, `Alignment`, `AutoSize`), `LargeImages`/`SmallImages`
-  - `MultiSelect`, `RowSelect`, `Checkboxes`, `GridLines`, `HideSelection`, `ReadOnly`, `SortType`/`AlphaSort`/`CustomSort`
-  - Gruppen (`Groups`, `GroupView`)
-- Virtuell wie `TListView`: `OwnerData` + `OnData`, `OnDataFind`, `Items.Count` setzbar (Ziel: 1 Mio. Einträge flüssig, Benchmark wie bei ListBox/Grid)
-- Bedienung:
-  - Kopf klicken (`OnColumnClick`), Spaltenbreite ziehen, Doppelklick auf die Kopfkante
-  - Umbenennen per F2/Klick (`OnEditing`/`OnEdited`)
-  - Ziehen aus der Liste (`DragMode`)
-  - Tastatur und Tippsuche wie Windows
-- Ereignisse wie VCL: `OnChange`, `OnSelectItem`, `OnItemChecked`, `OnCompare`, `OnCustomDrawItem`/`OnCustomDrawSubItem`
-- Symbol- und Listenansicht: Raster mit Umbruch, Beschriftung mehrzeilig unter dem Symbol, Auswahlrahmen per Maus (Gummiband) in den Symbolansichten
-- Barrierefreiheit: UIA-Provider wie bei ListBox/Grid (Liste bzw. Tabelle in `vsReport`)
-- Bewusst nicht: Kacheln (`vsTile`), Arbeitsbereiche (`WorkAreas`), Hintergrundbild, natives Header-Control
+## 18d – Scrollen in Containern
+- `TPPGPanel.AutoScroll` und `HorzScrollBar`/`VertScrollBar` wie `TScrollingWinControl`:
+  - echte Kind-Fenster per `ScrollWindowEx(SW_SCROLLCHILDREN)`
+  - Overlay-Leisten in PPGlow-Optik, weiches Scrollen, Mausrad über Kind-Controls (Verteiler `PPG.AppHooks`)
+  - `ScrollInView`
+- `TPPGScrollBox = class(TPPGPanel)` mit `AutoScroll = True` und ohne Rahmen als Vorgabe, DFM wie `TScrollBox`
+- Risiko: DPI-Wechsel und VCL-Styles. Prüfung mit Demo-Karte mit vielen Feldern.
 
 ## 18e – Migration, Demo, Doku, Prüfung
-- `migrate.ps1`:
-  - `TRadioGroup`→`TPPGRadioGroup`, `TScrollBox`→`TPPGScrollBox`, `TListView`→`TPPGListView`, `TDBNavigator`, `TDBText`, `TDBRadioGroup`, `TDBListBox`, `TDBLookupListBox`
-  - DevExpress/TMS-Gegenstücke, soweit 1:1 (`TcxRadioGroup`, `TcxCheckGroup`, `TcxListView`, `TAdvListView`)
-  - Event-Signaturen prüfen (`TLVSelectItemEvent` u. a.), Selbsttest-Fixtures ergänzen
-- Demo: Formularseite (RadioGroup/CheckGroup), Datenbankseite (Navigator, DBText, DB-RadioGroup …), Seite Listen/Explorer (ListView in allen Ansichten, virtuell), ScrollBox als Karte mit vielen Feldern. Selbsttest-Szenarien.
-- Tests:
-  - je Control Lebenszyklus, Paint GDI+ und GDI, Verhalten, Streaming, Sichtgalerie, UIA
-  - Regressionstest für jede gefundene Abweichung zur VCL (Gegenprobe mit dem VCL-Control)
-- Abschluss: Win32/Win64, Leak-Lauf, Benchmark (ListView), Regel-Prüfer, Palettensymbole (`make-icons.ps1`), Property-Referenz, Hilfe-Notizen, `Docs\Migration.md`
+- **`migrate.ps1`:**
+  - `TRadioGroup`/`TcxRadioGroup`→`TPPGRadioGroup`, `TcxCheckGroup`→`TPPGCheckGroup`, `TDBRadioGroup`→`TPPGDBRadioGroup`, `TDBNavigator`→`TPPGDBNavigator`, `TScrollBox`→`TPPGScrollBox`
+  - `TListView`: nur melden. Selbsttest-Fixtures ergänzen.
+- **Demo:**
+  - Formularseite: Auswahlgruppen in allen drei Stilen
+  - Neue Seite „Kacheln“ (Dateien/Produkte mit Suche, Zoom, virtuell 100 000)
+  - Datenbankseite: Navigator mit Zähler/Suche/Filter
+  - ScrollBox-Karte; Selbsttest-Szenarien
+- **Tests:**
+  - je Control Lebenszyklus, Paint GDI+/GDI, Verhalten, Streaming, Sichtgalerie, UIA
+  - Gegenprobe mit `TRadioGroup`/`TDBNavigator` (gleiche DFM lädt, gleiche Ereignisse)
+- **Doku:**
+  - `Docs\Phase18-Plan.md` durch diesen Plan ersetzen
+  - `Docs\Roadmap3.md` anpassen (Phase 18 „mit Mehrwert“, zurückgestellte Nachbauten)
+  - Hilfe-Notizen, Property-Referenz, `make-icons.ps1`, `Docs\Migration.md`, `NAECHSTE-SCHRITTE.md`
+- Neue Units in alle Projektlisten eintragen (Regel PROJECT), Texte nach `PPG.Consts` und `Lang\PPGlow.de.txt` (Regel LANG).
 
-## Entscheidungen (alle nach Empfehlung, vom User übernommen)
-1. **RadioGroup-Einträge selbst gezeichnet** in einem Fenster (nicht je Eintrag ein RadioButton).
-2. **ListView als eigenes Control** auf der Listen-Basis (kein umgezeichnetes natives `TListView`).
-3. **ListView virtuell** über `OwnerData`/`OnData` wie die VCL.
-4. **ListView ohne** Kacheln, `WorkAreas` und Hintergrundbild.
-5. **ScrollBox scrollt echte Kind-Fenster** mit der PPGlow-Optik der Scrollleisten.
-6. **DB-Navigator als ein Control** mit selbst gezeichneten Knöpfen (wie die ToolBar).
-7. **Reihenfolge** 18a → 18e, Bericht nach 18e. Zwischenstände nach 18b und 18c in `NAECHSTE-SCHRITTE.md`.
+## Reihenfolge
+18a → 18b → 18c → 18d → 18e, Bericht nach 18e. Zwischenstände in `NAECHSTE-SCHRITTE.md`.
 
-## Risiken
-- ListView: Umfang und die vielen VCL-Eigenheiten (Index-Semantik bei `OwnerData`, `Selected` vs. `ItemFocused`, Ereignisreihenfolge). Gegenmittel: Gegenprobe-Tests mit dem echten `TListView`.
-- ScrollBox: Kind-Fenster beim Scrollen und bei DPI-Wechsel, VCL-Styles (`TScrollBox` hat eigene Style-Hooks).
-- XE2: weiterhin nicht kompiliert (Absicherungsblock außerhalb der Phasen).
+## Verifikation
+- `Build\check-rules.ps1`, `build.ps1 -Projects Runtime,Design,DBRuntime,DBDesign,Tests,Demo` (Win32 und Win64)
+- `Tests\PPGlowTests.exe` (0 = grün), `/leaks`, Benchmark für `TPPGTileView` (100 000 virtuell, Scrollen und Filtern)
+- `Demo\PPGlowDemo.exe /selftest datei.txt` sowie Screenshots der neuen Seiten (vergrößert ansehen), Narrator-Stichprobe
+- `migrate.ps1 -SelfTest` mit den neuen Fixtures

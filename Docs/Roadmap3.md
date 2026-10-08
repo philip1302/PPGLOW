@@ -9,7 +9,7 @@
 | Phase | Inhalt | Größe | Warum jetzt |
 |---|---|---|---|
 | 17 | Ausgabe wie am Bildschirm: Druck, PDF und HTML mit der Grid-Optik | klein | Gleiche Kritik wie beim Excel-Export ist absehbar. `IPPGTableLook` gibt es schon. |
-| 18 | VCL-Lücken: RadioGroup/CheckGroup, ScrollBox, ListView, DB-Navigator, DBText und weitere DB-Controls | mittel–groß | Ohne sie bleibt in fast jedem umgestellten Formular Standard-VCL stehen. |
+| 18 | **Mehrwert statt Klone** (neu gefasst 08.10.2026): Auswahlgruppe mit Segment/Kacheln, `TPPGTileView` (Kachel-/Karten-Galerie), DB-Navigator mit Zähler/Suche/Filter, ScrollBox als `Panel.AutoScroll` | mittel–groß | Nur Controls, die mindestens zwei Dinge können, die VCL und TMS nicht können. Reine Nachbauten erst nach Inventur. |
 | 19 | Formular-Produktivität: `TPPGValidator`, `TPPGBusyOverlay` | klein–mittel | Spart in jedem Eingabeformular Code. Fertige Bausteine für Fehlerprüfung und Warten. |
 | 20 | Fertigstellen: offene Punkte an Planer, Kanban, Ribbon, ComboBox und Grid-Druck | mittel | Fällt Anwendern eher auf als ein weiteres Control. |
 | 21 | Nach der Inventur eines echten Kundenprojekts: `TPPGLayoutControl`, `TPPGInspector`, `TPPGFilterBuilder` | groß | Nur bauen, was die Zahlen rechtfertigen. |
@@ -25,16 +25,8 @@ Nicht geplant (bewusst): Gantt, Pivot-Grid, Docking, RichEdit/HTML-Editor, Code-
 - **Planer- und Kanban-Druck** prüfen: Kategorienfarben und Element-Stile müssen auch dort ankommen.
 - Prüfung: Pixeltests auf der Druckvorschau und Vergleich mit dem Grid-Screenshot.
 
-## Phase 18 – VCL-Lücken (Migration)
-| Control | Ersetzt | Hinweise |
-|---|---|---|
-| `TPPGRadioGroup`, `TPPGCheckGroup` | `TRadioGroup`, `TcxRadioGroup` | `Items`, `ItemIndex`, `Columns`, DFM-kompatibel; Tastatur wie VCL |
-| `TPPGScrollBox` | `TScrollBox` | Overlay-Scrollleisten aus Phase 5, `ScrollInView`, Mausrad bei Kind-Controls |
-| `TPPGListView` | `TListView` | `vsReport`/`vsIcon`/`vsSmallIcon`/`vsList`, Gruppen, Checkboxen, virtuell (`OwnerData`), API und DFM wie `TListView`; baut auf Item-Painter und Selection auf |
-| `TPPGDBNavigator` | `TDBNavigator` | `VisibleButtons`, Hints, `ConfirmDelete`, Fluent-Symbole |
-| `TPPGDBText` | `TDBText` | auf `TPPGLabel` |
-| weitere DB-Controls | `TDBListBox`, `TDBLookupListBox`, `TDBRadioGroup`, `TDBSpinEdit`, DB-ToggleSwitch | je klein |
-- Dazu: `migrate.ps1` um diese Klassen erweitern, Demo-Seiten ergänzen.
+## Phase 18 – Mehrwert statt Klone
+Detailplan: `Docs\Phase18-Plan.md`. Zurückgestellt bis zu einer Inventur: `TPPGDBText`, `TPPGDBListBox`, `TPPGDBLookupListBox`, `TPPGDBSpinEdit`, `TPPGDBToggleSwitch` und eine 1:1-`TPPGListView` (reine Nachbauten ohne Mehrwert).
 
 ## Phase 19 – Formular-Produktivität
 - **`TPPGValidator`** (nicht sichtbar): Regeln je Control (Pflicht, Bereich, Länge, Muster, eigene per Ereignis), nutzt den vorhandenen `ValidationState` der Felder, Fehlertext am Feld, Sammelliste, `Validate: Boolean`, springt zum ersten Fehler, optional OK-Button sperren, Prüfung beim Verlassen oder erst beim Speichern.
