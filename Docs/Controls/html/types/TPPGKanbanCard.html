@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGKanbanCard</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGKanbanCard</h1>
+<p>Typ in Unit <code>PPG.Kanban.Items</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Karte: Titel, Text, Labels, Person, F&#228;lligkeit, Fortschritt, Farbe sowie Spalte und Swimlane.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Id</code></td><td><code>Integer</code></td><td></td><td>Eindeutige Nummer der Karte; wird fortlaufend vergeben.</td></tr>
+<tr><td><code>Title</code></td><td><code>string</code></td><td></td><td>Titel der Karte (fett, erste Zeile).</td></tr>
+<tr><td><code>Text</code></td><td><code>string</code></td><td></td><td>Kartentext mit Markup (&lt;b&gt;, &lt;i&gt;, &lt;color=...&gt;), h&#246;chstens Board.MaxTextLines Zeilen.</td></tr>
+<tr><td><code>ColumnId</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Id der Spalte, in der die Karte liegt.</td></tr>
+<tr><td><code>LaneId</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Id der Swimlane der Karte (nur mit Lanes).</td></tr>
+<tr><td><code>Labels</code></td><td><code>string</code></td><td></td><td>Plaketten, durch Komma getrennt („Bug, UI&quot;); jede wird als farbige Marke gezeigt.</td></tr>
+<tr><td><code>Assignee</code></td><td><code>string</code></td><td></td><td>Name der zust&#228;ndigen Person; die Karte zeigt die Initialen in einem runden Symbol.</td></tr>
+<tr><td><code>Due</code></td><td><code>TDateTime</code></td><td></td><td>F&#228;lligkeitsdatum; 0 = keins. &#220;berf&#228;llige Karten werden hervorgehoben.</td></tr>
+<tr><td><code>Progress</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Fortschritt in Prozent (0 bis 100) als Balken auf der Karte; -1 = keine Anzeige.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clNone</code></td><td>Farbe des Streifens am Kartenrand; clNone = kein Streifen.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert der Anwendung.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGKanbanCards.html">TPPGKanbanCards</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

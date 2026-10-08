@@ -75,11 +75,65 @@ Titelleiste (kein Zeichnen im Nicht-Client-Bereich).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Images`, `LargeImages`, `Tabs`, `TabIndex`, `QuickAccess`, `QuickAccessPosition`, `ShowQuickAccess`, `QuickAccessCustomizable`, `ShowApplicationButton`, `ApplicationButtonCaption`, `ApplicationMenu`, `Backstage`, `Minimized`, `KeyTipsEnabled`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`, `Touch`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
+| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
+| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
+| `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
+| `LargeImages` | `TCustomImageList` |  | Bildliste für große Symbole (32 px) der Items mit Size = rsLarge (LargeImageIndex); die kleinen Symbole kommen aus Images. |
+| `Tabs` | [TPPGRibbonTabs](types/TPPGRibbonTabs.md) |  | Registerkarten des Bands; jede hat Gruppen (Groups), diese die Befehle (Items). Kontext-Registerkarten über ContextName. Nutzung: Im Designer über den Ribbon-Editor (Doppelklick); im Code `PPGRibbon1.Tabs.AddTab('Start').Groups.AddGroup('Ablage').Items.AddButton('Einfügen', $E77F);` |
+| `TabIndex` | `Integer` | `0` | Index der aktiven Registerkarte in Tabs (-1 bis Tabs.Count - 1). Setzen im Code löst keine Ereignisse aus. |
+| `QuickAccess` | [TPPGRibbonItems](types/TPPGRibbonItems.md) |  | Items der Schnellzugriffsleiste. Ein Eintrag mit derselben Action bzw. Beschriftung wie ein Item im Band wirkt auf dieses (QuickSource). Der Anwender passt sie über das Kontextmenü an, wenn QuickAccessCustomizable = True. Nutzung: Im Designer per Collection-Editor oder `PPGRibbon1.AddToQuickAccess(ItemSpeichern);` |
+| `QuickAccessPosition` | `TPPGQuickAccessPosition` | `qapAbove` | Lage der Schnellzugriffsleiste: über den Registerkarten (qapAbove) oder unter dem Band (qapBelow). Werte: `qapAbove`, `qapBelow`. |
+| `ShowQuickAccess` | `Boolean` | `True` | True: Die Schnellzugriffsleiste ist sichtbar. |
+| `QuickAccessCustomizable` | `Boolean` | `True` | True: Das Kontextmenü bietet „Zum Schnellzugriff hinzufügen/entfernen" und die Lage über/unter dem Band an. |
+| `ShowApplicationButton` | `Boolean` | `True` | True: Der „Datei"-Button links neben den Registerkarten ist sichtbar. |
+| `ApplicationButtonCaption` | `string` |  | Beschriftung des „Datei"-Buttons links neben den Registerkarten; leer = „Datei" in der aktuellen Sprache. |
+| `ApplicationMenu` | `TPopupMenu` |  | Menü, das beim Klick auf „Datei" aufklappt, wenn kein Backstage gesetzt ist. Mit TPPGPopupMenu im Stil der Suite. Nutzung: `PPGRibbon1.ApplicationMenu := PPGPopupMenu1;` |
+| `Backstage` | `TControl` |  | Backstage-Bereich: ein beliebiges Control (z. B. ein PageControl oder Panel), das beim Klick auf „Datei" über das ganze Formular gelegt wird. Hat Vorrang vor ApplicationMenu; Esc oder der Zurück-Knopf schließen ihn. Nutzung: Ein Panel mit Visible = False aufs Formular legen und hier zuweisen. |
+| `Minimized` | `Boolean` | `False` | True: Das Band ist eingeklappt, nur die Registerkarten sind sichtbar; ein Klick auf eine Karte öffnet sie als Popup. Umschalten auch per Doppelklick auf eine Karte, Strg+F1 oder den Knopf rechts. |
+| `KeyTipsEnabled` | `Boolean` | `True` | True: Alt bzw. F10 zeigt Tasten-Plaketten (KeyTips) über Registerkarten, „Datei" und Schnellzugriff; ein Buchstabe wählt aus, Esc geht eine Ebene zurück. |
+
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Align` | `TAlign` | `alTop` | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
+| `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
+| `AutoSize` | `Boolean` | `True` | True: Das Control passt seine Größe dem Inhalt an (Text, Bild, Schrift). |
+| `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. |
+| `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` |
+| `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. |
+| `Font` | `TFont` |  | Schrift (Name, Größe, Stil, Farbe). Die Textfarbe der Zustände kann Appearance überschreiben. Nutzung: `Label1.Font.Size := 12; Label1.Font.Style := [fsBold];` |
+| `ParentBiDiMode` | `Boolean` |  | True: BiDiMode wird vom Parent übernommen. |
+| `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. |
+| `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
+| `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
+| `ShowHint` | `Boolean` | `True` | True: Hint wird als Tooltip angezeigt. |
+| `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
+| `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
 
 ## Ereignisse
 
-`OnGesture`, `OnItemClick`, `OnTabChange`, `OnTabChanging`, `OnGalleryClick`, `OnGetGalleryItem`, `OnDrawGalleryItem`, `OnLauncherClick`, `OnMinimizedChange`, `OnQuickAccessChange`, `OnApplicationButtonClick`, `OnBackstageChange`
+| Ereignis | Typ und Parameter | Wann und wozu |
+|---|---|---|
+| `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
+| `OnItemClick` | `TPPGRibbonItemEvent` `(Sender: TObject; Item: TPPGRibbonItem)` | Ein Item wurde ausgelöst (Klick, KeyTip, Tastatur, Schnellzugriff); kommt nach Item.OnClick bzw. Action.Execute. Gut für eine zentrale Behandlung aller Befehle über Item.Tag. |
+| `OnTabChange` | `TNotifyEvent` `(Sender: TObject)` | Die aktive Registerkarte wurde durch den Anwender gewechselt (nicht bei TabIndex im Code). |
+| `OnTabChanging` | `TPPGRibbonTabChangingEvent` `(Sender: TObject; NewTab: TPPGRibbonTab; var AllowChange: Boolean)` | Vor einem Wechsel der Registerkarte durch den Anwender; NewTab ist das Ziel, AllowChange := False verhindert den Wechsel. |
+| `OnGalleryClick` | `TPPGRibbonGalleryEvent` `(Sender: TObject; Item: TPPGRibbonItem; Index: Integer)` | Ein Galerie-Eintrag wurde gewählt (in der Leiste oder in der aufgeklappten Galerie); Index ist der Eintrag, Item.GalleryIndex ist schon gesetzt. |
+| `OnGetGalleryItem` | `TPPGRibbonGetGalleryItemEvent` `(Sender: TObject; Item: TPPGRibbonItem; Index: Integer; var Data: TPPGItemData; var Color: TColor)` | Liefert den Inhalt eines virtuellen Galerie-Eintrags (Item.GalleryCount > 0): Data mit Text, Bild usw. füllen; Color setzt optional ein Farbfeld. Nutzung: `Data.Text := Vorlagen[Index].Name;` |
+| `OnDrawGalleryItem` | `TPPGRibbonDrawGalleryItemEvent` `(Sender: TObject; Item: TPPGRibbonItem; Index: Integer; Canvas: TCanvas; const Rect: TRect; Selected, Hot: Boolean; var Handled: Boolean)` | Eigenes Zeichnen eines Galerie-Eintrags: Item ist die Galerie, Index der Eintrag, Canvas/Rect die Zeichenfläche, Selected/Hot der Zustand. Handled := True ersetzt das Standard-Zeichnen. Nutzung: Für Vorschauen wie Formatvorlagen oder Farbfelder. |
+| `OnLauncherClick` | `TPPGRibbonGroupEvent` `(Sender: TObject; Group: TPPGRibbonGroup)` | Der kleine Pfeil unten rechts in einer Gruppe (Dialog-Starter) wurde geklickt; Group ist die Gruppe. Nutzung: Typisch: den passenden Einstellungsdialog öffnen. |
+| `OnMinimizedChange` | `TNotifyEvent` `(Sender: TObject)` | Minimized wurde durch den Anwender umgeschaltet. |
+| `OnQuickAccessChange` | `TNotifyEvent` `(Sender: TObject)` | Der Anwender hat den Schnellzugriff geändert (hinzugefügt, entfernt, geladen). Nutzung: Hier `SaveQuickAccess` aufrufen und das Ergebnis z. B. in einer INI-Datei speichern. |
+| `OnApplicationButtonClick` | `TNotifyEvent` `(Sender: TObject)` | Der „Datei"-Button wurde geklickt; kommt vor dem Öffnen von Backstage bzw. ApplicationMenu. |
+| `OnBackstageChange` | `TNotifyEvent` `(Sender: TObject)` | Der Backstage-Bereich wurde ein- oder ausgeblendet (Abfrage über BackstageVisible). |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGRibbon.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGRibbon.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

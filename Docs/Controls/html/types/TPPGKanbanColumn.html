@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGKanbanColumn</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGKanbanColumn</h1>
+<p>Typ in Unit <code>PPG.Kanban.Items</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Spalte: Titel, WIP-Limit, Farbe, Breite, eingeklappt und eine feste Id f&#252;r die Zuordnung der Karten.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Id</code></td><td><code>Integer</code></td><td></td><td>Eindeutige Nummer der Spalte; Karten verweisen &#252;ber ColumnId darauf.</td></tr>
+<tr><td><code>Title</code></td><td><code>string</code></td><td></td><td>Titel im Spaltenkopf.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clNone</code></td><td>Farbe der Kopfleiste der Spalte; clNone = Akzent des Presets.</td></tr>
+<tr><td><code>WipLimit</code></td><td><code>Integer</code></td><td><code>0</code></td><td>H&#246;chstzahl der Karten (0 bis 9999; 0 = ohne Limit). Dar&#252;ber wird die Spalte als Warnung gef&#228;rbt bzw. bei WipMode = kwmBlock gesperrt.</td></tr>
+<tr><td><code>Collapsed</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Die Spalte ist eingeklappt (schmaler Streifen mit senkrechtem Titel). Der Anwender schaltet &#252;ber den Pfeil im Kopf um.</td></tr>
+<tr><td><code>Width</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Eigene Breite der Spalte in logischen Pixeln (80 bis 2000); 0 = Board.ColumnWidth.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Die Spalte wird ausgeblendet.</td></tr>
+<tr><td><code>VirtualCount</code></td><td><code>Integer</code></td><td><code>0</code></td><td>&gt; 0: virtuelle Spalte mit so vielen Karten; der Inhalt kommt &#252;ber OnGetCard, gezeichnet wird nur Sichtbares. F&#252;r sehr viele Karten. Nutzung: <code>Kanban1.Columns[0].VirtualCount := 100000;</code></td></tr>
+<tr><td><code>Key</code></td><td><code>string</code></td><td></td><td>Wert im Spaltenfeld der Datenbank (DB-Kanban, ColumnField); leer = die Id als Text.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert der Anwendung.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGKanbanColumns.html">TPPGKanbanColumns</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

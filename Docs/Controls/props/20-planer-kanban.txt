@@ -1,0 +1,217 @@
+# Planer, DB-Planer, Termine, Planer-Drucker, Kanban, DB-Kanban, Kanban-Drucker, Druckränder.
+
+# --- TPPGAppointment (Eintrag von Appointments) ---
+TPPGAppointment.AllDay = True: ganztägiger Termin. Er liegt im Band über dem Zeitraster; Beginn und Ende sind dann reine Daten ohne Zeitzone, das Ende ist exklusiv (wie DTEND in iCalendar).
+> Ein Tag: `A.AllDay := True; A.Start := EncodeDate(2026, 10, 8); A.Finish := A.Start + 1;`
+TPPGAppointment.Body = Beschreibungstext des Termins; darf Mini-Markup enthalten (<b>, <i>, <color=...>). Wird in der Agenda und im Tooltip gezeigt.
+TPPGAppointment.Category = Index in Planner.Categories; bestimmt die Terminfarbe (Kategoriefarbe, bei clDefault eine Farbe der Diagrammpalette). -1 = keine Kategorie, dann gilt die Farbe der Ressource bzw. der Akzent.
+> `A.Category := 2;` Farbe zur Laufzeit ändern über OnGetAppointmentColor.
+TPPGAppointment.ExDates = Ausnahmen einer Serie: Beginnzeiten ausgefallener Vorkommen im iCalendar-Format, durch Komma getrennt (in gespeicherter Zeit, also UTC bei TimeZoneMode = tzmUtc). Wird beim Löschen bzw. Herauslösen eines Vorkommens automatisch ergänzt.
+> Im Code besser die Methode zum Ausnehmen eines Vorkommens verwenden statt den Text selbst zu bauen.
+TPPGAppointment.FinishTime = Gespeichertes Ende (UTC bei TimeZoneMode = tzmUtc, sonst Ortszeit). Für die Anzeige-Zeit die öffentliche Eigenschaft Finish verwenden.
+TPPGAppointment.Id = Eindeutige Nummer des Termins; vergibt die Collection fortlaufend. Wird für Serien (RecurrenceParent) und den DB-Planer (KeyField) gebraucht.
+TPPGAppointment.Location = Ort des Termins; erscheint unter dem Betreff, in der Agenda und für den Screenreader.
+TPPGAppointment.ReadOnly = True: Der Anwender kann diesen Termin nicht verschieben, in der Dauer ändern, umbenennen oder löschen; Kopieren mit Strg+Ziehen bleibt erlaubt.
+TPPGAppointment.Recurrence = Wiederholungsregel im iCalendar-Format (RRULE). Leer = Einzeltermin. Der Planer löst die Vorkommen nur für den sichtbaren Zeitraum auf.
+> `A.Recurrence := 'FREQ=WEEKLY;BYDAY=MO,WE;COUNT=10';`
+TPPGAppointment.RecurrenceParent = Bei einem geänderten Einzeltermin einer Serie: Id der Serie (0 = kein herausgelöster Termin). Zusammen mit RecurrenceStart ersetzt er genau ein Vorkommen der Serie.
+TPPGAppointment.RecurrenceStart = Ursprünglicher Beginn des Vorkommens, das dieser herausgelöste Termin ersetzt (nur mit RecurrenceParent <> 0).
+TPPGAppointment.ResourceId = Ressource des Termins (Wert von Resources[i].Id). Bestimmt die Spaltengruppe (GroupByResource) bzw. Zeile der Zeitleiste und ohne Kategorie die Farbe.
+TPPGAppointment.StartTime = Gespeicherter Beginn (UTC bei TimeZoneMode = tzmUtc, sonst Ortszeit). Für die Anzeige-Zeit die öffentliche Eigenschaft Start verwenden.
+> Im Code meist `A.Start := ...` (rechnet aus der Anzeige-Zone um); StartTime nur beim Laden aus eigenen Daten.
+TPPGAppointment.Subject = Betreff; die Überschrift des Termins im Raster. Der Anwender ändert ihn mit F2 oder Doppelklick (ohne OnAppointmentOpen).
+TPPGAppointment.Tag = Freier Ganzzahlwert der Anwendung (z. B. eine eigene Datensatz-ID).
+
+# --- TPPGCustomDBKanban (TPPGDBKanban) ---
+TPPGCustomDBKanban.AssigneeField = Feld mit dem Namen der zuständigen Person (Karte zeigt die Initialen). Optional.
+TPPGCustomDBKanban.ColorField = Feld mit der Farbe des Farbstreifens der Karte (TColor als Zahl). Optional.
+TPPGCustomDBKanban.ColumnField = Feld mit der Spalte der Karte. Der Wert wird mit Column.Key verglichen, ist Key leer, mit der Column.Id. Pflicht.
+> `DBKanban1.ColumnField := 'STATUS';` und in den Spalten `Key := 'offen'` usw.
+TPPGCustomDBKanban.DataSource = Datenquelle, deren Datensätze als Karten gezeigt werden.
+TPPGCustomDBKanban.DueField = Feld mit dem Fälligkeitsdatum (Datum/Zeit). Optional; überfällige Karten werden hervorgehoben.
+TPPGCustomDBKanban.KeyField = Feld mit dem eindeutigen ganzzahligen Schlüssel. Ohne KeyField ist das Board schreibgeschützt (Verschieben wird nicht gespeichert).
+TPPGCustomDBKanban.LabelsField = Feld mit den Plaketten, durch Komma getrennt („Bug, UI"). Optional.
+TPPGCustomDBKanban.LaneField = Feld mit der Swimlane; Wert wird mit Lane.Key bzw. Lane.Id verglichen. Optional, nur mit Lanes.
+TPPGCustomDBKanban.MaxRecords = Höchstzahl der gelesenen Datensätze (Schutz vor sehr großen Tabellen), 1 bis MaxInt; Standard 10000.
+TPPGCustomDBKanban.OrderField = Feld für die Reihenfolge der Karten in einer Spalte (Zahl). Nach dem Verschieben nummeriert das Board die betroffenen Zellen in Zehnerschritten neu und schreibt nur geänderte Datensätze.
+TPPGCustomDBKanban.ProgressField = Feld mit dem Fortschritt 0..100 (leer bzw. -1 = keine Anzeige). Optional.
+TPPGCustomDBKanban.ReloadDelay = Verzögerung in Millisekunden (0 bis 10000), bevor nach Änderungen von außen neu geladen wird; fasst viele Änderungen zu einem Neuladen zusammen.
+TPPGCustomDBKanban.SyncRecord = True: Die gewählte Karte wird zum aktuellen Datensatz der Datenmenge (z. B. für Detail-Felder daneben).
+TPPGCustomDBKanban.TextField = Feld mit dem Kartentext (darf Markup enthalten). Optional.
+TPPGCustomDBKanban.TitleField = Feld mit dem Kartentitel. Pflicht.
+
+# --- TPPGCustomDBPlanner (TPPGDBPlanner) ---
+TPPGCustomDBPlanner.AllDayField = Feld „ganztägig" (Boolean). Optional.
+TPPGCustomDBPlanner.BodyField = Feld mit dem Beschreibungstext (Markup erlaubt). Optional.
+TPPGCustomDBPlanner.CategoryField = Feld mit dem Kategorie-Index (Zahl, -1 = keine). Optional.
+TPPGCustomDBPlanner.DataSource = Datenquelle, deren Datensätze als Termine gezeigt werden.
+TPPGCustomDBPlanner.ExDatesField = Feld mit den Ausnahmen einer Serie (Text, iCalendar-Zeiten durch Komma getrennt). Optional, nur mit RecurrenceField.
+TPPGCustomDBPlanner.FinishField = Feld mit dem Ende (Datum/Zeit, in der Zone nach TimeZoneMode). Pflicht.
+TPPGCustomDBPlanner.KeyField = Feld mit dem eindeutigen ganzzahligen Schlüssel; Pflicht zum Schreiben. Selbst vergebene Schlüssel (AutoInc) werden nach dem Speichern übernommen.
+TPPGCustomDBPlanner.LocationField = Feld mit dem Ort. Optional.
+TPPGCustomDBPlanner.MaxRecords = Höchstzahl der gelesenen Datensätze, 1 bis MaxInt; Standard 10000. Für große Kalender zusätzlich OnGetRange nutzen.
+TPPGCustomDBPlanner.OnGetRange = Kommt vor jedem Lesen mit dem sichtbaren Zeitraum (AFrom bis ATo). Hier Filter oder Abfrage-Parameter setzen, damit nur dieser Zeitraum gelesen wird; Serien mit Wiederholung müssen immer dabei sein.
+> `Query1.ParamByName('VON').AsDateTime := AFrom; Query1.ParamByName('BIS').AsDateTime := ATo;`
+TPPGCustomDBPlanner.ParentField = Feld mit der Serien-Id eines herausgelösten Einzeltermins (RecurrenceParent). Optional.
+TPPGCustomDBPlanner.RecurrenceField = Feld mit der Wiederholungsregel (RRULE-Text). Optional.
+TPPGCustomDBPlanner.ReloadDelay = Verzögerung in Millisekunden (0 bis 10000), bevor nach Änderungen von außen neu geladen wird; eigenes Schreiben löst kein Neuladen aus.
+TPPGCustomDBPlanner.ResourceField = Feld mit der Ressourcen-Id (Zahl, Resources[i].Id). Optional.
+TPPGCustomDBPlanner.StartField = Feld mit dem Beginn (Datum/Zeit, in der Zone nach TimeZoneMode). Pflicht.
+TPPGCustomDBPlanner.SubjectField = Feld mit dem Betreff. Pflicht.
+TPPGCustomDBPlanner.SyncRecord = True: Der gewählte Termin wird zum aktuellen Datensatz der Datenmenge.
+
+# --- TPPGCustomKanban (TPPGKanban, TPPGDBKanban) ---
+TPPGCustomKanban.AllowDrag = True: Karten lassen sich mit der Maus ziehen. Mit False bleibt das Verschieben per Tastatur (Strg+Pfeile) und Code möglich, solange ReadOnly False ist.
+TPPGCustomKanban.CardGap = Abstand zwischen den Karten in logischen Pixeln (0 bis 64).
+TPPGCustomKanban.Cards = Alle Karten (Collection). Eine Karte gehört über ColumnId und LaneId zu einer Zelle; die Reihenfolge in der Zelle ist die Reihenfolge in der Collection.
+> `Kanban1.Cards.AddCard(Kanban1.Columns[0].Id, 'Neue Aufgabe');`
+TPPGCustomKanban.ColumnWidth = Standardbreite der Spalten in logischen Pixeln (120 bis 2000); einzelne Spalten weichen über Column.Width ab.
+TPPGCustomKanban.Columns = Die Spalten des Boards (Collection) mit Titel, Farbe, WIP-Limit, Breite und eingeklappt.
+> `Kanban1.Columns.AddColumn('In Arbeit', 3);` (Titel, WIP-Limit)
+TPPGCustomKanban.KanbanStyles = Bereiche des Boards einzeln gestalten: Spalten, Karten, Karte unter der Maus, gewählte Karte, Swimlane-Köpfe. Nicht gesetzte Werte kommen aus dem Preset.
+> `Kanban1.KanbanStyles.Card.Color := $00FAFAFA;`
+TPPGCustomKanban.Lanes = Swimlanes (Zeilen, Collection). Ohne sichtbare Lanes gibt es eine einzige Zeile und jede Spalte scrollt für sich; mit Lanes scrollt das ganze Board senkrecht.
+TPPGCustomKanban.MaxTextLines = Höchstzahl der Textzeilen je Karte (0 bis 50); längerer Text wird gekürzt. 0 = Kartentext nicht anzeigen.
+TPPGCustomKanban.OnCardClick = Eine Karte wurde angeklickt. Column und Index nennen ihre Lage; Card ist nil bei virtuellen Spalten.
+TPPGCustomKanban.OnCardMoved = Eine Karte wurde verschoben (Maus oder Tastatur). Move enthält Karte, Quell- und Zielspalte bzw. -Swimlane, Positionen und ByKeyboard; die DB-Variante hat dann schon gespeichert.
+> Gut für Protokoll oder Statusmeldung: `Log(Move.Card.Title + ' nach ' + Move.ToColumn.Title);`
+TPPGCustomKanban.OnCardMoving = Vor dem Verschieben einer Karte; Allow := False lehnt ab. Allow kommt bereits False an, wenn WipMode = kwmBlock und die Zielspalte voll ist.
+> `if (Move.ToColumn.Title = 'Erledigt') and (Move.Card.Progress < 100) then Allow := False;`
+TPPGCustomKanban.OnCardOpen = Eine Karte soll geöffnet werden (Doppelklick oder Enter); hier z. B. einen Bearbeitungsdialog zeigen.
+TPPGCustomKanban.OnColumnCollapse = Der Anwender hat eine Spalte über den Pfeil im Kopf ein- oder ausgeklappt (Column.Collapsed ist schon umgestellt).
+TPPGCustomKanban.OnCustomDrawCard = Vor dem Zeichnen jeder Karte: Style (Fill, TextColor, BorderColor, FontStyle) für diese Karte ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen. Card enthält die Kartendaten, State u. a. idsSelected und idsHot.
+> `if (Card.Due <> 0) and (Card.Due < Date) then Style.BorderColor := clRed;`
+TPPGCustomKanban.OnGetCard = Liefert den Inhalt einer Karte virtueller Spalten (Column.VirtualCount > 0): Data für Column und Index füllen. Wird nur für sichtbare Karten aufgerufen.
+> `Data.Title := Liste[Index].Name;`
+TPPGCustomKanban.OnSelectionChange = Die gewählte Karte hat sich durch den Anwender geändert (SelectedCard).
+TPPGCustomKanban.ReadOnly = True: Karten können weder gezogen noch per Tastatur verschoben werden; Auswahl, Öffnen und Einklappen bleiben möglich.
+TPPGCustomKanban.ShowCardCount = True: Im Spaltenkopf steht die Zahl der Karten (mit WIP-Limit als „3 / 5").
+TPPGCustomKanban.VirtualCardHeight = Feste Höhe der Karten virtueller Spalten in logischen Pixeln (0 bis 1000); 0 = aus der Schrift berechnet.
+TPPGCustomKanban.WipMode = Verhalten bei vollem WIP-Limit: kwmWarn färbt die Spalte als Warnung, erlaubt aber das Ablegen; kwmBlock lehnt Karten für volle Spalten ab.
+
+# --- TPPGCustomPlanner (TPPGPlanner, TPPGDBPlanner) ---
+TPPGCustomPlanner.AgendaDays = Zahl der Tage in der Agenda-Ansicht (1 bis 366).
+TPPGCustomPlanner.Appointments = Die Termine (Collection, wird in der DFM gespeichert). Beim DB-Planer ist sie nur der Spiegel der Datenmenge und wird nicht gespeichert.
+> `Planner1.Appointments.AddAppointment(Start, Finish, 'Besprechung');`
+TPPGCustomPlanner.Calendar = Verbundener TPPGCalendar: Er zeigt Tage mit Terminen fett, und ein Klick auf einen Tag stellt den Zeitraum des Planers ein.
+TPPGCustomPlanner.Categories = Kategorien mit Name und Farbe (wie Outlook); Appointment.Category ist der Index. Ohne eigene Farbe gilt eine Farbe der Diagrammpalette.
+> `Planner1.Categories.AddCategory('Kunde', $0050A0F0);`
+TPPGCustomPlanner.Date = Bezugstag: der gezeigte Zeitraum enthält diesen Tag (in Tag-, Wochen-, Monats- und Zeitleistenansicht). Wird nicht gespeichert, Vorgabe ist heute; Setzen löst OnRangeChange aus.
+> `Planner1.Date := EncodeDate(2026, 12, 1);`
+TPPGCustomPlanner.DayCount = Zahl der Tage in der Tagesansicht (pvDay), 1 bis 31.
+TPPGCustomPlanner.DayEndHour = Letzte gezeigte Stunde des Zeitrasters (1 bis 24, exklusiv); zusammen mit DayStartHour lässt sich z. B. nur 7–19 Uhr zeigen.
+TPPGCustomPlanner.DayStartHour = Erste gezeigte Stunde des Zeitrasters (0 bis 23).
+> `Planner1.DayStartHour := 7; Planner1.DayEndHour := 19;`
+TPPGCustomPlanner.FirstDayOfWeek = Erster Wochentag der Wochen- und Monatsansicht; fdLocale = nach den Ländereinstellungen von Windows.
+TPPGCustomPlanner.GroupByResource = True: In Tag- und Wochenansicht bekommt jede Ressource ihre eigene Spaltengruppe (nur mit Resources). In der Zeitleiste sind Ressourcen immer Zeilen.
+TPPGCustomPlanner.OnAppointmentChanged = Ein Termin wurde vom Anwender geändert (verschoben, in der Dauer geändert, kopiert oder umbenannt); beim DB-Planer ist er bereits gespeichert.
+TPPGCustomPlanner.OnAppointmentChanging = Vor einer Änderung durch den Anwender. Kind nennt die Art (Verschieben, Größe, Kopie, Betreff). NewStart, NewFinish und NewResourceId lassen sich anpassen, Allow := False bricht ab.
+> `if DayOfWeek(NewStart) in [1, 7] then Allow := False; // kein Wochenende`
+TPPGCustomPlanner.OnAppointmentCreated = Ein neuer Termin wurde angelegt (Doppelklick, Enter, Tippen auf freier Fläche oder Kopie); hier z. B. Standardwerte setzen.
+TPPGCustomPlanner.OnAppointmentOpen = Ein Termin soll geöffnet werden (Doppelklick oder Enter). Ist das Ereignis zugewiesen, wird statt der Betreff-Bearbeitung nur das Ereignis ausgelöst, z. B. für einen eigenen Dialog.
+TPPGCustomPlanner.OnCreateAppointment = Bevor ein Termin angelegt wird, mit gewähltem Zeitraum (AStart, AFinish), Ressource und ganztägig; Allow := False verhindert das Anlegen.
+> Eigenen Dialog zeigen und danach selbst anlegen, dann `Allow := False`.
+TPPGCustomPlanner.OnCustomDrawAppointment = Vor dem Zeichnen jedes Termins: Style (Fill = Terminfarbe, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen.
+> `if Appointment.ReadOnly then Style.FontStyle := [fsItalic];`
+TPPGCustomPlanner.OnDeleting = Bevor ein Termin gelöscht wird (Entf); Allow := False verhindert das Löschen, z. B. nach einer Rückfrage.
+TPPGCustomPlanner.OnGetAppointmentColor = Liefert die Farbe eines Termins zuletzt: AColor kommt mit der berechneten Farbe (Kategorie, Ressource oder Akzent) und kann überschrieben werden.
+> `if Appointment.Location = 'Extern' then AColor := clTeal;`
+TPPGCustomPlanner.OnRangeChange = Der sichtbare Zeitraum hat sich geändert (Blättern, Ansicht, Date per Code). Die DB-Variante lädt darüber nach.
+TPPGCustomPlanner.OnSelectionChange = Auswahl geändert (gewählter Termin oder gewählte Zeitfelder).
+TPPGCustomPlanner.PlannerStyles = Bereiche des Planers einzeln gestalten: Hintergrund, Kopf, Zeitleiste, Nicht-Arbeitszeit, Heute, Jetzt-Linie, Termine, gewählte Zeitfelder. Nicht gesetzte Werte kommen aus dem Preset.
+> `Planner1.PlannerStyles.NonWorkHours.Color := $00F4F4F4;`
+TPPGCustomPlanner.ReadOnly = True: Termine können weder angelegt, verschoben, in der Dauer geändert noch gelöscht werden; Auswahl und Öffnen bleiben möglich.
+TPPGCustomPlanner.Resources = Ressourcen (Personen, Räume) mit Id, Name und Farbe; Termine gehören über ResourceId dazu.
+> `Planner1.Resources.AddResource(1, 'Raum A');`
+TPPGCustomPlanner.ShowNowLine = True: Eine Linie markiert die aktuelle Uhrzeit (wird einmal pro Minute aktualisiert).
+TPPGCustomPlanner.SlotHeight = Höhe eines Zeitfelds in logischen Pixeln (8 bis 200).
+TPPGCustomPlanner.SlotMinutes = Länge eines Zeitfelds in Minuten: 5, 10, 15, 20, 30 oder 60. Ziehen und Größe ändern rasten an diesem Raster ein; andere Werte lösen EPPGPropertyError aus.
+TPPGCustomPlanner.SlotWidth = Breite eines Zeitfelds in der Zeitleiste (pvTimeline) in logischen Pixeln (8 bis 400).
+TPPGCustomPlanner.TimeZone = Zeitzone der Anzeige als Windows- oder IANA-Name (z. B. 'Europe/Berlin'); leer = Zone des Rechners.
+TPPGCustomPlanner.TimeZoneMode = In welcher Zeit StartTime und FinishTime gespeichert sind: tzmUtc (Vorgabe, eindeutig auch über Zonen und Sommerzeit) oder tzmLocal (Ortszeit ohne Umrechnung).
+TPPGCustomPlanner.TimelineDays = Zahl der Tage in der Zeitleiste (1 bis 366).
+TPPGCustomPlanner.View = Ansicht: Tag (DayCount Tage), Arbeitswoche (WorkDays), Woche, Monat (6 Wochen), Zeitleiste (waagerecht, Zeilen = Ressourcen) oder Agenda (Liste nach Tagen).
+> `Planner1.View := pvWorkWeek;`
+TPPGCustomPlanner.WorkDays = Arbeitstage: bestimmen die Arbeitswoche (pvWorkWeek); die übrigen Tage werden als freie Tage hinterlegt.
+TPPGCustomPlanner.WorkEnd = Ende der Arbeitszeit in Minuten nach Mitternacht (0 bis 1440, Standard 1020 = 17:00).
+TPPGCustomPlanner.WorkStart = Beginn der Arbeitszeit in Minuten nach Mitternacht (0 bis 1440, Standard 480 = 8:00); außerhalb wird das Raster als Nicht-Arbeitszeit hinterlegt.
+> `Planner1.WorkStart := 7 * 60 + 30; // 7:30`
+
+# --- TPPGKanbanCard ---
+TPPGKanbanCard.Assignee = Name der zuständigen Person; die Karte zeigt die Initialen in einem runden Symbol.
+TPPGKanbanCard.Color = Farbe des Streifens am Kartenrand; clNone = kein Streifen.
+TPPGKanbanCard.ColumnId = Id der Spalte, in der die Karte liegt.
+TPPGKanbanCard.Due = Fälligkeitsdatum; 0 = keins. Überfällige Karten werden hervorgehoben.
+TPPGKanbanCard.Id = Eindeutige Nummer der Karte; wird fortlaufend vergeben.
+TPPGKanbanCard.Labels = Plaketten, durch Komma getrennt („Bug, UI"); jede wird als farbige Marke gezeigt.
+TPPGKanbanCard.LaneId = Id der Swimlane der Karte (nur mit Lanes).
+TPPGKanbanCard.Progress = Fortschritt in Prozent (0 bis 100) als Balken auf der Karte; -1 = keine Anzeige.
+TPPGKanbanCard.Tag = Freier Ganzzahlwert der Anwendung.
+TPPGKanbanCard.Text = Kartentext mit Markup (<b>, <i>, <color=...>), höchstens Board.MaxTextLines Zeilen.
+TPPGKanbanCard.Title = Titel der Karte (fett, erste Zeile).
+
+# --- TPPGKanbanColumn ---
+TPPGKanbanColumn.Collapsed = True: Die Spalte ist eingeklappt (schmaler Streifen mit senkrechtem Titel). Der Anwender schaltet über den Pfeil im Kopf um.
+TPPGKanbanColumn.Color = Farbe der Kopfleiste der Spalte; clNone = Akzent des Presets.
+TPPGKanbanColumn.Id = Eindeutige Nummer der Spalte; Karten verweisen über ColumnId darauf.
+TPPGKanbanColumn.Key = Wert im Spaltenfeld der Datenbank (DB-Kanban, ColumnField); leer = die Id als Text.
+TPPGKanbanColumn.Tag = Freier Ganzzahlwert der Anwendung.
+TPPGKanbanColumn.Title = Titel im Spaltenkopf.
+TPPGKanbanColumn.VirtualCount = > 0: virtuelle Spalte mit so vielen Karten; der Inhalt kommt über OnGetCard, gezeichnet wird nur Sichtbares. Für sehr viele Karten.
+> `Kanban1.Columns[0].VirtualCount := 100000;`
+TPPGKanbanColumn.Visible = False: Die Spalte wird ausgeblendet.
+TPPGKanbanColumn.Width = Eigene Breite der Spalte in logischen Pixeln (80 bis 2000); 0 = Board.ColumnWidth.
+TPPGKanbanColumn.WipLimit = Höchstzahl der Karten (0 bis 9999; 0 = ohne Limit). Darüber wird die Spalte als Warnung gefärbt bzw. bei WipMode = kwmBlock gesperrt.
+
+# --- TPPGKanbanLane ---
+TPPGKanbanLane.Collapsed = True: Die Swimlane ist eingeklappt (nur der Kopf ist sichtbar).
+TPPGKanbanLane.Id = Eindeutige Nummer der Swimlane; Karten verweisen über LaneId darauf.
+TPPGKanbanLane.Key = Wert im Swimlane-Feld der Datenbank (DB-Kanban, LaneField); leer = die Id als Text.
+TPPGKanbanLane.Tag = Freier Ganzzahlwert der Anwendung.
+TPPGKanbanLane.Title = Titel im Kopf der Swimlane.
+TPPGKanbanLane.Visible = False: Die Swimlane wird ausgeblendet. Sind alle ausgeblendet, zeigt das Board keine Swimlanes.
+
+# --- TPPGKanbanPrinter ---
+TPPGKanbanPrinter.FitToPageWidth = True: Alle Spalten werden auf die Seitenbreite verkleinert. False: zu breite Boards gehen auf Seiten nebeneinander weiter. Auch im Dialog „Seite einrichten" umschaltbar.
+TPPGKanbanPrinter.Kanban = Das zu druckende Board (TPPGKanban oder TPPGDBKanban).
+> `PPGKanbanPrinter1.Kanban := PPGKanban1; PPGKanbanPrinter1.Preview;`
+
+# --- TPPGKanbanStyles ---
+TPPGKanbanStyles.Card = Karten: Color = Fläche, TextColor = Text, BorderColor = Rand, Font bzw. FontStyle = Schrift des Titels.
+TPPGKanbanStyles.Column = Spalten: Color = Hintergrund, TextColor = Titel, Font bzw. FontStyle = Schrift des Titels.
+TPPGKanbanStyles.HotCard = Karte unter der Maus: Color = Fläche.
+TPPGKanbanStyles.LaneHeader = Köpfe der Swimlanes: TextColor und Schrift.
+TPPGKanbanStyles.SelectedCard = Gewählte Karte: BorderColor = Rand der Auswahl.
+
+# --- TPPGPlannerCategory ---
+TPPGPlannerCategory.Caption = Name der Kategorie (z. B. „Kunde", „Privat").
+TPPGPlannerCategory.Color = Farbe der Termine dieser Kategorie; clDefault = Farbe aus der Diagrammpalette (je nach Index).
+
+# --- TPPGPlannerPrinter ---
+TPPGPlannerPrinter.Planner = Der zu druckende Planer (TPPGPlanner oder TPPGDBPlanner).
+TPPGPlannerPrinter.PrintFrom = Erster Tag des Druckzeitraums; 0 = nur die Seite um Planner.Date.
+> `Prn.PrintFrom := EncodeDate(2026, 6, 1); Prn.PrintTo := EncodeDate(2026, 6, 30);`
+TPPGPlannerPrinter.PrintTo = Letzter Tag des Druckzeitraums; zusammen mit PrintFrom entsteht eine Seite je Zeitraum der Ansicht.
+TPPGPlannerPrinter.View = Ansicht für den Druck: eine Seite je Tag, Arbeitswoche, Woche, Monat oder Agenda (7 Tage je Seite); die Zeitleiste wird als Woche gedruckt. TakeFromPlanner übernimmt die Ansicht des Planers.
+TPPGPlannerPrinter.WorkHoursOnly = True: Das Raster zeigt nur die Arbeitszeit (WorkStart bis WorkEnd) und füllt damit die Seite. Auch im Dialog „Seite einrichten" umschaltbar.
+
+# --- TPPGPlannerResource ---
+TPPGPlannerResource.Caption = Name der Ressource (Person, Raum, Gerät) im Spaltenkopf bzw. in der Zeile der Zeitleiste.
+TPPGPlannerResource.Color = Farbe der Termine dieser Ressource ohne Kategorie; clDefault = Akzent.
+TPPGPlannerResource.Id = Nummer der Ressource; entspricht TPPGAppointment.ResourceId.
+
+# --- TPPGPlannerStyles ---
+TPPGPlannerStyles.Appointment = Termine: TextColor und Schrift (die Fläche kommt aus Kategorie, Ressource bzw. OnGetAppointmentColor).
+TPPGPlannerStyles.Background = Hintergrund: Color = Fläche, TextColor = Text, BorderColor = Rasterlinien.
+TPPGPlannerStyles.Header = Kopf mit Tagen und Ressourcen: Color, TextColor, Schrift.
+TPPGPlannerStyles.NonWorkHours = Zeit außerhalb der Arbeitszeit und freie Tage: Color = Hinterlegung.
+TPPGPlannerStyles.NowLine = Jetzt-Linie: Color.
+TPPGPlannerStyles.SelectedSlot = Gewählte Zeitfelder: Color.
+TPPGPlannerStyles.TimeRuler = Zeitleiste mit den Uhrzeiten: TextColor und Schrift.
+TPPGPlannerStyles.Today = Heute: TextColor = Tageskopf, BorderColor = Markierung des Tages.
+
+# --- TPPGPrintMargins ---
+TPPGPrintMargins.Bottom = Unterer Rand in Millimetern vom Blattrand (0 bis 100, Standard 15).
+TPPGPrintMargins.Left = Linker Rand in Millimetern vom Blattrand (0 bis 100, Standard 15).
+TPPGPrintMargins.Right = Rechter Rand in Millimetern vom Blattrand (0 bis 100, Standard 15).
+TPPGPrintMargins.Top = Oberer Rand in Millimetern vom Blattrand (0 bis 100, Standard 15).

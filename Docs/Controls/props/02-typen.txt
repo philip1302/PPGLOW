@@ -1,0 +1,112 @@
+# Einleitungen der Typ-Seiten (Schluessel = Typname) und Typen, die erst
+# als Unterobjekte anderer Typen erscheinen (Token-Farben, Ribbon-Gruppen).
+
+TPPGAppointments = Die Termine des Planers (Collection). Termine mit Wiederholung, Ressource, Kategorie und Ort; alternativ liefert eine eigene Quelle (Source bzw. der DB-Planer) die Termine.
+> `with PPGPlanner1.Appointments.AddAppointment(Start, Ende, 'Besprechung') do Location := 'Raum 2';`
+TPPGAppointment = Ein Termin des Planers: Zeitraum, Betreff, Ort, Ressource, Kategorie, Farbe und Wiederholung.
+TPPGCalendarStyles = Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, Tage anderer Monate und Kalenderwochen. Nicht gesetzte Werte kommen aus dem Preset.
+> `PPGCalendar1.CalendarStyles.Weekend.TextColor := clMaroon;`
+TPPGChartAxis = Eine Achse des Diagramms (X, Y oder zweite Y-Achse): Bereich, Teilung, Format der Beschriftung und Sichtbarkeit.
+TPPGChartReferenceLines = Waagerechte oder senkrechte Referenzlinien (z. B. Ziel- oder Grenzwerte), die über dem Diagramm liegen.
+TPPGChartReferenceLine = Eine Referenzlinie: Wert, Achse, Farbe, Strichart und Beschriftung.
+TPPGChartSeriesList = Die Datenreihen des Diagramms (Collection). Jede Reihe hat Art (Linie, Säule, Kreis …), Werte und Farbe.
+> `with PPGChart1.Series.Add do begin Title := 'Umsatz'; ValuesText := '12;15;9;20'; end;`
+TPPGChartSeries = Eine Datenreihe: Art der Darstellung, Werte, Farbe, Achse, Beschriftung und Stapelung.
+TPPGChartStyles = Bereiche des Diagramms einzeln gestalten: Titel, Achsen, Gitterlinien und Legende (Farben und Schriften).
+> `PPGChart1.ChartStyles.Title.Font.Size := 14;`
+TPPGComboColumns = Die Spalten der Aufklappliste einer TPPGColumnComboBox (Collection).
+TPPGComboColumn = Eine Spalte der Aufklappliste: Titel, Breite, Ausrichtung und Sichtbarkeit.
+TPPGEditButton = Ein Knopf im Eingabefeld (links oder rechts): Symbol, Sichtbarkeit, Hint und optional ein Menü.
+> `Edit1.RightButton.Visible := True; Edit1.RightButton.DropDownMenu := PopupMenu1;`
+TPPGGaugeRanges = Farbige Bereiche auf dem Bogen der Anzeige (z. B. grün/gelb/rot).
+> `with PPGGauge1.Ranges.Add do begin StartValue := 80; EndValue := 100; RangeColor := grcDanger; end;`
+TPPGGaugeRange = Ein farbiger Bereich auf dem Bogen: Anfangs- und Endwert, Signalfarbe (RangeColor) oder eigene Farbe (CustomColor).
+TPPGGridBands = Bänder über den Spaltenköpfen: fassen benachbarte Spalten unter einer gemeinsamen Überschrift zusammen.
+TPPGGridBand = Ein Band über den Spaltenköpfen: Titel; die Zuordnung der Spalten erfolgt über deren Band-Index.
+TPPGGridColumns = Die Spalten des Grids bzw. DB-Grids (Collection). Ohne Spalten zeigt das Grid ColCount Spalten ohne eigene Einstellungen.
+> `with PPGGrid1.Columns.Add do begin Title := 'Menge'; Width := 80; Alignment := taRightJustify; end;`
+TPPGGridColumn = Eine Spalte: Titel, Breite, Ausrichtung, Editor, Format, Sortierung, Summe, Gruppierung, Zellart sowie eigene Stile für Zellen und Kopf.
+TPPGGridConditionalFormats = Bedingte Formatierung ohne Code: Regeln färben Zellen abhängig vom Wert (Bereich, gleich, enthält, Top/Bottom) oder zeigen Farbskala, Datenbalken und Symbole.
+> `with PPGGrid1.ConditionalFormats.Add do begin Column := 1; Rule := crContains; Value1 := 'Fehler'; Color := ccDanger; Target := ctText; end;`
+TPPGGridConditionalFormat = Eine Regel der bedingten Formatierung: Spalte, Regel, Vergleichswerte, Farbe, Ziel (Fläche oder Text) und Fett.
+TPPGGridStyles = Zehn Bereiche des Grids einzeln gestalten: Kopf, Fußzeile, Auswahl, Auswahl ohne Fokus, Zebra-Zeile, Hover-Zeile, Gitterlinien, fokussierte Zelle, Gruppenzeile und Filterzeile. Nicht gesetzte Werte kommen aus dem Preset.
+> `PPGGrid1.Styles.Header.Color := clNavy; PPGGrid1.Styles.AlternateRow.Color := $00FAF5EE;`
+TPPGItems = Einträge mit Text, Bild, Gruppe, Detailzeile, Plakette und eigener Farbe (ListBox, CheckListBox, ComboBox). Die einfache Liste Items (TStrings) zeigt auf dieselben Einträge.
+> `with PPGListBox1.ItemsEx.Add('Posteingang', 4) do begin Badge := '12'; Group := 'Favoriten'; end;`
+TPPGItem = Ein Eintrag: Text, Detailzeile, Plakette, Gruppe, Bild, Kästchen-Zustand, Enabled sowie eigene Farbe, Textfarbe und Schriftstil.
+TPPGKanbanCards = Die Karten des Boards (Collection). Jede Karte gehört über ColumnId und LaneId zu einer Spalte bzw. Swimlane; die Reihenfolge in der Collection ist die Reihenfolge im Board.
+> `PPGKanban1.Cards.AddCard(PPGKanban1.Columns[0].Id, 'Neue Aufgabe');`
+TPPGKanbanCard = Eine Karte: Titel, Text, Labels, Person, Fälligkeit, Fortschritt, Farbe sowie Spalte und Swimlane.
+TPPGKanbanColumns = Die Spalten des Boards (Collection) mit WIP-Limit, Farbe, Breite und Einklapp-Zustand.
+> `PPGKanban1.Columns.AddColumn('In Arbeit', 3);` (3 = WIP-Limit)
+TPPGKanbanColumn = Eine Spalte: Titel, WIP-Limit, Farbe, Breite, eingeklappt und eine feste Id für die Zuordnung der Karten.
+TPPGKanbanLanes = Die Swimlanes des Boards (waagerechte Bänder, z. B. je Person oder Priorität).
+TPPGKanbanLane = Eine Swimlane: Titel, Sichtbarkeit, eingeklappt und eine feste Id für die Zuordnung der Karten.
+TPPGKanbanStyles = Bereiche des Boards einzeln gestalten: Spalte, Karte, Karte unter der Maus, gewählte Karte und Swimlane-Kopf.
+> `PPGKanban1.KanbanStyles.Card.Color := clWhite;`
+TPPGListStyles = Bereiche einer Liste einzeln gestalten: Auswahl, Auswahl ohne Fokus, Zebra-Zeile, Eintrag unter der Maus, Gruppenkopf und Detailzeile.
+> `PPGListBox1.Styles.Selection.Color := $00F5E6D2;`
+TPPGMenuStyles = Bereiche der Menüs einzeln gestalten: Menüfläche, Eintrag unter der Maus, Trennlinie und Tastenkürzel.
+TPPGNavItems = Die Einträge der Navigationsleiste (Collection), auch mit Untereinträgen (Children), Überschriften und Fußbereich.
+> `PPGNavigationView1.Items.AddItem('Start', $E80F);`
+TPPGNavItem = Ein Eintrag der Navigationsleiste: Text, Symbol, Plakette, Untereinträge, Überschrift oder Trennlinie, Fußbereich sowie eigene Farben.
+TPPGNavStyles = Bereiche der Navigationsleiste einzeln gestalten (Fläche, Einträge, Auswahl, Indikator, Überschriften …).
+TPPGPlannerCategories = Kategorien des Planers wie in Outlook: Name und Farbe. Ein Termin verweist über Category (Index) auf eine Kategorie; deren Farbe ersetzt die Palettenfarbe.
+> `with PPGPlanner1.Categories.Add do begin Caption := 'Kunde'; Color := $0050B000; end;`
+TPPGPlannerCategory = Eine Kategorie: Name und Farbe.
+TPPGPlannerResources = Ressourcen des Planers (Personen, Räume, Geräte). Mit GroupByResource erhält jede Ressource eine eigene Spalte.
+TPPGPlannerResource = Eine Ressource: Name, Farbe und Id, auf die Termine verweisen.
+TPPGPlannerStyles = Bereiche des Planers einzeln gestalten: Kopf, Zeitleiste, Arbeitszeit, Freizeit, Heute, Jetzt-Linie, Termine und Auswahl.
+TPPGPrintMargins = Seitenränder beim Drucken in Millimetern.
+TPPGRibbonTabs = Die Registerkarten des Ribbons (Collection), auch Kontext-Registerkarten.
+> `PPGRibbon1.Tabs.AddTab('Start').Groups.AddGroup('Zwischenablage');`
+TPPGRibbonTab = Eine Registerkarte: Beschriftung, Gruppen, KeyTip und Kontext (für farbig markierte Kontext-Registerkarten).
+TPPGRibbonGroups = Die Gruppen einer Registerkarte (Collection).
+TPPGRibbonGroup = Eine Gruppe auf einer Registerkarte mit ihren Befehlen; schrumpft bei wenig Platz bis zu einem einzelnen Dropdown-Knopf.
+TPPGRibbonItems = Befehle einer Gruppe bzw. des Schnellzugriffs (Collection): Buttons, Split-Buttons, Umschalter, Galerien, eingebettete Controls und Trenner.
+> `G.Items.AddButton('Einfügen', $E77F, rsLarge, EinfuegenClick);`
+TPPGRibbonItem = Ein Befehl im Ribbon: Art, Größe, Bild bzw. Symbol, Beschriftung, Action, Umschaltzustand, Galerie-Einträge oder eingebettetes Control.
+TPPGStatusPanels = Die Felder der Statusleiste (Collection).
+TPPGStatusPanel = Ein Feld der Statusleiste: Text, Breite, Ausrichtung, Symbol, Plakette sowie eigene Farben.
+TPPGTabStyles = Bereiche der Reiterleiste einzeln gestalten: Reiter, Reiter unter der Maus, aktiver Reiter, Leiste und Indikator.
+> `PPGPageControl1.TabStyles.ActiveTab.FontStyle := [fsBold];`
+TPPGThemeColors = Token-Farben des Themes überschreiben, getrennt für Hell (Light) und Dunkel (Dark). Nur gesetzte Werte (≠ clDefault) gelten, für alle Presets.
+> `PPGStyleManager1.ThemeColors.Light.Danger := $002020C0;`
+TPPGToolItems = Die Elemente der Werkzeugleiste (Collection): Buttons, Umschalter, Dropdowns, Trenner.
+TPPGToolItem = Ein Element der Werkzeugleiste: Art, Beschriftung, Bild, Action, Umschaltzustand, Menü sowie eigene Farben.
+
+# --- TPPGTokenColorSet (StyleManager.ThemeColors.Light / .Dark) ---
+TPPGTokenColorSet = Ein Satz Token-Farben für Hell oder Dunkel. Jede gesetzte Farbe (≠ clDefault) ersetzt die des Presets in allen Controls; die Akzent-Varianten leitet AccentColor am StyleManager bereits automatisch ab.
+TPPGTokenColorSet.Accent = Hauptakzent: Fokus, Auswahl, Fortschritt, eingeschaltete Schalter, Links.
+TPPGTokenColorSet.AccentHover = Akzent unter der Maus (z. B. Akzent-Button bei Hover).
+TPPGTokenColorSet.AccentPressed = Akzent beim Drücken.
+TPPGTokenColorSet.OnAccent = Text- und Symbolfarbe auf Akzentflächen (muss genug Kontrast zum Akzent haben).
+TPPGTokenColorSet.Background = Fensterhintergrund.
+TPPGTokenColorSet.Layer = Flächen von Containern, Seiten und Listen.
+TPPGTokenColorSet.Surface = Fläche eines Bedienelements in Ruhe (Button, Feld).
+TPPGTokenColorSet.SurfaceHover = Fläche unter der Maus.
+TPPGTokenColorSet.SurfacePressed = Fläche beim Drücken.
+TPPGTokenColorSet.SurfaceDisabled = Fläche im deaktivierten Zustand.
+TPPGTokenColorSet.Stroke = Normaler Rand.
+TPPGTokenColorSet.StrokeStrong = Kräftiger Rand: Unterkante, Trennlinien, Elevation.
+TPPGTokenColorSet.StrokeDisabled = Rand im deaktivierten Zustand.
+TPPGTokenColorSet.TextPrimary = Haupttextfarbe.
+TPPGTokenColorSet.TextSecondary = Nebentexte: Detailzeilen, Hinweise, Achsenbeschriftung.
+TPPGTokenColorSet.TextDisabled = Text im deaktivierten Zustand.
+TPPGTokenColorSet.Danger = Signalfarbe Fehler (Validierung, InfoBar, Toast, WIP-Überschreitung).
+TPPGTokenColorSet.Warning = Signalfarbe Warnung.
+TPPGTokenColorSet.Success = Signalfarbe Erfolg.
+TPPGTokenColorSet.Paused = Farbe angehaltener Fortschritt (ProgressBar im Zustand Paused).
+
+# --- TPPGRibbonGroup ---
+TPPGRibbonGroup.Caption = Beschriftung der Gruppe (unter den Befehlen).
+TPPGRibbonGroup.Items = Die Befehle der Gruppe.
+> `G.Items.AddButton('Kopieren', $E8C8, rsMedium, KopierenClick);`
+TPPGRibbonGroup.ReduceOrder = Reihenfolge beim Schrumpfen, wenn das Ribbon schmaler wird: kleinere Werte schrumpfen zuerst, bei gleichem Wert die Gruppe weiter rechts.
+TPPGRibbonGroup.Visible = False blendet die Gruppe aus.
+TPPGRibbonGroup.KeyTip = Zugriffstaste der zu einem Dropdown geschrumpften Gruppe ('' = automatisch).
+TPPGRibbonGroup.ImageIndex = Bild der geschrumpften Gruppe (aus Ribbon.LargeImages bzw. Images); -1 = keins.
+TPPGRibbonGroup.IconChar = Symbol der geschrumpften Gruppe aus der Symbolschrift (0 = keins), z. B. $E8C8.
+TPPGRibbonGroup.ShowLauncher = True: Kleiner Pfeil unten rechts in der Gruppe, der einen Dialog öffnet (Ereignis OnLauncherClick des Ribbons).
+TPPGRibbonGroup.LauncherHint = Tooltip des Pfeils unten rechts.
+TPPGRibbonGroup.Tag = Freier Ganzzahlwert für eigene Zwecke.

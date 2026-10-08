@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGTokenColorSet</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGTokenColorSet</h1>
+<p>Typ in Unit <code>PPG.StyleManager</code> - Basis <code>TPersistent</code></p>
+<p>Ueberschreibungen der Farb-Tokens fuer einen Modus (Hell oder Dunkel). clDefault = Farbe des Presets.</p>
+<p>Ein Satz Token-Farben f&#252;r Hell oder Dunkel. Jede gesetzte Farbe (≠ clDefault) ersetzt die des Presets in allen Controls; die Akzent-Varianten leitet AccentColor am StyleManager bereits automatisch ab.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Accent</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Hauptakzent: Fokus, Auswahl, Fortschritt, eingeschaltete Schalter, Links.</td></tr>
+<tr><td><code>AccentHover</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Akzent unter der Maus (z. B. Akzent-Button bei Hover).</td></tr>
+<tr><td><code>AccentPressed</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Akzent beim Dr&#252;cken.</td></tr>
+<tr><td><code>OnAccent</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Text- und Symbolfarbe auf Akzentfl&#228;chen (muss genug Kontrast zum Akzent haben).</td></tr>
+<tr><td><code>Background</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Fensterhintergrund.</td></tr>
+<tr><td><code>Layer</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Fl&#228;chen von Containern, Seiten und Listen.</td></tr>
+<tr><td><code>Surface</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Fl&#228;che eines Bedienelements in Ruhe (Button, Feld).</td></tr>
+<tr><td><code>SurfaceHover</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Fl&#228;che unter der Maus.</td></tr>
+<tr><td><code>SurfacePressed</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Fl&#228;che beim Dr&#252;cken.</td></tr>
+<tr><td><code>SurfaceDisabled</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Fl&#228;che im deaktivierten Zustand.</td></tr>
+<tr><td><code>Stroke</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Normaler Rand.</td></tr>
+<tr><td><code>StrokeStrong</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Kr&#228;ftiger Rand: Unterkante, Trennlinien, Elevation.</td></tr>
+<tr><td><code>StrokeDisabled</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Rand im deaktivierten Zustand.</td></tr>
+<tr><td><code>TextPrimary</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Haupttextfarbe.</td></tr>
+<tr><td><code>TextSecondary</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Nebentexte: Detailzeilen, Hinweise, Achsenbeschriftung.</td></tr>
+<tr><td><code>TextDisabled</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Text im deaktivierten Zustand.</td></tr>
+<tr><td><code>Danger</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Signalfarbe Fehler (Validierung, InfoBar, Toast, WIP-&#220;berschreitung).</td></tr>
+<tr><td><code>Warning</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Signalfarbe Warnung.</td></tr>
+<tr><td><code>Success</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Signalfarbe Erfolg.</td></tr>
+<tr><td><code>Paused</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Farbe angehaltener Fortschritt (ProgressBar im Zustand Paused).</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGThemeColors.html">TPPGThemeColors</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

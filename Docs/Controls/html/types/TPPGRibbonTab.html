@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGRibbonTab</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGRibbonTab</h1>
+<p>Typ in Unit <code>PPG.Ribbon.Items</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Registerkarte: Beschriftung, Gruppen, KeyTip und Kontext (f&#252;r farbig markierte Kontext-Registerkarten).</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung der Registerkarte.</td></tr>
+<tr><td><code>Groups</code></td><td><a href="TPPGRibbonGroups.html">TPPGRibbonGroups</a></td><td></td><td>Gruppen der Registerkarte, jede mit Beschriftung und Items.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Registerkarte ausgeblendet (typisch f&#252;r Kontext-Karten).</td></tr>
+<tr><td><code>KeyTip</code></td><td><code>string</code></td><td></td><td>Eigener KeyTip der Registerkarte; leer = automatisch aus der Beschriftung.</td></tr>
+<tr><td><code>ContextName</code></td><td><code>string</code></td><td></td><td>Name des Kontexts (z. B. „Bildtools&quot;); leer = normale Registerkarte. Benachbarte Karten mit gleichem Namen bilden eine farbige Gruppe; meist zusammen mit Visible nur bei passender Auswahl zeigen. Nutzung: <code>tabBildFormat.ContextName := &#39;Bildtools&#39;; tabBildFormat.Visible := BildGewaehlt;</code></td></tr>
+<tr><td><code>ContextColor</code></td><td><code>TColor</code></td><td><code>clNone</code></td><td>Farbe einer Kontext-Registerkarte (Band &#252;ber der Karte); clNone = Akzentfarbe des Presets.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGRibbonTabs.html">TPPGRibbonTabs</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

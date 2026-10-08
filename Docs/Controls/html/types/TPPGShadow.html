@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGShadow</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGShadow</h1>
+<p>Typ in Unit <code>PPG.ElementStyle</code> - Basis <code>TPersistent</code></p>
+<p>Schriften fuer einen Zeichenvorgang: Basis-Schrift plus Stil-Abweichungen. Schatten unter einer Flaeche (Elevation). Size = 0: kein Schatten. Werte in logischen px (skaliert); im Hochkontrast nie gezeichnet.</p>
+<p>Schatten unter einer Fl&#228;che (Elevation). Size = 0 schaltet ihn aus. Alle Ma&#223;e in logischen Pixeln.</p>
+<p>Nutzung: <code>PPGPanel1.Shadow.Size := 8; PPGPanel1.Shadow.OffsetY := 3;</code></p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Size</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Weichzeichnung: so weit reicht der Schatten &#252;ber die Fl&#228;che hinaus (0..64; 0 = kein Schatten).</td></tr>
+<tr><td><code>OffsetY</code></td><td><code>Integer</code></td><td><code>2</code></td><td>Versatz nach unten (negativ: nach oben), -64..64. Gr&#246;&#223;erer Versatz wirkt „h&#246;her&quot;.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clBlack</code></td><td>Farbe des Schattens (meist Schwarz).</td></tr>
+<tr><td><code>Opacity</code></td><td><code>Integer</code></td><td><code>64</code></td><td>Deckkraft direkt an der Kante, 0..255; nach au&#223;en nimmt sie linear ab.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="../TPPGButton.html">TPPGButton</a>, <a href="../TPPGPanel.html">TPPGPanel</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

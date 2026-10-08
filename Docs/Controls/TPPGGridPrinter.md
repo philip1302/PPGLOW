@@ -37,7 +37,21 @@ Drucken von Tabellen (Phase 13e).
 
 ## PPGlow-Eigenschaften
 
-`Grid`, `Title`, `HeaderText`, `FooterText`, `Orientation`, `Margins`, `RepeatHeader`, `FitToPageWidth`, `PrintGridLines`, `PrintColors`, `PrinterName`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Grid` | `TPPGCustomGrid` |  | Das Grid bzw. DB-Grid, das gedruckt wird (mit seiner aktuellen Ansicht: Sortierung, Filter, sichtbare Spalten). Nutzung: `PPGGridPrinter1.Grid := PPGGrid1; PPGGridPrinter1.Preview;` |
+| `Title` | `string` |  | Titel des Druckauftrags (erscheint in der Druckerwarteschlange) und Wert des Platzhalters [Titel]. |
+| `HeaderText` | `string` |  | Kopfzeile jeder Seite (fett) mit denselben Platzhaltern wie FooterText; leer = keine Kopfzeile. Nutzung: `PPGGridPrinter1.HeaderText := '[Titel] - Stand [Datum]';` |
+| `FooterText` | `string` |  | Fußzeile jeder Seite mit Platzhaltern [Seite], [Seiten], [Datum], [Titel] (auch englisch [Page], [Pages], [Date], [Title]). Leer = keine Fußzeile; Vorgabe „Seite [Seite] von [Seiten]" in der Sprache der Anwendung. |
+| `Orientation` | `TPrinterOrientation` | `poPortrait` | Hochformat (poPortrait) oder Querformat (poLandscape). |
+| `Margins` | [TPPGPrintMargins](types/TPPGPrintMargins.md) |  | Seitenränder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten" änderbar. |
+| `RepeatHeader` | `Boolean` | `True` | True: Die Spaltenköpfe stehen auf jeder Seite. |
+| `FitToPageWidth` | `Boolean` | `True` | True: Alle Spalten werden auf die Seitenbreite verkleinert; False: zu breite Tabellen gehen auf weiteren Seiten nebeneinander weiter. |
+| `PrintGridLines` | `Boolean` | `True` | True: Gitterlinien werden gedruckt. |
+| `PrintColors` | `Boolean` | `True` | True: Zellfarben (bedingte Formate, Zebra) werden mitgedruckt; False: nur Schwarz auf Weiß. |
+| `PrinterName` | `string` |  | Name des Druckers; leer = Standarddrucker. Für PDF z. B. „Microsoft Print to PDF" mit PrintToFile. Nutzung: `PPGGridPrinter1.PrintToFile('Microsoft Print to PDF', 'C:\Export\Liste.pdf');` |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGGridPrinter.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGGridPrinter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

@@ -1,0 +1,152 @@
+# Aus der VCL geerbte Eigenschaften und Ereignisse (Schluessel VCL.Name).
+# Format: siehe Build\make-docs.ps1. Zeilen mit ">" = Nutzung.
+
+VCL.Action = Verknüpft das Control mit einer Action (TActionList/TActionManager). Beschriftung, Hint, Bild, Enabled, Checked und OnClick kommen dann aus der Action.
+> `Button1.Action := actSpeichern;`
+VCL.Align = Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position.
+> `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`.
+VCL.AlignWithMargins = True: Beim Ausrichten (Align) gelten die Abstände aus Margins.
+> `Edit1.AlignWithMargins := True; Edit1.Margins.SetBounds(8, 4, 8, 4);`
+VCL.Alignment = Ausrichtung des Textes (links, zentriert, rechts).
+VCL.Anchors = Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit.
+> `Edit1.Anchors := [akLeft, akTop, akRight];`
+VCL.AutoSize = True: Das Control passt seine Größe dem Inhalt an (Text, Bild, Schrift).
+VCL.BevelEdges = Kanten, an denen der VCL-Rahmen (Bevel) gezeichnet wird. Nur wirksam mit BevelKind <> bkNone.
+VCL.BevelInner = Innere VCL-Rahmenkante (bvNone, bvLowered, bvRaised, bvSpace). Meist bvNone lassen; die PPGlow-Optik kommt aus Appearance.
+VCL.BevelKind = Art des zusätzlichen VCL-Rahmens. Für die PPGlow-Optik bkNone lassen.
+VCL.BevelOuter = Äußere VCL-Rahmenkante. Für die PPGlow-Optik bvNone lassen.
+VCL.BevelWidth = Breite der VCL-Rahmenkanten in Pixeln.
+VCL.BiDiMode = Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch.
+> Meist über `ParentBiDiMode` vom Formular übernehmen.
+VCL.BorderWidth = Innerer Rand in Pixeln zwischen Kante und Inhalt bzw. Kind-Controls.
+VCL.Caption = Beschriftung. Ein & vor einem Buchstaben macht ihn zur Zugriffstaste (Alt+Buchstabe).
+> `Button1.Caption := '&Speichern';`
+VCL.Color = Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance.
+> `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`.
+VCL.Constraints = Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze.
+> `Panel1.Constraints.MinWidth := 200;`
+VCL.Cursor = Mauszeiger über dem Control.
+> `crHandPoint` für klickbare Flächen.
+VCL.CustomHint = Eigenes Hint-Objekt (z. B. TBalloonHint) statt des Standard-Tooltips.
+VCL.DockSite = True: Andere Controls können per Drag & Drop hier angedockt werden.
+VCL.DoubleBuffered = Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern selbst; meist nicht nötig.
+VCL.DragCursor = Mauszeiger während das Control gezogen wird (Drag & Drop).
+VCL.DragKind = dkDrag = Drag & Drop, dkDock = Andocken beim Ziehen.
+VCL.DragMode = dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag.
+VCL.Enabled = False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt.
+VCL.Font = Schrift (Name, Größe, Stil, Farbe). Die Textfarbe der Zustände kann Appearance überschreiben.
+> `Label1.Font.Size := 12; Label1.Font.Style := [fsBold];`
+VCL.Height = Höhe in Pixeln (bei hoher DPI skaliert die VCL beim Laden).
+VCL.HelpContext = Kontext-ID für die Hilfe (F1).
+VCL.HelpKeyword = Stichwort für die Hilfe (F1), wenn HelpType = htKeyword.
+VCL.HelpType = Ob F1 HelpContext (htContext) oder HelpKeyword (htKeyword) verwendet.
+VCL.Hint = Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor "|" = Tooltip, danach = Langtext für die Statusleiste.
+> `Button1.Hint := 'Dokument speichern|Speichert das Dokument unter dem bisherigen Namen';`
+VCL.ImeMode = Eingabemethode (IME) für asiatische Sprachen beim Fokus.
+VCL.ImeName = Name der IME, die beim Fokus aktiviert wird.
+VCL.Left = Linke Kante relativ zum Parent in Pixeln.
+VCL.Margins = Außenabstände für das Ausrichten; wirken nur mit AlignWithMargins = True.
+VCL.Padding = Innenabstand: Kind-Controls mit Align halten diesen Abstand zum Rand.
+> `Panel1.Padding.SetBounds(12, 12, 12, 12);`
+VCL.ParentBackground = True: Der Hintergrund des Parents scheint durch (transparente Wirkung).
+VCL.ParentBiDiMode = True: BiDiMode wird vom Parent übernommen.
+VCL.ParentColor = True: Color wird vom Parent übernommen.
+VCL.ParentCtl3D = True: Ctl3D vom Parent übernehmen (historisch, ohne Wirkung auf die PPGlow-Optik).
+VCL.Ctl3D = Historischer 3D-Rahmen; ohne Wirkung auf die PPGlow-Optik.
+VCL.ParentCustomHint = True: CustomHint wird vom Parent übernommen.
+VCL.ParentDoubleBuffered = True: DoubleBuffered wird vom Parent übernommen.
+VCL.ParentFont = True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird.
+VCL.ParentShowHint = True: ShowHint wird vom Parent übernommen (meist vom Formular).
+VCL.PopupMenu = Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu.
+VCL.ShowAccelChar = True: & in der Beschriftung markiert die Zugriffstaste; False: & wird als Zeichen angezeigt.
+VCL.ShowHint = True: Hint wird als Tooltip angezeigt.
+VCL.StyleElements = Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance.
+VCL.StyleName = Name eines VCL-Styles nur für dieses Control (ab Delphi 11).
+VCL.TabOrder = Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst).
+VCL.TabStop = True: Das Control ist mit Tab erreichbar.
+VCL.Tag = Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger).
+VCL.Top = Obere Kante relativ zum Parent in Pixeln.
+VCL.Touch = Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture.
+> Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten.
+VCL.Transparent = True: Der Hintergrund wird nicht gefüllt, der Parent scheint durch.
+VCL.UseDockManager = True: Ein Dock-Manager ordnet angedockte Controls an.
+VCL.Visible = False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein.
+VCL.Width = Breite in Pixeln (bei hoher DPI skaliert die VCL beim Laden).
+VCL.WordWrap = True: Langer Text wird umgebrochen.
+VCL.Layout = Senkrechte Lage des Textes (tlTop, tlCenter, tlBottom).
+VCL.EllipsisPosition = Wo zu langer Text mit „…" gekürzt wird (epNone, epPathEllipsis, epEndEllipsis, epWordEllipsis).
+VCL.FocusControl = Control, das den Fokus erhält, wenn die Zugriffstaste der Beschriftung gedrückt wird.
+> `Label1.Caption := '&Name:'; Label1.FocusControl := Edit1;`
+VCL.Text = Textinhalt.
+VCL.Style = Darstellungsart (je nach Control).
+
+VCL.OnAlignInsertBefore = Bei Align = alCustom: entscheidet die Reihenfolge zweier Kind-Controls.
+VCL.OnAlignPosition = Bei Align = alCustom: liefert die Position eines Kind-Controls.
+VCL.OnCanResize = Vor einer Größenänderung; Resize := False verhindert sie.
+VCL.OnChange = Nach einer Änderung des Wertes.
+VCL.OnClick = Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste.
+VCL.OnConstrainedResize = Beim Vergrößern: Mindest- und Höchstmaße dynamisch festlegen.
+VCL.OnContextPopup = Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü.
+VCL.OnDblClick = Doppelklick mit der linken Maustaste.
+VCL.OnDockDrop = Ein Control wurde hier angedockt.
+VCL.OnDockOver = Ein Control wird über diesem Dock-Ziel gezogen; Accept steuert, ob es andocken darf.
+VCL.OnDragDrop = Ein gezogenes Objekt wurde über dem Control losgelassen.
+> Source ist das gezogene Control; X, Y die Position im Control.
+VCL.OnDragOver = Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen.
+VCL.OnEndDock = Andock-Vorgang dieses Controls beendet.
+VCL.OnEndDrag = Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch).
+VCL.OnEnter = Das Control hat den Fokus erhalten.
+VCL.OnExit = Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe.
+VCL.OnGesture = Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung.
+> `if EventInfo.GestureID = sgiLeft then NaechsteSeite;`
+VCL.OnGetSiteInfo = Andocken: liefert das Zielrechteck für ein Control, das hier andocken will.
+VCL.OnKeyDown = Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie.
+> `if Key = VK_RETURN then Speichern;`
+VCL.OnKeyPress = Zeichen eingegeben; Key := #0 verwirft es.
+VCL.OnKeyUp = Taste losgelassen.
+VCL.OnMouseActivate = Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird.
+VCL.OnMouseDown = Maustaste über dem Control gedrückt.
+VCL.OnMouseEnter = Die Maus ist in das Control hineinbewegt worden.
+VCL.OnMouseLeave = Die Maus hat das Control verlassen.
+VCL.OnMouseMove = Maus über dem Control bewegt.
+VCL.OnMouseUp = Maustaste über dem Control losgelassen.
+VCL.OnMouseWheel = Mausrad gedreht; Handled := True verhindert das Standard-Scrollen.
+VCL.OnMouseWheelDown = Mausrad nach unten gedreht.
+VCL.OnMouseWheelUp = Mausrad nach oben gedreht.
+VCL.OnResize = Nach einer Größenänderung.
+VCL.OnStartDock = Beginn des Andockens dieses Controls.
+VCL.OnStartDrag = Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden.
+VCL.OnUnDock = Ein angedocktes Control wird gelöst; Allow steuert, ob das erlaubt ist.
+
+# TPPGTaskDialog erbt die Eigenschaften von TCustomTaskDialog (Vcl.Dialogs)
+TPPGTaskDialog.Buttons = Eigene Schaltflächen (Collection). Jede hat Caption, ModalResult, Default und bei Flag tfUseCommandLinks einen Hinweistext (CommandLinkHint).
+> Im Designer per Doppelklick; im Code `with PPGTaskDialog1.Buttons.Add do begin Caption := 'Speichern'; ModalResult := mrYes; end;`
+TPPGTaskDialog.Caption = Fenstertitel des Dialogs.
+TPPGTaskDialog.CommonButtons = Standardschaltflächen (tcbOk, tcbYes, tcbNo, tcbCancel, tcbRetry, tcbClose) zusätzlich zu Buttons.
+> `PPGTaskDialog1.CommonButtons := [tcbYes, tcbNo];`
+TPPGTaskDialog.CustomFooterIcon = Eigenes Symbol in der Fußzeile (statt FooterIcon); braucht Flag tfUseHiconFooter.
+TPPGTaskDialog.CustomMainIcon = Eigenes Hauptsymbol (statt MainIcon); braucht Flag tfUseHiconMain.
+TPPGTaskDialog.DefaultButton = Standardschaltfläche aus CommonButtons (Enter löst sie aus).
+TPPGTaskDialog.ExpandButtonCaption = Beschriftung des Aufklappers für ExpandedText.
+TPPGTaskDialog.ExpandedText = Zusatztext, der erst nach Klick auf den Aufklapper erscheint (Details).
+TPPGTaskDialog.Flags = Verhalten: tfUseCommandLinks (Buttons als große Befehlslinks), tfAllowDialogCancellation (Esc schließt), tfShowProgressBar, tfShowMarqueeProgressBar, tfExpandedByDefault, tfVerificationFlagChecked, tfPositionRelativeToWindow u. a.
+TPPGTaskDialog.FooterIcon = Symbol der Fußzeile (tdiNone, tdiWarning, tdiError, tdiInformation, tdiShield).
+TPPGTaskDialog.FooterText = Text in der Fußzeile, z. B. ein Hinweis oder Link.
+TPPGTaskDialog.HelpContext = Hilfe-Kontext für F1 im Dialog.
+TPPGTaskDialog.MainIcon = Hauptsymbol links neben dem Titel (tdiNone, tdiWarning, tdiError, tdiInformation, tdiShield).
+TPPGTaskDialog.ProgressBar = Fortschrittsbalken im Dialog (Position, Min, Max, State); sichtbar mit Flag tfShowProgressBar.
+TPPGTaskDialog.RadioButtons = Optionsfelder im Dialog (Collection); die Wahl steht danach in RadioButton.
+TPPGTaskDialog.Text = Haupttext unter dem Titel.
+TPPGTaskDialog.Title = Fett hervorgehobene Hauptanweisung (Überschrift im Dialog).
+> `PPGTaskDialog1.Title := 'Änderungen speichern?';`
+TPPGTaskDialog.VerificationText = Text eines Kontrollkästchens unten links, z. B. „Nicht mehr anzeigen"; Zustand über Flag tfVerificationFlagChecked.
+TPPGTaskDialog.OnButtonClicked = Eine Schaltfläche wurde geklickt; CanClose := False hält den Dialog offen.
+TPPGTaskDialog.OnDialogConstructed = Der Dialog ist aufgebaut, aber noch nicht sichtbar.
+TPPGTaskDialog.OnDialogCreated = Der Dialog ist erzeugt und sichtbar.
+TPPGTaskDialog.OnDialogDestroyed = Der Dialog wurde geschlossen und zerstört.
+TPPGTaskDialog.OnExpanded = Der Aufklapper für ExpandedText wurde umgeschaltet.
+TPPGTaskDialog.OnHyperlinkClicked = Ein Link (<a href="...">) in Text oder FooterText wurde geklickt (braucht Flag tfEnableHyperlinks); die Adresse steht in URL.
+TPPGTaskDialog.OnNavigated = Navigation zu einer neuen Seite im Dialog.
+TPPGTaskDialog.OnRadioButtonClicked = Ein Optionsfeld wurde gewählt.
+TPPGTaskDialog.OnTimer = Wird etwa alle 200 ms aufgerufen (braucht Flag tfCallbackTimer), z. B. um ProgressBar fortzuschreiben.
+TPPGTaskDialog.OnVerificationClicked = Das Kontrollkästchen (VerificationText) wurde umgeschaltet.

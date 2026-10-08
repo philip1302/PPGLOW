@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGChartStyles</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGChartStyles</h1>
+<p>Typ in Unit <code>PPG.Chart</code> - Basis <code>TPPGStyleGroup</code></p>
+<p>Bereiche des Diagramms (nur gesetzte Werte zaehlen, clDefault = Preset).</p>
+<p>Bereiche des Diagramms einzeln gestalten: Titel, Achsen, Gitterlinien und Legende (Farben und Schriften).</p>
+<p>Nutzung: <code>PPGChart1.ChartStyles.Title.Font.Size := 14;</code></p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Title</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Diagrammtitel: TextColor und Schrift. Ohne eigene Schrift wird die Schrift des Controls 1,25-fach und fett verwendet. Nutzung: <code>Chart.ChartStyles.Title.ParentFont := False; Chart.ChartStyles.Title.Font.Size := 14;</code></td></tr>
+<tr><td><code>Axis</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Achsenbeschriftung und Achsentitel: TextColor und Schrift.</td></tr>
+<tr><td><code>Grid</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Gitterlinien: Farbe &#252;ber Color (bzw. DarkColor). Nutzung: <code>Chart.ChartStyles.Grid.Color := $00E8E8E8;</code></td></tr>
+<tr><td><code>Legend</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Legende: TextColor und Schrift.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="../TPPGChart.html">TPPGChart</a>, <a href="../TPPGDBChart.html">TPPGDBChart</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

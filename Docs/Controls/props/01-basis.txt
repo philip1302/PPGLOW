@@ -1,0 +1,149 @@
+# Gemeinsame PPGlow-Basis: Control, Scroll-Control, Felder, Listen, Prüffelder,
+# Aufklappfelder sowie die Typen Appearance, Element-Stil, Animation, Schatten.
+
+# --- TPPGCustomControl (alle sichtbaren PPGlow-Controls) ---
+TPPGCustomControl.Preset = Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen.
+> `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager.
+TPPGCustomControl.StyleManager = Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht.
+> Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen.
+TPPGCustomControl.Appearance = Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt.
+> `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;`
+TPPGCustomControl.Animation = Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird.
+TPPGCustomControl.Images = Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten).
+TPPGCustomControl.ImageIndex = Index des Bildes in Images; -1 = kein Bild.
+> `PPGButton1.Images := ImageList1; PPGButton1.ImageIndex := 3;`
+TPPGCustomControl.ImageName = Name des Bildes in einer TVirtualImageList bzw. TImageCollection (ab Delphi 10.4). Robust gegen Umsortieren; ein unbekannter Name ergibt „kein Bild".
+TPPGCustomControl.HotImageIndex = Bild, solange die Maus über dem Control ist; -1 = wie ImageIndex.
+TPPGCustomControl.DisabledImageIndex = Bild im deaktivierten Zustand; -1 = ImageIndex grau dargestellt.
+TPPGCustomControl.PressedImageIndex = Bild beim Drücken bzw. im eingerasteten Zustand (Down); -1 = wie in Ruhe bzw. Hover.
+TPPGCustomControl.HotImageName = Wie HotImageIndex, aber per Name (TVirtualImageList, ab 10.4).
+TPPGCustomControl.DisabledImageName = Wie DisabledImageIndex, aber per Name (TVirtualImageList, ab 10.4).
+TPPGCustomControl.PressedImageName = Wie PressedImageIndex, aber per Name (TVirtualImageList, ab 10.4).
+TPPGCustomControl.ImageTint = itTextColor färbt das Bild einfarbig in der Textfarbe des aktuellen Zustands. Ideal für einfarbige Symbole (SVG, Icon-Fonts), die so Hover, Dark Mode und Deaktiviert automatisch folgen.
+> `PPGButton1.ImageTint := itTextColor;`
+TPPGCustomControl.ImagePosition = Lage des Bildes zum Text: links, rechts, oben oder unten.
+TPPGCustomControl.Spacing = Abstand zwischen Bild und Text in logischen Pixeln (wird mit der DPI skaliert).
+TPPGCustomControl.WordWrap = True: Die Beschriftung bricht um; mit AutoSize wächst dann die Höhe statt der Breite.
+TPPGCustomControl.ShowFocusRect = True: Bei Tastaturfokus wird der Fokusrahmen bzw. -ring gezeichnet.
+TPPGCustomControl.HighContrastSupport = True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit).
+TPPGCustomControl.RoundedCorners = Welche Ecken gerundet sind; die übrigen werden eckig. Für Button-Gruppen und Segment-Schalter: linker Button [pcTopLeft, pcBottomLeft], mittlere [], rechter [pcTopRight, pcBottomRight].
+> `PPGButton2.RoundedCorners := [];`
+TPPGCustomControl.Shadow = Schatten unter der Fläche (Elevation): Größe, Versatz, Farbe, Deckkraft. Die Fläche wird um den Platz für den Schatten kleiner; im Hochkontrast entfällt er.
+> `PPGButton1.Shadow.Size := 6; PPGButton1.Shadow.Opacity := 80;`
+
+# --- TPPGCustomScrollControl (Listen, Baum, Grid, Planer, Kanban ...) ---
+TPPGCustomScrollControl.ScrollBarMode = Wann die Scrollleisten erscheinen: sbmAuto (bei Bedarf, als schmale Overlay-Leiste), sbmAlways (immer), sbmNever (nie; Scrollen nur per Rad, Tastatur oder Code).
+TPPGCustomScrollControl.SmoothScrolling = True: Scrollen per Rad und Tastatur gleitet weich statt sprunghaft.
+TPPGCustomScrollControl.OnScroll = Die Scrollposition hat sich geändert (Rad, Leiste, Tastatur oder Code).
+> Z. B. um eine Positionsanzeige zu aktualisieren: `lblZeile.Caption := IntToStr(Grid.TopRow);`
+
+# --- TPPGCustomField (Eingabefelder) ---
+TPPGCustomField.Alignment = Ausrichtung des Textes im Feld (links, rechts, zentriert).
+TPPGCustomField.BorderStyle = bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen).
+TPPGCustomField.CharCase = Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase).
+TPPGCustomField.HideSelection = True: Die Markierung wird ausgeblendet, wenn das Feld den Fokus verliert.
+TPPGCustomField.MaxLength = Höchstzahl der Zeichen; 0 = unbegrenzt.
+TPPGCustomField.ReadOnly = True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle.
+TPPGCustomField.ReadOnlyStyle = Eigene Optik bei ReadOnly: Fläche, Text- und Randfarbe (je auch für Dunkel). clDefault = wie im bearbeitbaren Zustand.
+> `Edit1.ReadOnlyStyle.Color := $00F0F0F0; Edit1.ReadOnlyStyle.TextColor := clGrayText;`
+TPPGCustomField.ShowClearButton = True: Ein „×"-Knopf im Feld löscht den Text (nur sichtbar, wenn Text vorhanden und das Feld bearbeitbar ist).
+TPPGCustomField.TabStop = True: Das Feld ist mit Tab erreichbar.
+TPPGCustomField.TextHint = Platzhaltertext im leeren Feld (z. B. „Suchen …").
+> `Edit1.TextHint := 'E-Mail-Adresse';`
+TPPGCustomField.TextHintVisibleOnFocus = True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus.
+TPPGCustomField.UseSystemContextMenu = True: Rechtsklick zeigt das native Windows-Menü des Edits statt des PPGlow-Menüs (Rückgängig, Ausschneiden, Kopieren, Einfügen, Löschen, Alles markieren; übersetzt und im Preset-Stil).
+TPPGCustomField.ValidationState = Ergebnis einer Prüfung: pvsNone (neutral), pvsValid (grüner Rand), pvsWarning (gelb), pvsError (rot). Die Farben kommen aus den Signal-Tokens; ValidationHint erklärt den Zustand.
+> `if not IstMail(Edit1.Text) then begin Edit1.ValidationState := pvsError; Edit1.ValidationHint := 'Keine gültige Adresse'; end;`
+TPPGCustomField.ValidationHint = Erklärung zum ValidationState; erscheint als Tooltip und wird vom Screenreader vorgelesen.
+TPPGCustomField.OnChange = Der Text wurde geändert (Tippen, Einfügen, Code).
+
+# --- TPPGCustomItemList (ListBox, CheckListBox) ---
+TPPGCustomItemList.ItemHeight = Zeilenhöhe in logischen Pixeln; 0 = aus der Schrift berechnet (mit Detailzeile entsprechend höher).
+TPPGCustomItemList.BorderStyle = bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen.
+TPPGCustomItemList.AllowMarkup = True: Texte der Einträge dürfen Mini-Markup enthalten (<b>, <i>, <u>, <color=...>).
+> `List.AllowMarkup := True; List.ItemsEx.Add('<b>Wichtig</b> heute');`
+TPPGCustomItemList.AllowReorder = True: Einträge lassen sich mit der Maus umsortieren (Ziehen) bzw. mit Strg+Pfeiltasten verschieben; danach kommt OnReorder.
+TPPGCustomItemList.TypeAhead = True: Tippen springt zum ersten Eintrag mit diesen Anfangsbuchstaben (wie TListBox.AutoComplete).
+TPPGCustomItemList.OnReorder = Ein Eintrag wurde per Ziehen oder Tastatur verschoben (alter und neuer Index).
+TPPGCustomItemList.Styles = Bereiche der Liste einzeln gestalten: Selection, SelectionInactive (Auswahl ohne Fokus), AlternateRow (Zebra), HotItem (Maus darüber), GroupHeader, Detail (zweite Zeile). Nicht gesetzte Farben kommen aus dem Preset.
+> `List.Styles.AlternateRow.Color := $00FAF7F2;`
+TPPGCustomItemList.OnCustomDrawItem = Vor dem Zeichnen jedes Eintrags: Style (Fill, TextColor, BorderColor, FontStyle) für diesen Eintrag ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen. State enthält idsSelected, idsFocused, idsHot usw.
+> `if Pos('!', List.ItemsEx[Index].Text) > 0 then Style.TextColor := clRed;`
+
+# --- TPPGCustomCheckControl (CheckBox, RadioButton, ToggleSwitch) ---
+TPPGCustomCheckControl.State = Zustand: cbUnchecked, cbChecked oder cbGrayed (unbestimmt, nur mit AllowGrayed).
+TPPGCustomCheckControl.Checked = True = angehakt bzw. eingeschaltet. Setzen löst OnChange (und bei Klick OnClick) aus.
+TPPGCustomCheckControl.AllowGrayed = True: Ein Klick schaltet zusätzlich durch den unbestimmten Zustand (cbGrayed), z. B. für „teilweise ausgewählt".
+TPPGCustomCheckControl.Alignment = Lage der Beschriftung zum Kästchen: taRightJustify = Text rechts (Standard), taLeftJustify = Text links.
+TPPGCustomCheckControl.OnChange = Checked bzw. State hat sich geändert (Klick, Tastatur oder Code).
+
+# --- TPPGCustomDropDownField (Felder mit Aufklappliste) ---
+TPPGCustomDropDownField.OnDropDown = Die Aufklappliste öffnet sich gleich; hier kann sie noch befüllt werden.
+TPPGCustomDropDownField.OnCloseUp = Die Aufklappliste wurde geschlossen (mit oder ohne Auswahl).
+
+# --- Typen ---
+TPPGAppearance = Aussehen eines Controls: je ein TPPGStateStyle für die Zustände Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Formen (Rounding, BorderWidth, GlowSize), die Fokusfarbe sowie eigene Farben im Fokus (Focused) und im Dark Mode (Dark). Ein Preset-Wechsel setzt alle Werte neu; danach geänderte Werte bleiben, bis das Preset wieder gewechselt wird.
+> `PPGButton1.Appearance.Hot.Color := $00FFE8CC; PPGButton1.Appearance.Hot.FontStyle := [fsUnderline];`
+TPPGAppearance.Normal = Aussehen im Ruhezustand.
+TPPGAppearance.Hot = Aussehen, solange die Maus über dem Control ist (weich überblendet, siehe Animation).
+TPPGAppearance.Down = Aussehen beim Drücken bzw. im eingerasteten Zustand (Down = True bei Toggle-Buttons).
+TPPGAppearance.Disabled = Aussehen bei Enabled = False.
+TPPGAppearance.Checked = „An"-Zustand von CheckBox, RadioButton und ToggleSwitch: Color* = Füllung des Kästchens bzw. Schalters, TextColor = Haken, Punkt bzw. Schalterknopf.
+TPPGAppearance.FocusColor = Farbe des Fokusrings bzw. der Fokuslinie bei Tastaturfokus. Mit einer Markenfarbe am StyleManager (AccentColor) meist nicht nötig.
+TPPGAppearance.Rounding = Eckenradius in logischen Pixeln (0 = eckig). Einzelne Ecken eckig über RoundedCorners.
+TPPGAppearance.BorderWidth = Randbreite in logischen Pixeln (0 = ohne Rand).
+TPPGAppearance.GlowSize = Breite des äußeren Glows (ModernFlat) in logischen Pixeln; um diesen Platz ist die Fläche kleiner als das Control.
+TPPGAppearance.Focused = Eigene Farben, solange das Control den Tastaturfokus hat; nur gesetzte Werte (≠ clDefault) gelten, der Rest kommt aus dem aktuellen Zustand.
+> `Edit1.Appearance.Focused.Color := $00F2FBFF;`
+TPPGAppearance.Dark = Eigene Farben für den Dark Mode, je Zustand. Ohne Angabe gelten im Dunkeln die Farben des Presets (eigene helle Farben würden dort nicht passen).
+> `PPGButton1.Appearance.Dark.Normal.Color := $00402810;`
+TPPGStateStyle = Farben eines Zustands: Fläche als Verlauf (Color → ColorTo, bei Classic zweiteilig mit ColorMirror → ColorMirrorTo), Rand, Glow und Text.
+TPPGStateStyle.Color = Füllfarbe (Beginn des Verlaufs).
+TPPGStateStyle.ColorTo = Ende des Verlaufs; gleich Color = einfarbig.
+TPPGStateStyle.ColorMirror = Beginn der zweiten Verlaufshälfte (Glanzkante im Preset Classic).
+TPPGStateStyle.ColorMirrorTo = Ende der zweiten Verlaufshälfte.
+TPPGStateStyle.BorderColor = Randfarbe.
+TPPGStateStyle.GlowColor = Farbe des Glows (ModernFlat: äußerer Schein, Classic: Lichtschein von unten).
+TPPGStateStyle.GlowAlpha = Stärke des Glows, 0 (aus) bis 255.
+TPPGStateStyle.TextColor = Textfarbe (auch Farbe von ImageTint und des Hakens bei Checked).
+TPPGStateStyle.GradientDirection = Richtung des Verlaufs: gdVertical (oben → unten) oder gdHorizontal (links → rechts).
+TPPGStateStyle.FontStyle = Zusätzliche Schriftstile in diesem Zustand, z. B. [fsBold] im eingerasteten Zustand oder [fsUnderline] bei Hover. [] = Schrift des Controls.
+TPPGStateColors = Optionale Farben eines Zustands: nur Werte ≠ clDefault überschreiben, alle anderen kommen aus dem Preset bzw. dem Zustand.
+TPPGStateColors.Color = Füllfarbe; clDefault = nicht überschreiben.
+TPPGStateColors.ColorTo = Ende des Verlaufs; clDefault = nicht überschreiben.
+TPPGStateColors.ColorMirror = Zweite Verlaufshälfte (Classic); clDefault = nicht überschreiben.
+TPPGStateColors.ColorMirrorTo = Ende der zweiten Verlaufshälfte; clDefault = nicht überschreiben.
+TPPGStateColors.BorderColor = Randfarbe; clDefault = nicht überschreiben.
+TPPGStateColors.GlowColor = Glow-Farbe; clDefault = nicht überschreiben.
+TPPGStateColors.TextColor = Textfarbe; clDefault = nicht überschreiben.
+TPPGStateColors.FontStyle = Zusätzliche Schriftstile.
+TPPGDarkColors = Eigene Farben im Dark Mode, je Zustand als TPPGStateColors. Gesetzte Werte gelten nur im Dunkeln.
+TPPGDarkColors.Normal = Ruhezustand im Dunkeln.
+TPPGDarkColors.Hot = Maus darüber im Dunkeln.
+TPPGDarkColors.Down = Gedrückt im Dunkeln.
+TPPGDarkColors.Disabled = Deaktiviert im Dunkeln.
+TPPGDarkColors.Checked = „An"-Zustand (CheckBox, Radio, Schalter) im Dunkeln.
+TPPGDarkColors.Focused = Fokus-Farben im Dunkeln.
+TPPGDarkColors.FocusColor = Fokusring im Dunkeln; clDefault = wie im Hellen bzw. Preset.
+TPPGAnimationSettings = Steuert die Übergangsanimationen eines Controls (Hover, Drücken, Fokus, Aufklappen).
+TPPGAnimationSettings.Enabled = False: Zustandswechsel ohne Überblendung.
+TPPGAnimationSettings.Duration = Dauer einer Überblendung in Millisekunden (Standard 150).
+TPPGAnimationSettings.RespectSystemSettings = True: Ist in Windows „Animationen anzeigen" aus, wird nicht animiert.
+TPPGShadow = Schatten unter einer Fläche (Elevation). Size = 0 schaltet ihn aus. Alle Maße in logischen Pixeln.
+> `PPGPanel1.Shadow.Size := 8; PPGPanel1.Shadow.OffsetY := 3;`
+TPPGShadow.Size = Weichzeichnung: so weit reicht der Schatten über die Fläche hinaus (0..64; 0 = kein Schatten).
+TPPGShadow.OffsetY = Versatz nach unten (negativ: nach oben), -64..64. Größerer Versatz wirkt „höher".
+TPPGShadow.Color = Farbe des Schattens (meist Schwarz).
+TPPGShadow.Opacity = Deckkraft direkt an der Kante, 0..255; nach außen nimmt sie linear ab.
+TPPGElementStyle = Aussehen eines Bereichs (z. B. Kopfzeile, Auswahl, Zebra-Zeile). clDefault heißt „vom Preset berechnet": Ein leerer Stil ändert nichts und wird nicht in der DFM gespeichert. Farben gelten nicht im Hochkontrast und nicht mit VCL-Style, Schriften immer.
+> `Grid.Styles.Header.Color := clNavy; Grid.Styles.Header.TextColor := clWhite; Grid.Styles.Header.FontStyle := [fsBold];`
+TPPGElementStyle.Color = Flächenfarbe des Bereichs im Hellen; clDefault = vom Preset.
+TPPGElementStyle.TextColor = Textfarbe im Hellen; clDefault = vom Preset.
+TPPGElementStyle.BorderColor = Rand- bzw. Linienfarbe im Hellen; clDefault = vom Preset.
+TPPGElementStyle.DarkColor = Flächenfarbe im Dark Mode; clDefault = vom Preset (eigene helle Farben gelten im Dunkeln nicht).
+TPPGElementStyle.DarkTextColor = Textfarbe im Dark Mode; clDefault = vom Preset.
+TPPGElementStyle.DarkBorderColor = Rand- bzw. Linienfarbe im Dark Mode; clDefault = vom Preset.
+TPPGElementStyle.ParentFont = True: Schrift des Controls; wird False, sobald Font geändert wird.
+TPPGElementStyle.Font = Eigene Schrift des Bereichs (wirkt nur mit ParentFont = False).
+> `Grid.Styles.Footer.Font.Size := 8;`
+TPPGElementStyle.FontStyle = Zusätzliche Schriftstile auf die Schrift des Controls bzw. auf Font (z. B. [fsBold] für eine fette Kopfzeile ohne eigene Schrift).

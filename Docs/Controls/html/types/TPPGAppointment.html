@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGAppointment</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGAppointment</h1>
+<p>Typ in Unit <code>PPG.Planner.Model</code> - Basis <code>TCollectionItem</code></p>
+<p>Ein Termin des Planers: Zeitraum, Betreff, Ort, Ressource, Kategorie, Farbe und Wiederholung.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Id</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Eindeutige Nummer des Termins; vergibt die Collection fortlaufend. Wird f&#252;r Serien (RecurrenceParent) und den DB-Planer (KeyField) gebraucht.</td></tr>
+<tr><td><code>StartTime</code></td><td><code>TDateTime</code></td><td></td><td>Gespeicherter Beginn (UTC bei TimeZoneMode = tzmUtc, sonst Ortszeit). F&#252;r die Anzeige-Zeit die &#246;ffentliche Eigenschaft Start verwenden. Nutzung: Im Code meist <code>A.Start := ...</code> (rechnet aus der Anzeige-Zone um); StartTime nur beim Laden aus eigenen Daten.</td></tr>
+<tr><td><code>FinishTime</code></td><td><code>TDateTime</code></td><td></td><td>Gespeichertes Ende (UTC bei TimeZoneMode = tzmUtc, sonst Ortszeit). F&#252;r die Anzeige-Zeit die &#246;ffentliche Eigenschaft Finish verwenden.</td></tr>
+<tr><td><code>AllDay</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: ganzt&#228;giger Termin. Er liegt im Band &#252;ber dem Zeitraster; Beginn und Ende sind dann reine Daten ohne Zeitzone, das Ende ist exklusiv (wie DTEND in iCalendar). Nutzung: Ein Tag: <code>A.AllDay := True; A.Start := EncodeDate(2026, 10, 8); A.Finish := A.Start + 1;</code></td></tr>
+<tr><td><code>Subject</code></td><td><code>string</code></td><td></td><td>Betreff; die &#220;berschrift des Termins im Raster. Der Anwender &#228;ndert ihn mit F2 oder Doppelklick (ohne OnAppointmentOpen).</td></tr>
+<tr><td><code>Location</code></td><td><code>string</code></td><td></td><td>Ort des Termins; erscheint unter dem Betreff, in der Agenda und f&#252;r den Screenreader.</td></tr>
+<tr><td><code>Body</code></td><td><code>string</code></td><td></td><td>Beschreibungstext des Termins; darf Mini-Markup enthalten (&lt;b&gt;, &lt;i&gt;, &lt;color=...&gt;). Wird in der Agenda und im Tooltip gezeigt.</td></tr>
+<tr><td><code>Category</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Index in Planner.Categories; bestimmt die Terminfarbe (Kategoriefarbe, bei clDefault eine Farbe der Diagrammpalette). -1 = keine Kategorie, dann gilt die Farbe der Ressource bzw. der Akzent. Nutzung: <code>A.Category := 2;</code> Farbe zur Laufzeit &#228;ndern &#252;ber OnGetAppointmentColor.</td></tr>
+<tr><td><code>ResourceId</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Ressource des Termins (Wert von Resources[i].Id). Bestimmt die Spaltengruppe (GroupByResource) bzw. Zeile der Zeitleiste und ohne Kategorie die Farbe.</td></tr>
+<tr><td><code>Recurrence</code></td><td><code>string</code></td><td></td><td>Wiederholungsregel im iCalendar-Format (RRULE). Leer = Einzeltermin. Der Planer l&#246;st die Vorkommen nur f&#252;r den sichtbaren Zeitraum auf. Nutzung: <code>A.Recurrence := &#39;FREQ=WEEKLY;BYDAY=MO,WE;COUNT=10&#39;;</code></td></tr>
+<tr><td><code>ExDates</code></td><td><code>string</code></td><td></td><td>Ausnahmen einer Serie: Beginnzeiten ausgefallener Vorkommen im iCalendar-Format, durch Komma getrennt (in gespeicherter Zeit, also UTC bei TimeZoneMode = tzmUtc). Wird beim L&#246;schen bzw. Herausl&#246;sen eines Vorkommens automatisch erg&#228;nzt. Nutzung: Im Code besser die Methode zum Ausnehmen eines Vorkommens verwenden statt den Text selbst zu bauen.</td></tr>
+<tr><td><code>RecurrenceParent</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Bei einem ge&#228;nderten Einzeltermin einer Serie: Id der Serie (0 = kein herausgel&#246;ster Termin). Zusammen mit RecurrenceStart ersetzt er genau ein Vorkommen der Serie.</td></tr>
+<tr><td><code>RecurrenceStart</code></td><td><code>TDateTime</code></td><td></td><td>Urspr&#252;nglicher Beginn des Vorkommens, das dieser herausgel&#246;ste Termin ersetzt (nur mit RecurrenceParent &lt;&gt; 0).</td></tr>
+<tr><td><code>ReadOnly</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Anwender kann diesen Termin nicht verschieben, in der Dauer &#228;ndern, umbenennen oder l&#246;schen; Kopieren mit Strg+Ziehen bleibt erlaubt.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert der Anwendung (z. B. eine eigene Datensatz-ID).</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGAppointments.html">TPPGAppointments</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

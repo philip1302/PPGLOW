@@ -1,0 +1,317 @@
+# Bereich A: Grid, DB-Grid, Drucker-Basis, DB-Felder, CheckComboBox, ColorPicker,
+# ComboBox-Basis, DatePicker, Edit, MaskEdit, Memo, NumberEdit, TagEdit.
+
+# --- TPPGCheckComboBox ---
+TPPGCheckComboBox.CheckedText = Die angehakten Einträge als ein Text, getrennt durch Delimiter (z. B. „Rot;Grün"). So wird die Auswahl in der DFM gespeichert und an DB-Felder gebunden. Setzen aus Code hakt die passenden Einträge an, ohne OnChange oder OnItemCheck auszulösen.
+> `PPGCheckComboBox1.CheckedText := 'Montag;Mittwoch';`
+TPPGCheckComboBox.Delimiter = Trennzeichen in CheckedText (und damit im DB-Feld). Vorgabe „;".
+TPPGCheckComboBox.DisplayDelimiter = Trenner zwischen den Namen in der Anzeige des Felds (Vorgabe „, "). Betrifft nur die Anzeige, nicht CheckedText.
+TPPGCheckComboBox.DisplayMode = Anzeige der Auswahl im geschlossenen Feld: cdmCompact zeigt die ersten MaxDisplayItems Namen und „+n", cdmList alle Namen, cdmCount nur „3 ausgewählt". Ohne Auswahl erscheint TextHint.
+TPPGCheckComboBox.DropDownCount = Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (1..100).
+TPPGCheckComboBox.FilterThreshold = Ab dieser Zahl von Einträgen erscheint oben in der Liste eine Filterzeile; getippte Zeichen filtern die Einträge. 0 = nie.
+TPPGCheckComboBox.Items = Die auswählbaren Einträge, je Zeile einer. Den Haken je Eintrag liest und setzt man über Checked[Index].
+> `PPGCheckComboBox1.Items.CommaText := 'Rot,Grün,Blau'; PPGCheckComboBox1.Checked[1] := True;`
+TPPGCheckComboBox.MaxDisplayItems = Bei DisplayMode = cdmCompact: so viele Namen werden ausgeschrieben, der Rest als „+n" (1..100).
+TPPGCheckComboBox.OnItemCheck = Der Anwender hat einen Eintrag an- oder abgehakt (auch über „Alle auswählen"); Index ist der Eintrag in Items. Danach folgt OnChange. Änderungen aus Code lösen es nicht aus.
+> `procedure TForm1.CheckItem(Sender: TObject; Index: Integer); begin Log(Items[Index]); end;`
+TPPGCheckComboBox.ShowSelectAll = True: Erste Zeile der Liste ist „Alle auswählen" zum An- und Abhaken aller Einträge.
+
+# --- TPPGColorPicker ---
+TPPGColorPicker.DefaultColorColor = Farbe, mit der das Feld „Standard" (Selected = clDefault, mit cbIncludeDefault im Style) dargestellt wird.
+TPPGColorPicker.MaxRecent = Wie viele zuletzt benutzte Farben gemerkt und als eigener Abschnitt gezeigt werden (0..32; 0 = kein Abschnitt).
+TPPGColorPicker.NoneColorColor = Wie TColorBox.NoneColorColor; wird gespeichert, beeinflusst die Darstellung von „Keine" (clNone) im PPGlow-Popup aber nicht.
+TPPGColorPicker.RecentColors = Zuletzt benutzte Farben als Hexwerte „#RRGGBB", die neueste zuerst. Wird beim Wählen automatisch fortgeschrieben und in der DFM gespeichert; kann zum Speichern in einer Einstellung gelesen und wieder gesetzt werden.
+> `Ini.WriteString('Farben', 'Zuletzt', PPGColorPicker1.RecentColors.CommaText);`
+TPPGColorPicker.Selected = Die gewählte Farbe. clNone = „Keine", clDefault = „Standard". Setzen aus Code löst kein OnChange aus.
+> `Panel1.Color := PPGColorPicker1.Selected;`
+TPPGColorPicker.ShowHex = True: Das Feld zeigt den Hexwert („#1E90FF") statt des Farbnamens.
+TPPGColorPicker.ShowThemeColors = True: Das Popup zeigt oben die Designfarben des Presets (Akzent, Signalfarben, Diagrammpalette), damit gewählte Farben zum Theme passen.
+TPPGColorPicker.Style = Abschnitte des Popups wie bei TColorBox: cbStandardColors (16 Grundfarben), cbExtendedColors (weitere Farben), cbSystemColors (clBtnFace usw.), cbIncludeNone („Keine"), cbIncludeDefault („Standard"), cbCustomColor (Schaltfläche „Weitere Farben …" mit HSV-Feld und Hex-Eingabe), cbPrettyNames (lesbare Namen).
+> `PPGColorPicker1.Style := [cbStandardColors, cbIncludeNone, cbCustomColor];`
+
+# --- TPPGCustomComboBox (ComboBox, DB-ComboBox, Lookup, SearchEdit, TimePicker) ---
+TPPGCustomComboBox.AutoCloseUp = True: Springt die Tippsuche bei offener Liste auf einen Eintrag, wird er sofort übernommen und die Liste geschlossen.
+TPPGCustomComboBox.AutoComplete = True: Bei Style = csDropDown ergänzt das Feld den getippten Anfang zum ersten passenden Eintrag (der Rest ist markiert und wird beim Weitertippen ersetzt).
+TPPGCustomComboBox.AutoDropDown = True: Die Liste klappt beim Tippen automatisch auf.
+TPPGCustomComboBox.DropDownCount = Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1).
+TPPGCustomComboBox.DropDownWidth = Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. Nützlich für lange Einträge in schmalen Feldern.
+TPPGCustomComboBox.FilterMode = Filtern beim Tippen (nur Style = csDropDown): fmNone zeigt immer alle Einträge, fmPrefix nur die mit diesem Anfang, fmContains alle, die den Text irgendwo enthalten. Die Liste klappt dabei auf.
+> Für lange Listen: `ComboBox1.FilterMode := fmContains;`
+TPPGCustomComboBox.ItemHeight = Mindesthöhe einer Listenzeile in logischen Pixeln (0..1000); 0 = aus der Schrift. Einträge mit Detailzeile werden entsprechend höher.
+TPPGCustomComboBox.ItemIndex = Index des gewählten Eintrags; -1 = keiner. Setzen aus Code löst (wie bei TComboBox) kein Ereignis aus.
+> `ComboBox1.ItemIndex := ComboBox1.Items.IndexOf('Berlin');`
+TPPGCustomComboBox.Items = Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte.
+TPPGCustomComboBox.ItemsEx = Reiche Einträge mit Bild (aus Images), Detailzeile, Plakette und Markup. Sind welche vorhanden, sind sie die Einträge der Liste.
+> `with ComboBox1.ItemsEx.Add('Berlin', 2) do Detail := '3,7 Mio. Einwohner';`
+TPPGCustomComboBox.ListStyles = Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset.
+> `ComboBox1.ListStyles.AlternateRow.Color := $00FAF7F2;`
+TPPGCustomComboBox.OnCloseUp = Die Aufklappliste wurde geschlossen (mit oder ohne Übernahme).
+TPPGCustomComboBox.OnCustomDrawItem = Vor dem Zeichnen jedes Eintrags der Aufklappliste: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen.
+> `if Index = 0 then Style.FontStyle := [fsBold];`
+TPPGCustomComboBox.OnDropDown = Die Liste klappt gleich auf; hier lassen sich Einträge noch nachladen.
+TPPGCustomComboBox.OnSelect = Der Anwender hat einen Eintrag gewählt (Klick, Enter, Pfeiltasten im geschlossenen Feld). Kommt nach OnClick; ist OnSelect nicht zugewiesen, wird stattdessen OnChange ausgelöst. Nicht bei ItemIndex aus Code.
+TPPGCustomComboBox.Sorted = True: Die Einträge werden alphabetisch sortiert gehalten.
+TPPGCustomComboBox.Style = csDropDown: freie Eingabe im Feld plus Liste (mit AutoComplete und FilterMode); csDropDownList: nur Auswahl aus der Liste, Tippen springt per Anfangsbuchstaben. csSimple verhält sich wie csDropDown, csOwnerDraw* wie csDropDownList (Zeichnen über OnCustomDrawItem).
+TPPGCustomComboBox.Text = Der angezeigte bzw. eingegebene Text. Bei csDropDownList der Text des gewählten Eintrags.
+
+# --- TPPGCustomDBGrid ---
+TPPGCustomDBGrid.DataSource = Die Datenquelle, deren Datenmenge das Grid zeigt. Ohne Columns erscheinen alle sichtbaren Felder (Titel = DisplayLabel, Breite aus DisplayWidth).
+> `PPGDBGrid1.DataSource := DataSource1;`
+TPPGCustomDBGrid.ExportMaxRecords = Drucken und Export lesen höchstens so viele Datensätze (Schutz vor sehr großen Tabellen). Vorgabe 100000.
+TPPGCustomDBGrid.OnCellClick = Klick mit der linken Maustaste auf eine Datenzelle; Column ist die angeklickte Spalte (Column.Field liefert das Feld).
+TPPGCustomDBGrid.OnGetFooterText = Text der Summenzeile (ShowFooter) für eine Spalte. Text ist mit dem Wert aus Column.FooterField vorbelegt und kann ersetzt werden; die ganze Datenmenge liest das Grid dafür nie.
+> `if Column.FieldName = 'Betrag' then Text := FormatFloat('#,##0.00 €', SummeAusAbfrage);`
+TPPGCustomDBGrid.OnTitleClick = Klick auf einen Spaltentitel (mit dgTitleClick in Options). Sortieren ist Sache der Datenmenge, z. B. IndexFieldNames setzen.
+> `FDQuery1.IndexFieldNames := Column.FieldName;`
+TPPGCustomDBGrid.Options = Verhalten wie bei TDBGrid: dgEditing (bearbeiten), dgTitles (Titelzeile), dgIndicator (Datensatzzeiger links), dgColumnResize (Spaltenbreite und -position ändern), dgColLines/dgRowLines (Gitterlinien), dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete (Rückfrage bei Strg+Entf), dgCancelOnExit, dgTitleClick, dgTitleHotTrack. dgMultiSelect wird nicht unterstützt.
+TPPGCustomDBGrid.ReadOnly = True: Keine Bearbeitung im Grid, auch wenn die Datenmenge änderbar ist.
+
+# --- TPPGCustomDatePicker ---
+TPPGCustomDatePicker.CalAlignment = Ausrichtung des aufklappenden Kalenders am Feld: dtaLeft = linke Kante, dtaRight = rechte Kante (bei RTL gespiegelt).
+TPPGCustomDatePicker.CalendarStyles = Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern).
+> `DatePicker1.CalendarStyles.Weekend.TextColor := clRed;`
+TPPGCustomDatePicker.Checked = Nur mit ShowCheckbox: True = ein Datum ist gesetzt, False = „kein Datum".
+TPPGCustomDatePicker.Date = Das gewählte Datum (ohne Uhrzeit). Setzen aus Code löst kein OnChange aus; Werte außerhalb MinDate/MaxDate werden begrenzt.
+> `DatePicker1.Date := IncDay(Date, 7);`
+TPPGCustomDatePicker.DateFormat = dfShort (kurzes Datum, z. B. 08.10.2026) oder dfLong (langes Datum mit Wochentag) nach den Ländereinstellungen, wenn Format leer ist.
+TPPGCustomDatePicker.DateMode = Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts (immer Feld mit Kalender-Popup).
+TPPGCustomDatePicker.Format = Eigenes Anzeigeformat nach FormatDateTime (z. B. „dd.mm.yyyy" oder „ddd, d. mmmm"); leer = DateFormat.
+TPPGCustomDatePicker.Kind = Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts. Für Uhrzeiten TPPGTimePicker verwenden.
+TPPGCustomDatePicker.MaxDate = Spätestes wählbares Datum; 0 = keine Grenze. Spätere Tage sind im Kalender gesperrt, Eingaben werden begrenzt.
+TPPGCustomDatePicker.MinDate = Frühestes wählbares Datum; 0 = keine Grenze.
+> `DatePicker1.MinDate := Date;` (nur heute und später)
+TPPGCustomDatePicker.OnCloseUp = Der Kalender wurde geschlossen (mit oder ohne Übernahme).
+TPPGCustomDatePicker.OnCustomDrawDay = Vor dem Zeichnen jedes Tages im aufklappenden Kalender: Style für ADate ändern (z. B. Feiertage fett und rot) oder mit DefaultDraw := False selbst zeichnen.
+> `if IstFeiertag(ADate) then begin Style.TextColor := clRed; Style.FontStyle := [fsBold]; end;`
+TPPGCustomDatePicker.OnDropDown = Der Kalender klappt gleich auf.
+TPPGCustomDatePicker.ParseInput = Wie TDateTimePicker; wird gelesen und gespeichert, ändert aber nichts (Eingaben werden immer geprüft).
+TPPGCustomDatePicker.ShowCheckbox = True: Links im Feld erscheint ein Kontrollkästchen; ohne Haken (Checked = False) gilt „kein Datum".
+TPPGCustomDatePicker.Time = Uhrzeitanteil des Werts (wie TDateTimePicker.Time); die Anzeige zeigt nur das Datum.
+
+# --- TPPGCustomEdit ---
+TPPGCustomEdit.AutoSelect = True: Beim Fokus per Tab wird der ganze Text markiert.
+TPPGCustomEdit.LeftButton = Bild-Schaltfläche links im Feld (wie TButtonedEdit): Visible, ImageIndex (aus Images), Enabled, DropDownMenu. Klick löst OnLeftButtonClick aus und öffnet ggf. das Menü.
+> `Edit1.Images := ImageList1; Edit1.LeftButton.ImageIndex := 0; Edit1.LeftButton.Visible := True;`
+TPPGCustomEdit.NumbersOnly = True: Nur Ziffern können eingegeben werden (wie TEdit.NumbersOnly). Für Zahlen mit Komma und Grenzen besser TPPGNumberEdit.
+TPPGCustomEdit.OnLeftButtonClick = Die linke Schaltfläche (LeftButton) wurde geklickt.
+TPPGCustomEdit.OnRightButtonClick = Die rechte Schaltfläche (RightButton) wurde geklickt, z. B. um einen Suchdialog zu öffnen.
+TPPGCustomEdit.PasswordChar = Zeichen, das statt der Eingabe angezeigt wird (z. B. „●"); #0 = Klartext. Für Kennwörter mit Aufdecken-Knopf besser TPPGPasswordEdit.
+TPPGCustomEdit.RightButton = Bild-Schaltfläche rechts im Feld: Visible, ImageIndex (aus Images), Enabled, DropDownMenu. Klick löst OnRightButtonClick aus und öffnet ggf. das Menü.
+> `Edit1.RightButton.ImageIndex := 1; Edit1.RightButton.Visible := True; Edit1.RightButton.DropDownMenu := PopupMenu1;`
+
+# --- TPPGCustomField.Text ---
+TPPGCustomField.Text = Der Inhalt des Felds. Setzen aus Code löst OnChange aus (wie bei TEdit).
+> `Edit1.Text := '';`
+
+# --- TPPGCustomGrid ---
+TPPGCustomGrid.Bands = Bänder: Überschriften über mehreren Spalten, auch mehrstufig (ParentBand). Welche Spalten darunter stehen, legt Column.Band fest.
+> `Grid1.Bands.Add.Caption := 'Adresse'; Grid1.Columns[2].Band := 0; Grid1.Columns[3].Band := 0;`
+TPPGCustomGrid.BorderStyle = bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen.
+TPPGCustomGrid.ColCount = Anzahl der Spalten einschließlich fester Spalten (1..100000), wie TStringGrid.
+TPPGCustomGrid.Columns = Spaltendefinitionen: Titel, Breite, Ausrichtung, Editor, Zellart, Summe, Gruppierung, Stile. Ohne Einträge gelten Standardspalten mit DefaultColWidth.
+> Im Designer per Doppelklick; im Code `with Grid1.Columns.Add do begin Title := 'Preis'; Alignment := taRightJustify; Aggregate := agSum; end;`
+TPPGCustomGrid.ConditionalFormats = Bedingte Formate ohne Code: Regeln je Spalte (Wertbereich, gleich, enthält, oberste/unterste N, Farbskala, Datenbalken, Symbolsatz) mit Farben aus dem Theme.
+> `with Grid1.ConditionalFormats.Add do begin Column := 3; Rule := crDataBar; Color := ccAccent; end;`
+TPPGCustomGrid.DefaultColWidth = Breite der Spalten ohne eigene Breite in logischen Pixeln (1..10000).
+TPPGCustomGrid.DefaultDrawing = False: Der Zelltext wird nicht gezeichnet (Hintergrund, Linien und Auswahl schon); den Inhalt zeichnet man in OnDrawCell selbst.
+TPPGCustomGrid.DefaultRowHeight = Höhe der Zeilen ohne eigene Höhe in logischen Pixeln (1..10000).
+TPPGCustomGrid.DrawingStyle = Wie TStringGrid: gdsGradient zeichnet den Kopf als Verlauf von GradientStartColor nach GradientEndColor (nur im Hellen); gdsClassic und gdsThemed nehmen den Kopf vom Preset bzw. aus Styles.Header.
+TPPGCustomGrid.FixedColor = Wie TStringGrid.FixedColor: Hintergrund des Kopfs. Ist ein Alias für Styles.Header.Color und wird nicht eigens gespeichert; clBtnFace bedeutet „vom Preset".
+> `Grid1.FixedColor := $00F0E6DC;`
+TPPGCustomGrid.FixedCols = Anzahl fester Spalten links, die beim waagerechten Scrollen stehen bleiben (0..ColCount-1).
+TPPGCustomGrid.FixedColsRight = Anzahl Spalten, die rechts fest stehen bleiben (0..100), z. B. eine Aktions- oder Summenspalte.
+TPPGCustomGrid.FixedRows = Anzahl fester Kopfzeilen oben (0..RowCount-1).
+TPPGCustomGrid.GradientEndColor = Endfarbe des Kopf-Verlaufs bei DrawingStyle = gdsGradient.
+TPPGCustomGrid.GradientStartColor = Anfangsfarbe des Kopf-Verlaufs bei DrawingStyle = gdsGradient.
+TPPGCustomGrid.GridLineWidth = Breite der Gitterlinien in logischen Pixeln (0..10; 0 = keine Linien). Farbe über Styles.GridLine.Color.
+TPPGCustomGrid.GroupFooter = True: Unter jeder Gruppe steht eine Fußzeile mit den Summen (Column.Aggregate).
+TPPGCustomGrid.HeaderMenu = True: Rechtsklick auf den Kopf öffnet ein Menü zum Sortieren, Ausblenden, Wählen der Spalten und Anpassen der Breite. Ergänzen lässt es sich in OnHeaderMenu.
+TPPGCustomGrid.OnCellButtonClick = Eine Schaltfläche in einer Zelle mit CellKind = ckButton wurde geklickt (ACol, ARow = Datenspalte und -zeile).
+> `if ACol = 4 then LoescheZeile(ARow);`
+TPPGCustomGrid.OnColumnMoved = Der Anwender hat eine Spalte verschoben; FromIndex und ToIndex sind Anzeige-Positionen.
+TPPGCustomGrid.OnCompareCells = Eigener Vergleich beim Sortieren: Compare < 0, = 0 oder > 0 setzen (Zeile ARow1 vor, gleich oder nach ARow2). Ohne Ereignis vergleicht das Grid Zahlen numerisch, sonst als Text.
+> `Compare := CompareDate(StrToDate(Cells[ACol, ARow1]), StrToDate(Cells[ACol, ARow2]));`
+TPPGCustomGrid.OnCustomAggregate = Wert für Spalten mit Aggregate = agCustom: Value für Spalte ACol in Gruppe Group setzen (Group = -1 = Summenzeile). Die Zeilen der Gruppe liefert GroupDataRows(Group).
+TPPGCustomGrid.OnDrawCell = Nach dem Standardzeichnen einer Zelle zusätzlich auf Canvas zeichnen (Rect, State mit gdSelected, gdFocused, gdFixed). Mit DefaultDrawing = False zeichnet man so den ganzen Zellinhalt selbst. ACol und ARow sind Datenspalte und -zeile.
+TPPGCustomGrid.OnFixedCellClick = Klick auf eine feste Zelle (Kopf oder feste Spalte).
+TPPGCustomGrid.OnGetCellStyle = Darstellung je Zelle nach den bedingten Formaten: Style.Fill, TextColor, Bold, FontStyle, FontName, FontSize, Datenbalken (Bar, BarColor) und Symbol (Icon, IconColor) setzen.
+> `if StrToFloatDef(Grid1.Cells[ACol, ARow], 0) < 0 then Style.TextColor := clRed;`
+TPPGCustomGrid.OnGetCellText = Virtuelle Daten: liefert den Text einer Zelle, ohne dass er in Cells[] steht (z. B. für eine Million Zeilen aus einer eigenen Liste).
+> `Text := FDaten[ARow - 1].Name;`
+TPPGCustomGrid.OnGetEditText = Wie TStringGrid: Text, mit dem der Editor einer Zelle startet (z. B. ein Rohwert statt der formatierten Anzeige).
+TPPGCustomGrid.OnGetGroupText = Text einer Gruppenzeile (Markup erlaubt); Group ist der Index für GroupInfo.
+> `Text := Format('<b>%s</b> (%d)', [GroupInfo(Group).Key, GroupInfo(Group).Count]);`
+TPPGCustomGrid.OnHeaderMenu = Das Kopfmenü öffnet sich gleich: Einträge in Menu ergänzen oder entfernen; ACol ist die Datenspalte.
+TPPGCustomGrid.OnLinkClick = Eine Link-Zelle (CellKind = ckLink) oder ein Link im Markup wurde angeklickt; Link ist das Ziel bzw. der Zelltext.
+> `ShellExecute(0, 'open', PChar(Link), nil, nil, SW_SHOWNORMAL);`
+TPPGCustomGrid.OnSelectCell = Vor dem Wechsel der Fokuszelle; CanSelect := False verhindert ihn.
+TPPGCustomGrid.OnSetEditText = Wie TStringGrid: der Editor hat einen neuen Wert in die Zelle geschrieben.
+TPPGCustomGrid.OnSorted = Die Ansicht wurde neu sortiert (Klick auf den Kopf oder Code).
+TPPGCustomGrid.OnTopLeftChanged = Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen geändert.
+TPPGCustomGrid.OnValidateCell = Vor dem Übernehmen eines bearbeiteten Werts: Value prüfen oder korrigieren; Accept := False lehnt ab (der Editor bleibt offen).
+> `Accept := TryStrToFloat(Value, X); if not Accept then ShowMessage('Bitte eine Zahl eingeben');`
+TPPGCustomGrid.Options = Verhalten wie bei TStringGrid: goEditing (bearbeiten), goRowSelect (ganze Zeile wählen), goRangeSelect (Bereich wählen), goColSizing/goRowSizing (Breite/Höhe ziehen), goColMoving (Spalten verschieben), goTabs (Tab wechselt Zelle), goVertLine/goHorzLine und goFixedVertLine/goFixedHorzLine (Gitterlinien), goAlwaysShowEditor, goThumbTracking.
+> `Grid1.Options := Grid1.Options + [goEditing, goColSizing];`
+TPPGCustomGrid.RowCount = Anzahl der Zeilen einschließlich fester Zeilen (1 bis etwa 1 Milliarde); auch große Zahlen sind schnell (virtuell mit OnGetCellText).
+TPPGCustomGrid.ShowFilterRow = True: Unter dem Kopf erscheint eine Eingabezeile; Text je Spalte filtert die Zeilen (Teiltext, ohne Groß-/Kleinschreibung). Wirkt auf die Ansicht, die Daten bleiben unverändert.
+TPPGCustomGrid.ShowFooter = True: Unten steht eine Summenzeile; was je Spalte berechnet wird, legt Column.Aggregate fest (gilt für die gefilterte Ansicht).
+TPPGCustomGrid.ShowGroupPanel = True: Über dem Grid erscheint eine Leiste; einen Spaltenkopf hineinziehen gruppiert nach dieser Spalte (mehrstufig möglich).
+TPPGCustomGrid.SortOnHeaderClick = True: Klick auf einen Spaltenkopf sortiert die Ansicht nach dieser Spalte, erneuter Klick kehrt die Richtung um (nur Spalten mit Sortable = True).
+TPPGCustomGrid.Styles = Bereiche des Grids einzeln gestalten: Header, Footer, Selection, SelectionInactive, AlternateRow (Zebra), HotRow, GridLine, FocusedCell, GroupRow, FilterRow. Nur gesetzte Werte zählen, der Rest kommt vom Preset.
+> `Grid1.Styles.AlternateRow.Color := $00FAF5EE; Grid1.Styles.Header.FontStyle := [fsBold];`
+
+# --- TPPGCustomMaskEdit ---
+TPPGCustomMaskEdit.AutoSelect = True: Beim Fokus per Tab wird der ganze Text markiert.
+TPPGCustomMaskEdit.EditMask = Eingabemaske wie bei TMaskEdit (z. B. „00000;1;_" für eine PLZ oder „!99/99/0000;1;_" für ein Datum): Platzhalter, ob Literale gespeichert werden, und das Leerzeichen-Symbol.
+> `MaskEdit1.EditMask := '+49 999 99999999;0;_';`
+TPPGCustomMaskEdit.OnValidationError = Beim Verlassen passt die Eingabe nicht zur Maske. Statt des VCL-Fehlerdialogs wird ValidationState = pvsError gesetzt; hier kann man zusätzlich reagieren. Ein ganz leeres Feld gilt als gültig.
+TPPGCustomMaskEdit.PasswordChar = Zeichen, das statt der Eingabe angezeigt wird; #0 = Klartext.
+
+# --- TPPGCustomMemo ---
+TPPGCustomMemo.Lines = Der Text als Zeilenliste (wie TMemo.Lines).
+> `Memo1.Lines.Add('Neue Zeile'); Memo1.Lines.LoadFromFile('notiz.txt');`
+TPPGCustomMemo.ScrollBars = Scrollleisten: ssNone, ssHorizontal, ssVertical oder ssBoth.
+TPPGCustomMemo.WantReturns = True: Enter fügt einen Zeilenumbruch ein; False: Enter löst den Standard-Button des Formulars aus (Umbruch dann mit Strg+Enter).
+TPPGCustomMemo.WantTabs = True: Tab fügt ein Tabulatorzeichen ein statt zum nächsten Control zu wechseln.
+
+# --- TPPGCustomNumberEdit ---
+TPPGCustomNumberEdit.AllowExpressions = True: Die Eingabe darf rechnen („2*19,99", „(100-15)/2"); ausgerechnet wird bei Enter und beim Verlassen.
+TPPGCustomNumberEdit.AllowNull = True: Ein leeres Feld bedeutet „kein Wert" (IsNull, bei DB-Feldern Null); False: leer wird zu 0.
+TPPGCustomNumberEdit.CurrencyString = Währungszeichen bei NumberKind = nkCurrency; leer = Zeichen aus den Ländereinstellungen (z. B. „€").
+> `NumberEdit1.CurrencyString := 'CHF';`
+TPPGCustomNumberEdit.Decimals = Nachkommastellen in der Anzeige und beim Runden (0..10; kaufmännisch gerundet). Bei nkInteger ohne Wirkung.
+TPPGCustomNumberEdit.Increment = Schrittweite für Pfeil auf/ab, Mausrad und Spin-Buttons.
+TPPGCustomNumberEdit.LargeIncrement = Schrittweite für Bild auf/ab.
+TPPGCustomNumberEdit.MaxValue = Größter erlaubter Wert; größere werden still begrenzt. MinValue = MaxValue bedeutet keine Grenze (wie TSpinEdit).
+TPPGCustomNumberEdit.MinValue = Kleinster erlaubter Wert; kleinere werden still begrenzt. MinValue = MaxValue bedeutet keine Grenze.
+> `NumberEdit1.MinValue := 0; NumberEdit1.MaxValue := 100;`
+TPPGCustomNumberEdit.NumberKind = Art der Zahl: nkInteger (Ganzzahl), nkFloat (Kommazahl), nkCurrency (Geldbetrag, intern Currency ohne Rundungsfehler, mit Währungszeichen), nkPercent (Prozent; Value 12,5 wird als „12,5 %" angezeigt).
+TPPGCustomNumberEdit.ShowSpinButtons = True: Rechts im Feld erscheinen Auf/Ab-Schaltflächen (Schritt = Increment).
+TPPGCustomNumberEdit.ShowThousandSeparator = True: Ohne Fokus wird mit Tausendertrennzeichen angezeigt („1.234,50").
+TPPGCustomNumberEdit.Value = Der Zahlenwert. Ohne Fokus formatiert angezeigt, mit Fokus roh. Setzen aus Code löst kein OnChange aus; OnChange kommt nur bei Änderungen durch den Anwender.
+> `Gesamt := NumberEdit1.Value * 1.19;`
+
+# --- TPPGCustomPrinter (Grid-, Planer- und Kanban-Drucker) ---
+TPPGCustomPrinter.FooterText = Fußzeile jeder Seite mit Platzhaltern [Seite], [Seiten], [Datum], [Titel] (auch englisch [Page], [Pages], [Date], [Title]). Leer = keine Fußzeile; Vorgabe „Seite [Seite] von [Seiten]" in der Sprache der Anwendung.
+TPPGCustomPrinter.HeaderText = Kopfzeile jeder Seite (fett) mit denselben Platzhaltern wie FooterText; leer = keine Kopfzeile.
+> `PPGGridPrinter1.HeaderText := '[Titel] - Stand [Datum]';`
+TPPGCustomPrinter.Margins = Seitenränder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten" änderbar.
+TPPGCustomPrinter.Orientation = Hochformat (poPortrait) oder Querformat (poLandscape).
+TPPGCustomPrinter.PrinterName = Name des Druckers; leer = Standarddrucker. Für PDF z. B. „Microsoft Print to PDF" mit PrintToFile.
+> `PPGGridPrinter1.PrintToFile('Microsoft Print to PDF', 'C:\Export\Liste.pdf');`
+TPPGCustomPrinter.Title = Titel des Druckauftrags (erscheint in der Druckerwarteschlange) und Wert des Platzhalters [Titel].
+
+# --- DB-Felder ---
+TPPGDBCheckBox.DataField = Name des Felds der Datenmenge, das angezeigt und bearbeitet wird (Boolean-Feld oder ein Feld mit ValueChecked/ValueUnchecked).
+TPPGDBCheckBox.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBCheckBox.ReadOnly = True: Der Wert wird angezeigt, kann aber nicht geändert werden.
+TPPGDBCheckBox.ValueChecked = Wert(e) für „angehakt" bei Feldern, die kein Boolean sind; mehrere durch Semikolon getrennt, geschrieben wird der erste (wie TDBCheckBox). Vorgabe „True".
+> `DBCheckBox1.ValueChecked := 'J;Ja;1'; DBCheckBox1.ValueUnchecked := 'N;Nein;0';`
+TPPGDBCheckBox.ValueUnchecked = Wert(e) für „nicht angehakt"; mehrere durch Semikolon getrennt, geschrieben wird der erste.
+TPPGDBCheckComboBox.DataField = Feld, in dem die angehakten Einträge als CheckedText (getrennt durch Delimiter) stehen.
+TPPGDBCheckComboBox.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBColorPicker.DataField = Ganzzahl-Feld mit der Farbe als TColor-Wert; Null bzw. leer = „Keine" (clNone).
+TPPGDBColorPicker.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBComboBox.DataField = Feld, das angezeigt und geschrieben wird. Bei TPPGDBComboBox der gewählte bzw. eingegebene Text; bei TPPGDBLookupComboBox das Schlüsselfeld der Haupt-Datenmenge (bekommt KeyField des gewählten Eintrags).
+TPPGDBComboBox.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBDatePicker.DataField = Datums- bzw. Datum-Zeit-Feld, das angezeigt und bearbeitet wird; leeres Feld = Null.
+TPPGDBDatePicker.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBEdit.DataField = Feld, das angezeigt und bearbeitet wird. Mit Fokus erscheint Field.Text, ohne Fokus Field.DisplayText; beim Verlassen wird geschrieben (Fehler erscheinen als ValidationState statt Dialog).
+> `DBEdit1.DataSource := DataSource1; DBEdit1.DataField := 'Name';`
+TPPGDBEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBGrid.TitleFont = Wie TDBGrid.TitleFont: Schrift der Titelzeile. Ist ein Alias für Styles.Header.Font und wird nicht eigens gespeichert.
+TPPGDBLookupComboBox.KeyField = Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben.
+TPPGDBLookupComboBox.ListField = Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile.
+> `Lookup1.ListSource := dsKunden; Lookup1.KeyField := 'ID'; Lookup1.ListField := 'Name;Ort';`
+TPPGDBLookupComboBox.ListSource = Datenquelle der Nachschlage-Tabelle. Ihre Datenmenge wird beim Öffnen einmal vollständig gelesen; für sehr große Tabellen vorher in der Abfrage filtern.
+TPPGDBMaskEdit.DataField = Feld, das angezeigt und bearbeitet wird. Hat das Control keine eigene EditMask, wird Field.EditMask übernommen.
+TPPGDBMaskEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBMemo.AutoDisplay = False: Memo- und BLOB-Felder werden erst bei Doppelklick oder Enter geladen (spart Zeit beim Blättern; wie TDBMemo).
+TPPGDBMemo.DataField = Text- oder Memo-Feld, das angezeigt und bearbeitet wird.
+TPPGDBMemo.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBNumberEdit.DataField = Zahlenfeld (Ganzzahl, Gleitkomma, BCD, Währung); leeres Feld = Null bei AllowNull.
+TPPGDBNumberEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBTagEdit.DataField = Textfeld, in dem die Tags getrennt durch Delimiter stehen.
+TPPGDBTagEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+
+# --- TPPGGridBand ---
+TPPGGridBand.Alignment = Ausrichtung der Band-Überschrift (links, zentriert, rechts).
+TPPGGridBand.Caption = Überschrift des Bands über seinen Spalten.
+TPPGGridBand.ParentBand = Übergeordnetes Band (Index in Grid.Bands) für mehrstufige Köpfe; -1 = oberste Ebene.
+
+# --- TPPGGridColumn ---
+TPPGGridColumn.Aggregate = Zusammenfassung in Summenzeile (ShowFooter) und Gruppenfuß (GroupFooter): agSum (Summe), agAvg (Mittelwert), agMin, agMax, agCount (Anzahl), agCustom (Wert aus OnCustomAggregate), agNone.
+TPPGGridColumn.Alignment = Ausrichtung des Zellinhalts (links, zentriert, rechts); Zahlen meist rechtsbündig.
+TPPGGridColumn.Band = Band (Index in Grid.Bands), unter dem diese Spalte steht; -1 = keins.
+TPPGGridColumn.CellKind = Darstellung der Zellen: ckText, ckCheck (Kästchen), ckProgress (Balken zwischen MinValue und MaxValue, sonst 0..100), ckSparkline (Werte „1;4;2"), ckRating (Sterne, Anzahl = MaxValue, sonst 5), ckImage (Bildindex), ckLink, ckButton (OnCellButtonClick), ckColor (Farbfeld), ckMarkup, ckCustom (eigene Zellart über CellKindName).
+> `Grid1.Columns[2].CellKind := ckProgress;`
+TPPGGridColumn.CellKindName = Name einer selbst registrierten Zellart (nur mit CellKind = ckCustom).
+TPPGGridColumn.DisplayIndex = Position in der Anzeige unter den beweglichen Spalten (-1 = wie Index). Das Grid schreibt sie beim Verschieben für alle Spalten neu; der Index der Spalte (Datenspalte) bleibt gleich.
+TPPGGridColumn.EditorKind = Editor beim Bearbeiten: gekText (Textfeld), gekNone (nicht bearbeitbar), gekCombo (Auswahl aus PickList), gekSpin (Zahl mit MinValue/MaxValue), gekCheck (Kästchen).
+TPPGGridColumn.FooterFormat = FormatFloat-Muster für die Summen dieser Spalte (leer = „#,##0.##"); agCount wird immer ganzzahlig angezeigt.
+> `Grid1.Columns[3].FooterFormat := '#,##0.00 €';`
+TPPGGridColumn.Format = Zahlen- bzw. Datumsformat für den Excel-Export in Excel-Syntax (z. B. „#,##0.00" oder „dd.mm.yyyy"); leer = Standard.
+TPPGGridColumn.GroupIndex = Ebene beim Gruppieren nach dieser Spalte (0 = oberste); -1 = nicht gruppiert. Wird auch durch Ziehen in die Gruppenleiste gesetzt.
+TPPGGridColumn.MaxValue = Obergrenze für gekSpin und ckProgress bzw. Sternzahl bei ckRating (0 = Vorgabe).
+TPPGGridColumn.MinValue = Untergrenze für gekSpin und ckProgress.
+TPPGGridColumn.PickList = Auswahlwerte für den Editor gekCombo, je Zeile einer.
+> `Grid1.Columns[1].EditorKind := gekCombo; Grid1.Columns[1].PickList.CommaText := 'offen,erledigt';`
+TPPGGridColumn.ReadOnly = True: Zellen dieser Spalte sind nicht bearbeitbar.
+TPPGGridColumn.Sortable = False: Klick auf den Kopf sortiert nicht nach dieser Spalte.
+TPPGGridColumn.Style = Aussehen der Zellen dieser Spalte: Fläche, Text, Schrift (je auch für Dunkel). clDefault = wie im Grid.
+> `Grid1.Columns[0].Style.FontStyle := [fsBold];`
+TPPGGridColumn.Title = Überschrift der Spalte im Kopf.
+TPPGGridColumn.TitleAlignment = Ausrichtung des Spaltentitels: gtaColumn = wie Alignment der Spalte, sonst links, zentriert oder rechts.
+TPPGGridColumn.TitleStyle = Aussehen des Spaltenkopfs: Fläche, Text, Schrift. clDefault = wie Grid.Styles.Header.
+TPPGGridColumn.Visible = False: Die Spalte ist ausgeblendet (über das Kopfmenü wieder einblendbar); Daten und Index bleiben erhalten.
+TPPGGridColumn.Width = Breite in logischen Pixeln (0..10000); 0 = DefaultColWidth. Wird beim Ziehen der Spaltengrenze aktualisiert.
+
+# --- TPPGGridConditionalFormat ---
+TPPGGridConditionalFormat.Bold = True: Treffer werden zusätzlich fett dargestellt.
+TPPGGridConditionalFormat.Color = Farbe der Regel aus dem Theme: ccWarning, ccSuccess, ccDanger, ccAccent oder ccCustom (= CustomColor). Bei Farbskalen bestimmt ccSuccess/ccDanger die Richtung (niedrig rot, hoch grün bzw. umgekehrt).
+TPPGGridConditionalFormat.Column = Datenspalte der Regel; -1 = alle Spalten (nur für Regeln ohne Statistik, also nicht für Oben/Unten, Farbskala, Datenbalken, Symbolsatz).
+TPPGGridConditionalFormat.CustomColor = Eigene Farbe bei Color = ccCustom.
+TPPGGridConditionalFormat.Enabled = False: Die Regel ist vorübergehend abgeschaltet.
+TPPGGridConditionalFormat.Rule = Art der Regel: crRange (Wert zwischen Value1 und Value2), crEqual (gleich Value1), crContains (Text enthält Value1), crTop/crBottom (oberste/unterste N bzw. N %), crColorScale (Farbverlauf nach Wert), crDataBar (Balken nach Wert), crIconSet (Pfeile hoch/gleich/runter).
+TPPGGridConditionalFormat.Target = Was eingefärbt wird: ctFill (Zellfläche) oder ctText (Schrift).
+TPPGGridConditionalFormat.Value1 = Erster Vergleichswert: bei crRange „von" (leer = offen), bei crEqual/crContains der Wert, bei crTop/crBottom die Anzahl („10" oder „10%").
+> `Rule := crTop; Value1 := '10%';`
+TPPGGridConditionalFormat.Value2 = Zweiter Vergleichswert: bei crRange „bis" (leer = offen).
+
+# --- TPPGGridPrinter ---
+TPPGGridPrinter.FitToPageWidth = True: Alle Spalten werden auf die Seitenbreite verkleinert; False: zu breite Tabellen gehen auf weiteren Seiten nebeneinander weiter.
+TPPGGridPrinter.Grid = Das Grid bzw. DB-Grid, das gedruckt wird (mit seiner aktuellen Ansicht: Sortierung, Filter, sichtbare Spalten).
+> `PPGGridPrinter1.Grid := PPGGrid1; PPGGridPrinter1.Preview;`
+TPPGGridPrinter.PrintColors = True: Zellfarben (bedingte Formate, Zebra) werden mitgedruckt; False: nur Schwarz auf Weiß.
+TPPGGridPrinter.PrintGridLines = True: Gitterlinien werden gedruckt.
+TPPGGridPrinter.RepeatHeader = True: Die Spaltenköpfe stehen auf jeder Seite.
+
+# --- TPPGGridStyles ---
+TPPGGridStyles.AlternateRow = Zebra: jede zweite Datenzeile. Erst Color setzen schaltet es ein.
+TPPGGridStyles.FilterRow = Die Filterzeile unter dem Kopf (ShowFilterRow).
+TPPGGridStyles.FocusedCell = Die Zelle mit Tastaturfokus: BorderColor = Rahmen, Color = Fläche, TextColor = Text.
+TPPGGridStyles.Footer = Summenzeile (ShowFooter) und Gruppenfuß; ohne eigene Werte wie Header.
+TPPGGridStyles.GridLine = Gitterlinien: Color = Linienfarbe (Breite über GridLineWidth).
+TPPGGridStyles.GroupRow = Gruppenkopf-Zeilen beim Gruppieren.
+TPPGGridStyles.Header = Kopfzeilen, feste Spalten und Bänder: Color = Fläche, TextColor = Text, BorderColor = Linien im Kopf, Font/FontStyle = Schrift.
+> `Grid1.Styles.Header.Color := clNavy; Grid1.Styles.Header.TextColor := clWhite;`
+TPPGGridStyles.HotRow = Zeile unter der Maus. Erst Color setzen schaltet die Hervorhebung ein.
+TPPGGridStyles.Selection = Auswahl, solange das Grid den Fokus hat. Mit gesetzter Color wird sie deckend statt halbtransparent gezeichnet.
+TPPGGridStyles.SelectionInactive = Auswahl, wenn das Grid den Fokus nicht hat.
+
+# --- TPPGTagEdit ---
+TPPGTagEdit.AddOnExit = True: Beim Verlassen des Felds wird angefangener Text zum Tag.
+TPPGTagEdit.AllowDuplicates = True: Dasselbe Tag darf mehrfach vorkommen.
+TPPGTagEdit.AllowNew = False: Nur Einträge aus Suggestions sind erlaubt (Auswahlliste statt freier Eingabe).
+TPPGTagEdit.CaseSensitive = True: Groß-/Kleinschreibung zählt beim Prüfen auf Doppelte und beim Abgleich mit Suggestions.
+TPPGTagEdit.Delimiter = Trennzeichen der Tags in TagsText bzw. im DB-Feld. Vorgabe „;".
+TPPGTagEdit.Delimiters = Zeichen, die beim Tippen ein Tag abschließen (z. B. „;," ). Enter schließt immer ab; eingefügtes „a; b; c" ergibt drei Tags.
+TPPGTagEdit.MaxTags = Höchstzahl der Tags; 0 = ohne Grenze.
+TPPGTagEdit.OnTagAdding = Bevor ein Tag durch den Anwender entsteht: Tag kann geändert (z. B. getrimmt) werden, Allow := False lehnt ab.
+> `Allow := Pos('@', Tag) > 0; // nur E-Mail-Adressen`
+TPPGTagEdit.OnTagClick = Ein Tag (Chip) wurde angeklickt.
+TPPGTagEdit.OnTagRemoved = Der Anwender hat ein Tag entfernt (Klick auf ×, Entf oder Rücktaste).
+TPPGTagEdit.Suggestions = Vorschläge, die beim Tippen im Aufklappfenster erscheinen.
+> `TagEdit1.Suggestions.CommaText := 'Vertrieb,Einkauf,Technik';`
+TPPGTagEdit.Tags = Die aktuellen Tags, je Zeile eines. Änderungen aus Code lösen keine Ereignisse aus.
+> `TagEdit1.Tags.Add('Wichtig');`

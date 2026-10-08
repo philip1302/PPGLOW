@@ -42,11 +42,52 @@ TPPGSparkline - kleiner Werteverlauf ohne Achsen (Phase 10b).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Kind`, `Markers`, `MaxCount`, `LineWidth`, `LineColor`, `NegativeColor`, `UseRange`, `RangeMin`, `RangeMax`, `ShowReference`, `ReferenceValue`, `ValuesText`, `Align`, `Anchors`, `Constraints`, `Enabled`, `Hint`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`, `Touch`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
+| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
+| `Kind` | `TPPGSparklineKind` | `skLine` | Darstellung: Linie, Fläche, Säulen oder Gewinn/Verlust (gleich hohe Balken nach oben bzw. unten je nach Vorzeichen). Werte: `skLine`, `skArea`, `skColumn`, `skWinLoss`. |
+| `Markers` | `TPPGSparklineMarkers` | `[smLast]` | Hervorgehobene Punkte: Minimum, Maximum, erster und letzter Wert (Vorgabe: nur der letzte). Menge aus: `smMin`, `smMax`, `smFirst`, `smLast`. Nutzung: `Spark.Markers := [smMin, smMax, smLast];` |
+| `MaxCount` | `Integer` | `0` | Höchstzahl der Werte (0 = unbegrenzt). Mit AddValue entsteht so ein Lauffenster: neue Werte schieben die ältesten hinaus. Nutzung: `Spark.MaxCount := 60; Spark.AddValue(CpuLast);` z. B. im Timer. |
+| `LineWidth` | `Integer` | `2` | Strichstärke der Linie in logischen Pixeln (1..20). |
+| `LineColor` | `TColor` | `clDefault` | Farbe von Linie, Fläche bzw. positiven Säulen; clDefault = Akzentfarbe des Presets. |
+| `NegativeColor` | `TColor` | `clDefault` | Farbe negativer Säulen bzw. Verlust-Balken; clDefault = Signalfarbe „Fehler". |
+| `UseRange` | `Boolean` | `False` | True: Fester Wertebereich RangeMin..RangeMax statt aus den Daten; so bleiben mehrere Sparklines vergleichbar. |
+| `RangeMin` | `Double` |  | Feste Untergrenze der Skala; wirkt nur mit UseRange = True. |
+| `RangeMax` | `Double` |  | Feste Obergrenze der Skala; wirkt nur mit UseRange = True. |
+| `ShowReference` | `Boolean` | `False` | True: Eine waagerechte Referenzlinie bei ReferenceValue zeichnen. |
+| `ReferenceValue` | `Double` |  | Wert der Referenzlinie (z. B. Ziel oder Durchschnitt); sichtbar mit ShowReference. |
+| `ValuesText` | `string` |  | Werte als Text für das DFM, getrennt durch Semikolon, Punkt als Dezimaltrenner ("3;5;2.5"); im Code bequemer mit SetValues oder AddValue. |
+
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
+| `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
+| `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` |
+| `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. |
+| `Hint` | `string` |  | Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor "\|" = Tooltip, danach = Langtext für die Statusleiste. Nutzung: `Button1.Hint := 'Dokument speichern\|Speichert das Dokument unter dem bisherigen Namen';` |
+| `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
+| `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
+| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
+| `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
+| `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
 
 ## Ereignisse
 
-`OnGesture`, `OnClick`, `OnDblClick`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`
+| Ereignis | Typ und Parameter | Wann und wozu |
+|---|---|---|
+| `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
+| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. |
+| `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. |
+| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
+| `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGSparkline.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGSparkline.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

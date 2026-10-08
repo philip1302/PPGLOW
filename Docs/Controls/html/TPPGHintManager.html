@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGHintManager</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGHintManager</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGHintManager</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Hints</code> - Basis <code>TComponent</code></p>
@@ -41,7 +41,16 @@ SaveButton.ShowHint := True;
 </ul>
 <p>Gemeinsam: TPPGHintContent misst und zeichnet den Inhalt (DRY).</p>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Active</code>, <code>Preset</code>, <code>StyleManager</code>, <code>ShowTitle</code>, <code>AllowMarkup</code>, <code>MaxWidth</code></p>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Active</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Alle Hints der Anwendung erscheinen zur Laufzeit im PPGlow-Stil (HintWindowClass wird ersetzt und beim Freigeben wiederhergestellt). Im Designer ohne Wirkung. Nutzung: Einen TPPGHintManager auf das Hauptformular legen, Active := True.</td></tr>
+<tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage der Hints; &#39;&#39; = Standard bzw. StyleManager.</td></tr>
+<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle f&#252;r Preset und Farben der Hints.</td></tr>
+<tr><td><code>ShowTitle</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Besteht ein Hint aus Titel und Text, getrennt durch einen senkrechten Strich (wie bei der VCL), erscheint der Titel fett und der Text darunter; False: nur der kurze Teil wie bei der VCL. Nutzung: Hint-Text im Format der VCL: kurzer Titel, senkrechter Strich, ausf&#252;hrlicher Text.</td></tr>
+<tr><td><code>AllowMarkup</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Hint-Texte d&#252;rfen Mini-Markup enthalten (&lt;b&gt;, &lt;i&gt;, &lt;color=...&gt;).</td></tr>
+<tr><td><code>MaxWidth</code></td><td><code>Integer</code></td><td><code>360</code></td><td>Gr&#246;&#223;te Breite eines Hints in logischen Pixeln (80..2000); l&#228;ngerer Text bricht um.</td></tr>
+</table>
 <hr>
-<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGHintManager.md</code>.</p>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGHintManager.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

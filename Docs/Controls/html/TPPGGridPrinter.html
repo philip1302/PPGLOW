@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGridPrinter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGridPrinter</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGGridPrinter</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Grid.Print</code> - Basis <code>TPPGCustomPrinter</code></p>
@@ -32,7 +32,21 @@ PPGExportPdf(PPGGridPrinter1, &#39;Lagerliste.pdf&#39;);
 <li>Die frueher hier deklarierten Typen (TPPGPrintDevice, TPPGPrintMargins, Vorschau- und Seiten-Formular) gibt es weiter unter demselben Namen.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Grid</code>, <code>Title</code>, <code>HeaderText</code>, <code>FooterText</code>, <code>Orientation</code>, <code>Margins</code>, <code>RepeatHeader</code>, <code>FitToPageWidth</code>, <code>PrintGridLines</code>, <code>PrintColors</code>, <code>PrinterName</code></p>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Grid</code></td><td><code>TPPGCustomGrid</code></td><td></td><td>Das Grid bzw. DB-Grid, das gedruckt wird (mit seiner aktuellen Ansicht: Sortierung, Filter, sichtbare Spalten). Nutzung: <code>PPGGridPrinter1.Grid := PPGGrid1; PPGGridPrinter1.Preview;</code></td></tr>
+<tr><td><code>Title</code></td><td><code>string</code></td><td></td><td>Titel des Druckauftrags (erscheint in der Druckerwarteschlange) und Wert des Platzhalters [Titel].</td></tr>
+<tr><td><code>HeaderText</code></td><td><code>string</code></td><td></td><td>Kopfzeile jeder Seite (fett) mit denselben Platzhaltern wie FooterText; leer = keine Kopfzeile. Nutzung: <code>PPGGridPrinter1.HeaderText := &#39;[Titel] - Stand [Datum]&#39;;</code></td></tr>
+<tr><td><code>FooterText</code></td><td><code>string</code></td><td></td><td>Fu&#223;zeile jeder Seite mit Platzhaltern [Seite], [Seiten], [Datum], [Titel] (auch englisch [Page], [Pages], [Date], [Title]). Leer = keine Fu&#223;zeile; Vorgabe „Seite [Seite] von [Seiten]&quot; in der Sprache der Anwendung.</td></tr>
+<tr><td><code>Orientation</code></td><td><code>TPrinterOrientation</code></td><td><code>poPortrait</code></td><td>Hochformat (poPortrait) oder Querformat (poLandscape).</td></tr>
+<tr><td><code>Margins</code></td><td><a href="types/TPPGPrintMargins.html">TPPGPrintMargins</a></td><td></td><td>Seitenr&#228;nder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten&quot; &#228;nderbar.</td></tr>
+<tr><td><code>RepeatHeader</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Die Spaltenk&#246;pfe stehen auf jeder Seite.</td></tr>
+<tr><td><code>FitToPageWidth</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Alle Spalten werden auf die Seitenbreite verkleinert; False: zu breite Tabellen gehen auf weiteren Seiten nebeneinander weiter.</td></tr>
+<tr><td><code>PrintGridLines</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Gitterlinien werden gedruckt.</td></tr>
+<tr><td><code>PrintColors</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Zellfarben (bedingte Formate, Zebra) werden mitgedruckt; False: nur Schwarz auf Wei&#223;.</td></tr>
+<tr><td><code>PrinterName</code></td><td><code>string</code></td><td></td><td>Name des Druckers; leer = Standarddrucker. F&#252;r PDF z. B. „Microsoft Print to PDF&quot; mit PrintToFile. Nutzung: <code>PPGGridPrinter1.PrintToFile(&#39;Microsoft Print to PDF&#39;, &#39;C:\Export\Liste.pdf&#39;);</code></td></tr>
+</table>
 <hr>
-<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGGridPrinter.md</code>.</p>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGGridPrinter.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGChartAxis</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGChartAxis</h1>
+<p>Typ in Unit <code>PPG.Chart.Series</code> - Basis <code>TPersistent</code></p>
+<p>Eine Achse des Diagramms (X, Y oder zweite Y-Achse): Bereich, Teilung, Format der Beschriftung und Sichtbarkeit.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Achse samt Beschriftung ausblenden; die Skalierung gilt weiter.</td></tr>
+<tr><td><code>Title</code></td><td><code>string</code></td><td></td><td>Achsentitel neben bzw. unter der Achse (leer = keiner). Nutzung: <code>Chart.YAxis.Title := &#39;Umsatz in T€&#39;;</code></td></tr>
+<tr><td><code>AutoMin</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Die Untergrenze wird aus den Daten berechnet (runde Werte, bei S&#228;ulen ab 0). False: Es gilt Min. Nutzung: <code>Chart.YAxis.AutoMin := False; Chart.YAxis.Min := 0;</code></td></tr>
+<tr><td><code>AutoMax</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Die Obergrenze wird aus den Daten berechnet. False: Es gilt Max. Nutzung: <code>Chart.YAxis.AutoMax := False; Chart.YAxis.Max := 100;</code> z. B. f&#252;r Prozentwerte.</td></tr>
+<tr><td><code>Min</code></td><td><code>Double</code></td><td></td><td>Feste Untergrenze; wirkt nur mit AutoMin = False.</td></tr>
+<tr><td><code>Max</code></td><td><code>Double</code></td><td></td><td>Feste Obergrenze; wirkt nur mit AutoMax = False.</td></tr>
+<tr><td><code>Format</code></td><td><code>string</code></td><td></td><td>FormatFloat-Maske der Achsenbeschriftung; leer = passende Nachkommastellen aus der Schrittweite. Bei einer Datumsachse eine FormatDateTime-Maske. Nutzung: <code>Chart.YAxis.Format := &#39;#,##0 €&#39;;</code> oder <code>Chart.XAxis.Format := &#39;dd.mm.&#39;;</code></td></tr>
+<tr><td><code>ShowGrid</code></td><td><code>Boolean</code></td><td></td><td>Gitterlinien an den Teilstrichen dieser Achse. Vorgabe: an bei der Y-Achse, aus bei X- und zweiter Y-Achse. Farbe &#252;ber ChartStyles.Grid.</td></tr>
+<tr><td><code>Kind</code></td><td><code>TPPGChartXKind</code></td><td><code>cxkCategory</code></td><td>Nur f&#252;r die X-Achse: Art der Werte. Kategorien verteilen die Punkte gleichm&#228;&#223;ig (X = Index, Text aus Categories), Zahlen und Datum/Zeit setzen die Punkte nach ihrem X-Wert (Series.AddXY). Werte: <code>cxkCategory</code>, <code>cxkNumeric</code>, <code>cxkDateTime</code>. Nutzung: <code>Chart.XAxis.Kind := cxkDateTime; Chart.Series[0].AddXY(Date, 42);</code></td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="../TPPGChart.html">TPPGChart</a>, <a href="../TPPGDBChart.html">TPPGDBChart</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGChartReferenceLine</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGChartReferenceLine</h1>
+<p>Typ in Unit <code>PPG.Chart.Series</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Referenzlinie: Wert, Achse, Farbe, Strichart und Beschriftung.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Value</code></td><td><code>Double</code></td><td></td><td>Position der Linie als Achsenwert (bei Datumsachse ein TDateTime). Nutzung: <code>with Chart.ReferenceLines.Add as TPPGChartReferenceLine do begin Value := 80; Caption := &#39;Ziel&#39;; end;</code></td></tr>
+<tr><td><code>Axis</code></td><td><code>TPPGChartLineAxis</code></td><td><code>claY</code></td><td>An welcher Achse die Linie steht: Y (waagerecht, linke Achse), Y2 (waagerecht, rechte Achse) oder X (senkrecht, z. B. ein Stichtag). Werte: <code>claY</code>, <code>claY2</code>, <code>claX</code>.</td></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung an der Linie (z. B. „Ziel&quot; oder „Durchschnitt&quot;).</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Linienfarbe; clDefault = Sekund&#228;rtextfarbe des Presets.</td></tr>
+<tr><td><code>Dashed</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: gestrichelte Linie; False: durchgezogen.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGChartReferenceLines.html">TPPGChartReferenceLines</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

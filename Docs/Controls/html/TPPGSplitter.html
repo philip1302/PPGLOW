@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSplitter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSplitter</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGSplitter</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Splitter</code> - Basis <code>TPPGCustomSplitter</code></p>
@@ -19,9 +19,42 @@
 <li>Esc bricht das Ziehen ab (alte Groesse).</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>MinSize</code>, <code>AutoSnap</code>, <code>Beveled</code>, <code>ResizeStyle</code>, <code>Align</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>ParentColor</code>, <code>ParentShowHint</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code>, <code>Width</code></p>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage: „Classic&quot; (gl&#228;nzend, Office-Stil), „ModernFlat&quot; (flach mit Glow, Standard) oder „Fluent11&quot; (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel &#252;bernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name l&#246;st zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zur&#252;ckgefallen. Nutzung: <code>PPGButton1.Preset := &#39;Fluent11&#39;;</code> F&#252;r alle Controls eines Formulars einheitlich &#252;ber StyleManager.</td></tr>
+<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen.</td></tr>
+<tr><td><code>Appearance</code></td><td><a href="types/TPPGAppearance.html">TPPGAppearance</a></td><td></td><td>Aussehen je Zustand: Farben, Verl&#228;ufe, Rand, Glow und Textfarbe f&#252;r Normal, Hot (Maus dar&#252;ber), Down (gedr&#252;ckt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Gr&#246;&#223;e, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu bef&#252;llt. Nutzung: <code>PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;</code></td></tr>
+<tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen f&#252;r Barrierefreiheit).</td></tr>
+<tr><td><code>MinSize</code></td><td><code>Integer</code></td><td><code>30</code></td><td>Mindestgr&#246;&#223;e des angrenzenden Controls in Pixeln (0..100000); kleiner nur per AutoSnap auf 0.</td></tr>
+<tr><td><code>AutoSnap</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Wird das angrenzende Control kleiner als die H&#228;lfte von MinSize gezogen, klappt es ganz zu (Gr&#246;&#223;e 0), wie bei TSplitter.</td></tr>
+<tr><td><code>Beveled</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Die Trennlinie ist auch in Ruhe sichtbar; sonst erscheinen Linie und Griffpunkte erst beim Hover (wie TSplitter.Beveled).</td></tr>
+<tr><td><code>ResizeStyle</code></td><td><code>TResizeStyle</code></td><td><code>rsUpdate</code></td><td>R&#252;ckmeldung beim Ziehen: rsUpdate (Standard) &#228;ndert live, rsLine/rsPattern zeigen eine Linie auf dem Parent und &#228;ndern beim Loslassen, rsNone &#228;ndert erst beim Loslassen ohne Linie.</td></tr>
+</table>
+<h2>Eigenschaften wie in der VCL</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Align</code></td><td><code>TAlign</code></td><td><code>alLeft</code></td><td>Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder f&#252;llt den Rest (alClient). alNone = freie Position. Nutzung: <code>Panel1.Align := alClient;</code> Abst&#228;nde &#252;ber <code>AlignWithMargins</code> und <code>Margins</code>.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td></td><td>Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Fl&#228;chenfarben der Zust&#228;nde stehen in Appearance. Nutzung: <code>clWindow</code>, <code>clBtnFace</code> oder eine RGB-Farbe wie <code>$00F0F0F0</code>.</td></tr>
+<tr><td><code>Constraints</code></td><td><code>TSizeConstraints</code></td><td></td><td>Mindest- und H&#246;chstma&#223;e (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: <code>Panel1.Constraints.MinWidth := 200;</code></td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt.</td></tr>
+<tr><td><code>ParentColor</code></td><td><code>Boolean</code></td><td></td><td>True: Color wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>ParentShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: ShowHint wird vom Parent &#252;bernommen (meist vom Formular).</td></tr>
+<tr><td><code>ShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: Hint wird als Tooltip angezeigt.</td></tr>
+<tr><td><code>TabOrder</code></td><td><code>TTabOrder</code></td><td></td><td>Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst).</td></tr>
+<tr><td><code>TabStop</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Das Control ist mit Tab erreichbar.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein.</td></tr>
+<tr><td><code>Touch</code></td><td><code>TTouchManager</code></td><td></td><td>Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten.</td></tr>
+<tr><td><code>Width</code></td><td><code>Integer</code></td><td><code>6</code></td><td>Breite in Pixeln (bei hoher DPI skaliert die VCL beim Laden).</td></tr>
+</table>
 <h2>Ereignisse</h2>
-<p><code>OnGesture</code>, <code>OnCanResize</code>, <code>OnMoved</code>, <code>OnPaint</code></p>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnGesture</code></td><td><code>TGestureEvent</code> <code>(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)</code></td><td>Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: <code>if EventInfo.GestureID = sgiLeft then NaechsteSeite;</code></td></tr>
+<tr><td><code>OnCanResize</code></td><td><code>TCanResizeEvent</code> <code>(Sender: TObject; var NewWidth, NewHeight: Integer; var Resize: Boolean)</code></td><td>Vor jeder Gr&#246;&#223;en&#228;nderung beim Ziehen bzw. per Tastatur; NewSize kann angepasst werden, Accept := False verhindert die &#196;nderung. Nutzung: <code>if NewSize &gt; 400 then NewSize := 400;</code></td></tr>
+<tr><td><code>OnMoved</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Ziehen (oder ein Tastendruck) ist abgeschlossen und die neue Gr&#246;&#223;e gesetzt. Nutzung: Z. B. die Breite f&#252;r den n&#228;chsten Start speichern.</td></tr>
+<tr><td><code>OnPaint</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Wie TSplitter: wird nach dem eigenen Zeichnen aufgerufen; &#252;ber Canvas kann zus&#228;tzlich gezeichnet werden (nur innerhalb des Ereignisses g&#252;ltig).</td></tr>
+</table>
 <hr>
-<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSplitter.md</code>.</p>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSplitter.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGNavItem</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGNavItem</h1>
+<p>Typ in Unit <code>PPG.NavigationView</code> - Basis <code>TCollectionItem</code></p>
+<p>Ein Eintrag der Navigationsleiste: Text, Symbol, Plakette, Untereintr&#228;ge, &#220;berschrift oder Trennlinie, Fu&#223;bereich sowie eigene Farben.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Text des Eintrags; in der kompakten Leiste als Tooltip.</td></tr>
+<tr><td><code>Kind</code></td><td><code>TPPGNavItemKind</code></td><td><code>nikItem</code></td><td>Art: nikItem (w&#228;hlbarer Eintrag), nikHeader (Gruppen&#252;berschrift) oder nikSeparator (Trennlinie). Werte: <code>nikItem</code>, <code>nikHeader</code>, <code>nikSeparator</code>.</td></tr>
+<tr><td><code>IconChar</code></td><td><code>Word</code></td><td><code>0</code></td><td>Symbol aus der Icon-Schrift (Segoe Fluent Icons bzw. MDL2) als Zeichencode; 0 = keins (dann ImageIndex). Nutzung: <code>Item.IconChar := $E80F; // Start</code></td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus NavigationView.Images, wenn IconChar = 0; -1 = kein Bild.</td></tr>
+<tr><td><code>BadgeCount</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Zahl auf der Plakette des Eintrags (z. B. ungelesene Nachrichten); 0 = keine Zahl. Nutzung: <code>PPGNavigationView1.Items[2].BadgeCount := 12;</code></td></tr>
+<tr><td><code>BadgeDot</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Ein Punkt statt einer Zahl weist auf Neues hin (wird gezeigt, solange BadgeCount = 0).</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Eintrag grau und nicht w&#228;hlbar.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Eintrag ausgeblendet.</td></tr>
+<tr><td><code>Footer</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Eintrag steht im Fu&#223;bereich unten in der Leiste (typisch „Einstellungen&quot;).</td></tr>
+<tr><td><code>PageIndex</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Seite im verbundenen PageControl, die bei Auswahl gezeigt wird; -1 = keine.</td></tr>
+<tr><td><code>Expanded</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Untereintr&#228;ge (Items) sind aufgeklappt. Der Anwender klappt per Klick bzw. Rechts/Links.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Tooltip des Eintrags (zus&#228;tzlich zum Text in der kompakten Leiste).</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert, z. B. eine Befehls-ID f&#252;r OnItemInvoked.</td></tr>
+<tr><td><code>Items</code></td><td><a href="TPPGNavItems.html">TPPGNavItems</a></td><td></td><td>Untereintr&#228;ge; der Eintrag wird damit aufklappbar.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Fl&#228;chenfarbe dieses Eintrags; clDefault = aus NavStyles. Zusammen mit TextColor und FontStyle zum Hervorheben einzelner Eintr&#228;ge.</td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Textfarbe dieses Eintrags; clDefault = aus NavStyles.</td></tr>
+<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile nur f&#252;r diesen Eintrag, z. B. [fsBold].</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGNavItems.html">TPPGNavItems</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

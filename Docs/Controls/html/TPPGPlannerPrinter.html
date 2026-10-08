@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGPlannerPrinter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGPlannerPrinter</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGPlannerPrinter</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Planner.Print</code> - Basis <code>TPPGCustomPrinter</code></p>
@@ -28,7 +28,21 @@ PPGPlannerPrinter1.Preview;
 <li>Gezeichnet wird mit demselben Code wie auf dem Bildschirm: ein unsichtbarer Planer in Druckeraufloesung (ScalePPI = Drucker-PPI) mit den Einstellungen und Terminen des Planers, helle Farben, ohne Auswahl und &quot;Jetzt&quot;-Linie. Das Raster wird so hoch, dass die Stunden auf die Seite passen (WorkHoursOnly: nur die Arbeitszeit).</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Planner</code>, <code>View</code>, <code>PrintFrom</code>, <code>PrintTo</code>, <code>WorkHoursOnly</code>, <code>Title</code>, <code>HeaderText</code>, <code>FooterText</code>, <code>Orientation</code>, <code>Margins</code>, <code>PrinterName</code></p>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Planner</code></td><td><code>TPPGCustomPlanner</code></td><td></td><td>Der zu druckende Planer (TPPGPlanner oder TPPGDBPlanner).</td></tr>
+<tr><td><code>View</code></td><td><code>TPPGPlannerView</code></td><td><code>pvWeek</code></td><td>Ansicht f&#252;r den Druck: eine Seite je Tag, Arbeitswoche, Woche, Monat oder Agenda (7 Tage je Seite); die Zeitleiste wird als Woche gedruckt. TakeFromPlanner &#252;bernimmt die Ansicht des Planers. Werte: <code>pvDay</code>, <code>pvWorkWeek</code>, <code>pvWeek</code>, <code>pvMonth</code>, <code>pvTimeline</code>, <code>pvAgenda</code>.</td></tr>
+<tr><td><code>PrintFrom</code></td><td><code>TDate</code></td><td></td><td>Erster Tag des Druckzeitraums; 0 = nur die Seite um Planner.Date. Nutzung: <code>Prn.PrintFrom := EncodeDate(2026, 6, 1); Prn.PrintTo := EncodeDate(2026, 6, 30);</code></td></tr>
+<tr><td><code>PrintTo</code></td><td><code>TDate</code></td><td></td><td>Letzter Tag des Druckzeitraums; zusammen mit PrintFrom entsteht eine Seite je Zeitraum der Ansicht.</td></tr>
+<tr><td><code>WorkHoursOnly</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Das Raster zeigt nur die Arbeitszeit (WorkStart bis WorkEnd) und f&#252;llt damit die Seite. Auch im Dialog „Seite einrichten&quot; umschaltbar.</td></tr>
+<tr><td><code>Title</code></td><td><code>string</code></td><td></td><td>Titel des Druckauftrags (erscheint in der Druckerwarteschlange) und Wert des Platzhalters [Titel].</td></tr>
+<tr><td><code>HeaderText</code></td><td><code>string</code></td><td></td><td>Kopfzeile jeder Seite (fett) mit denselben Platzhaltern wie FooterText; leer = keine Kopfzeile. Nutzung: <code>PPGGridPrinter1.HeaderText := &#39;[Titel] - Stand [Datum]&#39;;</code></td></tr>
+<tr><td><code>FooterText</code></td><td><code>string</code></td><td></td><td>Fu&#223;zeile jeder Seite mit Platzhaltern [Seite], [Seiten], [Datum], [Titel] (auch englisch [Page], [Pages], [Date], [Title]). Leer = keine Fu&#223;zeile; Vorgabe „Seite [Seite] von [Seiten]&quot; in der Sprache der Anwendung.</td></tr>
+<tr><td><code>Orientation</code></td><td><code>TPrinterOrientation</code></td><td><code>poPortrait</code></td><td>Hochformat (poPortrait) oder Querformat (poLandscape).</td></tr>
+<tr><td><code>Margins</code></td><td><a href="types/TPPGPrintMargins.html">TPPGPrintMargins</a></td><td></td><td>Seitenr&#228;nder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten&quot; &#228;nderbar.</td></tr>
+<tr><td><code>PrinterName</code></td><td><code>string</code></td><td></td><td>Name des Druckers; leer = Standarddrucker. F&#252;r PDF z. B. „Microsoft Print to PDF&quot; mit PrintToFile. Nutzung: <code>PPGGridPrinter1.PrintToFile(&#39;Microsoft Print to PDF&#39;, &#39;C:\Export\Liste.pdf&#39;);</code></td></tr>
+</table>
 <hr>
-<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPlannerPrinter.md</code>.</p>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPlannerPrinter.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

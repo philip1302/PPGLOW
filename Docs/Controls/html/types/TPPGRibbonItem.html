@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGRibbonItem</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGRibbonItem</h1>
+<p>Typ in Unit <code>PPG.Ribbon.Items</code> - Basis <code>TCollectionItem</code></p>
+<p>Ein Befehl im Ribbon: Art, Gr&#246;&#223;e, Bild bzw. Symbol, Beschriftung, Action, Umschaltzustand, Galerie-Eintr&#228;ge oder eingebettetes Control.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Action</code></td><td><code>TBasicAction</code></td><td></td><td>Verkn&#252;pfte Action: Beschriftung, Hint, Enabled, Checked, Bild und Ausf&#252;hren kommen aus ihr. Im Schnellzugriff dient die Action als Schl&#252;ssel (SaveQuickAccess).</td></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung des Befehls; ein &amp; markiert die Zugriffstaste, sonst wird der KeyTip aus der Beschriftung gebildet.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Tooltip des Befehls (mit Titel aus Caption).</td></tr>
+<tr><td><code>Kind</code></td><td><code>TPPGRibbonItemKind</code></td><td><code>rikButton</code></td><td>Art des Items: rikButton, rikSplitButton (Button + Pfeil mit DropDownMenu), rikCheck (Umschalt-Button), rikGallery (Galerie), rikControl (eingebettetes Control) oder rikSeparator (Trennlinie). Werte: <code>rikButton</code>, <code>rikSplitButton</code>, <code>rikCheck</code>, <code>rikGallery</code>, <code>rikControl</code>, <code>rikSeparator</code>.</td></tr>
+<tr><td><code>Size</code></td><td><code>TPPGRibbonSize</code></td><td><code>rsLarge</code></td><td>Gr&#246;&#223;e, solange die Gruppe genug Platz hat: rsLarge (gro&#223;es Symbol, Text darunter), rsMedium (kleines Symbol mit Text), rsSmall (nur Symbol). Werte: <code>rsLarge</code>, <code>rsMedium</code>, <code>rsSmall</code>.</td></tr>
+<tr><td><code>MinSize</code></td><td><code>TPPGRibbonSize</code></td><td><code>rsSmall</code></td><td>Kleinste Gr&#246;&#223;e, auf die das Item schrumpfen darf, wenn die Breite nicht reicht (rsLarge = bleibt gro&#223;). Werte: <code>rsLarge</code>, <code>rsMedium</code>, <code>rsSmall</code>.</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Kleines Bild (16 px) aus Ribbon.Images; -1 = keins.</td></tr>
+<tr><td><code>LargeImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Gro&#223;es Bild (32 px) aus Ribbon.LargeImages f&#252;r Size = rsLarge; -1 = ImageIndex verwenden.</td></tr>
+<tr><td><code>IconChar</code></td><td><code>Word</code></td><td><code>0</code></td><td>Symbol aus der Icon-Schrift als Zeichencode (0 = keins), z. B. $E8C8 f&#252;r „Kopieren&quot;; Alternative zu ImageIndex.</td></tr>
+<tr><td><code>Down</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Eingerastet (Kind = rikCheck). Setzen im Code ohne Ereignis; mit GroupIndex wie Radiobuttons.</td></tr>
+<tr><td><code>GroupIndex</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Umschalt-Items (rikCheck) mit gleichem GroupIndex &lt;&gt; 0 schlie&#223;en sich gegenseitig aus (im ganzen Ribbon), z. B. Links/Zentriert/Rechts.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Befehl grau und nicht ausl&#246;sbar.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Item ausgeblendet.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert, z. B. eine Befehls-ID f&#252;r OnItemClick.</td></tr>
+<tr><td><code>KeyTip</code></td><td><code>string</code></td><td></td><td>Eigener KeyTip (Buchstabe(n) f&#252;r die Tastaturbedienung nach Alt); leer = automatisch aus der Beschriftung.</td></tr>
+<tr><td><code>BeginColumn</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Beginnt einen neuen Stapel kleiner bzw. mittlerer Items (bis zu drei Zeilen untereinander).</td></tr>
+<tr><td><code>SameRow</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Steht rechts neben dem vorigen kleinen Item in derselben Zeile (f&#252;r kompakte Knopfreihen wie Fett/Kursiv/Unterstrichen).</td></tr>
+<tr><td><code>DropDownMenu</code></td><td><code>TPopupMenu</code></td><td></td><td>Men&#252; eines Split-Buttons (rikSplitButton: Pfeilteil) bzw. eines Buttons, der nur aufklappt.</td></tr>
+<tr><td><code>Control</code></td><td><code>TControl</code></td><td></td><td>Eingebettetes Control bei Kind = rikControl (z. B. eine ComboBox f&#252;r die Schriftgr&#246;&#223;e); das Ribbon wird sein Parent und setzt die Lage.</td></tr>
+<tr><td><code>GalleryItems</code></td><td><code>TStrings</code></td><td></td><td>Texte der Galerie-Eintr&#228;ge, einer je Zeile (wenn GalleryCount = 0).</td></tr>
+<tr><td><code>GalleryCount</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Anzahl virtueller Galerie-Eintr&#228;ge, deren Inhalt OnGetGalleryItem liefert (0..MaxInt); 0 = Eintr&#228;ge aus GalleryItems.</td></tr>
+<tr><td><code>GalleryIndex</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Gew&#228;hlter Galerie-Eintrag (-1 = keiner).</td></tr>
+<tr><td><code>GalleryColumns</code></td><td><code>Integer</code></td><td><code>4</code></td><td>Spalten der Galerie direkt in der Leiste (1..50).</td></tr>
+<tr><td><code>GalleryPopupColumns</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Spalten der aufgeklappten Galerie (0..50); 0 = GalleryColumns + 1.</td></tr>
+<tr><td><code>GalleryItemWidth</code></td><td><code>Integer</code></td><td><code>72</code></td><td>Breite eines Galerie-Eintrags in logischen Pixeln (16..1000).</td></tr>
+<tr><td><code>GalleryItemHeight</code></td><td><code>Integer</code></td><td><code>0</code></td><td>H&#246;he eines Galerie-Eintrags in logischen Pixeln (0..1000); 0 = volle H&#246;he der Leiste.</td></tr>
+</table>
+<h2>Ereignisse</h2>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Item wurde ausgel&#246;st; kommt vor Ribbon.OnItemClick. Mit Action wird stattdessen Action.Execute aufgerufen (au&#223;er OnClick weicht von OnExecute ab).</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGRibbonItems.html">TPPGRibbonItems</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

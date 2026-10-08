@@ -42,11 +42,32 @@ innerhalb verschobener ScrollBoxen ohne WM_WINDOWPOSCHANGED.
 
 ## PPGlow-Eigenschaften
 
-`Target`, `Title`, `Subtitle`, `Text`, `ActionButtonText`, `CloseButtonText`, `Icon`, `ShowCloseButton`, `LightDismiss`, `Placement`, `MaxWidth`, `Preset`, `StyleManager`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Target` | `TControl` |  | Control, an das die Blase mit Pfeil geheftet wird; sie folgt ihm beim Verschieben. Ohne Target: unten rechts im Formular, ohne Pfeil. Nutzung: `PPGTeachingTip1.Target := btnExport; PPGTeachingTip1.Show;` |
+| `Title` | `string` |  | Fetter Titel der Blase (auch Name für Screenreader). |
+| `Subtitle` | `string` |  | Untertitel unter dem Titel. |
+| `Text` | `string` |  | Haupttext mit Mini-Markup (<b>, <i>, <a href=...>). |
+| `ActionButtonText` | `string` |  | Beschriftung des Aktions-Buttons (Akzentfarbe); leer = kein Button. Ein Klick löst OnActionClick aus, schließt aber nicht selbst. |
+| `CloseButtonText` | `string` |  | Beschriftung eines Schließen-Buttons; leer = stattdessen das Kreuz (ShowCloseButton). |
+| `Icon` | `TPPGTipIcon` | `tiNone` | Symbol links neben dem Titel: keins, Info, Erfolg, Warnung oder Fehler. Werte: `tiNone`, `tiInfo`, `tiSuccess`, `tiWarning`, `tiError`. |
+| `ShowCloseButton` | `Boolean` | `True` | True: Kreuz oben rechts (nur ohne CloseButtonText, wie WinUI). |
+| `LightDismiss` | `Boolean` | `False` | True: Ein Klick daneben oder der Wechsel in eine andere Anwendung schließt die Blase (der Klick erreicht trotzdem sein Ziel). False: nur Buttons oder Esc; dann nimmt die Blase die Tastatur. |
+| `Placement` | `TPPGTipPlacementMode` | `tpAuto` | Seite des Ziels, an der die Blase erscheint: tpAuto wählt die erste Seite (oben, unten, links, rechts), auf die sie ganz passt. Werte: `tpAuto`, `tpTop`, `tpBottom`, `tpLeft`, `tpRight`. |
+| `MaxWidth` | `Integer` | `320` | Breite der Blase in logischen Pixeln (120..2000). |
+| `Preset` | `string` |  | Optik-Vorlage der Blase ('' = Standard bzw. StyleManager). |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben. |
 
 ## Ereignisse
 
-`OnActionClick`, `OnLinkClick`, `OnClosing`, `OnClose`
+| Ereignis | Typ und Parameter | Wann und wozu |
+|---|---|---|
+| `OnActionClick` | `TNotifyEvent` `(Sender: TObject)` | Klick auf den Aktions-Button. Die Anwendung entscheidet, was folgt (z. B. nächster Schritt einer Tour oder Hide). Nutzung: `PPGTeachingTip1.Hide; ZeigeNaechstenSchritt;` |
+| `OnLinkClick` | `TPPGTipLinkEvent` `(Sender: TObject; const Link: string)` | Ein Link im Text (<a href="...">) wurde geklickt; Link = href-Ziel. |
+| `OnClosing` | `TPPGTipClosingEvent` `(Sender: TObject; Reason: TPPGTipCloseReason; var Allow: Boolean)` | Vor dem Schließen durch den Anwender; über den var-Parameter lässt sich das Schließen verhindern. |
+| `OnClose` | `TPPGTipCloseEvent` `(Sender: TObject; Reason: TPPGTipCloseReason)` | Die Blase wurde durch den Anwender geschlossen; Reason: Schließen-Button, Klick daneben, Esc. |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTeachingTip.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTeachingTip.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

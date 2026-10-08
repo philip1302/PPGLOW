@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGridColumn</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGGridColumn</h1>
+<p>Typ in Unit <code>PPG.Grid.Columns</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Spalte: Titel, Breite, Ausrichtung, Editor, Format, Sortierung, Summe, Gruppierung, Zellart sowie eigene Stile f&#252;r Zellen und Kopf.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Title</code></td><td><code>string</code></td><td></td><td>&#220;berschrift der Spalte im Kopf.</td></tr>
+<tr><td><code>Width</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Breite in logischen Pixeln (0..10000); 0 = DefaultColWidth. Wird beim Ziehen der Spaltengrenze aktualisiert.</td></tr>
+<tr><td><code>Alignment</code></td><td><code>TAlignment</code></td><td><code>taLeftJustify</code></td><td>Ausrichtung des Zellinhalts (links, zentriert, rechts); Zahlen meist rechtsb&#252;ndig.</td></tr>
+<tr><td><code>EditorKind</code></td><td><code>TPPGGridEditorKind</code></td><td><code>gekText</code></td><td>Editor beim Bearbeiten: gekText (Textfeld), gekNone (nicht bearbeitbar), gekCombo (Auswahl aus PickList), gekSpin (Zahl mit MinValue/MaxValue), gekCheck (K&#228;stchen). Werte: <code>gekText</code>, <code>gekNone</code>, <code>gekCombo</code>, <code>gekSpin</code>, <code>gekCheck</code>.</td></tr>
+<tr><td><code>PickList</code></td><td><code>TStrings</code></td><td></td><td>Auswahlwerte f&#252;r den Editor gekCombo, je Zeile einer. Nutzung: <code>Grid1.Columns[1].EditorKind := gekCombo; Grid1.Columns[1].PickList.CommaText := &#39;offen,erledigt&#39;;</code></td></tr>
+<tr><td><code>ReadOnly</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Zellen dieser Spalte sind nicht bearbeitbar.</td></tr>
+<tr><td><code>MinValue</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Untergrenze f&#252;r gekSpin und ckProgress.</td></tr>
+<tr><td><code>MaxValue</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Obergrenze f&#252;r gekSpin und ckProgress bzw. Sternzahl bei ckRating (0 = Vorgabe).</td></tr>
+<tr><td><code>Sortable</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Klick auf den Kopf sortiert nicht nach dieser Spalte.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Die Spalte ist ausgeblendet (&#252;ber das Kopfmen&#252; wieder einblendbar); Daten und Index bleiben erhalten.</td></tr>
+<tr><td><code>DisplayIndex</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Position in der Anzeige unter den beweglichen Spalten (-1 = wie Index). Das Grid schreibt sie beim Verschieben f&#252;r alle Spalten neu; der Index der Spalte (Datenspalte) bleibt gleich.</td></tr>
+<tr><td><code>Band</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Band (Index in Grid.Bands), unter dem diese Spalte steht; -1 = keins.</td></tr>
+<tr><td><code>Aggregate</code></td><td><code>TPPGGridAggregate</code></td><td><code>agNone</code></td><td>Zusammenfassung in Summenzeile (ShowFooter) und Gruppenfu&#223; (GroupFooter): agSum (Summe), agAvg (Mittelwert), agMin, agMax, agCount (Anzahl), agCustom (Wert aus OnCustomAggregate), agNone. Werte: <code>agNone</code>, <code>agSum</code>, <code>agAvg</code>, <code>agMin</code>, <code>agMax</code>, <code>agCount</code>, <code>agCustom</code>.</td></tr>
+<tr><td><code>FooterFormat</code></td><td><code>string</code></td><td></td><td>FormatFloat-Muster f&#252;r die Summen dieser Spalte (leer = „#,##0.##&quot;); agCount wird immer ganzzahlig angezeigt. Nutzung: <code>Grid1.Columns[3].FooterFormat := &#39;#,##0.00 €&#39;;</code></td></tr>
+<tr><td><code>GroupIndex</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Ebene beim Gruppieren nach dieser Spalte (0 = oberste); -1 = nicht gruppiert. Wird auch durch Ziehen in die Gruppenleiste gesetzt.</td></tr>
+<tr><td><code>CellKind</code></td><td><code>TPPGGridCellKind</code></td><td><code>ckText</code></td><td>Darstellung der Zellen: ckText, ckCheck (K&#228;stchen), ckProgress (Balken zwischen MinValue und MaxValue, sonst 0..100), ckSparkline (Werte „1;4;2&quot;), ckRating (Sterne, Anzahl = MaxValue, sonst 5), ckImage (Bildindex), ckLink, ckButton (OnCellButtonClick), ckColor (Farbfeld), ckMarkup, ckCustom (eigene Zellart &#252;ber CellKindName). Werte: <code>ckText</code>, <code>ckCheck</code>, <code>ckProgress</code>, <code>ckSparkline</code>, <code>ckRating</code>, <code>ckImage</code>, <code>ckLink</code>, <code>ckButton</code>, <code>ckColor</code>, <code>ckMarkup</code>, <code>ckCustom</code>. Nutzung: <code>Grid1.Columns[2].CellKind := ckProgress;</code></td></tr>
+<tr><td><code>CellKindName</code></td><td><code>string</code></td><td></td><td>Name einer selbst registrierten Zellart (nur mit CellKind = ckCustom).</td></tr>
+<tr><td><code>Format</code></td><td><code>string</code></td><td></td><td>Zahlen- bzw. Datumsformat f&#252;r den Excel-Export in Excel-Syntax (z. B. „#,##0.00&quot; oder „dd.mm.yyyy&quot;); leer = Standard.</td></tr>
+<tr><td><code>Style</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Aussehen der Zellen dieser Spalte: Fl&#228;che, Text, Schrift (je auch f&#252;r Dunkel). clDefault = wie im Grid. Nutzung: <code>Grid1.Columns[0].Style.FontStyle := [fsBold];</code></td></tr>
+<tr><td><code>TitleStyle</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Aussehen des Spaltenkopfs: Fl&#228;che, Text, Schrift. clDefault = wie Grid.Styles.Header.</td></tr>
+<tr><td><code>TitleAlignment</code></td><td><code>TPPGGridTitleAlignment</code></td><td><code>gtaColumn</code></td><td>Ausrichtung des Spaltentitels: gtaColumn = wie Alignment der Spalte, sonst links, zentriert oder rechts. Werte: <code>gtaColumn</code>, <code>gtaLeft</code>, <code>gtaCenter</code>, <code>gtaRight</code>.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGGridColumns.html">TPPGGridColumns</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

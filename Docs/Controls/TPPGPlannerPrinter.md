@@ -34,7 +34,21 @@ Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg
 
 ## PPGlow-Eigenschaften
 
-`Planner`, `View`, `PrintFrom`, `PrintTo`, `WorkHoursOnly`, `Title`, `HeaderText`, `FooterText`, `Orientation`, `Margins`, `PrinterName`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Planner` | `TPPGCustomPlanner` |  | Der zu druckende Planer (TPPGPlanner oder TPPGDBPlanner). |
+| `View` | `TPPGPlannerView` | `pvWeek` | Ansicht für den Druck: eine Seite je Tag, Arbeitswoche, Woche, Monat oder Agenda (7 Tage je Seite); die Zeitleiste wird als Woche gedruckt. TakeFromPlanner übernimmt die Ansicht des Planers. Werte: `pvDay`, `pvWorkWeek`, `pvWeek`, `pvMonth`, `pvTimeline`, `pvAgenda`. |
+| `PrintFrom` | `TDate` |  | Erster Tag des Druckzeitraums; 0 = nur die Seite um Planner.Date. Nutzung: `Prn.PrintFrom := EncodeDate(2026, 6, 1); Prn.PrintTo := EncodeDate(2026, 6, 30);` |
+| `PrintTo` | `TDate` |  | Letzter Tag des Druckzeitraums; zusammen mit PrintFrom entsteht eine Seite je Zeitraum der Ansicht. |
+| `WorkHoursOnly` | `Boolean` | `True` | True: Das Raster zeigt nur die Arbeitszeit (WorkStart bis WorkEnd) und füllt damit die Seite. Auch im Dialog „Seite einrichten" umschaltbar. |
+| `Title` | `string` |  | Titel des Druckauftrags (erscheint in der Druckerwarteschlange) und Wert des Platzhalters [Titel]. |
+| `HeaderText` | `string` |  | Kopfzeile jeder Seite (fett) mit denselben Platzhaltern wie FooterText; leer = keine Kopfzeile. Nutzung: `PPGGridPrinter1.HeaderText := '[Titel] - Stand [Datum]';` |
+| `FooterText` | `string` |  | Fußzeile jeder Seite mit Platzhaltern [Seite], [Seiten], [Datum], [Titel] (auch englisch [Page], [Pages], [Date], [Title]). Leer = keine Fußzeile; Vorgabe „Seite [Seite] von [Seiten]" in der Sprache der Anwendung. |
+| `Orientation` | `TPrinterOrientation` | `poPortrait` | Hochformat (poPortrait) oder Querformat (poLandscape). |
+| `Margins` | [TPPGPrintMargins](types/TPPGPrintMargins.md) |  | Seitenränder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten" änderbar. |
+| `PrinterName` | `string` |  | Name des Druckers; leer = Standarddrucker. Für PDF z. B. „Microsoft Print to PDF" mit PrintToFile. Nutzung: `PPGGridPrinter1.PrintToFile('Microsoft Print to PDF', 'C:\Export\Liste.pdf');` |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPlannerPrinter.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPlannerPrinter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

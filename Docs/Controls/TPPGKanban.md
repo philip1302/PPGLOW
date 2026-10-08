@@ -56,11 +56,69 @@ TPPGKanban - Kanban-Board (Phase 14c, Vorbild Trello / TMS FNC Kanban).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Columns`, `Lanes`, `Cards`, `ColumnWidth`, `CardGap`, `MaxTextLines`, `VirtualCardHeight`, `AllowDrag`, `ReadOnly`, `WipMode`, `ShowCardCount`, `KanbanStyles`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
+| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
+| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
+| `Columns` | [TPPGKanbanColumns](types/TPPGKanbanColumns.md) |  | Die Spalten des Boards (Collection) mit Titel, Farbe, WIP-Limit, Breite und eingeklappt. Nutzung: `Kanban1.Columns.AddColumn('In Arbeit', 3);` (Titel, WIP-Limit) |
+| `Lanes` | [TPPGKanbanLanes](types/TPPGKanbanLanes.md) |  | Swimlanes (Zeilen, Collection). Ohne sichtbare Lanes gibt es eine einzige Zeile und jede Spalte scrollt für sich; mit Lanes scrollt das ganze Board senkrecht. |
+| `Cards` | [TPPGKanbanCards](types/TPPGKanbanCards.md) |  | Alle Karten (Collection). Eine Karte gehört über ColumnId und LaneId zu einer Zelle; die Reihenfolge in der Zelle ist die Reihenfolge in der Collection. Nutzung: `Kanban1.Cards.AddCard(Kanban1.Columns[0].Id, 'Neue Aufgabe');` |
+| `ColumnWidth` | `Integer` | `272` | Standardbreite der Spalten in logischen Pixeln (120 bis 2000); einzelne Spalten weichen über Column.Width ab. |
+| `CardGap` | `Integer` | `8` | Abstand zwischen den Karten in logischen Pixeln (0 bis 64). |
+| `MaxTextLines` | `Integer` | `3` | Höchstzahl der Textzeilen je Karte (0 bis 50); längerer Text wird gekürzt. 0 = Kartentext nicht anzeigen. |
+| `VirtualCardHeight` | `Integer` | `0` | Feste Höhe der Karten virtueller Spalten in logischen Pixeln (0 bis 1000); 0 = aus der Schrift berechnet. |
+| `AllowDrag` | `Boolean` | `True` | True: Karten lassen sich mit der Maus ziehen. Mit False bleibt das Verschieben per Tastatur (Strg+Pfeile) und Code möglich, solange ReadOnly False ist. |
+| `ReadOnly` | `Boolean` | `False` | True: Karten können weder gezogen noch per Tastatur verschoben werden; Auswahl, Öffnen und Einklappen bleiben möglich. |
+| `WipMode` | `TPPGKanbanWipMode` | `kwmWarn` | Verhalten bei vollem WIP-Limit: kwmWarn färbt die Spalte als Warnung, erlaubt aber das Ablegen; kwmBlock lehnt Karten für volle Spalten ab. Werte: `kwmWarn`, `kwmBlock`. |
+| `ShowCardCount` | `Boolean` | `True` | True: Im Spaltenkopf steht die Zahl der Karten (mit WIP-Limit als „3 / 5"). |
+| `KanbanStyles` | [TPPGKanbanStyles](types/TPPGKanbanStyles.md) |  | Bereiche des Boards einzeln gestalten: Spalten, Karten, Karte unter der Maus, gewählte Karte, Swimlane-Köpfe. Nicht gesetzte Werte kommen aus dem Preset. Nutzung: `Kanban1.KanbanStyles.Card.Color := $00FAFAFA;` |
+| `ScrollBarMode` | `TPPGScrollBarMode` | `sbmAuto` | Wann die Scrollleisten erscheinen: sbmAuto (bei Bedarf, als schmale Overlay-Leiste), sbmAlways (immer), sbmNever (nie; Scrollen nur per Rad, Tastatur oder Code). Werte: `sbmAuto`, `sbmAlways`, `sbmNever`. |
+| `SmoothScrolling` | `Boolean` | `True` | True: Scrollen per Rad und Tastatur gleitet weich statt sprunghaft. |
+
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
+| `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
+| `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. |
+| `Color` | `TColor` |  | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. |
+| `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` |
+| `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. |
+| `Font` | `TFont` |  | Schrift (Name, Größe, Stil, Farbe). Die Textfarbe der Zustände kann Appearance überschreiben. Nutzung: `Label1.Font.Size := 12; Label1.Font.Style := [fsBold];` |
+| `ParentBiDiMode` | `Boolean` |  | True: BiDiMode wird vom Parent übernommen. |
+| `ParentColor` | `Boolean` |  | True: Color wird vom Parent übernommen. |
+| `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. |
+| `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
+| `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
+| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
+| `TabOrder` | `TTabOrder` |  | Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst). |
+| `TabStop` | `Boolean` | `True` | True: Das Control ist mit Tab erreichbar. |
+| `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
+| `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
 
 ## Ereignisse
 
-`OnCustomDrawCard`, `OnGesture`, `OnCardMoving`, `OnCardMoved`, `OnCardClick`, `OnCardOpen`, `OnGetCard`, `OnSelectionChange`, `OnColumnCollapse`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnScroll`
+| Ereignis | Typ und Parameter | Wann und wozu |
+|---|---|---|
+| `OnCustomDrawCard` | `TPPGKanbanDrawCardEvent` `(Sender: TObject; Canvas: TCanvas; const Card: TPPGKanbanCardData; const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle; var DefaultDraw: Boolean)` | Vor dem Zeichnen jeder Karte: Style (Fill, TextColor, BorderColor, FontStyle) für diese Karte ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen. Card enthält die Kartendaten, State u. a. idsSelected und idsHot. Nutzung: `if (Card.Due <> 0) and (Card.Due < Date) then Style.BorderColor := clRed;` |
+| `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
+| `OnCardMoving` | `TPPGKanbanMovingEvent` `(Sender: TObject; const Move: TPPGKanbanMove; var Allow: Boolean)` | Vor dem Verschieben einer Karte; Allow := False lehnt ab. Allow kommt bereits False an, wenn WipMode = kwmBlock und die Zielspalte voll ist. Nutzung: `if (Move.ToColumn.Title = 'Erledigt') and (Move.Card.Progress < 100) then Allow := False;` |
+| `OnCardMoved` | `TPPGKanbanMovedEvent` `(Sender: TObject; const Move: TPPGKanbanMove)` | Eine Karte wurde verschoben (Maus oder Tastatur). Move enthält Karte, Quell- und Zielspalte bzw. -Swimlane, Positionen und ByKeyboard; die DB-Variante hat dann schon gespeichert. Nutzung: Gut für Protokoll oder Statusmeldung: `Log(Move.Card.Title + ' nach ' + Move.ToColumn.Title);` |
+| `OnCardClick` | `TPPGKanbanCardEvent` `(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer; Card: TPPGKanbanCard)` | Eine Karte wurde angeklickt. Column und Index nennen ihre Lage; Card ist nil bei virtuellen Spalten. |
+| `OnCardOpen` | `TPPGKanbanCardEvent` `(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer; Card: TPPGKanbanCard)` | Eine Karte soll geöffnet werden (Doppelklick oder Enter); hier z. B. einen Bearbeitungsdialog zeigen. |
+| `OnGetCard` | `TPPGKanbanGetCardEvent` `(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer; var Data: TPPGKanbanCardData)` | Liefert den Inhalt einer Karte virtueller Spalten (Column.VirtualCount > 0): Data für Column und Index füllen. Wird nur für sichtbare Karten aufgerufen. Nutzung: `Data.Title := Liste[Index].Name;` |
+| `OnSelectionChange` | `TNotifyEvent` `(Sender: TObject)` | Die gewählte Karte hat sich durch den Anwender geändert (SelectedCard). |
+| `OnColumnCollapse` | `TPPGKanbanColumnEvent` `(Sender: TObject; Column: TPPGKanbanColumn)` | Der Anwender hat eine Spalte über den Pfeil im Kopf ein- oder ausgeklappt (Column.Collapsed ist schon umgestellt). |
+| `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
+| `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
+| `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` |
+| `OnScroll` | `TNotifyEvent` `(Sender: TObject)` | Die Scrollposition hat sich geändert (Rad, Leiste, Tastatur oder Code). Nutzung: Z. B. um eine Positionsanzeige zu aktualisieren: `lblZeile.Caption := IntToStr(Grid.TopRow);` |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanban.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanban.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

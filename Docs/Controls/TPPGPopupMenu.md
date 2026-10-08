@@ -42,11 +42,19 @@ OnClick, DFM). Ersetzt wird nur die Darstellung:
 
 ## PPGlow-Eigenschaften
 
-`StyleManager`, `Preset`, `MenuStyles`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle: Preset und Appearance wie bei den Controls. Ohne Manager übernimmt das Menü die Optik des auslösenden Controls. |
+| `Preset` | `string` |  | Optik-Vorlage des Menüs, wenn kein StyleManager gesetzt ist; leer = Preset des auslösenden Controls bzw. Standard. |
+| `MenuStyles` | [TPPGMenuStyles](types/TPPGMenuStyles.md) |  | Aussehen des Menüs in Bereichen (Fläche, Hover, Trennlinien, Tastenkürzel); clDefault = vom Preset. |
 
 ## Ereignisse
 
-`OnCustomDrawItem`
+| Ereignis | Typ und Parameter | Wann und wozu |
+|---|---|---|
+| `OnCustomDrawItem` | `TPPGMenuCustomDrawEvent` `(Sender: TObject; Canvas: TCanvas; Item: TMenuItem; const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle; var DefaultDraw: Boolean)` | Vor dem Zeichnen jedes Eintrags: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst zeichnen; Item ist der TMenuItem. Nutzung: `if Item = miLoeschen then Style.TextColor := clRed;` |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPopupMenu.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPopupMenu.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

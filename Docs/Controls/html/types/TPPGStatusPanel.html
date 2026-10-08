@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGStatusPanel</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGStatusPanel</h1>
+<p>Typ in Unit <code>PPG.StatusBar</code> - Basis <code>TCollectionItem</code></p>
+<p>Ein Feld der Statusleiste: Text, Breite, Ausrichtung, Symbol, Plakette sowie eigene Farben.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Alignment</code></td><td><code>TAlignment</code></td><td><code>taLeftJustify</code></td><td>Ausrichtung von Text bzw. Inhalt im Feld (links, zentriert, rechts).</td></tr>
+<tr><td><code>Bevel</code></td><td><code>TStatusPanelBevel</code></td><td><code>pbLowered</code></td><td>Trennlinie zum n&#228;chsten Feld: pbNone = keine, pbLowered/pbRaised = Linie.</td></tr>
+<tr><td><code>Style</code></td><td><code>TStatusPanelStyle</code></td><td><code>psText</code></td><td>psText (Standard) oder psOwnerDraw (Inhalt &#252;ber StatusBar.OnDrawPanel).</td></tr>
+<tr><td><code>Text</code></td><td><code>string</code></td><td></td><td>Text des Felds.</td></tr>
+<tr><td><code>Width</code></td><td><code>Integer</code></td><td><code>50</code></td><td>Breite in Pixeln (ab 0); das letzte Feld f&#252;llt den Rest, wenn seine Breite nicht reicht.</td></tr>
+<tr><td><code>Kind</code></td><td><code>TPPGStatusPanelKind</code></td><td><code>spkText</code></td><td>Inhalt: spkText (Text, optional mit Markup), spkProgress (Fortschrittsbalken, Progress) oder spkBadge (Plakette, BadgeCount). Werte: <code>spkText</code>, <code>spkProgress</code>, <code>spkBadge</code>.</td></tr>
+<tr><td><code>Progress</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Fortschritt in Prozent bei Kind = spkProgress (0..100, wird begrenzt).</td></tr>
+<tr><td><code>BadgeCount</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Zahl auf der Plakette bei Kind = spkBadge (0 = Text statt Zahl).</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus StatusBar.Images vor dem Inhalt; -1 = keins.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Beschreibung des Felds; der Screenreader liest sie vor dem Fortschritt bzw. der Plakette vor (z. B. „Upload: 40 %&quot;).</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Fl&#228;chenfarbe dieses Felds; clDefault = wie die Leiste. Zusammen mit TextColor und FontStyle z. B. f&#252;r Warnungen. Nutzung: <code>PPGStatusBar1.Panels[1].Color := $00C0E0FF;</code></td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Textfarbe dieses Felds; clDefault = wie die Leiste.</td></tr>
+<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile nur f&#252;r dieses Feld.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGStatusPanels.html">TPPGStatusPanels</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

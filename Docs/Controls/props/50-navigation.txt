@@ -1,0 +1,291 @@
+# Bereich D: Ribbon, Reiter, NavigationView, ToolBar, StatusBar, Menüs,
+# Splitter, Expander, Panel, GroupBox, Breadcrumb, Wizard.
+
+# --- TPPGBreadcrumb ---
+TPPGCustomBreadcrumb.Items = Segmente des Pfads von der Wurzel bis zum aktuellen Ort, ein Eintrag je Zeile; das letzte Segment ist der aktuelle Ort und wird hervorgehoben. Passt der Pfad nicht in die Breite, wandern die vorderen Segmente in ein „…"-Menü.
+> `PPGBreadcrumb1.Items.CommaText := 'Start,Kunden,Müller GmbH';`
+TPPGCustomBreadcrumb.OnItemClick = Ein Segment wurde per Klick, Enter/Leertaste oder aus dem „…"-Menü gewählt; Index ist die Position in Items (0 = Wurzel).
+> Zum gewählten Ort navigieren; mit TruncateOnClick sind die folgenden Segmente danach schon entfernt.
+TPPGCustomBreadcrumb.TruncateOnClick = True: Beim Klick auf ein Segment werden alle folgenden Segmente aus Items entfernt (Navigation „zurück zu"). False: Items bleibt unverändert, die Anwendung pflegt den Pfad selbst.
+
+# --- TPPGExpander ---
+TPPGCustomExpander.Detail = Zweite, kleinere Textzeile unter dem Titel (Caption) in der Kopfzeile, z. B. eine Zusammenfassung des Inhalts; leer = nur Titel.
+> `PPGExpander1.Detail := '3 Einstellungen geändert';`
+TPPGCustomExpander.Expanded = True: aufgeklappt (Inhalt sichtbar, Höhe = ExpandedHeight); False: nur die Kopfzeile. Setzen im Code klappt animiert, löst aber keine Ereignisse aus. Im zugeklappten Zustand sind die Kinder per Tab nicht erreichbar.
+> `PPGExpander1.Expanded := True;`
+TPPGCustomExpander.ExpandedHeight = Höhe im aufgeklappten Zustand in Pixeln (0..100000); 0 = die aktuelle Höhe beim Zuklappen wird gemerkt.
+TPPGCustomExpander.HeaderStyle = Aussehen der Kopfzeile: Fläche (Color), Text (TextColor), Rand und eigene Schrift (Font/FontStyle); clDefault = vom Preset.
+> `PPGExpander1.HeaderStyle.FontStyle := [fsBold];`
+TPPGCustomExpander.OnCollapsed = Der Anwender hat den Expander zugeklappt (nicht bei Expanded := False im Code).
+TPPGCustomExpander.OnExpanded = Der Anwender hat den Expander aufgeklappt (nicht bei Expanded := True im Code).
+> Guter Ort, um den Inhalt erst beim ersten Aufklappen zu laden.
+TPPGCustomExpander.OnExpanding = Vor dem Auf- oder Zuklappen durch den Anwender; AllowChange := False verhindert es (z. B. ungespeicherte Eingaben).
+
+# --- TPPGGroupBox ---
+TPPGCustomGroupBox.CaptionStyle = Aussehen der Beschriftungs-Plakette auf der Rahmenlinie: Fläche, Rand, Textfarbe und Schrift; clDefault = vom Preset.
+> `PPGGroupBox1.CaptionStyle.Color := clNavy; PPGGroupBox1.CaptionStyle.TextColor := clWhite;`
+TPPGCustomGroupBox.HighlightFocus = True: Liegt der Fokus auf einem Kind-Control, leuchtet die Plakette in der Fokusfarbe und zeigt so, in welcher Gruppe gerade gearbeitet wird.
+
+# --- TPPGMenuBar ---
+TPPGCustomMenuBar.Menu = Das TMainMenu, dessen Einträge die Leiste zeigt (bearbeiten im normalen Menü-Designer, mit Actions und Tastenkürzeln). Zur Laufzeit wird Form.Menu geleert und die Leiste übernimmt Darstellung und Kürzel; beim Freigeben der Leiste wird es wiederhergestellt.
+> `PPGMenuBar1.Menu := MainMenu1;` Die Leiste mit Align = alTop oben aufs Formular legen.
+TPPGCustomMenuBar.MenuStyles = Aussehen der aufklappenden Untermenüs: Fläche, Hover-Eintrag, Trennlinien und Tastenkürzel; clDefault = vom Preset.
+TPPGCustomMenuBar.OnCustomDrawItem = Vor dem Zeichnen jedes Eintrags der Untermenüs: Style (Fill, TextColor, BorderColor, FontStyle) für diesen Eintrag ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen. Item ist der TMenuItem.
+> `if Item.Tag = 1 then Style.TextColor := clRed;`
+
+# --- TPPGPanel ---
+TPPGCustomPanel.Alignment = Waagerechte Lage der Beschriftung (Caption) im Panel: links, zentriert (Standard) oder rechts.
+TPPGCustomPanel.ShowCaption = True: Caption wird im Panel angezeigt (wie TPanel). Für reine Container-Flächen auf False setzen.
+TPPGCustomPanel.VerticalAlignment = Senkrechte Lage der Beschriftung: oben, Mitte oder unten (wie TPanel.VerticalAlignment).
+
+# --- TPPGRibbon ---
+TPPGCustomRibbon.ApplicationButtonCaption = Beschriftung des „Datei"-Buttons links neben den Registerkarten; leer = „Datei" in der aktuellen Sprache.
+TPPGCustomRibbon.ApplicationMenu = Menü, das beim Klick auf „Datei" aufklappt, wenn kein Backstage gesetzt ist. Mit TPPGPopupMenu im Stil der Suite.
+> `PPGRibbon1.ApplicationMenu := PPGPopupMenu1;`
+TPPGCustomRibbon.Backstage = Backstage-Bereich: ein beliebiges Control (z. B. ein PageControl oder Panel), das beim Klick auf „Datei" über das ganze Formular gelegt wird. Hat Vorrang vor ApplicationMenu; Esc oder der Zurück-Knopf schließen ihn.
+> Ein Panel mit Visible = False aufs Formular legen und hier zuweisen.
+TPPGCustomRibbon.KeyTipsEnabled = True: Alt bzw. F10 zeigt Tasten-Plaketten (KeyTips) über Registerkarten, „Datei" und Schnellzugriff; ein Buchstabe wählt aus, Esc geht eine Ebene zurück.
+TPPGCustomRibbon.LargeImages = Bildliste für große Symbole (32 px) der Items mit Size = rsLarge (LargeImageIndex); die kleinen Symbole kommen aus Images.
+TPPGCustomRibbon.Minimized = True: Das Band ist eingeklappt, nur die Registerkarten sind sichtbar; ein Klick auf eine Karte öffnet sie als Popup. Umschalten auch per Doppelklick auf eine Karte, Strg+F1 oder den Knopf rechts.
+TPPGCustomRibbon.OnApplicationButtonClick = Der „Datei"-Button wurde geklickt; kommt vor dem Öffnen von Backstage bzw. ApplicationMenu.
+TPPGCustomRibbon.OnBackstageChange = Der Backstage-Bereich wurde ein- oder ausgeblendet (Abfrage über BackstageVisible).
+TPPGCustomRibbon.OnDrawGalleryItem = Eigenes Zeichnen eines Galerie-Eintrags: Item ist die Galerie, Index der Eintrag, Canvas/Rect die Zeichenfläche, Selected/Hot der Zustand. Handled := True ersetzt das Standard-Zeichnen.
+> Für Vorschauen wie Formatvorlagen oder Farbfelder.
+TPPGCustomRibbon.OnGalleryClick = Ein Galerie-Eintrag wurde gewählt (in der Leiste oder in der aufgeklappten Galerie); Index ist der Eintrag, Item.GalleryIndex ist schon gesetzt.
+TPPGCustomRibbon.OnGetGalleryItem = Liefert den Inhalt eines virtuellen Galerie-Eintrags (Item.GalleryCount > 0): Data mit Text, Bild usw. füllen; Color setzt optional ein Farbfeld.
+> `Data.Text := Vorlagen[Index].Name;`
+TPPGCustomRibbon.OnItemClick = Ein Item wurde ausgelöst (Klick, KeyTip, Tastatur, Schnellzugriff); kommt nach Item.OnClick bzw. Action.Execute. Gut für eine zentrale Behandlung aller Befehle über Item.Tag.
+TPPGCustomRibbon.OnLauncherClick = Der kleine Pfeil unten rechts in einer Gruppe (Dialog-Starter) wurde geklickt; Group ist die Gruppe.
+> Typisch: den passenden Einstellungsdialog öffnen.
+TPPGCustomRibbon.OnMinimizedChange = Minimized wurde durch den Anwender umgeschaltet.
+TPPGCustomRibbon.OnQuickAccessChange = Der Anwender hat den Schnellzugriff geändert (hinzugefügt, entfernt, geladen).
+> Hier `SaveQuickAccess` aufrufen und das Ergebnis z. B. in einer INI-Datei speichern.
+TPPGCustomRibbon.OnTabChange = Die aktive Registerkarte wurde durch den Anwender gewechselt (nicht bei TabIndex im Code).
+TPPGCustomRibbon.OnTabChanging = Vor einem Wechsel der Registerkarte durch den Anwender; NewTab ist das Ziel, AllowChange := False verhindert den Wechsel.
+TPPGCustomRibbon.QuickAccess = Items der Schnellzugriffsleiste. Ein Eintrag mit derselben Action bzw. Beschriftung wie ein Item im Band wirkt auf dieses (QuickSource). Der Anwender passt sie über das Kontextmenü an, wenn QuickAccessCustomizable = True.
+> Im Designer per Collection-Editor oder `PPGRibbon1.AddToQuickAccess(ItemSpeichern);`
+TPPGCustomRibbon.QuickAccessCustomizable = True: Das Kontextmenü bietet „Zum Schnellzugriff hinzufügen/entfernen" und die Lage über/unter dem Band an.
+TPPGCustomRibbon.QuickAccessPosition = Lage der Schnellzugriffsleiste: über den Registerkarten (qapAbove) oder unter dem Band (qapBelow).
+TPPGCustomRibbon.ShowApplicationButton = True: Der „Datei"-Button links neben den Registerkarten ist sichtbar.
+TPPGCustomRibbon.ShowQuickAccess = True: Die Schnellzugriffsleiste ist sichtbar.
+TPPGCustomRibbon.TabIndex = Index der aktiven Registerkarte in Tabs (-1 bis Tabs.Count - 1). Setzen im Code löst keine Ereignisse aus.
+TPPGCustomRibbon.Tabs = Registerkarten des Bands; jede hat Gruppen (Groups), diese die Befehle (Items). Kontext-Registerkarten über ContextName.
+> Im Designer über den Ribbon-Editor (Doppelklick); im Code `PPGRibbon1.Tabs.AddTab('Start').Groups.AddGroup('Ablage').Items.AddButton('Einfügen', $E77F);`
+
+# --- TPPGSplitter ---
+TPPGCustomSplitter.AutoSnap = True: Wird das angrenzende Control kleiner als die Hälfte von MinSize gezogen, klappt es ganz zu (Größe 0), wie bei TSplitter.
+TPPGCustomSplitter.Beveled = True: Die Trennlinie ist auch in Ruhe sichtbar; sonst erscheinen Linie und Griffpunkte erst beim Hover (wie TSplitter.Beveled).
+TPPGCustomSplitter.MinSize = Mindestgröße des angrenzenden Controls in Pixeln (0..100000); kleiner nur per AutoSnap auf 0.
+TPPGCustomSplitter.OnCanResize = Vor jeder Größenänderung beim Ziehen bzw. per Tastatur; NewSize kann angepasst werden, Accept := False verhindert die Änderung.
+> `if NewSize > 400 then NewSize := 400;`
+TPPGCustomSplitter.OnMoved = Das Ziehen (oder ein Tastendruck) ist abgeschlossen und die neue Größe gesetzt.
+> Z. B. die Breite für den nächsten Start speichern.
+TPPGCustomSplitter.OnPaint = Wie TSplitter: wird nach dem eigenen Zeichnen aufgerufen; über Canvas kann zusätzlich gezeichnet werden (nur innerhalb des Ereignisses gültig).
+TPPGCustomSplitter.ResizeStyle = Rückmeldung beim Ziehen: rsUpdate (Standard) ändert live, rsLine/rsPattern zeigen eine Linie auf dem Parent und ändern beim Loslassen, rsNone ändert erst beim Loslassen ohne Linie.
+
+# --- TPPGTabControl ---
+TPPGCustomTabControl.OnClose = Ein Reiter soll über seinen Schließen-Knopf geschlossen werden (nach OnCloseQuery); Index ist der Reiter. Action = caFree (Standard) entfernt ihn aus Tabs, caNone behält ihn.
+TPPGCustomTabControl.OnCloseQuery = Vor dem Schließen eines Reiters; CanClose := False bricht ab (z. B. bei ungespeicherten Änderungen).
+TPPGCustomTabControl.OnGetImageIndex = Liefert den Bildindex eines Reiters (wie TTabControl.OnGetImageIndex): TabIndex ist der Reiter, ImageIndex wird gesetzt; ohne Ereignis gilt der Index des Reiters.
+TPPGCustomTabControl.TabIndex = Index des gewählten Reiters (-1 = keiner). Ungültige Werte werden wie bei TTabControl ignoriert; Setzen im Code löst kein OnChanging/OnChange aus.
+TPPGCustomTabControl.Tabs = Beschriftungen der Reiter, eine je Zeile. Der Inhalt wechselt nicht selbst: Die Anwendung reagiert in OnChange auf den neuen TabIndex.
+> `PPGTabControl1.Tabs.Add('Neu');`
+
+# --- TPPGTabControl / TPPGPageControl (gemeinsame Basis) ---
+TPPGCustomTabs.HotTrack = True: Der Reiter unter der Maus wird hervorgehoben (TabStyles.HotTab).
+TPPGCustomTabs.MultiLine = True: Passen nicht alle Reiter in eine Zeile, werden sie auf mehrere Reihen verteilt (wie TPageControl); die Reihe mit dem gewählten Reiter liegt an der Seite. False: eine Reihe mit Blätterpfeilen.
+TPPGCustomTabs.OnChange = Der gewählte Reiter bzw. die aktive Seite hat sich durch den Anwender geändert (nicht beim Setzen im Code).
+TPPGCustomTabs.OnChanging = Vor einem Reiterwechsel durch den Anwender; AllowChange := False verhindert ihn (z. B. wenn die aktuelle Seite ungültige Eingaben hat).
+TPPGCustomTabs.OnCustomDrawItem = Vor dem Zeichnen jedes Reiters: Style (Fill, TextColor, BorderColor, FontStyle) für diesen Reiter ändern oder mit DefaultDraw := False selbst zeichnen; Index ist der Reiter, State enthält idsSelected/idsHot.
+> `if Index = 0 then Style.FontStyle := [fsBold];`
+TPPGCustomTabs.OnDrawTab = Mit OwnerDraw = True zeichnet die Anwendung den Inhalt jedes Reiters selbst (wie TTabControl.OnDrawTab): TabIndex, Rect und Active werden übergeben, gezeichnet wird auf Canvas des Controls.
+> `PPGTabControl1.Canvas.TextOut(Rect.Left + 4, Rect.Top + 4, '★');`
+TPPGCustomTabs.OwnerDraw = True: Der Inhalt der Reiter wird über OnDrawTab gezeichnet; Fläche und Rahmen kommen weiter aus dem Preset.
+TPPGCustomTabs.RaggedRight = Nur mit MultiLine: True = Reihen werden nicht auf die volle Breite gestreckt.
+TPPGCustomTabs.ScrollOpposite = Wird nur für die DFM-Kompatibilität mit TPageControl gespeichert und hat keine Wirkung.
+TPPGCustomTabs.ShowCloseButtons = True: Jeder Reiter zeigt einen Schließen-Knopf („×"); der Klick löst OnCloseQuery und OnClose aus.
+TPPGCustomTabs.Style = Darstellung wie TTabControl.Style: tsTabs (Reiter), tsButtons (Knöpfe) oder tsFlatButtons (flache Knöpfe).
+TPPGCustomTabs.TabHeight = Höhe der Reiter in Pixeln (0..1000); 0 = aus der Schrift berechnet.
+TPPGCustomTabs.TabPosition = Lage der Reiterleiste: tpTop oder tpBottom; tpLeft und tpRight werden derzeit wie oben bzw. unten dargestellt.
+TPPGCustomTabs.TabStyles = Aussehen der Reiterleiste einzeln: Tab (nicht gewählte Reiter), HotTab (Maus darüber), ActiveTab (gewählt), Strip (Fläche hinter den Reitern) und Indicator (Unterstrich); clDefault = vom Preset.
+> `PPGPageControl1.TabStyles.ActiveTab.FontStyle := [fsBold];`
+TPPGCustomTabs.TabWidth = Feste Breite aller Reiter in Pixeln (0..1000); 0 = jeder Reiter so breit wie seine Beschriftung.
+
+# --- TPPGMenuStyles ---
+TPPGMenuStyles.HotItem = Eintrag unter der Maus bzw. per Tastatur markiert: Fläche (Color) und Text (TextColor).
+TPPGMenuStyles.Menu = Das ganze Menü: Fläche (Color), Text (TextColor), Rand (BorderColor) und Schrift.
+TPPGMenuStyles.Separator = Trennlinien zwischen Eintragsgruppen (Color).
+TPPGMenuStyles.Shortcut = Tastenkürzel rechts im Eintrag (z. B. „Strg+S"): Textfarbe und Schrift.
+
+# --- TPPGNavItem ---
+TPPGNavItem.BadgeCount = Zahl auf der Plakette des Eintrags (z. B. ungelesene Nachrichten); 0 = keine Zahl.
+> `PPGNavigationView1.Items[2].BadgeCount := 12;`
+TPPGNavItem.BadgeDot = True: Ein Punkt statt einer Zahl weist auf Neues hin (wird gezeigt, solange BadgeCount = 0).
+TPPGNavItem.Caption = Text des Eintrags; in der kompakten Leiste als Tooltip.
+TPPGNavItem.Color = Eigene Flächenfarbe dieses Eintrags; clDefault = aus NavStyles. Zusammen mit TextColor und FontStyle zum Hervorheben einzelner Einträge.
+TPPGNavItem.Enabled = False: Eintrag grau und nicht wählbar.
+TPPGNavItem.Expanded = True: Untereinträge (Items) sind aufgeklappt. Der Anwender klappt per Klick bzw. Rechts/Links.
+TPPGNavItem.FontStyle = Zusätzliche Schriftstile nur für diesen Eintrag, z. B. [fsBold].
+TPPGNavItem.Footer = True: Eintrag steht im Fußbereich unten in der Leiste (typisch „Einstellungen").
+TPPGNavItem.Hint = Tooltip des Eintrags (zusätzlich zum Text in der kompakten Leiste).
+TPPGNavItem.IconChar = Symbol aus der Icon-Schrift (Segoe Fluent Icons bzw. MDL2) als Zeichencode; 0 = keins (dann ImageIndex).
+> `Item.IconChar := $E80F; // Start`
+TPPGNavItem.ImageIndex = Bild aus NavigationView.Images, wenn IconChar = 0; -1 = kein Bild.
+TPPGNavItem.Items = Untereinträge; der Eintrag wird damit aufklappbar.
+TPPGNavItem.Kind = Art: nikItem (wählbarer Eintrag), nikHeader (Gruppenüberschrift) oder nikSeparator (Trennlinie).
+TPPGNavItem.PageIndex = Seite im verbundenen PageControl, die bei Auswahl gezeigt wird; -1 = keine.
+TPPGNavItem.Tag = Freier Ganzzahlwert, z. B. eine Befehls-ID für OnItemInvoked.
+TPPGNavItem.TextColor = Eigene Textfarbe dieses Eintrags; clDefault = aus NavStyles.
+TPPGNavItem.Visible = False: Eintrag ausgeblendet.
+
+# --- TPPGNavStyles ---
+TPPGNavStyles.Header = Gruppenüberschriften (Kind = nikHeader): Textfarbe und Schrift.
+TPPGNavStyles.HotItem = Eintrag unter der Maus: Fläche und Text.
+TPPGNavStyles.Indicator = Der gleitende Auswahl-Indikator neben dem gewählten Eintrag (Color).
+TPPGNavStyles.Item = Einträge in Ruhe: Fläche, Text, Schrift.
+TPPGNavStyles.Pane = Die Leiste selbst: Color = Hintergrund, TextColor = Text, BorderColor = Trennlinie zum Inhalt.
+TPPGNavStyles.PaneTitle = Titel der Leiste (PaneTitle): Textfarbe und Schrift.
+TPPGNavStyles.SelectedItem = Gewählter Eintrag: Fläche, Text und Schrift.
+
+# --- TPPGNavigationView ---
+TPPGNavigationView.CompactModeThresholdWidth = Nur mit DisplayMode = pdmAuto: Ist der Parent schmaler als dieser Wert (Pixel), wird die Leiste kompakt.
+TPPGNavigationView.CompactPaneLength = Breite der kompakten Leiste (nur Symbole) in logischen Pixeln, 24..200.
+TPPGNavigationView.DisplayMode = Verhalten der Leiste: pdmLeft (immer links, Menü-Knopf klappt zwischen voll und kompakt), pdmLeftCompact (startet kompakt), pdmAuto (wechselt nach der Breite des Parents, siehe CompactModeThresholdWidth).
+TPPGNavigationView.IsPaneOpen = True: Leiste in voller Breite (OpenPaneLength); False: kompakt (CompactPaneLength). Der Wechsel ist animiert.
+TPPGNavigationView.Items = Einträge der Leiste (verschachtelt über Item.Items), mit Symbol, Text, Plakette, Überschriften, Trennern und Fußbereich.
+> Im Designer per Collection-Editor; im Code `with PPGNavigationView1.Items.AddItem('Kunden', $E716, 2) do BadgeCount := 3;`
+TPPGNavigationView.NavStyles = Aussehen der Leiste in Bereichen (Hintergrund, Einträge, Hover, Auswahl, Indikator, Überschriften); clDefault = vom Preset.
+TPPGNavigationView.OnCustomDrawItem = Vor dem Zeichnen jedes Eintrags: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst zeichnen; Item ist der Eintrag.
+> `if Item.Tag = 99 then Style.TextColor := clRed;`
+TPPGNavigationView.OnItemInvoked = Der Anwender hat einen Eintrag ausgelöst (Klick, Enter, Screenreader), auch wenn er schon gewählt war; Item ist der Eintrag.
+> Befehle ohne eigene Seite ausführen, z. B. über Item.Tag.
+TPPGNavigationView.OnPaneChange = Die Leiste wurde über den Menü-Knopf auf- oder zugeklappt.
+TPPGNavigationView.OnSelectionChange = Die Auswahl hat sich durch den Anwender geändert (nicht beim Setzen von Selected im Code).
+TPPGNavigationView.OpenPaneLength = Breite der offenen Leiste in logischen Pixeln (96 DPI), 48..2000.
+TPPGNavigationView.PageControl = Verbundenes PageControl: Die Auswahl eines Eintrags zeigt dort die Seite Item.PageIndex.
+> `PPGNavigationView1.PageControl := PPGPageControl1;` Die Reiter des PageControls dann ausblenden (TabVisible = False).
+TPPGNavigationView.PaneTitle = Titel oben in der offenen Leiste neben dem Menü-Knopf.
+TPPGNavigationView.ShowMenuButton = True: Der Hamburger-Knopf zum Auf- und Zuklappen der Leiste ist sichtbar.
+
+# --- TPPGPageControl ---
+TPPGPageControl.ActivePage = Die sichtbare Seite (TPPGTabSheet). Setzen im Code löst kein OnChanging/OnChange aus; lag der Fokus auf der alten Seite, geht er auf die neue.
+> `PPGPageControl1.ActivePage := tsAdresse;`
+TPPGPageControl.OnClose = Eine Seite soll über ihren Schließen-Knopf geschlossen werden (nach OnCloseQuery); Page ist die Seite. Action = caHide (Standard) blendet den Reiter aus, caFree gibt die Seite frei, caNone behält sie.
+TPPGPageControl.OnCloseQuery = Vor dem Schließen einer Seite; CanClose := False bricht ab.
+
+# --- TPPGPopupMenu ---
+TPPGPopupMenu.MenuStyles = Aussehen des Menüs in Bereichen (Fläche, Hover, Trennlinien, Tastenkürzel); clDefault = vom Preset.
+TPPGPopupMenu.OnCustomDrawItem = Vor dem Zeichnen jedes Eintrags: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst zeichnen; Item ist der TMenuItem.
+> `if Item = miLoeschen then Style.TextColor := clRed;`
+TPPGPopupMenu.Preset = Optik-Vorlage des Menüs, wenn kein StyleManager gesetzt ist; leer = Preset des auslösenden Controls bzw. Standard.
+TPPGPopupMenu.StyleManager = Zentrale Stilquelle: Preset und Appearance wie bei den Controls. Ohne Manager übernimmt das Menü die Optik des auslösenden Controls.
+
+# --- TPPGRibbonItem ---
+TPPGRibbonItem.Action = Verknüpfte Action: Beschriftung, Hint, Enabled, Checked, Bild und Ausführen kommen aus ihr. Im Schnellzugriff dient die Action als Schlüssel (SaveQuickAccess).
+TPPGRibbonItem.BeginColumn = True: Beginnt einen neuen Stapel kleiner bzw. mittlerer Items (bis zu drei Zeilen untereinander).
+TPPGRibbonItem.Caption = Beschriftung des Befehls; ein & markiert die Zugriffstaste, sonst wird der KeyTip aus der Beschriftung gebildet.
+TPPGRibbonItem.Control = Eingebettetes Control bei Kind = rikControl (z. B. eine ComboBox für die Schriftgröße); das Ribbon wird sein Parent und setzt die Lage.
+TPPGRibbonItem.Down = Eingerastet (Kind = rikCheck). Setzen im Code ohne Ereignis; mit GroupIndex wie Radiobuttons.
+TPPGRibbonItem.DropDownMenu = Menü eines Split-Buttons (rikSplitButton: Pfeilteil) bzw. eines Buttons, der nur aufklappt.
+TPPGRibbonItem.Enabled = False: Befehl grau und nicht auslösbar.
+TPPGRibbonItem.GalleryColumns = Spalten der Galerie direkt in der Leiste (1..50).
+TPPGRibbonItem.GalleryCount = Anzahl virtueller Galerie-Einträge, deren Inhalt OnGetGalleryItem liefert (0..MaxInt); 0 = Einträge aus GalleryItems.
+TPPGRibbonItem.GalleryIndex = Gewählter Galerie-Eintrag (-1 = keiner).
+TPPGRibbonItem.GalleryItemHeight = Höhe eines Galerie-Eintrags in logischen Pixeln (0..1000); 0 = volle Höhe der Leiste.
+TPPGRibbonItem.GalleryItemWidth = Breite eines Galerie-Eintrags in logischen Pixeln (16..1000).
+TPPGRibbonItem.GalleryItems = Texte der Galerie-Einträge, einer je Zeile (wenn GalleryCount = 0).
+TPPGRibbonItem.GalleryPopupColumns = Spalten der aufgeklappten Galerie (0..50); 0 = GalleryColumns + 1.
+TPPGRibbonItem.GroupIndex = Umschalt-Items (rikCheck) mit gleichem GroupIndex <> 0 schließen sich gegenseitig aus (im ganzen Ribbon), z. B. Links/Zentriert/Rechts.
+TPPGRibbonItem.Hint = Tooltip des Befehls (mit Titel aus Caption).
+TPPGRibbonItem.IconChar = Symbol aus der Icon-Schrift als Zeichencode (0 = keins), z. B. $E8C8 für „Kopieren"; Alternative zu ImageIndex.
+TPPGRibbonItem.ImageIndex = Kleines Bild (16 px) aus Ribbon.Images; -1 = keins.
+TPPGRibbonItem.KeyTip = Eigener KeyTip (Buchstabe(n) für die Tastaturbedienung nach Alt); leer = automatisch aus der Beschriftung.
+TPPGRibbonItem.Kind = Art des Items: rikButton, rikSplitButton (Button + Pfeil mit DropDownMenu), rikCheck (Umschalt-Button), rikGallery (Galerie), rikControl (eingebettetes Control) oder rikSeparator (Trennlinie).
+TPPGRibbonItem.LargeImageIndex = Großes Bild (32 px) aus Ribbon.LargeImages für Size = rsLarge; -1 = ImageIndex verwenden.
+TPPGRibbonItem.MinSize = Kleinste Größe, auf die das Item schrumpfen darf, wenn die Breite nicht reicht (rsLarge = bleibt groß).
+TPPGRibbonItem.OnClick = Das Item wurde ausgelöst; kommt vor Ribbon.OnItemClick. Mit Action wird stattdessen Action.Execute aufgerufen (außer OnClick weicht von OnExecute ab).
+TPPGRibbonItem.SameRow = True: Steht rechts neben dem vorigen kleinen Item in derselben Zeile (für kompakte Knopfreihen wie Fett/Kursiv/Unterstrichen).
+TPPGRibbonItem.Size = Größe, solange die Gruppe genug Platz hat: rsLarge (großes Symbol, Text darunter), rsMedium (kleines Symbol mit Text), rsSmall (nur Symbol).
+TPPGRibbonItem.Tag = Freier Ganzzahlwert, z. B. eine Befehls-ID für OnItemClick.
+TPPGRibbonItem.Visible = False: Item ausgeblendet.
+
+# --- TPPGRibbonTab ---
+TPPGRibbonTab.Caption = Beschriftung der Registerkarte.
+TPPGRibbonTab.ContextColor = Farbe einer Kontext-Registerkarte (Band über der Karte); clNone = Akzentfarbe des Presets.
+TPPGRibbonTab.ContextName = Name des Kontexts (z. B. „Bildtools"); leer = normale Registerkarte. Benachbarte Karten mit gleichem Namen bilden eine farbige Gruppe; meist zusammen mit Visible nur bei passender Auswahl zeigen.
+> `tabBildFormat.ContextName := 'Bildtools'; tabBildFormat.Visible := BildGewaehlt;`
+TPPGRibbonTab.Groups = Gruppen der Registerkarte, jede mit Beschriftung und Items.
+TPPGRibbonTab.KeyTip = Eigener KeyTip der Registerkarte; leer = automatisch aus der Beschriftung.
+TPPGRibbonTab.Tag = Freier Ganzzahlwert.
+TPPGRibbonTab.Visible = False: Registerkarte ausgeblendet (typisch für Kontext-Karten).
+
+# --- TPPGStatusBar ---
+TPPGStatusBar.AllowMarkup = True: Texte der Panels dürfen Mini-Markup enthalten (<b>, <i>, <color=...>).
+> `PPGStatusBar1.Panels[0].Text := 'Status: <b>verbunden</b>';`
+TPPGStatusBar.AutoHint = True: Hinweise der Anwendung (Langtext des Hints, Teil nach dem senkrechten Strich) erscheinen automatisch im ersten Panel bzw. in SimpleText; mit OnHint übernimmt die Anwendung die Anzeige.
+TPPGStatusBar.BarStyle = Aussehen der Leiste: Fläche, Text, Trennlinien (BorderColor) und Schrift; clDefault = vom Preset.
+TPPGStatusBar.OnDrawPanel = Eigenes Zeichnen eines Panels mit Style = psOwnerDraw: Panel und Rect werden übergeben, gezeichnet wird auf StatusBar.Canvas.
+TPPGStatusBar.OnHint = Mit AutoHint: Ein neuer Hinweis der Anwendung liegt vor (Application.Hint); die Anwendung zeigt ihn selbst an.
+TPPGStatusBar.Panels = Felder der Leiste (Text, Fortschritt oder Plakette, mit Breite, Ausrichtung, Bild und Trennlinie). Das letzte Panel füllt den Rest.
+> `with PPGStatusBar1.Panels.Add do begin Kind := spkProgress; Progress := 40; Width := 120; end;`
+TPPGStatusBar.SimplePanel = True: Statt der Panels zeigt die Leiste nur SimpleText über die ganze Breite.
+TPPGStatusBar.SimpleText = Text bei SimplePanel = True (bzw. bei AutoHint ohne Panels).
+TPPGStatusBar.SizeGrip = True: Griff unten rechts (RTL links) zum Vergrößern des Formulars; wirkt nur bei veränderbarem, nicht maximiertem Formular.
+TPPGStatusBar.UseSystemFont = True: Die Leiste nutzt die Statusleisten-Schrift von Windows; wird False, sobald Font geändert wird.
+
+# --- TPPGStatusPanel ---
+TPPGStatusPanel.Alignment = Ausrichtung von Text bzw. Inhalt im Feld (links, zentriert, rechts).
+TPPGStatusPanel.BadgeCount = Zahl auf der Plakette bei Kind = spkBadge (0 = Text statt Zahl).
+TPPGStatusPanel.Bevel = Trennlinie zum nächsten Feld: pbNone = keine, pbLowered/pbRaised = Linie.
+TPPGStatusPanel.Color = Eigene Flächenfarbe dieses Felds; clDefault = wie die Leiste. Zusammen mit TextColor und FontStyle z. B. für Warnungen.
+> `PPGStatusBar1.Panels[1].Color := $00C0E0FF;`
+TPPGStatusPanel.FontStyle = Zusätzliche Schriftstile nur für dieses Feld.
+TPPGStatusPanel.Hint = Beschreibung des Felds; der Screenreader liest sie vor dem Fortschritt bzw. der Plakette vor (z. B. „Upload: 40 %").
+TPPGStatusPanel.ImageIndex = Bild aus StatusBar.Images vor dem Inhalt; -1 = keins.
+TPPGStatusPanel.Kind = Inhalt: spkText (Text, optional mit Markup), spkProgress (Fortschrittsbalken, Progress) oder spkBadge (Plakette, BadgeCount).
+TPPGStatusPanel.Progress = Fortschritt in Prozent bei Kind = spkProgress (0..100, wird begrenzt).
+TPPGStatusPanel.Style = psText (Standard) oder psOwnerDraw (Inhalt über StatusBar.OnDrawPanel).
+TPPGStatusPanel.Text = Text des Felds.
+TPPGStatusPanel.TextColor = Eigene Textfarbe dieses Felds; clDefault = wie die Leiste.
+TPPGStatusPanel.Width = Breite in Pixeln (ab 0); das letzte Feld füllt den Rest, wenn seine Breite nicht reicht.
+
+# --- TPPGTabStyles ---
+TPPGTabStyles.ActiveTab = Gewählter Reiter: Fläche, Text, Rand und Schrift.
+TPPGTabStyles.HotTab = Reiter unter der Maus (mit HotTrack = True).
+TPPGTabStyles.Indicator = Unterstrich des gewählten Reiters (Color).
+TPPGTabStyles.Strip = Fläche hinter den Reitern (Color).
+TPPGTabStyles.Tab = Nicht gewählte Reiter: Color, TextColor, BorderColor und Schrift.
+
+# --- TPPGToolBar ---
+TPPGToolBar.Items = Befehle der Leiste: Buttons, Umschalt-Buttons und Trenner; was nicht in die Breite passt, landet im „…"-Menü am Ende.
+> Im Designer per Collection-Editor; im Code `PPGToolBar1.Items.AddButton('Neu', $E710, NeuClick);`
+TPPGToolBar.OnItemClick = Ein Item wurde ausgelöst (nach Item.OnClick bzw. Action.Execute); Item ist der Befehl.
+TPPGToolBar.ShowCaptions = True: Text neben dem Symbol; False: nur Symbole (Text dann als Tooltip).
+
+# --- TPPGToolItem ---
+TPPGToolItem.Action = Verknüpfte Action: Caption, Hint, Enabled, Checked, Visible, ImageIndex und Ausführen kommen aus ihr; die Leiste aktualisiert sie im Leerlauf.
+TPPGToolItem.Caption = Beschriftung des Befehls (sichtbar mit ShowCaptions).
+TPPGToolItem.Color = Eigene Flächenfarbe – auch in Ruhe, z. B. um die Hauptaktion hervorzuheben; clDefault = flach nach Preset.
+> `PPGToolBar1.Items[0].Color := $00D77800; PPGToolBar1.Items[0].TextColor := clWhite;`
+TPPGToolItem.Down = Eingerastet (nur Style = tisCheck); Setzen im Code ohne Ereignis.
+TPPGToolItem.Enabled = False: Befehl grau und nicht auslösbar.
+TPPGToolItem.FontStyle = Zusätzliche Schriftstile nur für diesen Befehl; die Breite wird mit dieser Schrift gemessen.
+TPPGToolItem.GroupIndex = Umschalt-Buttons (tisCheck) mit gleichem GroupIndex <> 0 schließen sich gegenseitig aus wie Radiobuttons.
+TPPGToolItem.Hint = Tooltip des Befehls.
+TPPGToolItem.IconChar = Symbol aus der Icon-Schrift als Zeichencode (0 = keins); Alternative zu ImageIndex.
+TPPGToolItem.ImageIndex = Bild aus ToolBar.Images; -1 = keins.
+TPPGToolItem.OnClick = Der Befehl wurde ausgelöst; danach folgt ToolBar.OnItemClick.
+TPPGToolItem.Style = Art: tisButton (Befehl), tisCheck (Umschalt-Button) oder tisSeparator (Trennlinie).
+TPPGToolItem.Tag = Freier Ganzzahlwert, z. B. eine Befehls-ID.
+TPPGToolItem.TextColor = Eigene Textfarbe dieses Befehls; clDefault = vom Preset.
+TPPGToolItem.Visible = False: Befehl ausgeblendet.
+
+# --- TPPGWizard ---
+TPPGWizard.ActivePage = Der aktuelle Schritt (TPPGWizardPage). Setzen im Code ohne Ereignisse.
+TPPGWizard.OnCanAdvance = Vor jedem „Weiter" bzw. „Fertig"; Page ist der aktuelle Schritt, Allow := False bleibt auf der Seite (z. B. bei unvollständigen Eingaben).
+> `Allow := (Page <> pgAdresse) or (edName.Text <> '');`
+TPPGWizard.OnCancel = „Abbrechen" (bzw. Esc) wurde gewählt. Ohne Ereignis schließt ein modales Formular mit mrCancel.
+TPPGWizard.OnFinish = „Fertig" auf dem letzten Schritt wurde gewählt (nach OnCanAdvance). Ohne Ereignis schließt ein modales Formular mit mrOk.
+TPPGWizard.OnPageChanged = Der Anwender hat den Schritt gewechselt (Weiter, Zurück oder Klick auf einen erledigten Schritt).
+TPPGWizard.ShowCancel = True: Der Button „Abbrechen" ist sichtbar.
+TPPGWizard.StepPosition = Lage der Schritt-Anzeige: wspTop (oben), wspLeft (links) oder wspNone (keine).

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGRibbonGroup</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGRibbonGroup</h1>
+<p>Typ in Unit <code>PPG.Ribbon.Items</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Gruppe auf einer Registerkarte mit ihren Befehlen; schrumpft bei wenig Platz bis zu einem einzelnen Dropdown-Knopf.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung der Gruppe (unter den Befehlen).</td></tr>
+<tr><td><code>Items</code></td><td><a href="TPPGRibbonItems.html">TPPGRibbonItems</a></td><td></td><td>Die Befehle der Gruppe. Nutzung: <code>G.Items.AddButton(&#39;Kopieren&#39;, $E8C8, rsMedium, KopierenClick);</code></td></tr>
+<tr><td><code>ReduceOrder</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Reihenfolge beim Schrumpfen, wenn das Ribbon schmaler wird: kleinere Werte schrumpfen zuerst, bei gleichem Wert die Gruppe weiter rechts.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False blendet die Gruppe aus.</td></tr>
+<tr><td><code>KeyTip</code></td><td><code>string</code></td><td></td><td>Zugriffstaste der zu einem Dropdown geschrumpften Gruppe (&#39;&#39; = automatisch).</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild der geschrumpften Gruppe (aus Ribbon.LargeImages bzw. Images); -1 = keins.</td></tr>
+<tr><td><code>IconChar</code></td><td><code>Word</code></td><td><code>0</code></td><td>Symbol der geschrumpften Gruppe aus der Symbolschrift (0 = keins), z. B. $E8C8.</td></tr>
+<tr><td><code>ShowLauncher</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Kleiner Pfeil unten rechts in der Gruppe, der einen Dialog &#246;ffnet (Ereignis OnLauncherClick des Ribbons).</td></tr>
+<tr><td><code>LauncherHint</code></td><td><code>string</code></td><td></td><td>Tooltip des Pfeils unten rechts.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert f&#252;r eigene Zwecke.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGRibbonGroups.html">TPPGRibbonGroups</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

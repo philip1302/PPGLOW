@@ -1,0 +1,195 @@
+# Bereich C: Listen, Baum, Auswahlfelder, Eingabefelder, Datum/Zeit.
+
+# --- TPPGCalendarStyles ---
+TPPGCalendarStyles.Background = Hintergrund des Kalenders: Color = Fläche, TextColor = Text der Tage, BorderColor = Rahmen.
+> `Cal.CalendarStyles.Background.Color := $00FAFAFA;`
+TPPGCalendarStyles.DayNames = Zeile mit den Wochentagsnamen (Mo, Di …): TextColor und Schrift.
+TPPGCalendarStyles.Header = Titelzeile (Monat und Jahr) samt Blätterpfeilen: TextColor und Schrift.
+> `Cal.CalendarStyles.Header.FontStyle := [fsBold];`
+TPPGCalendarStyles.OtherMonth = Tage des Vor- und Folgemonats, die die Monatsansicht auffüllen: TextColor (meist gedämpft).
+TPPGCalendarStyles.Selected = Gewählte Tage: Color = Fläche der Markierung, TextColor = Schrift darauf.
+TPPGCalendarStyles.Today = Markierung von heute: BorderColor = Ring um den Tag, TextColor = Schrift.
+TPPGCalendarStyles.WeekNumbers = Spalte der Kalenderwochen (sichtbar mit ShowWeekNumbers): TextColor und Schrift.
+TPPGCalendarStyles.Weekend = Samstag und Sonntag: Color, TextColor und Schrift, z. B. Wochenenden rot hervorheben.
+> `Cal.CalendarStyles.Weekend.TextColor := clMaroon;`
+
+# --- TPPGColumnComboBox ---
+TPPGColumnComboBox.ColumnDelimiter = Trennzeichen zwischen den Zellen einer Zeile in Items (Vorgabe senkrechter Strich).
+> `Combo.ColumnDelimiter := ';'; Combo.Items.Add('1001;Müller;Berlin');`
+TPPGColumnComboBox.Columns = Spalten der Aufklappliste (Titel, Breite, Ausrichtung, sichtbar). Die Kopfzeile im Popup sortiert per Klick die Ansicht, nicht die Daten.
+> Im Designer per Doppelklick; im Code `with Combo.Columns.Add do begin Title := 'Nr.'; Width := 60; end;`
+TPPGColumnComboBox.DisplayColumn = Index der Spalte, deren Text im Feld steht; in ihr sucht auch die Tippsuche.
+TPPGColumnComboBox.DropDownCount = Sichtbare Zeilen der Aufklappliste, bevor gescrollt wird (1..100).
+TPPGColumnComboBox.DropDownWidth = Breite der Aufklappliste in logischen Pixeln; 0 = Summe der Spaltenbreiten.
+TPPGColumnComboBox.Items = Zeilen der Liste, jede mit den Zellen getrennt durch ColumnDelimiter. Wird nicht benutzt, wenn VirtualRowCount > 0 ist.
+TPPGColumnComboBox.KeyColumn = Index der Spalte mit dem Schlüssel; KeyValue liest bzw. wählt die Zeile über diesen Wert (z. B. für die DB-Anbindung).
+> `Combo.KeyColumn := 0; Combo.KeyValue := '1001';`
+TPPGColumnComboBox.OnGetCellText = Virtueller Modus (VirtualRowCount > 0): liefert den Text einer Zelle. Row und Column benennen die Zelle, das Ergebnis kommt in den var-Parameter Text.
+> `Text := Kunden[Row].Felder[Column];`
+TPPGColumnComboBox.VirtualRowCount = Größer 0: Die Liste hat so viele Zeilen und holt ihre Zellen aus OnGetCellText, ohne Kopie in Items (z. B. 100 000 Zeilen).
+
+# --- TPPGComboColumn ---
+TPPGComboColumn.Alignment = Ausrichtung der Zellen und des Titels dieser Spalte.
+TPPGComboColumn.Title = Überschrift der Spalte in der Kopfzeile der Aufklappliste.
+TPPGComboColumn.Visible = False: Die Spalte wird nicht angezeigt (ihre Daten bleiben verfügbar, z. B. als versteckter Schlüssel).
+TPPGComboColumn.Width = Breite der Spalte in logischen Pixeln (wird mit der DPI skaliert).
+
+# --- TPPGCustomCalendar ---
+TPPGCustomCalendar.CalendarStyles = Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, andere Monate, Wochennummern. Nicht gesetzte Werte kommen aus dem Preset.
+> `Cal.CalendarStyles.Weekend.TextColor := clRed;`
+TPPGCustomCalendar.Date = Gewähltes Datum (bei Bereich bzw. Mehrfachauswahl der Fokus-Tag). Setzen im Code springt zum Monat und löst kein OnChange aus.
+> `Cal.Date := EncodeDate(2026, 12, 24);`
+TPPGCustomCalendar.FirstDayOfWeek = Erster Wochentag der Monatsansicht; fdLocale = aus den Windows-Ländereinstellungen.
+TPPGCustomCalendar.MaxDate = Spätestes wählbares Datum; spätere Tage sind gesperrt. 0 = ohne Grenze.
+TPPGCustomCalendar.MinDate = Frühestes wählbares Datum; frühere Tage sind gesperrt. 0 = ohne Grenze.
+> `Cal.MinDate := Date;` erlaubt nur heute und später.
+TPPGCustomCalendar.OnChange = Der Anwender hat ein Datum bzw. die Auswahl geändert (nicht bei Date im Code).
+TPPGCustomCalendar.OnCustomDrawDay = Vor dem Zeichnen jedes Tages der Monatsansicht: Style (Fill, TextColor, BorderColor, FontStyle) für diesen Tag ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen. State nennt idsSelected, idsToday, idsDisabled usw.
+> `if IstFeiertag(ADate) then begin Style.TextColor := clRed; Style.FontStyle := [fsBold]; end;`
+TPPGCustomCalendar.OnIsDateDisabled = Fragt je Tag, ob er gesperrt ist; Disabled := True macht ihn nicht wählbar (zusätzlich zu MinDate/MaxDate).
+> `Disabled := DayOfTheWeek(ADate) in [6, 7];` sperrt Wochenenden.
+TPPGCustomCalendar.OnViewChange = Die Ansicht (Monat, Jahr, Dekade) oder der angezeigte Zeitraum hat gewechselt, z. B. nach Blättern.
+TPPGCustomCalendar.SelectionMode = Auswahlart: ein Tag, ein Bereich (zwei Klicks bzw. Umschalt+Klick) oder mehrere einzelne Tage (Klick schaltet um).
+TPPGCustomCalendar.ShowToday = True: Der heutige Tag ist mit einem Ring markiert (Farbe über CalendarStyles.Today).
+TPPGCustomCalendar.ShowWeekNumbers = True: Links steht die Kalenderwoche nach ISO 8601.
+TPPGCustomCalendar.View = Aktuelle Ansicht: Monat (Tage), Jahr (Monate) oder Dekade (Jahre). Der Anwender zoomt per Klick auf den Titel bzw. Strg+Oben/Unten.
+
+# --- TPPGCustomCheckListBox ---
+TPPGCustomCheckListBox.AllowGrayed = True: Ein Klick schaltet aus → an → gemischt (cbGrayed), z. B. für „teilweise".
+TPPGCustomCheckListBox.Flat = Nur zum Lesen alter DFMs von TCheckListBox; ohne Wirkung, die Kästchen zeichnet das Preset.
+TPPGCustomCheckListBox.HeaderBackgroundColor = Aus TCheckListBox übernommen, damit alte DFMs laden; die Optik der Überschriften (Header[]) kommt aus Styles.GroupHeader.
+TPPGCustomCheckListBox.HeaderColor = Aus TCheckListBox übernommen, damit alte DFMs laden; die Textfarbe der Überschriften stellt man über Styles.GroupHeader.TextColor ein.
+TPPGCustomCheckListBox.OnClickCheck = Der Anwender hat ein Kästchen umgeschaltet (Klick, Leertaste, Screenreader). Setzen von Checked[] oder State[] im Code löst es nicht aus.
+> `lblAnzahl.Caption := IntToStr(ZaehleHaken);`
+TPPGCustomCheckListBox.OnSetChecked = Virtueller Stil (Style = lbVirtual): Der Anwender hat das Kästchen der Zeile Index auf Value umgeschaltet; die Anwendung speichert den Zustand selbst (und liefert ihn in OnGetItem über Data.Checked zurück).
+
+# --- TPPGCustomFileEdit ---
+TPPGCustomFileEdit.AcceptDrop = True: Eine Datei bzw. ein Ordner kann aus dem Explorer ins Feld gezogen werden; übernommen wird der erste passende Eintrag (je nach Kind).
+TPPGCustomFileEdit.AutoComplete = True: Pfade werden beim Tippen vervollständigt (Windows-Shell-Autovervollständigung).
+TPPGCustomFileEdit.DefaultExt = Endung, die der Speichern-Dialog anhängt, wenn der Anwender keine angibt (ohne Punkt, z. B. "csv").
+TPPGCustomFileEdit.DialogTitle = Titel des Dateidialogs; leer = Windows-Standardtitel.
+TPPGCustomFileEdit.Filter = Dateifilter des Dialogs wie TOpenDialog.Filter: Paare aus Beschreibung und Muster, alle durch senkrechte Striche getrennt in einem String.
+TPPGCustomFileEdit.FilterIndex = Vorgewählter Filter im Dialog (1 = erster Eintrag von Filter).
+TPPGCustomFileEdit.InitialDir = Startordner des Dialogs, wenn das Feld noch leer ist.
+TPPGCustomFileEdit.Kind = Was gewählt wird: Datei zum Öffnen, Datei zum Speichern oder Ordner. Bestimmt den Dialog des Knopfes und was beim Ablegen angenommen wird.
+TPPGCustomFileEdit.MustExist = True: Eine fehlende Datei bzw. ein fehlender Ordner wird beim Verlassen als ValidationState = pvsError markiert (kein Dialog); ein leeres Feld ist gültig.
+TPPGCustomFileEdit.OnAfterDialog = Nach dem Dialog mit dem gewählten Namen: FileName kann geprüft und geändert werden, Accept := False verwirft die Wahl.
+> `if not EndsText('.csv', FileName) then FileName := FileName + '.csv';`
+TPPGCustomFileEdit.OnBeforeDialog = Bevor der Dialog öffnet: Allow := False bricht ab; hier lassen sich z. B. Filter oder InitialDir anpassen.
+
+# --- TPPGCustomListBox ---
+TPPGCustomListBox.AutoComplete = True: Tippen springt zum ersten Eintrag mit diesen Anfangsbuchstaben (wie TListBox.AutoComplete).
+TPPGCustomListBox.Columns = Nur zum Lesen alter TListBox-DFMs; die Liste ist immer einspaltig (für Spalten das Grid verwenden).
+TPPGCustomListBox.ExtendedSelect = Nur mit MultiSelect: True = Mehrfachauswahl wie im Explorer (Umschalt für Bereiche, Strg für einzelne); False = jeder Klick schaltet einen Eintrag um.
+TPPGCustomListBox.IntegralHeight = Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung (die Liste scrollt weich, angeschnittene Zeilen sind erlaubt).
+TPPGCustomListBox.ItemIndex = Index des gewählten bzw. fokussierten Eintrags; -1 = keiner.
+> `List.ItemIndex := List.Items.IndexOf('Berlin');`
+TPPGCustomListBox.Items = Einträge als Textliste wie bei TListBox (Objects[] für eigene Daten). Quelle der Liste, solange ItemsEx leer ist und Style nicht virtuell ist.
+> `List.Items.AddObject('Anna', Kunde);`
+TPPGCustomListBox.ItemsEx = Einträge mit allen Angaben (Text, Detailzeile, Bild, Plakette, Gruppe, Farbe, Kästchen). Sobald ItemsEx Einträge hat, ist es die Quelle statt Items.
+> `with List.ItemsEx.Add('Posteingang', 4) do begin Badge := '12'; Group := 'Favoriten'; end;`
+TPPGCustomListBox.MultiSelect = True: Mehrere Einträge sind gleichzeitig wählbar (Art über ExtendedSelect); abfragen über Selected[] und SelCount.
+TPPGCustomListBox.OnData = Virtueller Stil (lbVirtual) wie bei TListBox: liefert den Text der Zeile Index in den var-Parameter Data. Für mehr Angaben OnGetItem verwenden.
+> `List.Style := lbVirtual; List.Count := 1000000;` und in OnData `Data := 'Zeile ' + IntToStr(Index);`
+TPPGCustomListBox.OnDataFind = Virtueller Stil: Tippsuche bzw. IndexOf fragen nach dem Index des Eintrags mit diesem Text; die Funktion liefert ihn als Ergebnis (-1 = nicht gefunden).
+TPPGCustomListBox.OnDataObject = Virtueller Stil: liefert das Objekt (Objects[]) der Zeile Index.
+TPPGCustomListBox.OnDrawItem = Owner-Draw wie TListBox (Style = lbOwnerDrawFixed/Variable bzw. lbVirtualOwnerDraw): zeichnet den Eintrag auf Canvas; Hintergrund und Auswahl hat das Preset schon gezeichnet. Für Farbänderungen ohne eigenes Zeichnen ist OnCustomDrawItem einfacher.
+TPPGCustomListBox.OnGetItem = Virtuell mit allen Angaben: füllt Data (Text, Detail, Bild, Plakette, Kästchen, Farben) für die Zeile Index. Anzahl über Count.
+> `Data.Text := Mails[Index].Betreff; Data.Detail := Mails[Index].Absender;`
+TPPGCustomListBox.OnMeasureItem = Bei Style = lbOwnerDrawVariable: liefert die Höhe der Zeile Index in den var-Parameter Height.
+TPPGCustomListBox.ScrollWidth = Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung (kein waagerechter Bildlauf).
+TPPGCustomListBox.Sorted = True: Items werden alphabetisch sortiert gehalten; neue Einträge landen an ihrer Sortierposition.
+TPPGCustomListBox.Style = Datenquelle und Zeichnen wie TListBox: lbStandard, Owner-Draw (lbOwnerDrawFixed, lbOwnerDrawVariable) oder virtuell (lbVirtual, lbVirtualOwnerDraw: Count + OnGetItem bzw. OnData, Daten bleiben beim Anwender).
+TPPGCustomListBox.TabWidth = Aus TListBox übernommen, damit alte DFMs laden; ohne Wirkung.
+
+# --- TPPGCustomPasswordEdit ---
+TPPGCustomPasswordEdit.CapsLockWarning = True: Bei aktiver Feststelltaste erscheint im Feld ein Hinweis, solange es den Fokus hat.
+TPPGCustomPasswordEdit.OnRevealChange = Der Anwender hat den Klartext über das Auge ein- oder ausgeblendet (Revealed geändert).
+TPPGCustomPasswordEdit.PasswordChar = Zeichen, das statt der Eingabe gezeigt wird (Vorgabe Punkt ●). Kopieren und Ausschneiden sind gesperrt, solange verdeckt.
+TPPGCustomPasswordEdit.RevealMode = Auge im Feld: rmPeek zeigt den Klartext nur, solange es gedrückt ist; rmToggle schaltet per Klick um; rmHidden zeigt kein Auge.
+
+# --- TPPGCustomSearchEdit ---
+TPPGCustomSearchEdit.OnSearch = SearchDelay ms nach der letzten Eingabe mit dem Suchtext; hier die Vorschläge (Items) neu füllen, danach zeigt das Feld die Liste. Text im Code löst es nicht aus.
+> `Search.Items.Assign(SucheKunden(SearchText));`
+TPPGCustomSearchEdit.OnSubmit = Suche abgeschickt: Enter, Klick auf die Lupe oder Wahl eines Vorschlags. Eine noch wartende OnSearch-Suche entfällt.
+> `ZeigeErgebnisse(SearchText);`
+TPPGCustomSearchEdit.SearchDelay = Wartezeit in Millisekunden nach dem Tippen bis OnSearch (Vorgabe 300); 0 = sofort bei jeder Änderung.
+
+# --- TPPGCustomSpinEdit ---
+TPPGCustomSpinEdit.AutoSelect = True: Beim Fokus wird der ganze Text markiert, damit man direkt überschreiben kann.
+TPPGCustomSpinEdit.EditorEnabled = False: Der Wert lässt sich nur über die Pfeil-Buttons, Pfeiltasten und das Mausrad ändern, nicht durch Tippen.
+TPPGCustomSpinEdit.Increment = Schrittweite für Buttons, Pfeiltasten und Mausrad; Bild auf/ab ändert um das Zehnfache.
+TPPGCustomSpinEdit.MaxValue = Obergrenze für Value. MinValue = MaxValue bedeutet „keine Grenze" (wie TSpinEdit).
+TPPGCustomSpinEdit.MinValue = Untergrenze für Value. MinValue = MaxValue bedeutet „keine Grenze"; die Reihenfolge beim Setzen ist egal.
+> `Spin.MinValue := 1; Spin.MaxValue := 99;`
+TPPGCustomSpinEdit.Value = Aktueller Wert; wird still auf MinValue..MaxValue begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt.
+
+# --- TPPGCustomTimePicker ---
+TPPGCustomTimePicker.ClockFormat = 12- oder 24-Stunden-Anzeige; pcfLocale = aus den Windows-Ländereinstellungen.
+TPPGCustomTimePicker.MinuteIncrement = Abstand der Zeiten in der Aufklappliste in Minuten (1..60, Vorgabe 15).
+TPPGCustomTimePicker.ShowSeconds = True: Die Zeit wird mit Sekunden angezeigt und eingegeben.
+TPPGCustomTimePicker.Time = Gewählte Uhrzeit. Setzen im Code löst kein OnChange aus; freie Eingaben („14:30", „1430", „2:30 PM") werden beim Verlassen geprüft.
+> `TimePicker1.Time := EncodeTime(9, 30, 0, 0);`
+
+# --- TPPGCustomTreeView ---
+TPPGCustomTreeView.AutoCheck = Nur mit CheckBoxes: Umschalten eines Knotens gibt den Zustand an alle Kinder weiter und berechnet die Eltern (alle an, alle aus oder gemischt).
+TPPGCustomTreeView.AutoExpand = True: Ein Knoten klappt beim Wählen per Maus oder Tastatur automatisch auf.
+TPPGCustomTreeView.CheckBoxes = True: Jeder Knoten zeigt ein Kästchen mit drei Zuständen (Node.CheckState); Änderungen meldet OnChecked.
+TPPGCustomTreeView.HideSelection = True: Die Auswahl wird ohne Fokus nicht hervorgehoben.
+TPPGCustomTreeView.HotTrack = Wie TTreeView: Der Knoten unter der Maus wird unterstrichen.
+TPPGCustomTreeView.Indent = Einzug je Ebene in logischen Pixeln (0..200, Vorgabe 19).
+TPPGCustomTreeView.Items = Die Knoten (API wie TTreeNodes: Add, AddChild, Insert, Delete, Clear, BeginUpdate/EndUpdate). In der DFM als lesbare Zeilenliste gespeichert.
+> `N := Tree.Items.Add(nil, 'Projekte'); Tree.Items.AddChild(N, 'PPGlow');`
+TPPGCustomTreeView.MultiSelect = True: Mehrere Knoten sind gleichzeitig wählbar (Strg/Umschalt+Klick).
+TPPGCustomTreeView.OnChange = Der gewählte Knoten hat sich geändert (auch bei Selected im Code, wie TTreeView).
+TPPGCustomTreeView.OnChanging = Bevor die Auswahl wechselt; AllowChange := False verhindert den Wechsel zu Node.
+TPPGCustomTreeView.OnChecked = Das Kästchen eines Knotens wurde umgeschaltet (Node = der umgeschaltete Knoten).
+TPPGCustomTreeView.OnCollapsed = Ein Knoten wurde zugeklappt.
+TPPGCustomTreeView.OnCollapsing = Bevor ein Knoten zuklappt; AllowCollapse := False verhindert es.
+TPPGCustomTreeView.OnCompare = Eigene Sortierung für AlphaSort: Compare < 0, wenn Node1 vor Node2 gehört, > 0 danach, 0 bei Gleichheit.
+> `Compare := CompareDate(TDatei(Node1.Data).Datum, TDatei(Node2.Data).Datum);`
+TPPGCustomTreeView.OnCustomDrawNode = Vor dem Zeichnen jedes Knotens: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False den Text selbst zeichnen. Pfeil, Linien und Kästchen zeichnet der Baum immer.
+> `if Node.Level = 0 then Style.FontStyle := [fsBold];`
+TPPGCustomTreeView.OnDeletion = Ein Knoten wird gelöscht; guter Ort, um Node.Data freizugeben.
+> `TObject(Node.Data).Free;`
+TPPGCustomTreeView.OnEdited = Umbenennen beendet: S enthält den neuen Text und kann noch geändert werden (z. B. getrimmt).
+TPPGCustomTreeView.OnEditing = Bevor das Umbenennen (F2 bzw. EditText) beginnt; AllowEdit := False verhindert es für diesen Knoten.
+TPPGCustomTreeView.OnExpanded = Ein Knoten wurde aufgeklappt.
+TPPGCustomTreeView.OnExpanding = Bevor ein Knoten aufklappt (auch aus dem Code); AllowExpansion := False verhindert es. Ort für Lazy Loading: Knoten mit HasChildren = True hier mit Kindern füllen.
+> `if Node.Count = 0 then LadeUnterordner(Node);`
+TPPGCustomTreeView.OnNodeDrop = Ein gezogener Knoten soll abgelegt werden (AllowReorder): Target und Mode nennen Ziel und Art (davor, danach, als Kind); Allow := False lehnt ab.
+TPPGCustomTreeView.ReadOnly = True: Knoten können nicht umbenannt werden (F2 und Klick auf den gewählten Knoten bleiben wirkungslos).
+TPPGCustomTreeView.RowSelect = Nur zur DFM-Kompatibilität mit TTreeView: Der Baum hebt immer die ganze Zeile hervor (Fluent-Standard).
+TPPGCustomTreeView.ShowButtons = True: Knoten mit Kindern zeigen den Auf-/Zuklapp-Pfeil.
+TPPGCustomTreeView.ShowLines = True: Verbindungslinien zwischen Eltern- und Kindknoten werden gezeichnet.
+TPPGCustomTreeView.ShowRoot = True: Auch die Knoten der obersten Ebene haben Einzug, Pfeil und Linien.
+TPPGCustomTreeView.ToolTips = Wie TTreeView: Abgeschnittene Knotentexte erscheinen als Hinweis, wenn die Maus darauf steht (braucht ShowHint = True).
+
+# --- TPPGEditButton (LeftButton/RightButton von TPPGEdit) ---
+TPPGEditButton.DropDownMenu = Menü, das beim Klick auf den Knopf unter dem Feld aufklappt (z. B. Auswahl von Suchbereichen).
+TPPGEditButton.Enabled = False: Der Knopf ist sichtbar, aber grau und nicht klickbar.
+TPPGEditButton.ImageIndex = Bild des Knopfes aus Images des Felds; -1 = kein Bild.
+TPPGEditButton.Visible = True: Der Knopf wird im Feld angezeigt (Vorgabe False).
+
+# --- TPPGItem (Einträge von ItemsEx) ---
+TPPGItem.Badge = Kurzer Text in einer Plakette rechts im Eintrag (z. B. Anzahl ungelesener Nachrichten); leer = keine Plakette.
+TPPGItem.Checked = Zustand des Kästchens (CheckListBox): cbUnchecked, cbChecked oder cbGrayed.
+TPPGItem.Color = Eigene Fläche dieses Eintrags; clDefault = wie die Liste. Gilt hell und dunkel; Auswahl und Hover liegen darüber.
+TPPGItem.Detail = Zweite, kleinere Zeile unter dem Text (Optik über Styles.Detail); leer = einzeilig.
+TPPGItem.Enabled = False: Der Eintrag ist grau und nicht wählbar.
+TPPGItem.FontStyle = Zusätzliche Schriftstile für diesen Eintrag, z. B. [fsBold] für ungelesene Einträge.
+TPPGItem.Group = Gruppenname: Aufeinanderfolgende Einträge mit derselben Gruppe erhalten eine gemeinsame Überschrift (Optik über Styles.GroupHeader).
+TPPGItem.ImageIndex = Bild aus Images der Liste; -1 = kein Bild.
+TPPGItem.Tag = Freier Ganzzahlwert, z. B. eine Datensatz-ID.
+TPPGItem.Text = Haupttext des Eintrags; mit AllowMarkup der Liste auch mit <b>, <i>, <color=...>.
+TPPGItem.TextColor = Eigene Textfarbe dieses Eintrags; clDefault = wie die Liste.
+
+# --- TPPGListStyles ---
+TPPGListStyles.AlternateRow = Zebra-Zeilen: jede zweite Zeile erhält diese Fläche. Erst ein gesetztes Color schaltet das Zebra ein.
+> `List.Styles.AlternateRow.Color := $00FAF7F2;`
+TPPGListStyles.Detail = Detailzeile (zweite Zeile) der Einträge: TextColor und Schrift.
+TPPGListStyles.GroupHeader = Gruppenüberschriften (TPPGItem.Group bzw. Header[] der CheckListBox): Fläche, Text und Schrift.
+TPPGListStyles.HotItem = Eintrag unter der Maus: Fläche und Textfarbe.
+TPPGListStyles.Selection = Gewählte Einträge bei Fokus: Color = deckende Fläche, BorderColor = Akzentbalken links, TextColor und Schrift.
+> `List.Styles.Selection.Color := $00F5E6D2; List.Styles.Selection.TextColor := clBlack;`
+TPPGListStyles.SelectionInactive = Gewählte Einträge, wenn die Liste keinen Fokus hat (meist gedämpfter als Selection).

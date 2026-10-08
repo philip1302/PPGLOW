@@ -29,11 +29,27 @@ TPPGNotificationCenter - Benachrichtigungen ("Toasts") der Anwendung (Phase 7d).
 
 ## PPGlow-Eigenschaften
 
-`Position`, `Duration`, `MaxVisible`, `ToastWidth`, `Preset`, `StyleManager`, `Animations`, `RespectQuietHours`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Position` | `TPPGToastPosition` | `npBottomRight` | Bildschirmecke, in der die Toasts gestapelt werden (auf dem Monitor des Formulars). Werte: `npBottomRight`, `npTopRight`, `npBottomLeft`, `npTopLeft`. |
+| `Duration` | `Integer` | `5000` | Anzeigedauer in Millisekunden (0..600000); 0 = bis zum Schließen. Solange die Maus über dem Toast steht, ist die Zeit angehalten. Show kann pro Toast eine eigene Dauer angeben. |
+| `MaxVisible` | `Integer` | `3` | Höchstzahl gleichzeitig sichtbarer Toasts (1..20); weitere warten in einer Schlange. |
+| `ToastWidth` | `Integer` | `360` | Breite eines Toasts in logischen Pixeln (160..1000). |
+| `Preset` | `string` |  | Optik-Vorlage der Toasts ('' = Standard bzw. StyleManager). |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben der Toasts. |
+| `Animations` | `Boolean` | `True` | True: Toasts gleiten ein und aus, der Stapel rückt animiert nach (nur, wenn Windows Animationen erlaubt). |
+| `RespectQuietHours` | `Boolean` | `True` | True: Läuft eine Vollbild-Anwendung oder Präsentation, warten neue Toasts, bis sie beendet ist. |
 
 ## Ereignisse
 
-`OnAction`, `OnClose`, `OnShow`, `OnToastClick`
+| Ereignis | Typ und Parameter | Wann und wozu |
+|---|---|---|
+| `OnAction` | `TPPGToastActionEvent` `(Sender: TObject; Toast: TPPGToast; ActionIndex: Integer)` | Ein Aktions-Button eines Toasts wurde geklickt; ActionIndex = Nummer der Aktion (0-basiert, Reihenfolge wie bei Show). Nutzung: `if ActionIndex = 0 then OeffneDatei(Toast.Tag);` |
+| `OnClose` | `TPPGToastCloseEvent` `(Sender: TObject; Toast: TPPGToast; Reason: TPPGToastCloseReason)` | Ein Toast wurde geschlossen; Reason sagt warum (Zeit abgelaufen, Anwender, Aktion, Klick, Code). |
+| `OnShow` | `TPPGToastEvent` `(Sender: TObject; Toast: TPPGToast)` | Ein Toast ist erschienen (nach Warteschlange bzw. Ruhezeit). |
+| `OnToastClick` | `TPPGToastEvent` `(Sender: TObject; Toast: TPPGToast)` | Der Anwender hat auf die Fläche eines Toasts geklickt (nicht auf Buttons), z. B. um zum Vorgang zu springen. |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGNotificationCenter.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGNotificationCenter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

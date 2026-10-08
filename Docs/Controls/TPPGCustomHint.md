@@ -44,7 +44,20 @@ Gemeinsam: TPPGHintContent misst und zeichnet den Inhalt (DRY).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `AllowMarkup`, `MaxWidth`, `Style`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Preset` | `string` |  | Optik-Vorlage des Hints ('' = Standard bzw. StyleManager). |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle; gesetzt kommt das Preset vom Manager. |
+| `AllowMarkup` | `Boolean` | `False` | True: Titel und Beschreibung dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). |
+| `MaxWidth` | `Integer` | `360` | Größte Breite des Hint-Fensters in logischen Pixeln (80..2000); längerer Text bricht um. |
+
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Style` |  | `bhsStandard` | Darstellungsart (je nach Control). |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGCustomHint.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGCustomHint.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

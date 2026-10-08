@@ -31,7 +31,18 @@ Drucken des Kanban-Boards ueber den gemeinsamen Druck-Weg
 
 ## PPGlow-Eigenschaften
 
-`Kanban`, `FitToPageWidth`, `Title`, `HeaderText`, `FooterText`, `Orientation`, `Margins`, `PrinterName`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Kanban` | `TPPGCustomKanban` |  | Das zu druckende Board (TPPGKanban oder TPPGDBKanban). Nutzung: `PPGKanbanPrinter1.Kanban := PPGKanban1; PPGKanbanPrinter1.Preview;` |
+| `FitToPageWidth` | `Boolean` | `True` | True: Alle Spalten werden auf die Seitenbreite verkleinert. False: zu breite Boards gehen auf Seiten nebeneinander weiter. Auch im Dialog „Seite einrichten" umschaltbar. |
+| `Title` | `string` |  | Titel des Druckauftrags (erscheint in der Druckerwarteschlange) und Wert des Platzhalters [Titel]. |
+| `HeaderText` | `string` |  | Kopfzeile jeder Seite (fett) mit denselben Platzhaltern wie FooterText; leer = keine Kopfzeile. Nutzung: `PPGGridPrinter1.HeaderText := '[Titel] - Stand [Datum]';` |
+| `FooterText` | `string` |  | Fußzeile jeder Seite mit Platzhaltern [Seite], [Seiten], [Datum], [Titel] (auch englisch [Page], [Pages], [Date], [Title]). Leer = keine Fußzeile; Vorgabe „Seite [Seite] von [Seiten]" in der Sprache der Anwendung. |
+| `Orientation` | `TPrinterOrientation` | `poPortrait` | Hochformat (poPortrait) oder Querformat (poLandscape). |
+| `Margins` | [TPPGPrintMargins](types/TPPGPrintMargins.md) |  | Seitenränder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten" änderbar. |
+| `PrinterName` | `string` |  | Name des Druckers; leer = Standarddrucker. Für PDF z. B. „Microsoft Print to PDF" mit PrintToFile. Nutzung: `PPGGridPrinter1.PrintToFile('Microsoft Print to PDF', 'C:\Export\Liste.pdf');` |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanbanPrinter.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanbanPrinter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

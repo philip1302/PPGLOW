@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGItem</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGItem</h1>
+<p>Typ in Unit <code>PPG.Items</code> - Basis <code>TCollectionItem</code></p>
+<p>Ein Eintrag: Text, Detailzeile, Plakette, Gruppe, Bild, K&#228;stchen-Zustand, Enabled sowie eigene Farbe, Textfarbe und Schriftstil.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Text</code></td><td><code>string</code></td><td></td><td>Haupttext des Eintrags; mit AllowMarkup der Liste auch mit &lt;b&gt;, &lt;i&gt;, &lt;color=...&gt;.</td></tr>
+<tr><td><code>Detail</code></td><td><code>string</code></td><td></td><td>Zweite, kleinere Zeile unter dem Text (Optik &#252;ber Styles.Detail); leer = einzeilig.</td></tr>
+<tr><td><code>Badge</code></td><td><code>string</code></td><td></td><td>Kurzer Text in einer Plakette rechts im Eintrag (z. B. Anzahl ungelesener Nachrichten); leer = keine Plakette.</td></tr>
+<tr><td><code>Group</code></td><td><code>string</code></td><td></td><td>Gruppenname: Aufeinanderfolgende Eintr&#228;ge mit derselben Gruppe erhalten eine gemeinsame &#220;berschrift (Optik &#252;ber Styles.GroupHeader).</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus Images der Liste; -1 = kein Bild.</td></tr>
+<tr><td><code>Checked</code></td><td><code>TCheckBoxState</code></td><td><code>cbUnchecked</code></td><td>Zustand des K&#228;stchens (CheckListBox): cbUnchecked, cbChecked oder cbGrayed.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Der Eintrag ist grau und nicht w&#228;hlbar.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert, z. B. eine Datensatz-ID.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Fl&#228;che dieses Eintrags; clDefault = wie die Liste. Gilt hell und dunkel; Auswahl und Hover liegen dar&#252;ber.</td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Textfarbe dieses Eintrags; clDefault = wie die Liste.</td></tr>
+<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile f&#252;r diesen Eintrag, z. B. [fsBold] f&#252;r ungelesene Eintr&#228;ge.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGItems.html">TPPGItems</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

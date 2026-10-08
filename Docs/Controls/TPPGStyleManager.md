@@ -32,7 +32,18 @@ Marke / Firmen-Design (AccentColor, ThemeColors, ChartPalette):
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `Appearance`, `Animation`, `ThemeMode`, `StyleForms`, `AccentColor`, `ThemeColors`, `ChartPalette`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Preset` | `string` |  | Optik-Vorlage aller verbundenen Controls (Classic, ModernFlat, Fluent11). |
+| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Gemeinsame Appearance aller verbundenen Controls; wird beim Preset-Wechsel und bei geänderten Theme-Farben neu abgeleitet. |
+| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Animationseinstellungen für alle verbundenen Controls (an/aus, Dauer, Systemeinstellung beachten). |
+| `ThemeMode` | `TPPGThemeMode` | `tmLight` | Hell (tmLight), Dunkel (tmDark) oder wie Windows (tmSystem) für alle PPGlow-Controls der Anwendung, auch im Designer. Bei mehreren Managern gilt der zuletzt gesetzte. Werte: `tmLight`, `tmDark`, `tmSystem`. |
+| `StyleForms` | `Boolean` | `False` | True: Formulare werden zur Laufzeit in den neutralen Farben des Modus gefärbt, im Dunkeln mit dunkler Titelleiste. |
+| `AccentColor` | `TColor` | `clDefault` | Markenfarbe der Anwendung: Akzent für Fokus, Auswahl, Fortschritt, Schalter, Links und Diagramme in allen Presets und in Hell und Dunkel (Hover-/Gedrückt-Varianten werden mit Kontrastprüfung abgeleitet). clDefault = Akzent des Presets bzw. des Systems (Fluent11). Nutzung: `PPGStyleManager1.AccentColor := $00B05A8E;` |
+| `ThemeColors` | [TPPGThemeColors](types/TPPGThemeColors.md) |  | Einzelne Theme-Farben (Tokens) getrennt für Hell (Light) und Dunkel (Dark) überschreiben: Akzent, Flächen, Text, Rand, Signalfarben. Nur gesetzte Werte gelten; sie gehen AccentColor vor. Speichern/Laden mit SaveToFile/LoadFromFile. Nutzung: `PPGStyleManager1.ThemeColors.Light.Danger := $002020C0;` |
+| `ChartPalette` | `TStrings` |  | Diagramm- und Kategorienfarben in dieser Reihenfolge, eine Farbe je Zeile („#RRGGBB" oder Farbname wie clNavy). Leer = Palette des Presets. Im Dunkeln werden zu dunkle Farben aufgehellt. Nutzung: `PPGStyleManager1.ChartPalette.Text := '#0F6CBD'#13#10'#C239B3'#13#10'clGreen';` |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGStyleManager.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGStyleManager.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

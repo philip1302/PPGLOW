@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGToolItem</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGToolItem</h1>
+<p>Typ in Unit <code>PPG.ToolBar</code> - Basis <code>TCollectionItem</code></p>
+<p>Ein Element der Werkzeugleiste: Art, Beschriftung, Bild, Action, Umschaltzustand, Men&#252; sowie eigene Farben.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Action</code></td><td><code>TBasicAction</code></td><td></td><td>Verkn&#252;pfte Action: Caption, Hint, Enabled, Checked, Visible, ImageIndex und Ausf&#252;hren kommen aus ihr; die Leiste aktualisiert sie im Leerlauf.</td></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung des Befehls (sichtbar mit ShowCaptions).</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Tooltip des Befehls.</td></tr>
+<tr><td><code>Style</code></td><td><code>TPPGToolItemStyle</code></td><td><code>tisButton</code></td><td>Art: tisButton (Befehl), tisCheck (Umschalt-Button) oder tisSeparator (Trennlinie). Werte: <code>tisButton</code>, <code>tisCheck</code>, <code>tisSeparator</code>.</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus ToolBar.Images; -1 = keins.</td></tr>
+<tr><td><code>IconChar</code></td><td><code>Word</code></td><td><code>0</code></td><td>Symbol aus der Icon-Schrift als Zeichencode (0 = keins); Alternative zu ImageIndex.</td></tr>
+<tr><td><code>Down</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Eingerastet (nur Style = tisCheck); Setzen im Code ohne Ereignis.</td></tr>
+<tr><td><code>GroupIndex</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Umschalt-Buttons (tisCheck) mit gleichem GroupIndex &lt;&gt; 0 schlie&#223;en sich gegenseitig aus wie Radiobuttons.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Befehl grau und nicht ausl&#246;sbar.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Befehl ausgeblendet.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert, z. B. eine Befehls-ID.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Fl&#228;chenfarbe – auch in Ruhe, z. B. um die Hauptaktion hervorzuheben; clDefault = flach nach Preset. Nutzung: <code>PPGToolBar1.Items[0].Color := $00D77800; PPGToolBar1.Items[0].TextColor := clWhite;</code></td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Textfarbe dieses Befehls; clDefault = vom Preset.</td></tr>
+<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile nur f&#252;r diesen Befehl; die Breite wird mit dieser Schrift gemessen.</td></tr>
+</table>
+<h2>Ereignisse</h2>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Der Befehl wurde ausgel&#246;st; danach folgt ToolBar.OnItemClick.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGToolItems.html">TPPGToolItems</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

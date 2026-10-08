@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSparkline</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGSparkline</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGSparkline</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Sparkline</code> - Basis <code>TPPGCustomSparkline</code></p>
@@ -37,9 +37,50 @@ end;
 <li>Kein Fokus, kein Hover. Screenreader: Rolle Diagramm, Wert &quot;Min x, Max y, letzter z&quot;.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>HighContrastSupport</code>, <code>Kind</code>, <code>Markers</code>, <code>MaxCount</code>, <code>LineWidth</code>, <code>LineColor</code>, <code>NegativeColor</code>, <code>UseRange</code>, <code>RangeMin</code>, <code>RangeMax</code>, <code>ShowReference</code>, <code>ReferenceValue</code>, <code>ValuesText</code>, <code>Align</code>, <code>Anchors</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Hint</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Visible</code>, <code>Touch</code></p>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage: „Classic&quot; (gl&#228;nzend, Office-Stil), „ModernFlat&quot; (flach mit Glow, Standard) oder „Fluent11&quot; (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel &#252;bernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name l&#246;st zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zur&#252;ckgefallen. Nutzung: <code>PPGButton1.Preset := &#39;Fluent11&#39;;</code> F&#252;r alle Controls eines Formulars einheitlich &#252;ber StyleManager.</td></tr>
+<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen.</td></tr>
+<tr><td><code>Appearance</code></td><td><a href="types/TPPGAppearance.html">TPPGAppearance</a></td><td></td><td>Aussehen je Zustand: Farben, Verl&#228;ufe, Rand, Glow und Textfarbe f&#252;r Normal, Hot (Maus dar&#252;ber), Down (gedr&#252;ckt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Gr&#246;&#223;e, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu bef&#252;llt. Nutzung: <code>PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;</code></td></tr>
+<tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen f&#252;r Barrierefreiheit).</td></tr>
+<tr><td><code>Kind</code></td><td><code>TPPGSparklineKind</code></td><td><code>skLine</code></td><td>Darstellung: Linie, Fl&#228;che, S&#228;ulen oder Gewinn/Verlust (gleich hohe Balken nach oben bzw. unten je nach Vorzeichen). Werte: <code>skLine</code>, <code>skArea</code>, <code>skColumn</code>, <code>skWinLoss</code>.</td></tr>
+<tr><td><code>Markers</code></td><td><code>TPPGSparklineMarkers</code></td><td><code>[smLast]</code></td><td>Hervorgehobene Punkte: Minimum, Maximum, erster und letzter Wert (Vorgabe: nur der letzte). Menge aus: <code>smMin</code>, <code>smMax</code>, <code>smFirst</code>, <code>smLast</code>. Nutzung: <code>Spark.Markers := [smMin, smMax, smLast];</code></td></tr>
+<tr><td><code>MaxCount</code></td><td><code>Integer</code></td><td><code>0</code></td><td>H&#246;chstzahl der Werte (0 = unbegrenzt). Mit AddValue entsteht so ein Lauffenster: neue Werte schieben die &#228;ltesten hinaus. Nutzung: <code>Spark.MaxCount := 60; Spark.AddValue(CpuLast);</code> z. B. im Timer.</td></tr>
+<tr><td><code>LineWidth</code></td><td><code>Integer</code></td><td><code>2</code></td><td>Strichst&#228;rke der Linie in logischen Pixeln (1..20).</td></tr>
+<tr><td><code>LineColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Farbe von Linie, Fl&#228;che bzw. positiven S&#228;ulen; clDefault = Akzentfarbe des Presets.</td></tr>
+<tr><td><code>NegativeColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Farbe negativer S&#228;ulen bzw. Verlust-Balken; clDefault = Signalfarbe „Fehler&quot;.</td></tr>
+<tr><td><code>UseRange</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Fester Wertebereich RangeMin..RangeMax statt aus den Daten; so bleiben mehrere Sparklines vergleichbar.</td></tr>
+<tr><td><code>RangeMin</code></td><td><code>Double</code></td><td></td><td>Feste Untergrenze der Skala; wirkt nur mit UseRange = True.</td></tr>
+<tr><td><code>RangeMax</code></td><td><code>Double</code></td><td></td><td>Feste Obergrenze der Skala; wirkt nur mit UseRange = True.</td></tr>
+<tr><td><code>ShowReference</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Eine waagerechte Referenzlinie bei ReferenceValue zeichnen.</td></tr>
+<tr><td><code>ReferenceValue</code></td><td><code>Double</code></td><td></td><td>Wert der Referenzlinie (z. B. Ziel oder Durchschnitt); sichtbar mit ShowReference.</td></tr>
+<tr><td><code>ValuesText</code></td><td><code>string</code></td><td></td><td>Werte als Text f&#252;r das DFM, getrennt durch Semikolon, Punkt als Dezimaltrenner (&quot;3;5;2.5&quot;); im Code bequemer mit SetValues oder AddValue.</td></tr>
+</table>
+<h2>Eigenschaften wie in der VCL</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Align</code></td><td><code>TAlign</code></td><td></td><td>Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder f&#252;llt den Rest (alClient). alNone = freie Position. Nutzung: <code>Panel1.Align := alClient;</code> Abst&#228;nde &#252;ber <code>AlignWithMargins</code> und <code>Margins</code>.</td></tr>
+<tr><td><code>Anchors</code></td><td><code>TAnchors</code></td><td></td><td>Kanten, deren Abstand zum Parent beim Vergr&#246;&#223;ern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: <code>Edit1.Anchors := [akLeft, akTop, akRight];</code></td></tr>
+<tr><td><code>Constraints</code></td><td><code>TSizeConstraints</code></td><td></td><td>Mindest- und H&#246;chstma&#223;e (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: <code>Panel1.Constraints.MinWidth := 200;</code></td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor &quot;|&quot; = Tooltip, danach = Langtext f&#252;r die Statusleiste. Nutzung: <code>Button1.Hint := &#39;Dokument speichern|Speichert das Dokument unter dem bisherigen Namen&#39;;</code></td></tr>
+<tr><td><code>ParentShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: ShowHint wird vom Parent &#252;bernommen (meist vom Formular).</td></tr>
+<tr><td><code>PopupMenu</code></td><td><code>TPopupMenu</code></td><td></td><td>Kontextmen&#252; bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu.</td></tr>
+<tr><td><code>ShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: Hint wird als Tooltip angezeigt.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein.</td></tr>
+<tr><td><code>Touch</code></td><td><code>TTouchManager</code></td><td></td><td>Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten.</td></tr>
+</table>
 <h2>Ereignisse</h2>
-<p><code>OnGesture</code>, <code>OnClick</code>, <code>OnDblClick</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code></p>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnGesture</code></td><td><code>TGestureEvent</code> <code>(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)</code></td><td>Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: <code>if EventInfo.GestureID = sgiLeft then NaechsteSeite;</code></td></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste.</td></tr>
+<tr><td><code>OnDblClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Doppelklick mit der linken Maustaste.</td></tr>
+<tr><td><code>OnMouseDown</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control gedr&#252;ckt.</td></tr>
+<tr><td><code>OnMouseMove</code></td><td><code>TMouseMoveEvent</code> <code>(Sender: TObject; Shift: TShiftState; X, Y: Integer)</code></td><td>Maus &#252;ber dem Control bewegt.</td></tr>
+<tr><td><code>OnMouseUp</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control losgelassen.</td></tr>
+</table>
 <hr>
-<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSparkline.md</code>.</p>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGSparkline.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

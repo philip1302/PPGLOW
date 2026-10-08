@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGKanbanStyles</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGKanbanStyles</h1>
+<p>Typ in Unit <code>PPG.Kanban</code> - Basis <code>TPPGStyleGroup</code></p>
+<p>Bereiche des Boards (nur gesetzte Werte zaehlen, clDefault = Preset).</p>
+<p>Bereiche des Boards einzeln gestalten: Spalte, Karte, Karte unter der Maus, gew&#228;hlte Karte und Swimlane-Kopf.</p>
+<p>Nutzung: <code>PPGKanban1.KanbanStyles.Card.Color := clWhite;</code></p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Column</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Spalten: Color = Hintergrund, TextColor = Titel, Font bzw. FontStyle = Schrift des Titels.</td></tr>
+<tr><td><code>Card</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Karten: Color = Fl&#228;che, TextColor = Text, BorderColor = Rand, Font bzw. FontStyle = Schrift des Titels.</td></tr>
+<tr><td><code>HotCard</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Karte unter der Maus: Color = Fl&#228;che.</td></tr>
+<tr><td><code>SelectedCard</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Gew&#228;hlte Karte: BorderColor = Rand der Auswahl.</td></tr>
+<tr><td><code>LaneHeader</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>K&#246;pfe der Swimlanes: TextColor und Schrift.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="../TPPGDBKanban.html">TPPGDBKanban</a>, <a href="../TPPGKanban.html">TPPGKanban</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

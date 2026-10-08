@@ -65,7 +65,8 @@ Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt   # Szenarien aller Demo-Seit
 # Generatoren (Ergebnis wird eingecheckt):
 powershell -ExecutionPolicy Bypass -File Build\make-icons.ps1 [-Preview Docs\palette-icons.png]   # Palettensymbole (.dcr)
 powershell -ExecutionPolicy Bypass -File Build\make-lang.ps1            # Lang\PPGlow.de.txt -> PPG.Lang.De.pas (-Check prüft nur)
-powershell -ExecutionPolicy Bypass -File Build\make-docs.ps1            # Docs\Controls\*.md und html
+powershell -ExecutionPolicy Bypass -File Build\make-docs.ps1            # Docs\Controls\*.md, types\*.md und html: jede Property/jedes Ereignis mit Typ, Vorgabe, Wirkung, Nutzung
+#   Texte in Docs\Controls\props\*.txt (Schluessel Klasse.Name); neue Properties dort beschreiben, "-Missing datei.txt" listet Luecken (Soll: 0)
 powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path <Projekt> -Recurse -WhatIf   # VCL/TMS -> PPGlow
 # Release + Installation (IDE geschlossen!):
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design -Platform Win32 -Config Release

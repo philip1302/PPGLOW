@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGStyleManager</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGStyleManager</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGStyleManager</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.StyleManager</code> - Basis <code>TComponent</code></p>
@@ -31,7 +31,18 @@
 <li>SaveToFile/LoadFromFile: Theme-Datei (INI) mit allen Einstellungen.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>Appearance</code>, <code>Animation</code>, <code>ThemeMode</code>, <code>StyleForms</code>, <code>AccentColor</code>, <code>ThemeColors</code>, <code>ChartPalette</code></p>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage aller verbundenen Controls (Classic, ModernFlat, Fluent11).</td></tr>
+<tr><td><code>Appearance</code></td><td><a href="types/TPPGAppearance.html">TPPGAppearance</a></td><td></td><td>Gemeinsame Appearance aller verbundenen Controls; wird beim Preset-Wechsel und bei ge&#228;nderten Theme-Farben neu abgeleitet.</td></tr>
+<tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>Animationseinstellungen f&#252;r alle verbundenen Controls (an/aus, Dauer, Systemeinstellung beachten).</td></tr>
+<tr><td><code>ThemeMode</code></td><td><code>TPPGThemeMode</code></td><td><code>tmLight</code></td><td>Hell (tmLight), Dunkel (tmDark) oder wie Windows (tmSystem) f&#252;r alle PPGlow-Controls der Anwendung, auch im Designer. Bei mehreren Managern gilt der zuletzt gesetzte. Werte: <code>tmLight</code>, <code>tmDark</code>, <code>tmSystem</code>.</td></tr>
+<tr><td><code>StyleForms</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Formulare werden zur Laufzeit in den neutralen Farben des Modus gef&#228;rbt, im Dunkeln mit dunkler Titelleiste.</td></tr>
+<tr><td><code>AccentColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Markenfarbe der Anwendung: Akzent f&#252;r Fokus, Auswahl, Fortschritt, Schalter, Links und Diagramme in allen Presets und in Hell und Dunkel (Hover-/Gedr&#252;ckt-Varianten werden mit Kontrastpr&#252;fung abgeleitet). clDefault = Akzent des Presets bzw. des Systems (Fluent11). Nutzung: <code>PPGStyleManager1.AccentColor := $00B05A8E;</code></td></tr>
+<tr><td><code>ThemeColors</code></td><td><a href="types/TPPGThemeColors.html">TPPGThemeColors</a></td><td></td><td>Einzelne Theme-Farben (Tokens) getrennt f&#252;r Hell (Light) und Dunkel (Dark) &#252;berschreiben: Akzent, Fl&#228;chen, Text, Rand, Signalfarben. Nur gesetzte Werte gelten; sie gehen AccentColor vor. Speichern/Laden mit SaveToFile/LoadFromFile. Nutzung: <code>PPGStyleManager1.ThemeColors.Light.Danger := $002020C0;</code></td></tr>
+<tr><td><code>ChartPalette</code></td><td><code>TStrings</code></td><td></td><td>Diagramm- und Kategorienfarben in dieser Reihenfolge, eine Farbe je Zeile („#RRGGBB&quot; oder Farbname wie clNavy). Leer = Palette des Presets. Im Dunkeln werden zu dunkle Farben aufgehellt. Nutzung: <code>PPGStyleManager1.ChartPalette.Text := &#39;#0F6CBD&#39;#13#10&#39;#C239B3&#39;#13#10&#39;clGreen&#39;;</code></td></tr>
+</table>
 <hr>
-<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGStyleManager.md</code>.</p>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGStyleManager.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

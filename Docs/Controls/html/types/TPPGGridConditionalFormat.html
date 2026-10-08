@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGridConditionalFormat</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGGridConditionalFormat</h1>
+<p>Typ in Unit <code>PPG.Grid.Styles</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Regel der bedingten Formatierung: Spalte, Regel, Vergleichswerte, Farbe, Ziel (Fl&#228;che oder Text) und Fett.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Column</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Datenspalte der Regel; -1 = alle Spalten (nur f&#252;r Regeln ohne Statistik, also nicht f&#252;r Oben/Unten, Farbskala, Datenbalken, Symbolsatz).</td></tr>
+<tr><td><code>Rule</code></td><td><code>TPPGCondRule</code></td><td><code>crRange</code></td><td>Art der Regel: crRange (Wert zwischen Value1 und Value2), crEqual (gleich Value1), crContains (Text enth&#228;lt Value1), crTop/crBottom (oberste/unterste N bzw. N %), crColorScale (Farbverlauf nach Wert), crDataBar (Balken nach Wert), crIconSet (Pfeile hoch/gleich/runter). Werte: <code>crRange</code>, <code>crEqual</code>, <code>crContains</code>, <code>crTop</code>, <code>crBottom</code>, <code>crColorScale</code>, <code>crDataBar</code>, <code>crIconSet</code>.</td></tr>
+<tr><td><code>Value1</code></td><td><code>string</code></td><td></td><td>Erster Vergleichswert: bei crRange „von&quot; (leer = offen), bei crEqual/crContains der Wert, bei crTop/crBottom die Anzahl („10&quot; oder „10%&quot;). Nutzung: <code>Rule := crTop; Value1 := &#39;10%&#39;;</code></td></tr>
+<tr><td><code>Value2</code></td><td><code>string</code></td><td></td><td>Zweiter Vergleichswert: bei crRange „bis&quot; (leer = offen).</td></tr>
+<tr><td><code>Color</code></td><td><code>TPPGCondColor</code></td><td><code>ccWarning</code></td><td>Farbe der Regel aus dem Theme: ccWarning, ccSuccess, ccDanger, ccAccent oder ccCustom (= CustomColor). Bei Farbskalen bestimmt ccSuccess/ccDanger die Richtung (niedrig rot, hoch gr&#252;n bzw. umgekehrt). Werte: <code>ccWarning</code>, <code>ccSuccess</code>, <code>ccDanger</code>, <code>ccAccent</code>, <code>ccCustom</code>.</td></tr>
+<tr><td><code>CustomColor</code></td><td><code>TColor</code></td><td><code>clNone</code></td><td>Eigene Farbe bei Color = ccCustom.</td></tr>
+<tr><td><code>Target</code></td><td><code>TPPGCondTarget</code></td><td><code>ctFill</code></td><td>Was eingef&#228;rbt wird: ctFill (Zellfl&#228;che) oder ctText (Schrift). Werte: <code>ctFill</code>, <code>ctText</code>.</td></tr>
+<tr><td><code>Bold</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Treffer werden zus&#228;tzlich fett dargestellt.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Die Regel ist vor&#252;bergehend abgeschaltet.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGGridConditionalFormats.html">TPPGGridConditionalFormats</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

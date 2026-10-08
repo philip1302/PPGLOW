@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGStateColors</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGStateColors</h1>
+<p>Typ in Unit <code>PPG.Appearance</code> - Basis <code>TPersistent</code></p>
+<p>Einzelne Farb-Ueberschreibungen fuer einen Zustand (Fokus, Dunkel). clDefault = nicht ueberschreiben. Color ohne ColorTo/Mirror faerbt die ganze Flaeche einfarbig.</p>
+<p>Optionale Farben eines Zustands: nur Werte ≠ clDefault &#252;berschreiben, alle anderen kommen aus dem Preset bzw. dem Zustand.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>F&#252;llfarbe; clDefault = nicht &#252;berschreiben.</td></tr>
+<tr><td><code>ColorTo</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Ende des Verlaufs; clDefault = nicht &#252;berschreiben.</td></tr>
+<tr><td><code>ColorMirror</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Zweite Verlaufsh&#228;lfte (Classic); clDefault = nicht &#252;berschreiben.</td></tr>
+<tr><td><code>ColorMirrorTo</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Ende der zweiten Verlaufsh&#228;lfte; clDefault = nicht &#252;berschreiben.</td></tr>
+<tr><td><code>BorderColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Randfarbe; clDefault = nicht &#252;berschreiben.</td></tr>
+<tr><td><code>GlowColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Glow-Farbe; clDefault = nicht &#252;berschreiben.</td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Textfarbe; clDefault = nicht &#252;berschreiben.</td></tr>
+<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGAppearance.html">TPPGAppearance</a>, <a href="TPPGDarkColors.html">TPPGDarkColors</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

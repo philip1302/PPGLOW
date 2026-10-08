@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBCheckBox</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBCheckBox</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGDBCheckBox</h1>
 <p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Controls</code> - Basis <code>TPPGCheckBox</code></p>
@@ -21,7 +21,79 @@
 </ul>
 <p>Fallstrick (Roadmap): TDataLink-Ereignisse kommen auch, waehrend gezeichnet wird (berechnete Felder). Die Handler setzen deshalb nur Werte; Zeichnen passiert immer erst im naechsten Paint.</p>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>DataField</code>, <code>DataSource</code>, <code>ReadOnly</code>, <code>ValueChecked</code>, <code>ValueUnchecked</code>, <code>State</code></p>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>DataField</code></td><td><code>string</code></td><td></td><td>Name des Felds der Datenmenge, das angezeigt und bearbeitet wird (Boolean-Feld oder ein Feld mit ValueChecked/ValueUnchecked).</td></tr>
+<tr><td><code>DataSource</code></td><td><code>TDataSource</code></td><td></td><td>Datenquelle mit der Datenmenge, aus der DataField kommt.</td></tr>
+<tr><td><code>ReadOnly</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Wert wird angezeigt, kann aber nicht ge&#228;ndert werden.</td></tr>
+<tr><td><code>ValueChecked</code></td><td><code>string</code></td><td></td><td>Wert(e) f&#252;r „angehakt&quot; bei Feldern, die kein Boolean sind; mehrere durch Semikolon getrennt, geschrieben wird der erste (wie TDBCheckBox). Vorgabe „True&quot;. Nutzung: <code>DBCheckBox1.ValueChecked := &#39;J;Ja;1&#39;; DBCheckBox1.ValueUnchecked := &#39;N;Nein;0&#39;;</code></td></tr>
+<tr><td><code>ValueUnchecked</code></td><td><code>string</code></td><td></td><td>Wert(e) f&#252;r „nicht angehakt&quot;; mehrere durch Semikolon getrennt, geschrieben wird der erste.</td></tr>
+<tr><td><code>State</code></td><td><code>TPPGCheckState</code></td><td><code>cbUnchecked</code></td><td>Zustand: cbUnchecked, cbChecked oder cbGrayed (unbestimmt, nur mit AllowGrayed).</td></tr>
+<tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage: „Classic&quot; (gl&#228;nzend, Office-Stil), „ModernFlat&quot; (flach mit Glow, Standard) oder „Fluent11&quot; (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel &#252;bernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name l&#246;st zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zur&#252;ckgefallen. Nutzung: <code>PPGButton1.Preset := &#39;Fluent11&#39;;</code> F&#252;r alle Controls eines Formulars einheitlich &#252;ber StyleManager.</td></tr>
+<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen.</td></tr>
+<tr><td><code>Appearance</code></td><td><a href="types/TPPGAppearance.html">TPPGAppearance</a></td><td></td><td>Aussehen je Zustand: Farben, Verl&#228;ufe, Rand, Glow und Textfarbe f&#252;r Normal, Hot (Maus dar&#252;ber), Down (gedr&#252;ckt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Gr&#246;&#223;e, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu bef&#252;llt. Nutzung: <code>PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;</code></td></tr>
+<tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>&#220;berg&#228;nge zwischen den Zust&#228;nden (Hover, Dr&#252;cken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen&quot; beachtet wird.</td></tr>
+<tr><td><code>Alignment</code></td><td><code>TLeftRight</code></td><td><code>taRightJustify</code></td><td>Lage der Beschriftung zum K&#228;stchen: taRightJustify = Text rechts (Standard), taLeftJustify = Text links.</td></tr>
+<tr><td><code>AllowGrayed</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Ein Klick schaltet zus&#228;tzlich durch den unbestimmten Zustand (cbGrayed), z. B. f&#252;r „teilweise ausgew&#228;hlt&quot;.</td></tr>
+<tr><td><code>Spacing</code></td><td><code>Integer</code></td><td><code>4</code></td><td>Abstand zwischen Bild und Text in logischen Pixeln (wird mit der DPI skaliert).</td></tr>
+<tr><td><code>WordWrap</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Die Beschriftung bricht um; mit AutoSize w&#228;chst dann die H&#246;he statt der Breite.</td></tr>
+<tr><td><code>ShowFocusRect</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Bei Tastaturfokus wird der Fokusrahmen bzw. -ring gezeichnet.</td></tr>
+<tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen f&#252;r Barrierefreiheit).</td></tr>
+</table>
+<h2>Eigenschaften wie in der VCL</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Action</code></td><td><code>TBasicAction</code></td><td></td><td>Verkn&#252;pft das Control mit einer Action (TActionList/TActionManager). Beschriftung, Hint, Bild, Enabled, Checked und OnClick kommen dann aus der Action. Nutzung: <code>Button1.Action := actSpeichern;</code></td></tr>
+<tr><td><code>Align</code></td><td><code>TAlign</code></td><td></td><td>Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder f&#252;llt den Rest (alClient). alNone = freie Position. Nutzung: <code>Panel1.Align := alClient;</code> Abst&#228;nde &#252;ber <code>AlignWithMargins</code> und <code>Margins</code>.</td></tr>
+<tr><td><code>Anchors</code></td><td><code>TAnchors</code></td><td></td><td>Kanten, deren Abstand zum Parent beim Vergr&#246;&#223;ern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: <code>Edit1.Anchors := [akLeft, akTop, akRight];</code></td></tr>
+<tr><td><code>AutoSize</code></td><td><code>Boolean</code></td><td></td><td>True: Das Control passt seine Gr&#246;&#223;e dem Inhalt an (Text, Bild, Schrift).</td></tr>
+<tr><td><code>BiDiMode</code></td><td><code>TBiDiMode</code></td><td></td><td>Leserichtung. bdRightToLeft spiegelt Layout und Text f&#252;r Arabisch und Hebr&#228;isch. Nutzung: Meist &#252;ber <code>ParentBiDiMode</code> vom Formular &#252;bernehmen.</td></tr>
+<tr><td><code>Caption</code></td><td><code>TCaption</code></td><td></td><td>Beschriftung. Ein &amp; vor einem Buchstaben macht ihn zur Zugriffstaste (Alt+Buchstabe). Nutzung: <code>Button1.Caption := &#39;&amp;Speichern&#39;;</code></td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td></td><td>Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Fl&#228;chenfarben der Zust&#228;nde stehen in Appearance. Nutzung: <code>clWindow</code>, <code>clBtnFace</code> oder eine RGB-Farbe wie <code>$00F0F0F0</code>.</td></tr>
+<tr><td><code>Constraints</code></td><td><code>TSizeConstraints</code></td><td></td><td>Mindest- und H&#246;chstma&#223;e (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: <code>Panel1.Constraints.MinWidth := 200;</code></td></tr>
+<tr><td><code>DragCursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger w&#228;hrend das Control gezogen wird (Drag &amp; Drop).</td></tr>
+<tr><td><code>DragKind</code></td><td><code>TDragKind</code></td><td></td><td>dkDrag = Drag &amp; Drop, dkDock = Andocken beim Ziehen.</td></tr>
+<tr><td><code>DragMode</code></td><td><code>TDragMode</code></td><td></td><td>dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt.</td></tr>
+<tr><td><code>Font</code></td><td><code>TFont</code></td><td></td><td>Schrift (Name, Gr&#246;&#223;e, Stil, Farbe). Die Textfarbe der Zust&#228;nde kann Appearance &#252;berschreiben. Nutzung: <code>Label1.Font.Size := 12; Label1.Font.Style := [fsBold];</code></td></tr>
+<tr><td><code>ParentBackground</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Der Hintergrund des Parents scheint durch (transparente Wirkung).</td></tr>
+<tr><td><code>ParentBiDiMode</code></td><td><code>Boolean</code></td><td></td><td>True: BiDiMode wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>ParentColor</code></td><td><code>Boolean</code></td><td></td><td>True: Color wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>ParentFont</code></td><td><code>Boolean</code></td><td></td><td>True: Font wird vom Parent &#252;bernommen; wird automatisch False, sobald Font ge&#228;ndert wird.</td></tr>
+<tr><td><code>ParentShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: ShowHint wird vom Parent &#252;bernommen (meist vom Formular).</td></tr>
+<tr><td><code>PopupMenu</code></td><td><code>TPopupMenu</code></td><td></td><td>Kontextmen&#252; bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu.</td></tr>
+<tr><td><code>ShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: Hint wird als Tooltip angezeigt.</td></tr>
+<tr><td><code>StyleElements</code></td><td><code>TStyleElements</code></td><td></td><td>Welche Teile ein aktiver VCL-Style f&#228;rbt (seFont, seClient, seBorder). Ohne seClient beh&#228;lt ein PPGlow-Control seine eigenen Farben aus Appearance.</td></tr>
+<tr><td><code>TabOrder</code></td><td><code>TTabOrder</code></td><td></td><td>Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst).</td></tr>
+<tr><td><code>TabStop</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Das Control ist mit Tab erreichbar.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein.</td></tr>
+<tr><td><code>Touch</code></td><td><code>TTouchManager</code></td><td></td><td>Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten.</td></tr>
+</table>
+<h2>Ereignisse</h2>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnChange</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Checked bzw. State hat sich ge&#228;ndert (Klick, Tastatur oder Code).</td></tr>
+<tr><td><code>OnGesture</code></td><td><code>TGestureEvent</code> <code>(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)</code></td><td>Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: <code>if EventInfo.GestureID = sgiLeft then NaechsteSeite;</code></td></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste.</td></tr>
+<tr><td><code>OnContextPopup</code></td><td><code>TContextPopupEvent</code> <code>(Sender: TObject; MousePos: TPoint; var Handled: Boolean)</code></td><td>Vor dem Kontextmen&#252;; Handled := True unterdr&#252;ckt das Standardmen&#252;.</td></tr>
+<tr><td><code>OnDragDrop</code></td><td><code>TDragDropEvent</code> <code>(Sender, Source: TObject; X, Y: Integer)</code></td><td>Ein gezogenes Objekt wurde &#252;ber dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control.</td></tr>
+<tr><td><code>OnDragOver</code></td><td><code>TDragOverEvent</code> <code>(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)</code></td><td>Ein Objekt wird &#252;ber dem Control gezogen; Accept := True erlaubt das Ablegen.</td></tr>
+<tr><td><code>OnEndDock</code></td><td><code>TEndDragEvent</code> <code>(Sender, Target: TObject; X, Y: Integer)</code></td><td>Andock-Vorgang dieses Controls beendet.</td></tr>
+<tr><td><code>OnEndDrag</code></td><td><code>TEndDragEvent</code> <code>(Sender, Target: TObject; X, Y: Integer)</code></td><td>Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch).</td></tr>
+<tr><td><code>OnEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus erhalten.</td></tr>
+<tr><td><code>OnExit</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus verloren; guter Ort f&#252;r Pr&#252;fungen der Eingabe.</td></tr>
+<tr><td><code>OnKeyDown</code></td><td><code>TKeyEvent</code> <code>(Sender: TObject; var Key: Word; Shift: TShiftState)</code></td><td>Taste gedr&#252;ckt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: <code>if Key = VK_RETURN then Speichern;</code></td></tr>
+<tr><td><code>OnKeyPress</code></td><td><code>TKeyPressEvent</code> <code>(Sender: TObject; var Key: Char)</code></td><td>Zeichen eingegeben; Key := #0 verwirft es.</td></tr>
+<tr><td><code>OnKeyUp</code></td><td><code>TKeyEvent</code> <code>(Sender: TObject; var Key: Word; Shift: TShiftState)</code></td><td>Taste losgelassen.</td></tr>
+<tr><td><code>OnMouseDown</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control gedr&#252;ckt.</td></tr>
+<tr><td><code>OnMouseEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus ist in das Control hineinbewegt worden.</td></tr>
+<tr><td><code>OnMouseLeave</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus hat das Control verlassen.</td></tr>
+<tr><td><code>OnMouseMove</code></td><td><code>TMouseMoveEvent</code> <code>(Sender: TObject; Shift: TShiftState; X, Y: Integer)</code></td><td>Maus &#252;ber dem Control bewegt.</td></tr>
+<tr><td><code>OnMouseUp</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control losgelassen.</td></tr>
+<tr><td><code>OnStartDock</code></td><td><code>TStartDockEvent</code> <code>(Sender: TObject; var DragObject: TDragDockObject)</code></td><td>Beginn des Andockens dieses Controls.</td></tr>
+<tr><td><code>OnStartDrag</code></td><td><code>TStartDragEvent</code> <code>(Sender: TObject; var DragObject: TDragObject)</code></td><td>Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden.</td></tr>
+</table>
 <hr>
-<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBCheckBox.md</code>.</p>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBCheckBox.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

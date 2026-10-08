@@ -1,0 +1,150 @@
+# Bereich B2: Chart, DB-Chart, Serien, Achsen, Referenzlinien, Chart-Stile,
+# Gauge, Gauge-Bereiche, KPI-Kachel, Sparkline.
+
+# --- TPPGChartAxis (XAxis, YAxis, Y2Axis) ---
+TPPGChartAxis.AutoMin = True: Die Untergrenze wird aus den Daten berechnet (runde Werte, bei Säulen ab 0). False: Es gilt Min.
+> `Chart.YAxis.AutoMin := False; Chart.YAxis.Min := 0;`
+TPPGChartAxis.AutoMax = True: Die Obergrenze wird aus den Daten berechnet. False: Es gilt Max.
+> `Chart.YAxis.AutoMax := False; Chart.YAxis.Max := 100;` z. B. für Prozentwerte.
+TPPGChartAxis.Format = FormatFloat-Maske der Achsenbeschriftung; leer = passende Nachkommastellen aus der Schrittweite. Bei einer Datumsachse eine FormatDateTime-Maske.
+> `Chart.YAxis.Format := '#,##0 €';` oder `Chart.XAxis.Format := 'dd.mm.';`
+TPPGChartAxis.Kind = Nur für die X-Achse: Art der Werte. Kategorien verteilen die Punkte gleichmäßig (X = Index, Text aus Categories), Zahlen und Datum/Zeit setzen die Punkte nach ihrem X-Wert (Series.AddXY).
+> `Chart.XAxis.Kind := cxkDateTime; Chart.Series[0].AddXY(Date, 42);`
+TPPGChartAxis.Max = Feste Obergrenze; wirkt nur mit AutoMax = False.
+TPPGChartAxis.Min = Feste Untergrenze; wirkt nur mit AutoMin = False.
+TPPGChartAxis.ShowGrid = Gitterlinien an den Teilstrichen dieser Achse. Vorgabe: an bei der Y-Achse, aus bei X- und zweiter Y-Achse. Farbe über ChartStyles.Grid.
+TPPGChartAxis.Title = Achsentitel neben bzw. unter der Achse (leer = keiner).
+> `Chart.YAxis.Title := 'Umsatz in T€';`
+TPPGChartAxis.Visible = False: Achse samt Beschriftung ausblenden; die Skalierung gilt weiter.
+
+# --- TPPGChartReferenceLine (Collection ReferenceLines) ---
+TPPGChartReferenceLine.Axis = An welcher Achse die Linie steht: Y (waagerecht, linke Achse), Y2 (waagerecht, rechte Achse) oder X (senkrecht, z. B. ein Stichtag).
+TPPGChartReferenceLine.Caption = Beschriftung an der Linie (z. B. „Ziel" oder „Durchschnitt").
+TPPGChartReferenceLine.Color = Linienfarbe; clDefault = Sekundärtextfarbe des Presets.
+TPPGChartReferenceLine.Dashed = True: gestrichelte Linie; False: durchgezogen.
+TPPGChartReferenceLine.Value = Position der Linie als Achsenwert (bei Datumsachse ein TDateTime).
+> `with Chart.ReferenceLines.Add as TPPGChartReferenceLine do begin Value := 80; Caption := 'Ziel'; end;`
+
+# --- TPPGChartSeries (Collection Series) ---
+TPPGChartSeries.Color = Farbe der Serie; clDefault = nächste Farbe der Palette (Akzent zuerst, eigene Palette über TPPGStyleManager.ChartPalette). Einzelne Punkte können eigene Farben haben (Parameter Color von Add).
+TPPGChartSeries.Kind = Darstellung der Serie. Linien, Stufen, Flächen und Säulen lassen sich mischen; sind alle sichtbaren Serien Balken, liegt das Diagramm quer. Ist die erste sichtbare Serie Kreis oder Ring, zeigt das Diagramm nur diese Serie.
+> `Chart.Series[0].Kind := cskColumn; Chart.Series[1].Kind := cskLine;`
+TPPGChartSeries.LineWidth = Strichstärke von Linie, Stufe und Flächenrand in logischen Pixeln (1..20).
+TPPGChartSeries.ShowMarkers = True: Punkte auf der Linie als Kreise markieren (sinnvoll bei wenigen Werten).
+TPPGChartSeries.Title = Name der Serie in Legende, Tooltip und für den Screenreader.
+TPPGChartSeries.ValueFormat = FormatFloat-Maske der Werte im Tooltip; leer = Format der zugehörigen Y-Achse.
+> `Chart.Series[0].ValueFormat := '#,##0.00 €';`
+TPPGChartSeries.ValuesText = Y-Werte als Text, getrennt durch Semikolon, Punkt als Dezimaltrenner ("3;5;2.5"); X ist dann der Index. So stehen Werte im DFM; im Code bequemer mit SetValues, Add oder AddXY.
+> Im Objektinspektor `12;18;9.5;22` eintragen; im Code `Chart.Series[0].SetValues([12, 18, 9.5, 22]);`
+TPPGChartSeries.VirtualCount = > 0: Die Serie hat so viele Punkte, geliefert werden sie bei Bedarf über OnGetPoint des Diagramms; eigene Punkte werden ignoriert. Für sehr große oder berechnete Datenmengen.
+> `Chart.Series[0].VirtualCount := 100000;` und OnGetPoint behandeln.
+TPPGChartSeries.Visible = False: Serie ausblenden (gleitend, wenn animiert). Dasselbe bewirkt ein Klick auf den Legendeneintrag (LegendToggle).
+TPPGChartSeries.YAxis = An welcher Y-Achse die Serie skaliert wird: casPrimary = links (YAxis), casSecondary = rechts (Y2Axis). Für zwei Größen mit verschiedenen Einheiten.
+> `Chart.Series[1].YAxis := casSecondary; Chart.Y2Axis.Title := 'Anzahl';`
+
+# --- TPPGChartStyles (ChartStyles) ---
+TPPGChartStyles.Axis = Achsenbeschriftung und Achsentitel: TextColor und Schrift.
+TPPGChartStyles.Grid = Gitterlinien: Farbe über Color (bzw. DarkColor).
+> `Chart.ChartStyles.Grid.Color := $00E8E8E8;`
+TPPGChartStyles.Legend = Legende: TextColor und Schrift.
+TPPGChartStyles.Title = Diagrammtitel: TextColor und Schrift. Ohne eigene Schrift wird die Schrift des Controls 1,25-fach und fett verwendet.
+> `Chart.ChartStyles.Title.ParentFont := False; Chart.ChartStyles.Title.Font.Size := 14;`
+
+# --- TPPGCustomChart (TPPGChart, TPPGDBChart) ---
+TPPGCustomChart.Categories = Beschriftungen der Kategorieachse, eine Zeile je Punktindex. Ohne Eintrag gilt der Text des Punktes bzw. 1, 2, 3 …
+> `Chart.Categories.CommaText := 'Jan,Feb,Mrz,Apr';`
+TPPGCustomChart.ChartStyles = Bereiche einzeln gestalten: Titel, Achsen, Gitter, Legende. Nicht gesetzte Farben kommen aus dem Preset.
+TPPGCustomChart.LegendPosition = Lage der Legende (oben, unten, rechts) oder keine. Bei Kreis und Ring zeigt die Legende die Kategorien.
+TPPGCustomChart.LegendToggle = True: Ein Klick auf einen Legendeneintrag blendet die Serie aus bzw. wieder ein.
+TPPGCustomChart.OnGetPoint = Liefert im virtuellen Modus (Series.VirtualCount > 0) den Punkt Index der Serie SeriesIndex. Point füllen: X, Y, optional Text und Color (clDefault = Serienfarbe). Wird beim Zeichnen nur für benötigte Punkte gerufen; schnell halten, nichts zeichnen.
+> `Point.X := Index; Point.Y := FDaten[Index];`
+TPPGCustomChart.OnPointClick = Ein Datenpunkt wurde angeklickt oder per Enter/Leertaste ausgelöst. SeriesIndex und PointIndex nennen den Punkt (bei Kreis/Ring das Segment).
+> `ShowMessage(Chart.Categories[PointIndex]);` Beim DB-Chart springt die Datenmenge zusätzlich zum Datensatz (JumpToRecord).
+TPPGCustomChart.ReferenceLines = Waagerechte oder senkrechte Hilfslinien mit Beschriftung, z. B. Ziel, Grenzwert oder Stichtag.
+TPPGCustomChart.Series = Die Datenreihen (Collection von TPPGChartSeries) mit Art, Farbe, Achse und Werten.
+> `with Chart.Series.Add do begin Title := 'Umsatz'; Kind := cskColumn; SetValues([12, 18, 9]); end;`
+TPPGCustomChart.ShowTooltips = True: Beim Überfahren erscheint ein Tooltip mit den Werten (rastet auf den nächsten X-Wert über alle Serien bzw. auf das Kreissegment ein). Er ist Teil des Bildes und erscheint auch im Export.
+TPPGCustomChart.Stacking = Stapeln von Säulen, Balken und Flächen auf der Kategorieachse: nicht gestapelt, gestapelt (Summen) oder 100 % (Anteile je Kategorie).
+> `Chart.Stacking := cstStacked;`
+TPPGCustomChart.Title = Überschrift über dem Diagramm (leer = keine). Gestaltung über ChartStyles.Title.
+TPPGCustomChart.XAxis = Waagerechte Achse: Art (Kategorie, Zahl, Datum), Grenzen, Format, Titel, Gitter. Bei Balkendiagrammen liegt sie senkrecht.
+TPPGCustomChart.Y2Axis = Zweite Y-Achse rechts; sichtbar nur, wenn mindestens eine Serie YAxis = casSecondary hat.
+TPPGCustomChart.YAxis = Linke Werteachse: Grenzen (automatisch oder fest), Format, Titel, Gitter.
+
+# --- TPPGCustomDBChart (TPPGDBChart) ---
+TPPGCustomDBChart.DataSource = Datenquelle; die ganze Datenmenge wird gelesen (höchstens MaxRecords Datensätze), der aktuelle Datensatz bleibt stehen. Eindirektionale Datenmengen werden nicht gelesen.
+TPPGCustomDBChart.JumpToRecord = True: Ein Klick auf einen Punkt macht dessen Datensatz zum aktuellen (z. B. für ein Detailformular).
+TPPGCustomDBChart.LabelField = Feld für die Kategorie-Beschriftung (X-Achse bzw. Kreissegmente).
+> `DBChart.LabelField := 'Monat';`
+TPPGCustomDBChart.MaxRecords = Höchstzahl der gelesenen Datensätze (ab 1, Vorgabe 10 000); schützt vor sehr großen Tabellen.
+TPPGCustomDBChart.ReloadDelay = Wartezeit in Millisekunden vor dem Neuladen nach Datenänderungen (0..10 000; 0 = sofort). Viele Änderungen hintereinander ergeben ein einziges Laden. Während Edit/Insert wird nicht gelesen.
+TPPGCustomDBChart.ShowCurrentRecord = True: Der aktuelle Datensatz wird im Diagramm markiert und folgt dem Datensatzzeiger.
+TPPGCustomDBChart.ValueFields = Wertfelder, getrennt durch Semikolon; je Feld eine Serie in der Reihenfolge von Series. Fehlende Serien werden angelegt und nach Field.DisplayLabel benannt.
+> `DBChart.ValueFields := 'Umsatz;Kosten';`
+TPPGCustomDBChart.XField = Feld mit dem X-Wert für eine Zahl- oder Datumsachse (XAxis.Kind = cxkNumeric bzw. cxkDateTime); leer = Kategorieachse mit LabelField.
+> `DBChart.XField := 'Datum'; DBChart.XAxis.Kind := cxkDateTime;`
+
+# --- TPPGCustomGauge (TPPGGauge) ---
+TPPGCustomGauge.Increment = Schrittweite für Pfeiltasten, wenn die Anzeige bedienbar ist (ReadOnly = False); Bild auf/ab ändert um das Zehnfache.
+TPPGCustomGauge.Max = Obergrenze der Skala. Muss größer als Min sein, sonst EPPGPropertyError; Value wird in den Bereich geklemmt.
+TPPGCustomGauge.Min = Untergrenze der Skala. Muss kleiner als Max sein, sonst EPPGPropertyError; Value wird in den Bereich geklemmt.
+TPPGCustomGauge.OnChange = Der Anwender hat den Wert geändert (Ziehen auf dem Bogen oder Tastatur, nur mit ReadOnly = False). Setzen von Value im Code löst es nicht aus.
+TPPGCustomGauge.Ranges = Farbige Abschnitte der Spur (z. B. grün/gelb/rot), je mit Start- und Endwert und Farbe. Mit ValueColorFromRange übernimmt der Wertbogen die Farbe seines Abschnitts.
+> `with Gauge.Ranges.Add do begin StartValue := 80; EndValue := 100; RangeColor := grcDanger; end;`
+TPPGCustomGauge.ReadOnly = True (Vorgabe): reine Anzeige ohne Fokus. False: Der Bogen wird zum Schieberegler (Ziehen, Pfeile, Bild, Pos1/Ende) und meldet Änderungen über OnChange.
+TPPGCustomGauge.ShowTarget = True: Eine Zielmarke bei TargetValue auf dem Bogen zeigen.
+TPPGCustomGauge.ShowValue = True: Werttext (mit ValueFormat und Units) in der Mitte zeigen.
+TPPGCustomGauge.StartAngle = Beginn des Bogens in Grad (-360..360); 0 = oben, positiv im Uhrzeigersinn. Vorgabe -135 (mit SweepAngle 270 ein nach unten offener Bogen).
+> Halbrund: `Gauge.StartAngle := -90; Gauge.SweepAngle := 180;`
+TPPGCustomGauge.SweepAngle = Länge des Bogens in Grad (10..360; 360 = Vollkreis).
+TPPGCustomGauge.TargetValue = Wert der Zielmarke (sichtbar mit ShowTarget).
+TPPGCustomGauge.Thickness = Strichstärke des Bogens in logischen Pixeln (0..200; 0 = aus der Größe des Controls berechnet).
+TPPGCustomGauge.Units = Einheit hinter dem Werttext (z. B. „%" oder „km/h").
+TPPGCustomGauge.Value = Angezeigter Wert, geklemmt auf Min..Max. Ein neuer Wert gleitet animiert dorthin, der Text zählt mit. Setzen im Code löst kein OnChange aus.
+> `Gauge.Value := Auslastung;`
+TPPGCustomGauge.ValueColor = Feste Farbe des Wertbogens; clDefault = Akzentfarbe bzw. Farbe des Abschnitts (ValueColorFromRange).
+TPPGCustomGauge.ValueColorFromRange = True: Der Wertbogen nimmt die Farbe des Abschnitts (Ranges) an, in dem der Wert liegt. Gilt nur, solange ValueColor = clDefault.
+TPPGCustomGauge.ValueFormat = FormatFloat-Maske des Werttexts (Vorgabe "0").
+> `Gauge.ValueFormat := '0.0';`
+TPPGCustomGauge.ValueStyle = Werttext: TextColor und Schrift. Ohne eigene Schrift wird fett und passend zur Bogengröße gezeichnet.
+
+# --- TPPGCustomKpiTile (TPPGKpiTile) ---
+TPPGCustomKpiTile.Change = Veränderung zum Vergleichszeitraum als Anteil (0,052 = +5,2 % mit der Vorgabe-Maske). Positiv zeigt einen grünen Pfeil nach oben, negativ einen roten nach unten (umgekehrt mit InvertTrend).
+> `Kpi.Change := (Umsatz - UmsatzVorjahr) / UmsatzVorjahr;`
+TPPGCustomKpiTile.ChangeFormat = FormatFloat-Maske der Veränderung mit Abschnitten für positiv;negativ;null (Vorgabe "+0.0%;-0.0%;0.0%"; % multipliziert mit 100).
+TPPGCustomKpiTile.InvertTrend = True: Sinkende Werte gelten als gut (grün), steigende als schlecht – z. B. für Fehlerquote oder Kosten.
+TPPGCustomKpiTile.ShowChange = True: Die Veränderungszeile mit Trendpfeil zeigen.
+TPPGCustomKpiTile.ShowSparkline = True: Den kleinen Verlauf (SparklineText) unten in der Kachel zeigen.
+TPPGCustomKpiTile.SparklineKind = Art des eingebetteten Verlaufs (Linie, Fläche, Säulen, Gewinn/Verlust); Vorgabe Fläche.
+TPPGCustomKpiTile.SparklineText = Werte des eingebetteten Verlaufs als Text, getrennt durch Semikolon, Punkt als Dezimaltrenner; im Code auch über SetSparkline.
+> `Kpi.SparklineText := '12;15;14;18;21';`
+TPPGCustomKpiTile.Title = Überschrift der Kachel (z. B. „Umsatz Oktober").
+TPPGCustomKpiTile.TitleStyle = Titel: TextColor und Schrift.
+TPPGCustomKpiTile.Units = Einheit hinter dem Wert (z. B. „€" oder „Stk.").
+TPPGCustomKpiTile.Value = Die Kennzahl; angezeigt mit ValueFormat und Units, sofern ValueText leer ist.
+> `Kpi.Value := 128450; Kpi.Units := '€';`
+TPPGCustomKpiTile.ValueFormat = FormatFloat-Maske des Werts (Vorgabe "#,##0").
+TPPGCustomKpiTile.ValueStyle = Wert: TextColor und Schrift. Ohne eigene Schrift wird fett und passend zur Kachelgröße gezeichnet.
+TPPGCustomKpiTile.ValueText = Freier Text statt Value, z. B. „n/a" oder „3:45 h"; leer = Value formatiert anzeigen.
+
+# --- TPPGCustomSparkline (TPPGSparkline) ---
+TPPGCustomSparkline.Kind = Darstellung: Linie, Fläche, Säulen oder Gewinn/Verlust (gleich hohe Balken nach oben bzw. unten je nach Vorzeichen).
+TPPGCustomSparkline.LineColor = Farbe von Linie, Fläche bzw. positiven Säulen; clDefault = Akzentfarbe des Presets.
+TPPGCustomSparkline.LineWidth = Strichstärke der Linie in logischen Pixeln (1..20).
+TPPGCustomSparkline.Markers = Hervorgehobene Punkte: Minimum, Maximum, erster und letzter Wert (Vorgabe: nur der letzte).
+> `Spark.Markers := [smMin, smMax, smLast];`
+TPPGCustomSparkline.MaxCount = Höchstzahl der Werte (0 = unbegrenzt). Mit AddValue entsteht so ein Lauffenster: neue Werte schieben die ältesten hinaus.
+> `Spark.MaxCount := 60; Spark.AddValue(CpuLast);` z. B. im Timer.
+TPPGCustomSparkline.NegativeColor = Farbe negativer Säulen bzw. Verlust-Balken; clDefault = Signalfarbe „Fehler".
+TPPGCustomSparkline.RangeMax = Feste Obergrenze der Skala; wirkt nur mit UseRange = True.
+TPPGCustomSparkline.RangeMin = Feste Untergrenze der Skala; wirkt nur mit UseRange = True.
+TPPGCustomSparkline.ReferenceValue = Wert der Referenzlinie (z. B. Ziel oder Durchschnitt); sichtbar mit ShowReference.
+TPPGCustomSparkline.ShowReference = True: Eine waagerechte Referenzlinie bei ReferenceValue zeichnen.
+TPPGCustomSparkline.UseRange = True: Fester Wertebereich RangeMin..RangeMax statt aus den Daten; so bleiben mehrere Sparklines vergleichbar.
+TPPGCustomSparkline.ValuesText = Werte als Text für das DFM, getrennt durch Semikolon, Punkt als Dezimaltrenner ("3;5;2.5"); im Code bequemer mit SetValues oder AddValue.
+
+# --- TPPGGaugeRange (Collection Ranges) ---
+TPPGGaugeRange.CustomColor = Eigene Farbe des Abschnitts; wirkt nur mit RangeColor = grcCustom.
+TPPGGaugeRange.EndValue = Ende des Abschnitts als Skalenwert.
+TPPGGaugeRange.RangeColor = Farbe des Abschnitts aus den Tokens: Erfolg (grün), Warnung (gelb), Gefahr (rot), Akzent, neutral, oder eigene Farbe (CustomColor). Die Token-Farben passen sich Preset und Dark Mode an.
+TPPGGaugeRange.StartValue = Beginn des Abschnitts als Skalenwert.

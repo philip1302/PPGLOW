@@ -55,11 +55,52 @@ Aufruf nur im Haupt-Thread (EPPGError statt Haenger).
 
 ## PPGlow-Eigenschaften
 
-`Buttons`, `Caption`, `CommonButtons`, `CustomFooterIcon`, `CustomMainIcon`, `DefaultButton`, `ExpandButtonCaption`, `ExpandedText`, `Flags`, `FooterIcon`, `FooterText`, `HelpContext`, `MainIcon`, `ProgressBar`, `RadioButtons`, `Text`, `Title`, `VerificationText`, `Preset`, `StyleManager`, `AllowMarkup`, `ContentControl`
+Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Preset` | `string` |  | Optik-Vorlage des Dialogs ('' = Standard bzw. StyleManager). |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben des Dialogs. |
+| `AllowMarkup` | `Boolean` | `False` | True: Text, Fußzeile und Zusatztexte dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). |
+| `ContentControl` | `TControl` |  | Eigenes Control, das im Dialog unter dem Text eingebettet wird (z. B. ein Panel mit Eingabefeldern). Es wird für die Dauer des Dialogs umgehängt. Nutzung: `PPGTaskDialog1.ContentControl := pnlOptionen;` |
+
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Buttons` |  |  | Eigene Schaltflächen (Collection). Jede hat Caption, ModalResult, Default und bei Flag tfUseCommandLinks einen Hinweistext (CommandLinkHint). Nutzung: Im Designer per Doppelklick; im Code `with PPGTaskDialog1.Buttons.Add do begin Caption := 'Speichern'; ModalResult := mrYes; end;` |
+| `Caption` | `TCaption` |  | Fenstertitel des Dialogs. |
+| `CommonButtons` |  |  | Standardschaltflächen (tcbOk, tcbYes, tcbNo, tcbCancel, tcbRetry, tcbClose) zusätzlich zu Buttons. Nutzung: `PPGTaskDialog1.CommonButtons := [tcbYes, tcbNo];` |
+| `CustomFooterIcon` |  |  | Eigenes Symbol in der Fußzeile (statt FooterIcon); braucht Flag tfUseHiconFooter. |
+| `CustomMainIcon` |  |  | Eigenes Hauptsymbol (statt MainIcon); braucht Flag tfUseHiconMain. |
+| `DefaultButton` |  |  | Standardschaltfläche aus CommonButtons (Enter löst sie aus). |
+| `ExpandButtonCaption` |  |  | Beschriftung des Aufklappers für ExpandedText. |
+| `ExpandedText` |  |  | Zusatztext, der erst nach Klick auf den Aufklapper erscheint (Details). |
+| `Flags` |  |  | Verhalten: tfUseCommandLinks (Buttons als große Befehlslinks), tfAllowDialogCancellation (Esc schließt), tfShowProgressBar, tfShowMarqueeProgressBar, tfExpandedByDefault, tfVerificationFlagChecked, tfPositionRelativeToWindow u. a. |
+| `FooterIcon` |  |  | Symbol der Fußzeile (tdiNone, tdiWarning, tdiError, tdiInformation, tdiShield). |
+| `FooterText` |  |  | Text in der Fußzeile, z. B. ein Hinweis oder Link. |
+| `HelpContext` | `THelpContext` |  | Hilfe-Kontext für F1 im Dialog. |
+| `MainIcon` |  |  | Hauptsymbol links neben dem Titel (tdiNone, tdiWarning, tdiError, tdiInformation, tdiShield). |
+| `ProgressBar` |  |  | Fortschrittsbalken im Dialog (Position, Min, Max, State); sichtbar mit Flag tfShowProgressBar. |
+| `RadioButtons` |  |  | Optionsfelder im Dialog (Collection); die Wahl steht danach in RadioButton. |
+| `Text` |  |  | Haupttext unter dem Titel. |
+| `Title` |  |  | Fett hervorgehobene Hauptanweisung (Überschrift im Dialog). Nutzung: `PPGTaskDialog1.Title := 'Änderungen speichern?';` |
+| `VerificationText` |  |  | Text eines Kontrollkästchens unten links, z. B. „Nicht mehr anzeigen"; Zustand über Flag tfVerificationFlagChecked. |
 
 ## Ereignisse
 
-`OnButtonClicked`, `OnDialogConstructed`, `OnDialogCreated`, `OnDialogDestroyed`, `OnExpanded`, `OnHyperlinkClicked`, `OnNavigated`, `OnRadioButtonClicked`, `OnTimer`, `OnVerificationClicked`
+| Ereignis | Typ und Parameter | Wann und wozu |
+|---|---|---|
+| `OnButtonClicked` | `TTaskDlgClickEvent` `(Sender: TObject; ModalResult: TModalResult; var CanClose: Boolean)` | Eine Schaltfläche wurde geklickt; CanClose := False hält den Dialog offen. |
+| `OnDialogConstructed` | `TNotifyEvent` `(Sender: TObject)` | Der Dialog ist aufgebaut, aber noch nicht sichtbar. |
+| `OnDialogCreated` | `TNotifyEvent` `(Sender: TObject)` | Der Dialog ist erzeugt und sichtbar. |
+| `OnDialogDestroyed` | `TNotifyEvent` `(Sender: TObject)` | Der Dialog wurde geschlossen und zerstört. |
+| `OnExpanded` | `TNotifyEvent` `(Sender: TObject)` | Der Aufklapper für ExpandedText wurde umgeschaltet. |
+| `OnHyperlinkClicked` | `TNotifyEvent` `(Sender: TObject)` | Ein Link (<a href="...">) in Text oder FooterText wurde geklickt (braucht Flag tfEnableHyperlinks); die Adresse steht in URL. |
+| `OnNavigated` | `TNotifyEvent` `(Sender: TObject)` | Navigation zu einer neuen Seite im Dialog. |
+| `OnRadioButtonClicked` | `TNotifyEvent` `(Sender: TObject)` | Ein Optionsfeld wurde gewählt. |
+| `OnTimer` | `TTaskDlgTimerEvent` `(Sender: TObject; TickCount: Cardinal; var Reset: Boolean)` | Wird etwa alle 200 ms aufgerufen (braucht Flag tfCallbackTimer), z. B. um ProgressBar fortzuschreiben. |
+| `OnVerificationClicked` | `TNotifyEvent` `(Sender: TObject)` | Das Kontrollkästchen (VerificationText) wurde umgeschaltet. |
 
 ---
-Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTaskDialog.md`.
+Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTaskDialog.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

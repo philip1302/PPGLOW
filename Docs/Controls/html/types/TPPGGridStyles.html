@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGridStyles</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGGridStyles</h1>
+<p>Typ in Unit <code>PPG.Grid.Styles</code> - Basis <code>TPPGStyleGroup</code></p>
+<p>Bereiche des Grids (Anpassbarkeit). Nur gesetzte Werte ueberschreiben die vom Preset berechneten Farben (clDefault = Preset).</p>
+<p>Zehn Bereiche des Grids einzeln gestalten: Kopf, Fu&#223;zeile, Auswahl, Auswahl ohne Fokus, Zebra-Zeile, Hover-Zeile, Gitterlinien, fokussierte Zelle, Gruppenzeile und Filterzeile. Nicht gesetzte Werte kommen aus dem Preset.</p>
+<p>Nutzung: <code>PPGGrid1.Styles.Header.Color := clNavy; PPGGrid1.Styles.AlternateRow.Color := $00FAF5EE;</code></p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Header</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Kopfzeilen, feste Spalten und B&#228;nder: Color = Fl&#228;che, TextColor = Text, BorderColor = Linien im Kopf, Font/FontStyle = Schrift. Nutzung: <code>Grid1.Styles.Header.Color := clNavy; Grid1.Styles.Header.TextColor := clWhite;</code></td></tr>
+<tr><td><code>Footer</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Summenzeile (ShowFooter) und Gruppenfu&#223;; ohne eigene Werte wie Header.</td></tr>
+<tr><td><code>Selection</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Auswahl, solange das Grid den Fokus hat. Mit gesetzter Color wird sie deckend statt halbtransparent gezeichnet.</td></tr>
+<tr><td><code>SelectionInactive</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Auswahl, wenn das Grid den Fokus nicht hat.</td></tr>
+<tr><td><code>AlternateRow</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Zebra: jede zweite Datenzeile. Erst Color setzen schaltet es ein.</td></tr>
+<tr><td><code>HotRow</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Zeile unter der Maus. Erst Color setzen schaltet die Hervorhebung ein.</td></tr>
+<tr><td><code>GridLine</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Gitterlinien: Color = Linienfarbe (Breite &#252;ber GridLineWidth).</td></tr>
+<tr><td><code>FocusedCell</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Die Zelle mit Tastaturfokus: BorderColor = Rahmen, Color = Fl&#228;che, TextColor = Text.</td></tr>
+<tr><td><code>GroupRow</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Gruppenkopf-Zeilen beim Gruppieren.</td></tr>
+<tr><td><code>FilterRow</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Die Filterzeile unter dem Kopf (ShowFilterRow).</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="../TPPGDBGrid.html">TPPGDBGrid</a>, <a href="../TPPGGrid.html">TPPGGrid</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

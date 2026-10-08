@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGGaugeRange</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGGaugeRange</h1>
+<p>Typ in Unit <code>PPG.Gauge</code> - Basis <code>TCollectionItem</code></p>
+<p>Ein farbiger Bereich auf dem Bogen: Anfangs- und Endwert, Signalfarbe (RangeColor) oder eigene Farbe (CustomColor).</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>StartValue</code></td><td><code>Double</code></td><td></td><td>Beginn des Abschnitts als Skalenwert.</td></tr>
+<tr><td><code>EndValue</code></td><td><code>Double</code></td><td></td><td>Ende des Abschnitts als Skalenwert.</td></tr>
+<tr><td><code>RangeColor</code></td><td><code>TPPGGaugeRangeColor</code></td><td><code>grcSuccess</code></td><td>Farbe des Abschnitts aus den Tokens: Erfolg (gr&#252;n), Warnung (gelb), Gefahr (rot), Akzent, neutral, oder eigene Farbe (CustomColor). Die Token-Farben passen sich Preset und Dark Mode an. Werte: <code>grcSuccess</code>, <code>grcWarning</code>, <code>grcDanger</code>, <code>grcAccent</code>, <code>grcNeutral</code>, <code>grcCustom</code>.</td></tr>
+<tr><td><code>CustomColor</code></td><td><code>TColor</code></td><td><code>clNone</code></td><td>Eigene Farbe des Abschnitts; wirkt nur mit RangeColor = grcCustom.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGGaugeRanges.html">TPPGGaugeRanges</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>
