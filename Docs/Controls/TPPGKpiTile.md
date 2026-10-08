@@ -39,11 +39,11 @@ TPPGKpiTile - Kennzahl-Kachel:
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Title`, `Value`, `ValueText`, `ValueFormat`, `Units`, `Change`, `ChangeFormat`, `ShowChange`, `InvertTrend`, `SparklineKind`, `ShowSparkline`, `SparklineText`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Title`, `TitleStyle`, `Value`, `ValueText`, `ValueStyle`, `ValueFormat`, `Units`, `Change`, `ChangeFormat`, `ShowChange`, `InvertTrend`, `SparklineKind`, `ShowSparkline`, `SparklineText`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnClick`, `OnEnter`, `OnExit`
+`OnGesture`, `OnClick`, `OnEnter`, `OnExit`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKpiTile.md`.

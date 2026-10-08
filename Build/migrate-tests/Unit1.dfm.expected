@@ -44,12 +44,28 @@ object Form1: TForm1
     Left = 8
     Top = 160
     DataSource = DataSource1
+    FixedColor = clSkyBlue
+    TitleFont.Name = 'Segoe UI'
     OnTitleClick = Grid1TitleClick
     Columns = <
       item
         FieldName = 'Name'
         Title = 'Kunde'
+        TitleStyle.ParentFont = False
+        TitleStyle.Font.Style = [fsBold]
         Width = 120
+        Visible = True
+      end
+      item
+        Style.Color = clInfoBk
+        FieldName = 'Ort'
+        Style.ParentFont = False
+        Style.Font.Color = clNavy
+        Style.Font.Name = 'Arial'
+        TitleAlignment = gtaCenter
+        Title = 'Ort'
+        TitleStyle.Color = clYellow
+        Visible = False
       end>
   end
   object Memo1: TPPGMemo

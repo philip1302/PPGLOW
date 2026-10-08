@@ -31,11 +31,11 @@ TPPGLinkLabel - Fenster-Control mit Fokus fuer Text mit Links (wie TLinkLabel):
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Alignment`, `Anchors`, `AutoSize`, `BiDiMode`, `Caption`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `EllipsisPosition`, `Enabled`, `FocusControl`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowAccelChar`, `ShowHint`, `StyleElements`, `Transparent`, `Layout`, `Visible`, `WordWrap`
+`Align`, `Alignment`, `Anchors`, `AutoSize`, `BiDiMode`, `Caption`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `EllipsisPosition`, `Enabled`, `FocusControl`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowAccelChar`, `ShowHint`, `StyleElements`, `Transparent`, `Layout`, `Visible`, `Touch`, `WordWrap`
 
 ## Ereignisse
 
-`OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnMouseActivate`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnMouseEnter`, `OnMouseLeave`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnMouseActivate`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnMouseEnter`, `OnMouseLeave`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGLabel.md`.

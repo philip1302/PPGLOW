@@ -10,6 +10,12 @@
 <li><code>StyleForms</code> f&#228;rbt Formulare mit den neutralen Windows-11-Farben (nur zur Laufzeit).</li>
 <li>Verb „Apply preset to form...“ setzt das Preset aller Controls des Formulars.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>AccentColor</code>: Markenfarbe f&#252;r alle Presets (Fokus, Auswahl, Fortschritt, Schalter, Links); der Kontrast wird gepr&#252;ft.</li>
+<li><code>ThemeColors.Light</code>/<code>ThemeColors.Dark</code>: einzelne Tokens &#252;berschreiben (Fl&#228;chen, Text, Rand, Signalfarben). <code>ChartPalette</code>: eigene Serienfarben (eine Farbe je Zeile).</li>
+<li><code>SaveToFile</code>/<code>LoadFromFile</code> (INI <code>[PPGlowTheme]</code>): Firmen-Design weitergeben. Eine fehlerhafte Datei l&#228;sst den Manager unver&#228;ndert.</li>
+</ul>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster).</p>
 <p>Lebenszyklus-Regeln:</p>
@@ -18,8 +24,14 @@
 <li>FreeNotification in beide Richtungen: wird ein Client oder der Manager freigegeben, raeumt Notification(opRemove) die Referenzen auf.</li>
 <li>Benachrichtigt wird ueber ein kurzlebiges IPPGStyleClient (Supports), dadurch kennt diese Unit keine Control-Klassen (keine Zyklen).</li>
 </ul>
+<p>Marke / Firmen-Design (AccentColor, ThemeColors, ChartPalette):</p>
+<ul>
+<li>Die Werte gelten anwendungsweit fuer ALLE PPGlow-Controls (wie ThemeMode, ueber TPPGTokenOverrides). Mehrere Manager: der zuletzt geaenderte bzw. geladene Manager mit eigenen Werten gilt.</li>
+<li>Aendert sich AccentColor oder ThemeColors.Light (nicht beim Laden), werden die Farben der eigenen Appearance aus den Tokens neu abgeleitet (ApplyThemeColors); die Formen (Rundung, Glow ...) bleiben.</li>
+<li>SaveToFile/LoadFromFile: Theme-Datei (INI) mit allen Einstellungen.</li>
+</ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>Appearance</code>, <code>Animation</code>, <code>ThemeMode</code>, <code>StyleForms</code></p>
+<p><code>Preset</code>, <code>Appearance</code>, <code>Animation</code>, <code>ThemeMode</code>, <code>StyleForms</code>, <code>AccentColor</code>, <code>ThemeColors</code>, <code>ChartPalette</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGStyleManager.md</code>.</p>
 </body></html>

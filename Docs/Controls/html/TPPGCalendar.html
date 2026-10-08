@@ -9,6 +9,10 @@
 <li>Monat/Jahr/Dekade mit Zoom-Animation, Wochennummern nach ISO 8601, erster Wochentag aus <code>FormatSettings</code>.</li>
 <li><code>Date</code> im Code l&#246;st kein Ereignis aus.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>CalendarStyles</code> (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate …) und <code>OnCustomDrawDay</code> (z. B. Feiertage fett).</li>
+</ul>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>TPPGCalendar - Monatskalender mit Jahres- und Dekadenansicht (Phase 7b).</p>
 <ul>
@@ -21,9 +25,9 @@
 <li>Link (Phase 14a): ein verbundener Planer (IPPGCalendarLink) markiert Tage mit Terminen fett und erfaehrt die Auswahl des Anwenders.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>View</code>, <code>Date</code>, <code>SelectionMode</code>, <code>MinDate</code>, <code>MaxDate</code>, <code>ShowWeekNumbers</code>, <code>ShowToday</code>, <code>FirstDayOfWeek</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>View</code>, <code>Date</code>, <code>SelectionMode</code>, <code>MinDate</code>, <code>MaxDate</code>, <code>ShowWeekNumbers</code>, <code>ShowToday</code>, <code>FirstDayOfWeek</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code>, <code>CalendarStyles</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnChange</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnIsDateDisabled</code>, <code>OnViewChange</code></p>
+<p><code>OnGesture</code>, <code>OnChange</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnIsDateDisabled</code>, <code>OnCustomDrawDay</code>, <code>OnViewChange</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGCalendar.md</code>.</p>
 </body></html>

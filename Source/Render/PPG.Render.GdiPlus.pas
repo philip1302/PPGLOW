@@ -22,8 +22,9 @@ uses
   PPG.Types, PPG.Render.Intf;
 
 type
-  TPPGGdiPlusCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas)
+  TPPGGdiPlusCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas, IPPGCornerCanvas)
   private
+    FSquare: TPPGCorners;
     FDC: HDC;
     FGraphics: TGPGraphics;
     FClipStates: array of GraphicsState;
@@ -56,6 +57,9 @@ type
     procedure DrawFocusRect(const R: TRect);
     function BeginGdi: HDC;
     procedure EndGdi(DC: HDC);
+    { IPPGCornerCanvas }
+    function GetSquareCorners: TPPGCorners;
+    procedure SetSquareCorners(Corners: TPPGCorners);
     { IPPGShapeCanvas }
     procedure FillPolygon(const Points: array of TPoint; Color: TColor; Alpha: Byte);
     procedure DrawDashedPolyline(const Points: array of TPoint; Width, Dash, Gap: Integer;
@@ -197,6 +201,16 @@ begin
   Result := True;
 end;
 
+function TPPGGdiPlusCanvas.GetSquareCorners: TPPGCorners;
+begin
+  Result := FSquare;
+end;
+
+procedure TPPGGdiPlusCanvas.SetSquareCorners(Corners: TPPGCorners);
+begin
+  FSquare := Corners;
+end;
+
 function TPPGGdiPlusCanvas.NewRoundRectPath(X, Y, W, H, Radius: Single): TGPGraphicsPath;
 var
   D: Single;
@@ -217,10 +231,23 @@ begin
       Result.AddRectangle(MakeRect(X, Y, W, H))
     else
     begin
-      Result.AddArc(X, Y, D, D, 180, 90);
-      Result.AddArc(X + W - D, Y, D, D, 270, 90);
-      Result.AddArc(X + W - D, Y + H - D, D, D, 0, 90);
-      Result.AddArc(X, Y + H - D, D, D, 90, 90);
+      // Eckige Ecken (IPPGCornerCanvas): Punkt statt Bogen
+      if pcTopLeft in FSquare then
+        Result.AddLine(X, Y, X, Y)
+      else
+        Result.AddArc(X, Y, D, D, 180, 90);
+      if pcTopRight in FSquare then
+        Result.AddLine(X + W, Y, X + W, Y)
+      else
+        Result.AddArc(X + W - D, Y, D, D, 270, 90);
+      if pcBottomRight in FSquare then
+        Result.AddLine(X + W, Y + H, X + W, Y + H)
+      else
+        Result.AddArc(X + W - D, Y + H - D, D, D, 0, 90);
+      if pcBottomLeft in FSquare then
+        Result.AddLine(X, Y + H, X, Y + H)
+      else
+        Result.AddArc(X, Y + H - D, D, D, 90, 90);
       Result.CloseFigure;
     end;
   except

@@ -299,6 +299,9 @@ begin
     P.SlotMinutes := Acc(FPlanner).SlotMinutes;
     P.BiDiMode := Acc(FPlanner).BiDiMode;
     P.OnGetAppointmentColor := Acc(FPlanner).OnGetAppointmentColor;
+    P.Categories := Acc(FPlanner).Categories;
+    P.PlannerStyles := Acc(FPlanner).PlannerStyles;
+    P.OnCustomDrawAppointment := Acc(FPlanner).OnCustomDrawAppointment;
     P.ShowNowLine := False;
     P.HighContrastSupport := False;
     P.ScrollBarMode := sbmNever;

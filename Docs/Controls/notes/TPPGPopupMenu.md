@@ -10,6 +10,10 @@
 - Felder der Suite (Edit, Memo, ComboBox, …) zeigen ohne eigenes `PopupMenu` ein übersetztes Bearbeiten-Menü in diesem Stil. `UseSystemContextMenu = True` stellt das Windows-Menü wieder her.
 - Screenreader: Ereignisse `EVENT_SYSTEM_MENUPOPUPSTART/END`, Einträge als Kinder mit Rolle Menüeintrag.
 
+## Anpassung
+
+- `MenuStyles` (Menü, Hover, Trennlinie, Tastenkürzel) und `OnCustomDrawItem`.
+
 ## Beispiel
 
 ```pascal

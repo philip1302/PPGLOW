@@ -136,6 +136,8 @@ type
     property SyncRecord;
     property OnGetRange;
     property Resources;
+    property Categories;
+    property PlannerStyles;
     property View;
     property Date;
     property DayCount;
@@ -177,6 +179,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnAppointmentChanging;
     property OnAppointmentChanged;
     property OnAppointmentCreated;
@@ -184,6 +188,7 @@ type
     property OnDeleting;
     property OnCreateAppointment;
     property OnGetAppointmentColor;
+    property OnCustomDrawAppointment;
     property OnSelectionChange;
     property OnRangeChange;
     property OnScroll;

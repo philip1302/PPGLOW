@@ -40,6 +40,9 @@ type
     FLeaveOnKeyUp: Boolean;      // Alt/F10 im Tastaturmodus: beim Loslassen verlassen
     FSwitching: Boolean;         // OpenItem wechselt das Untermenue (kein "geschlossen")
     FHooked: Boolean;
+    FMenuStyles: TPPGMenuStyles;
+    FOnCustomDrawItem: TPPGMenuCustomDrawEvent;
+    procedure SetMenuStyles(const Value: TPPGMenuStyles);
     procedure SetMenu(const Value: TMainMenu);
     procedure Hook(var Msg: TMsg; var Handled: Boolean);
     procedure AppDeactivate(Sender: TObject);
@@ -83,6 +86,10 @@ type
     function AccRole: Integer; override;
     function AccName: string; override;
     property Menu: TMainMenu read FMenu write SetMenu;
+    /// Bereiche der Untermenues (Flaeche, Hover, Trennlinien, Kuerzel).
+    property MenuStyles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
+    /// Vor dem Zeichnen jedes Eintrags der Untermenues.
+    property OnCustomDrawItem: TPPGMenuCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -109,6 +116,8 @@ type
   TPPGMenuBar = class(TPPGCustomMenuBar)
   published
     property Menu;
+    property MenuStyles;
+    property OnCustomDrawItem;
     property Preset;
     property StyleManager;
     property Appearance;
@@ -124,6 +133,8 @@ type
     property ParentBiDiMode;
     property ParentFont;
     property Visible;
+    property Touch;
+    property OnGesture;
   end;
 
 implementation
@@ -152,6 +163,12 @@ begin
   AutoSize := True;
   FLoop := TPPGMenuLoop.Create;
   FLoop.Bar := Self;
+  FMenuStyles := TPPGMenuStyles.Create(Self);
+end;
+
+procedure TPPGCustomMenuBar.SetMenuStyles(const Value: TPPGMenuStyles);
+begin
+  FMenuStyles.Assign(Value);
 end;
 
 destructor TPPGCustomMenuBar.Destroy;
@@ -170,6 +187,7 @@ begin
   FreeAndNil(FLoop);
   RestoreFormMenu;
   inherited Destroy;
+  FreeAndNil(FMenuStyles);
 end;
 
 function TPPGCustomMenuBar.OwnForm: TCustomForm;
@@ -398,6 +416,9 @@ begin
   R := Rect(P.X, P.Y, P.X + R.Right - R.Left, P.Y + R.Bottom - R.Top);
   FLoop.StyleSource := Self;
   FLoop.BiDiMode := BiDiMode;
+  FLoop.MenuStyles := FMenuStyles;
+  FLoop.OnCustomDrawItem := FOnCustomDrawItem;
+  FLoop.DrawSender := Self;
   FLoop.ShowAccelerators := SelectFirst or FKeyboardMode;
   FSwitching := True;
   try

@@ -113,6 +113,8 @@ type
     property TabStop;
     property Text;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnCloseUp;
     property OnContextPopup;

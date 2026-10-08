@@ -16,6 +16,11 @@
 - Drucken über `TPPGPlannerPrinter`, iCalendar über `PPGSaveICal`/`PPGLoadICal` (Unit `PPG.Planner.ICal`).
 - Screenreader: Tabelle, Kinder sind die sichtbaren Termine („Betreff, Beginn bis Ende, Ort“). RTL gespiegelt.
 
+## Anpassung
+
+- `Categories` (Name, Farbe; `Category` des Termins ist der Index), `PlannerStyles` und `OnCustomDrawAppointment`.
+- `SaveLayout`/`LoadLayout`: Ansicht, Tage, Raster und Gruppierung.
+
 ## Beispiel
 
 ```pascal

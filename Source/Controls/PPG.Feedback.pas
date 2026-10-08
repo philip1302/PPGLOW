@@ -22,7 +22,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics,
-  PPG.Types, PPG.Animation, PPG.Tokens, PPG.Render.Intf, PPG.Markup, PPG.Controls.Base;
+  PPG.Types, PPG.Animation, PPG.Tokens, PPG.Render.Intf, PPG.Markup, PPG.Controls.Base, PPG.ElementStyle;
 
 type
   TPPGSeverity = (psInformational, psSuccess, psWarning, psError);
@@ -79,6 +79,8 @@ type
     property ParentShowHint;
     property ShowHint;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnMouseDown;
     property OnMouseUp;
@@ -137,6 +139,8 @@ type
     property ParentShowHint;
     property ShowHint;
     property Visible;
+    property Touch;
+    property OnGesture;
   end;
 
   TPPGInfoBarPart = (ipNone, ipAction, ipClose);
@@ -144,6 +148,7 @@ type
 
   TPPGCustomInfoBar = class(TPPGCustomControl)
   private
+    FBarStyle: TPPGElementStyle;
     FSeverity: TPPGSeverity;
     FTitle: string;
     FMessage: string;
@@ -159,6 +164,8 @@ type
     FOnActionClick: TNotifyEvent;
     FOnClosing: TPPGInfoBarClosingEvent;
     FOnClose: TNotifyEvent;
+    procedure SetBarStyle(const Value: TPPGElementStyle);
+    procedure BarStyleChanged(Sender: TObject);
     procedure SetSeverity(const Value: TPPGSeverity);
     procedure SetTitle(const Value: string);
     procedure SetMessage(const Value: string);
@@ -204,6 +211,8 @@ type
     property OnActionClick: TNotifyEvent read FOnActionClick write FOnActionClick;
     property OnClosing: TPPGInfoBarClosingEvent read FOnClosing write FOnClosing;
     property OnClose: TNotifyEvent read FOnClose write FOnClose;
+    /// Leiste: Flaeche, Rand, Text und Schrift (sonst aus der Signalfarbe getoent).
+    property BarStyle: TPPGElementStyle read FBarStyle write SetBarStyle;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -227,6 +236,7 @@ type
     property Message;
     property IsOpen;
     property IsClosable;
+    property BarStyle;
     property ActionCaption;
     property Align;
     property Anchors;
@@ -246,6 +256,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnActionClick;
     property OnClose;
     property OnClosing;
@@ -677,9 +689,23 @@ const
   IconSize = 16;
   CloseSize = 32;
 
+procedure TPPGCustomInfoBar.SetBarStyle(const Value: TPPGElementStyle);
+begin
+  FBarStyle.Assign(Value);
+end;
+
+procedure TPPGCustomInfoBar.BarStyleChanged(Sender: TObject);
+begin
+  RequestAutoSize;
+  Realign;
+  Invalidate;
+end;
+
 constructor TPPGCustomInfoBar.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FBarStyle := TPPGElementStyle.Create(Self);
+  FBarStyle.OnChange := BarStyleChanged;
   ControlStyle := ControlStyle - [csSetCaption, csClickEvents];
   FIsOpen := True;
   FIsClosable := True;
@@ -702,6 +728,7 @@ begin
   FreeAndNil(FOpenAnim);
   FreeAndNil(FMarkup);
   inherited Destroy;
+  FreeAndNil(FBarStyle);
 end;
 
 function TPPGCustomInfoBar.IsHot: Boolean;
@@ -808,9 +835,15 @@ end;
 function TPPGCustomInfoBar.HeightForTextWidth(TextWidth: Integer): Integer;
 var
   PPI: Integer;
+  Temp: TFont;
 begin
   PPI := ScalePPI;
-  FMarkup.Layout(MarkupText, Font, nil, Max(TextWidth, 1), True);
+  Temp := nil;
+  try
+    FMarkup.Layout(MarkupText, PPGElementFont(FBarStyle, Font, [], Temp), nil, Max(TextWidth, 1), True);
+  finally
+    Temp.Free;
+  end;
   Result := FMarkup.Size.cy + 2 * PPGScale(BarPad, PPI);
   if Result < PPGScale(48, PPI) then
     Result := PPGScale(48, PPI);
@@ -868,6 +901,7 @@ end;
 
 procedure TPPGCustomInfoBar.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
+  Temp: TFont;
   IR, TR, AR, CR, Body, R: TRect;
   PPI, Rad: Integer;
   Sev, Fill, Border, Text: TColor;
@@ -899,6 +933,12 @@ begin
     Text := T.TextPrimary;
     if UseVclStyle then
       Text := PPGColorToRGB(A.Normal.TextColor);
+    if not UseVclStyle then
+    begin
+      Fill := FBarStyle.FillFor(UseDarkMode, Fill);
+      Border := FBarStyle.BorderFor(UseDarkMode, Border);
+      Text := FBarStyle.TextFor(UseDarkMode, Text);
+    end;
     if not Enabled then
       Text := T.TextDisabled;
   end;
@@ -933,7 +973,12 @@ begin
       ACanvas.DrawText(IR, 'i', Font, ContrastText(Sev), DT_CENTER or DT_VCENTER or DT_SINGLELINE);
   end;
   // Titel und Text
-  FMarkup.Layout(MarkupText, Font, nil, TR.Right - TR.Left, True);
+  Temp := nil;
+  try
+    FMarkup.Layout(MarkupText, PPGElementFont(FBarStyle, Font, [], Temp), nil, TR.Right - TR.Left, True);
+  finally
+    Temp.Free;
+  end;
   ACanvas.PushClipRoundRect(TR, 0);
   try
     if UseRightToLeftAlignment then

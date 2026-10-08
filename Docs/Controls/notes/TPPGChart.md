@@ -10,6 +10,10 @@
 - Der Tooltip ist Teil des Controls (kein eigenes Fenster) und erscheint deshalb auch in Screenshots. `SaveToBitmap`/`SaveToPng`/`CopyToClipboard` zeigen immer den Endzustand.
 - Screenreader: Kinder sind die Datenpunkte (höchstens 500 je Serie).
 
+## Anpassung
+
+- `ChartStyles` (Titel, Achse, Gitter, Legende), `TitleFont`, `LegendFont`; Serienfarben ohne eigene Farbe aus `TPPGStyleManager.ChartPalette`.
+
 ## Beispiel
 
 ```pascal

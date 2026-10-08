@@ -169,6 +169,7 @@
         <DCCReference Include="..\Source\Render\PPG.IconFont.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Controls.Scroll.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.ItemPainter.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.CustomDraw.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Controls.ItemList.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.ListBox.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.CheckListBox.pas"/>
@@ -189,6 +190,7 @@
         <DCCReference Include="..\Source\Controls\PPG.StatusBar.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Notifications.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Planner.Print.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Kanban.Print.pas"/>
         <DCCReference Include="..\Source\Core\PPG.KeyTips.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Ribbon.Layout.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Ribbon.Items.pas"/>
@@ -256,7 +258,9 @@
         <DCCReference Include="..\Source\Controls\PPG.Controls.Base.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Button.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Tokens.pas"/>
+        <DCCReference Include="..\Source\Core\PPG.ElementStyle.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.VclStyles.pas"/>
+        <DCCReference Include="..\Source\Theme\PPG.ThemeFile.pas"/>
         <DCCReference Include="..\Source\Access\PPG.Accessibility.pas"/>
         <DCCReference Include="..\Source\Access\PPG.UIA.Intf.pas"/>
         <DCCReference Include="..\Source\Access\PPG.UIA.pas"/>
@@ -334,6 +338,7 @@
         <DCCReference Include="PPG.Tests.Phase14cKanban.pas"/>
         <DCCReference Include="PPG.Tests.Phase14cDB.pas"/>
         <DCCReference Include="PPG.Tests.Review.pas"/>
+        <DCCReference Include="PPG.Tests.Custom.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

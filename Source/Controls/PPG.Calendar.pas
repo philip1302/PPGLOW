@@ -28,7 +28,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics,
-  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base;
+  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base, PPG.ElementStyle, PPG.CustomDraw;
 
 type
   TPPGCalendarView = (cvMonth, cvYear, cvDecade);
@@ -48,6 +48,35 @@ type
     /// Anwender hat einen Tag gewaehlt.
     procedure CalendarDateSelected(Sender: TObject; ADate: TDate);
   end;
+
+  /// Bereiche des Kalenders (nur gesetzte Werte zaehlen, clDefault = Preset).
+  TPPGCalendarStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Flaeche (Color), Text (TextColor), Rahmen (BorderColor).
+    property Background: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Titel (Monat/Jahr) und Pfeile: TextColor, Schrift.
+    property Header: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Wochentagsnamen: TextColor, Schrift.
+    property DayNames: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Heute: BorderColor = Ring, TextColor.
+    property Today: TPPGElementStyle index 3 read GetItem write SetItem;
+    /// Gewaehlte Tage: Color = Flaeche, TextColor.
+    property Selected: TPPGElementStyle index 4 read GetItem write SetItem;
+    /// Samstag und Sonntag: Color, TextColor, Schrift.
+    property Weekend: TPPGElementStyle index 5 read GetItem write SetItem;
+    /// Tage anderer Monate: TextColor.
+    property OtherMonth: TPPGElementStyle index 6 read GetItem write SetItem;
+    /// Wochennummern: TextColor, Schrift.
+    property WeekNumbers: TPPGElementStyle index 7 read GetItem write SetItem;
+  end;
+
+  /// Vor dem Zeichnen eines Tages (Monatsansicht): Style (z.B. Feiertag fett und
+  /// farbig) oder ganz selbst zeichnen (DefaultDraw = False).
+  TPPGCalendarDrawDayEvent = procedure(Sender: TObject; Canvas: TCanvas; ADate: TDate;
+    const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle;
+    var DefaultDraw: Boolean) of object;
 
   TPPGCustomCalendar = class(TPPGCustomControl, IPPGAccessibleChildren)
   private
@@ -72,12 +101,18 @@ type
     FTransAnim: TPPGAnimation;
     FTransKind: Integer; // 0 = keine, 1 = Zoom hinein, 2 = Zoom heraus, 3 = vor, 4 = zurueck
     FBoldFont: TFont;
+    FCalendarStyles: TPPGCalendarStyles;
+    FOnCustomDrawDay: TPPGCalendarDrawDayEvent;
+    FDrawCanvas: TCanvas;
+    FFonts: TPPGFontCache;
     FTodayOverride: TDate;
     FShowFocusAlways: Boolean;
     FLink: TComponent;
     FOnChange: TNotifyEvent;
     FOnIsDateDisabled: TPPGDateDisabledEvent;
     FOnViewChange: TNotifyEvent;
+    procedure SetCalendarStyles(const Value: TPPGCalendarStyles);
+    procedure CalendarStylesChanged(Sender: TObject);
     procedure SetView(const Value: TPPGCalendarView);
     procedure SetDate(const Value: TDate);
     procedure SetSelectionMode(const Value: TPPGDateSelectionMode);
@@ -145,6 +180,10 @@ type
     property FirstDayOfWeek: TPPGFirstDayOfWeek read FFirstDayOfWeek write SetFirstDayOfWeek default fdLocale;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnIsDateDisabled: TPPGDateDisabledEvent read FOnIsDateDisabled write FOnIsDateDisabled;
+    /// Bereiche (Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende ...).
+    property CalendarStyles: TPPGCalendarStyles read FCalendarStyles write SetCalendarStyles;
+    /// Vor dem Zeichnen jedes Tages (Monatsansicht).
+    property OnCustomDrawDay: TPPGCalendarDrawDayEvent read FOnCustomDrawDay write FOnCustomDrawDay;
     property OnViewChange: TNotifyEvent read FOnViewChange write FOnViewChange;
   public
     constructor Create(AOwner: TComponent); override;
@@ -216,10 +255,14 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnEnter;
     property OnExit;
     property OnIsDateDisabled;
+    property CalendarStyles;
+    property OnCustomDrawDay;
     property OnViewChange;
   end;
 
@@ -280,6 +323,10 @@ begin
   FHotCell := -1;
   FDownCell := -1;
   FBoldFont := TFont.Create;
+  FCalendarStyles := TPPGCalendarStyles.Create(Self);
+  FCalendarStyles.OnChange := CalendarStylesChanged;
+  FDrawCanvas := TCanvas.Create;
+  FFonts := TPPGFontCache.Create;
   DecodeDate(System.SysUtils.Date, Y, M, D);
   FDisplayYear := Y;
   FDisplayMonth := M;
@@ -300,6 +347,9 @@ begin
     FTransAnim.OnStep := nil;
   FreeAndNil(FTransAnim);
   FreeAndNil(FBoldFont);
+  FreeAndNil(FFonts);
+  FreeAndNil(FDrawCanvas);
+  FreeAndNil(FCalendarStyles);
   FreeAndNil(FSelected);
   inherited Destroy;
 end;
@@ -1208,6 +1258,23 @@ end;
 
 { ---- Zeichnen ---- }
 
+{ TPPGCalendarStyles }
+
+constructor TPPGCalendarStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 8);
+end;
+
+procedure TPPGCustomCalendar.SetCalendarStyles(const Value: TPPGCalendarStyles);
+begin
+  FCalendarStyles.Assign(Value);
+end;
+
+procedure TPPGCustomCalendar.CalendarStylesChanged(Sender: TObject);
+begin
+  Invalidate;
+end;
+
 procedure TPPGCustomCalendar.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   T: TPPGTokens;
@@ -1226,22 +1293,29 @@ var
   TxtR: array[0..63] of TRect;
   TxtS: array[0..63] of string;
   TxtC: array[0..63] of TColor;
-  TxtB: array[0..63] of Boolean;
+  TxtF: array[0..63] of TFont;
   NText, NHead: Integer;
   DC: HDC;
   LastColor: TColor;
-  LastBold: Boolean;
+  LastFont: TFont;
   Link: IPPGCalendarLink;
   Marked: Boolean;
+  CS: TPPGCalendarStyles;
+  UseColors, Dk, DrawIt, Weekend: Boolean;
+  DS: TPPGDrawStyle;
+  St: TPPGItemDrawState;
+  CellFill, SelFill, TodayRing: TColor;
+  TF, DayF: TFont;
+  Extra: TFontStyles;
 
-  procedure AddText(const AR: TRect; const AS_: string; AC: TColor; ABold: Boolean);
+  procedure AddText(const AR: TRect; const AS_: string; AC: TColor; AF: TFont);
   begin
     if NText > High(TxtR) then
       Exit;
     TxtR[NText] := AR;
     TxtS[NText] := AS_;
     TxtC[NText] := AC;
-    TxtB[NText] := ABold;
+    TxtF[NText] := AF;
     Inc(NText);
   end;
 
@@ -1280,11 +1354,32 @@ begin
       DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
     end;
   end;
+  // Element-Stile (CalendarStyles): Farben nur ohne Hochkontrast/VCL-Style
+  CS := FCalendarStyles;
+  UseColors := not HC and not UseVclStyle;
+  Dk := UseDarkMode;
+  FFonts.Clear;
+  if UseColors then
+  begin
+    Fill := CS.Background.FillFor(Dk, Fill);
+    TextCol := CS.Background.TextFor(Dk, TextCol);
+    Border := CS.Background.BorderFor(Dk, Border);
+  end;
+  SelFill := Accent;
+  TodayRing := Accent;
+  if UseColors then
+  begin
+    SelFill := CS.Selected.FillFor(Dk, Accent);
+    OnAccent := CS.Selected.TextFor(Dk, ContrastOn(SelFill));
+    TodayRing := CS.Today.BorderFor(Dk, Accent);
+  end;
   if not Enabled then
   begin
     TextCol := DisabledCol;
     Secondary := DisabledCol;
     Accent := PPGBlendColor(Accent, Fill, 0.5);
+    SelFill := PPGBlendColor(SelFill, Fill, 0.5);
+    TodayRing := PPGBlendColor(TodayRing, Fill, 0.5);
   end;
   HoverCol := TextCol;
   Body := ClientR;
@@ -1305,7 +1400,10 @@ begin
   if Enabled and (FHotPart = cpTitle) then
     ACanvas.FillRoundRect(R, PPGScale(4, PPI), HoverCol, 14);
   InflateRect(R, -PPGScale(8, PPI), 0);
-  ACanvas.DrawText(R, S, FBoldFont, TextCol,
+  C := TextCol;
+  if UseColors and Enabled then
+    C := CS.Header.TextFor(Dk, C);
+  ACanvas.DrawText(R, S, FFonts.ForStyle(CS.Header, FBoldFont), C,
     DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_END_ELLIPSIS));
   for I := 0 to 1 do
   begin
@@ -1329,7 +1427,7 @@ begin
       Pts[1] := Point((R.Left + R.Right) div 2 + Off div 2, (R.Top + R.Bottom) div 2);
       Pts[2] := Point((R.Left + R.Right) div 2 - Off div 2, (R.Top + R.Bottom) div 2 + Off);
     end;
-    ACanvas.DrawPolyline(Pts, Max(1, Round(1.5 * PPI / 96)), TextCol, 255);
+    ACanvas.DrawPolyline(Pts, Max(1, Round(1.5 * PPI / 96)), C, 255);
   end;
 
   G := GridArea(Self, WeekCol);
@@ -1343,7 +1441,10 @@ begin
       R := Rect(CR.Left, HeaderRect.Bottom, CR.Right, G.Top);
       D0 := (FirstDay - 1 + I) mod 7 + 1; // ISO
       S := Copy(FormatSettings.ShortDayNames[D0 mod 7 + 1], 1, 2);
-      AddText(R, S, Secondary, False);
+      C := Secondary;
+      if UseColors and Enabled then
+        C := CS.DayNames.TextFor(Dk, C);
+      AddText(R, S, C, FFonts.ForStyle(CS.DayNames, Font));
     end;
   end;
   NHead := NText;
@@ -1408,6 +1509,39 @@ begin
         InRange := (FSelectionMode = dsmRange) and (FRangeEnd <> 0) and Sel;
         Marked := (Link <> nil) and Link.CalendarDateMarked(Dt);
       end;
+      // Wochenende (Monatsansicht) und eigenes Zeichnen des Tages
+      Weekend := (FView = cvMonth) and (DayOfTheWeek(Dt) >= 6);
+      DS.Reset;
+      DrawIt := True;
+      if (FView = cvMonth) and Assigned(FOnCustomDrawDay) then
+      begin
+        St := [];
+        if Sel then
+          Include(St, idsSelected);
+        if Enabled and (I = FHotCell) then
+          Include(St, idsHot);
+        if Dis then
+          Include(St, idsDisabled);
+        if IsToday then
+          Include(St, idsToday);
+        if I = FocusCell then
+          Include(St, idsFocused);
+        DC := ACanvas.BeginGdi;
+        try
+          FDrawCanvas.Handle := DC;
+          try
+            FDrawCanvas.Font := Font;
+            FDrawCanvas.Brush.Style := bsClear;
+            FOnCustomDrawDay(Self, FDrawCanvas, Dt, CR, St, DS, DrawIt);
+          finally
+            FDrawCanvas.Handle := 0;
+          end;
+        finally
+          ACanvas.EndGdi(DC);
+        end;
+      end;
+      if not DrawIt then
+        Continue;
       Diam := Min(CR.Right - CR.Left, CR.Bottom - CR.Top) - PPGScale(4, PPI);
       if FView = cvMonth then
         R := Rect((CR.Left + CR.Right - Diam) div 2, (CR.Top + CR.Bottom - Diam) div 2,
@@ -1440,32 +1574,67 @@ begin
       // Endpunkte (bzw. einzelne Auswahl) voll in der Akzentfarbe
       if Sel and (not InRange or (Trunc(Dt) = Trunc(FRangeStart)) or (Trunc(Dt) = Trunc(FRangeEnd))) then
       begin
-        ACanvas.FillRoundRect(R, Rad, Accent, 255);
+        ACanvas.FillRoundRect(R, Rad, SelFill, 255);
         C := OnAccent;
       end
       else
       begin
+        // Eigene Flaeche: eigenes Zeichnen > Wochenende
+        CellFill := clNone;
+        if UseColors and Enabled then
+        begin
+          if Weekend and CS.Weekend.HasFill(Dk) then
+            CellFill := CS.Weekend.FillFor(Dk, clNone);
+          if DS.Fill <> clNone then
+            CellFill := PPGColorToRGB(DS.Fill);
+        end;
+        if CellFill <> clNone then
+          ACanvas.FillRoundRect(R, Rad, CellFill, 255);
         if Enabled and (I = FHotCell) and not Dis then
           ACanvas.FillRoundRect(R, Rad, HoverCol, 16);
         if Dis then
           C := DisabledCol
         else if Other then
-          C := Secondary
+        begin
+          C := Secondary;
+          if UseColors and Enabled then
+            C := CS.OtherMonth.TextFor(Dk, C);
+        end
         else
+        begin
           C := TextCol;
+          if UseColors and Enabled and Weekend then
+            C := CS.Weekend.TextFor(Dk, C);
+        end;
+        if UseColors and Enabled and not Dis and (DS.TextColor <> clNone) then
+          C := PPGColorToRGB(DS.TextColor);
       end;
+      // Schrift: fett fuer markierte Tage, dazu Wochenende und eigenes Zeichnen
+      Extra := DS.FontStyle;
+      if Marked then
+        Include(Extra, fsBold);
+      if Weekend then
+        DayF := FFonts.ForStyle(CS.Weekend, Font, Extra)
+      else
+        DayF := FFonts.Get(Font, Extra);
       if IsToday then
       begin
         if Sel then
           ACanvas.FrameRoundRect(Rect(R.Left + 2, R.Top + 2, R.Right - 2, R.Bottom - 2),
             Max(0, Rad - 2), Max(1, PPGScale(1, PPI)), OnAccent, 255)
         else
-          ACanvas.FrameRoundRect(R, Rad, Max(1, PPGScale(1, PPI)) + 1, Accent, 255);
+          ACanvas.FrameRoundRect(R, Rad, Max(1, PPGScale(1, PPI)) + 1, TodayRing, 255);
       end;
       if IsToday and not Sel then
-        AddText(CR, S, Accent, True)
+      begin
+        C := Accent;
+        if UseColors and Enabled then
+          C := CS.Today.TextFor(Dk, C);
+        TF := FFonts.ForStyle(CS.Today, FBoldFont, DS.FontStyle);
+        AddText(CR, S, C, TF);
+      end
       else
-        AddText(CR, S, C, Marked);
+        AddText(CR, S, C, DayF);
       if ((FocusVisible and Focused) or FShowFocusAlways) and (I = FocusI) then
         ACanvas.FrameRoundRect(Rect(R.Left - 2, R.Top - 2, R.Right + 2, R.Bottom + 2), Rad + 2,
           PPGScale(2, PPI), PPGColorToRGB(A.FocusColor), 255);
@@ -1481,7 +1650,10 @@ begin
           R := Rect(CR.Left - WeekCol, CR.Top, CR.Left, CR.Bottom);
         OffsetRect(R, 0, Off);
         Wk := WeekNumberOfRow(I);
-        AddText(R, IntToStr(Wk), Secondary, False);
+        C := Secondary;
+        if UseColors and Enabled then
+          C := CS.WeekNumbers.TextFor(Dk, C);
+        AddText(R, IntToStr(Wk), C, FFonts.ForStyle(CS.WeekNumbers, Font));
       end;
   finally
     ACanvas.PopClip;
@@ -1494,19 +1666,16 @@ begin
     try
       SetBkMode(DC, TRANSPARENT);
       LastColor := clNone;
-      LastBold := False;
+      LastFont := Font;
       SelectObject(DC, Font.Handle);
       for I := 0 to NText - 1 do
       begin
         if I = NHead then
           IntersectClipRect(DC, G.Left, G.Top, G.Right, G.Bottom);
-        if TxtB[I] <> LastBold then
+        if (TxtF[I] <> nil) and (TxtF[I] <> LastFont) then
         begin
-          if TxtB[I] then
-            SelectObject(DC, FBoldFont.Handle)
-          else
-            SelectObject(DC, Font.Handle);
-          LastBold := TxtB[I];
+          SelectObject(DC, TxtF[I].Handle);
+          LastFont := TxtF[I];
         end;
         if TxtC[I] <> LastColor then
         begin
@@ -1521,6 +1690,7 @@ begin
       ACanvas.EndGdi(DC); // stellt Schrift, Clip und Modus wieder her
     end;
   end;
+  FFonts.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
 end;
 
 function TPPGCustomCalendar.WeekNumberOfRow(Row: Integer): Integer;

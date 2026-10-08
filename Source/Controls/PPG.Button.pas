@@ -23,7 +23,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Forms, Vcl.Menus, Vcl.ActnList, Vcl.ImgList,
-  PPG.Types, PPG.Render.Intf, PPG.Controls.Base;
+  PPG.Types, PPG.Layout, PPG.Render.Intf, PPG.Controls.Base;
 
 type
   TPPGCustomButton = class;
@@ -56,6 +56,10 @@ type
     FStyle: TPPGButtonStyle;
     FDropDownOpen: Boolean;
     FOnDropDownClick: TNotifyEvent;
+    FAlignment: TAlignment;
+    FMargin: Integer;
+    procedure SetAlignment(const Value: TAlignment);
+    procedure SetMargin(const Value: Integer);
     procedure SetStyle(const Value: TPPGButtonStyle);
     procedure SetDefault(const Value: Boolean);
     procedure SetDropDownMenu(const Value: TPopupMenu);
@@ -86,6 +90,7 @@ type
     procedure DoPaintContent(const ACanvas: IPPGCanvas; const Body: TRect;
       const Style: TPPGSurfaceStyle); override;
     function AutoSizeExtraWidth: Integer; override;
+    function GetCaptionAlignment: TPPGHorzAlign; override;
     function AccRole: Integer; override;
     function AccState: Integer; override;
 
@@ -99,6 +104,11 @@ type
     property Down: Boolean read FDown write SetDown stored IsDownStored;
     property AllowAllUp: Boolean read FAllowAllUp write SetAllowAllUp default False;
     property ImageIndex stored IsImageIndexStored;
+    /// Lage von Bild und Text im Button (taCenter wie TButton).
+    property Alignment: TAlignment read FAlignment write SetAlignment default taCenter;
+    /// Wie TBitBtn.Margin: Abstand von Bild/Text zum Rand in logischen px
+    /// (-1 = nach Alignment ausgerichtet ohne festen Abstand).
+    property Margin: Integer read FMargin write SetMargin default -1;
   public
     constructor Create(AOwner: TComponent); override;
     procedure Click; override;
@@ -121,8 +131,19 @@ type
     {$ENDIF}
     property HotImageIndex;
     property DisabledImageIndex;
+    property PressedImageIndex;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    property HotImageName;
+    property DisabledImageName;
+    property PressedImageName;
+    {$ENDIF}
+    property ImageTint;
     property ImagePosition;
     property Spacing;
+    property Alignment;
+    property Margin;
+    property RoundedCorners;
+    property Shadow;
     property WordWrap;
     property ShowFocusRect;
     property HighContrastSupport;
@@ -162,6 +183,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnContextPopup;
     property OnDragDrop;
@@ -235,6 +258,8 @@ end;
 constructor TPPGCustomButton.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FAlignment := taCenter;
+  FMargin := -1;
   ControlStyle := ControlStyle - [csDoubleClicks];
   TabStop := True;
   Width := 100;
@@ -334,6 +359,48 @@ begin
     Result.Left := Result.Right - W;
 end;
 
+function TPPGCustomButton.GetCaptionAlignment: TPPGHorzAlign;
+var
+  A: TAlignment;
+begin
+  A := FAlignment;
+  // Margin ohne eigene Ausrichtung: wie TBitBtn links (RTL rechts)
+  if (FMargin >= 0) and (A = taCenter) then
+    A := taLeftJustify;
+  if UseRightToLeftAlignment then
+    case A of
+      taLeftJustify: A := taRightJustify;
+      taRightJustify: A := taLeftJustify;
+    end;
+  case A of
+    taLeftJustify: Result := haLeft;
+    taRightJustify: Result := haRight;
+  else
+    Result := haCenter;
+  end;
+end;
+
+procedure TPPGCustomButton.SetAlignment(const Value: TAlignment);
+begin
+  if FAlignment <> Value then
+  begin
+    FAlignment := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomButton.SetMargin(const Value: Integer);
+var
+  V: Integer;
+begin
+  V := PPGCheckRange(Self, 'Margin', Value, -1, 1000);
+  if FMargin <> V then
+  begin
+    FMargin := V;
+    Invalidate;
+  end;
+end;
+
 function TPPGCustomButton.AutoSizeExtraWidth: Integer;
 begin
   if HasArrow then
@@ -357,8 +424,18 @@ function TPPGCustomButton.GetContentRect(const Body: TRect;
   const Style: TPPGSurfaceStyle): TRect;
 var
   AR: TRect;
+  M: Integer;
 begin
   Result := inherited GetContentRect(Body, Style);
+  // Margin: fester Abstand zum Rand auf der Seite der Ausrichtung
+  if FMargin >= 0 then
+  begin
+    M := Body.Left + Style.BorderWidth + PPGScale(FMargin, ScalePPI);
+    if GetCaptionAlignment = haRight then
+      Result.Right := Body.Right - Style.BorderWidth - PPGScale(FMargin, ScalePPI)
+    else
+      Result.Left := M;
+  end;
   if not HasArrow then
     Exit;
   // Text/Bild nicht unter den Pfeil legen

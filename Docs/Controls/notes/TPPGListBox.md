@@ -7,6 +7,11 @@
 - Quellen: `Items`, `ItemsEx` (reich: Bild, Detail, Gruppe, Plakette) oder virtuell (`Style = lbVirtual`, `Count` + `OnData`).
 - UI Automation: Liste mit Auswahl-Muster, Einträge mit Position im Satz.
 
+## Anpassung
+
+- `Styles` (`Selection`, `SelectionInactive`, `AlternateRow`, `HotItem`, `GroupHeader`, `Detail`); je Eintrag `Color`, `TextColor`, `FontStyle`.
+- `OnCustomDrawItem`: Stil eines Eintrags vor dem Zeichnen ändern oder mit `DefaultDraw := False` selbst zeichnen.
+
 ## Beispiel
 
 ```pascal

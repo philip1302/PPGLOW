@@ -118,6 +118,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnEnter;
     property OnExit;
     property OnItemClick;

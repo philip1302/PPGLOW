@@ -39,6 +39,7 @@ type
     FColors: array of TColor;
     FFlags: array of Cardinal;
     FBold: array of Boolean;
+    FFonts: array of HFONT;
     FCount: Integer;
     FCells: IPPGGridCellRenderer;
   public
@@ -48,6 +49,9 @@ type
     /// Text vormerken (R = Textrechteck, Flags = DrawText-Flags).
     procedure AddText(const R: TRect; const S: string; Color: TColor; Flags: Cardinal;
       Bold: Boolean = False);
+    /// Text mit eigener Schrift (Element-Stil, Spalte); 0 = Standard-Schrift.
+    procedure AddTextFont(const R: TRect; const S: string; Color: TColor; Flags: Cardinal;
+      AFont: HFONT);
     /// Vorgemerkte Texte ausgeben (Schrift und Farbe bleiben im DC gesetzt).
     /// BoldFont fuer fett markierte Texte (0 = normale Schrift).
     procedure FlushTexts(DC: HDC; Font: HFONT; BoldFont: HFONT = 0);
@@ -142,6 +146,13 @@ end;
 
 procedure TPPGCellPainter.AddText(const R: TRect; const S: string; Color: TColor;
   Flags: Cardinal; Bold: Boolean);
+begin
+  AddTextFont(R, S, Color, Flags, 0);
+  FBold[FCount - 1] := Bold;
+end;
+
+procedure TPPGCellPainter.AddTextFont(const R: TRect; const S: string; Color: TColor;
+  Flags: Cardinal; AFont: HFONT);
 var
   N: Integer;
 begin
@@ -155,12 +166,14 @@ begin
     SetLength(FColors, N);
     SetLength(FFlags, N);
     SetLength(FBold, N);
+    SetLength(FFonts, N);
   end;
   FTexts[FCount] := S;
   FRects[FCount] := R;
   FColors[FCount] := Color;
   FFlags[FCount] := Flags;
-  FBold[FCount] := Bold;
+  FBold[FCount] := False;
+  FFonts[FCount] := AFont;
   Inc(FCount);
 end;
 
@@ -169,12 +182,12 @@ var
   I: Integer;
   LastColor: TColor;
   TR: TRect;
-  IsBold: Boolean;
+  Want, Current: HFONT;
 begin
   if FCount = 0 then
     Exit;
   SelectObject(DC, Font);
-  IsBold := False;
+  Current := Font;
   SetBkMode(DC, TRANSPARENT);
   LastColor := clNone;
   for I := 0 to FCount - 1 do
@@ -184,13 +197,17 @@ begin
       SetTextColor(DC, ColorToRGB(FColors[I]));
       LastColor := FColors[I];
     end;
-    if (BoldFont <> 0) and (FBold[I] <> IsBold) then
+    // Schrift nur bei Wechsel waehlen (eigene Schrift > fett > Standard)
+    if FFonts[I] <> 0 then
+      Want := FFonts[I]
+    else if FBold[I] and (BoldFont <> 0) then
+      Want := BoldFont
+    else
+      Want := Font;
+    if Want <> Current then
     begin
-      IsBold := FBold[I];
-      if IsBold then
-        SelectObject(DC, BoldFont)
-      else
-        SelectObject(DC, Font);
+      SelectObject(DC, Want);
+      Current := Want;
     end;
     TR := FRects[I];
     Winapi.Windows.DrawText(DC, PChar(FTexts[I]), Length(FTexts[I]), TR, FFlags[I]);

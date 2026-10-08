@@ -33,11 +33,11 @@ TPPGFileEdit - Feld fuer eine Datei oder einen Ordner (Phase 12c).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Kind`, `Filter`, `FilterIndex`, `InitialDir`, `DefaultExt`, `DialogTitle`, `MustExist`, `AcceptDrop`, `AutoComplete`, `ShowClearButton`, `TextHint`, `TextHintVisibleOnFocus`, `UseSystemContextMenu`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Kind`, `Filter`, `FilterIndex`, `InitialDir`, `DefaultExt`, `DialogTitle`, `MustExist`, `AcceptDrop`, `AutoComplete`, `ShowClearButton`, `TextHint`, `TextHintVisibleOnFocus`, `UseSystemContextMenu`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnAfterDialog`, `OnBeforeDialog`, `OnChange`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
+`OnGesture`, `OnAfterDialog`, `OnBeforeDialog`, `OnChange`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGFileEdit.md`.

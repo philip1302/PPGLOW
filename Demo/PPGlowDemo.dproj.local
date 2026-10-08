@@ -178,6 +178,8 @@
     <File Path="..\Source\Controls\PPG.Ribbon.pas"/>
     <File Path="..\Source\Controls\PPG.Kanban.Items.pas"/>
     <File Path="..\Source\Controls\PPG.Kanban.pas"/>
+    <File Path="..\Source\Controls\PPG.CustomDraw.pas"/>
+    <File Path="..\Source\Controls\PPG.Kanban.Print.pas"/>
     <File Path="..\Source\Core"/>
     <File Path="..\Source\Core\PPG.Animation.pas"/>
     <File Path="..\Source\Core\PPG.Appearance.pas"/>
@@ -205,6 +207,7 @@
     <File Path="..\Source\Core\PPG.KeyTips.pas"/>
     <File Path="..\Source\Core\PPG.Ribbon.Layout.pas"/>
     <File Path="..\Source\Core\PPG.Kanban.Layout.pas"/>
+    <File Path="..\Source\Core\PPG.ElementStyle.pas"/>
     <File Path="..\Source\DB"/>
     <File Path="..\Source\DB\PPG.DB.Chart.pas"/>
     <File Path="..\Source\DB\PPG.DB.Controls.pas"/>
@@ -229,6 +232,7 @@
     <File Path="..\Source\Theme\PPG.StyleManager.pas"/>
     <File Path="..\Source\Theme\PPG.Theme.pas"/>
     <File Path="..\Source\Theme\PPG.VclStyles.pas"/>
+    <File Path="..\Source\Theme\PPG.ThemeFile.pas"/>
     <File Path="DemoKit.pas"/>
     <File Path="DemoMain.pas"/>
     <File Path="DemoPages1.pas"/>
@@ -240,5 +244,6 @@
     <File Path="DemoPages7.pas"/>
     <File Path="DemoPages8.pas"/>
     <File Path="DemoPages9.pas"/>
+    <File Path="DemoPages10.pas"/>
   </ProjectSortOrder>
 </BorlandProject>

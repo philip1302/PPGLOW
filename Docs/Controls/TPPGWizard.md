@@ -37,11 +37,11 @@ TPPGWizard + TPPGWizardPage - Schritt-Assistent (Phase 11g).
 
 ## PPGlow-Eigenschaften
 
-`ActivePage`, `StepPosition`, `ShowCancel`, `Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `Visible`
+`ActivePage`, `StepPosition`, `ShowCancel`, `Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnCanAdvance`, `OnPageChanged`, `OnFinish`, `OnCancel`, `OnResize`
+`OnGesture`, `OnCanAdvance`, `OnPageChanged`, `OnFinish`, `OnCancel`, `OnResize`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGWizard.md`.

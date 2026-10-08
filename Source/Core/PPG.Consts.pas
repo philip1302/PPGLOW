@@ -172,6 +172,7 @@ resourcestring
   SPPGPlannerAccItem = '%s, %s to %s';
   SPPGPlannerAccSlot = '%s to %s';
   SPPGPlannerPrintWorkHours = 'Print working hours only';
+  SPPGKanbanPrintFitWidth = 'Shrink to page width';
 
   // Ribbon (Phase 14b)
   SPPGRibbonName = 'Ribbon';
@@ -195,6 +196,11 @@ resourcestring
   SPPGKanbanAccCollapsed = 'collapsed';
   SPPGKanbanMoved = 'Moved to column %s, position %d of %d';
   SPPGKanbanMoveRejected = 'Moving to column %s is not allowed';
+
+  // Anpassbarkeit (Theme-Datei, Farben)
+  SPPGThemeFileInvalid = 'The theme file "%s" is invalid: %s';
+  SPPGThemeValueInvalid = 'Invalid value "%s" for %s';
+  SPPGColorInvalid = '"%s" is not a valid color';
 
 implementation
 

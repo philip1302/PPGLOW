@@ -49,7 +49,7 @@ uses
   PPG.Types, PPG.RowLayout, PPG.Render.Intf, PPG.Accessibility, PPG.UIA,
   PPG.Controls.Base, PPG.Controls.Scroll,
   PPG.Grid.Columns, PPG.Grid.View, PPG.Grid.Data, PPG.Grid.Paint, PPG.Grid.Edit, PPG.Markup,
-  PPG.Grid.CellKinds, PPG.Grid.Styles;
+  PPG.Grid.CellKinds, PPG.Grid.Styles, PPG.ElementStyle;
 
 const
   gekText = PPG.Grid.Columns.gekText;
@@ -123,6 +123,13 @@ type
   /// Farben eines Zeichenvorgangs (einmal berechnet, nicht je Zelle).
   TPPGGridPaintColors = record
     Fill, Text, Header, Line, Accent, Hint: TColor;
+    // Anpassbarkeit: Kopftext, Linien im Kopf, Fokusrahmen; Modus der Stile
+    HeaderText, HeaderLine, FocusFrame: TColor;
+    UseColors: Boolean; // False: Hochkontrast oder VCL-Style (nur Schriften)
+    Dark: Boolean;
+    Gradient: Boolean; // DrawingStyle = gdsGradient
+    CellStyles: Boolean; // Zeilen-/Spaltenflaechen aus Element-Stilen
+    HeaderFont: TFont; // je Zeichenvorgang aus FFontCache
   end;
 
   TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren, IPPGUiaSource,
@@ -167,7 +174,13 @@ type
     FCondFormats: TPPGGridConditionalFormats;
     FMerges: array of TPPGGridMerge;
     FKindCtx: TPPGCellKindContext;  // je Zeichenvorgang gefuellt
-    FBoldFont: TFont;
+    FStyles: TPPGGridStyles;
+    FFontCache: TPPGFontCache;  // Schriften eines Zeichenvorgangs
+    FHotV: Integer;              // Zeile unter der Maus (Styles.HotRow)
+    FGridLineWidth: Integer;
+    FDrawingStyle: TGridDrawingStyle;
+    FGradientStartColor: TColor;
+    FGradientEndColor: TColor;
     FLayout: TPPGRowLayout;
     FColX: array of Integer;        // Pixel-Anfang je Spalte (+ Ende)
     FGeomValid: Boolean;
@@ -233,6 +246,15 @@ type
     procedure SetConditionalFormats(const Value: TPPGGridConditionalFormats);
     procedure SetShowFilterRow(const Value: Boolean);
     procedure SetBorderStyle(const Value: TBorderStyle);
+    procedure SetStyles(const Value: TPPGGridStyles);
+    procedure StylesObjChanged(Sender: TObject);
+    procedure SetGridLineWidth(const Value: Integer);
+    procedure SetDrawingStyle(const Value: TGridDrawingStyle);
+    procedure SetGradientStartColor(const Value: TColor);
+    procedure SetGradientEndColor(const Value: TColor);
+    function GetFixedColor: TColor;
+    procedure SetFixedColor(const Value: TColor);
+    procedure SetHotRow(VRow: Integer);
     function GetCells(ACol, ARow: Integer): string;
     procedure SetCells(ACol, ARow: Integer; const Value: string);
     function GetColWidths(Index: Integer): Integer;
@@ -426,6 +448,10 @@ type
     function GetScrollStyle: TPPGSurfaceStyle; override;
     function GetBackgroundColor: TColor; override;
     procedure GetGridColors(out Fill, Text, Header, Line, Accent: TColor);
+    /// Farben und Schriften der Element-Stile fuer diesen Zeichenvorgang.
+    procedure PrepareStyleColors;
+    /// Schrift (und Textfarbe) einer Datenzelle nach Spalte, Zeile und Zellstil.
+    function CellFont(Col: TPPGGridColumn; const St: TPPGGridCellStyle; Extra: TFontStyles): TFont;
     { Eingabe }
     procedure ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseMove(Shift: TShiftState; X, Y: Integer); override;
@@ -539,6 +565,18 @@ type
     property OnGetCellStyle: TPPGGridCellStyleEvent read FOnGetCellStyle write FOnGetCellStyle;
     property OnLinkClick: TPPGGridLinkEvent read FOnLinkClick write FOnLinkClick;
     property OnCellButtonClick: TPPGGridCellEvent read FOnCellButtonClick write FOnCellButtonClick;
+    /// Bereiche (Kopf, Auswahl, Zebra, Linien ...): nur gesetzte Werte zaehlen.
+    property Styles: TPPGGridStyles read FStyles write SetStyles;
+    /// Breite der Gitterlinien in logischen Pixeln (0 = keine Linien; wie TStringGrid).
+    property GridLineWidth: Integer read FGridLineWidth write SetGridLineWidth default 1;
+    /// Wie TStringGrid: gdsGradient = Kopf als Verlauf GradientStartColor ->
+    /// GradientEndColor (nur hell); gdsClassic/gdsThemed = Kopf vom Preset.
+    property DrawingStyle: TGridDrawingStyle read FDrawingStyle write SetDrawingStyle default gdsThemed;
+    property GradientStartColor: TColor read FGradientStartColor write SetGradientStartColor default clWhite;
+    property GradientEndColor: TColor read FGradientEndColor write SetGradientEndColor default clBtnFace;
+    /// Wie TStringGrid.FixedColor (= Styles.Header.Color, nicht gespeichert);
+    /// clBtnFace = Kopf vom Preset.
+    property FixedColor: TColor read GetFixedColor write SetFixedColor stored False;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -653,7 +691,13 @@ type
     property ScrollBarMode;
     property SmoothScrolling;
     property HighContrastSupport;
+    property Styles;
+    property GridLineWidth;
     { wie TStringGrid }
+    property DrawingStyle;
+    property FixedColor;
+    property GradientEndColor;
+    property GradientStartColor;
     property Align;
     property Anchors;
     property BiDiMode;
@@ -685,6 +729,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnCompareCells;
     property OnCellButtonClick;
@@ -778,7 +824,14 @@ begin
   FPainter := TPPGCellPainter.Create;
   FGroupMarkup := TPPGMarkupLayout.Create;
   FCondFormats := TPPGGridConditionalFormats.Create(Self, TPPGGridConditionalFormat);
-  FBoldFont := TFont.Create;
+  FStyles := TPPGGridStyles.Create(Self);
+  FStyles.OnChange := StylesObjChanged;
+  FFontCache := TPPGFontCache.Create;
+  FHotV := -1;
+  FGridLineWidth := 1;
+  FDrawingStyle := gdsThemed;
+  FGradientStartColor := clWhite;
+  FGradientEndColor := clBtnFace;
   FSortCol := -1;
   FSortAscending := True;
   FSortOnHeaderClick := True;
@@ -819,7 +872,8 @@ begin
   FreeAndNil(FPainter);
   FreeAndNil(FGroupMarkup);
   FreeAndNil(FCondFormats);
-  FreeAndNil(FBoldFont);
+  FreeAndNil(FFontCache);
+  FreeAndNil(FStyles);
   inherited Destroy;
 end;
 
@@ -2989,6 +3043,8 @@ procedure TPPGCustomGrid.PaintFooter(const ACanvas: IPPGCanvas; const R: TRect);
 var
   FR, Pad, PPI: Integer;
   GV: TRect;
+  FootFont: TFont;
+  FootText: TColor;
 
   procedure Area(VFrom, VTo: Integer; ALeft, ARight: Integer);
   var
@@ -3027,7 +3083,7 @@ var
           Al := Col.Alignment;
         TR := CR;
         InflateRect(TR, -Pad, 0);
-        DrawTextGdi(ACanvas, Font, S, TR, FPaint.Text,
+        DrawTextGdi(ACanvas, FootFont, S, TR, FootText,
           DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(Al)));
       end;
     finally
@@ -3039,8 +3095,17 @@ begin
   PPI := ScalePPI;
   Pad := PPGScale(CellPadX, PPI);
   GV := GridViewRect;
-  ACanvas.FillRoundRect(R, 0, FPaint.Header, 255);
-  ACanvas.FillRoundRect(Rect(R.Left, R.Top, R.Right, R.Top + 1), 0, FPaint.Line, 255);
+  // Styles.Footer, ohne Werte wie der Kopf
+  FootFont := FFontCache.ForStyle(FStyles.Footer, FPaint.HeaderFont);
+  FootText := FPaint.HeaderText;
+  if FPaint.UseColors then
+  begin
+    FootText := FStyles.Footer.TextFor(FPaint.Dark, FootText);
+    ACanvas.FillRoundRect(R, 0, FStyles.Footer.FillFor(FPaint.Dark, FPaint.Header), 255);
+  end
+  else
+    ACanvas.FillRoundRect(R, 0, FPaint.Header, 255);
+  ACanvas.FillRoundRect(Rect(R.Left, R.Top, R.Right, R.Top + 1), 0, FPaint.HeaderLine, 255);
   FR := FirstRightCol;
   Area(0, FFixedCols - 1, GV.Left, GV.Left + FixedWidth);
   if FR < VColCount then
@@ -3077,6 +3142,8 @@ procedure TPPGCustomGrid.PaintGroupRow(const ACanvas: IPPGCanvas; VRow: Integer;
 var
   G, PPI, TX, TY: Integer;
   RR, Row, ER: TRect;
+  GF: TFont;
+  GT: TColor;
 begin
   G := GroupOfRow(VRow);
   if G < 0 then
@@ -3088,7 +3155,10 @@ begin
   if IsRectEmpty(Row) then
     Exit;
   // Deckend ueber Zellen und Gitterlinien: die Gruppenzeile ist eine Zeile
-  ACanvas.FillRoundRect(Row, 0, PPGBlendColor(FPaint.Fill, FPaint.Header, 0.6), 255);
+  if FPaint.UseColors and FStyles.GroupRow.HasFill(FPaint.Dark) then
+    ACanvas.FillRoundRect(Row, 0, FStyles.GroupRow.FillFor(FPaint.Dark, FPaint.Fill), 255)
+  else
+    ACanvas.FillRoundRect(Row, 0, PPGBlendColor(FPaint.Fill, FPaint.Header, 0.6), 255);
   ACanvas.FillRoundRect(Rect(Row.Left, RR.Bottom - 1, Row.Right, RR.Bottom), 0, FPaint.Line, 255);
   if VRow = FFocusV then
   begin
@@ -3102,13 +3172,17 @@ begin
   ER := GroupExpanderRect(VRow);
   FPainter.DrawExpander(ACanvas, ER, PPGBlendColor(FPaint.Text, FPaint.Header, 0.2),
     FView.Group.Groups[G].Expanded, UseRightToLeftAlignment, PPI);
-  FGroupMarkup.Layout(GroupText(G), Font, nil, 0, False);
+  GF := FFontCache.ForStyle(FStyles.GroupRow, Font);
+  GT := FPaint.Text;
+  if FPaint.UseColors then
+    GT := FStyles.GroupRow.TextFor(FPaint.Dark, GT);
+  FGroupMarkup.Layout(GroupText(G), GF, nil, 0, False);
   TY := RR.Top + ((RR.Bottom - RR.Top) - FGroupMarkup.Size.cy) div 2;
   if UseRightToLeftAlignment then
     TX := ER.Left - PPGScale(4, PPI) - FGroupMarkup.Size.cx
   else
     TX := ER.Right + PPGScale(4, PPI);
-  FGroupMarkup.Draw(ACanvas, TX, TY, FPaint.Text, FPaint.Accent, Enabled);
+  FGroupMarkup.Draw(ACanvas, TX, TY, GT, FPaint.Accent, Enabled);
 end;
 
 procedure TPPGCustomGrid.AddGroupColumn(ACol: Integer);
@@ -3642,6 +3716,133 @@ end;
 
 { ---- Farben und Zeichnen ---- }
 
+{ ---- Element-Stile (Anpassbarkeit) ---- }
+
+procedure TPPGCustomGrid.SetStyles(const Value: TPPGGridStyles);
+begin
+  FStyles.Assign(Value);
+end;
+
+procedure TPPGCustomGrid.StylesObjChanged(Sender: TObject);
+begin
+  Invalidate;
+end;
+
+procedure TPPGCustomGrid.SetGridLineWidth(const Value: Integer);
+var
+  V: Integer;
+begin
+  V := PPGCheckRange(Self, 'GridLineWidth', Value, 0, 10);
+  if FGridLineWidth <> V then
+  begin
+    FGridLineWidth := V;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomGrid.SetDrawingStyle(const Value: TGridDrawingStyle);
+begin
+  if FDrawingStyle <> Value then
+  begin
+    FDrawingStyle := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomGrid.SetGradientStartColor(const Value: TColor);
+begin
+  if FGradientStartColor <> Value then
+  begin
+    FGradientStartColor := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomGrid.SetGradientEndColor(const Value: TColor);
+begin
+  if FGradientEndColor <> Value then
+  begin
+    FGradientEndColor := Value;
+    Invalidate;
+  end;
+end;
+
+function TPPGCustomGrid.GetFixedColor: TColor;
+begin
+  if FStyles.Header.Color = clDefault then
+    Result := clBtnFace
+  else
+    Result := FStyles.Header.Color;
+end;
+
+procedure TPPGCustomGrid.SetFixedColor(const Value: TColor);
+begin
+  // clBtnFace ist die Vorgabe von TStringGrid: Kopf vom Preset
+  if Value = clBtnFace then
+    FStyles.Header.Color := clDefault
+  else
+    FStyles.Header.Color := Value;
+end;
+
+procedure TPPGCustomGrid.SetHotRow(VRow: Integer);
+begin
+  if FHotV = VRow then
+    Exit;
+  FHotV := VRow;
+  // Nur neu zeichnen, wenn die Zeile ueberhaupt hervorgehoben wird
+  if FStyles.HotRow.HasFill(UseDarkMode) or FStyles.HotRow.HasText(UseDarkMode) or
+    (FStyles.HotRow.FontStyle <> []) then
+    Invalidate;
+end;
+
+procedure TPPGCustomGrid.PrepareStyleColors;
+var
+  I: Integer;
+begin
+  FPaint.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+  FPaint.Dark := UseDarkMode;
+  FPaint.HeaderText := FPaint.Text;
+  FPaint.FocusFrame := FPaint.Accent;
+  if FPaint.UseColors then
+  begin
+    FPaint.Line := FStyles.GridLine.FillFor(FPaint.Dark, FPaint.Line);
+    FPaint.Header := FStyles.Header.FillFor(FPaint.Dark, FPaint.Header);
+    FPaint.HeaderText := FStyles.Header.TextFor(FPaint.Dark, FPaint.Text);
+    FPaint.FocusFrame := FStyles.FocusedCell.BorderFor(FPaint.Dark, FPaint.Accent);
+  end;
+  FPaint.HeaderLine := FPaint.Line;
+  if FPaint.UseColors then
+    FPaint.HeaderLine := FStyles.Header.BorderFor(FPaint.Dark, FPaint.Line);
+  FPaint.Gradient := FPaint.UseColors and not FPaint.Dark and (FDrawingStyle = gdsGradient);
+  FPaint.CellStyles := FStyles.AlternateRow.HasFill(FPaint.Dark) or
+    FStyles.HotRow.HasFill(FPaint.Dark) or FStyles.FilterRow.HasFill(FPaint.Dark) or
+    FStyles.Footer.HasFill(FPaint.Dark);
+  if not FPaint.CellStyles then
+    for I := 0 to FColumns.Count - 1 do
+      if FColumns[I].Style.HasFill(FPaint.Dark) or FColumns[I].TitleStyle.HasFill(FPaint.Dark) then
+      begin
+        FPaint.CellStyles := True;
+        Break;
+      end;
+  FPaint.HeaderFont := FFontCache.ForStyle(FStyles.Header, Font);
+end;
+
+function TPPGCustomGrid.CellFont(Col: TPPGGridColumn; const St: TPPGGridCellStyle;
+  Extra: TFontStyles): TFont;
+var
+  Base: TFont;
+begin
+  // Spaltenschrift (eigene Schrift auf die PPI des Grids, plus FontStyle)
+  if Col <> nil then
+    Base := FFontCache.ForStyle(Col.Style, Font)
+  else
+    Base := Font;
+  Extra := Extra + St.FontStyle;
+  if St.Bold then
+    Include(Extra, fsBold);
+  Result := FFontCache.Get(Base, Extra, St.FontName, St.FontSize);
+end;
+
 procedure TPPGCustomGrid.GetGridColors(out Fill, Text, Header, Line, Accent: TColor);
 var
   T: TPPGTokens;
@@ -3772,7 +3973,7 @@ begin
   // Sortierpfeil in der Kopfzeile
   if (D = 0) and (FFixedRows > 0) and (ACol = FSortCol) then
     FPainter.DrawSortArrow(ACanvas, R, FSortAscending, UseRightToLeftAlignment,
-      PPGBlendColor(FPaint.Text, FPaint.Header, 0.3), PPI);
+      PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.3), PPI);
 end;
 
 procedure TPPGCustomGrid.DrawCell(const ACanvas: IPPGCanvas; ACol, VRow: Integer;
@@ -3836,13 +4037,13 @@ type
 var
   Clip, BR: TRect;
   C, V, D, DCol, Pad, PPI, I, K, NX, NM, W, Idx, IconW: Integer;
-  HasGroups, HasStyles, AnyBold: Boolean;
+  HasGroups, HasStyles: Boolean;
   R, LR, SR, TR: TRect;
   Sl: TGridRect;
   ExtraC, ExtraV: array of Integer;
   ExtraS: array of string;
-  StyleTC: array of TColor;
-  StyleBold, StyleIcon: array of Boolean;
+  StyleRec: array of TPPGGridCellStyle;
+  StyleIcon: array of Boolean;
   VM: array of TVisMerge;
   S: string;
   TC: TColor;
@@ -3852,6 +4053,13 @@ var
   VLine, HLine, HasKind: Boolean;
   St: TPPGGridCellStyle;
   Pts: array[0..3] of TPoint;
+  LW: Integer;           // Linienbreite (px)
+  HasSel: Boolean;
+  SelSt: TPPGElementStyle;
+  F: TFont;
+  Extra: TFontStyles;
+  Al: TAlignment;
+  IsHead: Boolean;
   Cut: array of TPoint; // ausgesparte Abschnitte (Von, Bis) einer Linie
 
   function CellIndex(AC, AV: Integer): Integer;
@@ -3867,6 +4075,88 @@ var
       if (AC >= VM[J].C0) and (AC <= VM[J].C1) and (AV >= VM[J].R0) and (AV <= VM[J].R1) then
         Exit(True);
     Result := False;
+  end;
+
+  procedure AddCellText(const ATR: TRect; const AS_: string; AC: TColor; AAl: TAlignment;
+    AF: TFont);
+  begin
+    if (AF = nil) or (AF = Font) then
+      FPainter.AddText(ATR, AS_, AC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(AAl)))
+    else
+      FPainter.AddTextFont(ATR, AS_, AC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(AAl)),
+        AF.Handle);
+  end;
+
+  function InSel(AC, AV: Integer): Boolean;
+  begin
+    Result := HasSel and (AC >= Sl.Left) and (AC <= Sl.Right) and (AV >= Sl.Top) and
+      (AV <= Sl.Bottom);
+  end;
+
+  function IsZebraRow(AV: Integer): Boolean;
+  begin
+    Result := Odd(AV - VFixedRows);
+  end;
+
+  procedure StyleBackgrounds;
+  var
+    AV, AC, AD: Integer;
+    CR: TRect;
+    RowFill, CF: TColor;
+    ACol: TPPGGridColumn;
+    Dk, HotRow: Boolean;
+  begin
+    // Element-Stile: Filterzeile, Gruppenfuss, Zebra, Hover-Zeile, Spalten und
+    // Spaltenkoepfe (nur gesetzte Farben)
+    Dk := FPaint.Dark;
+    for AV := RowFrom to RowTo do
+    begin
+      AD := DataRow(AV);
+      RowFill := clNone;
+      HotRow := False;
+      if AD = FilterRowMark then
+      begin
+        if FStyles.FilterRow.HasFill(Dk) then
+          RowFill := FStyles.FilterRow.FillFor(Dk, clNone);
+      end
+      else if AD = GroupFooterMark then
+      begin
+        if FStyles.Footer.HasFill(Dk) then
+          RowFill := FStyles.Footer.FillFor(Dk, clNone);
+      end
+      else if AD >= FFixedRows then
+      begin
+        if FStyles.AlternateRow.HasFill(Dk) and IsZebraRow(AV) then
+          RowFill := FStyles.AlternateRow.FillFor(Dk, clNone);
+        if (AV = FHotV) and FStyles.HotRow.HasFill(Dk) then
+        begin
+          RowFill := FStyles.HotRow.FillFor(Dk, clNone);
+          HotRow := True;
+        end;
+      end
+      else if AD < 0 then
+        Continue;
+      for AC := ColFrom to ColTo do
+      begin
+        CF := RowFill;
+        ACol := ColumnOf(FVisCols[AC]);
+        if ACol <> nil then
+          if (AD = 0) and (FFixedRows > 0) then
+          begin
+            if ACol.TitleStyle.HasFill(Dk) then
+              CF := ACol.TitleStyle.FillFor(Dk, CF);
+          end
+          else if (AD >= FFixedRows) and (AC >= FFixedCols) and not HotRow and
+            ACol.Style.HasFill(Dk) then
+            CF := ACol.Style.FillFor(Dk, CF);
+        if CF = clNone then
+          Continue;
+        CR := RawCellRect(AC, AV);
+        IntersectRect(CR, CR, Clip);
+        if not IsRectEmpty(CR) then
+          ACanvas.FillRoundRect(CR, 0, CF, 255);
+      end;
+    end;
   end;
 
   procedure LineSegments(AFrom, ATo: Integer; Vertical: Boolean; Fixed: Integer);
@@ -3890,9 +4180,14 @@ var
       if T < 0 then
         Continue;
       if Vertical then
-        Winapi.Windows.FillRect(DC, Rect(Fixed, P, Fixed + 1, T), LineBrush)
+      begin
+        if UseRightToLeftAlignment then
+          Winapi.Windows.FillRect(DC, Rect(Fixed, P, Fixed + LW, T), LineBrush)
+        else
+          Winapi.Windows.FillRect(DC, Rect(Fixed - LW + 1, P, Fixed + 1, T), LineBrush);
+      end
       else
-        Winapi.Windows.FillRect(DC, Rect(P, Fixed - 1, T, Fixed), LineBrush);
+        Winapi.Windows.FillRect(DC, Rect(P, Fixed - LW, T, Fixed), LineBrush);
       P := T;
     end;
   end;
@@ -3929,12 +4224,34 @@ begin
     DC := ACanvas.BeginGdi;
     try
       if FixedArea then
-        TPPGCellPainter.FillGdi(DC, Clip, FPaint.Header)
+      begin
+        if not FPaint.Gradient then
+          TPPGCellPainter.FillGdi(DC, Clip, FPaint.Header);
+      end
       else
         TPPGCellPainter.FillGdi(DC, Clip, FPaint.Fill);
     finally
       ACanvas.EndGdi(DC);
     end;
+    // Kopf als Verlauf (DrawingStyle = gdsGradient, wie TStringGrid)
+    if FixedArea and FPaint.Gradient then
+      ACanvas.FillGradientRect(Clip, PPGColorToRGB(FGradientStartColor),
+        PPGColorToRGB(FGradientEndColor), gdVertical, 255);
+    // Auswahl (Anzeige-Zeilen) fuer Flaechen und Textfarben
+    HasSel := False;
+    if not FixedArea and (ColFrom >= FFixedCols) then
+    begin
+      Sl := GetSelection;
+      HasSel := (Sl.Top >= VFixedRows) and (Sl.Right >= ColFrom) and (Sl.Left <= ColTo) and
+        (Sl.Bottom >= RowFrom) and (Sl.Top <= RowTo);
+    end;
+    if Focused then
+      SelSt := FStyles.Selection
+    else
+      SelSt := FStyles.SelectionInactive;
+    // 1a. Element-Stile (Spalten, Zebra, Hover-Zeile, Filterzeile, Koepfe)
+    if FPaint.UseColors and FPaint.CellStyles then
+      StyleBackgrounds;
     // 1b. Gruppenfuss-Zeilen leicht abgesetzt
     HasGroups := FView.Grouped;
     if HasGroups then
@@ -3944,17 +4261,15 @@ begin
           R := RawCellRect(ColFrom, V);
           SR := Rect(Clip.Left, R.Top, Clip.Right, R.Bottom);
           IntersectRect(SR, SR, Clip);
-          if not IsRectEmpty(SR) then
+          if not IsRectEmpty(SR) and not (FPaint.UseColors and FStyles.Footer.HasFill(FPaint.Dark)) then
             ACanvas.FillRoundRect(SR, 0, PPGBlendColor(FPaint.Fill, FPaint.Header, 0.35), 255);
         end;
     // 1c. Bedingte Formate: Flaechen, Datenbalken, Symbole (nur Datenzellen)
     HasStyles := not FixedArea and ((FCondFormats.Count > 0) or Assigned(FOnGetCellStyle));
-    AnyBold := False;
-    if HasStyles then
+      if HasStyles then
     begin
       I := (ColTo - ColFrom + 1) * (RowTo - RowFrom + 1);
-      SetLength(StyleTC, I);
-      SetLength(StyleBold, I);
+      SetLength(StyleRec, I);
       SetLength(StyleIcon, I);
       for V := RowFrom to RowTo do
       begin
@@ -3962,8 +4277,7 @@ begin
         for C := ColFrom to ColTo do
         begin
           Idx := CellIndex(C, V);
-          StyleTC[Idx] := clNone;
-          StyleBold[Idx] := False;
+          StyleRec[Idx].Reset;
           StyleIcon[Idx] := False;
           DCol := FVisCols[C];
           if (D < FFixedRows) or (C < FFixedCols) or
@@ -4019,19 +4333,13 @@ begin
             PPGFillPolygon(ACanvas, Pts, St.IconColor, 255);
             StyleIcon[Idx] := True;
           end;
-          StyleTC[Idx] := St.TextColor;
-          StyleBold[Idx] := St.Bold;
-          if St.Bold then
-            AnyBold := True;
+          StyleRec[Idx] := St;
         end;
       end;
     end;
     // 2. Auswahl als ein halbtransparentes Rechteck (nur Datenzellen)
-    if not FixedArea and (ColFrom >= FFixedCols) then
+    if HasSel then
     begin
-      Sl := GetSelection;
-      if (Sl.Right >= ColFrom) and (Sl.Left <= ColTo) and (Sl.Bottom >= RowFrom) and
-        (Sl.Top <= RowTo) and (Sl.Top >= VFixedRows) then
       begin
         SR := RawCellRect(Sl.Left, Sl.Top);
         LR := RawCellRect(Sl.Right, Sl.Bottom);
@@ -4044,12 +4352,25 @@ begin
         IntersectRect(SR, SR, Clip);
         if not IsRectEmpty(SR) then
         begin
-          if Focused then
+          // Eigene Auswahlfarbe deckend, sonst halbtransparent (Akzent)
+          if FPaint.UseColors and SelSt.HasFill(FPaint.Dark) then
+            ACanvas.FillRoundRect(SR, 0, SelSt.FillFor(FPaint.Dark, FPaint.Accent), 255)
+          else if Focused then
             ACanvas.FillRoundRect(SR, 0, FPaint.Accent, 46)
           else
             ACanvas.FillRoundRect(SR, 0, FPaint.Text, 22);
         end;
       end;
+    end;
+    // 2b. Flaeche der Fokuszelle (Styles.FocusedCell.Color)
+    if not FixedArea and Focused and FPaint.UseColors and FStyles.FocusedCell.HasFill(FPaint.Dark) and
+      (FFocusC >= ColFrom) and (FFocusC <= ColTo) and (FFocusV >= RowFrom) and (FFocusV <= RowTo) and
+      (DataRow(FFocusV) >= FFixedRows) then
+    begin
+      SR := RawCellRect(FFocusC, FFocusV);
+      IntersectRect(SR, SR, Clip);
+      if not IsRectEmpty(SR) then
+        ACanvas.FillRoundRect(SR, 0, FStyles.FocusedCell.FillFor(FPaint.Dark, FPaint.Fill), 255);
     end;
     // 3. Texte sammeln (Zellarten/Sortierpfeil merken)
     NX := 0;
@@ -4079,15 +4400,23 @@ begin
           TR := RawCellRect(C, V);
           InflateRect(TR, -Pad, 0);
           Col := ColumnOf(DCol);
-          if (Col <> nil) and (Col.Alignment <> taLeftJustify) then
-            FPainter.AddText(TR, S, TC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(Col.Alignment)))
+          if FPaint.UseColors then
+            TC := FStyles.Footer.TextFor(FPaint.Dark, FPaint.HeaderText)
           else
-            FPainter.AddText(TR, S, TC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taRightJustify)));
+            TC := FPaint.Text;
+          F := FFontCache.ForStyle(FStyles.Footer, FPaint.HeaderFont);
+          if (Col <> nil) and (Col.Alignment <> taLeftJustify) then
+            Al := Col.Alignment
+          else
+            Al := taRightJustify;
+          AddCellText(TR, S, TC, Al, F);
           Continue;
         end
         else if D = FilterRowMark then
         begin
           S := GetFilter(DCol);
+          if FPaint.UseColors then
+            TC := FStyles.FilterRow.TextFor(FPaint.Dark, TC);
           if S = '' then
           begin
             S := PPGStr(@SPPGGridFilterHint);
@@ -4118,30 +4447,74 @@ begin
             Inc(TR.Left, PPGScale(TPPGCellPainter.SortArrowSpace, PPI))
           else
             Dec(TR.Right, PPGScale(TPPGCellPainter.SortArrowSpace, PPI));
-        if HasStyles then
-        begin
-          Idx := CellIndex(C, V);
-          if StyleTC[Idx] <> clNone then
-            TC := StyleTC[Idx];
-          if StyleIcon[Idx] then
-            if UseRightToLeftAlignment then
-              Dec(TR.Right, IconW + Pad div 2)
-            else
-              Inc(TR.Left, IconW + Pad div 2);
-          Col := ColumnOf(DCol);
-          if Col <> nil then
-            FPainter.AddText(TR, S, TC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(Col.Alignment)),
-              StyleBold[Idx])
-          else
-            FPainter.AddText(TR, S, TC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taLeftJustify)),
-              StyleBold[Idx]);
-          Continue;
-        end;
         Col := ColumnOf(DCol);
         if Col <> nil then
-          FPainter.AddText(TR, S, TC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(Col.Alignment)))
+          Al := Col.Alignment
         else
-          FPainter.AddText(TR, S, TC, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taLeftJustify)));
+          Al := taLeftJustify;
+        St.Reset;
+        Extra := [];
+        IsHead := (D >= 0) and ((D < FFixedRows) or (C < FFixedCols));
+        if IsHead then
+        begin
+          // Kopfzellen: Styles.Header, Spaltenkopf: Column.TitleStyle
+          TC := FPaint.HeaderText;
+          F := FPaint.HeaderFont;
+          if (D = 0) and (Col <> nil) then
+          begin
+            Al := Col.EffectiveTitleAlignment;
+            F := FFontCache.ForStyle(Col.TitleStyle, FPaint.HeaderFont);
+            if FPaint.UseColors then
+              TC := Col.TitleStyle.TextFor(FPaint.Dark, TC);
+          end;
+        end
+        else if D = FilterRowMark then
+          F := FFontCache.ForStyle(FStyles.FilterRow, Font)
+        else
+        begin
+          // Datenzelle: Spalte -> Zebra -> Hover -> Zellstil -> Auswahl -> Fokus
+          if FPaint.UseColors then
+          begin
+            if Col <> nil then
+              TC := Col.Style.TextFor(FPaint.Dark, TC);
+            if FStyles.AlternateRow.HasFill(FPaint.Dark) and IsZebraRow(V) then
+            begin
+              TC := FStyles.AlternateRow.TextFor(FPaint.Dark, TC);
+              Extra := Extra + FStyles.AlternateRow.FontStyle;
+            end;
+            if V = FHotV then
+            begin
+              TC := FStyles.HotRow.TextFor(FPaint.Dark, TC);
+              Extra := Extra + FStyles.HotRow.FontStyle;
+            end;
+          end;
+          if HasStyles then
+          begin
+            Idx := CellIndex(C, V);
+            St := StyleRec[Idx];
+            if St.TextColor <> clNone then
+              TC := St.TextColor;
+            if StyleIcon[Idx] then
+              if UseRightToLeftAlignment then
+                Dec(TR.Right, IconW + Pad div 2)
+              else
+                Inc(TR.Left, IconW + Pad div 2);
+          end;
+          if InSel(C, V) then
+          begin
+            if FPaint.UseColors then
+              TC := SelSt.TextFor(FPaint.Dark, TC);
+            Extra := Extra + SelSt.FontStyle;
+          end;
+          if (C = FFocusC) and (V = FFocusV) and Focused then
+          begin
+            if FPaint.UseColors then
+              TC := FStyles.FocusedCell.TextFor(FPaint.Dark, TC);
+            Extra := Extra + FStyles.FocusedCell.FontStyle;
+          end;
+          F := CellFont(Col, St, Extra);
+        end;
+        AddCellText(TR, S, TC, Al, F);
       end;
     end;
     // 3b. Verbundene Zellen: Text der Ursprungszelle ueber die ganze Flaeche
@@ -4158,10 +4531,14 @@ begin
         TR := VM[I].R;
         InflateRect(TR, -Pad, 0);
         Col := ColumnOf(DCol);
+        St.Reset;
+        TC := FPaint.Text;
+        if (Col <> nil) and FPaint.UseColors then
+          TC := Col.Style.TextFor(FPaint.Dark, TC);
         if Col <> nil then
-          FPainter.AddText(TR, S, FPaint.Text, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(Col.Alignment)))
+          AddCellText(TR, S, TC, Col.Alignment, CellFont(Col, St, []))
         else
-          FPainter.AddText(TR, S, FPaint.Text, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taLeftJustify)));
+          AddCellText(TR, S, TC, taLeftJustify, Font);
       end;
     // 4. Gitterlinien und Texte in EINEM GDI-Block (GetHDC/Schrift nur einmal)
     if FixedArea then
@@ -4174,9 +4551,21 @@ begin
       VLine := goVertLine in FOptions;
       HLine := goHorzLine in FOptions;
     end;
+    // Linienbreite (GridLineWidth, 0 = keine Linien wie TStringGrid)
+    LW := PPGScale(FGridLineWidth, PPI);
+    if (FGridLineWidth > 0) and (LW < 1) then
+      LW := 1;
+    if LW = 0 then
+    begin
+      VLine := False;
+      HLine := False;
+    end;
     DC := ACanvas.BeginGdi;
     try
-      LineBrush := CreateSolidBrush(ColorToRGB(FPaint.Line));
+      if FixedArea then
+        LineBrush := CreateSolidBrush(ColorToRGB(FPaint.HeaderLine))
+      else
+        LineBrush := CreateSolidBrush(ColorToRGB(FPaint.Line));
       if LineBrush <> 0 then
       try
         if VLine then
@@ -4213,14 +4602,7 @@ begin
       finally
         DeleteObject(LineBrush);
       end;
-      if AnyBold then
-      begin
-        FBoldFont.Assign(Font);
-        FBoldFont.Style := FBoldFont.Style + [fsBold];
-        FPainter.FlushTexts(DC, Font.Handle, FBoldFont.Handle);
-      end
-      else
-        FPainter.FlushTexts(DC, Font.Handle);
+      FPainter.FlushTexts(DC, Font.Handle);
     finally
       ACanvas.EndGdi(DC); // stellt Schrift, Farbe und Modus wieder her
     end;
@@ -4245,7 +4627,7 @@ begin
         LR := RawCellRect(ColFrom, FFocusV);
         LR := Rect(Clip.Left, LR.Top, Clip.Right, LR.Bottom);
         InflateRect(LR, -1, -1);
-        ACanvas.FrameRoundRect(LR, PPGScale(2, PPI), PPGScale(2, PPI), FPaint.Accent, 255);
+        ACanvas.FrameRoundRect(LR, PPGScale(2, PPI), PPGScale(2, PPI), FPaint.FocusFrame, 255);
       end;
     end
     else if not FixedArea and FocusVisible and (FFocusC >= ColFrom) and (FFocusC <= ColTo) and
@@ -4257,7 +4639,7 @@ begin
         if (VM[I].C0 = FFocusC) and (VM[I].R0 = FFocusV) then
           LR := VM[I].R;
       InflateRect(LR, -1, -1);
-      ACanvas.FrameRoundRect(LR, PPGScale(2, PPI), PPGScale(2, PPI), FPaint.Accent, 255);
+      ACanvas.FrameRoundRect(LR, PPGScale(2, PPI), PPGScale(2, PPI), FPaint.FocusFrame, 255);
     end;
     if Assigned(FOnDrawCell) then
       for V := RowFrom to RowTo do
@@ -4290,78 +4672,85 @@ begin
     Exit;
   // Farben einmal pro Zeichnen (nicht je Zelle)
   GetGridColors(FPaint.Fill, FPaint.Text, FPaint.Header, FPaint.Line, FPaint.Accent);
-  FPaint.Hint := PPGBlendColor(FPaint.Text, FPaint.Header, 0.55);
+  FFontCache.Clear;
+  PrepareStyleColors;
+  FPaint.Hint := PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.55);
   FPainter.Prepare(Renderer);
   PrepareKindContext(ACanvas);
-  GV := View;
-  PH := GroupPanelHeight;
-  BH := BandHeight;
-  Inc(GV.Top, PH + BH);
-  Dec(GV.Bottom, FooterHeight);
-  if GV.Top > GV.Bottom then
-    GV.Top := GV.Bottom;
-  FW := FixedWidth;
-  FH := FixedHeight;
-  FR := FirstRightCol;
-  // Rechter Rand der scrollbaren Spalten (rechts fixierte stehen dahinter)
-  if FR < VColCount then
-    MidRight := ColLeft(FR)
-  else
-    MidRight := GV.Right - GV.Left;
-  // Sichtbare scrollbare Spalten/Zeilen
-  CX := ScrollX + FW;
-  C0 := FFixedCols;
-  while (C0 < FR - 1) and (FColX[C0 + 1] <= CX) do
-    Inc(C0);
-  C1 := C0;
-  while (C1 < FR - 1) and (FColX[C1 + 1] < CX + MidRight - FW) do
-    Inc(C1);
-  CY := Int64(RowScrollY) + FH;
-  if CY >= FLayout.TotalHeight64 then
-    R0 := FLayout.Count
-  else
-    R0 := FLayout.RowAt(CY);
-  if R0 < VFixedRows then
-    R0 := VFixedRows;
-  R1 := R0;
-  while (R1 < FLayout.Count - 1) and
-    (FLayout.RowTop(R1 + 1) < CY + (GV.Bottom - GV.Top) - FH) do
-    Inc(R1);
-  if R0 >= FLayout.Count then
-    R1 := R0 - 1; // keine Datenzeilen sichtbar
-  // Bereiche: Daten, Kopfzeilen, Kopfspalten, rechts fixierte, Ecke
-  PaintRegion(ACanvas, C0, C1, R0, R1,
-    Mirror(Rect(GV.Left + FW, GV.Top + FH, GV.Left + MidRight, GV.Bottom)), False);
-  PaintRegion(ACanvas, C0, C1, 0, VFixedRows - 1,
-    Mirror(Rect(GV.Left + FW, GV.Top, GV.Left + MidRight, GV.Top + FH)), True);
-  PaintRegion(ACanvas, 0, FFixedCols - 1, R0, R1,
-    Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FW, GV.Bottom)), True);
-  if FR < VColCount then
-  begin
-    PaintRegion(ACanvas, FR, VColCount - 1, R0, R1,
-      Mirror(Rect(GV.Left + MidRight, GV.Top + FH, GV.Right, GV.Bottom)), False);
-    PaintRegion(ACanvas, FR, VColCount - 1, 0, VFixedRows - 1,
-      Mirror(Rect(GV.Left + MidRight, GV.Top, GV.Right, GV.Top + FH)), True);
+  try
+    GV := View;
+    PH := GroupPanelHeight;
+    BH := BandHeight;
+    Inc(GV.Top, PH + BH);
+    Dec(GV.Bottom, FooterHeight);
+    if GV.Top > GV.Bottom then
+      GV.Top := GV.Bottom;
+    FW := FixedWidth;
+    FH := FixedHeight;
+    FR := FirstRightCol;
+    // Rechter Rand der scrollbaren Spalten (rechts fixierte stehen dahinter)
+    if FR < VColCount then
+      MidRight := ColLeft(FR)
+    else
+      MidRight := GV.Right - GV.Left;
+    // Sichtbare scrollbare Spalten/Zeilen
+    CX := ScrollX + FW;
+    C0 := FFixedCols;
+    while (C0 < FR - 1) and (FColX[C0 + 1] <= CX) do
+      Inc(C0);
+    C1 := C0;
+    while (C1 < FR - 1) and (FColX[C1 + 1] < CX + MidRight - FW) do
+      Inc(C1);
+    CY := Int64(RowScrollY) + FH;
+    if CY >= FLayout.TotalHeight64 then
+      R0 := FLayout.Count
+    else
+      R0 := FLayout.RowAt(CY);
+    if R0 < VFixedRows then
+      R0 := VFixedRows;
+    R1 := R0;
+    while (R1 < FLayout.Count - 1) and
+      (FLayout.RowTop(R1 + 1) < CY + (GV.Bottom - GV.Top) - FH) do
+      Inc(R1);
+    if R0 >= FLayout.Count then
+      R1 := R0 - 1; // keine Datenzeilen sichtbar
+    // Bereiche: Daten, Kopfzeilen, Kopfspalten, rechts fixierte, Ecke
+    PaintRegion(ACanvas, C0, C1, R0, R1,
+      Mirror(Rect(GV.Left + FW, GV.Top + FH, GV.Left + MidRight, GV.Bottom)), False);
+    PaintRegion(ACanvas, C0, C1, 0, VFixedRows - 1,
+      Mirror(Rect(GV.Left + FW, GV.Top, GV.Left + MidRight, GV.Top + FH)), True);
+    PaintRegion(ACanvas, 0, FFixedCols - 1, R0, R1,
+      Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FW, GV.Bottom)), True);
+    if FR < VColCount then
+    begin
+      PaintRegion(ACanvas, FR, VColCount - 1, R0, R1,
+        Mirror(Rect(GV.Left + MidRight, GV.Top + FH, GV.Right, GV.Bottom)), False);
+      PaintRegion(ACanvas, FR, VColCount - 1, 0, VFixedRows - 1,
+        Mirror(Rect(GV.Left + MidRight, GV.Top, GV.Right, GV.Top + FH)), True);
+    end;
+    PaintRegion(ACanvas, 0, FFixedCols - 1, 0, VFixedRows - 1,
+      Mirror(Rect(GV.Left, GV.Top, GV.Left + FW, GV.Top + FH)), True);
+    if BH > 0 then
+      PaintBands(ACanvas, Rect(View.Left, View.Top + PH, View.Right, View.Top + PH + BH));
+    if PH > 0 then
+      PaintGroupPanel(ACanvas, Rect(View.Left, View.Top, View.Right, View.Top + PH));
+    if GV.Bottom < View.Bottom then
+      PaintFooter(ACanvas, Rect(View.Left, GV.Bottom, View.Right, View.Bottom));
+    // Einfuegemarke beim Verschieben einer Spalte
+    if FColDragging and not FDropToGroup and (FColDropAt >= 0) and HandleAllocated and
+      (GetCapture = Handle) then
+    begin
+      X := GV.Left + ColLeft(FColDropAt);
+      if UseRightToLeftAlignment then
+        X := GV.Left + GV.Right - X;
+      ACanvas.FillRoundRect(Rect(X - PPGScale(1, ScalePPI), View.Top + PH,
+        X + PPGScale(1, ScalePPI), GV.Top + FH), 0, FPaint.Accent, 255);
+    end;
+  finally
+    FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
+    FPaint.HeaderFont := nil;
+    FFontCache.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
   end;
-  PaintRegion(ACanvas, 0, FFixedCols - 1, 0, VFixedRows - 1,
-    Mirror(Rect(GV.Left, GV.Top, GV.Left + FW, GV.Top + FH)), True);
-  if BH > 0 then
-    PaintBands(ACanvas, Rect(View.Left, View.Top + PH, View.Right, View.Top + PH + BH));
-  if PH > 0 then
-    PaintGroupPanel(ACanvas, Rect(View.Left, View.Top, View.Right, View.Top + PH));
-  if GV.Bottom < View.Bottom then
-    PaintFooter(ACanvas, Rect(View.Left, GV.Bottom, View.Right, View.Bottom));
-  // Einfuegemarke beim Verschieben einer Spalte
-  if FColDragging and not FDropToGroup and (FColDropAt >= 0) and HandleAllocated and
-    (GetCapture = Handle) then
-  begin
-    X := GV.Left + ColLeft(FColDropAt);
-    if UseRightToLeftAlignment then
-      X := GV.Left + GV.Right - X;
-    ACanvas.FillRoundRect(Rect(X - PPGScale(1, ScalePPI), View.Top + PH,
-      X + PPGScale(1, ScalePPI), GV.Top + FH), 0, FPaint.Accent, 255);
-  end;
-  FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
 end;
 
 procedure TPPGCustomGrid.PaintBands(const ACanvas: IPPGCanvas; const View: TRect);
@@ -4413,7 +4802,7 @@ var
     Winapi.Windows.FillRect(DC, LR, LineBrush);
     TR := R;
     InflateRect(TR, -Pad, 0);
-    FPainter.AddText(TR, FBands[ABand].Caption, FPaint.Text,
+    FPainter.AddText(TR, FBands[ABand].Caption, FPaint.HeaderText,
       DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(FBands[ABand].Alignment)));
   end;
 
@@ -4426,7 +4815,7 @@ begin
   DC := ACanvas.BeginGdi;
   try
     TPPGCellPainter.FillGdi(DC, View, FPaint.Header);
-    LineBrush := CreateSolidBrush(ColorToRGB(FPaint.Line));
+    LineBrush := CreateSolidBrush(ColorToRGB(FPaint.HeaderLine));
     if LineBrush = 0 then
       Exit;
     try
@@ -4450,7 +4839,7 @@ begin
     finally
       DeleteObject(LineBrush);
     end;
-    FPainter.FlushTexts(DC, Font.Handle);
+    FPainter.FlushTexts(DC, FPaint.HeaderFont.Handle);
   finally
     ACanvas.EndGdi(DC);
   end;
@@ -4832,6 +5221,11 @@ var
   C, V, W: Integer;
   ToGroup: Boolean;
 begin
+  // Zeile unter der Maus (nur Datenzeilen) fuer Styles.HotRow
+  if MouseCoord(X, Y, C, V) and (DataRow(V) >= FFixedRows) then
+    SetHotRow(V)
+  else
+    SetHotRow(-1);
   if FSizingCol >= 0 then
   begin
     if UseRightToLeftAlignment then
@@ -5536,6 +5930,8 @@ begin
     end;
     Exit;
   end;
+  if Message.Msg = CM_MOUSELEAVE then
+    SetHotRow(-1);
   if (GMsgRowAction <> 0) and (Message.Msg = GMsgRowAction) then
   begin
     if (Integer(Message.WParam) >= VFixedRows) and (Integer(Message.WParam) < VRowCount) then

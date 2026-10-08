@@ -31,7 +31,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.ImgList, Vcl.Forms,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base,
-  PPG.PageControl;
+  PPG.PageControl, PPG.ElementStyle, PPG.CustomDraw;
 
 type
   TPPGNavigationView = class;
@@ -42,6 +42,9 @@ type
 
   TPPGNavItem = class(TCollectionItem)
   private
+    FColor: TColor;
+    FTextColor: TColor;
+    FFontStyle: TFontStyles;
     FCaption: string;
     FKind: TPPGNavItemKind;
     FIconChar: Word;
@@ -68,6 +71,9 @@ type
     procedure SetFooter(const Value: Boolean);
     procedure SetExpanded(const Value: Boolean);
     procedure SetItems(const Value: TPPGNavItems);
+    procedure SetColor(const Value: TColor);
+    procedure SetTextColor(const Value: TColor);
+    procedure SetFontStyle(const Value: TFontStyles);
     function GetLevel: Integer;
     function GetParentItem: TPPGNavItem;
   protected
@@ -101,7 +107,36 @@ type
     property Hint: string read FHint write FHint;
     property Tag: NativeInt read FTag write FTag default 0;
     property Items: TPPGNavItems read FItems write SetItems;
+    /// Flaeche, Text und zusaetzliche Schriftstile des Eintrags (clDefault = NavStyles).
+    property Color: TColor read FColor write SetColor default clDefault;
+    property TextColor: TColor read FTextColor write SetTextColor default clDefault;
+    property FontStyle: TFontStyles read FFontStyle write SetFontStyle default [];
   end;
+
+  /// Bereiche der Navigation (nur gesetzte Werte zaehlen, clDefault = Preset).
+  TPPGNavStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Leiste (Color = Hintergrund, TextColor = Text, BorderColor = Trennlinie).
+    property Pane: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Eintraege in Ruhe.
+    property Item: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Eintrag unter der Maus.
+    property HotItem: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Gewaehlter Eintrag.
+    property SelectedItem: TPPGElementStyle index 3 read GetItem write SetItem;
+    /// Ueberschriften (Kind = nikHeader).
+    property Header: TPPGElementStyle index 4 read GetItem write SetItem;
+    /// Auswahl-Indikator (Color).
+    property Indicator: TPPGElementStyle index 5 read GetItem write SetItem;
+    /// Titel der Leiste.
+    property PaneTitle: TPPGElementStyle index 6 read GetItem write SetItem;
+  end;
+
+  TPPGNavCustomDrawEvent = procedure(Sender: TObject; Canvas: TCanvas; Item: TPPGNavItem;
+    const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle;
+    var DefaultDraw: Boolean) of object;
 
   TPPGNavItems = class(TOwnedCollection)
   private
@@ -124,6 +159,11 @@ type
 
   TPPGNavigationView = class(TPPGCustomControl, IPPGAccessibleChildren)
   private
+    FImageTint: TPPGImageTint;
+    FNavStyles: TPPGNavStyles;
+    FOnCustomDrawItem: TPPGNavCustomDrawEvent;
+    FDrawCanvas: TCanvas;
+    FFonts: TPPGFontCache;
     FItems: TPPGNavItems;
     FSelected: TPPGNavItem;
     FFocusItem: TPPGNavItem;
@@ -157,6 +197,11 @@ type
     FOnSelectionChange: TNotifyEvent;
     FOnItemInvoked: TPPGNavItemEvent;
     FOnPaneChange: TNotifyEvent;
+    procedure DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer; AEnabled: Boolean;
+      Color: TColor);
+    procedure SetImageTint(const Value: TPPGImageTint);
+    procedure SetNavStyles(const Value: TPPGNavStyles);
+    procedure NavStylesChanged(Sender: TObject);
     procedure SetItems(const Value: TPPGNavItems);
     procedure SetSelected(const Value: TPPGNavItem);
     procedure SetIsPaneOpen(const Value: Boolean);
@@ -259,7 +304,13 @@ type
     property CompactModeThresholdWidth: Integer read FCompactThreshold write FCompactThreshold default 640;
     property PaneTitle: string read FPaneTitle write SetPaneTitle;
     property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
+    /// itTextColor: Symbole einfarbig in der Textfarbe (Hover, Dunkel, Deaktiviert).
+    property ImageTint: TPPGImageTint read FImageTint write SetImageTint default itNone;
     property PageControl: TPPGPageControl read FPageControl write SetPageControl;
+    /// Bereiche der Leiste (Hintergrund, Eintraege, Hover, Auswahl, Ueberschriften).
+    property NavStyles: TPPGNavStyles read FNavStyles write SetNavStyles;
+    /// Vor dem Zeichnen jedes Eintrags: Style anpassen oder selbst zeichnen.
+    property OnCustomDrawItem: TPPGNavCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
     property Align default alLeft;
     property Anchors;
     property BiDiMode;
@@ -276,6 +327,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnEnter;
     property OnExit;
     property OnItemInvoked: TPPGNavItemEvent read FOnItemInvoked write FOnItemInvoked;
@@ -392,6 +445,8 @@ begin
   FEnabled := True;
   FVisible := True;
   FPageIndex := -1;
+  FColor := clDefault;
+  FTextColor := clDefault;
   FItems := TPPGNavItems.Create(Self);
   inherited Create(Collection);
 end;
@@ -452,6 +507,9 @@ begin
     FExpanded := S.FExpanded;
     FHint := S.FHint;
     FTag := S.FTag;
+    FColor := S.FColor;
+    FTextColor := S.FTextColor;
+    FFontStyle := S.FFontStyle;
     FItems.Assign(S.FItems);
     Changed(False);
   end
@@ -556,6 +614,33 @@ begin
   if FBadgeCount <> Value then
   begin
     FBadgeCount := Max(0, Value);
+    Changed(False);
+  end;
+end;
+
+procedure TPPGNavItem.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGNavItem.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGNavItem.SetFontStyle(const Value: TFontStyles);
+begin
+  if FFontStyle <> Value then
+  begin
+    FFontStyle := Value;
     Changed(False);
   end;
 end;
@@ -695,11 +780,51 @@ end;
 
 { TPPGNavigationView }
 
+{ TPPGNavStyles }
+
+constructor TPPGNavStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 7);
+end;
+
+{ TPPGNavigationView }
+
+procedure TPPGNavigationView.DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer;
+  AEnabled: Boolean; Color: TColor);
+var
+  DC: HDC;
+begin
+  if FImageTint = itNone then
+  begin
+    ACanvas.DrawImage(Images, Index, X, Y, AEnabled);
+    Exit;
+  end;
+  DC := ACanvas.BeginGdi;
+  try
+    PPGGdiDrawImageTinted(DC, Images, Index, X, Y, Color);
+  finally
+    ACanvas.EndGdi(DC);
+  end;
+end;
+
+procedure TPPGNavigationView.SetImageTint(const Value: TPPGImageTint);
+begin
+  if FImageTint <> Value then
+  begin
+    FImageTint := Value;
+    Invalidate;
+  end;
+end;
+
 constructor TPPGNavigationView.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   ControlStyle := ControlStyle - [csSetCaption, csClickEvents, csDoubleClicks];
   FItems := TPPGNavItems.Create(Self);
+  FNavStyles := TPPGNavStyles.Create(Self);
+  FNavStyles.OnChange := NavStylesChanged;
+  FDrawCanvas := TCanvas.Create;
+  FFonts := TPPGFontCache.Create;
   FRows := TList<TPPGNavItem>.Create;
   FFooterRows := TList<TPPGNavItem>.Create;
   FHotRow := -1;
@@ -738,7 +863,20 @@ begin
   FreeAndNil(FItems);
   FreeAndNil(FRows);
   FreeAndNil(FFooterRows);
+  FreeAndNil(FFonts);
+  FreeAndNil(FDrawCanvas);
+  FreeAndNil(FNavStyles);
   inherited Destroy;
+end;
+
+procedure TPPGNavigationView.SetNavStyles(const Value: TPPGNavStyles);
+begin
+  FNavStyles.Assign(Value);
+end;
+
+procedure TPPGNavigationView.NavStylesChanged(Sender: TObject);
+begin
+  Invalidate;
 end;
 
 procedure TPPGNavigationView.Loaded;
@@ -1600,6 +1738,14 @@ var
   S: string;
   Pts: array[0..2] of TPoint;
   Sz: TSize;
+  UseColors, Dk, DrawIt: Boolean;
+  NS: TPPGNavStyles;
+  E: TPPGElementStyle;
+  DS: TPPGDrawStyle;
+  St: TPPGItemDrawState;
+  F, TF: TFont;
+  ItemFill: TColor;
+  DC: HDC;
 begin
   PPI := ScalePPI;
   T := Tokens;
@@ -1630,220 +1776,303 @@ begin
       DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
     end;
   end;
-  if not Enabled then
+  // Element-Stile (NavStyles): Leiste, Ueberschriften; Eintraege unten
+  NS := FNavStyles;
+  UseColors := not HC and not UseVclStyle;
+  Dk := UseDarkMode;
+  if UseColors then
   begin
-    TextCol := DisabledCol;
-    Secondary := DisabledCol;
-    Accent := PPGBlendColor(Accent, Fill, 0.6); // Plaketten und Indikator zuruecknehmen
+    Fill := NS.Pane.FillFor(Dk, Fill);
+    TextCol := NS.Pane.TextFor(Dk, TextCol);
+    Border := NS.Pane.BorderFor(Dk, Border);
+    Secondary := NS.Header.TextFor(Dk, Secondary);
   end;
-  ACanvas.FillRoundRect(ClientR, 0, Fill, 255);
-  // Trennlinie zum Inhalt
-  if UseRightToLeftAlignment then
-    ACanvas.FillRoundRect(Rect(ClientR.Left, ClientR.Top, ClientR.Left + 1, ClientR.Bottom), 0, Border, 255)
-  else
-    ACanvas.FillRoundRect(Rect(ClientR.Right - 1, ClientR.Top, ClientR.Right, ClientR.Bottom), 0, Border, 255);
-  BuildRows;
-  Open := PaneOpenNow;
-  IconW := PPGScale(FCompactPaneLength, PPI);
-  Rad := PPGScale(4, PPI);
-
-  // Menue-Knopf und Titel
-  if FShowMenuButton then
-  begin
-    R := MenuRect;
-    if Enabled and (FHotRow = -2) then
-      ACanvas.FillRoundRect(R, Rad, TextCol, IfThen(FDownRow = -2, 24, 14));
-    if not PPGDrawIcon(ACanvas, R, igMenu, TextCol, PPGScale(16, PPI)) then
-      for I := -1 to 1 do
-        ACanvas.FillRoundRect(Rect((R.Left + R.Right) div 2 - PPGScale(8, PPI),
-          (R.Top + R.Bottom) div 2 + I * PPGScale(5, PPI) - 1,
-          (R.Left + R.Right) div 2 + PPGScale(8, PPI),
-          (R.Top + R.Bottom) div 2 + I * PPGScale(5, PPI) + 1), 0, TextCol, 255);
-    if FocusVisible and Focused and (FFocusItem = nil) then
-      ACanvas.FrameRoundRect(R, Rad, PPGScale(2, PPI), Accent, 255);
-  end;
-  if (FPaneTitle <> '') and (Width > IconW + PPGScale(24, PPI)) then
-  begin
-    if FShowMenuButton then
-      R := Rect(IconW, 0, Width - PPGScale(8, PPI), MainTop)
-    else
-      R := Rect(PPGScale(16, PPI), 0, Width - PPGScale(8, PPI), MainTop);
-    if UseRightToLeftAlignment then
-      R := Rect(Width - R.Right, R.Top, Width - R.Left, R.Bottom);
-    ACanvas.DrawText(R, FPaneTitle, Font, TextCol,
-      DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX));
-  end;
-
-  IndItem := IndicatorItem;
-  FooterT := FooterTop;
-  IR := PPGItemRendererOf(Renderer);
-  for I := 0 to RowCountAll - 1 do
-  begin
-    It := RowItem(I);
-    R := RowRect(I);
-    if I < FRows.Count then
+  FFonts.Clear;
+  try
+    if not Enabled then
     begin
-      if (R.Bottom <= MainTop) or (R.Top >= FooterT) then
-        Continue;
-      Clip := Rect(0, MainTop, Width, FooterT);
-    end
+      TextCol := DisabledCol;
+      Secondary := DisabledCol;
+      Accent := PPGBlendColor(Accent, Fill, 0.6); // Plaketten und Indikator zuruecknehmen
+    end;
+    ACanvas.FillRoundRect(ClientR, 0, Fill, 255);
+    // Trennlinie zum Inhalt
+    if UseRightToLeftAlignment then
+      ACanvas.FillRoundRect(Rect(ClientR.Left, ClientR.Top, ClientR.Left + 1, ClientR.Bottom), 0, Border, 255)
     else
-      Clip := ClientR;
-    ACanvas.PushClipRoundRect(Clip, 0);
-    try
-      case It.Kind of
-        nikSeparator:
-          ACanvas.FillRoundRect(Rect(R.Left + PPGScale(12, PPI), (R.Top + R.Bottom) div 2,
-            R.Right - PPGScale(12, PPI), (R.Top + R.Bottom) div 2 + 1), 0, Border, 255);
-        nikHeader:
-          begin
-            TextR := Rect(R.Left + PPGScale(16, PPI), R.Top, R.Right - PPGScale(8, PPI), R.Bottom);
-            if UseRightToLeftAlignment then
-              TextR := Rect(Width - TextR.Right, TextR.Top, Width - TextR.Left, TextR.Bottom);
-            ACanvas.DrawText(TextR, It.Caption, Font, Secondary,
-              DrawTextBiDiModeFlags(DT_SINGLELINE or DT_BOTTOM or DT_END_ELLIPSIS or DT_NOPREFIX));
-          end;
+      ACanvas.FillRoundRect(Rect(ClientR.Right - 1, ClientR.Top, ClientR.Right, ClientR.Bottom), 0, Border, 255);
+    BuildRows;
+    Open := PaneOpenNow;
+    IconW := PPGScale(FCompactPaneLength, PPI);
+    Rad := PPGScale(4, PPI);
+
+    // Menue-Knopf und Titel
+    if FShowMenuButton then
+    begin
+      R := MenuRect;
+      if Enabled and (FHotRow = -2) then
+        ACanvas.FillRoundRect(R, Rad, TextCol, IfThen(FDownRow = -2, 24, 14));
+      if not PPGDrawIcon(ACanvas, R, igMenu, TextCol, PPGScale(16, PPI)) then
+        for I := -1 to 1 do
+          ACanvas.FillRoundRect(Rect((R.Left + R.Right) div 2 - PPGScale(8, PPI),
+            (R.Top + R.Bottom) div 2 + I * PPGScale(5, PPI) - 1,
+            (R.Left + R.Right) div 2 + PPGScale(8, PPI),
+            (R.Top + R.Bottom) div 2 + I * PPGScale(5, PPI) + 1), 0, TextCol, 255);
+      if FocusVisible and Focused and (FFocusItem = nil) then
+        ACanvas.FrameRoundRect(R, Rad, PPGScale(2, PPI), Accent, 255);
+    end;
+    if (FPaneTitle <> '') and (Width > IconW + PPGScale(24, PPI)) then
+    begin
+      if FShowMenuButton then
+        R := Rect(IconW, 0, Width - PPGScale(8, PPI), MainTop)
       else
-        begin
-          RR := Rect(R.Left + PPGScale(RowInset, PPI), R.Top + PPGScale(2, PPI),
-            R.Right - PPGScale(RowInset, PPI), R.Bottom - PPGScale(2, PPI));
-          Sel := (It = IndItem);
-          Hot := Enabled and It.Enabled and (I = FHotRow);
-          Down := Hot and (I = FDownRow);
-          if Sel then
-            ACanvas.FillRoundRect(RR, Rad, TextCol, IfThen(Hot, 22, 16))
-          else if Down then
-            ACanvas.FillRoundRect(RR, Rad, TextCol, 20)
-          else if Hot then
-            ACanvas.FillRoundRect(RR, Rad, TextCol, 10);
-          if It.Enabled then
-            C := TextCol
-          else
-            C := DisabledCol;
-          Lvl := 0;
-          if Open then
-            Lvl := It.Level;
-          X := Lvl * PPGScale(IndentW, PPI);
-          IconR := Rect(X, R.Top, X + IconW, R.Bottom);
-          if UseRightToLeftAlignment then
-            IconR := Rect(Width - IconR.Right, IconR.Top, Width - IconR.Left, IconR.Bottom);
-          if (Images <> nil) and (It.ImageIndex >= 0) and (It.ImageIndex < Images.Count) then
-            ACanvas.DrawImage(Images, It.ImageIndex, (IconR.Left + IconR.Right - Images.Width) div 2,
-              (IconR.Top + IconR.Bottom - Images.Height) div 2, Enabled and It.Enabled)
-          else if It.IconChar <> 0 then
+        R := Rect(PPGScale(16, PPI), 0, Width - PPGScale(8, PPI), MainTop);
+      if UseRightToLeftAlignment then
+        R := Rect(Width - R.Right, R.Top, Width - R.Left, R.Bottom);
+      TF := FFonts.ForStyle(NS.PaneTitle, Font);
+      C := TextCol;
+      if UseColors and Enabled then
+        C := NS.PaneTitle.TextFor(Dk, C);
+      ACanvas.DrawText(R, FPaneTitle, TF, C,
+        DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX));
+    end;
+
+    IndItem := IndicatorItem;
+    FooterT := FooterTop;
+    IR := PPGItemRendererOf(Renderer);
+    for I := 0 to RowCountAll - 1 do
+    begin
+      It := RowItem(I);
+      R := RowRect(I);
+      if I < FRows.Count then
+      begin
+        if (R.Bottom <= MainTop) or (R.Top >= FooterT) then
+          Continue;
+        Clip := Rect(0, MainTop, Width, FooterT);
+      end
+      else
+        Clip := ClientR;
+      ACanvas.PushClipRoundRect(Clip, 0);
+      try
+        case It.Kind of
+          nikSeparator:
+            ACanvas.FillRoundRect(Rect(R.Left + PPGScale(12, PPI), (R.Top + R.Bottom) div 2,
+              R.Right - PPGScale(12, PPI), (R.Top + R.Bottom) div 2 + 1), 0, Border, 255);
+          nikHeader:
+            begin
+              TextR := Rect(R.Left + PPGScale(16, PPI), R.Top, R.Right - PPGScale(8, PPI), R.Bottom);
+              if UseRightToLeftAlignment then
+                TextR := Rect(Width - TextR.Right, TextR.Top, Width - TextR.Left, TextR.Bottom);
+              ACanvas.DrawText(TextR, It.Caption, FFonts.ForStyle(NS.Header, Font), Secondary,
+                DrawTextBiDiModeFlags(DT_SINGLELINE or DT_BOTTOM or DT_END_ELLIPSIS or DT_NOPREFIX));
+            end;
+        else
           begin
-            if not PPGDrawIconChar(ACanvas, IconR, It.IconChar, C, PPGScale(16, PPI)) then
-              // Ersatz ohne Symbolschrift: Anfangsbuchstabe
+            RR := Rect(R.Left + PPGScale(RowInset, PPI), R.Top + PPGScale(2, PPI),
+              R.Right - PPGScale(RowInset, PPI), R.Bottom - PPGScale(2, PPI));
+            Sel := (It = IndItem);
+            Hot := Enabled and It.Enabled and (I = FHotRow);
+            Down := Hot and (I = FDownRow);
+            // Eigenes Zeichnen (vor dem Eintrag)
+            DS.Reset;
+            DrawIt := True;
+            if Assigned(FOnCustomDrawItem) then
+            begin
+              St := [];
+              if Sel then
+                Include(St, idsSelected);
+              if Hot then
+                Include(St, idsHot);
+              if not (Enabled and It.Enabled) then
+                Include(St, idsDisabled);
+              if It.Expanded then
+                Include(St, idsExpanded);
+              if FocusVisible and Focused and (It = FFocusItem) then
+                Include(St, idsFocused);
+              DC := ACanvas.BeginGdi;
+              try
+                FDrawCanvas.Handle := DC;
+                try
+                  FDrawCanvas.Font := Font;
+                  FDrawCanvas.Brush.Style := bsClear;
+                  FOnCustomDrawItem(Self, FDrawCanvas, It, RR, St, DS, DrawIt);
+                finally
+                  FDrawCanvas.Handle := 0;
+                end;
+              finally
+                ACanvas.EndGdi(DC);
+              end;
+            end;
+            if not DrawIt then
+              Continue;
+            if Sel then
+              E := NS.SelectedItem
+            else if Hot then
+              E := NS.HotItem
+            else
+              E := NS.Item;
+            // Flaeche: eigene Farbe deckend, sonst die dezente Preset-Flaeche
+            ItemFill := clNone;
+            if UseColors then
+            begin
+              if E.HasFill(Dk) then
+                ItemFill := E.FillFor(Dk, clNone);
+              if (It.Color <> clDefault) and (It.Color <> clNone) then
+                ItemFill := PPGColorToRGB(It.Color);
+              if DS.Fill <> clNone then
+                ItemFill := PPGColorToRGB(DS.Fill);
+            end;
+            if ItemFill <> clNone then
+              ACanvas.FillRoundRect(RR, Rad, ItemFill, 255)
+            else if Sel then
+              ACanvas.FillRoundRect(RR, Rad, TextCol, IfThen(Hot, 22, 16))
+            else if Down then
+              ACanvas.FillRoundRect(RR, Rad, TextCol, 20)
+            else if Hot then
+              ACanvas.FillRoundRect(RR, Rad, TextCol, 10);
+            if It.Enabled then
+              C := TextCol
+            else
+              C := DisabledCol;
+            if UseColors and It.Enabled and Enabled then
+            begin
+              C := E.TextFor(Dk, C);
+              if (It.TextColor <> clDefault) and (It.TextColor <> clNone) then
+                C := PPGColorToRGB(It.TextColor);
+              if DS.TextColor <> clNone then
+                C := PPGColorToRGB(DS.TextColor);
+            end;
+            F := FFonts.ForStyle(E, Font, It.FontStyle + DS.FontStyle);
+            Lvl := 0;
+            if Open then
+              Lvl := It.Level;
+            X := Lvl * PPGScale(IndentW, PPI);
+            IconR := Rect(X, R.Top, X + IconW, R.Bottom);
+            if UseRightToLeftAlignment then
+              IconR := Rect(Width - IconR.Right, IconR.Top, Width - IconR.Left, IconR.Bottom);
+            if (Images <> nil) and (It.ImageIndex >= 0) and (It.ImageIndex < Images.Count) then
+              DrawItemImage(ACanvas, It.ImageIndex, (IconR.Left + IconR.Right - Images.Width) div 2,
+                (IconR.Top + IconR.Bottom - Images.Height) div 2, Enabled and It.Enabled, C)
+            else if It.IconChar <> 0 then
+            begin
+              if not PPGDrawIconChar(ACanvas, IconR, It.IconChar, C, PPGScale(16, PPI)) then
+                // Ersatz ohne Symbolschrift: Anfangsbuchstabe
+                ACanvas.DrawText(IconR, Copy(It.Caption, 1, 1), Font, C,
+                  DT_SINGLELINE or DT_CENTER or DT_VCENTER or DT_NOPREFIX);
+            end
+            else if not Open then
               ACanvas.DrawText(IconR, Copy(It.Caption, 1, 1), Font, C,
                 DT_SINGLELINE or DT_CENTER or DT_VCENTER or DT_NOPREFIX);
-          end
-          else if not Open then
-            ACanvas.DrawText(IconR, Copy(It.Caption, 1, 1), Font, C,
-              DT_SINGLELINE or DT_CENTER or DT_VCENTER or DT_NOPREFIX);
-          // Plakette: offen rechts, kompakt oben rechts am Symbol
-          if (It.BadgeCount > 0) or It.BadgeDot then
-          begin
-            if It.BadgeDot or not Open then
+            // Plakette: offen rechts, kompakt oben rechts am Symbol
+            if (It.BadgeCount > 0) or It.BadgeDot then
             begin
-              BadgeH := PPGScale(8, PPI);
-              if It.BadgeDot then
-                BR := Rect((IconR.Left + IconR.Right) div 2 + PPGScale(5, PPI), R.Top + PPGScale(8, PPI),
-                  (IconR.Left + IconR.Right) div 2 + PPGScale(5, PPI) + BadgeH, R.Top + PPGScale(8, PPI) + BadgeH)
-              else
-                BR := Rect(0, 0, 0, 0);
-              if not IsRectEmpty(BR) then
-                ACanvas.FillEllipse(BR, Accent, 255)
-              else
+              if It.BadgeDot or not Open then
               begin
-                S := IntToStr(Min(It.BadgeCount, 99));
-                Sz := PPGMeasureTextNoCanvas(S, Font, 0, False);
-                BR := Rect((IconR.Left + IconR.Right) div 2 + PPGScale(2, PPI), R.Top + PPGScale(3, PPI),
-                  (IconR.Left + IconR.Right) div 2 + PPGScale(2, PPI) + Max(Sz.cx + PPGScale(6, PPI), Sz.cy),
-                  R.Top + PPGScale(3, PPI) + Sz.cy);
+                BadgeH := PPGScale(8, PPI);
+                if It.BadgeDot then
+                  BR := Rect((IconR.Left + IconR.Right) div 2 + PPGScale(5, PPI), R.Top + PPGScale(8, PPI),
+                    (IconR.Left + IconR.Right) div 2 + PPGScale(5, PPI) + BadgeH, R.Top + PPGScale(8, PPI) + BadgeH)
+                else
+                  BR := Rect(0, 0, 0, 0);
+                if not IsRectEmpty(BR) then
+                  ACanvas.FillEllipse(BR, Accent, 255)
+                else
+                begin
+                  S := IntToStr(Min(It.BadgeCount, 99));
+                  Sz := PPGMeasureTextNoCanvas(S, Font, 0, False);
+                  BR := Rect((IconR.Left + IconR.Right) div 2 + PPGScale(2, PPI), R.Top + PPGScale(3, PPI),
+                    (IconR.Left + IconR.Right) div 2 + PPGScale(2, PPI) + Max(Sz.cx + PPGScale(6, PPI), Sz.cy),
+                    R.Top + PPGScale(3, PPI) + Sz.cy);
+                  IR.DrawBadge(ACanvas, BR, S, Font, Accent, ContrastOn(Accent), PPI);
+                end;
+              end;
+            end;
+            if Open then
+            begin
+              TextR := Rect(IconR.Right, R.Top, R.Right - PPGScale(12, PPI), R.Bottom);
+              if UseRightToLeftAlignment then
+                TextR := Rect(R.Left + PPGScale(12, PPI), R.Top, IconR.Left, R.Bottom);
+              // Chevron fuer Untereintraege
+              if It.HasChildren then
+              begin
+                BR := Rect(TextR.Right - PPGScale(20, PPI), R.Top, TextR.Right, R.Bottom);
+                if UseRightToLeftAlignment then
+                  BR := Rect(TextR.Left, R.Top, TextR.Left + PPGScale(20, PPI), R.Bottom);
+                Y := (BR.Top + BR.Bottom) div 2;
+                if It.Expanded then
+                begin
+                  Pts[0] := Point((BR.Left + BR.Right) div 2 - PPGScale(4, PPI), Y + PPGScale(2, PPI));
+                  Pts[1] := Point((BR.Left + BR.Right) div 2, Y - PPGScale(2, PPI));
+                  Pts[2] := Point((BR.Left + BR.Right) div 2 + PPGScale(4, PPI), Y + PPGScale(2, PPI));
+                end
+                else
+                begin
+                  Pts[0] := Point((BR.Left + BR.Right) div 2 - PPGScale(4, PPI), Y - PPGScale(2, PPI));
+                  Pts[1] := Point((BR.Left + BR.Right) div 2, Y + PPGScale(2, PPI));
+                  Pts[2] := Point((BR.Left + BR.Right) div 2 + PPGScale(4, PPI), Y - PPGScale(2, PPI));
+                end;
+                ACanvas.DrawPolyline(Pts, Max(1, Round(1.5 * PPI / 96)), C, 255);
+                if UseRightToLeftAlignment then
+                  TextR.Left := BR.Right
+                else
+                  TextR.Right := BR.Left;
+              end;
+              if It.BadgeCount > 0 then
+              begin
+                S := IntToStr(It.BadgeCount);
+                if It.BadgeCount > 99 then
+                  S := '99+';
+                Sz := IR.BadgeSize(ACanvas, S, Font, PPI);
+                if UseRightToLeftAlignment then
+                begin
+                  BR := Rect(TextR.Left, (R.Top + R.Bottom - Sz.cy) div 2, TextR.Left + Sz.cx,
+                    (R.Top + R.Bottom + Sz.cy) div 2);
+                  TextR.Left := BR.Right + PPGScale(6, PPI);
+                end
+                else
+                begin
+                  BR := Rect(TextR.Right - Sz.cx, (R.Top + R.Bottom - Sz.cy) div 2, TextR.Right,
+                    (R.Top + R.Bottom + Sz.cy) div 2);
+                  TextR.Right := BR.Left - PPGScale(6, PPI);
+                end;
                 IR.DrawBadge(ACanvas, BR, S, Font, Accent, ContrastOn(Accent), PPI);
               end;
+              ACanvas.DrawText(TextR, It.Caption, F, C,
+                DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX));
             end;
+            if FocusVisible and Focused and (It = FFocusItem) then
+              ACanvas.FrameRoundRect(RR, Rad, PPGScale(2, PPI), Accent, 255);
           end;
-          if Open then
-          begin
-            TextR := Rect(IconR.Right, R.Top, R.Right - PPGScale(12, PPI), R.Bottom);
-            if UseRightToLeftAlignment then
-              TextR := Rect(R.Left + PPGScale(12, PPI), R.Top, IconR.Left, R.Bottom);
-            // Chevron fuer Untereintraege
-            if It.HasChildren then
-            begin
-              BR := Rect(TextR.Right - PPGScale(20, PPI), R.Top, TextR.Right, R.Bottom);
-              if UseRightToLeftAlignment then
-                BR := Rect(TextR.Left, R.Top, TextR.Left + PPGScale(20, PPI), R.Bottom);
-              Y := (BR.Top + BR.Bottom) div 2;
-              if It.Expanded then
-              begin
-                Pts[0] := Point((BR.Left + BR.Right) div 2 - PPGScale(4, PPI), Y + PPGScale(2, PPI));
-                Pts[1] := Point((BR.Left + BR.Right) div 2, Y - PPGScale(2, PPI));
-                Pts[2] := Point((BR.Left + BR.Right) div 2 + PPGScale(4, PPI), Y + PPGScale(2, PPI));
-              end
-              else
-              begin
-                Pts[0] := Point((BR.Left + BR.Right) div 2 - PPGScale(4, PPI), Y - PPGScale(2, PPI));
-                Pts[1] := Point((BR.Left + BR.Right) div 2, Y + PPGScale(2, PPI));
-                Pts[2] := Point((BR.Left + BR.Right) div 2 + PPGScale(4, PPI), Y - PPGScale(2, PPI));
-              end;
-              ACanvas.DrawPolyline(Pts, Max(1, Round(1.5 * PPI / 96)), C, 255);
-              if UseRightToLeftAlignment then
-                TextR.Left := BR.Right
-              else
-                TextR.Right := BR.Left;
-            end;
-            if It.BadgeCount > 0 then
-            begin
-              S := IntToStr(It.BadgeCount);
-              if It.BadgeCount > 99 then
-                S := '99+';
-              Sz := IR.BadgeSize(ACanvas, S, Font, PPI);
-              if UseRightToLeftAlignment then
-              begin
-                BR := Rect(TextR.Left, (R.Top + R.Bottom - Sz.cy) div 2, TextR.Left + Sz.cx,
-                  (R.Top + R.Bottom + Sz.cy) div 2);
-                TextR.Left := BR.Right + PPGScale(6, PPI);
-              end
-              else
-              begin
-                BR := Rect(TextR.Right - Sz.cx, (R.Top + R.Bottom - Sz.cy) div 2, TextR.Right,
-                  (R.Top + R.Bottom + Sz.cy) div 2);
-                TextR.Right := BR.Left - PPGScale(6, PPI);
-              end;
-              IR.DrawBadge(ACanvas, BR, S, Font, Accent, ContrastOn(Accent), PPI);
-            end;
-            ACanvas.DrawText(TextR, It.Caption, Font, C,
-              DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX));
-          end;
-          if FocusVisible and Focused and (It = FFocusItem) then
-            ACanvas.FrameRoundRect(RR, Rad, PPGScale(2, PPI), Accent, 255);
         end;
+      finally
+        ACanvas.PopClip;
       end;
-    finally
-      ACanvas.PopClip;
     end;
-  end;
 
-  // Auswahl-Indikator (gleitet)
-  if IndItem <> nil then
-  begin
-    Y := IndicatorPos;
-    R := Rect(PPGScale(RowInset, PPI) + PPGScale(2, PPI), Y - PPGScale(8, PPI),
-      PPGScale(RowInset, PPI) + PPGScale(5, PPI), Y + PPGScale(8, PPI));
-    if UseRightToLeftAlignment then
-      R := Rect(Width - R.Right, R.Top, Width - R.Left, R.Bottom);
-    if RowOfItem(IndItem) < FRows.Count then
-      Clip := Rect(0, MainTop, Width, FooterT)
-    else
-      Clip := ClientR;
-    ACanvas.PushClipRoundRect(Clip, 0);
-    try
-      ACanvas.FillRoundRect(R, PPGScale(2, PPI), Accent, 255);
-    finally
-      ACanvas.PopClip;
+    // Auswahl-Indikator (gleitet)
+    if IndItem <> nil then
+    begin
+      Y := IndicatorPos;
+      R := Rect(PPGScale(RowInset, PPI) + PPGScale(2, PPI), Y - PPGScale(8, PPI),
+        PPGScale(RowInset, PPI) + PPGScale(5, PPI), Y + PPGScale(8, PPI));
+      if UseRightToLeftAlignment then
+        R := Rect(Width - R.Right, R.Top, Width - R.Left, R.Bottom);
+      if RowOfItem(IndItem) < FRows.Count then
+        Clip := Rect(0, MainTop, Width, FooterT)
+      else
+        Clip := ClientR;
+      ACanvas.PushClipRoundRect(Clip, 0);
+      try
+        if UseColors and Enabled then
+          ACanvas.FillRoundRect(R, PPGScale(2, PPI), NS.Indicator.FillFor(Dk, Accent), 255)
+        else
+          ACanvas.FillRoundRect(R, PPGScale(2, PPI), Accent, 255);
+      finally
+        ACanvas.PopClip;
+      end;
     end;
+  finally
+    FFonts.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
   end;
 end;
 

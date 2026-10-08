@@ -8,6 +8,10 @@
 - Ohne `KeyField` ist das Board schreibgeschützt (Verschieben wird abgelehnt).
 - Änderungen von außen laden nach `ReloadDelay` neu; die Auswahl bleibt an der Karte. `SyncRecord`: die gewählte Karte wird zum aktuellen Datensatz.
 
+## Anpassung
+
+- `KanbanStyles`, `OnCustomDrawCard`, `SaveLayout`/`LoadLayout` wie `TPPGKanban`.
+
 ## Beispiel
 
 ```pascal

@@ -22,11 +22,11 @@ Filter beim Tippen und Tastatur kommen von dort. Dazu:
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `FilterMode`, `SearchDelay`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoComplete`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DropDownCount`, `DropDownWidth`, `Enabled`, `Font`, `ItemHeight`, `Items`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Sorted`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `FilterMode`, `SearchDelay`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoComplete`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DropDownCount`, `DropDownWidth`, `Enabled`, `Font`, `ItemHeight`, `Items`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Sorted`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnCloseUp`, `OnContextPopup`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseEnter`, `OnMouseLeave`, `OnSearch`, `OnSelect`, `OnSubmit`
+`OnGesture`, `OnChange`, `OnCloseUp`, `OnContextPopup`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseEnter`, `OnMouseLeave`, `OnSearch`, `OnSelect`, `OnSubmit`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGSearchEdit.md`.

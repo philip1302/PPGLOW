@@ -14,6 +14,11 @@
 <li><code>OnTitleClick(Column)</code>/<code>OnCellClick(Column)</code> ohne Sender wie <code>TDBGrid</code>; Sortieren ist Sache der Datenmenge.</li>
 <li>Im Designer: „Edit columns...“ und „Add all fields“.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li>Dieselben <code>Styles</code>, Spalten-<code>Style</code>/<code>TitleStyle</code>/<code>TitleAlignment</code> und <code>GridLineWidth</code> wie <code>TPPGGrid</code>.</li>
+<li><code>TitleFont</code> (wie <code>TDBGrid</code>) ist <code>Styles.Header.Font</code>; <code>migrate.ps1</code> &#252;bertr&#228;gt <code>Title.Font</code>, <code>Title.Color</code>, <code>Title.Alignment</code>, <code>Font</code> und <code>Color</code> der Spalten.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>procedure TForm1.PPGDBGrid1TitleClick(Column: TPPGDBGridColumn);
 begin
@@ -42,11 +47,11 @@ PPGDBGrid1.ShowFooter := True;
 <li>Nicht unterstuetzt: Gruppieren (braeuchte die ganze Datenmenge im Speicher; GROUP BY in der Abfrage nutzen), dgMultiSelect, Unterspalten (ADT/Array-Felder).</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Columns</code>, <code>Bands</code>, <code>ConditionalFormats</code>, <code>ExportMaxRecords</code>, <code>FixedColsRight</code>, <code>HeaderMenu</code>, <code>ShowFooter</code>, <code>DataSource</code>, <code>Options</code>, <code>ReadOnly</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Columns</code>, <code>Bands</code>, <code>ConditionalFormats</code>, <code>ExportMaxRecords</code>, <code>FixedColsRight</code>, <code>HeaderMenu</code>, <code>ShowFooter</code>, <code>DataSource</code>, <code>Options</code>, <code>ReadOnly</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code>, <code>Styles</code>, <code>GridLineWidth</code>, <code>DrawingStyle</code>, <code>FixedColor</code>, <code>GradientEndColor</code>, <code>GradientStartColor</code>, <code>TitleFont</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
-<p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>DefaultDrawing</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Constraints</code>, <code>DefaultDrawing</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnCellClick</code>, <code>OnColumnMoved</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawCell</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetCellStyle</code>, <code>OnGetFooterText</code>, <code>OnHeaderMenu</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code>, <code>OnTitleClick</code></p>
+<p><code>OnGesture</code>, <code>OnCellClick</code>, <code>OnColumnMoved</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawCell</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetCellStyle</code>, <code>OnGetFooterText</code>, <code>OnHeaderMenu</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code>, <code>OnTitleClick</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBGrid.md</code>.</p>
 </body></html>

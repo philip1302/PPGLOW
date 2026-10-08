@@ -26,10 +26,17 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.Forms,
   Vcl.ImgList, PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility,
-  PPG.Controls.Base, PPG.Items, PPG.ItemPainter, PPG.Popup.Placement;
+  PPG.Controls.Base, PPG.Items, PPG.ItemPainter, PPG.Popup.Placement, PPG.CustomDraw;
 
 type
   TPPGPopupItemEvent = procedure(Sender: TObject; Index: Integer) of object;
+
+  /// Ausloeser einer Liste mit Stilen/eigenem Zeichnen (z.B. ComboBox).
+  IPPGListStylesSource = interface
+    ['{5C2B8E41-7D93-4A06-B1F7-3E8D20C964A5}']
+    function GetListStyles: TPPGListStyles;
+    function GetCustomDrawItem: TPPGCustomDrawItemEvent;
+  end;
 
   TPPGPopupWindow = class(TPPGCustomControl)
   private
@@ -102,6 +109,10 @@ type
     FPressedItem: Integer;
     FListName: string;
     FOnItemClick: TPPGPopupItemEvent;
+    FListStyles: TPPGListStyles;     // gehoert dem Ausloeser
+    FOnCustomDrawItem: TPPGCustomDrawItemEvent;
+    FDrawCanvas: TCanvas;
+    FStyleSource: TObject;
     procedure SetItemIndex(Value: Integer);
     procedure SetTopIndex(Value: Integer);
     procedure SetListColor(const Value: TColor);
@@ -113,6 +124,9 @@ type
     function ItemTotal: Integer;
     procedure GetRowData(Item: Integer; var Data: TPPGItemData);
     procedure GetStyles(out ListStyle, HighlightStyle: TPPGSurfaceStyle);
+    procedure PaintRowBackground(const ACanvas: IPPGCanvas; const LR: IPPGListRenderer;
+      const R: TRect; const L, H: TPPGSurfaceStyle; const Info: TPPGItemPaintInfo;
+      const Data: TPPGItemData; Row: Integer; Selected: Boolean; Hl: Single);
   protected
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     procedure WndProc(var Message: TMessage); override;
@@ -439,6 +453,7 @@ begin
   FListColor := clWindow;
   FTextColor := clWindowText;
   FPainter := TPPGItemPainter.Create;
+  FDrawCanvas := TCanvas.Create;
   if GMsgItemAction = 0 then
     GMsgItemAction := RegisterWindowMessage('PPGlow.PopupItemAction');
 end;
@@ -447,12 +462,24 @@ destructor TPPGPopupList.Destroy;
 begin
   FSource := nil;
   FreeAndNil(FPainter);
+  FreeAndNil(FDrawCanvas);
   inherited Destroy;
 end;
 
 procedure TPPGPopupList.SyncFrom(Source: TPPGCustomControl);
+var
+  LS: IPPGListStylesSource;
 begin
   inherited SyncFrom(Source);
+  // Stile und eigenes Zeichnen des Ausloesers (nur waehrend die Liste offen ist)
+  FListStyles := nil;
+  FOnCustomDrawItem := nil;
+  if Supports(Source, IPPGListStylesSource, LS) then
+  begin
+    FListStyles := LS.GetListStyles;
+    FOnCustomDrawItem := LS.GetCustomDrawItem;
+    FStyleSource := Source;
+  end;
   FScrollHot := False;
   FThumbDrag := False;
   FPressedItem := -1;
@@ -897,6 +924,47 @@ begin
   end;
 end;
 
+procedure TPPGPopupList.PaintRowBackground(const ACanvas: IPPGCanvas; const LR: IPPGListRenderer;
+  const R: TRect; const L, H: TPPGSurfaceStyle; const Info: TPPGItemPaintInfo;
+  const Data: TPPGItemData; Row: Integer; Selected: Boolean; Hl: Single);
+var
+  HS: TPPGSurfaceStyle;
+  Fill, C: TColor;
+  S: TPPGListStyles;
+  OwnSel: Boolean;
+begin
+  HS := H;
+  S := FListStyles;
+  OwnSel := False;
+  if Info.UseColors then
+  begin
+    Fill := clNone;
+    if (S <> nil) and Odd(Row) and S.AlternateRow.HasFill(Info.Dark) then
+      Fill := S.AlternateRow.FillFor(Info.Dark, clNone);
+    if (Data.Color <> clDefault) and (Data.Color <> clNone) then
+      Fill := PPGColorToRGB(Data.Color);
+    if Fill <> clNone then
+      ACanvas.FillRoundRect(R, 0, Fill, 255);
+    if S <> nil then
+    begin
+      if S.HotItem.HasFill(Info.Dark) then
+      begin
+        C := S.HotItem.FillFor(Info.Dark, HS.Color);
+        HS.Color := C;
+        HS.ColorTo := C;
+        HS.ColorMirror := C;
+        HS.ColorMirrorTo := C;
+      end;
+      if Selected and S.Selection.HasFill(Info.Dark) then
+      begin
+        OwnSel := True;
+        ACanvas.FillRoundRect(R, PPGScale(4, Info.PPI), S.Selection.FillFor(Info.Dark, clNone), 255);
+      end;
+    end;
+  end;
+  LR.DrawListItem(ACanvas, R, L, HS, Selected and not OwnSel, Hl, Info.PPI);
+end;
+
 procedure TPPGPopupList.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   LR: IPPGListRenderer;
@@ -907,6 +975,9 @@ var
   Hl: Single;
   Info: TPPGItemPaintInfo;
   Data: TPPGItemData;
+  Sel: Boolean;
+  St: TPPGItemDrawState;
+  DS: TPPGDrawStyle;
 begin
   PPI := ScalePPI;
   GetStyles(L, H);
@@ -928,6 +999,10 @@ begin
   Info.RightToLeft := UseRightToLeftAlignment;
   Info.Enabled := True;
   Info.PPI := PPI;
+  Info.Styles := FListStyles;
+  Info.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+  Info.Dark := UseDarkMode;
+  Info.Focused := True;
   Last := FTopIndex + VisibleRows - 1;
   if Last > RowCount - 1 then
     Last := RowCount - 1;
@@ -939,10 +1014,34 @@ begin
       Hl := 1
     else
       Hl := 0;
-    LR.DrawListItem(ACanvas, R, L, H, I = FItemIndex, Hl, PPI);
     GetRowData(I, Data);
-    FPainter.PaintContent(ACanvas, IR, R, Data, Info, Hl > 0);
+    Sel := I = FItemIndex;
+    // Eigenes Zeichnen (Style) bzw. ganz selbst (DefaultDraw = False)
+    if Assigned(FOnCustomDrawItem) then
+    begin
+      St := [];
+      if Sel then
+        Include(St, idsSelected);
+      if Hl > 0 then
+        Include(St, idsHot);
+      if not Data.Enabled then
+        Include(St, idsDisabled);
+      if not PPGRunCustomDraw(ACanvas, FDrawCanvas, Font, FOnCustomDrawItem, FStyleSource, I,
+        R, St, DS) then
+        Continue;
+      if DS.Fill <> clNone then
+        Data.Color := DS.Fill;
+      if DS.TextColor <> clNone then
+        Data.TextColor := DS.TextColor;
+      Data.FontStyle := Data.FontStyle + DS.FontStyle;
+    end;
+    PaintRowBackground(ACanvas, LR, R, L, H, Info, Data, Row, Sel, Hl);
+    // Text: hervorgehoben nur beim Hover; die Auswahl-Stile gelten fuer den
+    // aktuellen Wert, wenn sie gesetzt sind
+    FPainter.PaintItemContent(ACanvas, IR, R, Data, Info, Row,
+      Sel and (FListStyles <> nil) and not FListStyles.Selection.IsEmpty, Hl);
   end;
+  FPainter.EndPaint;
   if NeedScrollBar then
     LR.DrawScrollThumb(ACanvas, TrackRect, ThumbRect, L, FScrollHot or FThumbDrag, PPI);
 end;

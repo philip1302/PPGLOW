@@ -19,15 +19,15 @@ TPPGExpander - Container mit Kopfzeile, auf- und zuklappbar (Phase 7a).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Expanded`, `Detail`, `ExpandedHeight`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Expanded`, `HeaderStyle`, `Detail`, `ExpandedHeight`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `BiDiMode`, `Caption`, `Color`, `Constraints`, `Enabled`, `Font`, `Padding`, `ParentBackground`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Align`, `Anchors`, `BiDiMode`, `Caption`, `Color`, `Constraints`, `Enabled`, `Font`, `Padding`, `ParentBackground`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnCollapsed`, `OnContextPopup`, `OnEnter`, `OnExit`, `OnExpanded`, `OnExpanding`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnResize`
+`OnGesture`, `OnCollapsed`, `OnContextPopup`, `OnEnter`, `OnExit`, `OnExpanded`, `OnExpanding`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnResize`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGExpander.md`.

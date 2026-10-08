@@ -9,6 +9,10 @@
 - MDI-Menüs (`Merge`/`Unmerge`) werden noch nicht zusammengeführt.
 - Screenreader: Rolle Menüleiste, Ereignisse `EVENT_SYSTEM_MENUSTART/END`.
 
+## Anpassung
+
+- `MenuStyles` und `OnCustomDrawItem` wie `TPPGPopupMenu`.
+
 ## Beispiel
 
 ```pascal

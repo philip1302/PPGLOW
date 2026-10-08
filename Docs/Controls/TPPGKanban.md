@@ -17,6 +17,11 @@ Palette **PPGlow** - Unit `PPG.Kanban` - Basis `TPPGCustomKanban`
 - Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnSelectionChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
 - Ziehen zwischen Anwendungen (OLE) gibt es nicht.
 
+## Anpassung
+
+- `KanbanStyles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
+- `SaveLayout`/`LoadLayout`: Spaltenbreiten und eingeklappte Spalten/Swimlanes (nach `Id`). Drucken mit `TPPGKanbanPrinter`.
+
 ## Beispiel
 
 ```pascal
@@ -51,11 +56,11 @@ TPPGKanban - Kanban-Board (Phase 14c, Vorbild Trello / TMS FNC Kanban).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Columns`, `Lanes`, `Cards`, `ColumnWidth`, `CardGap`, `MaxTextLines`, `VirtualCardHeight`, `AllowDrag`, `ReadOnly`, `WipMode`, `ShowCardCount`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Columns`, `Lanes`, `Cards`, `ColumnWidth`, `CardGap`, `MaxTextLines`, `VirtualCardHeight`, `AllowDrag`, `ReadOnly`, `WipMode`, `ShowCardCount`, `KanbanStyles`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnCardMoving`, `OnCardMoved`, `OnCardClick`, `OnCardOpen`, `OnGetCard`, `OnSelectionChange`, `OnColumnCollapse`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnScroll`
+`OnCustomDrawCard`, `OnGesture`, `OnCardMoving`, `OnCardMoved`, `OnCardClick`, `OnCardOpen`, `OnGetCard`, `OnSelectionChange`, `OnColumnCollapse`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnScroll`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanban.md`.

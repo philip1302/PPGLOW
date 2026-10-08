@@ -50,6 +50,7 @@ object Form1: TForm1
     Left = 8
     Top = 160
     DataSource = DataSource1
+    FixedColor = clSkyBlue
     TitleFont.Name = 'Segoe UI'
     OnTitleClick = Grid1TitleClick
     Columns = <
@@ -60,6 +61,17 @@ object Form1: TForm1
         Title.Font.Style = [fsBold]
         Width = 120
         Visible = True
+      end
+      item
+        Expanded = False
+        Color = clInfoBk
+        FieldName = 'Ort'
+        Font.Color = clNavy
+        Font.Name = 'Arial'
+        Title.Alignment = taCenter
+        Title.Caption = 'Ort'
+        Title.Color = clYellow
+        Visible = False
       end>
   end
   object Memo1: TMemo

@@ -9,6 +9,10 @@ Palette **PPGlow** - Unit `PPG.ToolBar` - Basis `TPPGCustomControl`
 - Einträge (`Items`) statt Kind-Buttons; daher kein automatischer Umstieg von `TToolBar`/`TToolButton`.
 - Überlauf als natives Kontextmenü; Actions über `Items[].Action`.
 
+## Anpassung
+
+- Je Item `Color`, `TextColor`, `FontStyle`; `ImageTint` für einfarbige Symbole.
+
 ## Verhalten (aus dem Quelltext)
 
 TPPGToolBar - Befehlsleiste (Phase 7c, wie WinUI CommandBar).
@@ -23,11 +27,11 @@ TPPGToolBar - Befehlsleiste (Phase 7c, wie WinUI CommandBar).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Images`, `Items`, `ShowCaptions`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Images`, `Items`, `ShowCaptions`, `ImageTint`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnEnter`, `OnExit`, `OnItemClick`
+`OnGesture`, `OnEnter`, `OnExit`, `OnItemClick`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGToolBar.md`.

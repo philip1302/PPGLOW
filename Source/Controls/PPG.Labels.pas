@@ -74,6 +74,8 @@ type
     property Transparent;
     property Layout;
     property Visible;
+    property Touch;
+    property OnGesture;
     property WordWrap;
     property OnClick;
     property OnContextPopup;
@@ -180,6 +182,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnContextPopup;
     property OnEnter;

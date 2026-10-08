@@ -52,6 +52,8 @@ type
   TPPGCustomDatePicker = class(TPPGCustomField)
   private
     FDateTime: TDateTime;   // 0 = kein Datum
+    FCalendarStyles: TPPGCalendarStyles;
+    FOnCustomDrawDay: TPPGCalendarDrawDayEvent;
     FMinDate: TDate;
     FMaxDate: TDate;
     FShowCheckbox: Boolean;
@@ -68,6 +70,7 @@ type
     FEditing: Boolean;
     FOnDropDown: TNotifyEvent;
     FOnCloseUp: TNotifyEvent;
+    procedure SetCalendarStyles(const Value: TPPGCalendarStyles);
     function GetDate: TDate;
     procedure SetDate(const Value: TDate);
     function GetTime: TTime;
@@ -116,6 +119,10 @@ type
     property MinDate: TDate read FMinDate write SetMinDate;
     property MaxDate: TDate read FMaxDate write SetMaxDate;
     property ShowCheckbox: Boolean read FShowCheckbox write SetShowCheckbox default False;
+    /// Bereiche des aufklappenden Kalenders.
+    property CalendarStyles: TPPGCalendarStyles read FCalendarStyles write SetCalendarStyles;
+    /// Vor dem Zeichnen jedes Tages im aufklappenden Kalender.
+    property OnCustomDrawDay: TPPGCalendarDrawDayEvent read FOnCustomDrawDay write FOnCustomDrawDay;
     property Checked: Boolean read FChecked write SetChecked default True;
     property DateFormat: TDTDateFormat read FDateFormat write SetDateFormat default dfShort;
     /// Anzeigeformat (FormatDateTime), leer = DateFormat.
@@ -179,6 +186,8 @@ type
     property ParseInput;
     property PopupMenu;
     property ShowCheckbox;
+    property CalendarStyles;
+    property OnCustomDrawDay;
     property ShowHint;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
@@ -187,6 +196,8 @@ type
     property TabStop;
     property Time;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnClick;
     property OnCloseUp;
@@ -296,6 +307,17 @@ begin
   FCalendar.Appearance := Appearance;
   FCalendar.Font := Font;
   FCalendar.BiDiMode := Source.BiDiMode;
+  // Stile und eigenes Zeichnen der Tage vom Datumsfeld
+  if Source is TPPGCustomDatePicker then
+  begin
+    FCalendar.CalendarStyles := TPPGCustomDatePicker(Source).FCalendarStyles;
+    FCalendar.OnCustomDrawDay := TPPGCustomDatePicker(Source).FOnCustomDrawDay;
+  end;
+end;
+
+procedure TPPGCustomDatePicker.SetCalendarStyles(const Value: TPPGCalendarStyles);
+begin
+  FCalendarStyles.Assign(Value);
 end;
 
 { TPPGCustomDatePicker }
@@ -305,6 +327,7 @@ begin
   inherited Create(AOwner);
   FChecked := True;
   FDateTime := System.SysUtils.Date; // wie TDateTimePicker: heute
+  FCalendarStyles := TPPGCalendarStyles.Create(Self);
   if GMsgDateToggle = 0 then
     GMsgDateToggle := RegisterWindowMessage('PPGlow.DatePickerToggle');
   UpdateText;
@@ -323,6 +346,7 @@ begin
   end;
   FreeAndNil(FPopup);
   inherited Destroy;
+  FreeAndNil(FCalendarStyles);
 end;
 
 procedure TPPGCustomDatePicker.Loaded;

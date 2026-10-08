@@ -19,11 +19,11 @@ Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Severity`, `Title`, `Message`, `IsOpen`, `IsClosable`, `ActionCaption`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Severity`, `Title`, `Message`, `IsOpen`, `IsClosable`, `BarStyle`, `ActionCaption`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnActionClick`, `OnClose`, `OnClosing`, `OnEnter`, `OnExit`
+`OnGesture`, `OnActionClick`, `OnClose`, `OnClosing`, `OnEnter`, `OnExit`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGInfoBar.md`.

@@ -11,6 +11,11 @@ Palette **PPGlow** - Unit `PPG.ListBox` - Basis `TPPGCustomListBox`
 - Quellen: `Items`, `ItemsEx` (reich: Bild, Detail, Gruppe, Plakette) oder virtuell (`Style = lbVirtual`, `Count` + `OnData`).
 - UI Automation: Liste mit Auswahl-Muster, Einträge mit Position im Satz.
 
+## Anpassung
+
+- `Styles` (`Selection`, `SelectionInactive`, `AlternateRow`, `HotItem`, `GroupHeader`, `Detail`); je Eintrag `Color`, `TextColor`, `FontStyle`.
+- `OnCustomDrawItem`: Stil eines Eintrags vor dem Zeichnen ändern oder mit `DefaultDraw := False` selbst zeichnen.
+
 ## Beispiel
 
 ```pascal
@@ -38,15 +43,15 @@ Auswahl hat das Preset schon gezeichnet), OnMeasureItem liefert Hoehen.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `AllowMarkup`, `AllowReorder`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `AllowMarkup`, `AllowReorder`, `Styles`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `AutoComplete`, `BiDiMode`, `BorderStyle`, `Color`, `Columns`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `ExtendedSelect`, `Font`, `IntegralHeight`, `ItemHeight`, `Items`, `MultiSelect`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ScrollWidth`, `ShowHint`, `Sorted`, `Style`, `StyleElements`, `TabOrder`, `TabStop`, `TabWidth`, `Visible`, `ItemIndex`
+`Align`, `Anchors`, `AutoComplete`, `BiDiMode`, `BorderStyle`, `Color`, `Columns`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `ExtendedSelect`, `Font`, `IntegralHeight`, `ItemHeight`, `Items`, `MultiSelect`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ScrollWidth`, `ShowHint`, `Sorted`, `Style`, `StyleElements`, `TabOrder`, `TabStop`, `TabWidth`, `Visible`, `Touch`, `ItemIndex`
 
 ## Ereignisse
 
-`OnClick`, `OnContextPopup`, `OnData`, `OnDataFind`, `OnDataObject`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDrawItem`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnGetItem`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMeasureItem`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnReorder`, `OnScroll`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnClick`, `OnContextPopup`, `OnData`, `OnDataFind`, `OnDataObject`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDrawItem`, `OnCustomDrawItem`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnGetItem`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMeasureItem`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnReorder`, `OnScroll`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGListBox.md`.

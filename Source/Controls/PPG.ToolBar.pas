@@ -64,6 +64,9 @@ type
     FEnabled: Boolean;
     FVisible: Boolean;
     FTag: NativeInt;
+    FColor: TColor;
+    FTextColor: TColor;
+    FFontStyle: TFontStyles;
     FActionLink: TPPGToolItemActionLink;
     FOnClick: TNotifyEvent;
     procedure SetCaption(const Value: string);
@@ -73,6 +76,9 @@ type
     procedure SetDown(const Value: Boolean);
     procedure SetEnabled(const Value: Boolean);
     procedure SetVisible(const Value: Boolean);
+    procedure SetColor(const Value: TColor);
+    procedure SetTextColor(const Value: TColor);
+    procedure SetFontStyle(const Value: TFontStyles);
     function GetAction: TBasicAction;
     procedure SetAction(const Value: TBasicAction);
     function IsCaptionStored: Boolean;
@@ -108,6 +114,10 @@ type
     property Enabled: Boolean read FEnabled write SetEnabled stored IsEnabledStored default True;
     property Visible: Boolean read FVisible write SetVisible stored IsVisibleStored default True;
     property Tag: NativeInt read FTag write FTag default 0;
+    /// Flaeche (auch in Ruhe, z.B. fuer die Hauptaktion), Text und Schriftstile.
+    property Color: TColor read FColor write SetColor default clDefault;
+    property TextColor: TColor read FTextColor write SetTextColor default clDefault;
+    property FontStyle: TFontStyles read FFontStyle write SetFontStyle default [];
     property OnClick: TNotifyEvent read FOnClick write FOnClick stored IsOnClickStored;
   end;
 
@@ -129,6 +139,7 @@ type
 
   TPPGToolBar = class(TPPGCustomControl, IPPGAccessibleChildren)
   private
+    FImageTint: TPPGImageTint;
     FItems: TPPGToolItems;
     FShowCaptions: Boolean;
     FLayoutValid: Boolean;
@@ -140,6 +151,9 @@ type
     FFocusPart: Integer;
     FMenu: TPopupMenu;
     FOnItemClick: TPPGToolItemEvent;
+    procedure DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer; AEnabled: Boolean;
+      Color: TColor);
+    procedure SetImageTint(const Value: TPPGImageTint);
     procedure SetItems(const Value: TPPGToolItems);
     procedure SetShowCaptions(const Value: Boolean);
     procedure EnsureLayout;
@@ -203,6 +217,8 @@ type
     property Images;
     property Items: TPPGToolItems read FItems write SetItems;
     property ShowCaptions: Boolean read FShowCaptions write SetShowCaptions default True;
+    /// itTextColor: Symbole einfarbig in der Textfarbe (Hover, Dunkel, Deaktiviert).
+    property ImageTint: TPPGImageTint read FImageTint write SetImageTint default itNone;
     property Align default alTop;
     property Anchors;
     property AutoSize default True;
@@ -220,6 +236,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnEnter;
     property OnExit;
     property OnItemClick: TPPGToolItemEvent read FOnItemClick write FOnItemClick;
@@ -339,12 +357,41 @@ begin
   FImageIndex := -1;
   FEnabled := True;
   FVisible := True;
+  FColor := clDefault;
+  FTextColor := clDefault;
 end;
 
 destructor TPPGToolItem.Destroy;
 begin
   FreeAndNil(FActionLink);
   inherited Destroy;
+end;
+
+procedure TPPGToolItem.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGToolItem.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGToolItem.SetFontStyle(const Value: TFontStyles);
+begin
+  if FFontStyle <> Value then
+  begin
+    FFontStyle := Value;
+    Changed(True); // Breite aendert sich
+  end;
 end;
 
 procedure TPPGToolItem.Assign(Source: TPersistent);
@@ -364,6 +411,9 @@ begin
     FEnabled := S.FEnabled;
     FVisible := S.FVisible;
     FTag := S.FTag;
+    FColor := S.FColor;
+    FTextColor := S.FTextColor;
+    FFontStyle := S.FFontStyle;
     FOnClick := S.FOnClick;
     Action := S.Action;
     Changed(False);
@@ -614,6 +664,33 @@ end;
 
 { TPPGToolBar }
 
+procedure TPPGToolBar.DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer;
+  AEnabled: Boolean; Color: TColor);
+var
+  DC: HDC;
+begin
+  if FImageTint = itNone then
+  begin
+    ACanvas.DrawImage(Images, Index, X, Y, AEnabled);
+    Exit;
+  end;
+  DC := ACanvas.BeginGdi;
+  try
+    PPGGdiDrawImageTinted(DC, Images, Index, X, Y, Color);
+  finally
+    ACanvas.EndGdi(DC);
+  end;
+end;
+
+procedure TPPGToolBar.SetImageTint(const Value: TPPGImageTint);
+begin
+  if FImageTint <> Value then
+  begin
+    FImageTint := Value;
+    Invalidate;
+  end;
+end;
+
 constructor TPPGToolBar.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -708,6 +785,7 @@ function TPPGToolBar.ItemWidth(Item: TPPGToolItem): Integer;
 var
   PPI: Integer;
   HasIcon: Boolean;
+  Temp: TFont;
 begin
   PPI := ScalePPI;
   if Item.Style = tisSeparator then
@@ -720,7 +798,14 @@ begin
   begin
     if HasIcon then
       Inc(Result, PPGScale(8, PPI));
-    Inc(Result, PPGMeasureTextNoCanvas(StripHotkey(Item.Caption), Font, 0, False).cx);
+    // Breite mit den Schriftstilen des Eintrags (fett ist breiter)
+    Temp := nil;
+    try
+      Inc(Result, PPGMeasureTextNoCanvas(StripHotkey(Item.Caption),
+        PPGStyledFont(Font, Item.FontStyle, Temp), 0, False).cx);
+    finally
+      Temp.Free;
+    end;
   end;
   if Result < ButtonHeight then
     Result := ButtonHeight;
@@ -960,6 +1045,8 @@ var
   It: TPPGToolItem;
   S: TPPGSurfaceStyle;
   TextCol, C: TColor;
+  UseColors, OwnFill: Boolean;
+  F, Temp: TFont;
 begin
   EnsureLayout;
   PPI := ScalePPI;
@@ -988,8 +1075,21 @@ begin
     Hot := Enabled and It.Enabled and (FHotPart = I);
     Down := Hot and (FDownPart = I);
     Checked := (It.Style = tisCheck) and It.Down;
+    // Eigene Flaeche des Eintrags (auch in Ruhe); Hover/Druck dann als Abdunkelung
+    UseColors := not HC and not UseVclStyle;
+    OwnFill := UseColors and (It.Color <> clDefault) and (It.Color <> clNone);
+    if OwnFill then
+    begin
+      Rad := PPGScale(6, PPI);
+      ACanvas.FillRoundRect(R, Rad, PPGColorToRGB(It.Color), 255);
+      if Down or Checked then
+        ACanvas.FillRoundRect(R, Rad, TextCol, 36)
+      else if Hot then
+        ACanvas.FillRoundRect(R, Rad, TextCol, 18);
+      C := TextCol;
+    end
     // In Ruhe flach; Hover/Druck/eingerastet in der Optik des Presets
-    if Hot or Down or Checked then
+    else if Hot or Down or Checked then
     begin
       if not (Enabled and It.Enabled) then
         S := A.Resolve(vsDisabled, PPI, False)
@@ -1012,6 +1112,8 @@ begin
     end
     else
       C := TextCol;
+    if UseColors and (It.TextColor <> clDefault) and (It.TextColor <> clNone) then
+      C := PPGColorToRGB(It.TextColor);
     if not (Enabled and It.Enabled) then
       if HC then
         C := PPGColorToRGB(clGrayText)
@@ -1037,16 +1139,24 @@ begin
       else
         IconR := R;
       if (Images <> nil) and (It.ImageIndex >= 0) and (It.ImageIndex < Images.Count) then
-        ACanvas.DrawImage(Images, It.ImageIndex, (IconR.Left + IconR.Right - Images.Width) div 2,
-          (IconR.Top + IconR.Bottom - Images.Height) div 2, Enabled and It.Enabled)
+        DrawItemImage(ACanvas, It.ImageIndex, (IconR.Left + IconR.Right - Images.Width) div 2,
+          (IconR.Top + IconR.Bottom - Images.Height) div 2, Enabled and It.Enabled, C)
       else if not PPGDrawIconChar(ACanvas, IconR, It.IconChar, C, PPGScale(IconSz, PPI)) then
         ACanvas.DrawText(IconR, Copy(StripHotkey(It.Caption), 1, 1), Font, C,
           DT_SINGLELINE or DT_CENTER or DT_VCENTER or DT_NOPREFIX);
     end;
     if (FShowCaptions or not HasIcon) and (It.Caption <> '') then
-      ACanvas.DrawText(TextR, StripHotkey(It.Caption), Font, C,
-        DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_END_ELLIPSIS or
-        IfThen(HasIcon, 0, DT_CENTER)));
+    begin
+      Temp := nil;
+      try
+        F := PPGStyledFont(Font, It.FontStyle, Temp);
+        ACanvas.DrawText(TextR, StripHotkey(It.Caption), F, C,
+          DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_END_ELLIPSIS or
+          IfThen(HasIcon, 0, DT_CENTER)));
+      finally
+        Temp.Free;
+      end;
+    end;
     if FocusVisible and Focused and (FFocusPart = I) then
       ACanvas.FrameRoundRect(R, PPGScale(4, PPI), PPGScale(2, PPI), PPGColorToRGB(A.FocusColor), 255);
   end;

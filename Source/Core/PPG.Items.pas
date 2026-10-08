@@ -17,7 +17,7 @@ unit PPG.Items;
 interface
 
 uses
-  System.Classes, Vcl.StdCtrls, PPG.Types;
+  System.Classes, Vcl.Graphics, Vcl.StdCtrls, PPG.Types;
 
 type
   /// Alle Angaben zu einem Eintrag (ein Aufruf pro Eintrag und Paint).
@@ -31,6 +31,10 @@ type
     Enabled: Boolean;
     IsHeader: Boolean;  // Ueberschrift-Zeile (nicht waehlbar, ohne Kaestchen)
     Data: Pointer;
+    // Anpassbarkeit: eigene Farben/Schrift des Eintrags (clDefault = Liste)
+    Color: TColor;
+    TextColor: TColor;
+    FontStyle: TFontStyles;
   end;
 
   TPPGItemsChangeEvent = procedure(Sender: TObject; Index: Integer) of object;
@@ -57,6 +61,12 @@ type
     FEnabled: Boolean;
     FTag: NativeInt;
     FData: Pointer;
+    FColor: TColor;
+    FTextColor: TColor;
+    FFontStyle: TFontStyles;
+    procedure SetColor(const Value: TColor);
+    procedure SetTextColor(const Value: TColor);
+    procedure SetFontStyle(const Value: TFontStyles);
     procedure SetText(const Value: string);
     procedure SetDetail(const Value: string);
     procedure SetBadge(const Value: string);
@@ -79,6 +89,11 @@ type
     property Checked: TCheckBoxState read FChecked write SetChecked default cbUnchecked;
     property Enabled: Boolean read FEnabled write SetEnabled default True;
     property Tag: NativeInt read FTag write FTag default 0;
+    /// Flaeche des Eintrags (clDefault = Liste; gilt hell und dunkel).
+    property Color: TColor read FColor write SetColor default clDefault;
+    property TextColor: TColor read FTextColor write SetTextColor default clDefault;
+    /// Zusaetzliche Schriftstile (z.B. fett fuer ungelesene Eintraege).
+    property FontStyle: TFontStyles read FFontStyle write SetFontStyle default [];
   end;
 
   TPPGItems = class(TOwnedCollection)
@@ -184,6 +199,9 @@ begin
   Data.Enabled := True;
   Data.IsHeader := False;
   Data.Data := nil;
+  Data.Color := clDefault;
+  Data.TextColor := clDefault;
+  Data.FontStyle := [];
 end;
 
 { TPPGItem }
@@ -192,7 +210,36 @@ constructor TPPGItem.Create(Collection: TCollection);
 begin
   FImageIndex := -1;
   FEnabled := True;
+  FColor := clDefault;
+  FTextColor := clDefault;
   inherited Create(Collection);
+end;
+
+procedure TPPGItem.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGItem.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGItem.SetFontStyle(const Value: TFontStyles);
+begin
+  if FFontStyle <> Value then
+  begin
+    FFontStyle := Value;
+    Changed(False);
+  end;
 end;
 
 procedure TPPGItem.Assign(Source: TPersistent);
@@ -211,6 +258,9 @@ begin
     FEnabled := S.FEnabled;
     FTag := S.FTag;
     FData := S.FData;
+    FColor := S.FColor;
+    FTextColor := S.FTextColor;
+    FFontStyle := S.FFontStyle;
     Changed(False);
   end
   else
@@ -413,6 +463,9 @@ begin
   Data.Checked := It.Checked;
   Data.Enabled := It.Enabled;
   Data.Data := It.Data;
+  Data.Color := It.Color;
+  Data.TextColor := It.TextColor;
+  Data.FontStyle := It.FontStyle;
 end;
 
 function TPPGCollectionSource.SetChecked(Index: Integer; Value: TCheckBoxState): Boolean;

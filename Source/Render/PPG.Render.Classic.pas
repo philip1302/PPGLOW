@@ -16,7 +16,7 @@ type
   public
     function Name: string; override;
     procedure ApplyDefaults(Appearance: TPPGAppearance); override;
-    function Tokens(Dark: Boolean): TPPGTokens; override;
+    function BaseTokens(Dark: Boolean): TPPGTokens; override;
     procedure ApplyThemeColors(Appearance: TPPGAppearance; Dark: Boolean); override;
     procedure DrawSurface(const Canvas: IPPGCanvas; const Body: TRect;
       const Style: TPPGSurfaceStyle); override;
@@ -53,9 +53,9 @@ begin
   Result := PPGPresetClassic;
 end;
 
-function TPPGClassicRenderer.Tokens(Dark: Boolean): TPPGTokens;
+function TPPGClassicRenderer.BaseTokens(Dark: Boolean): TPPGTokens;
 begin
-  Result := PPGDefaultTokens(Dark);
+  Result := PPGBaseTokens(Dark);
   if not Dark then
   begin
     Result.Accent := $00D77800;

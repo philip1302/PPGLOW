@@ -20,6 +20,11 @@
 <li>Drucken &#252;ber <code>TPPGPlannerPrinter</code>, iCalendar &#252;ber <code>PPGSaveICal</code>/<code>PPGLoadICal</code> (Unit <code>PPG.Planner.ICal</code>).</li>
 <li>Screenreader: Tabelle, Kinder sind die sichtbaren Termine („Betreff, Beginn bis Ende, Ort“). RTL gespiegelt.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>Categories</code> (Name, Farbe; <code>Category</code> des Termins ist der Index), <code>PlannerStyles</code> und <code>OnCustomDrawAppointment</code>.</li>
+<li><code>SaveLayout</code>/<code>LoadLayout</code>: Ansicht, Tage, Raster und Gruppierung.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>uses PPG.Planner.Model, PPG.Planner.ICal;
 
@@ -50,9 +55,9 @@ PPGSaveICal(PPGPlanner1.Appointments, &#39;Team.ics&#39;, &#39;Team&#39;);
 <li>Screenreader: Tabelle, Kinder sind die sichtbaren Termine (&quot;Betreff, Beginn bis Ende, Ort&quot;). RTL gespiegelt.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Appointments</code>, <code>Resources</code>, <code>View</code>, <code>Date</code>, <code>DayCount</code>, <code>FirstDayOfWeek</code>, <code>WorkDays</code>, <code>WorkStart</code>, <code>WorkEnd</code>, <code>DayStartHour</code>, <code>DayEndHour</code>, <code>SlotMinutes</code>, <code>SlotHeight</code>, <code>SlotWidth</code>, <code>TimelineDays</code>, <code>AgendaDays</code>, <code>GroupByResource</code>, <code>ShowNowLine</code>, <code>ReadOnly</code>, <code>TimeZone</code>, <code>TimeZoneMode</code>, <code>Calendar</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>Appointments</code>, <code>Resources</code>, <code>Categories</code>, <code>PlannerStyles</code>, <code>View</code>, <code>Date</code>, <code>DayCount</code>, <code>FirstDayOfWeek</code>, <code>WorkDays</code>, <code>WorkStart</code>, <code>WorkEnd</code>, <code>DayStartHour</code>, <code>DayEndHour</code>, <code>SlotMinutes</code>, <code>SlotHeight</code>, <code>SlotWidth</code>, <code>TimelineDays</code>, <code>AgendaDays</code>, <code>GroupByResource</code>, <code>ShowNowLine</code>, <code>ReadOnly</code>, <code>TimeZone</code>, <code>TimeZoneMode</code>, <code>Calendar</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnAppointmentChanging</code>, <code>OnAppointmentChanged</code>, <code>OnAppointmentCreated</code>, <code>OnAppointmentOpen</code>, <code>OnDeleting</code>, <code>OnCreateAppointment</code>, <code>OnGetAppointmentColor</code>, <code>OnSelectionChange</code>, <code>OnRangeChange</code>, <code>OnScroll</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnMouseDown</code>, <code>OnMouseUp</code></p>
+<p><code>OnGesture</code>, <code>OnAppointmentChanging</code>, <code>OnAppointmentChanged</code>, <code>OnAppointmentCreated</code>, <code>OnAppointmentOpen</code>, <code>OnDeleting</code>, <code>OnCreateAppointment</code>, <code>OnGetAppointmentColor</code>, <code>OnCustomDrawAppointment</code>, <code>OnSelectionChange</code>, <code>OnRangeChange</code>, <code>OnScroll</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnMouseDown</code>, <code>OnMouseUp</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPlanner.md</code>.</p>
 </body></html>

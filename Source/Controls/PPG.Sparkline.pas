@@ -159,6 +159,8 @@ type
     property PopupMenu;
     property ShowHint;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnDblClick;
     property OnMouseDown;

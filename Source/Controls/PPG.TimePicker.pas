@@ -109,6 +109,8 @@ type
     property TabOrder;
     property TabStop;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnCloseUp;
     property OnContextPopup;

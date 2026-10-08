@@ -38,11 +38,11 @@ WinUI TokenizingTextBox).
 
 ## PPGlow-Eigenschaften
 
-`Tags`, `Suggestions`, `Delimiters`, `Delimiter`, `AllowNew`, `AllowDuplicates`, `CaseSensitive`, `MaxTags`, `AddOnExit`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Tags`, `Suggestions`, `Delimiters`, `Delimiter`, `AllowNew`, `AllowDuplicates`, `CaseSensitive`, `MaxTags`, `AddOnExit`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnTagAdding`, `OnTagRemoved`, `OnTagClick`, `OnChange`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
+`OnTagAdding`, `OnTagRemoved`, `OnTagClick`, `OnGesture`, `OnChange`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTagEdit.md`.

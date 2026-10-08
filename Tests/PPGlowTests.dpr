@@ -19,6 +19,7 @@ uses
   PPG.ErrorHandler in '..\Source\Core\PPG.ErrorHandler.pas',
   PPG.Types in '..\Source\Core\PPG.Types.pas',
   PPG.Tokens in '..\Source\Core\PPG.Tokens.pas',
+  PPG.ElementStyle in '..\Source\Core\PPG.ElementStyle.pas',
   PPG.Appearance in '..\Source\Core\PPG.Appearance.pas',
   PPG.Animation in '..\Source\Core\PPG.Animation.pas',
   PPG.Layout in '..\Source\Core\PPG.Layout.pas',
@@ -35,6 +36,7 @@ uses
   PPG.StyleManager in '..\Source\Theme\PPG.StyleManager.pas',
   PPG.Theme in '..\Source\Theme\PPG.Theme.pas',
   PPG.VclStyles in '..\Source\Theme\PPG.VclStyles.pas',
+  PPG.ThemeFile in '..\Source\Theme\PPG.ThemeFile.pas',
   PPG.Accessibility in '..\Source\Access\PPG.Accessibility.pas',
   PPG.UIA.Intf in '..\Source\Access\PPG.UIA.Intf.pas',
   PPG.UIA in '..\Source\Access\PPG.UIA.pas',
@@ -65,6 +67,7 @@ uses
   PPG.RowLayout in '..\Source\Controls\PPG.RowLayout.pas',
   PPG.Controls.Scroll in '..\Source\Controls\PPG.Controls.Scroll.pas',
   PPG.ItemPainter in '..\Source\Controls\PPG.ItemPainter.pas',
+  PPG.CustomDraw in '..\Source\Controls\PPG.CustomDraw.pas',
   PPG.Controls.ItemList in '..\Source\Controls\PPG.Controls.ItemList.pas',
   PPG.ListBox in '..\Source\Controls\PPG.ListBox.pas',
   PPG.CheckListBox in '..\Source\Controls\PPG.CheckListBox.pas',
@@ -85,6 +88,7 @@ uses
   PPG.StatusBar in '..\Source\Controls\PPG.StatusBar.pas',
   PPG.Notifications in '..\Source\Controls\PPG.Notifications.pas',
   PPG.Planner.Print in '..\Source\Controls\PPG.Planner.Print.pas',
+  PPG.Kanban.Print in '..\Source\Controls\PPG.Kanban.Print.pas',
   PPG.KeyTips in '..\Source\Core\PPG.KeyTips.pas',
   PPG.Ribbon.Layout in '..\Source\Core\PPG.Ribbon.Layout.pas',
   PPG.Ribbon.Items in '..\Source\Controls\PPG.Ribbon.Items.pas',
@@ -195,7 +199,8 @@ uses
   PPG.Tests.Phase14c in 'PPG.Tests.Phase14c.pas',
   PPG.Tests.Phase14cKanban in 'PPG.Tests.Phase14cKanban.pas',
   PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas',
-  PPG.Tests.Review in 'PPG.Tests.Review.pas';
+  PPG.Tests.Review in 'PPG.Tests.Review.pas',
+  PPG.Tests.Custom in 'PPG.Tests.Custom.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;
@@ -223,6 +228,36 @@ begin
   end;
 end;
 
+/// Leck-Suche (/leaksuites): nach einem Lauf aller Tests (Caches fuellen)
+/// jede Test-Klasse einzeln noch einmal; gemeldet wird jede Klasse, nach der
+/// mehr als 1 KB mehr belegt ist ("LEAKSUITE Klasse Bytes").
+procedure LeakSuites;
+var
+  Root, Grp, S: ITest;
+  I, J: Integer;
+  B, A: Int64;
+  R: TTestResult;
+begin
+  RunAll;
+  Root := RegisteredTests;
+  for I := 0 to Root.Tests.Count - 1 do
+  begin
+    Grp := Root.Tests[I] as ITest;
+    for J := 0 to Grp.Tests.Count - 1 do
+    begin
+      S := Grp.Tests[J] as ITest;
+      Application.ProcessMessages;
+      B := AllocatedBytes;
+      R := TextTestRunner.RunTest(S, rxbContinue);
+      R.Free;
+      Application.ProcessMessages;
+      A := AllocatedBytes;
+      if A - B > 1024 then
+        WriteLn(Format('LEAKSUITE %s.%s %d', [Grp.Name, S.Name, A - B]));
+    end;
+  end;
+end;
+
 const
   /// Erlaubter Zuwachs zwischen erstem und zweitem Lauf (Caches des
   /// Speichermanagers, Fenster-Klassen, Windows-Interna): 256 KB.
@@ -239,6 +274,11 @@ begin
   begin
     ReportMemoryLeaksOnShutdown := True;
     GUITestRunner.RunRegisteredTests;
+    Exit;
+  end;
+  if FindCmdLineSwitch('leaksuites', ['/', '-'], True) then
+  begin
+    LeakSuites;
     Exit;
   end;
   if FindCmdLineSwitch('leaks', ['/', '-'], True) then

@@ -40,10 +40,12 @@ const
     TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart);
 
   // Layout-, Eltern- und Verweis-Properties gehoeren nicht zum Einzeltest
-  SkipProps: array[0..21] of string = ('Name', 'Left', 'Top', 'Width', 'Height', 'Align',
+  SkipProps: array[0..24] of string = ('Name', 'Left', 'Top', 'Width', 'Height', 'Align',
     'Preset', 'TabOrder', 'Visible', 'ParentFont', 'ParentColor', 'ParentBackground',
     'ParentShowHint', 'ParentBiDiMode', 'HelpContext', 'ImageName', 'DragKind', 'DragCursor',
-    'DockSite', 'AutoSize', 'Tag', 'ParentDoubleBuffered');
+    'DockSite', 'AutoSize', 'Tag', 'ParentDoubleBuffered',
+    // Bildnamen werden nur mit einer ImageList mit Namen gespeichert
+    'HotImageName', 'DisabledImageName', 'PressedImageName');
 
 function TStreamingTests.RoundTrip(C: TComponent): TComponent;
 var

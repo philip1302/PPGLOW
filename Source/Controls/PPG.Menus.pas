@@ -36,10 +36,30 @@ uses
   System.Generics.Collections, System.UITypes, Vcl.Controls, Vcl.Graphics, Vcl.Menus, Vcl.ImgList,
   Vcl.Forms,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base,
-  PPG.StyleManager, PPG.Popup, PPG.Popup.Placement;
+  PPG.StyleManager, PPG.Popup, PPG.Popup.Placement, PPG.ElementStyle, PPG.CustomDraw;
 
 type
   TPPGMenuLoop = class;
+
+  /// Bereiche der Menues (nur gesetzte Werte zaehlen, clDefault = Preset).
+  TPPGMenuStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Menue: Flaeche (Color), Text (TextColor), Schrift.
+    property Menu: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Hervorgehobener Eintrag.
+    property HotItem: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Trennlinien (Color).
+    property Separator: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Tastenkuerzel (TextColor, Schrift).
+    property Shortcut: TPPGElementStyle index 3 read GetItem write SetItem;
+  end;
+
+  /// Vor dem Zeichnen eines Menue-Eintrags (siehe PPG.CustomDraw).
+  TPPGMenuCustomDrawEvent = procedure(Sender: TObject; Canvas: TCanvas; Item: TMenuItem;
+    const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle;
+    var DefaultDraw: Boolean) of object;
 
   /// Rueckmeldungen der Schleife an eine Menueleiste (TPPGMenuBar).
   IPPGMenuBarHost = interface
@@ -80,6 +100,7 @@ type
     procedure PaintItem(const ACanvas: IPPGCanvas; Index: Integer; const R: TRect;
       const L, H: TPPGSurfaceStyle; MR: IPPGMenuRenderer);
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
+    procedure ApplyMenuStyles(var L, H: TPPGSurfaceStyle);
   protected
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     function PopupRounding: Integer; override;
@@ -155,6 +176,9 @@ type
     FCloseOnKeyUp: Boolean;   // Alt/F10 gedrueckt: beim Loslassen schliessen
     FAnimate: Boolean;
     FOnClosed: TNotifyEvent;
+    FMenuStyles: TPPGMenuStyles;
+    FOnCustomDrawItem: TPPGMenuCustomDrawEvent;
+    FDrawSender: TObject;
     procedure Hook(var Msg: TMsg; var Handled: Boolean);
     procedure AppDeactivate(Sender: TObject);
     procedure DelayStep(Sender: TObject);
@@ -203,6 +227,10 @@ type
     property Animate: Boolean read FAnimate write FAnimate;
     property Bar: IPPGMenuBarHost read FBar write FBar;
     property OnClosed: TNotifyEvent read FOnClosed write FOnClosed;
+    /// Stile und eigenes Zeichnen des Ausloesers (gehoeren ihm, nicht der Schleife).
+    property MenuStyles: TPPGMenuStyles read FMenuStyles write FMenuStyles;
+    property OnCustomDrawItem: TPPGMenuCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
+    property DrawSender: TObject read FDrawSender write FDrawSender;
   end;
 
   TPPGPopupMenu = class(TPopupMenu)
@@ -210,11 +238,15 @@ type
     FStyleManager: TPPGStyleManager;
     FPreset: string;
     FLoop: TPPGMenuLoop;
+    FMenuStyles: TPPGMenuStyles;
+    FOnCustomDrawItem: TPPGMenuCustomDrawEvent;
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    procedure SetMenuStyles(const Value: TPPGMenuStyles);
     function StyleSourceControl: TPPGCustomControl;
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
+    constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Popup(X, Y: Integer); override;
     /// Am Rechteck (Bildschirmkoordinaten) aufklappen, z.B. unter einem Button.
@@ -227,6 +259,10 @@ type
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// Preset ohne StyleManager ('' = des Ausloesers bzw. Standard).
     property Preset: string read FPreset write FPreset;
+    /// Bereiche des Menues (Flaeche, Hover, Trennlinien, Kuerzel).
+    property MenuStyles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
+    /// Vor dem Zeichnen jedes Eintrags: Style anpassen oder selbst zeichnen.
+    property OnCustomDrawItem: TPPGMenuCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
   end;
 
 /// Das gerade offene Menue der Anwendung (nil = keins).
@@ -727,20 +763,32 @@ var
   C: TCanvas;
   State: TOwnerDrawState;
   Img: Integer;
+  MS: TPPGMenuStyles;
+  UseColors, Dk, DrawIt: Boolean;
+  DS: TPPGDrawStyle;
+  St: TPPGItemDrawState;
+  Body: TRect;
+  F, Temp: TFont;
+  ShortCol: TColor;
 begin
   It := FItems[Index];
+  MS := FLoop.MenuStyles;
   PPI := ScalePPI;
   T := Tokens;
   HC := HighContrastSupport and PPGIsHighContrast;
   RTL := UseRightToLeftAlignment;
   Hot := Index = FHot;
   Col := FCols[Index];
+  UseColors := not HC and not UseVclStyle;
+  Dk := UseDarkMode;
   if It.IsLine then
   begin
     if HC then
       SepCol := PPGColorToRGB(clGrayText)
     else
       SepCol := PPGBlendColor(L.Color, L.TextColor, 0.15);
+    if (MS <> nil) and UseColors then
+      SepCol := MS.Separator.FillFor(Dk, SepCol);
     MR.DrawMenuSeparator(ACanvas, Rect(R.Left + PPGScale(8, PPI), R.Top,
       R.Right - PPGScale(8, PPI), R.Bottom), SepCol, PPI);
     Exit;
@@ -776,9 +824,44 @@ begin
     Exit;
   end;
 
+  // Eigenes Zeichnen (Style) bzw. ganz selbst (DefaultDraw = False)
+  DS.Reset;
+  DrawIt := True;
+  if Assigned(FLoop.OnCustomDrawItem) then
+  begin
+    St := [];
+    if Hot then
+      Include(St, idsSelected);
+    if Hot then
+      Include(St, idsHot);
+    if not It.Enabled then
+      Include(St, idsDisabled);
+    if It.Checked then
+      Include(St, idsChecked);
+    DC := ACanvas.BeginGdi;
+    try
+      C := TCanvas.Create;
+      try
+        C.Handle := DC;
+        C.Font := ItemFont(It);
+        C.Brush.Style := bsClear;
+        FLoop.OnCustomDrawItem(FLoop.DrawSender, C, It, R, St, DS, DrawIt);
+      finally
+        C.Handle := 0;
+        C.Free;
+      end;
+    finally
+      ACanvas.EndGdi(DC);
+    end;
+  end;
+  if not DrawIt then
+    Exit;
+  Body := Rect(R.Left + PPGScale(4, PPI), R.Top + PPGScale(1, PPI),
+    R.Right - PPGScale(4, PPI), R.Bottom - PPGScale(1, PPI));
+  if UseColors and (DS.Fill <> clNone) then
+    ACanvas.FillRoundRect(Body, PPGScale(4, PPI), PPGColorToRGB(DS.Fill), 255);
   if Hot then
-    MR.DrawMenuItem(ACanvas, Rect(R.Left + PPGScale(4, PPI), R.Top + PPGScale(1, PPI),
-      R.Right - PPGScale(4, PPI), R.Bottom - PPGScale(1, PPI)), L, H, 1, PPI);
+    MR.DrawMenuItem(ACanvas, Body, L, H, 1, PPI);
   if HC then
   begin
     if not It.Enabled then
@@ -794,10 +877,20 @@ begin
     TextCol := H.TextColor // wie die Listen (Classic: dunkle Schrift auf Glanz)
   else
     TextCol := L.TextColor;
+  if UseColors and It.Enabled then
+  begin
+    if Hot and (MS <> nil) then
+      TextCol := MS.HotItem.TextFor(Dk, TextCol);
+    if DS.TextColor <> clNone then
+      TextCol := PPGColorToRGB(DS.TextColor);
+  end;
   if HC or not It.Enabled then
     SecCol := TextCol
   else
     SecCol := PPGBlendColor(TextCol, L.Color, 0.35);
+  ShortCol := SecCol;
+  if (MS <> nil) and UseColors and It.Enabled then
+    ShortCol := MS.Shortcut.TextFor(Dk, ShortCol);
 
   // Spalten: Bild/Haken | Text | Kuerzel | Pfeil (RTL gespiegelt)
   IconR := Rect(R.Left, R.Top, R.Left + FIconW, R.Bottom);
@@ -841,17 +934,62 @@ begin
   Flags := Base;
   if RTL then
     Flags := Flags or DT_RIGHT or DT_RTLREADING;
-  ACanvas.DrawText(TextR, It.Caption, ItemFont(It), TextCol, Flags);
+  Temp := nil;
+  try
+    F := ItemFont(It);
+    if MS <> nil then
+    begin
+      if Hot then
+        F := PPGStyledFont(F, MS.Menu.FontStyle + MS.HotItem.FontStyle + DS.FontStyle, Temp)
+      else
+        F := PPGStyledFont(F, MS.Menu.FontStyle + DS.FontStyle, Temp);
+    end
+    else
+      F := PPGStyledFont(F, DS.FontStyle, Temp);
+    ACanvas.DrawText(TextR, It.Caption, F, TextCol, Flags);
+  finally
+    Temp.Free;
+  end;
   if It.ShortCut <> 0 then
   begin
     if RTL then
       Flags := DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_LEFT
     else
       Flags := DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_RIGHT;
-    ACanvas.DrawText(ShortR, ShortCutToText(It.ShortCut), Font, SecCol, Flags);
+    ACanvas.DrawText(ShortR, ShortCutToText(It.ShortCut), Font, ShortCol, Flags);
   end;
   if It.Count > 0 then
     MR.DrawMenuSubArrow(ACanvas, ArrowR, TextCol, RTL, PPI);
+end;
+
+procedure TPPGMenuWindow.ApplyMenuStyles(var L, H: TPPGSurfaceStyle);
+var
+  MS: TPPGMenuStyles;
+  Dk: Boolean;
+  C: TColor;
+begin
+  MS := FLoop.MenuStyles;
+  if (MS = nil) or (HighContrastSupport and PPGIsHighContrast) or UseVclStyle then
+    Exit;
+  Dk := UseDarkMode;
+  if MS.Menu.HasFill(Dk) then
+  begin
+    C := MS.Menu.FillFor(Dk, L.Color);
+    L.Color := C;
+    L.ColorTo := C;
+    L.ColorMirror := C;
+    L.ColorMirrorTo := C;
+  end;
+  L.TextColor := MS.Menu.TextFor(Dk, L.TextColor);
+  L.BorderColor := MS.Menu.BorderFor(Dk, L.BorderColor);
+  if MS.HotItem.HasFill(Dk) then
+  begin
+    C := MS.HotItem.FillFor(Dk, H.Color);
+    H.Color := C;
+    H.ColorTo := C;
+    H.ColorMirror := C;
+    H.ColorMirrorTo := C;
+  end;
 end;
 
 procedure TPPGMenuWindow.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
@@ -866,6 +1004,7 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   GetPopupStyles(T.Layer, T.TextPrimary, L, H);
+  ApplyMenuStyles(L, H);
   if not Supports(Renderer, IPPGMenuRenderer, MR) then
     Supports(TPPGRendererRegistry.Get(TPPGRendererRegistry.DefaultName), IPPGMenuRenderer, MR);
   MR.DrawMenuFrame(ACanvas, Rect(0, -ContentOffset, ClientWidth, FullHeight - ContentOffset),
@@ -1081,6 +1220,13 @@ end;
 function TPPGMenuWindow.AccSelectedChild: Integer;
 begin
   Result := FHot + 1;
+end;
+
+{ TPPGMenuStyles }
+
+constructor TPPGMenuStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 4);
 end;
 
 { TPPGMenuLoop }
@@ -1594,6 +1740,7 @@ begin
     FLoop.CloseAll;
   FStyleManager := nil;
   inherited Destroy;
+  FreeAndNil(FMenuStyles);
 end;
 
 procedure TPPGPopupMenu.Notification(AComponent: TComponent; Operation: TOperation);
@@ -1641,6 +1788,17 @@ begin
   PopupAtRect(Rect(X, Y, X, Y));
 end;
 
+constructor TPPGPopupMenu.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FMenuStyles := TPPGMenuStyles.Create(Self);
+end;
+
+procedure TPPGPopupMenu.SetMenuStyles(const Value: TPPGMenuStyles);
+begin
+  FMenuStyles.Assign(Value);
+end;
+
 procedure TPPGPopupMenu.PopupAtRect(const Anchor: TRect; ShowAccelerators: Boolean);
 var
   Loop: TPPGMenuLoop;
@@ -1660,6 +1818,9 @@ begin
     Loop.StyleManager := FStyleManager;
     Loop.Preset := FPreset;
     Loop.BiDiMode := BiDiMode;
+    Loop.MenuStyles := FMenuStyles;
+    Loop.OnCustomDrawItem := FOnCustomDrawItem;
+    Loop.DrawSender := Self;
     Loop.ShowAccelerators := ShowAccelerators;
     AlignEnd := (Alignment = paRight) <> (BiDiMode = bdRightToLeft);
     Loop.OpenPopup(Items, Anchor, ppsBelow, AlignEnd);

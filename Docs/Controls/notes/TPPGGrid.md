@@ -13,6 +13,13 @@
 - Drucken mit `TPPGGridPrinter`; Export über `PPG.Grid.Export` (xlsx, PDF, HTML, CSV), Import `PPGLoadXlsx`.
 - UI Automation: Tabellen-Muster mit Kopfzeilen, Gruppenzeilen (Auf-/Zuklappen), Kästchen, Links und Buttons (Invoke).
 
+## Anpassung
+
+- `Styles` mit zehn Bereichen (`Header`, `Footer`, `Selection`, `SelectionInactive`, `AlternateRow`, `HotRow`, `GridLine`, `FocusedCell`, `GroupRow`, `FilterRow`); jeder Bereich hat `Color`, `TextColor`, `BorderColor`, Dunkel-Varianten und auf Wunsch eine eigene `Font`. `clDefault` = vom Preset.
+- Zebra-Zeilen: `Styles.AlternateRow.Color`. Gitterlinien: `Styles.GridLine.Color` und `GridLineWidth`.
+- Spalten: `Style`, `TitleStyle`, `TitleAlignment`. `OnGetCellStyle` kann zusätzlich `FontStyle`, `FontName` und `FontSize` setzen.
+- Wie `TStringGrid`: `FixedColor` (Alias für `Styles.Header.Color`), `DrawingStyle`, `GradientStartColor`/`GradientEndColor`.
+
 ## Beispiel
 
 ```pascal

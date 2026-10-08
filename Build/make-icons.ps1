@@ -95,6 +95,7 @@ $Icons = [ordered]@{
   'TPPGRibbon'      = @('rect 2 5 28 22 3 W S 1.5', 'rect 4 7 7 4 1 A', 'line 14 9 18 9 2 G', 'line 21 9 25 9 2 G', 'line 3 12.5 29 12.5 1 S', 'rect 5 15 7 9 1.5 L A 1', 'line 15 16 21 16 2 G', 'line 15 19.5 22 19.5 2 G', 'line 15 23 20 23 2 G', 'line 25 15 25 24 1 G')
   'TPPGKanban'      = @('rect 2 4 8 24 2 H', 'rect 12 4 8 24 2 H', 'rect 22 4 8 24 2 H', 'rect 3 6 6 5 1 W S 1', 'rect 3 12 6 5 1 W S 1', 'rect 13 6 6 5 1 A', 'rect 13 12 6 5 1 W S 1', 'rect 13 18 6 5 1 W S 1', 'rect 23 6 6 5 1 W S 1')
   'TPPGPlannerPrinter' = @('rect 8 3 16 8 1.5 W S 1.5', 'rect 3 11 26 12 2 A', 'rect 8 19 16 10 1.5 W S 1.5', 'rect 10 21 5 3 0.5 L', 'rect 17 21 5 6 0.5 A', 'circle 25 15 1.2 W')
+  'TPPGKanbanPrinter' = @('rect 8 3 16 8 1.5 W S 1.5', 'rect 3 11 26 12 2 A', 'rect 8 19 16 10 1.5 W S 1.5', 'rect 10 21 3 6 0.5 L', 'rect 14.5 21 3 4 0.5 A', 'rect 19 21 3 7 0.5 L', 'circle 25 15 1.2 W')
   'TPPGPopupMenu'   = @('rect 6 3 22 26 3 W S 1.5', 'rect 8 11 18 6 1.5 L', 'line 11 7.5 22 7.5 2 G', 'line 11 14 22 14 2 A', 'line 11 20.5 20 20.5 2 G', 'line 11 25 18 25 2 G', 'path 2.5 D 2 2 2 10 5 7.5')
   'TPPGMenuBar'     = @('rect 2 4 28 7 2 H', 'line 5 7.5 9 7.5 2 D', 'line 13 7.5 17 7.5 2 A', 'line 21 7.5 25 7.5 2 D', 'rect 11 12 15 16 2 W S 1.5', 'line 14 17 23 17 2 G', 'line 14 23 21 23 2 G')
   'TPPGHintManager' = @('rect 3 4 26 16 3 W S 1.5', 'poly S 9 19.5 9 26 15 19.5', 'line 8 9.5 18 9.5 2 D', 'line 8 14.5 23 14.5 2 G', 'circle 26 25 4.5 A', 'line 26 23 26 27 1.5 W')

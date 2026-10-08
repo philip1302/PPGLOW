@@ -12,6 +12,11 @@
 <li>Knoten aus <code>TTreeView</code>-DFMs (bin&#228;r) werden nicht gelesen; Knoten im Designer &#252;ber „Edit nodes...“ anlegen.</li>
 <li>UI Automation: Hierarchie, Auf-/Zuklappen, Ebene und Position im Satz.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>Styles</code> wie die Listen; je Knoten <code>Color</code>, <code>TextColor</code>, <code>FontStyle</code> (zur Laufzeit).</li>
+<li><code>OnCustomDrawNode</code>; wie <code>TTreeView</code>: <code>HotTrack</code> und <code>ToolTips</code> (abgeschnittene Knoten, braucht <code>ShowHint</code>).</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>N := PPGTreeView1.Items.AddChild(nil, &#39;Dokumente&#39;);
 N.HasChildren := True;  // Kinder erst in OnExpanding
@@ -29,11 +34,11 @@ N.HasChildren := True;  // Kinder erst in OnExpanding
 <li>Streaming: Items als lesbare Zeilenliste (&quot;Items.Nodes&quot;); binaere TTreeView-Knoten aus alten DFMs werden nicht gelesen.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>AllowMarkup</code>, <code>AllowReorder</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>AllowMarkup</code>, <code>AllowReorder</code>, <code>Styles</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
-<p><code>Align</code>, <code>Anchors</code>, <code>AutoCheck</code>, <code>AutoExpand</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CheckBoxes</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HideSelection</code>, <code>Indent</code>, <code>ItemHeight</code>, <code>Items</code>, <code>MultiSelect</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>RowSelect</code>, <code>ShowButtons</code>, <code>ShowHint</code>, <code>ShowLines</code>, <code>ShowRoot</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>Align</code>, <code>Anchors</code>, <code>AutoCheck</code>, <code>AutoExpand</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CheckBoxes</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HideSelection</code>, <code>HotTrack</code>, <code>Indent</code>, <code>ItemHeight</code>, <code>Items</code>, <code>MultiSelect</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>RowSelect</code>, <code>ShowButtons</code>, <code>ShowHint</code>, <code>ShowLines</code>, <code>ShowRoot</code>, <code>ToolTips</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnChange</code>, <code>OnChanging</code>, <code>OnChecked</code>, <code>OnClick</code>, <code>OnCollapsed</code>, <code>OnCollapsing</code>, <code>OnCompare</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDeletion</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEdited</code>, <code>OnEditing</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnExpanded</code>, <code>OnExpanding</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnNodeDrop</code>, <code>OnScroll</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<p><code>OnGesture</code>, <code>OnChange</code>, <code>OnChanging</code>, <code>OnChecked</code>, <code>OnClick</code>, <code>OnCollapsed</code>, <code>OnCollapsing</code>, <code>OnCompare</code>, <code>OnCustomDrawNode</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDeletion</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEdited</code>, <code>OnEditing</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnExpanded</code>, <code>OnExpanding</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnNodeDrop</code>, <code>OnScroll</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGTreeView.md</code>.</p>
 </body></html>

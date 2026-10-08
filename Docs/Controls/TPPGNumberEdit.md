@@ -46,11 +46,11 @@ TPPGNumberEdit - ein Feld fuer Ganzzahl, Kommazahl, Waehrung und Prozent
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `NumberKind`, `Decimals`, `MinValue`, `MaxValue`, `Increment`, `LargeIncrement`, `ShowSpinButtons`, `ShowThousandSeparator`, `CurrencyString`, `AllowExpressions`, `AllowNull`, `Value`, `TextHint`, `TextHintVisibleOnFocus`, `UseSystemContextMenu`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Alignment`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`RoundedCorners`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `NumberKind`, `Decimals`, `MinValue`, `MaxValue`, `Increment`, `LargeIncrement`, `ShowSpinButtons`, `ShowThousandSeparator`, `CurrencyString`, `AllowExpressions`, `AllowNull`, `Value`, `TextHint`, `TextHintVisibleOnFocus`, `UseSystemContextMenu`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Alignment`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`
+`OnGesture`, `OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGNumberEdit.md`.

@@ -35,11 +35,11 @@ TPPGMaskEdit - Eingabe mit Maske (Phase 12b, Vorbild TMaskEdit).
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Alignment`, `Anchors`, `AutoSelect`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `EditMask`, `Enabled`, `Font`, `HideSelection`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PasswordChar`, `PopupMenu`, `ReadOnly`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`
+`Align`, `Alignment`, `Anchors`, `AutoSelect`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `EditMask`, `Enabled`, `Font`, `HideSelection`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PasswordChar`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnValidationError`
+`OnGesture`, `OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnValidationError`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGMaskEdit.md`.

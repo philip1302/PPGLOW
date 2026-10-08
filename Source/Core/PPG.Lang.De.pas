@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 157;
+  PPGLangDeCount = 161;
 
 implementation
 
@@ -298,6 +298,8 @@ begin
     '%s bis %s');
   PPGAddTranslation(PPGLangDeCode, @SPPGPlannerPrintWorkHours,
     'Nur die Arbeitszeit drucken');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanPrintFitWidth,
+    'Auf Seitenbreite verkleinern');
   PPGAddTranslation(PPGLangDeCode, @SPPGRibbonName,
     'Men'#$00FC'band');
   PPGAddTranslation(PPGLangDeCode, @SPPGRibbonFile,
@@ -336,6 +338,12 @@ begin
     'Verschoben nach Spalte %s, Position %d von %d');
   PPGAddTranslation(PPGLangDeCode, @SPPGKanbanMoveRejected,
     'Verschieben in die Spalte %s ist nicht erlaubt');
+  PPGAddTranslation(PPGLangDeCode, @SPPGThemeFileInvalid,
+    'Die Theme-Datei '#$201E'%s'#$201C' ist ung'#$00FC'ltig: %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGThemeValueInvalid,
+    'Ung'#$00FC'ltiger Wert '#$201E'%s'#$201C' f'#$00FC'r %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGColorInvalid,
+    #$201E'%s'#$201C' ist keine g'#$00FC'ltige Farbe');
 end;
 
 initialization

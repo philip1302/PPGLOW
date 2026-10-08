@@ -270,6 +270,15 @@ type
   /// unveraendert bleibt; beide mitgelieferten Canvas-Klassen implementieren
   /// es. Fremde Canvas ohne dieses Interface: PPG.Render.Shapes faellt auf
   /// Umrisse zurueck.
+  /// Optionale Erweiterung: Ecken ohne Rundung. Gilt fuer alle folgenden
+  /// FillRoundRect, FrameRoundRect, DrawOuterGlow und PushClipRoundRect,
+  /// bis der Aufrufer den alten Wert zuruecksetzt (PPGSetSquareCorners).
+  IPPGCornerCanvas = interface
+    ['{3E9A6C21-7D58-4B0F-9A42-C81E5D3B6F07}']
+    function GetSquareCorners: TPPGCorners;
+    procedure SetSquareCorners(Corners: TPPGCorners);
+  end;
+
   IPPGShapeCanvas = interface
     ['{5B8E2D14-9C67-4A3F-B1D0-6E4F2A9C7D53}']
     /// Gefuelltes Polygon (geschlossen, Fuellregel "alternate").
@@ -297,6 +306,24 @@ type
       const Style: TPPGSurfaceStyle; PPI: Integer);
   end;
 
+/// Eckige Ecken setzen; liefert den alten Wert (Canvas ohne IPPGCornerCanvas: []).
+function PPGSetSquareCorners(const Canvas: IPPGCanvas; Corners: TPPGCorners): TPPGCorners;
+
 implementation
+
+uses
+  System.SysUtils;
+
+function PPGSetSquareCorners(const Canvas: IPPGCanvas; Corners: TPPGCorners): TPPGCorners;
+var
+  C: IPPGCornerCanvas;
+begin
+  Result := [];
+  if Supports(Canvas, IPPGCornerCanvas, C) then
+  begin
+    Result := C.GetSquareCorners;
+    C.SetSquareCorners(Corners);
+  end;
+end;
 
 end.

@@ -184,6 +184,7 @@ type
     property ParentShowHint;
     property PopupMenu;
     property ReadOnly;
+    property ReadOnlyStyle;
     property ShowHint;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
@@ -191,6 +192,8 @@ type
     property TabOrder;
     property TabStop;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnEnter;
     property OnExit;

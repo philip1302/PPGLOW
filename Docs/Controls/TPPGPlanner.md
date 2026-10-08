@@ -20,6 +20,11 @@ Palette **PPGlow** - Unit `PPG.Planner` - Basis `TPPGCustomPlanner`
 - Drucken über `TPPGPlannerPrinter`, iCalendar über `PPGSaveICal`/`PPGLoadICal` (Unit `PPG.Planner.ICal`).
 - Screenreader: Tabelle, Kinder sind die sichtbaren Termine („Betreff, Beginn bis Ende, Ort“). RTL gespiegelt.
 
+## Anpassung
+
+- `Categories` (Name, Farbe; `Category` des Termins ist der Index), `PlannerStyles` und `OnCustomDrawAppointment`.
+- `SaveLayout`/`LoadLayout`: Ansicht, Tage, Raster und Gruppierung.
+
 ## Beispiel
 
 ```pascal
@@ -55,11 +60,11 @@ TPPGPlanner - Terminplaner (Phase 14a).
 
 ## PPGlow-Eigenschaften
 
-`Appointments`, `Resources`, `View`, `Date`, `DayCount`, `FirstDayOfWeek`, `WorkDays`, `WorkStart`, `WorkEnd`, `DayStartHour`, `DayEndHour`, `SlotMinutes`, `SlotHeight`, `SlotWidth`, `TimelineDays`, `AgendaDays`, `GroupByResource`, `ShowNowLine`, `ReadOnly`, `TimeZone`, `TimeZoneMode`, `Calendar`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Appointments`, `Resources`, `Categories`, `PlannerStyles`, `View`, `Date`, `DayCount`, `FirstDayOfWeek`, `WorkDays`, `WorkStart`, `WorkEnd`, `DayStartHour`, `DayEndHour`, `SlotMinutes`, `SlotHeight`, `SlotWidth`, `TimelineDays`, `AgendaDays`, `GroupByResource`, `ShowNowLine`, `ReadOnly`, `TimeZone`, `TimeZoneMode`, `Calendar`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnAppointmentChanging`, `OnAppointmentChanged`, `OnAppointmentCreated`, `OnAppointmentOpen`, `OnDeleting`, `OnCreateAppointment`, `OnGetAppointmentColor`, `OnSelectionChange`, `OnRangeChange`, `OnScroll`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnMouseDown`, `OnMouseUp`
+`OnGesture`, `OnAppointmentChanging`, `OnAppointmentChanged`, `OnAppointmentCreated`, `OnAppointmentOpen`, `OnDeleting`, `OnCreateAppointment`, `OnGetAppointmentColor`, `OnCustomDrawAppointment`, `OnSelectionChange`, `OnRangeChange`, `OnScroll`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnMouseDown`, `OnMouseUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPlanner.md`.

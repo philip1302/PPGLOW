@@ -450,6 +450,8 @@ var
   TextColor: TColor;
   Flags: Cardinal;
   TextSize: TSize;
+  Extra: TFontStyles;
+  F, Temp: TFont;
 begin
   PPI := ScalePPI;
   Ind := GetIndicatorSize;
@@ -507,18 +509,35 @@ begin
     Flags := Flags or DT_HIDEPREFIX;
   Flags := DrawTextBiDiModeFlags(Flags);
 
-  TextRect := Rect(TextLeft, ClientR.Top, TextRight, ClientR.Bottom);
-  if WordWrap then
+  // Zusaetzliche Schriftstile: Normal, dazu Hover, An bzw. Deaktiviert
+  Extra := EffectiveAppearance.Normal.FontStyle;
+  if not Enabled then
+    Extra := Extra + EffectiveAppearance.Disabled.FontStyle
+  else
   begin
-    // Mehrzeilig vertikal zentrieren (DT_VCENTER wirkt nur einzeilig)
-    TextSize := ACanvas.MeasureText(Text, Font, TextRight - TextLeft, True);
-    if TextSize.cy < H then
-    begin
-      TextRect.Top := ClientR.Top + (H - TextSize.cy) div 2;
-      TextRect.Bottom := TextRect.Top + TextSize.cy;
-    end;
+    if IsHot then
+      Extra := Extra + EffectiveAppearance.Hot.FontStyle;
+    if FState <> cbUnchecked then
+      Extra := Extra + EffectiveAppearance.Checked.FontStyle;
   end;
-  ACanvas.DrawText(TextRect, Text, Font, PPGColorToRGB(TextColor), Flags);
+  Temp := nil;
+  try
+    F := PPGStyledFont(Font, Extra, Temp);
+    TextRect := Rect(TextLeft, ClientR.Top, TextRight, ClientR.Bottom);
+    if WordWrap then
+    begin
+      // Mehrzeilig vertikal zentrieren (DT_VCENTER wirkt nur einzeilig)
+      TextSize := ACanvas.MeasureText(Text, F, TextRight - TextLeft, True);
+      if TextSize.cy < H then
+      begin
+        TextRect.Top := ClientR.Top + (H - TextSize.cy) div 2;
+        TextRect.Bottom := TextRect.Top + TextSize.cy;
+      end;
+    end;
+    ACanvas.DrawText(TextRect, Text, F, PPGColorToRGB(TextColor), Flags);
+  finally
+    Temp.Free;
+  end;
 end;
 
 end.

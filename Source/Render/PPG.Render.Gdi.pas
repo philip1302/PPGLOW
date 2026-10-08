@@ -24,12 +24,14 @@ type
     Bounds: TRect;
   end;
 
-  TPPGGdiCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas)
+  TPPGGdiCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas, IPPGCornerCanvas)
   private
     FDC: HDC;
+    FSquare: TPPGCorners;
     FClipDepth: Integer;
     function BeginLayer(const Bounds: TRect; out Layer: TPPGGdiLayer): Boolean;
     procedure EndLayer(var Layer: TPPGGdiLayer; Alpha: Byte);
+    procedure AddSquareCorners(Rgn: HRGN; const R: TRect; Radius: Integer);
   public
     constructor Create(ADC: HDC);
     destructor Destroy; override;
@@ -54,6 +56,9 @@ type
     procedure DrawFocusRect(const R: TRect);
     function BeginGdi: HDC;
     procedure EndGdi(DC: HDC);
+    { IPPGCornerCanvas }
+    function GetSquareCorners: TPPGCorners;
+    procedure SetSquareCorners(Corners: TPPGCorners);
     { IPPGShapeCanvas }
     procedure FillPolygon(const Points: array of TPoint; Color: TColor; Alpha: Byte);
     procedure DrawDashedPolyline(const Points: array of TPoint; Width, Dash, Gap: Integer;
@@ -68,6 +73,10 @@ procedure PPGGdiDrawText(DC: HDC; const R: TRect; const Text: string; Font: TFon
 procedure PPGGdiDrawImage(DC: HDC; Images: TCustomImageList; Index, X, Y: Integer;
   Enabled: Boolean);
 procedure PPGGdiDrawFocusRect(DC: HDC; const R: TRect);
+/// Zeichnet ein Bild einfarbig in Color (Form aus dem Alphakanal bzw. der
+/// Maske), z.B. einfarbige Symbole in der Textfarbe des Zustands.
+procedure PPGGdiDrawImageTinted(DC: HDC; Images: TCustomImageList; Index, X, Y: Integer;
+  Color: TColor);
 /// Misst Text ohne vorhandenen Canvas (z.B. fuer AutoSize ausserhalb von Paint).
 /// Legt kurzzeitig einen Speicher-DC an und gibt ihn sofort wieder frei.
 function PPGMeasureTextNoCanvas(const Text: string; Font: TFont; MaxWidth: Integer;
@@ -76,9 +85,117 @@ function PPGMeasureTextNoCanvas(const Text: string; Font: TFont; MaxWidth: Integ
 implementation
 
 uses
-  System.SysUtils, PPG.Exceptions;
+  System.SysUtils, System.Math, Winapi.CommCtrl, PPG.Exceptions;
 
 { Helfer }
+
+procedure PPGGdiDrawImageTinted(DC: HDC; Images: TCustomImageList; Index, X, Y: Integer;
+  Color: TColor);
+const
+  KeyColor = $00FF00FF; // Magenta als Hintergrund fuer Bilder ohne Alphakanal
+var
+  MemDC: HDC;
+  Bmp, OldBmp: HBITMAP;
+  BI: TBitmapInfo;
+  Bits: Pointer;
+  P: PCardinal;
+  W, H, I, N: Integer;
+  A, R, G, B: Cardinal;
+  C: Cardinal;
+  HasAlpha: Boolean;
+  BF: TBlendFunction;
+begin
+  if (Images = nil) or (Index < 0) or (Index >= Images.Count) then
+    Exit;
+  W := Images.Width;
+  H := Images.Height;
+  if (W <= 0) or (H <= 0) then
+    Exit;
+  N := W * H;
+  FillChar(BI, SizeOf(BI), 0);
+  BI.bmiHeader.biSize := SizeOf(BI.bmiHeader);
+  BI.bmiHeader.biWidth := W;
+  BI.bmiHeader.biHeight := -H; // von oben nach unten
+  BI.bmiHeader.biPlanes := 1;
+  BI.bmiHeader.biBitCount := 32;
+  BI.bmiHeader.biCompression := BI_RGB;
+  MemDC := CreateCompatibleDC(DC);
+  if MemDC = 0 then
+    PPGRaiseLastOSError('CreateCompatibleDC');
+  try
+    Bmp := CreateDIBSection(MemDC, BI, DIB_RGB_COLORS, Bits, 0, 0);
+    if (Bmp = 0) or (Bits = nil) then
+      PPGRaiseLastOSError('CreateDIBSection');
+    try
+      OldBmp := SelectObject(MemDC, Bmp);
+      try
+        // 1. Mit Alphakanal (32-Bit-Listen, TVirtualImageList): auf
+        // durchsichtigen Grund zeichnen, der Alphakanal bleibt erhalten
+        FillChar(Bits^, N * 4, 0);
+        ImageList_Draw(Images.Handle, Index, MemDC, 0, 0, ILD_TRANSPARENT);
+        GdiFlush;
+        HasAlpha := False;
+        P := Bits;
+        for I := 0 to N - 1 do
+        begin
+          if P^ shr 24 <> 0 then
+          begin
+            HasAlpha := True;
+            Break;
+          end;
+          Inc(P);
+        end;
+        // 2. Ohne Alphakanal (Maske): auf Magenta zeichnen, alles andere ist Form
+        if not HasAlpha then
+        begin
+          P := Bits;
+          for I := 0 to N - 1 do
+          begin
+            P^ := KeyColor;
+            Inc(P);
+          end;
+          ImageList_Draw(Images.Handle, Index, MemDC, 0, 0, ILD_TRANSPARENT);
+          GdiFlush;
+          P := Bits;
+          for I := 0 to N - 1 do
+          begin
+            if P^ and $00FFFFFF = KeyColor then
+              P^ := 0
+            else
+              P^ := $FF000000;
+            Inc(P);
+          end;
+        end;
+        // 3. Einfaerben: Farbe vormultipliziert mit dem Alpha (BGRA im Speicher)
+        C := Cardinal(ColorToRGB(Color));
+        R := C and $FF;
+        G := (C shr 8) and $FF;
+        B := (C shr 16) and $FF;
+        P := Bits;
+        for I := 0 to N - 1 do
+        begin
+          A := P^ shr 24;
+          P^ := (A shl 24) or ((R * A div 255) shl 16) or ((G * A div 255) shl 8) or
+            (B * A div 255);
+          Inc(P);
+        end;
+        BF.BlendOp := AC_SRC_OVER;
+        BF.BlendFlags := 0;
+        BF.SourceConstantAlpha := 255;
+        BF.AlphaFormat := AC_SRC_ALPHA;
+        if not Winapi.Windows.AlphaBlend(DC, X, Y, W, H, MemDC, 0, 0, W, H, BF) then
+          PPGRaiseLastOSError('AlphaBlend');
+      finally
+        SelectObject(MemDC, OldBmp);
+      end;
+    finally
+      DeleteObject(Bmp);
+    end;
+  finally
+    DeleteDC(MemDC);
+  end;
+end;
+
 
 function PPGGdiMeasureText(DC: HDC; const Text: string; Font: TFont; MaxWidth: Integer;
   WordWrap: Boolean): TSize;
@@ -258,10 +375,28 @@ begin
   end;
 end;
 
-procedure PaintFillRoundRect(DC: HDC; const R: TRect; Radius: Integer; Color: TColor);
+/// Quadrat der Rundung an einer Ecke (fuer eckige Ecken).
+function CornerBox(const R: TRect; Radius: Integer; C: TPPGCorner): TRect;
+var
+  D: Integer;
+begin
+  D := Min(Radius, Min((R.Right - R.Left) div 2, (R.Bottom - R.Top) div 2));
+  case C of
+    pcTopLeft: Result := Rect(R.Left, R.Top, R.Left + D, R.Top + D);
+    pcTopRight: Result := Rect(R.Right - D, R.Top, R.Right, R.Top + D);
+    pcBottomRight: Result := Rect(R.Right - D, R.Bottom - D, R.Right, R.Bottom);
+  else
+    Result := Rect(R.Left, R.Bottom - D, R.Left + D, R.Bottom);
+  end;
+end;
+
+procedure PaintFillRoundRect(DC: HDC; const R: TRect; Radius: Integer; Color: TColor;
+  Square: TPPGCorners = []);
 var
   Brush: HBRUSH;
   Saved: Integer;
+  C: TPPGCorner;
+  B: TRect;
 begin
   Brush := CreateSolidBrush(ColorToRGB(Color));
   if Brush = 0 then
@@ -280,6 +415,13 @@ begin
       finally
         RestoreDC(DC, Saved);
       end;
+      // Eckige Ecken: Rundung mit dem Eckquadrat auffuellen
+      for C := Low(TPPGCorner) to High(TPPGCorner) do
+        if C in Square then
+        begin
+          B := CornerBox(R, Radius, C);
+          Winapi.Windows.FillRect(DC, B, Brush);
+        end;
     end;
   finally
     DeleteObject(Brush);
@@ -295,12 +437,12 @@ begin
     Exit;
   if (Alpha < 255) and BeginLayer(Rect(R.Left, R.Top, R.Right + 1, R.Bottom + 1), L) then
     try
-      PaintFillRoundRect(L.DC, R, Radius, Color);
+      PaintFillRoundRect(L.DC, R, Radius, Color, FSquare);
     finally
       EndLayer(L, Alpha);
     end
   else
-    PaintFillRoundRect(FDC, R, Radius, Color);
+    PaintFillRoundRect(FDC, R, Radius, Color, FSquare);
 end;
 
 procedure PaintGradient(DC: HDC; const R: TRect; ColorFrom, ColorTo: TColor;
@@ -352,10 +494,14 @@ begin
     PaintGradient(FDC, R, ColorFrom, ColorTo, Direction);
 end;
 
-procedure PaintFrameRoundRect(DC: HDC; const R: TRect; Radius, Width: Integer; Color: TColor);
+procedure PaintFrameRoundRect(DC: HDC; const R: TRect; Radius, Width: Integer; Color: TColor;
+  Square: TPPGCorners = []);
 var
   Pen: HPEN;
+  Brush: HBRUSH;
   Saved: Integer;
+  C: TPPGCorner;
+  B: TRect;
 begin
   Pen := CreatePen(PS_INSIDEFRAME, Width, ColorToRGB(Color));
   if Pen = 0 then
@@ -368,9 +514,43 @@ begin
       if Radius <= 0 then
         Rectangle(DC, R.Left, R.Top, R.Right, R.Bottom)
       else
+      begin
+        // Eckige Ecken: Bogen dort ausblenden, danach gerade Kanten
+        for C := Low(TPPGCorner) to High(TPPGCorner) do
+          if C in Square then
+          begin
+            B := CornerBox(R, Radius, C);
+            ExcludeClipRect(DC, B.Left, B.Top, B.Right, B.Bottom);
+          end;
         RoundRect(DC, R.Left, R.Top, R.Right, R.Bottom, Radius * 2, Radius * 2);
+      end;
     finally
       RestoreDC(DC, Saved);
+    end;
+    if (Radius > 0) and (Square <> []) then
+    begin
+      Brush := CreateSolidBrush(ColorToRGB(Color));
+      if Brush = 0 then
+        PPGRaiseLastOSError('CreateSolidBrush');
+      try
+        for C := Low(TPPGCorner) to High(TPPGCorner) do
+          if C in Square then
+          begin
+            B := CornerBox(R, Radius, C);
+            // waagerechte Kante
+            if C in [pcTopLeft, pcTopRight] then
+              Winapi.Windows.FillRect(DC, Rect(B.Left, B.Top, B.Right, Min(B.Bottom, B.Top + Width)), Brush)
+            else
+              Winapi.Windows.FillRect(DC, Rect(B.Left, Max(B.Top, B.Bottom - Width), B.Right, B.Bottom), Brush);
+            // senkrechte Kante
+            if C in [pcTopLeft, pcBottomLeft] then
+              Winapi.Windows.FillRect(DC, Rect(B.Left, B.Top, Min(B.Right, B.Left + Width), B.Bottom), Brush)
+            else
+              Winapi.Windows.FillRect(DC, Rect(Max(B.Left, B.Right - Width), B.Top, B.Right, B.Bottom), Brush);
+          end;
+      finally
+        DeleteObject(Brush);
+      end;
     end;
   finally
     DeleteObject(Pen);
@@ -386,12 +566,12 @@ begin
     Exit;
   if (Alpha < 255) and BeginLayer(R, L) then
     try
-      PaintFrameRoundRect(L.DC, R, Radius, Width, Color);
+      PaintFrameRoundRect(L.DC, R, Radius, Width, Color, FSquare);
     finally
       EndLayer(L, Alpha);
     end
   else
-    PaintFrameRoundRect(FDC, R, Radius, Width, Color);
+    PaintFrameRoundRect(FDC, R, Radius, Width, Color, FSquare);
 end;
 
 procedure TPPGGdiCanvas.DrawOuterGlow(const R: TRect; Radius, Size: Integer; Color: TColor;
@@ -674,6 +854,38 @@ begin
     PaintDashes(FDC, Points, Width, Dash, Gap, Color);
 end;
 
+function TPPGGdiCanvas.GetSquareCorners: TPPGCorners;
+begin
+  Result := FSquare;
+end;
+
+procedure TPPGGdiCanvas.SetSquareCorners(Corners: TPPGCorners);
+begin
+  FSquare := Corners;
+end;
+
+procedure TPPGGdiCanvas.AddSquareCorners(Rgn: HRGN; const R: TRect; Radius: Integer);
+var
+  C: TPPGCorner;
+  B: TRect;
+  Box: HRGN;
+begin
+  for C := Low(TPPGCorner) to High(TPPGCorner) do
+    if C in FSquare then
+    begin
+      B := CornerBox(R, Radius, C);
+      // Region ist rechts/unten exklusiv
+      Box := CreateRectRgn(B.Left, B.Top, B.Right + Ord(C in [pcTopRight, pcBottomRight]),
+        B.Bottom + Ord(C in [pcBottomLeft, pcBottomRight]));
+      if Box <> 0 then
+      try
+        CombineRgn(Rgn, Rgn, Box, RGN_OR);
+      finally
+        DeleteObject(Box);
+      end;
+    end;
+end;
+
 procedure TPPGGdiCanvas.PushClipRoundRect(const R: TRect; Radius: Integer);
 var
   Rgn: HRGN;
@@ -694,6 +906,7 @@ begin
   Rgn := CreateRoundRectRgn(P[0].X, P[0].Y, P[1].X, P[1].Y, Radius * 2, Radius * 2);
   if Rgn = 0 then
     Exit; // ohne Clipping weiterzeichnen ist besser als ein Abbruch
+  AddSquareCorners(Rgn, Rect(P[0].X, P[0].Y, P[1].X - 1, P[1].Y - 1), Radius);
   try
     ExtSelectClipRgn(FDC, Rgn, RGN_AND);
   finally

@@ -12,6 +12,10 @@
 <li>Ohne <code>KeyField</code> ist das Board schreibgesch&#252;tzt (Verschieben wird abgelehnt).</li>
 <li>&#196;nderungen von au&#223;en laden nach <code>ReloadDelay</code> neu; die Auswahl bleibt an der Karte. <code>SyncRecord</code>: die gew&#228;hlte Karte wird zum aktuellen Datensatz.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>KanbanStyles</code>, <code>OnCustomDrawCard</code>, <code>SaveLayout</code>/<code>LoadLayout</code> wie <code>TPPGKanban</code>.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>PPGDBKanban1.Columns.AddColumn(&#39;Offen&#39;).Key := &#39;todo&#39;;
 PPGDBKanban1.Columns.AddColumn(&#39;In Arbeit&#39;, 3).Key := &#39;doing&#39;;
@@ -33,9 +37,9 @@ PPGDBKanban1.DataSource := DataSource1;
 <li>SyncRecord: die gewaehlte Karte wird zum aktuellen Datensatz.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>DataSource</code>, <code>KeyField</code>, <code>ColumnField</code>, <code>LaneField</code>, <code>OrderField</code>, <code>TitleField</code>, <code>TextField</code>, <code>LabelsField</code>, <code>AssigneeField</code>, <code>DueField</code>, <code>ProgressField</code>, <code>ColorField</code>, <code>MaxRecords</code>, <code>ReloadDelay</code>, <code>SyncRecord</code>, <code>Columns</code>, <code>Lanes</code>, <code>ColumnWidth</code>, <code>CardGap</code>, <code>MaxTextLines</code>, <code>AllowDrag</code>, <code>ReadOnly</code>, <code>WipMode</code>, <code>ShowCardCount</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>DataSource</code>, <code>KeyField</code>, <code>ColumnField</code>, <code>LaneField</code>, <code>OrderField</code>, <code>TitleField</code>, <code>TextField</code>, <code>LabelsField</code>, <code>AssigneeField</code>, <code>DueField</code>, <code>ProgressField</code>, <code>ColorField</code>, <code>MaxRecords</code>, <code>ReloadDelay</code>, <code>SyncRecord</code>, <code>Columns</code>, <code>Lanes</code>, <code>ColumnWidth</code>, <code>CardGap</code>, <code>MaxTextLines</code>, <code>AllowDrag</code>, <code>ReadOnly</code>, <code>WipMode</code>, <code>ShowCardCount</code>, <code>KanbanStyles</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnCardMoving</code>, <code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code>, <code>OnSelectionChange</code>, <code>OnColumnCollapse</code>, <code>OnEnter</code>, <code>OnExit</code></p>
+<p><code>OnCustomDrawCard</code>, <code>OnGesture</code>, <code>OnCardMoving</code>, <code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code>, <code>OnSelectionChange</code>, <code>OnColumnCollapse</code>, <code>OnEnter</code>, <code>OnExit</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBKanban.md</code>.</p>
 </body></html>

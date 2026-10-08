@@ -14,7 +14,9 @@
     Felder in der .pas ("X: TButton;") und fehlende PPGlow-Units in der
     uses-Liste des interface-Teils.
   - Properties: bekannte Umbenennungen (z.B. TMS EmptyText -> TextHint,
-    TDBGrid-Spalten Title.Caption -> Title, TToggleSwitch State -> Checked).
+    TDBGrid-Spalten Title.Caption -> Title, Title.Alignment -> TitleAlignment,
+    Title.Font/Title.Color -> TitleStyle, Font/Color -> Style,
+    TToggleSwitch State -> Checked).
   - Properties, die die PPGlow-Klasse nicht hat, werden entfernt und im
     Bericht genannt. Die erlaubten Properties liest das Skript aus den
     PPGlow-Quelltexten (published-Abschnitte).
@@ -186,6 +188,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
   $stack = New-Object System.Collections.Generic.List[object]
   $usedUnits = New-Object 'System.Collections.Generic.HashSet[string]'
   $collection = $null # laufende Collection (z.B. Columns des DB-Grids)
+  $colFont = $false; $colTitleFont = $false
   $changed = $false
 
   for ($i = 0; $i -lt $lines.Count; $i++) {
@@ -223,14 +226,35 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
     if ($null -ne $collection) {
       if ($t -match '^item$' -or $t -match '^end$' -or $t -match '^end>') {
         if ($t -match '>\s*$') { $collection = $null }
+        # je Spalte: ParentFont = False nur einmal einfuegen
+        $colFont = $false; $colTitleFont = $false
         $out.Add($line)
         continue
       }
       if ($t -match '^([\w.]+)\s*=(.*)$') {
         $p = $Matches[1]
         if ($collection -eq 'DBGridColumns') {
+          $sp = ' ' * $indent
+          $v = $Matches[2]
           if ($p -eq 'Title.Caption') { $line = $line.Replace('Title.Caption', 'Title'); $out.Add($line); continue }
-          if ($p -notin @('FieldName', 'Width', 'Alignment', 'ReadOnly', 'PickList.Strings')) {
+          if ($p -eq 'Title.Alignment') {
+            $al = @{ 'taLeftJustify' = 'gtaLeft'; 'taCenter' = 'gtaCenter'; 'taRightJustify' = 'gtaRight' }[$v.Trim()]
+            if ($al) { $out.Add("${sp}TitleAlignment = $al") }
+            continue
+          }
+          if ($p -eq 'Title.Color') { $out.Add("${sp}TitleStyle.Color =$v"); continue }
+          if ($p -eq 'Color') { $out.Add("${sp}Style.Color =$v"); continue }
+          if ($p -like 'Title.Font.*') {
+            if (-not $colTitleFont) { $out.Add("${sp}TitleStyle.ParentFont = False"); $colTitleFont = $true }
+            $out.Add("${sp}TitleStyle.$($p.Substring(6)) =$v")
+            continue
+          }
+          if ($p -like 'Font.*') {
+            if (-not $colFont) { $out.Add("${sp}Style.ParentFont = False"); $colFont = $true }
+            $out.Add("${sp}Style.$p =$v")
+            continue
+          }
+          if ($p -notin @('FieldName', 'Width', 'Alignment', 'ReadOnly', 'PickList.Strings', 'Visible')) {
             $report.Add("$File :   $($cur.Name).Columns: '$p' entfernt")
             $i = Get-ValueEnd $lines $i $Matches[2]
             continue

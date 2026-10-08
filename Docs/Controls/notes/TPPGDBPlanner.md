@@ -11,6 +11,10 @@
 - `SyncRecord`: der gewählte Termin wird zum aktuellen Datensatz (z. B. für ein Formular daneben).
 - Ohne `KeyField` sind die Termine schreibgeschützt.
 
+## Anpassung
+
+- `Categories`, `PlannerStyles`, `OnCustomDrawAppointment`, `SaveLayout`/`LoadLayout` wie `TPPGPlanner`.
+
 ## Beispiel
 
 ```pascal

@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..156] of PResStringRec = (
+  AllTexts: array[0..160] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -73,7 +73,11 @@ const
     @SPPGRibbonRemoveFromQat, @SPPGRibbonQatBelow, @SPPGRibbonQatAbove, @SPPGRibbonMinimize,
     @SPPGRibbonExpand, @SPPGRibbonGalleryUp, @SPPGRibbonGalleryDown, @SPPGRibbonContextTab,
     @SPPGKanbanAccCard, @SPPGKanbanAccDue, @SPPGKanbanAccColumn, @SPPGKanbanAccLimit,
-    @SPPGKanbanAccCollapsed, @SPPGKanbanMoved, @SPPGKanbanMoveRejected);
+    @SPPGKanbanAccCollapsed, @SPPGKanbanMoved, @SPPGKanbanMoveRejected,
+    @SPPGKanbanPrintFitWidth,
+    @SPPGThemeFileInvalid,
+    @SPPGThemeValueInvalid,
+    @SPPGColorInvalid);
 
 var
   GChanges: Integer;

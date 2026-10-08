@@ -81,6 +81,7 @@ type
     property ParentShowHint;
     property PopupMenu;
     property ReadOnly;
+    property ReadOnlyStyle;
     property ScrollBars;
     property ShowHint;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
@@ -89,6 +90,8 @@ type
     property TabOrder;
     property TabStop;
     property Visible;
+    property Touch;
+    property OnGesture;
     property WantReturns;
     property WantTabs;
     property WordWrap;

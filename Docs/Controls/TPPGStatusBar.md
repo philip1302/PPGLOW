@@ -9,6 +9,10 @@ Palette **PPGlow** - Unit `PPG.StatusBar` - Basis `TPPGCustomControl`
 - DFM wie `TStatusBar` (`Panels`, `SimplePanel`); zusätzlich Panel-Arten Fortschritt und Plakette.
 - Eigene Schrift schaltet `UseSystemFont` ab (wie `TStatusBar`).
 
+## Anpassung
+
+- Je Feld `Color`, `TextColor`, `FontStyle`; `BarStyle` für die Leiste.
+
 ## Verhalten (aus dem Quelltext)
 
 TPPGStatusBar - Statusleiste (Phase 7c).
@@ -22,11 +26,11 @@ TPPGStatusBar - Statusleiste (Phase 7c).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Images`, `Panels`, `SimplePanel`, `SimpleText`, `SizeGrip`, `AutoHint`, `UseSystemFont`, `AllowMarkup`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Images`, `Panels`, `SimplePanel`, `SimpleText`, `SizeGrip`, `AutoHint`, `UseSystemFont`, `BarStyle`, `AllowMarkup`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnClick`, `OnContextPopup`, `OnDblClick`, `OnDrawPanel`, `OnHint`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnResize`
+`OnGesture`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDrawPanel`, `OnHint`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnResize`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGStatusBar.md`.

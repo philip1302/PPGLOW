@@ -13,6 +13,11 @@
 - Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnSelectionChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
 - Ziehen zwischen Anwendungen (OLE) gibt es nicht.
 
+## Anpassung
+
+- `KanbanStyles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
+- `SaveLayout`/`LoadLayout`: Spaltenbreiten und eingeklappte Spalten/Swimlanes (nach `Id`). Drucken mit `TPPGKanbanPrinter`.
+
 ## Beispiel
 
 ```pascal

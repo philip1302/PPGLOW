@@ -10,6 +10,11 @@
 <li><code>TextHint</code> wird selbst gezeichnet; <code>TextHintVisibleOnFocus</code> ist standardm&#228;&#223;ig <code>False</code>. TMS <code>EmptyText</code> wird zu <code>TextHint</code>.</li>
 <li>Zus&#228;tzlich: <code>ValidationState</code>/<code>ValidationHint</code>, <code>ShowClearButton</code>, <code>LeftButton</code>/<code>RightButton</code> (mit <code>DropDownMenu</code>).</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>ReadOnlyStyle</code>: eigene Fl&#228;che, Text- und Randfarbe bei <code>ReadOnly</code> (alle Eingabefelder).</li>
+<li><code>RoundedCorners</code>: einzelne Ecken eckig, z. B. Feld + Button als Gruppe.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>PPGEdit1.TextHint := &#39;E-Mail-Adresse&#39;;
 PPGEdit1.ShowClearButton := True;
@@ -26,11 +31,11 @@ PPGEdit1.ValidationHint := &#39;Bitte eine g&#252;ltige Adresse eingeben&#39;;
 <li>Migration: Property-Namen von TEdit, eine DFM laesst sich per Suchen/Ersetzen (TEdit -&gt; TPPGEdit) umstellen.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>LeftButton</code>, <code>RightButton</code>, <code>ShowClearButton</code>, <code>TextHint</code>, <code>UseSystemContextMenu</code>, <code>TextHintVisibleOnFocus</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code></p>
+<p><code>RoundedCorners</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>LeftButton</code>, <code>RightButton</code>, <code>ShowClearButton</code>, <code>TextHint</code>, <code>UseSystemContextMenu</code>, <code>TextHintVisibleOnFocus</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
-<p><code>Align</code>, <code>Alignment</code>, <code>Anchors</code>, <code>AutoSelect</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CharCase</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HideSelection</code>, <code>MaxLength</code>, <code>NumbersOnly</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PasswordChar</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code></p>
+<p><code>Align</code>, <code>Alignment</code>, <code>Anchors</code>, <code>AutoSelect</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CharCase</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HideSelection</code>, <code>MaxLength</code>, <code>NumbersOnly</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PasswordChar</code>, <code>PopupMenu</code>, <code>ReadOnly</code>, <code>ReadOnlyStyle</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnChange</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnLeftButtonClick</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnMouseWheel</code>, <code>OnRightButtonClick</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<p><code>OnGesture</code>, <code>OnChange</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnLeftButtonClick</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnMouseWheel</code>, <code>OnRightButtonClick</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGEdit.md</code>.</p>
 </body></html>

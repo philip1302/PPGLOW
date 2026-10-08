@@ -14,6 +14,11 @@ Palette **PPGlow DB** - Unit `PPG.DB.Grid` - Basis `TPPGCustomDBGrid`
 - `OnTitleClick(Column)`/`OnCellClick(Column)` ohne Sender wie `TDBGrid`; Sortieren ist Sache der Datenmenge.
 - Im Designer: „Edit columns...“ und „Add all fields“.
 
+## Anpassung
+
+- Dieselben `Styles`, Spalten-`Style`/`TitleStyle`/`TitleAlignment` und `GridLineWidth` wie `TPPGGrid`.
+- `TitleFont` (wie `TDBGrid`) ist `Styles.Header.Font`; `migrate.ps1` überträgt `Title.Font`, `Title.Color`, `Title.Alignment`, `Font` und `Color` der Spalten.
+
 ## Beispiel
 
 ```pascal
@@ -47,15 +52,15 @@ Aufbau:
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Columns`, `Bands`, `ConditionalFormats`, `ExportMaxRecords`, `FixedColsRight`, `HeaderMenu`, `ShowFooter`, `DataSource`, `Options`, `ReadOnly`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Columns`, `Bands`, `ConditionalFormats`, `ExportMaxRecords`, `FixedColsRight`, `HeaderMenu`, `ShowFooter`, `DataSource`, `Options`, `ReadOnly`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`, `Styles`, `GridLineWidth`, `DrawingStyle`, `FixedColor`, `GradientEndColor`, `GradientStartColor`, `TitleFont`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `DefaultDrawing`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Align`, `Anchors`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `DefaultDrawing`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnCellClick`, `OnColumnMoved`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDrawCell`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnGetCellStyle`, `OnGetFooterText`, `OnHeaderMenu`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnStartDock`, `OnStartDrag`, `OnTitleClick`
+`OnGesture`, `OnCellClick`, `OnColumnMoved`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDrawCell`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnGetCellStyle`, `OnGetFooterText`, `OnHeaderMenu`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnStartDock`, `OnStartDrag`, `OnTitleClick`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBGrid.md`.

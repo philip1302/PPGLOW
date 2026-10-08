@@ -11,6 +11,11 @@
 <li><code>ItemHeight</code> ist eine Mindesth&#246;he (alte DFMs speichern 13).</li>
 <li>Eigene Aufklappliste (<code>PPG.Popup</code>) mit <code>ItemsEx</code> (Bild, Detail, Plakette, Markup) und <code>FilterMode</code>; Filtern ersetzt AutoComplete, ohne Treffer schlie&#223;t die Liste.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>ListStyles</code> f&#252;r die Aufklappliste (Zebra, Auswahl, Hover) und <code>OnCustomDrawItem</code>.</li>
+<li><code>RoundedCorners</code> f&#252;r zusammengesetzte Eingabegruppen.</li>
+</ul>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>TPPGComboBox - Auswahlfeld mit eigener Aufklappliste in der Optik des Presets.</p>
 <ul>
@@ -21,11 +26,11 @@
 <li>Migration: Property-Namen von TComboBox (Style, Items, ItemIndex, DropDownCount, Sorted, AutoComplete, ...). csSimple wird wie csDropDown, csOwnerDraw* wie csDropDownList behandelt (Owner-Draw gibt es nicht). ItemHeight ist eine Mindesthoehe der Zeilen (0 = aus der Schrift).</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ItemsEx</code>, <code>FilterMode</code>, <code>ShowClearButton</code>, <code>TextHint</code>, <code>UseSystemContextMenu</code>, <code>TextHintVisibleOnFocus</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code></p>
+<p><code>RoundedCorners</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ItemsEx</code>, <code>FilterMode</code>, <code>ListStyles</code>, <code>ShowClearButton</code>, <code>TextHint</code>, <code>UseSystemContextMenu</code>, <code>TextHintVisibleOnFocus</code>, <code>ValidationState</code>, <code>ValidationHint</code>, <code>HighContrastSupport</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
-<p><code>Align</code>, <code>Anchors</code>, <code>AutoCloseUp</code>, <code>AutoComplete</code>, <code>AutoDropDown</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CharCase</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>DropDownCount</code>, <code>DropDownWidth</code>, <code>Enabled</code>, <code>Font</code>, <code>ItemHeight</code>, <code>Items</code>, <code>ItemIndex</code>, <code>MaxLength</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Sorted</code>, <code>Style</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code></p>
+<p><code>Align</code>, <code>Anchors</code>, <code>AutoCloseUp</code>, <code>AutoComplete</code>, <code>AutoDropDown</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>CharCase</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>DropDownCount</code>, <code>DropDownWidth</code>, <code>Enabled</code>, <code>Font</code>, <code>ItemHeight</code>, <code>Items</code>, <code>ItemIndex</code>, <code>MaxLength</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Sorted</code>, <code>Style</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Text</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnChange</code>, <code>OnClick</code>, <code>OnCloseUp</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDropDown</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnSelect</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<p><code>OnGesture</code>, <code>OnChange</code>, <code>OnCustomDrawItem</code>, <code>OnClick</code>, <code>OnCloseUp</code>, <code>OnContextPopup</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDropDown</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnSelect</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGComboBox.md</code>.</p>
 </body></html>

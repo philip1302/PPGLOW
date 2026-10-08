@@ -120,6 +120,8 @@ type
     property ReadOnly;
     property WipMode;
     property ShowCardCount;
+    property KanbanStyles;
+    property OnCustomDrawCard;
     property Preset;
     property StyleManager;
     property Appearance;
@@ -143,6 +145,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnCardMoving;
     property OnCardMoved;
     property OnCardClick;

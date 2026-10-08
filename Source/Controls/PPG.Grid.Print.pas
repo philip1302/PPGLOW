@@ -497,12 +497,12 @@ begin
           Fl := AlignFlags(Info.Alignment);
           if St.TextColor <> clNone then
           begin
-            if St.Bold then
+            if St.Bold or (fsBold in St.FontStyle) then
               Txt(S, TR, FBoldFont, St.TextColor, Fl)
             else
               Txt(S, TR, FFont, St.TextColor, Fl);
           end
-          else if St.Bold then
+          else if St.Bold or (fsBold in St.FontStyle) then
             Txt(S, TR, FBoldFont, clBlack, Fl)
           else
             Txt(S, TR, FFont, clBlack, Fl);

@@ -89,6 +89,7 @@
         <DCCReference Include="..\..\Source\Core\PPG.ErrorHandler.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Types.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Tokens.pas"/>
+        <DCCReference Include="..\..\Source\Core\PPG.ElementStyle.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Appearance.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Animation.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Layout.pas"/>
@@ -105,6 +106,7 @@
         <DCCReference Include="..\..\Source\Theme\PPG.StyleManager.pas"/>
         <DCCReference Include="..\..\Source\Theme\PPG.Theme.pas"/>
         <DCCReference Include="..\..\Source\Theme\PPG.VclStyles.pas"/>
+        <DCCReference Include="..\..\Source\Theme\PPG.ThemeFile.pas"/>
         <DCCReference Include="..\..\Source\Access\PPG.Accessibility.pas"/>
         <DCCReference Include="..\..\Source\Access\PPG.UIA.Intf.pas"/>
         <DCCReference Include="..\..\Source\Access\PPG.UIA.pas"/>
@@ -135,6 +137,7 @@
         <DCCReference Include="..\..\Source\Controls\PPG.RowLayout.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Controls.Scroll.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.ItemPainter.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.CustomDraw.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Controls.ItemList.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.ListBox.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.CheckListBox.pas"/>
@@ -155,6 +158,7 @@
         <DCCReference Include="..\..\Source\Controls\PPG.StatusBar.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Notifications.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Planner.Print.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.Kanban.Print.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.KeyTips.pas"/>
         <DCCReference Include="..\..\Source\Core\PPG.Ribbon.Layout.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Ribbon.Items.pas"/>

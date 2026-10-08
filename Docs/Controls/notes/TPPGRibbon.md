@@ -22,6 +22,10 @@
 - Screenreader: Gruppierung „Menüband“; Kinder sind Datei, Schnellzugriff, Registerkarten (gewählt) und die Befehle der aktiven Karte mit Rolle (Button, Split-Button, Umschalt-Button, Menü-Button). RTL gespiegelt.
 - Nicht unterstützt: Ribbon in der Titelleiste, MDI-Zusammenführung, Speichern des Schnellzugriffs (die Anwendung tut das in `OnQuickAccessChange`).
 
+## Anpassung
+
+- `SaveQuickAccess`/`LoadQuickAccess`: vom Anwender angepassten Schnellzugriff speichern (Schlüssel: Action-Name, sonst Reiter/Gruppe/Item mit Beschriftung).
+
 ## Beispiel
 
 ```pascal

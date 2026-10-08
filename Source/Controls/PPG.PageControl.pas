@@ -33,6 +33,9 @@ type
   private
     FImageIndex: TPPGImageIndex;
     FTabVisible: Boolean;
+    FTabColor: TColor;
+    FTabTextColor: TColor;
+    FTabFontStyle: TFontStyles;
     FOnShow: TNotifyEvent;
     FOnHide: TNotifyEvent;
     function GetPageControl: TPPGPageControl;
@@ -42,6 +45,9 @@ type
     function GetTabIndex: Integer;
     procedure SetImageIndex(const Value: TPPGImageIndex);
     procedure SetTabVisible(const Value: Boolean);
+    procedure SetTabColor(const Value: TColor);
+    procedure SetTabTextColor(const Value: TColor);
+    procedure SetTabFontStyle(const Value: TFontStyles);
     procedure CMTextChanged(var Message: TMessage); message CM_TEXTCHANGED;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
   protected
@@ -73,6 +79,10 @@ type
     property ParentShowHint;
     property PopupMenu;
     property ShowHint;
+    /// Flaeche, Text und zusaetzliche Schriftstile des Reiters (clDefault = TabStyles).
+    property TabColor: TColor read FTabColor write SetTabColor default clDefault;
+    property TabTextColor: TColor read FTabTextColor write SetTabTextColor default clDefault;
+    property TabFontStyle: TFontStyles read FTabFontStyle write SetTabFontStyle default [];
     property TabVisible: Boolean read FTabVisible write SetTabVisible default True;
     property Top stored False;
     property Width stored False;
@@ -146,6 +156,12 @@ type
     property Appearance;
     property Animation;
     property ShowCloseButtons;
+    property TabStyles;
+    property MultiLine;
+    property OwnerDraw;
+    property RaggedRight;
+    property ScrollOpposite;
+    property Style;
     property HighContrastSupport;
     { wie TPageControl }
     property Align;
@@ -173,8 +189,12 @@ type
     property TabStop default True;
     property TabWidth;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnChanging;
+    property OnDrawTab;
+    property OnCustomDrawItem;
     property OnClose: TPPGPageCloseEvent read FOnClose write FOnClose;
     property OnCloseQuery: TPPGPageCloseQueryEvent read FOnCloseQuery write FOnCloseQuery;
     property OnContextPopup;
@@ -211,6 +231,8 @@ begin
   Visible := False;
   FImageIndex := -1;
   FTabVisible := True;
+  FTabColor := clDefault;
+  FTabTextColor := clDefault;
 end;
 
 destructor TPPGTabSheet.Destroy;
@@ -261,6 +283,36 @@ begin
   if FImageIndex <> Value then
   begin
     FImageIndex := Value;
+    if PageControl <> nil then
+      PageControl.PageChanged(Self);
+  end;
+end;
+
+procedure TPPGTabSheet.SetTabColor(const Value: TColor);
+begin
+  if FTabColor <> Value then
+  begin
+    FTabColor := Value;
+    if PageControl <> nil then
+      PageControl.PageChanged(Self);
+  end;
+end;
+
+procedure TPPGTabSheet.SetTabTextColor(const Value: TColor);
+begin
+  if FTabTextColor <> Value then
+  begin
+    FTabTextColor := Value;
+    if PageControl <> nil then
+      PageControl.PageChanged(Self);
+  end;
+end;
+
+procedure TPPGTabSheet.SetTabFontStyle(const Value: TFontStyles);
+begin
+  if FTabFontStyle <> Value then
+  begin
+    FTabFontStyle := Value;
     if PageControl <> nil then
       PageControl.PageChanged(Self);
   end;
@@ -611,7 +663,10 @@ begin
   begin
     P := Pages[I];
     if P.TabVisible then
+    begin
       Strip.Add(P.Caption, P.ImageIndex, P.Enabled, I);
+      Strip.SetTabStyle(Strip.Count - 1, P.TabColor, P.TabTextColor, P.TabFontStyle);
+    end;
   end;
 end;
 

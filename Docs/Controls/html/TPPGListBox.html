@@ -11,6 +11,11 @@
 <li>Quellen: <code>Items</code>, <code>ItemsEx</code> (reich: Bild, Detail, Gruppe, Plakette) oder virtuell (<code>Style = lbVirtual</code>, <code>Count</code> + <code>OnData</code>).</li>
 <li>UI Automation: Liste mit Auswahl-Muster, Eintr&#228;ge mit Position im Satz.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>Styles</code> (<code>Selection</code>, <code>SelectionInactive</code>, <code>AlternateRow</code>, <code>HotItem</code>, <code>GroupHeader</code>, <code>Detail</code>); je Eintrag <code>Color</code>, <code>TextColor</code>, <code>FontStyle</code>.</li>
+<li><code>OnCustomDrawItem</code>: Stil eines Eintrags vor dem Zeichnen &#228;ndern oder mit <code>DefaultDraw := False</code> selbst zeichnen.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>PPGListBox1.Style := lbVirtual;
 PPGListBox1.Count := 1000000;   // Texte &#252;ber OnData
@@ -26,11 +31,11 @@ PPGListBox1.Count := 1000000;   // Texte &#252;ber OnData
 <p>Items ist eine eigene TStringList, die Einfuegen/Loeschen mit Index meldet: Auswahl und Fokus wandern mit. Pro Zeile haelt sie eine kleine Huelle (Objects[] des Anwenders, Kaestchen-Zustand der CheckListBox), die beim Sortieren und Verschieben mitwandert.</p>
 <p>Owner-Draw (lbOwnerDrawFixed/Variable): OnDrawItem zeichnet auf Canvas (waehrend des Aufrufs ein TCanvas auf dem Zeichenpuffer, Hintergrund und Auswahl hat das Preset schon gezeichnet), OnMeasureItem liefert Hoehen.</p>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ItemsEx</code>, <code>AllowMarkup</code>, <code>AllowReorder</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ItemsEx</code>, <code>AllowMarkup</code>, <code>AllowReorder</code>, <code>Styles</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>HighContrastSupport</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
-<p><code>Align</code>, <code>Anchors</code>, <code>AutoComplete</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Columns</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>ExtendedSelect</code>, <code>Font</code>, <code>IntegralHeight</code>, <code>ItemHeight</code>, <code>Items</code>, <code>MultiSelect</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ScrollWidth</code>, <code>ShowHint</code>, <code>Sorted</code>, <code>Style</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>TabWidth</code>, <code>Visible</code>, <code>ItemIndex</code></p>
+<p><code>Align</code>, <code>Anchors</code>, <code>AutoComplete</code>, <code>BiDiMode</code>, <code>BorderStyle</code>, <code>Color</code>, <code>Columns</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>ExtendedSelect</code>, <code>Font</code>, <code>IntegralHeight</code>, <code>ItemHeight</code>, <code>Items</code>, <code>MultiSelect</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ScrollWidth</code>, <code>ShowHint</code>, <code>Sorted</code>, <code>Style</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>TabWidth</code>, <code>Visible</code>, <code>Touch</code>, <code>ItemIndex</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnClick</code>, <code>OnContextPopup</code>, <code>OnData</code>, <code>OnDataFind</code>, <code>OnDataObject</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawItem</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetItem</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMeasureItem</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnReorder</code>, <code>OnScroll</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<p><code>OnGesture</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnData</code>, <code>OnDataFind</code>, <code>OnDataObject</code>, <code>OnDblClick</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnDrawItem</code>, <code>OnCustomDrawItem</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetItem</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMeasureItem</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnReorder</code>, <code>OnScroll</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGListBox.md</code>.</p>
 </body></html>

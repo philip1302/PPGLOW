@@ -15,6 +15,10 @@ Palette **PPGlow DB** - Unit `PPG.DB.Planner` - Basis `TPPGCustomDBPlanner`
 - `SyncRecord`: der gewählte Termin wird zum aktuellen Datensatz (z. B. für ein Formular daneben).
 - Ohne `KeyField` sind die Termine schreibgeschützt.
 
+## Anpassung
+
+- `Categories`, `PlannerStyles`, `OnCustomDrawAppointment`, `SaveLayout`/`LoadLayout` wie `TPPGPlanner`.
+
 ## Beispiel
 
 ```pascal
@@ -50,11 +54,11 @@ TPPGDBPlanner - Terminplaner auf einer Datenmenge (Phase 14a, Paket PPGlowDBR).
 
 ## PPGlow-Eigenschaften
 
-`DataSource`, `KeyField`, `StartField`, `FinishField`, `SubjectField`, `LocationField`, `BodyField`, `AllDayField`, `CategoryField`, `ResourceField`, `RecurrenceField`, `ExDatesField`, `ParentField`, `MaxRecords`, `ReloadDelay`, `SyncRecord`, `Resources`, `View`, `Date`, `DayCount`, `FirstDayOfWeek`, `WorkDays`, `WorkStart`, `WorkEnd`, `DayStartHour`, `DayEndHour`, `SlotMinutes`, `SlotHeight`, `SlotWidth`, `TimelineDays`, `AgendaDays`, `GroupByResource`, `ShowNowLine`, `ReadOnly`, `TimeZone`, `TimeZoneMode`, `Calendar`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`DataSource`, `KeyField`, `StartField`, `FinishField`, `SubjectField`, `LocationField`, `BodyField`, `AllDayField`, `CategoryField`, `ResourceField`, `RecurrenceField`, `ExDatesField`, `ParentField`, `MaxRecords`, `ReloadDelay`, `SyncRecord`, `Resources`, `Categories`, `PlannerStyles`, `View`, `Date`, `DayCount`, `FirstDayOfWeek`, `WorkDays`, `WorkStart`, `WorkEnd`, `DayStartHour`, `DayEndHour`, `SlotMinutes`, `SlotHeight`, `SlotWidth`, `TimelineDays`, `AgendaDays`, `GroupByResource`, `ShowNowLine`, `ReadOnly`, `TimeZone`, `TimeZoneMode`, `Calendar`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnGetRange`, `OnAppointmentChanging`, `OnAppointmentChanged`, `OnAppointmentCreated`, `OnAppointmentOpen`, `OnDeleting`, `OnCreateAppointment`, `OnGetAppointmentColor`, `OnSelectionChange`, `OnRangeChange`, `OnScroll`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnMouseDown`, `OnMouseUp`
+`OnGetRange`, `OnGesture`, `OnAppointmentChanging`, `OnAppointmentChanged`, `OnAppointmentCreated`, `OnAppointmentOpen`, `OnDeleting`, `OnCreateAppointment`, `OnGetAppointmentColor`, `OnCustomDrawAppointment`, `OnSelectionChange`, `OnRangeChange`, `OnScroll`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnMouseDown`, `OnMouseUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBPlanner.md`.

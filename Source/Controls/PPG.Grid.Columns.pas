@@ -20,7 +20,7 @@ unit PPG.Grid.Columns;
 interface
 
 uses
-  System.Classes;
+  System.Classes, PPG.ElementStyle;
 
 type
   TPPGGridEditorKind = (gekText, gekNone, gekCombo, gekSpin, gekCheck);
@@ -31,6 +31,9 @@ type
   /// Darstellung der Zellen einer Spalte (PPG.Grid.CellKinds).
   TPPGGridCellKind = (ckText, ckCheck, ckProgress, ckSparkline, ckRating, ckImage,
     ckLink, ckButton, ckColor, ckMarkup, ckCustom);
+
+  /// Ausrichtung des Spaltentitels; gtaColumn = wie Alignment der Spalte.
+  TPPGGridTitleAlignment = (gtaColumn, gtaLeft, gtaCenter, gtaRight);
 
   /// Owner der Spalten (Grid, DB-Grid): wird nach jeder Aenderung gerufen.
   IPPGGridColumnsHost = interface
@@ -58,6 +61,13 @@ type
     FCellKind: TPPGGridCellKind;
     FCellKindName: string;
     FFormat: string;
+    FStyle: TPPGElementStyle;
+    FTitleStyle: TPPGElementStyle;
+    FTitleAlignment: TPPGGridTitleAlignment;
+    procedure SetStyle(const Value: TPPGElementStyle);
+    procedure SetTitleStyle(const Value: TPPGElementStyle);
+    procedure SetTitleAlignment(const Value: TPPGGridTitleAlignment);
+    procedure StyleChanged(Sender: TObject);
     procedure SetCellKind(const Value: TPPGGridCellKind);
     procedure SetCellKindName(const Value: string);
     procedure SetAggregate(const Value: TPPGGridAggregate);
@@ -76,6 +86,8 @@ type
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
+    /// Ausrichtung des Titels (gtaColumn aufgeloest).
+    function EffectiveTitleAlignment: TAlignment;
   published
     property Title: string read FTitle write SetTitle;
     /// Logische Breite (0 = DefaultColWidth).
@@ -104,6 +116,12 @@ type
     /// Zahlen-/Datumsformat fuer den Export (Excel-Syntax, z.B. '#,##0.00',
     /// 'dd.mm.yyyy'); '' = Standard.
     property Format: string read FFormat write FFormat;
+    /// Zellen dieser Spalte: Flaeche, Text und Schrift (clDefault = Grid).
+    property Style: TPPGElementStyle read FStyle write SetStyle;
+    /// Spaltenkopf: Flaeche, Text und Schrift (clDefault = Grid.Styles.Header).
+    property TitleStyle: TPPGElementStyle read FTitleStyle write SetTitleStyle;
+    property TitleAlignment: TPPGGridTitleAlignment read FTitleAlignment
+      write SetTitleAlignment default gtaColumn;
   end;
 
   TPPGGridColumns = class(TOwnedCollection)
@@ -167,12 +185,18 @@ begin
   FDisplayIndex := -1;
   FBand := -1;
   FGroupIndex := -1;
+  FStyle := TPPGElementStyle.Create(Self);
+  FStyle.OnChange := StyleChanged;
+  FTitleStyle := TPPGElementStyle.Create(Self);
+  FTitleStyle.OnChange := StyleChanged;
   inherited Create(Collection);
 end;
 
 destructor TPPGGridColumn.Destroy;
 begin
   FreeAndNil(FPickList);
+  FreeAndNil(FTitleStyle);
+  FreeAndNil(FStyle);
   inherited Destroy;
 end;
 
@@ -201,6 +225,16 @@ begin
     FCellKind := S.FCellKind;
     FCellKindName := S.FCellKindName;
     FFormat := S.FFormat;
+    FStyle.OnChange := nil;
+    FTitleStyle.OnChange := nil;
+    try
+      FStyle.Assign(S.FStyle);
+      FTitleStyle.Assign(S.FTitleStyle);
+    finally
+      FStyle.OnChange := StyleChanged;
+      FTitleStyle.OnChange := StyleChanged;
+    end;
+    FTitleAlignment := S.FTitleAlignment;
     Changed(True);
   end
   else
@@ -213,6 +247,41 @@ begin
     Result := FTitle
   else
     Result := inherited GetDisplayName;
+end;
+
+procedure TPPGGridColumn.SetStyle(const Value: TPPGElementStyle);
+begin
+  FStyle.Assign(Value);
+end;
+
+procedure TPPGGridColumn.SetTitleStyle(const Value: TPPGElementStyle);
+begin
+  FTitleStyle.Assign(Value);
+end;
+
+procedure TPPGGridColumn.StyleChanged(Sender: TObject);
+begin
+  Changed(False);
+end;
+
+procedure TPPGGridColumn.SetTitleAlignment(const Value: TPPGGridTitleAlignment);
+begin
+  if FTitleAlignment <> Value then
+  begin
+    FTitleAlignment := Value;
+    Changed(False);
+  end;
+end;
+
+function TPPGGridColumn.EffectiveTitleAlignment: TAlignment;
+begin
+  case FTitleAlignment of
+    gtaLeft: Result := taLeftJustify;
+    gtaCenter: Result := taCenter;
+    gtaRight: Result := taRightJustify;
+  else
+    Result := FAlignment;
+  end;
 end;
 
 procedure TPPGGridColumn.SetTitle(const Value: string);

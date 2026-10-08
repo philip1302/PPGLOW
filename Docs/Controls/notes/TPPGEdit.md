@@ -6,6 +6,11 @@
 - `TextHint` wird selbst gezeichnet; `TextHintVisibleOnFocus` ist standardmäßig `False`. TMS `EmptyText` wird zu `TextHint`.
 - Zusätzlich: `ValidationState`/`ValidationHint`, `ShowClearButton`, `LeftButton`/`RightButton` (mit `DropDownMenu`).
 
+## Anpassung
+
+- `ReadOnlyStyle`: eigene Fläche, Text- und Randfarbe bei `ReadOnly` (alle Eingabefelder).
+- `RoundedCorners`: einzelne Ecken eckig, z. B. Feld + Button als Gruppe.
+
 ## Beispiel
 
 ```pascal

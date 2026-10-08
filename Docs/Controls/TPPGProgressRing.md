@@ -18,7 +18,11 @@ Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Indeterminate`, `Value`, `Thickness`, `ShowTrack`, `Align`, `Anchors`, `Enabled`, `ParentShowHint`, `ShowHint`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Indeterminate`, `Value`, `Thickness`, `ShowTrack`, `Align`, `Anchors`, `Enabled`, `ParentShowHint`, `ShowHint`, `Visible`, `Touch`
+
+## Ereignisse
+
+`OnGesture`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGProgressRing.md`.

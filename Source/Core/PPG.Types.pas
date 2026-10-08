@@ -27,6 +27,13 @@ type
 
   TPPGImagePosition = (ipLeft, ipRight, ipTop, ipBottom);
 
+  /// Ecken einer Flaeche (Rundung je Ecke, z.B. Button-Gruppen).
+  TPPGCorner = (pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft);
+  TPPGCorners = set of TPPGCorner;
+
+  /// Einfaerben von Bildern: keins bzw. einfarbig in der Textfarbe.
+  TPPGImageTint = (itNone, itTextColor);
+
   TPPGPresetName = type string;
 
 const
@@ -54,7 +61,11 @@ type
     GlowSize: Integer;     // px, skaliert
     GlowAlpha: Byte;       // 0 = kein Glow, 255 = voller Glow
     Focused: Boolean;
+    FontStyle: TFontStyles; // zusaetzliche Schriftstile des Zustands
   end;
+
+const
+  PPGAllCorners = [pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft];
 
 /// Wandelt clXxx-Systemfarben in echte RGB-Werte um.
 function PPGColorToRGB(Color: TColor): TColor;
@@ -66,6 +77,10 @@ function PPGBlendSurface(const A, B: TPPGSurfaceStyle; T: Single): TPPGSurfaceSt
 function PPGClampSingle(Value, AMin, AMax: Single): Single;
 /// Zerlegt S an Delim (wie string.Split, das es erst ab XE3 gibt).
 function PPGSplitString(const S: string; Delim: Char; SkipEmpty: Boolean): TArray<string>;
+
+/// Schrift mit zusaetzlichen Stilen (Zustand, Element-Stil): liefert Base, wenn
+/// Extra nichts aendert, sonst eine Kopie in Temp (Aufrufer gibt Temp frei).
+function PPGStyledFont(Base: TFont; Extra: TFontStyles; var Temp: TFont): TFont;
 
 /// Validiert einen Integer-Property-Wert.
 /// - Zur Laufzeit: ausserhalb des Bereichs -> EPPGPropertyError (Objekt bleibt unveraendert).
@@ -144,6 +159,20 @@ begin
   Result.GlowSize := Round(A.GlowSize + (B.GlowSize - A.GlowSize) * T);
   Result.Rounding := Round(A.Rounding + (B.Rounding - A.Rounding) * T);
   Result.BorderWidth := Round(A.BorderWidth + (B.BorderWidth - A.BorderWidth) * T);
+  // Schriftstil springt in der Mitte des Uebergangs
+  if T < 0.5 then
+    Result.FontStyle := A.FontStyle;
+end;
+
+function PPGStyledFont(Base: TFont; Extra: TFontStyles; var Temp: TFont): TFont;
+begin
+  if (Base = nil) or (Extra - Base.Style = []) then
+    Exit(Base);
+  if Temp = nil then
+    Temp := TFont.Create;
+  Temp.Assign(Base);
+  Temp.Style := Base.Style + Extra;
+  Result := Temp;
 end;
 
 function PPGIsLoading(Sender: TPersistent): Boolean;

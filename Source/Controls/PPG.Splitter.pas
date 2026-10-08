@@ -116,6 +116,8 @@ type
     property TabOrder;
     property TabStop default False;
     property Visible;
+    property Touch;
+    property OnGesture;
     property Width default 6;
     property OnCanResize;
     property OnMoved;

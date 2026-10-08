@@ -191,6 +191,8 @@ type
     {$ENDIF}
     property TabOrder;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnCanAdvance: TPPGWizardCanAdvanceEvent read FOnCanAdvance write FOnCanAdvance;
     property OnPageChanged: TNotifyEvent read FOnPageChanged write FOnPageChanged;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;

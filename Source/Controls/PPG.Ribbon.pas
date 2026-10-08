@@ -447,6 +447,11 @@ type
     /// Item im Band, auf das ein Schnellzugriff-Item wirkt (gleiche Action bzw.
     /// gleiche Beschriftung, Art und Symbol), sonst nil.
     function QuickSource(QuickItem: TPPGRibbonItem): TPPGRibbonItem;
+    /// Vom Anwender angepassten Schnellzugriff als Text sichern bzw. laden
+    /// (Schluessel: Action-Name, sonst Reiter/Gruppe/Item mit Beschriftung).
+    /// Eintraege, die es im Band nicht mehr gibt, werden uebergangen.
+    function SaveQuickAccess: string;
+    procedure LoadQuickAccess(const S: string);
     { KeyTips und Tastatur }
     procedure ShowKeyTips;
     procedure HideKeyTips;
@@ -560,6 +565,8 @@ type
     property PopupMenu;
     property ShowHint default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnItemClick;
     property OnTabChange;
     property OnTabChanging;
@@ -2541,6 +2548,10 @@ begin
   Info.RightToLeft := UseRightToLeftAlignment;
   Info.Enabled := Enabled and Item.Enabled;
   Info.PPI := ScalePPI;
+  Info.Styles := nil;
+  Info.UseColors := False;
+  Info.Dark := UseDarkMode;
+  Info.Focused := Focused;
   First := TopRow * Cols;
   Last := Min(Item.GalleryTotal, (TopRow + Rows) * Cols) - 1;
   for I := First to Last do
@@ -2578,15 +2589,8 @@ begin
     Inner := R;
     InflateRect(Inner, -Sc(1), -Sc(1));
     FPainter.PaintBackground(ACanvas, IR, Inner, Info, Sel, I = FocusTile, Ord(Hot));
-    Data.Text := '';
-    Data.Detail := '';
-    Data.Badge := '';
-    Data.Group := '';
-    Data.ImageIndex := -1;
-    Data.Checked := cbUnchecked;
+    PPGInitItemData(Data);
     Data.Enabled := Item.Enabled;
-    Data.IsHeader := False;
-    Data.Data := nil;
     Col := clNone;
     GetGalleryData(Item, I, Data, Col);
     if Col <> clNone then
@@ -3870,6 +3874,183 @@ begin
     FOnQuickAccessChange(Self);
 end;
 
+function TPPGCustomRibbon.SaveQuickAccess: string;
+var
+  L: TStringList;
+  I, T, G: Integer;
+  Q, Src: TPPGRibbonItem;
+  Found: Boolean;
+begin
+  L := TStringList.Create;
+  try
+    L.Add('[PPGRibbonQuickAccess]');
+    L.Add('Version=1');
+    for I := 0 to FQuickAccess.Count - 1 do
+    begin
+      Q := FQuickAccess[I];
+      if (Q.Action <> nil) and (Q.Action.Name <> '') then
+      begin
+        L.Add('Action=' + Q.Action.Name);
+        Continue;
+      end;
+      Src := QuickSource(Q);
+      Found := False;
+      if Src <> nil then
+        for T := 0 to FTabs.Count - 1 do
+          for G := 0 to FTabs[T].Groups.Count - 1 do
+          begin
+            if (Src.Collection = FTabs[T].Groups[G].Items) and not Found then
+            begin
+              L.Add(Format('Item=%d,%d,%d,%s', [T, G, Src.Index, Src.Caption]));
+              Found := True;
+            end;
+          end;
+      // Nur im Schnellzugriff definiert: per Beschriftung wiederfinden
+      if not Found then
+        L.Add('Own=' + Q.Caption);
+    end;
+    Result := L.Text;
+  finally
+    L.Free;
+  end;
+end;
+
+procedure TPPGCustomRibbon.LoadQuickAccess(const S: string);
+var
+  L: TStringList;
+  I, J, P, N, T, G, K: Integer;
+  Key, Val, Cap: string;
+  Src, Q: TPPGRibbonItem;
+  Changed: Boolean;
+
+  function ByAction(const AName: string): TPPGRibbonItem;
+  var
+    A, B, C: Integer;
+    It: TPPGRibbonItem;
+  begin
+    for A := 0 to FTabs.Count - 1 do
+      for B := 0 to FTabs[A].Groups.Count - 1 do
+        for C := 0 to FTabs[A].Groups[B].Items.Count - 1 do
+        begin
+          It := FTabs[A].Groups[B].Items[C];
+          if (It.Action <> nil) and SameText(It.Action.Name, AName) then
+            Exit(It);
+        end;
+    Result := nil;
+  end;
+
+  function ByPath(ATab, AGroup, AItem: Integer; const ACaption: string): TPPGRibbonItem;
+  var
+    A, B, C: Integer;
+  begin
+    // Erst die gespeicherte Lage, dann (Band umgebaut) die Beschriftung
+    if (ATab >= 0) and (ATab < FTabs.Count) and (AGroup >= 0) and
+      (AGroup < FTabs[ATab].Groups.Count) and (AItem >= 0) and
+      (AItem < FTabs[ATab].Groups[AGroup].Items.Count) and
+      (FTabs[ATab].Groups[AGroup].Items[AItem].Caption = ACaption) then
+      Exit(FTabs[ATab].Groups[AGroup].Items[AItem]);
+    if ACaption <> '' then
+      for A := 0 to FTabs.Count - 1 do
+        for B := 0 to FTabs[A].Groups.Count - 1 do
+          for C := 0 to FTabs[A].Groups[B].Items.Count - 1 do
+            if FTabs[A].Groups[B].Items[C].Caption = ACaption then
+              Exit(FTabs[A].Groups[B].Items[C]);
+    Result := nil;
+  end;
+
+  function ParsePath(const V: string; out ATab, AGroup, AItem: Integer; out ACaption: string): Boolean;
+  var
+    R: string;
+    C1: Integer;
+  begin
+    Result := False;
+    R := V;
+    C1 := Pos(',', R);
+    if (C1 = 0) or not TryStrToInt(Copy(R, 1, C1 - 1), ATab) then
+      Exit;
+    Delete(R, 1, C1);
+    C1 := Pos(',', R);
+    if (C1 = 0) or not TryStrToInt(Copy(R, 1, C1 - 1), AGroup) then
+      Exit;
+    Delete(R, 1, C1);
+    C1 := Pos(',', R);
+    if (C1 = 0) or not TryStrToInt(Copy(R, 1, C1 - 1), AItem) then
+      Exit;
+    ACaption := Copy(R, C1 + 1, MaxInt);
+    Result := True;
+  end;
+
+begin
+  L := TStringList.Create;
+  try
+    L.Text := S;
+    if (L.Count = 0) or (Trim(L[0]) <> '[PPGRibbonQuickAccess]') then
+      Exit; // kein Schnellzugriff dieses Ribbons: unveraendert lassen
+    if FHot.Part = rpQuickItem then
+      FHot := NoHit;
+    N := 0;
+    Changed := False;
+    FQuickAccess.BeginUpdate;
+    try
+      for I := 1 to L.Count - 1 do
+      begin
+        P := Pos('=', L[I]);
+        if P = 0 then
+          Continue;
+        Key := Copy(L[I], 1, P - 1);
+        Val := Copy(L[I], P + 1, MaxInt);
+        Src := nil;
+        if SameText(Key, 'Action') then
+          Src := ByAction(Val)
+        else if SameText(Key, 'Item') then
+        begin
+          if ParsePath(Val, T, G, K, Cap) then
+            Src := ByPath(T, G, K, Cap);
+        end
+        else if SameText(Key, 'Own') then
+        begin
+          // Vorhandenes eigenes Item an die Stelle N schieben
+          for J := N to FQuickAccess.Count - 1 do
+            if (FQuickAccess[J].Caption = Val) and (QuickSource(FQuickAccess[J]) = nil) then
+            begin
+              FQuickAccess[J].Index := N;
+              Inc(N);
+              Changed := True;
+              Break;
+            end;
+          Continue;
+        end;
+        if (Src = nil) or (Src.Kind in [rikSeparator, rikControl]) then
+          Continue;
+        // Doppelte Eintraege uebergehen
+        Q := nil;
+        for J := 0 to N - 1 do
+          if QuickSource(FQuickAccess[J]) = Src then
+            Q := FQuickAccess[J];
+        if Q <> nil then
+          Continue;
+        Q := TPPGRibbonItem(FQuickAccess.Insert(N));
+        Q.Assign(Src);
+        Q.Size := rsSmall;
+        Q.KeyTip := '';
+        Inc(N);
+        Changed := True;
+      end;
+      while FQuickAccess.Count > N do
+      begin
+        FQuickAccess.Delete(FQuickAccess.Count - 1);
+        Changed := True;
+      end;
+    finally
+      FQuickAccess.EndUpdate;
+    end;
+  finally
+    L.Free;
+  end;
+  if Changed and Assigned(FOnQuickAccessChange) then
+    FOnQuickAccessChange(Self);
+end;
+
 procedure TPPGCustomRibbon.DoContextPopup(MousePos: TPoint; var Handled: Boolean);
 var
   Hit: TPPGRibbonHit;
@@ -4009,15 +4190,7 @@ begin
     rpGalleryTile:
       if It <> nil then
       begin
-        D.Text := '';
-        D.Detail := '';
-        D.Badge := '';
-        D.Group := '';
-        D.ImageIndex := -1;
-        D.Checked := cbUnchecked;
-        D.Enabled := True;
-        D.IsHeader := False;
-        D.Data := nil;
+        PPGInitItemData(D);
         Col := clNone;
         GetGalleryData(It, Hit.Tile, D, Col);
         Result := D.Text;

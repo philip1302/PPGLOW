@@ -23,7 +23,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.Forms, Vcl.ImgList,
   PPG.Types, PPG.Items, PPG.Selection, PPG.RowLayout, PPG.Render.Intf,
-  PPG.Accessibility, PPG.UIA, PPG.Controls.Base, PPG.Controls.Scroll, PPG.ItemPainter;
+  PPG.Accessibility, PPG.UIA, PPG.Controls.Base, PPG.Controls.Scroll, PPG.ItemPainter,
+  PPG.CustomDraw;
 
 const
   /// UIA-Art der Eintraege (A = Index); 0 ist die Liste selbst.
@@ -66,6 +67,11 @@ type
     FInButtonUp: Boolean;
     FDropInside: Boolean;
     FOnReorder: TPPGReorderEvent;
+    FListStyles: TPPGListStyles;
+    FOnCustomDrawItem: TPPGCustomDrawItemEvent;
+    FDrawCanvas: TCanvas;
+    procedure SetListStyles(const Value: TPPGListStyles);
+    procedure ListStylesChanged(Sender: TObject);
     procedure SetItemHeight(const Value: Integer);
     procedure SetBorderStyle(const Value: TBorderStyle);
     procedure SetAllowMarkup(const Value: Boolean);
@@ -127,6 +133,16 @@ type
     function ItemPaintSelected(Index: Integer): Boolean; virtual;
     /// Einzug vor dem Inhalt (Baum, Kaestchen) in Pixeln.
     function ItemIndent(Index: Integer; const Data: TPPGItemData): Integer; virtual;
+    /// Eigenes Zeichnen eines Eintrags (OnCustomDrawItem); Ergebnis = DefaultDraw.
+    /// Der Baum ueberschreibt das (Ereignis mit Knoten).
+    function DoCustomDrawItem(const ACanvas: IPPGCanvas; Index: Integer; const R: TRect;
+      State: TPPGItemDrawState; var Style: TPPGDrawStyle): Boolean; virtual;
+    /// Ist eigenes Zeichnen eingehaengt?
+    function HasCustomDraw: Boolean; virtual;
+    /// Zusaetzliche Schriftstile eines Eintrags (Baum: HotTrack unterstreicht).
+    function ItemExtraFontStyle(Index: Integer; Hot: Boolean): TFontStyles; virtual;
+    /// TCanvas fuer eigenes Zeichnen (ohne eigenes Handle).
+    property DrawCanvas: TCanvas read FDrawCanvas;
     function GetScrollStyle: TPPGSurfaceStyle; override;
     function GetBackgroundColor: TColor; override;
     /// Flaeche und Text der Liste (Hochkontrast > VCL-Style > Dark Mode > Color/Font).
@@ -229,6 +245,10 @@ type
     /// Tippsuche ueber die Anfangsbuchstaben (TListBox.AutoComplete).
     property TypeAhead: Boolean read FTypeAhead write FTypeAhead default True;
     property OnReorder: TPPGReorderEvent read FOnReorder write FOnReorder;
+    /// Bereiche der Liste (Auswahl, Zebra, Hover, Gruppenkopf, Detailzeile).
+    property Styles: TPPGListStyles read FListStyles write SetListStyles;
+    /// Vor dem Zeichnen jedes Eintrags: Style anpassen oder selbst zeichnen.
+    property OnCustomDrawItem: TPPGCustomDrawItemEvent read FOnCustomDrawItem write FOnCustomDrawItem;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -295,6 +315,9 @@ begin
   FLayout := TPPGRowLayout.Create;
   FHeaders := TBits.Create;
   FPainter := TPPGItemPainter.Create;
+  FListStyles := TPPGListStyles.Create(Self);
+  FListStyles.OnChange := ListStylesChanged;
+  FDrawCanvas := TCanvas.Create;
   if GMsgChildAction = 0 then
     GMsgChildAction := RegisterWindowMessage('PPGlow.ItemListChildAction');
   if GMsgChildSelect = 0 then
@@ -311,6 +334,8 @@ begin
   if FSelection <> nil then
     FSelection.OnChange := nil;
   FreeAndNil(FPainter);
+  FreeAndNil(FDrawCanvas);
+  FreeAndNil(FListStyles);
   FreeAndNil(FHeaders);
   FreeAndNil(FLayout);
   FreeAndNil(FSelection);
@@ -828,6 +853,10 @@ begin
   Result.RightToLeft := UseRightToLeftAlignment;
   Result.Enabled := Enabled;
   Result.PPI := ScalePPI;
+  Result.Styles := FListStyles;
+  Result.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+  Result.Dark := UseDarkMode;
+  Result.Focused := Focused;
 end;
 
 function TPPGCustomItemList.GetScrollStyle: TPPGSurfaceStyle;
@@ -884,6 +913,33 @@ begin
   Result := 0;
 end;
 
+procedure TPPGCustomItemList.SetListStyles(const Value: TPPGListStyles);
+begin
+  FListStyles.Assign(Value);
+end;
+
+procedure TPPGCustomItemList.ListStylesChanged(Sender: TObject);
+begin
+  Invalidate;
+end;
+
+function TPPGCustomItemList.HasCustomDraw: Boolean;
+begin
+  Result := Assigned(FOnCustomDrawItem);
+end;
+
+function TPPGCustomItemList.DoCustomDrawItem(const ACanvas: IPPGCanvas; Index: Integer;
+  const R: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle): Boolean;
+begin
+  Result := PPGRunCustomDraw(ACanvas, FDrawCanvas, Font, FOnCustomDrawItem, Self, Index, R,
+    State, Style);
+end;
+
+function TPPGCustomItemList.ItemExtraFontStyle(Index: Integer; Hot: Boolean): TFontStyles;
+begin
+  Result := [];
+end;
+
 procedure TPPGCustomItemList.PaintItem(const ACanvas: IPPGCanvas; Index: Integer;
   const R: TRect; const Data: TPPGItemData; const Info: TPPGItemPaintInfo);
 var
@@ -892,6 +948,9 @@ var
   Hot: Single;
   C: TRect;
   Indent: Integer;
+  D: TPPGItemData;
+  St: TPPGItemDrawState;
+  DS: TPPGDrawStyle;
 begin
   IR := PPGItemRendererOf(Renderer);
   if Data.IsHeader then
@@ -905,14 +964,39 @@ begin
     Hot := 1
   else
     Hot := 0;
-  FPainter.PaintBackground(ACanvas, IR, R, Info, Sel, Foc, Hot);
+  D := Data;
+  D.FontStyle := D.FontStyle + ItemExtraFontStyle(Index, Hot > 0);
+  // Eigenes Zeichnen: Style aendert Farben/Schrift, DefaultDraw = False
+  // ueberlaesst den ganzen Eintrag dem Ereignis
+  if HasCustomDraw then
+  begin
+    St := [];
+    if Sel then
+      Include(St, idsSelected);
+    if Foc then
+      Include(St, idsFocused);
+    if Hot > 0 then
+      Include(St, idsHot);
+    if not (Enabled and Data.Enabled) then
+      Include(St, idsDisabled);
+    if Data.Checked = cbChecked then
+      Include(St, idsChecked);
+    if not DoCustomDrawItem(ACanvas, Index, R, St, DS) then
+      Exit;
+    if DS.Fill <> clNone then
+      D.Color := DS.Fill;
+    if DS.TextColor <> clNone then
+      D.TextColor := DS.TextColor;
+    D.FontStyle := D.FontStyle + DS.FontStyle;
+  end;
+  FPainter.PaintItemBackground(ACanvas, IR, R, Info, D, Index, Sel, Foc, Hot);
   C := R;
   Indent := ItemIndent(Index, Data);
   if Info.RightToLeft then
     Dec(C.Right, Indent)
   else
     Inc(C.Left, Indent);
-  FPainter.PaintContent(ACanvas, IR, C, Data, Info, Sel or (Hot > 0));
+  FPainter.PaintItemContent(ACanvas, IR, C, D, Info, Index, Sel, Hot);
 end;
 
 procedure TPPGCustomItemList.PaintViewport(const ACanvas: IPPGCanvas; const View: TRect);
@@ -931,43 +1015,47 @@ begin
     Exit;
   Info := GetPaintInfo;
   IR := PPGItemRendererOf(Renderer);
-  I := FLayout.RowAt(ScrollY);
-  while (I >= 0) and (I < N) do
-  begin
-    Top := FLayout.RowTop(I) - ScrollY + View.Top;
-    if Top >= View.Bottom then
-      Break;
-    R := Rect(View.Left, Integer(Top), View.Right, Integer(Top) + FLayout.RowHeight(I));
-    GetItemData(I, Data);
-    if ItemStartsGroup(I) then
+  try
+    I := FLayout.RowAt(ScrollY);
+    while (I >= 0) and (I < N) do
     begin
-      HR := R;
-      HR.Bottom := HR.Top + FHeaderH;
-      FPainter.PaintGroupHeader(ACanvas, IR, HR, Data.Group, Info);
-      R.Top := HR.Bottom;
+      Top := FLayout.RowTop(I) - ScrollY + View.Top;
+      if Top >= View.Bottom then
+        Break;
+      R := Rect(View.Left, Integer(Top), View.Right, Integer(Top) + FLayout.RowHeight(I));
+      GetItemData(I, Data);
+      if ItemStartsGroup(I) then
+      begin
+        HR := R;
+        HR.Bottom := HR.Top + FHeaderH;
+        FPainter.PaintGroupHeader(ACanvas, IR, HR, Data.Group, Info);
+        R.Top := HR.Bottom;
+      end;
+      PaintItem(ACanvas, I, R, Data, Info);
+      Inc(I);
     end;
-    PaintItem(ACanvas, I, R, Data, Info);
-    Inc(I);
-  end;
-  // Ablegen in eine Zeile (Baum): Zeile als Ziel hervorheben
-  if FDragging and FDropInside and (FDropRow >= 0) and (FDropRow < N) then
-  begin
-    R := ItemRect(FDropRow);
-    if not IsRectEmpty(R) then
-      IR.DrawItemBackground(ACanvas, R, Info.ListStyle, Info.HighlightStyle, False, True,
-        1, Info.RightToLeft, Info.PPI);
-  end
-  // Einfuegemarke beim Umsortieren
-  else if FDragging and (FDropRow >= 0) then
-  begin
-    if FDropRow < N then
-      Y := Integer(FLayout.RowTop(FDropRow) - ScrollY) + View.Top
-    else
-      Y := Integer(FLayout.TotalHeight64 - ScrollY) + View.Top;
-    LineH := PPGScale(2, ScalePPI);
-    DR := Rect(View.Left + PPGScale(4, ScalePPI), Y - LineH div 2,
-      View.Right - PPGScale(4, ScalePPI), Y - LineH div 2 + LineH);
-    IR.DrawDropIndicator(ACanvas, DR, Info.ListStyle.GlowColor, Info.PPI);
+    // Ablegen in eine Zeile (Baum): Zeile als Ziel hervorheben
+    if FDragging and FDropInside and (FDropRow >= 0) and (FDropRow < N) then
+    begin
+      R := ItemRect(FDropRow);
+      if not IsRectEmpty(R) then
+        IR.DrawItemBackground(ACanvas, R, Info.ListStyle, Info.HighlightStyle, False, True,
+          1, Info.RightToLeft, Info.PPI);
+    end
+    // Einfuegemarke beim Umsortieren
+    else if FDragging and (FDropRow >= 0) then
+    begin
+      if FDropRow < N then
+        Y := Integer(FLayout.RowTop(FDropRow) - ScrollY) + View.Top
+      else
+        Y := Integer(FLayout.TotalHeight64 - ScrollY) + View.Top;
+      LineH := PPGScale(2, ScalePPI);
+      DR := Rect(View.Left + PPGScale(4, ScalePPI), Y - LineH div 2,
+        View.Right - PPGScale(4, ScalePPI), Y - LineH div 2 + LineH);
+      IR.DrawDropIndicator(ACanvas, DR, Info.ListStyle.GlowColor, Info.PPI);
+    end;
+  finally
+    FPainter.EndPaint; // keine Schrift-Handles ueber das Zeichnen hinaus
   end;
 end;
 

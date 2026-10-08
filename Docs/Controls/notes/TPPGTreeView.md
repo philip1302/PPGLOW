@@ -8,6 +8,11 @@
 - Knoten aus `TTreeView`-DFMs (binär) werden nicht gelesen; Knoten im Designer über „Edit nodes...“ anlegen.
 - UI Automation: Hierarchie, Auf-/Zuklappen, Ebene und Position im Satz.
 
+## Anpassung
+
+- `Styles` wie die Listen; je Knoten `Color`, `TextColor`, `FontStyle` (zur Laufzeit).
+- `OnCustomDrawNode`; wie `TTreeView`: `HotTrack` und `ToolTips` (abgeschnittene Knoten, braucht `ShowHint`).
+
 ## Beispiel
 
 ```pascal

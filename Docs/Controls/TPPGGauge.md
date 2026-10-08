@@ -44,11 +44,11 @@ TPPGKpiTile - Kennzahl-Kachel:
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Min`, `Max`, `Value`, `StartAngle`, `SweepAngle`, `Thickness`, `Ranges`, `ValueColorFromRange`, `ShowTarget`, `TargetValue`, `ShowValue`, `ValueFormat`, `Units`, `ValueColor`, `ReadOnly`, `Increment`, `Caption`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Min`, `Max`, `Value`, `StartAngle`, `SweepAngle`, `Thickness`, `Ranges`, `ValueColorFromRange`, `ShowTarget`, `TargetValue`, `ShowValue`, `ValueFormat`, `Units`, `ValueColor`, `ValueStyle`, `ReadOnly`, `Increment`, `Caption`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnEnter`, `OnExit`
+`OnGesture`, `OnChange`, `OnClick`, `OnEnter`, `OnExit`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGGauge.md`.

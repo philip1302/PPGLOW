@@ -26,6 +26,10 @@ Palette **PPGlow** - Unit `PPG.Ribbon` - Basis `TPPGCustomRibbon`
 - Screenreader: Gruppierung „Menüband“; Kinder sind Datei, Schnellzugriff, Registerkarten (gewählt) und die Befehle der aktiven Karte mit Rolle (Button, Split-Button, Umschalt-Button, Menü-Button). RTL gespiegelt.
 - Nicht unterstützt: Ribbon in der Titelleiste, MDI-Zusammenführung, Speichern des Schnellzugriffs (die Anwendung tut das in `OnQuickAccessChange`).
 
+## Anpassung
+
+- `SaveQuickAccess`/`LoadQuickAccess`: vom Anwender angepassten Schnellzugriff speichern (Schlüssel: Action-Name, sonst Reiter/Gruppe/Item mit Beschriftung).
+
 ## Beispiel
 
 ```pascal
@@ -71,11 +75,11 @@ Titelleiste (kein Zeichnen im Nicht-Client-Bereich).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Images`, `LargeImages`, `Tabs`, `TabIndex`, `QuickAccess`, `QuickAccessPosition`, `ShowQuickAccess`, `QuickAccessCustomizable`, `ShowApplicationButton`, `ApplicationButtonCaption`, `ApplicationMenu`, `Backstage`, `Minimized`, `KeyTipsEnabled`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Images`, `LargeImages`, `Tabs`, `TabIndex`, `QuickAccess`, `QuickAccessPosition`, `ShowQuickAccess`, `QuickAccessCustomizable`, `ShowApplicationButton`, `ApplicationButtonCaption`, `ApplicationMenu`, `Backstage`, `Minimized`, `KeyTipsEnabled`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnItemClick`, `OnTabChange`, `OnTabChanging`, `OnGalleryClick`, `OnGetGalleryItem`, `OnDrawGalleryItem`, `OnLauncherClick`, `OnMinimizedChange`, `OnQuickAccessChange`, `OnApplicationButtonClick`, `OnBackstageChange`
+`OnGesture`, `OnItemClick`, `OnTabChange`, `OnTabChanging`, `OnGalleryClick`, `OnGetGalleryItem`, `OnDrawGalleryItem`, `OnLauncherClick`, `OnMinimizedChange`, `OnQuickAccessChange`, `OnApplicationButtonClick`, `OnBackstageChange`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGRibbon.md`.

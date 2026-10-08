@@ -21,11 +21,8 @@ uses
   PPG.Render.Registry;
 
 type
-  /// Akzentfarben fuer beide Modi.
-  TPPGAccentPair = record
-    Light: TColor; // heller Modus: Text darauf weiss
-    Dark: TColor;  // dunkler Modus: Text darauf schwarz
-  end;
+  /// Akzentfarben fuer beide Modi (jetzt in PPG.Tokens).
+  TPPGAccentPair = PPG.Tokens.TPPGAccentPair;
 
   TPPGFluent11Renderer = class(TPPGRendererBase)
   private
@@ -37,7 +34,7 @@ type
   public
     function Name: string; override;
     procedure ApplyDefaults(Appearance: TPPGAppearance); override;
-    function Tokens(Dark: Boolean): TPPGTokens; override;
+    function BaseTokens(Dark: Boolean): TPPGTokens; override;
     procedure ApplyThemeColors(Appearance: TPPGAppearance; Dark: Boolean); override;
     /// Platz fuer den Fokusring (GlowSize), damit er nicht abgeschnitten wird.
     function BodyInset(const Style: TPPGSurfaceStyle): Integer; override;
@@ -102,46 +99,9 @@ var
 
 { ---- Systemakzent ---- }
 
-function EnsureContrast(C, Against: TColor; Min: Double; TowardWhite: Boolean): TColor;
-var
-  I: Integer;
-begin
-  Result := C;
-  for I := 1 to 30 do
-  begin
-    if PPGContrastRatio(Result, Against) >= Min then
-      Exit;
-    if TowardWhite then
-      Result := PPGLighten(Result, 0.1)
-    else
-      Result := PPGDarken(Result, 0.1);
-  end;
-end;
-
-function FixPair(const Pair: TPPGAccentPair): TPPGAccentPair;
-var
-  Dark: TPPGTokens;
-begin
-  // Hell: weisser Text auf dem Akzent (WCAG AA). Dunkel: schwarzer Text mit
-  // deutlichem Abstand (7:1), so bleibt die Helligkeit klar von den hellen
-  // Akzenten getrennt (DrawFocus erkennt daran den Modus), und der Akzent
-  // hebt sich vom dunklen Hintergrund ab.
-  Dark := PPGDefaultTokens(True);
-  Result.Light := EnsureContrast(PPGColorToRGB(Pair.Light), clWhite, 4.5, False);
-  Result.Dark := EnsureContrast(PPGColorToRGB(Pair.Dark), clBlack, 7.0, True);
-  Result.Dark := EnsureContrast(Result.Dark, Dark.Background, 3.0, True);
-end;
-
 function PPGAccentFromBase(Base: TColor): TPPGAccentPair;
-var
-  B: TColor;
 begin
-  // Windows nutzt im Hellen eine dunklere, im Dunkeln eine deutlich hellere
-  // Variante der Grundfarbe (AccentDark1 / AccentLight2)
-  B := PPGColorToRGB(Base);
-  Result.Light := PPGDarken(B, 0.15);
-  Result.Dark := PPGLighten(B, 0.45);
-  Result := FixPair(Result);
+  Result := PPG.Tokens.PPGAccentFromBase(Base);
 end;
 
 function PPGAccentFromPalette(const Palette: array of Byte;
@@ -163,7 +123,7 @@ begin
     Exit;
   Pair.Light := TColor(RGB(Palette[16], Palette[17], Palette[18]));
   Pair.Dark := TColor(RGB(Palette[4], Palette[5], Palette[6]));
-  Pair := FixPair(Pair);
+  Pair := PPGFixAccentPair(Pair);
   Result := True;
 end;
 
@@ -296,14 +256,14 @@ begin
     Result := PPGSystemAccent(Pair);
 end;
 
-function TPPGFluent11Renderer.Tokens(Dark: Boolean): TPPGTokens;
+function TPPGFluent11Renderer.BaseTokens(Dark: Boolean): TPPGTokens;
 var
   P: TPPGAccentPair;
   A, Under: TColor;
 begin
   // Grundlage ist die neutrale Windows-11-Palette; nur der Akzent kommt aus
   // dem System. Hover/Druck = Akzent mit 90 %/80 % Deckung (wie WinUI).
-  Result := PPGDefaultTokens(Dark);
+  Result := PPGBaseTokens(Dark);
   if CurrentAccent(P) then
   begin
     if Dark then

@@ -192,6 +192,9 @@ type
   end;
 
   TPPGDBGrid = class(TPPGCustomDBGrid)
+  private
+    function GetTitleFont: TFont;
+    procedure SetTitleFont(const Value: TFont);
   published
     property Preset;
     property StyleManager;
@@ -210,6 +213,14 @@ type
     property ScrollBarMode;
     property SmoothScrolling;
     property HighContrastSupport;
+    property Styles;
+    property GridLineWidth;
+    property DrawingStyle;
+    property FixedColor;
+    property GradientEndColor;
+    property GradientStartColor;
+    /// Wie TDBGrid.TitleFont (= Styles.Header.Font, nicht gespeichert).
+    property TitleFont: TFont read GetTitleFont write SetTitleFont stored False;
     { wie TDBGrid }
     property Align;
     property Anchors;
@@ -235,6 +246,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnCellClick;
     property OnColumnMoved;
     property OnContextPopup;
@@ -1321,6 +1334,19 @@ begin
   end;
   if Key <> 0 then
     inherited KeyDown(Key, Shift);
+end;
+
+
+{ TPPGDBGrid }
+
+function TPPGDBGrid.GetTitleFont: TFont;
+begin
+  Result := Styles.Header.Font;
+end;
+
+procedure TPPGDBGrid.SetTitleFont(const Value: TFont);
+begin
+  Styles.Header.Font := Value; // setzt ParentFont := False
 end;
 
 end.

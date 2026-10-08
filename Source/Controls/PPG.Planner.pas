@@ -45,7 +45,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics, Vcl.Forms,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base,
-  PPG.Controls.Scroll, PPG.Edit, PPG.Calendar, PPG.TimeZones, PPG.Planner.Model;
+  PPG.Controls.Scroll, PPG.Edit, PPG.Calendar, PPG.TimeZones, PPG.Planner.Model, PPG.ElementStyle, PPG.CustomDraw;
 
 type
   TPPGPlannerView = (pvDay, pvWorkWeek, pvWeek, pvMonth, pvTimeline, pvAgenda);
@@ -124,6 +124,65 @@ type
     property Items[Index: Integer]: TPPGPlannerResource read GetItem; default;
   end;
 
+  /// Kategorie (wie Outlook): Name und Farbe; Appointment.Category = Index.
+  TPPGPlannerCategory = class(TCollectionItem)
+  private
+    FCaption: string;
+    FColor: TColor;
+    procedure SetCaption(const Value: string);
+    procedure SetColor(const Value: TColor);
+  protected
+    function GetDisplayName: string; override;
+  public
+    constructor Create(Collection: TCollection); override;
+    procedure Assign(Source: TPersistent); override;
+  published
+    property Caption: string read FCaption write SetCaption;
+    /// clDefault = Farbe aus der Diagrammpalette.
+    property Color: TColor read FColor write SetColor default clDefault;
+  end;
+
+  TPPGPlannerCategories = class(TOwnedCollection)
+  private
+    function GetItem(Index: Integer): TPPGPlannerCategory;
+  protected
+    procedure Update(Item: TCollectionItem); override;
+  public
+    function Add: TPPGPlannerCategory;
+    /// Kategorie mit Name und Farbe anfuegen (Index = Wert fuer Appointment.Category).
+    function AddCategory(const ACaption: string; AColor: TColor): TPPGPlannerCategory;
+    property Items[Index: Integer]: TPPGPlannerCategory read GetItem; default;
+  end;
+
+  /// Bereiche des Planers (nur gesetzte Werte zaehlen, clDefault = Preset).
+  TPPGPlannerStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Flaeche (Color), Text (TextColor), Linien (BorderColor).
+    property Background: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Kopf (Tage, Ressourcen): Color, TextColor, Schrift.
+    property Header: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Zeitleiste: TextColor, Schrift.
+    property TimeRuler: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Ausserhalb der Arbeitszeit und freie Tage (Color).
+    property NonWorkHours: TPPGElementStyle index 3 read GetItem write SetItem;
+    /// Heute: TextColor = Tageskopf, BorderColor = Markierung.
+    property Today: TPPGElementStyle index 4 read GetItem write SetItem;
+    /// Jetzt-Linie (Color).
+    property NowLine: TPPGElementStyle index 5 read GetItem write SetItem;
+    /// Termine: TextColor, Schrift.
+    property Appointment: TPPGElementStyle index 6 read GetItem write SetItem;
+    /// Gewaehlte Zeitfelder (Color).
+    property SelectedSlot: TPPGElementStyle index 7 read GetItem write SetItem;
+  end;
+
+  /// Vor dem Zeichnen eines Termins: Style (Fill = Terminfarbe, TextColor,
+  /// FontStyle fett) oder ganz selbst zeichnen (DefaultDraw = False).
+  TPPGPlannerDrawEvent = procedure(Sender: TObject; Canvas: TCanvas; Appointment: TPPGAppointment;
+    const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle;
+    var DefaultDraw: Boolean) of object;
+
   TPPGPlannerEdit = class(TPPGEdit)
   protected
     function WantSpecialKey(Key: Word): Boolean; override;
@@ -142,6 +201,11 @@ type
   private
     FAppointments: TPPGAppointments;
     FResources: TPPGPlannerResources;
+    FCategories: TPPGPlannerCategories;
+    FPlannerStyles: TPPGPlannerStyles;
+    FOnCustomDrawAppointment: TPPGPlannerDrawEvent;
+    FDrawCanvas: TCanvas;
+    FFonts: TPPGFontCache;
     FSource: IPPGAppointmentSource;
     FView: TPPGPlannerView;
     FDate: TDate;
@@ -230,6 +294,9 @@ type
     FOnGetAppointmentColor: TPPGAppointmentColorEvent;
     FOnSelectionChange: TNotifyEvent;
     FOnRangeChange: TNotifyEvent;
+    procedure SetCategories(const Value: TPPGPlannerCategories);
+    procedure SetPlannerStyles(const Value: TPPGPlannerStyles);
+    procedure PlannerStylesChanged(Sender: TObject);
     procedure SetAppointments(const Value: TPPGAppointments);
     procedure SetResources(const Value: TPPGPlannerResources);
     procedure SetSource(const Value: IPPGAppointmentSource);
@@ -365,6 +432,12 @@ type
     function AccSelectedChild: Integer;
 
     property Resources: TPPGPlannerResources read FResources write SetResources;
+    /// Kategorien mit Name und Farbe (Appointment.Category = Index).
+    property Categories: TPPGPlannerCategories read FCategories write SetCategories;
+    /// Bereiche (Hintergrund, Kopf, Zeitleiste, Arbeitszeit, Heute, Jetzt-Linie ...).
+    property PlannerStyles: TPPGPlannerStyles read FPlannerStyles write SetPlannerStyles;
+    property OnCustomDrawAppointment: TPPGPlannerDrawEvent read FOnCustomDrawAppointment
+      write FOnCustomDrawAppointment;
     property View: TPPGPlannerView read FView write SetView default pvWeek;
     /// Bezugstag des Zeitraums (nicht gespeichert: Vorgabe heute).
     property Date: TDate read FDate write SetDate stored False;
@@ -405,6 +478,10 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Invalidate; override;
+    /// Ansicht, Tage, Raster und Gruppierung als Text (INI-Stil, wie
+    /// TPPGGrid.SaveLayout) und zurueck; ungueltige Werte werden uebergangen.
+    function SaveLayout: string;
+    procedure LoadLayout(const S: string);
     /// Layout jetzt berechnen (sonst beim Zeichnen bzw. bei Abfragen).
     procedure EnsureLayout;
     procedure InvalidateLayout;
@@ -468,6 +545,8 @@ type
   published
     property Appointments;
     property Resources;
+    property Categories;
+    property PlannerStyles;
     property View;
     property Date;
     property DayCount;
@@ -509,6 +588,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnAppointmentChanging;
     property OnAppointmentChanged;
     property OnAppointmentCreated;
@@ -516,6 +597,7 @@ type
     property OnDeleting;
     property OnCreateAppointment;
     property OnGetAppointmentColor;
+    property OnCustomDrawAppointment;
     property OnSelectionChange;
     property OnRangeChange;
     property OnScroll;
@@ -531,7 +613,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.Math, System.DateUtils, System.UITypes, Winapi.oleacc,
+  System.Math, System.DateUtils, System.UITypes, System.TypInfo, Winapi.oleacc,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Chart.Palette,
   PPG.Planner.Layout;
 
@@ -563,6 +645,8 @@ type
   TPlannerColors = record
     HC: Boolean;
     Fill, Alt, Line, LineSoft, Text, Secondary, Accent, OnAccent, NowCol, Header: TColor;
+    // Anpassbarkeit (PlannerStyles)
+    HeaderText, RulerText, TodayText, TodayBar, AppText, SelSlot: TColor;
   end;
 
   /// Texte sammeln und in einem GDI-Block zeichnen (wie im Kalender).
@@ -651,6 +735,86 @@ end;
 function TimeText(T: TDateTime): string;
 begin
   Result := FormatDateTime(FormatSettings.ShortTimeFormat, T);
+end;
+
+{ TPPGPlannerCategory }
+
+constructor TPPGPlannerCategory.Create(Collection: TCollection);
+begin
+  FColor := clDefault;
+  inherited Create(Collection);
+end;
+
+procedure TPPGPlannerCategory.Assign(Source: TPersistent);
+begin
+  if Source is TPPGPlannerCategory then
+  begin
+    FCaption := TPPGPlannerCategory(Source).FCaption;
+    FColor := TPPGPlannerCategory(Source).FColor;
+    Changed(False);
+  end
+  else
+    inherited Assign(Source);
+end;
+
+function TPPGPlannerCategory.GetDisplayName: string;
+begin
+  if FCaption <> '' then
+    Result := FCaption
+  else
+    Result := inherited GetDisplayName;
+end;
+
+procedure TPPGPlannerCategory.SetCaption(const Value: string);
+begin
+  if FCaption <> Value then
+  begin
+    FCaption := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGPlannerCategory.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    Changed(False);
+  end;
+end;
+
+{ TPPGPlannerCategories }
+
+function TPPGPlannerCategories.GetItem(Index: Integer): TPPGPlannerCategory;
+begin
+  Result := TPPGPlannerCategory(inherited Items[Index]);
+end;
+
+function TPPGPlannerCategories.Add: TPPGPlannerCategory;
+begin
+  Result := TPPGPlannerCategory(inherited Add);
+end;
+
+function TPPGPlannerCategories.AddCategory(const ACaption: string;
+  AColor: TColor): TPPGPlannerCategory;
+begin
+  Result := Add;
+  Result.Caption := ACaption;
+  Result.Color := AColor;
+end;
+
+procedure TPPGPlannerCategories.Update(Item: TCollectionItem);
+begin
+  inherited Update(Item);
+  if GetOwner is TControl then
+    TControl(GetOwner).Invalidate;
+end;
+
+{ TPPGPlannerStyles }
+
+constructor TPPGPlannerStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 8);
 end;
 
 { TPPGPlannerResource }
@@ -770,6 +934,11 @@ begin
   ControlStyle := ControlStyle + [csDoubleClicks];
   FAppointments := TPPGAppointments.Create(Self);
   FResources := TPPGPlannerResources.Create(Self);
+  FCategories := TPPGPlannerCategories.Create(Self, TPPGPlannerCategory);
+  FPlannerStyles := TPPGPlannerStyles.Create(Self);
+  FPlannerStyles.OnChange := PlannerStylesChanged;
+  FDrawCanvas := TCanvas.Create;
+  FFonts := TPPGFontCache.Create;
   FView := pvWeek;
   FDate := System.SysUtils.Date;
   FDayCount := 1;
@@ -814,6 +983,10 @@ begin
   end;
   FSource := nil;
   FreeAndNil(FResources);
+  FreeAndNil(FCategories);
+  FreeAndNil(FPlannerStyles);
+  FreeAndNil(FDrawCanvas);
+  FreeAndNil(FFonts);
   FreeAndNil(FAppointments);
   FreeAndNil(FBoldFont);
   inherited Destroy;
@@ -1152,6 +1325,82 @@ begin
     Result := FSource.GetOccurrences(AFrom, ATo)
   else
     Result := FAppointments.GetOccurrences(AFrom, ATo);
+end;
+
+{ ---- Layout speichern ---- }
+
+function TPPGCustomPlanner.SaveLayout: string;
+var
+  L: TStringList;
+begin
+  L := TStringList.Create;
+  try
+    L.Add('[PPGPlannerLayout]');
+    L.Add('Version=1');
+    L.Add('View=' + GetEnumName(TypeInfo(TPPGPlannerView), Ord(FView)));
+    L.Add('DayCount=' + IntToStr(FDayCount));
+    L.Add('SlotMinutes=' + IntToStr(FSlotMinutes));
+    L.Add('SlotHeight=' + IntToStr(FSlotHeight));
+    L.Add('SlotWidth=' + IntToStr(FSlotWidth));
+    L.Add('TimelineDays=' + IntToStr(FTimelineDays));
+    L.Add('AgendaDays=' + IntToStr(FAgendaDays));
+    L.Add('GroupByResource=' + IntToStr(Ord(FGroupByResource)));
+    Result := L.Text;
+  finally
+    L.Free;
+  end;
+end;
+
+procedure TPPGCustomPlanner.LoadLayout(const S: string);
+var
+  L: TStringList;
+  I, P, N: Integer;
+  Key, Val: string;
+begin
+  L := TStringList.Create;
+  try
+    L.Text := S;
+    if (L.Count = 0) or (Trim(L[0]) <> '[PPGPlannerLayout]') then
+      Exit; // kein Layout dieses Planers: unveraendert lassen
+    for I := 1 to L.Count - 1 do
+    begin
+      P := Pos('=', L[I]);
+      if P = 0 then
+        Continue;
+      Key := Trim(Copy(L[I], 1, P - 1));
+      Val := Trim(Copy(L[I], P + 1, MaxInt));
+      try
+        if SameText(Key, 'View') then
+        begin
+          N := GetEnumValue(TypeInfo(TPPGPlannerView), Val);
+          if (N >= Ord(Low(TPPGPlannerView))) and (N <= Ord(High(TPPGPlannerView))) then
+            View := TPPGPlannerView(N);
+        end
+        else if TryStrToInt(Val, N) then
+        begin
+          if SameText(Key, 'DayCount') then
+            DayCount := N
+          else if SameText(Key, 'SlotMinutes') then
+            SlotMinutes := N
+          else if SameText(Key, 'SlotHeight') then
+            SlotHeight := N
+          else if SameText(Key, 'SlotWidth') then
+            SlotWidth := N
+          else if SameText(Key, 'TimelineDays') then
+            TimelineDays := N
+          else if SameText(Key, 'AgendaDays') then
+            AgendaDays := N
+          else if SameText(Key, 'GroupByResource') then
+            GroupByResource := N <> 0;
+        end;
+      except
+        on EPPGPropertyError do
+          ; // Wert ausserhalb des Bereichs (z. B. alte Datei): Eintrag uebergehen
+      end;
+    end;
+  finally
+    L.Free;
+  end;
 end;
 
 { ---- Layout ---- }
@@ -2002,6 +2251,8 @@ function GetColors(P: TPPGCustomPlanner): TPlannerColors;
 var
   T: TPPGTokens;
   A: TPPGAppearance;
+  UseStyles, Dk: Boolean;
+  St: TPPGPlannerStyles;
 begin
   T := P.Tokens;
   A := P.EffectiveAppearance;
@@ -2018,6 +2269,12 @@ begin
     Result.OnAccent := PPGColorToRGB(clHighlightText);
     Result.NowCol := Result.Accent;
     Result.Header := Result.Fill;
+    Result.HeaderText := Result.Text;
+    Result.RulerText := Result.Text;
+    Result.TodayText := Result.Accent;
+    Result.TodayBar := Result.Accent;
+    Result.AppText := Result.Text;
+    Result.SelSlot := Result.Accent;
     Exit;
   end;
   Result.Fill := T.Layer;
@@ -2029,6 +2286,14 @@ begin
     Result.Text := PPGColorToRGB(A.Normal.TextColor);
     Result.Secondary := PPGBlendColor(Result.Text, Result.Fill, 0.4);
   end;
+  UseStyles := not P.UseVclStyle;
+  Dk := P.UseDarkMode;
+  St := P.FPlannerStyles;
+  if UseStyles then
+  begin
+    Result.Fill := St.Background.FillFor(Dk, Result.Fill);
+    Result.Text := St.Background.TextFor(Dk, Result.Text);
+  end;
   Result.Alt := PPGBlendColor(Result.Fill, Result.Text, 0.045);
   Result.Line := PPGBlendColor(Result.Fill, Result.Text, 0.18);
   Result.LineSoft := PPGBlendColor(Result.Fill, Result.Text, 0.08);
@@ -2036,10 +2301,32 @@ begin
   Result.OnAccent := ContrastOn(Result.Accent);
   Result.NowCol := T.Danger;
   Result.Header := Result.Fill;
+  Result.HeaderText := Result.Text;
+  Result.RulerText := Result.Secondary;
+  Result.TodayText := Result.Accent;
+  Result.TodayBar := Result.Accent;
+  Result.AppText := Result.Text;
+  Result.SelSlot := Result.Accent;
+  if UseStyles then
+  begin
+    Result.Line := St.Background.BorderFor(Dk, Result.Line);
+    Result.Alt := St.NonWorkHours.FillFor(Dk, Result.Alt);
+    Result.Header := St.Header.FillFor(Dk, Result.Header);
+    Result.HeaderText := St.Header.TextFor(Dk, Result.HeaderText);
+    Result.RulerText := St.TimeRuler.TextFor(Dk, Result.RulerText);
+    Result.TodayText := St.Today.TextFor(Dk, Result.TodayText);
+    Result.TodayBar := St.Today.BorderFor(Dk, Result.TodayBar);
+    Result.NowCol := St.NowLine.FillFor(Dk, Result.NowCol);
+    Result.AppText := St.Appointment.TextFor(Dk, Result.AppText);
+    Result.SelSlot := St.SelectedSlot.FillFor(Dk, Result.SelSlot);
+  end;
   if not P.Enabled then
   begin
     Result.Text := T.TextDisabled;
     Result.Secondary := T.TextDisabled;
+    Result.HeaderText := T.TextDisabled;
+    Result.RulerText := T.TextDisabled;
+    Result.AppText := T.TextDisabled;
   end;
 end;
 
@@ -2049,7 +2336,10 @@ var
 begin
   if HighContrastSupport and PPGIsHighContrast then
     Exit(PPGColorToRGB(clHighlight));
-  if A.Category >= 0 then
+  if (A.Category >= 0) and (A.Category < FCategories.Count) and
+    (FCategories[A.Category].Color <> clDefault) then
+    Result := PPGColorToRGB(FCategories[A.Category].Color)
+  else if A.Category >= 0 then
     Result := PPGChartColor(Tokens, UseDarkMode, A.Category)
   else
   begin
@@ -2073,6 +2363,21 @@ begin
     Result := FormatSettings.LongDayNames[Wd] + ' ' + IntToStr(DayOf(D))
   else
     Result := FormatSettings.ShortDayNames[Wd] + ' ' + IntToStr(DayOf(D));
+end;
+
+procedure TPPGCustomPlanner.SetCategories(const Value: TPPGPlannerCategories);
+begin
+  FCategories.Assign(Value);
+end;
+
+procedure TPPGCustomPlanner.SetPlannerStyles(const Value: TPPGPlannerStyles);
+begin
+  FPlannerStyles.Assign(Value);
+end;
+
+procedure TPPGCustomPlanner.PlannerStylesChanged(Sender: TObject);
+begin
+  Invalidate;
 end;
 
 procedure TPPGCustomPlanner.PaintViewport(const ACanvas: IPPGCanvas; const View: TRect);
@@ -2105,6 +2410,11 @@ var
   Batch: TTextBatch;
   Flags: Cardinal;
   Pts: array[0..2] of TPoint;
+  DS: TPPGDrawStyle;
+  St: TPPGItemDrawState;
+  DrawIt: Boolean;
+  DC: HDC;
+  AF: TFont;
 begin
   Col := GetColors(Self);
   Batch := TTextBatch.Create;
@@ -2127,6 +2437,36 @@ begin
         C := AppointmentColor(A);
         Sel := P.Item = FSelItem;
         Hot := (P.Item = FHot.Item) and (FDrag = pdNone);
+        // Eigenes Zeichnen: Fill = Terminfarbe, TextColor, fett; DefaultDraw = False
+        DS.Reset;
+        DrawIt := True;
+        if Assigned(FOnCustomDrawAppointment) then
+        begin
+          St := [];
+          if Sel then
+            Include(St, idsSelected);
+          if Hot then
+            Include(St, idsHot);
+          if Sel and Focused then
+            Include(St, idsFocused);
+          DC := ACanvas.BeginGdi;
+          try
+            FDrawCanvas.Handle := DC;
+            try
+              FDrawCanvas.Font := Font;
+              FDrawCanvas.Brush.Style := bsClear;
+              FOnCustomDrawAppointment(Self, FDrawCanvas, A, R, St, DS, DrawIt);
+            finally
+              FDrawCanvas.Handle := 0;
+            end;
+          finally
+            ACanvas.EndGdi(DC);
+          end;
+        end;
+        if not DrawIt then
+          Continue;
+        if (DS.Fill <> clNone) and not Col.HC then
+          C := PPGColorToRGB(DS.Fill);
         Rad := S(4);
         Short := (FView = pvMonth) and not P.Band;
         if Col.HC then
@@ -2154,7 +2494,9 @@ begin
         if Sel then
           TextC := ContrastOn(Fill)
         else
-          TextC := Col.Text;
+          TextC := Col.AppText;
+        if (DS.TextColor <> clNone) and not Col.HC then
+          TextC := PPGColorToRGB(DS.TextColor);
         if Col.HC and Sel then
           TextC := Col.OnAccent;
         if FView = pvAgenda then
@@ -2313,12 +2655,14 @@ begin
             Txt := Txt + ' ' + #$2013 + ' ' + A.Location;
           Flags := DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
         end;
-        Batch.Add(TR, Txt, TextC, False, DrawTextBiDiModeFlags(Flags));
+        Batch.Add(TR, Txt, TextC, fsBold in DS.FontStyle, DrawTextBiDiModeFlags(Flags));
       end;
     finally
       ACanvas.PopClip;
     end;
-    Batch.Flush(ACanvas, Clip, Font, FBoldFont);
+    AF := FFonts.ForStyle(FPlannerStyles.Appointment, Font);
+    Batch.Flush(ACanvas, Clip, AF, FFonts.Get(AF, [fsBold]));
+    FFonts.Clear;
   finally
     Batch.Free;
   end;
@@ -2429,6 +2773,7 @@ var
   NowT: TDateTime;
   Work, IsToday: Boolean;
   S_: string;
+  RF, HF: TFont;
 begin
   Col := GetColors(Self);
   N := Length(FDays);
@@ -2472,7 +2817,7 @@ begin
               C := Gi * N + D;
               R := Rect(FV.Left + FColX[C], Y + TimeToY(FDays[D], Max(FSelFrom, FDays[D])),
                 FV.Left + FColX[C + 1], Y + TimeToY(FDays[D], Min(FSelTo, FDays[D] + 1)));
-              ACanvas.FillRoundRect(Mirror(R), 0, Col.Accent, 60);
+              ACanvas.FillRoundRect(Mirror(R), 0, Col.SelSlot, 60);
             end;
       end;
       // Linien: volle Stunde kraeftig, Zwischenfelder schwach
@@ -2490,7 +2835,7 @@ begin
             Col.LineSoft, 255);
         if (M mod 60 = 0) and (I < Slots) then
           Batch.Add(Mirror(Rect(FV.Left, YT + 2, FV.Left + S(RulerW) - S(8), YT + 2 + Font.Height * -2)),
-            TimeText(M * OneMinute), Col.Secondary, False,
+            TimeText(M * OneMinute), Col.RulerText, False,
             DT_SINGLELINE or DT_TOP or IfThen(FRtl, DT_LEFT, DT_RIGHT));
       end;
       for C := 0 to N * G do
@@ -2505,7 +2850,8 @@ begin
     finally
       ACanvas.PopClip;
     end;
-    Batch.Flush(ACanvas, Ruler, Font, FBoldFont);
+    RF := FFonts.ForStyle(FPlannerStyles.TimeRuler, Font);
+    Batch.Flush(ACanvas, Ruler, RF, RF);
     PaintPieces(ACanvas, Rect(Body.Left + S(RulerW), Body.Top, Body.Right, Body.Bottom), [paBodyY]);
     // Jetzt-Linie
     NowT := Now_;
@@ -2551,7 +2897,7 @@ begin
       begin
         R := Rect(X0, FV.Top, FV.Left + FColX[C + N], FV.Top + S(ResHeadH));
         S_ := FResources[Gi].Caption;
-        Batch.Add(Mirror(Rect(R.Left + S(6), R.Top, R.Right - S(6), R.Bottom)), S_, Col.Text, True,
+        Batch.Add(Mirror(Rect(R.Left + S(6), R.Top, R.Right - S(6), R.Bottom)), S_, Col.HeaderText, True,
           DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_CENTER or DT_END_ELLIPSIS));
         ACanvas.FillRoundRect(Mirror(Rect(R.Left, R.Bottom - 1, R.Right, R.Bottom)), 0, Col.Line, 255);
       end;
@@ -2562,14 +2908,14 @@ begin
       if IsToday then
       begin
         ACanvas.FillRoundRect(Mirror(Rect(R.Left + 1, R.Bottom - S(3), R.Right - 1, R.Bottom)), 0,
-          Col.Accent, 255);
+          Col.TodayBar, 255);
         Batch.Add(Mirror(Rect(R.Left + S(6), R.Top, R.Right - S(4), R.Bottom)),
-          DayHeaderText(FDays[D], R.Right - R.Left), Col.Accent, True,
+          DayHeaderText(FDays[D], R.Right - R.Left), Col.TodayText, True,
           DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS));
       end
       else
         Batch.Add(Mirror(Rect(R.Left + S(6), R.Top, R.Right - S(4), R.Bottom)),
-          DayHeaderText(FDays[D], R.Right - R.Left), Col.Text, False,
+          DayHeaderText(FDays[D], R.Right - R.Left), Col.HeaderText, False,
           DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS));
       ACanvas.FillRoundRect(Mirror(Rect(X0, FV.Top + FHeadH, X0 + 1, FV.Top + FHeaderH)), 0,
         Col.Line, 255);
@@ -2591,7 +2937,8 @@ begin
       Col.Line, 255);
     ACanvas.FillRoundRect(Rect(FV.Left, FV.Top + FHeaderH - 1, FV.Right, FV.Top + FHeaderH), 0,
       Col.Line, 255);
-    Batch.Flush(ACanvas, Head, Font, FBoldFont);
+    HF := FFonts.ForStyle(FPlannerStyles.Header, Font);
+    Batch.Flush(ACanvas, Head, HF, FFonts.Get(HF, [fsBold]));
     PaintPieces(ACanvas, Rect(FV.Left, FV.Top + FHeadH, FV.Right, FV.Top + FHeaderH - 1), [paFixed]);
     if FDragBand then
       PaintGhost(ACanvas);
@@ -2652,8 +2999,8 @@ begin
       if IsToday then
       begin
         ACanvas.FillRoundRect(Rect(R.Left - S(4), R.Top, R.Left + ACanvas.MeasureText(S_, FBoldFont, 0, False).cx + S(4),
-          R.Bottom), S(4), Col.Accent, 255);
-        Batch.Add(R, S_, Col.OnAccent, True, DT_SINGLELINE or DT_VCENTER or DT_LEFT);
+          R.Bottom), S(4), Col.TodayBar, 255);
+        Batch.Add(R, S_, ContrastOn(Col.TodayBar), True, DT_SINGLELINE or DT_VCENTER or DT_LEFT);
       end
       else if Other then
         Batch.Add(R, S_, Col.Secondary, False,
@@ -2763,10 +3110,10 @@ begin
       if R.Left < Head.Left + S(6) then
         R.Left := Min(Head.Left + S(6), R.Right);
       if FDays[D] = Trunc(NowT) then
-        Batch.Add(Mirror(R), DayHeaderText(FDays[D], DayW), Col.Accent, True,
+        Batch.Add(Mirror(R), DayHeaderText(FDays[D], DayW), Col.TodayText, True,
           DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS))
       else
-        Batch.Add(Mirror(R), DayHeaderText(FDays[D], DayW), Col.Text, True,
+        Batch.Add(Mirror(R), DayHeaderText(FDays[D], DayW), Col.HeaderText, True,
           DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS));
       for K := 0 to Slots - 1 do
       begin
@@ -2780,7 +3127,8 @@ begin
       end;
     end;
     ACanvas.FillRoundRect(Mirror(Rect(Head.Left, Head.Bottom - 1, Head.Right, Head.Bottom)), 0, Col.Line, 255);
-    Batch.Flush(ACanvas, Mirror(Head), Font, FBoldFont);
+    Batch.Flush(ACanvas, Mirror(Head), FFonts.ForStyle(FPlannerStyles.Header, Font),
+      FFonts.Get(FFonts.ForStyle(FPlannerStyles.Header, Font), [fsBold]));
     // Ressourcen links
     ACanvas.FillRoundRect(Mirror(Rect(FV.Left, FV.Top, FV.Left + FBodyLeft, FV.Bottom)), 0, Col.Header, 255);
     for I := 0 to NR - 1 do
@@ -2790,14 +3138,16 @@ begin
       else
         S_ := '';
       R := Rect(FV.Left + S(8), Y0 + FTLRowTop[I], FV.Left + FBodyLeft - S(6), Y0 + FTLRowTop[I + 1]);
-      Batch.Add(Mirror(R), S_, Col.Text, False,
+      Batch.Add(Mirror(R), S_, Col.HeaderText, False,
         DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS));
       ACanvas.FillRoundRect(Mirror(Rect(FV.Left, Y0 + FTLRowTop[I + 1], FV.Left + FBodyLeft,
         Y0 + FTLRowTop[I + 1] + 1)), 0, Col.Line, 255);
     end;
     ACanvas.FillRoundRect(Mirror(Rect(FV.Left + FBodyLeft - 1, FV.Top, FV.Left + FBodyLeft, FV.Bottom)), 0,
       Col.Line, 255);
-    Batch.Flush(ACanvas, Mirror(Res), Font, FBoldFont);
+    Batch.Flush(ACanvas, Mirror(Res), FFonts.ForStyle(FPlannerStyles.Header, Font),
+      FFonts.Get(FFonts.ForStyle(FPlannerStyles.Header, Font), [fsBold]));
+    FFonts.Clear;
   finally
     Batch.Free;
   end;

@@ -38,7 +38,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics,
   PPG.Types, PPG.Tokens, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base,
-  PPG.Accessibility, PPG.Chart.Scale, PPG.Chart.Series;
+  PPG.Accessibility, PPG.Chart.Scale, PPG.Chart.Series, PPG.ElementStyle;
 
 type
   TPPGChartPointEvent = procedure(Sender: TObject; SeriesIndex, PointIndex: Integer) of object;
@@ -80,10 +80,27 @@ type
     Legend: TArray<TPPGChartLegendItem>;
   end;
 
+  /// Bereiche des Diagramms (nur gesetzte Werte zaehlen, clDefault = Preset).
+  TPPGChartStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Titel: TextColor, Schrift (ohne eigene Schrift: 1,25-fach fett).
+    property Title: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Achsenbeschriftung und -titel: TextColor.
+    property Axis: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Gitterlinien: Color.
+    property Grid: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Legende: TextColor, Schrift.
+    property Legend: TPPGElementStyle index 3 read GetItem write SetItem;
+  end;
+
   TPPGCustomChart = class(TPPGCustomControl, IPPGChartHost, IPPGAccessibleChildren)
   private
     FSeries: TPPGChartSeriesList;
     FCategories: TStrings;
+    FChartStyles: TPPGChartStyles;
+    FFonts: TPPGFontCache;
     FXAxis: TPPGChartAxis;
     FYAxis: TPPGChartAxis;
     FY2Axis: TPPGChartAxis;
@@ -107,6 +124,11 @@ type
     FMarkedIndex: Integer;
     FOnPointClick: TPPGChartPointEvent;
     FOnGetPoint: TPPGChartGetPointEvent;
+    procedure SetChartStyles(const Value: TPPGChartStyles);
+    procedure ChartStylesChanged(Sender: TObject);
+    /// Titel-Schrift: eigene (ChartStyles.Title) bzw. 1,25-fach fett; Temp freigeben.
+    function TitleFont(var Temp: TFont): TFont;
+    function LegendFont: TFont;
     procedure SetSeries(const Value: TPPGChartSeriesList);
     procedure SetCategories(const Value: TStrings);
     procedure SetXAxis(const Value: TPPGChartAxis);
@@ -188,6 +210,8 @@ type
     property ShowTooltips: Boolean read FShowTooltips write SetShowTooltips default True;
     /// Klick auf einen Legendeneintrag blendet die Serie aus/ein.
     property LegendToggle: Boolean read FLegendToggle write FLegendToggle default True;
+    /// Bereiche (Titel, Achsen, Gitter, Legende).
+    property ChartStyles: TPPGChartStyles read FChartStyles write SetChartStyles;
     property OnPointClick: TPPGChartPointEvent read FOnPointClick write FOnPointClick;
     property OnGetPoint: TPPGChartGetPointEvent read FOnGetPoint write FOnGetPoint;
   public
@@ -239,6 +263,7 @@ type
     property LegendPosition;
     property ShowTooltips;
     property LegendToggle;
+    property ChartStyles;
     property Align;
     property Anchors;
     property BiDiMode;
@@ -254,6 +279,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnDblClick;
     property OnEnter;
@@ -306,6 +333,13 @@ begin
   Result := FormatFloat('#,##0.##', V);
 end;
 
+{ TPPGChartStyles }
+
+constructor TPPGChartStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 4);
+end;
+
 { TPPGCustomChart }
 
 constructor TPPGCustomChart.Create(AOwner: TComponent);
@@ -313,6 +347,9 @@ begin
   inherited Create(AOwner);
   ControlStyle := ControlStyle - [csSetCaption];
   FSeries := TPPGChartSeriesList.Create(Self);
+  FChartStyles := TPPGChartStyles.Create(Self);
+  FChartStyles.OnChange := ChartStylesChanged;
+  FFonts := TPPGFontCache.Create;
   FCategories := TStringList.Create;
   TStringList(FCategories).OnChange := CategoriesChanged;
   FXAxis := TPPGChartAxis.Create(Self, False);
@@ -342,8 +379,45 @@ begin
   Height := 260;
 end;
 
+procedure TPPGCustomChart.SetChartStyles(const Value: TPPGChartStyles);
+begin
+  FChartStyles.Assign(Value);
+end;
+
+procedure TPPGCustomChart.ChartStylesChanged(Sender: TObject);
+begin
+  FFonts.Clear;
+  Invalidate;
+end;
+
+function TPPGCustomChart.TitleFont(var Temp: TFont): TFont;
+begin
+  if FChartStyles.Title.HasOwnFont then
+    Result := PPGStyledFont(FChartStyles.Title.Font, FChartStyles.Title.FontStyle, Temp)
+  else
+  begin
+    if Temp = nil then
+      Temp := TFont.Create;
+    Temp.Assign(Font);
+    Temp.Style := [fsBold] + FChartStyles.Title.FontStyle;
+    Temp.Height := Round(Font.Height * 1.25);
+    Result := Temp;
+  end;
+end;
+
+function TPPGCustomChart.LegendFont: TFont;
+begin
+  // Zwischengespeichert bis zum Ende des Zeichnens bzw. bis zur naechsten
+  // Stil- oder Schriftaenderung
+  Result := FFonts.ForStyle(FChartStyles.Legend, Font);
+end;
+
 destructor TPPGCustomChart.Destroy;
 begin
+  FreeAndNil(FFonts);
+  if FChartStyles <> nil then
+    FChartStyles.OnChange := nil;
+  FreeAndNil(FChartStyles);
   if FIntroAnim <> nil then
     FIntroAnim.OnStep := nil;
   if FChangeAnim <> nil then
@@ -513,6 +587,7 @@ end;
 
 procedure TPPGCustomChart.CMFontChanged(var Message: TMessage);
 begin
+  FFonts.Clear;
   inherited;
   Invalidate;
 end;
@@ -823,6 +898,8 @@ end;
 
 function TPPGCustomChart.Layout: TPPGChartLayout;
 var
+  LF: TFont;
+  LegendFontH: Integer;
   PPI, Pad, I, J, N, Gap, Swatch, ItemW, X, Y, RowH, LegendH, LegendW, MaxTW: Integer;
   YLabelW, Y2LabelW, XLabelH, XTitleH, YTitleH, MaxTicks, Cnt: Integer;
   S: TPPGChartSeries;
@@ -905,12 +982,9 @@ begin
   // Titel
   if FTitle <> '' then
   begin
-    TF := TFont.Create;
+    TF := nil;
     try
-      TF.Assign(Font);
-      TF.Style := [fsBold];
-      TF.Height := Round(Font.Height * 1.25);
-      Sz := PPGMeasureTextNoCanvas(FTitle, TF, 0, False);
+      Sz := PPGMeasureTextNoCanvas(FTitle, TitleFont(TF), 0, False);
     finally
       TF.Free;
     end;
@@ -974,14 +1048,16 @@ begin
   end;
   if (FLegendPosition <> clpNone) and (N > 0) and (Result.Mode <> cmEmpty) then
   begin
-    Swatch := Round(Result.FontH * 0.75);
-    RowH := Result.FontH + PPGScale(4, PPI);
+    LF := LegendFont;
+    LegendFontH := PPGMeasureTextNoCanvas('Wg', LF, 0, False).cy;
+    Swatch := Round(LegendFontH * 0.75);
+    RowH := LegendFontH + PPGScale(4, PPI);
     SetLength(Result.Legend, N);
     if FLegendPosition = clpRight then
     begin
       MaxTW := 0;
       for I := 0 to N - 1 do
-        MaxTW := System.Math.Max(MaxTW, PPGMeasureTextNoCanvas(Names[I], Font, 0, False).cx);
+        MaxTW := System.Math.Max(MaxTW, PPGMeasureTextNoCanvas(Names[I], LF, 0, False).cx);
       LegendW := System.Math.Min(Swatch + Gap + MaxTW, (Content.Right - Content.Left) div 3);
       if RTL then
       begin
@@ -1007,7 +1083,7 @@ begin
       Y := 0;
       for I := 0 to N - 1 do
       begin
-        ItemW := Swatch + Gap + PPGMeasureTextNoCanvas(Names[I], Font, 0, False).cx;
+        ItemW := Swatch + Gap + PPGMeasureTextNoCanvas(Names[I], LF, 0, False).cx;
         ItemW := System.Math.Min(ItemW, Content.Right - Content.Left);
         if (X > 0) and (X + ItemW > Content.Right - Content.Left) then
         begin
@@ -1428,6 +1504,8 @@ var
       else
         TxR.Left := SR.Right + Gap;
       TC := TextCol;
+      if not HC and not UseVclStyle and Enabled then
+        TC := FChartStyles.Legend.TextFor(UseDarkMode, TC);
       if not Shown then
         TC := SecCol;
       if (FHot.Kind = chkLegend) and (FHot.Series = L.Legend[LI].Index) and not HC then
@@ -1435,7 +1513,7 @@ var
       Flags := DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX;
       if RTL then
         Flags := Flags or DT_RIGHT or DT_RTLREADING;
-      ACanvas.DrawText(TxR, Name, Font, TC, Flags);
+      ACanvas.DrawText(TxR, Name, LegendFont, TC, Flags);
     end;
   end;
 
@@ -1533,21 +1611,27 @@ begin
     if not Enabled then
       SecCol := T.TextDisabled;
     GridCol := PPGBlendColor(Bg, T.TextPrimary, 0.1);
+    if not UseVclStyle then
+    begin
+      GridCol := FChartStyles.Grid.FillFor(UseDarkMode, GridCol);
+      if Enabled then
+        SecCol := FChartStyles.Axis.TextFor(UseDarkMode, SecCol);
+    end;
   end;
   L := Layout;
 
   // Titel
   if FTitle <> '' then
   begin
-    TF := TFont.Create;
+    TF := nil;
     try
-      TF.Assign(Font);
-      TF.Style := [fsBold];
-      TF.Height := Round(Font.Height * 1.25);
       Flags := DT_SINGLELINE or DT_END_ELLIPSIS or DT_NOPREFIX;
       if RTL then
         Flags := Flags or DT_RIGHT or DT_RTLREADING;
-      ACanvas.DrawText(L.TitleR, FTitle, TF, TextCol, Flags);
+      Col := TextCol;
+      if not HC and not UseVclStyle and Enabled then
+        Col := FChartStyles.Title.TextFor(UseDarkMode, Col);
+      ACanvas.DrawText(L.TitleR, FTitle, TitleFont(TF), Col, Flags);
     finally
       TF.Free;
     end;
@@ -2223,6 +2307,7 @@ begin
 
   if FocusVisible then
     Renderer.DrawFocus(ACanvas, ClientR, GetCurrentStyle);
+  FFonts.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
 end;
 
 { ---- Treffer ---- }

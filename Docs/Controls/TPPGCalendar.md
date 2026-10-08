@@ -9,6 +9,10 @@ Palette **PPGlow** - Unit `PPG.Calendar` - Basis `TPPGCustomCalendar`
 - Monat/Jahr/Dekade mit Zoom-Animation, Wochennummern nach ISO 8601, erster Wochentag aus `FormatSettings`.
 - `Date` im Code löst kein Ereignis aus.
 
+## Anpassung
+
+- `CalendarStyles` (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate …) und `OnCustomDrawDay` (z. B. Feiertage fett).
+
 ## Verhalten (aus dem Quelltext)
 
 TPPGCalendar - Monatskalender mit Jahres- und Dekadenansicht (Phase 7b).
@@ -23,11 +27,11 @@ TPPGCalendar - Monatskalender mit Jahres- und Dekadenansicht (Phase 7b).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `View`, `Date`, `SelectionMode`, `MinDate`, `MaxDate`, `ShowWeekNumbers`, `ShowToday`, `FirstDayOfWeek`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `View`, `Date`, `SelectionMode`, `MinDate`, `MaxDate`, `ShowWeekNumbers`, `ShowToday`, `FirstDayOfWeek`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`, `CalendarStyles`
 
 ## Ereignisse
 
-`OnChange`, `OnEnter`, `OnExit`, `OnIsDateDisabled`, `OnViewChange`
+`OnGesture`, `OnChange`, `OnEnter`, `OnExit`, `OnIsDateDisabled`, `OnCustomDrawDay`, `OnViewChange`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGCalendar.md`.

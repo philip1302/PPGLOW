@@ -20,11 +20,11 @@ TPPGBreadcrumb - Pfadleiste aus Segmenten (Phase 7c, wie WinUI BreadcrumbBar).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Items`, `TruncateOnClick`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Items`, `TruncateOnClick`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnEnter`, `OnExit`, `OnItemClick`
+`OnGesture`, `OnEnter`, `OnExit`, `OnItemClick`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGBreadcrumb.md`.

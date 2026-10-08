@@ -10,6 +10,10 @@ Palette **PPGlow** - Unit `PPG.DatePicker` - Basis `TPPGCustomDatePicker`
 - `Kind`, `DateMode`, `ParseInput` werden nur gelesen/gespeichert. Leeres Datum nur mit `ShowCheckbox`.
 - Für `Kind = dtkTime` gibt es `TPPGTimePicker`.
 
+## Anpassung
+
+- `CalendarStyles` und `OnCustomDrawDay` gelten für den aufgeklappten Kalender.
+
 ## Verhalten (aus dem Quelltext)
 
 TPPGDatePicker - Datumsfeld mit Kalender-Popup (Phase 7b).
@@ -26,11 +30,11 @@ TPPGDatePicker - Datumsfeld mit Kalender-Popup (Phase 7b).
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CalAlignment`, `Checked`, `Color`, `Constraints`, `Date`, `DateFormat`, `DateMode`, `Enabled`, `Font`, `Format`, `Kind`, `MaxDate`, `MinDate`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `ParseInput`, `PopupMenu`, `ShowCheckbox`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Time`, `Visible`
+`Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CalAlignment`, `Checked`, `Color`, `Constraints`, `Date`, `DateFormat`, `DateMode`, `Enabled`, `Font`, `Format`, `Kind`, `MaxDate`, `MinDate`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `ParseInput`, `PopupMenu`, `ShowCheckbox`, `CalendarStyles`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Time`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnCloseUp`, `OnContextPopup`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseEnter`, `OnMouseLeave`
+`OnCustomDrawDay`, `OnGesture`, `OnChange`, `OnClick`, `OnCloseUp`, `OnContextPopup`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseEnter`, `OnMouseLeave`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDatePicker.md`.

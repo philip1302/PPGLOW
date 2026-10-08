@@ -12,6 +12,11 @@ Palette **PPGlow** - Unit `PPG.TreeView` - Basis `TPPGCustomTreeView`
 - Knoten aus `TTreeView`-DFMs (binär) werden nicht gelesen; Knoten im Designer über „Edit nodes...“ anlegen.
 - UI Automation: Hierarchie, Auf-/Zuklappen, Ebene und Position im Satz.
 
+## Anpassung
+
+- `Styles` wie die Listen; je Knoten `Color`, `TextColor`, `FontStyle` (zur Laufzeit).
+- `OnCustomDrawNode`; wie `TTreeView`: `HotTrack` und `ToolTips` (abgeschnittene Knoten, braucht `ShowHint`).
+
 ## Beispiel
 
 ```pascal
@@ -38,15 +43,15 @@ Einzug, Auf-/Zuklapp-Pfeil, Linien, Kaestchen und das Umbenennen hinzu.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `AllowMarkup`, `AllowReorder`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `AllowMarkup`, `AllowReorder`, `Styles`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `AutoCheck`, `AutoExpand`, `BiDiMode`, `BorderStyle`, `CheckBoxes`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HideSelection`, `Indent`, `ItemHeight`, `Items`, `MultiSelect`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `RowSelect`, `ShowButtons`, `ShowHint`, `ShowLines`, `ShowRoot`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Align`, `Anchors`, `AutoCheck`, `AutoExpand`, `BiDiMode`, `BorderStyle`, `CheckBoxes`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HideSelection`, `HotTrack`, `Indent`, `ItemHeight`, `Items`, `MultiSelect`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `RowSelect`, `ShowButtons`, `ShowHint`, `ShowLines`, `ShowRoot`, `ToolTips`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnChanging`, `OnChecked`, `OnClick`, `OnCollapsed`, `OnCollapsing`, `OnCompare`, `OnContextPopup`, `OnDblClick`, `OnDeletion`, `OnDragDrop`, `OnDragOver`, `OnEdited`, `OnEditing`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnExpanded`, `OnExpanding`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnNodeDrop`, `OnScroll`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnChange`, `OnChanging`, `OnChecked`, `OnClick`, `OnCollapsed`, `OnCollapsing`, `OnCompare`, `OnCustomDrawNode`, `OnContextPopup`, `OnDblClick`, `OnDeletion`, `OnDragDrop`, `OnDragOver`, `OnEdited`, `OnEditing`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnExpanded`, `OnExpanding`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnNodeDrop`, `OnScroll`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTreeView.md`.

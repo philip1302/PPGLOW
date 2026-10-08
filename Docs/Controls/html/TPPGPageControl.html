@@ -10,6 +10,11 @@
 <li>Schlie&#223;en einer Seite blendet standardm&#228;&#223;ig nur den Reiter aus (<code>caHide</code>).</li>
 <li>Sind alle Reiter ausgeblendet, bleibt die aktive Seite aktiv und die Reiterleiste verschwindet (f&#252;r die NavigationView).</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li>Je TabSheet <code>TabColor</code>, <code>TabTextColor</code>, <code>TabFontStyle</code>; <code>TabStyles</code> (Reiter, Hover, aktiv, Leiste, Indikator).</li>
+<li>Wie <code>TPageControl</code>: <code>MultiLine</code>, <code>RaggedRight</code>, <code>Style</code>, <code>OwnerDraw</code>, <code>OnDrawTab</code>.</li>
+</ul>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>TPPGPageControl + TPPGTabSheet - Seiten mit Reitern, DFM-kompatibel zu TPageControl/TTabSheet (ActivePage, TabPosition, TabWidth, TabHeight, HotTrack, Images; Seiten mit Caption, ImageIndex, PageIndex, TabVisible).</p>
 <ul>
@@ -21,11 +26,11 @@
 <li>Designer: Klick auf Reiter wechselt die Seite; ein Control auf einer verdeckten Seite auswaehlen zeigt diese (ShowControl). Komponenteneditor &quot;Neue Seite&quot; usw. in PPG.Reg.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>ActivePage</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>ShowCloseButtons</code>, <code>HighContrastSupport</code></p>
+<p><code>ActivePage</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>ShowCloseButtons</code>, <code>TabStyles</code>, <code>MultiLine</code>, <code>OwnerDraw</code>, <code>RaggedRight</code>, <code>ScrollOpposite</code>, <code>Style</code>, <code>HighContrastSupport</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
-<p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HotTrack</code>, <code>Images</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabHeight</code>, <code>TabOrder</code>, <code>TabPosition</code>, <code>TabStop</code>, <code>TabWidth</code>, <code>Visible</code></p>
+<p><code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>HotTrack</code>, <code>Images</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabHeight</code>, <code>TabOrder</code>, <code>TabPosition</code>, <code>TabStop</code>, <code>TabWidth</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnChange</code>, <code>OnChanging</code>, <code>OnClose</code>, <code>OnCloseQuery</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnResize</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<p><code>OnGesture</code>, <code>OnChange</code>, <code>OnChanging</code>, <code>OnDrawTab</code>, <code>OnCustomDrawItem</code>, <code>OnClose</code>, <code>OnCloseQuery</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnResize</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPageControl.md</code>.</p>
 </body></html>

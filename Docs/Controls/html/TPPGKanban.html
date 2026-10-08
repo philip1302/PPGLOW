@@ -17,6 +17,11 @@
 <li>Code setzt Werte ohne Ereignisse (<code>Cards</code>, <code>Collapsed</code>, <code>SelectedCard</code>); Anwenderaktionen l&#246;sen <code>OnCardMoving</code>/<code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code> (Doppelklick, Enter), <code>OnSelectionChange</code> und <code>OnColumnCollapse</code> aus. <code>MoveCard</code> verschiebt wie der Anwender (mit Ereignissen).</li>
 <li>Ziehen zwischen Anwendungen (OLE) gibt es nicht.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>KanbanStyles</code> (<code>Column</code>, <code>Card</code>, <code>HotCard</code>, <code>SelectedCard</code>, <code>LaneHeader</code>) und <code>OnCustomDrawCard</code>.</li>
+<li><code>SaveLayout</code>/<code>LoadLayout</code>: Spaltenbreiten und eingeklappte Spalten/Swimlanes (nach <code>Id</code>). Drucken mit <code>TPPGKanbanPrinter</code>.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>uses PPG.Kanban.Items;
 
@@ -46,9 +51,9 @@ end;
 <li>Code (Cards, Column.Collapsed, SelectedCard) loest keine Ereignisse aus.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Columns</code>, <code>Lanes</code>, <code>Cards</code>, <code>ColumnWidth</code>, <code>CardGap</code>, <code>MaxTextLines</code>, <code>VirtualCardHeight</code>, <code>AllowDrag</code>, <code>ReadOnly</code>, <code>WipMode</code>, <code>ShowCardCount</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Columns</code>, <code>Lanes</code>, <code>Cards</code>, <code>ColumnWidth</code>, <code>CardGap</code>, <code>MaxTextLines</code>, <code>VirtualCardHeight</code>, <code>AllowDrag</code>, <code>ReadOnly</code>, <code>WipMode</code>, <code>ShowCardCount</code>, <code>KanbanStyles</code>, <code>ScrollBarMode</code>, <code>SmoothScrolling</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Color</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnCardMoving</code>, <code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code>, <code>OnGetCard</code>, <code>OnSelectionChange</code>, <code>OnColumnCollapse</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnScroll</code></p>
+<p><code>OnCustomDrawCard</code>, <code>OnGesture</code>, <code>OnCardMoving</code>, <code>OnCardMoved</code>, <code>OnCardClick</code>, <code>OnCardOpen</code>, <code>OnGetCard</code>, <code>OnSelectionChange</code>, <code>OnColumnCollapse</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnScroll</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGKanban.md</code>.</p>
 </body></html>

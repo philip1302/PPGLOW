@@ -13,6 +13,10 @@ Palette **PPGlow** - Unit `PPG.MenuBar` - Basis `TPPGCustomMenuBar`
 - MDI-Menüs (`Merge`/`Unmerge`) werden noch nicht zusammengeführt.
 - Screenreader: Rolle Menüleiste, Ereignisse `EVENT_SYSTEM_MENUSTART/END`.
 
+## Anpassung
+
+- `MenuStyles` und `OnCustomDrawItem` wie `TPPGPopupMenu`.
+
 ## Beispiel
 
 ```pascal
@@ -31,7 +35,11 @@ TPPGMenuBar - Hauptmenue als Control im Stil der Suite (Phase 11c).
 
 ## PPGlow-Eigenschaften
 
-`Menu`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `Visible`
+`Menu`, `MenuStyles`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentFont`, `Visible`, `Touch`
+
+## Ereignisse
+
+`OnCustomDrawItem`, `OnGesture`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGMenuBar.md`.

@@ -19,15 +19,15 @@ TPPGSpinEdit - Zahlenfeld mit Auf-/Ab-Buttons in der Optik des Presets.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `UseSystemContextMenu`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
+`RoundedCorners`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `UseSystemContextMenu`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Alignment`, `Anchors`, `AutoSelect`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `EditorEnabled`, `Enabled`, `Font`, `Increment`, `MaxLength`, `MaxValue`, `MinValue`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Value`, `Visible`
+`Align`, `Alignment`, `Anchors`, `AutoSelect`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `EditorEnabled`, `Enabled`, `Font`, `Increment`, `MaxLength`, `MaxValue`, `MinValue`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Value`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnMouseWheel`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnMouseWheel`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGSpinEdit.md`.

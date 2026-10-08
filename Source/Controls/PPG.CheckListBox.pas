@@ -89,6 +89,7 @@ type
     property ItemsEx;
     property AllowMarkup;
     property AllowReorder;
+    property Styles;
     property ScrollBarMode;
     property SmoothScrolling;
     property HighContrastSupport;
@@ -131,6 +132,8 @@ type
     property TabStop default True;
     property TabWidth;
     property Visible;
+    property Touch;
+    property OnGesture;
     property ItemIndex;
     property OnClick;
     property OnClickCheck;
@@ -142,6 +145,7 @@ type
     property OnDragDrop;
     property OnDragOver;
     property OnDrawItem;
+    property OnCustomDrawItem;
     property OnEndDock;
     property OnEndDrag;
     property OnEnter;

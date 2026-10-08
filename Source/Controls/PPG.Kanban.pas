@@ -29,7 +29,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   System.Generics.Collections, System.UITypes, Vcl.Controls, Vcl.Graphics,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base,
-  PPG.Controls.Scroll, PPG.Markup, PPG.Kanban.Layout, PPG.Kanban.Items;
+  PPG.Controls.Scroll, PPG.Markup, PPG.Kanban.Layout, PPG.Kanban.Items, PPG.ElementStyle, PPG.CustomDraw;
 
 type
   TPPGKanbanPart = (kpNone, kpCard, kpHeader, kpCollapse, kpLane, kpCell, kpThumb);
@@ -84,10 +84,36 @@ type
     BodyHeight: Integer;
   end;
 
+  /// Bereiche des Boards (nur gesetzte Werte zaehlen, clDefault = Preset).
+  TPPGKanbanStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Spalten: Color = Hintergrund, TextColor = Titel, Schrift des Titels.
+    property Column: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Karten: Color, TextColor, BorderColor = Rand, Schrift des Titels.
+    property Card: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Karte unter der Maus (Color).
+    property HotCard: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Gewaehlte Karte (BorderColor).
+    property SelectedCard: TPPGElementStyle index 3 read GetItem write SetItem;
+    /// Swimlane-Koepfe (TextColor, Schrift).
+    property LaneHeader: TPPGElementStyle index 4 read GetItem write SetItem;
+  end;
+
+  /// Vor dem Zeichnen einer Karte: Style (Flaeche, Text, Rand, fett) oder
+  /// ganz selbst zeichnen (DefaultDraw = False).
+  TPPGKanbanDrawCardEvent = procedure(Sender: TObject; Canvas: TCanvas;
+    const Card: TPPGKanbanCardData; const ARect: TRect; State: TPPGItemDrawState;
+    var Style: TPPGDrawStyle; var DefaultDraw: Boolean) of object;
+
   TPPGCustomKanban = class(TPPGCustomScrollControl, IPPGKanbanHost, IPPGAccessibleChildren)
   private
     FColumns: TPPGKanbanColumns;
     FLanes: TPPGKanbanLanes;
+    FKanbanStyles: TPPGKanbanStyles;
+    FOnCustomDrawCard: TPPGKanbanDrawCardEvent;
+    FDrawCanvas: TCanvas;
     FCards: TPPGKanbanCards;
     FColumnWidth: Integer;
     FCardGap: Integer;
@@ -135,6 +161,8 @@ type
     FOnGetCard: TPPGKanbanGetCardEvent;
     FOnSelectionChange: TNotifyEvent;
     FOnColumnCollapse: TPPGKanbanColumnEvent;
+    procedure SetKanbanStyles(const Value: TPPGKanbanStyles);
+    procedure KanbanStylesChanged(Sender: TObject);
     procedure SetColumns(const Value: TPPGKanbanColumns);
     procedure SetLanes(const Value: TPPGKanbanLanes);
     procedure SetCards(const Value: TPPGKanbanCards);
@@ -182,6 +210,7 @@ type
     { Zeichnen }
     procedure PaintColumn(const ACanvas: IPPGCanvas; C: Integer; const View: TRect);
     procedure PaintCard(const ACanvas: IPPGCanvas; const R: TRect; const D: TPPGKanbanCardData;
+      const DS: TPPGDrawStyle;
       Selected, Hot, Ghost: Boolean);
     function DragWidth: Integer;
     function DropPlaceholderRect: TRect;
@@ -233,6 +262,12 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure EnsureLayout;
+    /// Hoehe, in der das ganze Board ohne Scrollen Platz hat (Druck, Bild).
+    function BoardHeight: Integer;
+    /// Breiten und eingeklappte Spalten/Swimlanes als Text (INI-Stil, wie
+    /// TPPGGrid.SaveLayout) und zurueck; unbekannte Ids werden uebergangen.
+    function SaveLayout: string;
+    procedure LoadLayout(const S: string);
     { Abfragen (Treffer in Client-Koordinaten) }
     function HitTest(X, Y: Integer): TPPGKanbanHit;
     function ColumnCount: Integer;
@@ -283,6 +318,9 @@ type
     property ReadOnly: Boolean read FReadOnly write FReadOnly default False;
     property WipMode: TPPGKanbanWipMode read FWipMode write FWipMode default kwmWarn;
     property ShowCardCount: Boolean read FShowCardCount write SetShowCardCount default True;
+    /// Bereiche (Spalten, Karten, Hover, Auswahl, Swimlane-Koepfe).
+    property KanbanStyles: TPPGKanbanStyles read FKanbanStyles write SetKanbanStyles;
+    property OnCustomDrawCard: TPPGKanbanDrawCardEvent read FOnCustomDrawCard write FOnCustomDrawCard;
     property OnCardMoving: TPPGKanbanMovingEvent read FOnCardMoving write FOnCardMoving;
     property OnCardMoved: TPPGKanbanMovedEvent read FOnCardMoved write FOnCardMoved;
     property OnCardClick: TPPGKanbanCardEvent read FOnCardClick write FOnCardClick;
@@ -310,6 +348,8 @@ type
     property ReadOnly;
     property WipMode;
     property ShowCardCount;
+    property KanbanStyles;
+    property OnCustomDrawCard;
     property ScrollBarMode;
     property SmoothScrolling;
     property Align;
@@ -328,6 +368,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnCardMoving;
     property OnCardMoved;
     property OnCardClick;
@@ -350,7 +392,7 @@ implementation
 uses
   PPG.Lang,
   System.Math, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.Render.Gdi,
+  PPG.Exceptions, PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.Render.Gdi,
   PPG.Chart.Palette;
 
 var
@@ -391,6 +433,13 @@ begin
     Result := Result + ', ' + IntToStr(D.Progress) + ' %';
 end;
 
+{ TPPGKanbanStyles }
+
+constructor TPPGKanbanStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 5);
+end;
+
 { TPPGCustomKanban }
 
 constructor TPPGCustomKanban.Create(AOwner: TComponent);
@@ -404,6 +453,9 @@ begin
   FHeights := TDictionary<TPPGKanbanCard, Integer>.Create;
   FMarkup := TPPGMarkupLayout.Create;
   FBold := TFont.Create;
+  FKanbanStyles := TPPGKanbanStyles.Create(Self);
+  FKanbanStyles.OnChange := KanbanStylesChanged;
+  FDrawCanvas := TCanvas.Create;
   FSmall := TFont.Create;
   FShiftAnim := TPPGAnimation.Create(Self);
   FShiftAnim.OnStep := ShiftStep;
@@ -446,6 +498,8 @@ begin
   FreeAndNil(FHeights);
   FreeAndNil(FMarkup);
   FreeAndNil(FBold);
+  FreeAndNil(FDrawCanvas);
+  FreeAndNil(FKanbanStyles);
   FreeAndNil(FSmall);
   inherited Destroy;
 end;
@@ -463,7 +517,8 @@ begin
   FBold.Assign(Font);
   FBold.Style := Font.Style + [fsBold];
   FSmall.Assign(Font);
-  FSmall.Height := -Max(9, Round(Abs(Font.Height) * 0.86));
+  // Untergrenze skaliert (Druck mit verkleinerter Aufloesung)
+  FSmall.Height := -Max(Sc(9), Round(Abs(Font.Height) * 0.86));
 end;
 
 procedure TPPGCustomKanban.CMFontChanged(var Message: TMessage);
@@ -656,6 +711,7 @@ end;
 function TPPGCustomKanban.MeasureCard(const D: TPPGKanbanCardData; W: Integer): Integer;
 var
   Inner, Lh, TH: Integer;
+  TitleF, Temp: TFont;
 begin
   Inner := W - 2 * CardPad;
   if D.Color <> clNone then
@@ -663,10 +719,19 @@ begin
   Result := CardPad;
   if D.Labels <> '' then
     Inc(Result, TextH(FSmall) + Sc(4) + Sc(6));
-  // Titel: hoechstens zwei Zeilen
-  Lh := TextH(FBold);
-  TH := PPGMeasureTextNoCanvas(D.Title, FBold, Max(10, Inner), True).cy;
-  Inc(Result, Max(Lh, Min(TH, 2 * Lh)));
+  // Titel: hoechstens zwei Zeilen, in der Schrift des Karten-Stils
+  Temp := nil;
+  try
+    if FKanbanStyles.Card.HasOwnFont then
+      TitleF := PPGStyledFont(FKanbanStyles.Card.Font, [fsBold] + FKanbanStyles.Card.FontStyle, Temp)
+    else
+      TitleF := PPGStyledFont(FBold, FKanbanStyles.Card.FontStyle, Temp);
+    Lh := TextH(TitleF);
+    TH := PPGMeasureTextNoCanvas(D.Title, TitleF, Max(10, Inner), True).cy;
+    Inc(Result, Max(Lh, Min(TH, 2 * Lh)));
+  finally
+    Temp.Free;
+  end;
   if (D.Text <> '') and (FMaxTextLines > 0) then
   begin
     FMarkup.Layout(D.Text, Font, nil, Max(10, Inner), True);
@@ -691,11 +756,21 @@ var
   H: Integer;
   LaneIds: array of Integer;
   Hts: TArray<Integer>;
+  TitleTemp: TFont;
 begin
   if FLayoutValid then
     Exit;
   FLayoutValid := True;
-  FHeaderH := TextH(FBold) + Sc(20);
+  // Kopfhoehe nach der Titel-Schrift des Spalten-Stils
+  TitleTemp := nil;
+  try
+    if FKanbanStyles.Column.HasOwnFont then
+      FHeaderH := TextH(PPGStyledFont(FKanbanStyles.Column.Font, [fsBold], TitleTemp)) + Sc(20)
+    else
+      FHeaderH := TextH(PPGStyledFont(FBold, FKanbanStyles.Column.FontStyle, TitleTemp)) + Sc(20);
+  finally
+    TitleTemp.Free;
+  end;
   Laned := HasLanes;
   // Swimlanes
   NL := 0;
@@ -1303,11 +1378,118 @@ begin
   end;
 end;
 
+{ ---- Layout speichern ---- }
+
+function TPPGCustomKanban.BoardHeight: Integer;
+var
+  C: Integer;
+begin
+  EnsureLayout;
+  if HasLanes then
+    Exit(ContentHeight);
+  // Ohne Swimlanes scrollen die Spalten einzeln: die laengste zaehlt
+  Result := FHeaderH + Sc(16);
+  for C := 0 to High(FCols) do
+    if not FCols[C].Collapsed then
+      Result := Max(Result, FCols[C].Cells[0].Bottom + Sc(16));
+end;
+
+function TPPGCustomKanban.SaveLayout: string;
+var
+  L: TStringList;
+  I: Integer;
+begin
+  L := TStringList.Create;
+  try
+    L.Add('[PPGKanbanLayout]');
+    L.Add('Version=1');
+    for I := 0 to FColumns.Count - 1 do
+      L.Add(Format('Column.%d=%d,%d', [FColumns[I].Id, FColumns[I].Width,
+        Ord(FColumns[I].Collapsed)]));
+    for I := 0 to FLanes.Count - 1 do
+      L.Add(Format('Lane.%d=%d', [FLanes[I].Id, Ord(FLanes[I].Collapsed)]));
+    Result := L.Text;
+  finally
+    L.Free;
+  end;
+end;
+
+procedure TPPGCustomKanban.LoadLayout(const S: string);
+var
+  L: TStringList;
+  I, P, Id, W, Cl: Integer;
+  Key, Val: string;
+  Col: TPPGKanbanColumn;
+  Lane: TPPGKanbanLane;
+begin
+  L := TStringList.Create;
+  try
+    L.Text := S;
+    if (L.Count = 0) or (Trim(L[0]) <> '[PPGKanbanLayout]') then
+      Exit; // kein Layout dieses Boards: unveraendert lassen
+    FColumns.BeginUpdate;
+    FLanes.BeginUpdate;
+    try
+      for I := 0 to L.Count - 1 do
+      begin
+        P := Pos('=', L[I]);
+        if P = 0 then
+          Continue;
+        Key := Copy(L[I], 1, P - 1);
+        Val := Copy(L[I], P + 1, MaxInt);
+        if SameText(Copy(Key, 1, 7), 'Column.') and
+          TryStrToInt(Copy(Key, 8, MaxInt), Id) then
+        begin
+          Col := FColumns.FindById(Id);
+          P := Pos(',', Val);
+          if (Col <> nil) and (P > 0) and TryStrToInt(Copy(Val, 1, P - 1), W) and
+            TryStrToInt(Copy(Val, P + 1, MaxInt), Cl) then
+          begin
+            Col.Collapsed := Cl <> 0;
+            try
+              Col.Width := W;
+            except
+              on EPPGPropertyError do
+                ; // Breite ausserhalb des Bereichs: Vorgabe behalten
+            end;
+          end;
+        end
+        else if SameText(Copy(Key, 1, 5), 'Lane.') and
+          TryStrToInt(Copy(Key, 6, MaxInt), Id) and TryStrToInt(Val, Cl) then
+        begin
+          Lane := FLanes.FindById(Id);
+          if Lane <> nil then
+            Lane.Collapsed := Cl <> 0;
+        end;
+      end;
+    finally
+      FLanes.EndUpdate;
+      FColumns.EndUpdate;
+    end;
+  finally
+    L.Free;
+  end;
+  LayoutChanged;
+end;
+
 { ---- Zeichnen ---- }
 
+procedure TPPGCustomKanban.SetKanbanStyles(const Value: TPPGKanbanStyles);
+begin
+  FKanbanStyles.Assign(Value);
+end;
+
+procedure TPPGCustomKanban.KanbanStylesChanged(Sender: TObject);
+begin
+  LayoutChanged; // Schrift der Kartentitel bestimmt die Hoehe
+end;
+
 procedure TPPGCustomKanban.PaintCard(const ACanvas: IPPGCanvas; const R: TRect;
-  const D: TPPGKanbanCardData; Selected, Hot, Ghost: Boolean);
+  const D: TPPGKanbanCardData; const DS: TPPGDrawStyle; Selected, Hot, Ghost: Boolean);
 var
+  KS: TPPGKanbanStyles;
+  SelCol: TColor;
+  TitleF, Temp: TFont;
   T: TPPGTokens;
   Fill, Stroke, TextCol, Sec, Col: TColor;
   HC, Dark, RTL: Boolean;
@@ -1337,12 +1519,31 @@ begin
     Stroke := T.Stroke;
     TextCol := T.TextPrimary;
     Sec := T.TextSecondary;
+    // Element-Stile (KanbanStyles) und eigenes Zeichnen
+    if not UseVclStyle then
+    begin
+      KS := FKanbanStyles;
+      Fill := KS.Card.FillFor(Dark, Fill);
+      if Hot then
+        Fill := KS.HotCard.FillFor(Dark, Fill);
+      Stroke := KS.Card.BorderFor(Dark, Stroke);
+      TextCol := KS.Card.TextFor(Dark, TextCol);
+      if DS.Fill <> clNone then
+        Fill := PPGColorToRGB(DS.Fill);
+      if DS.BorderColor <> clNone then
+        Stroke := PPGColorToRGB(DS.BorderColor);
+      if DS.TextColor <> clNone then
+        TextCol := PPGColorToRGB(DS.TextColor);
+    end;
   end;
+  SelCol := PPGColorToRGB(EffectiveAppearance.FocusColor);
+  if not HC and not UseVclStyle then
+    SelCol := FKanbanStyles.SelectedCard.BorderFor(Dark, SelCol);
   if Ghost then
     ACanvas.DrawOuterGlow(R, Rad, Sc(8), PPGColorToRGB(clBlack), 60);
   ACanvas.FillRoundRect(R, Rad, Fill, 255);
   if Selected then
-    ACanvas.FrameRoundRect(R, Rad, Sc(2), PPGColorToRGB(EffectiveAppearance.FocusColor), 255)
+    ACanvas.FrameRoundRect(R, Rad, Sc(2), SelCol, 255)
   else
     ACanvas.FrameRoundRect(R, Rad, 1, Stroke, 255);
   Inner := R;
@@ -1404,12 +1605,23 @@ begin
     Inner.Top := Inner.Top + Lh + Sc(6);
   end;
   // Titel (hoechstens zwei Zeilen)
-  Lh := TextH(FBold);
-  TH := PPGMeasureTextNoCanvas(D.Title, FBold, Max(10, Inner.Right - Inner.Left), True).cy;
-  TH := Max(Lh, Min(TH, 2 * Lh));
-  TR := Rect(Inner.Left, Inner.Top, Inner.Right, Inner.Top + TH);
-  ACanvas.DrawText(TR, D.Title, FBold, TextCol, DrawTextBiDiModeFlags(DT_WORDBREAK or DT_NOPREFIX or
-    DT_END_ELLIPSIS or DT_EDITCONTROL));
+  Temp := nil;
+  try
+    // Titel-Schrift: Karten-Stil (eigene Schrift/Stile) und eigenes Zeichnen
+    if FKanbanStyles.Card.HasOwnFont then
+      TitleF := PPGStyledFont(FKanbanStyles.Card.Font, [fsBold] + FKanbanStyles.Card.FontStyle +
+        DS.FontStyle, Temp)
+    else
+      TitleF := PPGStyledFont(FBold, FKanbanStyles.Card.FontStyle + DS.FontStyle, Temp);
+    Lh := TextH(TitleF);
+    TH := PPGMeasureTextNoCanvas(D.Title, TitleF, Max(10, Inner.Right - Inner.Left), True).cy;
+    TH := Max(Lh, Min(TH, 2 * Lh));
+    TR := Rect(Inner.Left, Inner.Top, Inner.Right, Inner.Top + TH);
+    ACanvas.DrawText(TR, D.Title, TitleF, TextCol, DrawTextBiDiModeFlags(DT_WORDBREAK or DT_NOPREFIX or
+      DT_END_ELLIPSIS or DT_EDITCONTROL));
+  finally
+    Temp.Free;
+  end;
   Inner.Top := TR.Bottom;
   // Text mit Markup (hoechstens MaxTextLines Zeilen)
   if (D.Text <> '') and (FMaxTextLines > 0) then
@@ -1510,6 +1722,10 @@ var
   LF: TLogFont;
   Fnt, OldF: HFONT;
   Hot: Boolean;
+  TitleF, Temp: TFont;
+  DS: TPPGDrawStyle;
+  St: TPPGItemDrawState;
+  DrawIt, CardSel, CardHot: Boolean;
 begin
   T := Tokens;
   HC := HighContrastSupport and PPGIsHighContrast;
@@ -1526,6 +1742,11 @@ begin
     TextCol := T.TextPrimary;
     Sec := T.TextSecondary;
     Accent := T.Accent;
+    if not UseVclStyle then
+    begin
+      Back := FKanbanStyles.Column.FillFor(UseDarkMode, Back);
+      TextCol := FKanbanStyles.Column.TextFor(UseDarkMode, TextCol);
+    end;
   end;
   R := ColClientRect(C);
   if (R.Right < View.Left) or (R.Left > View.Right) then
@@ -1580,8 +1801,17 @@ begin
     HR := Rect(R.Left + Sc(36), R.Top + Sc(8), R.Right - Sc(12), R.Top + FHeaderH)
   else
     HR := Rect(R.Left + Sc(12), R.Top + Sc(8), R.Right - Sc(36), R.Top + FHeaderH);
-  ACanvas.DrawText(HR, FCols[C].Column.Title, FBold, TextCol,
-    DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_END_ELLIPSIS));
+  Temp := nil;
+  try
+    if FKanbanStyles.Column.HasOwnFont then
+      TitleF := PPGStyledFont(FKanbanStyles.Column.Font, [fsBold] + FKanbanStyles.Column.FontStyle, Temp)
+    else
+      TitleF := PPGStyledFont(FBold, FKanbanStyles.Column.FontStyle, Temp);
+    ACanvas.DrawText(HR, FCols[C].Column.Title, TitleF, TextCol,
+      DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_END_ELLIPSIS));
+  finally
+    Temp.Free;
+  end;
   if FShowCardCount then
   begin
     if FCols[C].Column.WipLimit > 0 then
@@ -1655,9 +1885,38 @@ begin
         if CR.Bottom < Clip.Top then
           Continue;
         D := CardData(C, L, I);
-        PaintCard(ACanvas, CR, D, (FFocus.Part = kpCard) and (FFocus.Col = C) and (FFocus.Lane = L) and
-          (FFocus.Index = I) and (Focused or not FDragging), (FHot.Part = kpCard) and (FHot.Col = C) and
-          (FHot.Lane = L) and (FHot.Index = I) and not FDragging, False);
+        CardSel := (FFocus.Part = kpCard) and (FFocus.Col = C) and (FFocus.Lane = L) and
+          (FFocus.Index = I) and (Focused or not FDragging);
+        CardHot := (FHot.Part = kpCard) and (FHot.Col = C) and (FHot.Lane = L) and
+          (FHot.Index = I) and not FDragging;
+        // Eigenes Zeichnen der Karte
+        DS.Reset;
+        DrawIt := True;
+        if Assigned(FOnCustomDrawCard) then
+        begin
+          St := [];
+          if CardSel then
+            Include(St, idsSelected);
+          if CardHot then
+            Include(St, idsHot);
+          if CardSel and Focused then
+            Include(St, idsFocused);
+          DC := ACanvas.BeginGdi;
+          try
+            FDrawCanvas.Handle := DC;
+            try
+              FDrawCanvas.Font := Font;
+              FDrawCanvas.Brush.Style := bsClear;
+              FOnCustomDrawCard(Self, FDrawCanvas, D, CR, St, DS, DrawIt);
+            finally
+              FDrawCanvas.Handle := 0;
+            end;
+          finally
+            ACanvas.EndGdi(DC);
+          end;
+        end;
+        if DrawIt then
+          PaintCard(ACanvas, CR, D, DS, CardSel, CardHot, False);
       end;
     end;
   finally
@@ -1671,6 +1930,7 @@ end;
 
 procedure TPPGCustomKanban.PaintViewport(const ACanvas: IPPGCanvas; const View: TRect);
 var
+  DS: TPPGDrawStyle;
   C, L: Integer;
   R, CR: TRect;
   T: TPPGTokens;
@@ -1739,7 +1999,8 @@ begin
   begin
     R := Rect(FMousePt.X - FGrab.X, FMousePt.Y - FGrab.Y, FMousePt.X - FGrab.X + DragWidth,
       FMousePt.Y - FGrab.Y + FDragH);
-    PaintCard(ACanvas, R, FDragData, True, False, True);
+    DS.Reset;
+    PaintCard(ACanvas, R, FDragData, DS, True, False, True);
   end;
   if Focused and (FFocus.Part = kpHeader) then
     ACanvas.FrameRoundRect(HeaderRect(FFocus.Col), Sc(8), Sc(2), PPGColorToRGB(EffectiveAppearance.FocusColor), 255);

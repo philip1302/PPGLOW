@@ -41,7 +41,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls, Vcl.Forms, Vcl.Menus,
-  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base;
+  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base, PPG.ElementStyle;
 
 type
   /// Validierungszustand eines Felds (faerbt Rahmen und Fokuslinie).
@@ -136,6 +136,10 @@ type
     FUseSystemContextMenu: Boolean;
     FChangeLock: Integer;
     FOnChange: TNotifyEvent;
+    FReadOnlyStyle: TPPGElementStyle;
+    procedure SetReadOnlyStyle(const Value: TPPGElementStyle);
+    procedure ReadOnlyStyleChanged(Sender: TObject);
+    function UseReadOnlyColors: Boolean;
     procedure EditMenuClick(Sender: TObject);
     procedure ShowEditMenu(X, Y: Integer);
     procedure InnerWndProc(var Message: TMessage);
@@ -297,6 +301,8 @@ type
     property HideSelection: Boolean read GetHideSelection write SetHideSelection default True;
     property MaxLength: Integer read GetMaxLength write SetMaxLength default 0;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
+    /// Optik bei ReadOnly (Flaeche, Text, Rand; clDefault = wie bearbeitbar).
+    property ReadOnlyStyle: TPPGElementStyle read FReadOnlyStyle write SetReadOnlyStyle;
     property ShowClearButton: Boolean read FShowClearButton write SetShowClearButton default False;
     property TabStop: Boolean read GetTabStop write SetTabStop default True;
     /// True = natives Windows-Kontextmenue des Edits statt des Suite-Menues.
@@ -485,6 +491,8 @@ var
   E: TEditAccess;
 begin
   inherited Create(AOwner);
+  FReadOnlyStyle := TPPGElementStyle.Create(Self);
+  FReadOnlyStyle.OnChange := ReadOnlyStyleChanged;
   // Keine Caption (Text gehoert dem inneren Edit), keine Kinder im Designer
   ControlStyle := ControlStyle - [csSetCaption, csAcceptsControls];
   TWinControl(Self).TabStop := False;
@@ -553,6 +561,7 @@ begin
     FreeAndNil(FInner);
   end;
   FreeAndNil(FEditMenu);
+  FreeAndNil(FReadOnlyStyle);
   if FFocusAnim <> nil then
     FFocusAnim.OnStep := nil;
   FreeAndNil(FFocusAnim);
@@ -1362,6 +1371,27 @@ begin
     Fill := PPGColorToRGB(A.Disabled.Color);
     Text := PPGColorToRGB(A.Disabled.TextColor);
   end;
+  if UseReadOnlyColors then
+  begin
+    Fill := PPGColorToRGB(FReadOnlyStyle.FillFor(UseDarkMode, Fill));
+    Text := PPGColorToRGB(FReadOnlyStyle.TextFor(UseDarkMode, Text));
+  end;
+end;
+
+function TPPGCustomField.UseReadOnlyColors: Boolean;
+begin
+  Result := (FReadOnlyStyle <> nil) and (FInner <> nil) and Enabled and GetReadOnly and
+    not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+end;
+
+procedure TPPGCustomField.SetReadOnlyStyle(const Value: TPPGElementStyle);
+begin
+  FReadOnlyStyle.Assign(Value);
+end;
+
+procedure TPPGCustomField.ReadOnlyStyleChanged(Sender: TObject);
+begin
+  UpdateColors;
 end;
 
 procedure TPPGCustomField.UpdateColors;
@@ -1448,6 +1478,8 @@ begin
   Result.GlowColor := Accent;
   Result.GlowAlpha := 0;
   Result.Focused := FieldFocused;
+  if UseReadOnlyColors and FReadOnlyStyle.HasBorder(UseDarkMode) and (Signal = clNone) then
+    Result.BorderColor := PPGColorToRGB(FReadOnlyStyle.BorderFor(UseDarkMode, Result.BorderColor));
   if FBorderStyle = bsNone then
     Result.BorderWidth := 0;
 end;
@@ -1463,6 +1495,7 @@ procedure TPPGCustomField.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRec
 var
   Style, BtnStyle: TPPGSurfaceStyle;
   FR: IPPGFieldRenderer;
+  Old: TPPGCorners;
   I, PPI, X, Y: Integer;
   B: TPPGFieldButton;
   Hot, Pressed: Boolean;
@@ -1470,7 +1503,12 @@ begin
   PPI := ScalePPI;
   Style := GetFieldStyle;
   FR := FieldRenderer;
-  FR.DrawField(ACanvas, ClientR, Style, FocusProgress, PPI);
+  Old := PPGSetSquareCorners(ACanvas, SquareCorners);
+  try
+    FR.DrawField(ACanvas, ClientR, Style, FocusProgress, PPI);
+  finally
+    PPGSetSquareCorners(ACanvas, Old);
+  end;
 
   for I := 0 to High(FButtons) do
   begin
@@ -1674,6 +1712,8 @@ begin
   if Ed(FInner).ReadOnly <> Value then
   begin
     Ed(FInner).ReadOnly := Value;
+    if not FReadOnlyStyle.IsEmpty then
+      UpdateColors;
     Invalidate;
     NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
   end;

@@ -43,11 +43,11 @@ TPPGColorPicker - Farbauswahl mit Palette (Phase 12d).
 
 ## PPGlow-Eigenschaften
 
-`Selected`, `Style`, `ShowThemeColors`, `RecentColors`, `MaxRecent`, `ShowHex`, `NoneColorColor`, `DefaultColorColor`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Selected`, `Style`, `ShowThemeColors`, `RecentColors`, `MaxRecent`, `ShowHex`, `NoneColorColor`, `DefaultColorColor`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnCloseUp`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
+`OnGesture`, `OnChange`, `OnCloseUp`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGColorPicker.md`.

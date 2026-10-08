@@ -36,11 +36,11 @@ Vorbild TMS TCheckListEdit).
 
 ## PPGlow-Eigenschaften
 
-`Items`, `CheckedText`, `Delimiter`, `DisplayDelimiter`, `DisplayMode`, `MaxDisplayItems`, `ShowSelectAll`, `FilterThreshold`, `DropDownCount`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Items`, `CheckedText`, `Delimiter`, `DisplayDelimiter`, `DisplayMode`, `MaxDisplayItems`, `ShowSelectAll`, `FilterThreshold`, `DropDownCount`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `TextHint`, `ValidationState`, `ValidationHint`, `HighContrastSupport`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `BorderStyle`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnItemCheck`, `OnChange`, `OnCloseUp`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
+`OnItemCheck`, `OnGesture`, `OnChange`, `OnCloseUp`, `OnDropDown`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGCheckComboBox.md`.

@@ -11,6 +11,13 @@
 <li>Split-Button: <code>Style = bsSplitButton</code> mit <code>DropDownMenu</code>; Klick auf den Pfeil &#246;ffnet das Men&#252; ohne <code>OnClick</code>.</li>
 <li>Bilder kommen aus <code>Images</code>/<code>ImageIndex</code> (ab 10.4 auch <code>ImageName</code>), nicht aus <code>Glyph</code>.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>Alignment</code> und <code>Margin</code> (wie <code>TBitBtn</code>) f&#252;r die Lage von Bild und Text.</li>
+<li>Bilder je Zustand: <code>HotImageIndex</code>, <code>DisabledImageIndex</code>, <code>PressedImageIndex</code> (bzw. <code>…ImageName</code> ab 10.4); <code>ImageTint = itTextColor</code> f&#228;rbt einfarbige Symbole in der Textfarbe des Zustands.</li>
+<li><code>RoundedCorners</code> (Segment-Buttons, Button-Gruppen) und <code>Shadow</code> (Elevation).</li>
+<li>Schriftstil je Zustand &#252;ber <code>Appearance.Hot.FontStyle</code> usw.; <code>Appearance.Focused</code> und <code>Appearance.Dark</code> f&#252;r Fokus- und Dunkel-Farben.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>PPGButton1.Caption := &#39;&amp;Speichern&#39;;
 PPGButton1.ModalResult := mrOk;
@@ -27,11 +34,11 @@ PPGButton1.Default := True;
 <li>Split-Button: Das Menue oeffnet beim Druecken auf den Pfeil (wie Windows). csClicked wird dabei entfernt, damit beim Loslassen KEIN OnClick folgt.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ImageIndex</code>, <code>ImageName</code>, <code>HotImageIndex</code>, <code>DisabledImageIndex</code>, <code>ImagePosition</code>, <code>Spacing</code>, <code>WordWrap</code>, <code>ShowFocusRect</code>, <code>HighContrastSupport</code>, <code>ModalResult</code>, <code>Default</code>, <code>Cancel</code>, <code>Style</code>, <code>DropDownMenu</code>, <code>GroupIndex</code>, <code>AllowAllUp</code>, <code>Down</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>Images</code>, <code>ImageIndex</code>, <code>ImageName</code>, <code>HotImageIndex</code>, <code>DisabledImageIndex</code>, <code>PressedImageIndex</code>, <code>HotImageName</code>, <code>DisabledImageName</code>, <code>PressedImageName</code>, <code>ImageTint</code>, <code>ImagePosition</code>, <code>Spacing</code>, <code>Alignment</code>, <code>Margin</code>, <code>RoundedCorners</code>, <code>Shadow</code>, <code>WordWrap</code>, <code>ShowFocusRect</code>, <code>HighContrastSupport</code>, <code>ModalResult</code>, <code>Default</code>, <code>Cancel</code>, <code>Style</code>, <code>DropDownMenu</code>, <code>GroupIndex</code>, <code>AllowAllUp</code>, <code>Down</code></p>
 <h2>Eigenschaften wie in der VCL</h2>
-<p><code>Action</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Caption</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBackground</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>Action</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Caption</code>, <code>Color</code>, <code>Constraints</code>, <code>DragCursor</code>, <code>DragKind</code>, <code>DragMode</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBackground</code>, <code>ParentBiDiMode</code>, <code>ParentColor</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>StyleElements</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnDropDownClick</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
+<p><code>OnDropDownClick</code>, <code>OnGesture</code>, <code>OnClick</code>, <code>OnContextPopup</code>, <code>OnDragDrop</code>, <code>OnDragOver</code>, <code>OnEndDock</code>, <code>OnEndDrag</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnKeyDown</code>, <code>OnKeyPress</code>, <code>OnKeyUp</code>, <code>OnMouseDown</code>, <code>OnMouseEnter</code>, <code>OnMouseLeave</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnStartDock</code>, <code>OnStartDrag</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGButton.md</code>.</p>
 </body></html>

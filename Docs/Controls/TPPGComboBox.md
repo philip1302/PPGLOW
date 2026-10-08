@@ -11,6 +11,11 @@ Palette **PPGlow** - Unit `PPG.ComboBox` - Basis `TPPGCustomComboBox`
 - `ItemHeight` ist eine Mindesthöhe (alte DFMs speichern 13).
 - Eigene Aufklappliste (`PPG.Popup`) mit `ItemsEx` (Bild, Detail, Plakette, Markup) und `FilterMode`; Filtern ersetzt AutoComplete, ohne Treffer schließt die Liste.
 
+## Anpassung
+
+- `ListStyles` für die Aufklappliste (Zebra, Auswahl, Hover) und `OnCustomDrawItem`.
+- `RoundedCorners` für zusammengesetzte Eingabegruppen.
+
 ## Verhalten (aus dem Quelltext)
 
 TPPGComboBox - Auswahlfeld mit eigener Aufklappliste in der Optik des Presets.
@@ -23,15 +28,15 @@ TPPGComboBox - Auswahlfeld mit eigener Aufklappliste in der Optik des Presets.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `FilterMode`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
+`RoundedCorners`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ItemsEx`, `FilterMode`, `ListStyles`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `AutoCloseUp`, `AutoComplete`, `AutoDropDown`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `DropDownCount`, `DropDownWidth`, `Enabled`, `Font`, `ItemHeight`, `Items`, `ItemIndex`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Sorted`, `Style`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`
+`Align`, `Anchors`, `AutoCloseUp`, `AutoComplete`, `AutoDropDown`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `DropDownCount`, `DropDownWidth`, `Enabled`, `Font`, `ItemHeight`, `Items`, `ItemIndex`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Sorted`, `Style`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnCloseUp`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDropDown`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnSelect`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnChange`, `OnCustomDrawItem`, `OnClick`, `OnCloseUp`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDropDown`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnSelect`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGComboBox.md`.

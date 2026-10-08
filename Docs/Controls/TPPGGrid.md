@@ -17,6 +17,13 @@ Palette **PPGlow** - Unit `PPG.Grid` - Basis `TPPGCustomGrid`
 - Drucken mit `TPPGGridPrinter`; Export über `PPG.Grid.Export` (xlsx, PDF, HTML, CSV), Import `PPGLoadXlsx`.
 - UI Automation: Tabellen-Muster mit Kopfzeilen, Gruppenzeilen (Auf-/Zuklappen), Kästchen, Links und Buttons (Invoke).
 
+## Anpassung
+
+- `Styles` mit zehn Bereichen (`Header`, `Footer`, `Selection`, `SelectionInactive`, `AlternateRow`, `HotRow`, `GridLine`, `FocusedCell`, `GroupRow`, `FilterRow`); jeder Bereich hat `Color`, `TextColor`, `BorderColor`, Dunkel-Varianten und auf Wunsch eine eigene `Font`. `clDefault` = vom Preset.
+- Zebra-Zeilen: `Styles.AlternateRow.Color`. Gitterlinien: `Styles.GridLine.Color` und `GridLineWidth`.
+- Spalten: `Style`, `TitleStyle`, `TitleAlignment`. `OnGetCellStyle` kann zusätzlich `FontStyle`, `FontName` und `FontSize` setzen.
+- Wie `TStringGrid`: `FixedColor` (Alias für `Styles.Header.Color`), `DrawingStyle`, `GradientStartColor`/`GradientEndColor`.
+
 ## Beispiel
 
 ```pascal
@@ -44,15 +51,15 @@ TPPGGrid - Tabelle im Stil der Suite (Phase 6c).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `Bands`, `Columns`, `ShowFilterRow`, `FixedColsRight`, `HeaderMenu`, `ShowFooter`, `GroupFooter`, `ShowGroupPanel`, `ConditionalFormats`, `SortOnHeaderClick`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `Bands`, `Columns`, `ShowFilterRow`, `FixedColsRight`, `HeaderMenu`, `ShowFooter`, `GroupFooter`, `ShowGroupPanel`, `ConditionalFormats`, `SortOnHeaderClick`, `ScrollBarMode`, `SmoothScrolling`, `HighContrastSupport`, `Styles`, `GridLineWidth`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `BiDiMode`, `BorderStyle`, `Color`, `ColCount`, `Constraints`, `DefaultColWidth`, `DefaultDrawing`, `DefaultRowHeight`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `FixedCols`, `FixedRows`, `Font`, `Options`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `RowCount`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`DrawingStyle`, `FixedColor`, `GradientEndColor`, `GradientStartColor`, `Align`, `Anchors`, `BiDiMode`, `BorderStyle`, `Color`, `ColCount`, `Constraints`, `DefaultColWidth`, `DefaultDrawing`, `DefaultRowHeight`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `FixedCols`, `FixedRows`, `Font`, `Options`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `RowCount`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnClick`, `OnCompareCells`, `OnCellButtonClick`, `OnColumnMoved`, `OnCustomAggregate`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDrawCell`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnFixedCellClick`, `OnGetCellText`, `OnGetEditText`, `OnGetGroupText`, `OnGetCellStyle`, `OnHeaderMenu`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnLinkClick`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnScroll`, `OnSelectCell`, `OnSetEditText`, `OnSorted`, `OnStartDock`, `OnStartDrag`, `OnTopLeftChanged`, `OnValidateCell`
+`OnGesture`, `OnClick`, `OnCompareCells`, `OnCellButtonClick`, `OnColumnMoved`, `OnCustomAggregate`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnDrawCell`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnFixedCellClick`, `OnGetCellText`, `OnGetEditText`, `OnGetGroupText`, `OnGetCellStyle`, `OnHeaderMenu`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnLinkClick`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnScroll`, `OnSelectCell`, `OnSetEditText`, `OnSorted`, `OnStartDock`, `OnStartDrag`, `OnTopLeftChanged`, `OnValidateCell`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGGrid.md`.

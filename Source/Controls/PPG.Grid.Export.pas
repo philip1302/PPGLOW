@@ -121,7 +121,7 @@ begin
             Style := Style + ';background:' + CssColor(St.Fill);
           if St.TextColor <> clNone then
             Style := Style + ';color:' + CssColor(St.TextColor);
-          if St.Bold then
+          if St.Bold or (fsBold in St.FontStyle) then
             Style := Style + ';font-weight:bold';
         end;
         SB.Append('<td style="' + Style + '">' + HtmlEscape(S) + '</td>');

@@ -70,7 +70,11 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TToggleSwitch | `State = tssOn/tssOff` | `Checked = True/False` |
 | TSearchBox | `OnInvokeSearch` | `OnSearch` |
 | TDBGrid-Spalten | `Title.Caption` | `Title` |
-| TDBGrid-Spalten | `Expanded`, `Visible`, `Title.Font.*`, `Color` … | entfernt |
+| TDBGrid-Spalten | `Title.Alignment` | `TitleAlignment` (`gtaLeft`/`gtaCenter`/`gtaRight`) |
+| TDBGrid-Spalten | `Title.Font.*`, `Title.Color` | `TitleStyle.Font.*` (mit `TitleStyle.ParentFont = False`), `TitleStyle.Color` |
+| TDBGrid-Spalten | `Font.*`, `Color` | `Style.Font.*` (mit `Style.ParentFont = False`), `Style.Color` |
+| TDBGrid-Spalten | `Expanded` … | entfernt |
+| TDBGrid | `TitleFont`, `FixedColor` | bleiben (gleichnamig bei `TPPGDBGrid`) |
 | TBitBtn | `Kind`, `Glyph`, `NumGlyphs`, `Layout` | entfernt (Bilder über `Images`/`ImageIndex`) |
 | TSpeedButton | `Glyph`, `NumGlyphs`, `Flat`, `Layout` | entfernt |
 

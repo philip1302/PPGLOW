@@ -47,6 +47,8 @@ type
     property VerticalAlignment;
     property ShowCaption;
     property WordWrap;
+    property RoundedCorners;
+    property Shadow;
     property HighContrastSupport;
     { VCL-Standard }
     property Align;
@@ -82,6 +84,8 @@ type
     property TabStop default False;
     property UseDockManager default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnAlignInsertBefore;
     property OnAlignPosition;
     property OnClick;
@@ -158,10 +162,16 @@ end;
 procedure TPPGCustomPanel.AdjustClientRect(var Rect: TRect);
 var
   D: Integer;
+  SI: TRect;
 begin
   inherited AdjustClientRect(Rect);
   D := ContentInset;
   InflateRect(Rect, -D, -D);
+  SI := ShadowInsets;
+  Inc(Rect.Left, SI.Left);
+  Inc(Rect.Top, SI.Top);
+  Dec(Rect.Right, SI.Right);
+  Dec(Rect.Bottom, SI.Bottom);
 end;
 
 function TPPGCustomPanel.ChildOverlapsDecoration(const R: TRect): Boolean;
@@ -200,17 +210,31 @@ end;
 procedure TPPGCustomPanel.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   Style: TPPGSurfaceStyle;
-  TextR: TRect;
+  TextR, Body, SI: TRect;
+  Old: TPPGCorners;
   Flags: Cardinal;
   D: Integer;
   TextSize: TSize;
 begin
   Style := GetContainerStyle(False);
-  ContainerRenderer.DrawContainer(ACanvas, ClientR, Style);
+  // Flaeche ohne den Platz fuer den Schatten; eckige Ecken nur fuer die Flaeche
+  Body := ClientR;
+  SI := ShadowInsets;
+  Inc(Body.Left, SI.Left);
+  Inc(Body.Top, SI.Top);
+  Dec(Body.Right, SI.Right);
+  Dec(Body.Bottom, SI.Bottom);
+  Old := PPGSetSquareCorners(ACanvas, SquareCorners);
+  try
+    PaintShadow(ACanvas, Body, Style.Rounding);
+    ContainerRenderer.DrawContainer(ACanvas, Body, Style);
+  finally
+    PPGSetSquareCorners(ACanvas, Old);
+  end;
   if not FShowCaption or (Caption = '') then
     Exit;
 
-  TextR := ClientR;
+  TextR := Body;
   D := Style.BorderWidth + PPGScale(CaptionPadding, ScalePPI);
   InflateRect(TextR, -D, -D);
   if IsRectEmpty(TextR) then

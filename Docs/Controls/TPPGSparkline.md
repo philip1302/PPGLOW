@@ -42,11 +42,11 @@ TPPGSparkline - kleiner Werteverlauf ohne Achsen (Phase 10b).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Kind`, `Markers`, `MaxCount`, `LineWidth`, `LineColor`, `NegativeColor`, `UseRange`, `RangeMin`, `RangeMax`, `ShowReference`, `ReferenceValue`, `ValuesText`, `Align`, `Anchors`, `Constraints`, `Enabled`, `Hint`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Kind`, `Markers`, `MaxCount`, `LineWidth`, `LineColor`, `NegativeColor`, `UseRange`, `RangeMin`, `RangeMax`, `ShowReference`, `ReferenceValue`, `ValuesText`, `Align`, `Anchors`, `Constraints`, `Enabled`, `Hint`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnClick`, `OnDblClick`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`
+`OnGesture`, `OnClick`, `OnDblClick`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGSparkline.md`.

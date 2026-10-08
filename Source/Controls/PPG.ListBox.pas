@@ -174,6 +174,7 @@ type
     property ItemsEx;
     property AllowMarkup;
     property AllowReorder;
+    property Styles;
     property ScrollBarMode;
     property SmoothScrolling;
     property HighContrastSupport;
@@ -212,6 +213,8 @@ type
     property TabStop default True;
     property TabWidth;
     property Visible;
+    property Touch;
+    property OnGesture;
     property ItemIndex;
     property OnClick;
     property OnContextPopup;
@@ -222,6 +225,7 @@ type
     property OnDragDrop;
     property OnDragOver;
     property OnDrawItem;
+    property OnCustomDrawItem;
     property OnEndDock;
     property OnEndDrag;
     property OnEnter;
@@ -589,6 +593,9 @@ begin
         Data.Checked := It.Checked;
         Data.Enabled := It.Enabled;
         Data.Data := It.Data;
+        Data.Color := It.Color;
+        Data.TextColor := It.TextColor;
+        Data.FontStyle := It.FontStyle;
       end;
   else
     if (Index >= 0) and (Index < FItems.Count) then
@@ -664,7 +671,7 @@ begin
   // der Anwender auf einen TCanvas ueber dem Zeichenpuffer
   Sel := Selection.Selected[Index];
   IR := PPGItemRendererOf(Renderer);
-  Painter.PaintBackground(ACanvas, IR, R, Info, Sel,
+  Painter.PaintItemBackground(ACanvas, IR, R, Info, Data, Index, Sel,
     FocusVisible and (Index = Selection.Focus), Ord(Index = HotIndex));
   State := [];
   if Sel then

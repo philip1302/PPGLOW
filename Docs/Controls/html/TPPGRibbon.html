@@ -26,6 +26,10 @@
 <li>Screenreader: Gruppierung „Men&#252;band“; Kinder sind Datei, Schnellzugriff, Registerkarten (gew&#228;hlt) und die Befehle der aktiven Karte mit Rolle (Button, Split-Button, Umschalt-Button, Men&#252;-Button). RTL gespiegelt.</li>
 <li>Nicht unterst&#252;tzt: Ribbon in der Titelleiste, MDI-Zusammenf&#252;hrung, Speichern des Schnellzugriffs (die Anwendung tut das in <code>OnQuickAccessChange</code>).</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>SaveQuickAccess</code>/<code>LoadQuickAccess</code>: vom Anwender angepassten Schnellzugriff speichern (Schl&#252;ssel: Action-Name, sonst Reiter/Gruppe/Item mit Beschriftung).</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>uses PPG.Ribbon.Items, PPG.Ribbon.Layout;
 
@@ -62,9 +66,9 @@ end;
 <li>Screenreader: Gruppierung &quot;Menueband&quot; mit Datei, Schnellzugriff, Registerkarten und den Befehlen der aktiven Karte als Kindern.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Images</code>, <code>LargeImages</code>, <code>Tabs</code>, <code>TabIndex</code>, <code>QuickAccess</code>, <code>QuickAccessPosition</code>, <code>ShowQuickAccess</code>, <code>QuickAccessCustomizable</code>, <code>ShowApplicationButton</code>, <code>ApplicationButtonCaption</code>, <code>ApplicationMenu</code>, <code>Backstage</code>, <code>Minimized</code>, <code>KeyTipsEnabled</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Visible</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Images</code>, <code>LargeImages</code>, <code>Tabs</code>, <code>TabIndex</code>, <code>QuickAccess</code>, <code>QuickAccessPosition</code>, <code>ShowQuickAccess</code>, <code>QuickAccessCustomizable</code>, <code>ShowApplicationButton</code>, <code>ApplicationButtonCaption</code>, <code>ApplicationMenu</code>, <code>Backstage</code>, <code>Minimized</code>, <code>KeyTipsEnabled</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnItemClick</code>, <code>OnTabChange</code>, <code>OnTabChanging</code>, <code>OnGalleryClick</code>, <code>OnGetGalleryItem</code>, <code>OnDrawGalleryItem</code>, <code>OnLauncherClick</code>, <code>OnMinimizedChange</code>, <code>OnQuickAccessChange</code>, <code>OnApplicationButtonClick</code>, <code>OnBackstageChange</code></p>
+<p><code>OnGesture</code>, <code>OnItemClick</code>, <code>OnTabChange</code>, <code>OnTabChanging</code>, <code>OnGalleryClick</code>, <code>OnGetGalleryItem</code>, <code>OnDrawGalleryItem</code>, <code>OnLauncherClick</code>, <code>OnMinimizedChange</code>, <code>OnQuickAccessChange</code>, <code>OnApplicationButtonClick</code>, <code>OnBackstageChange</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGRibbon.md</code>.</p>
 </body></html>

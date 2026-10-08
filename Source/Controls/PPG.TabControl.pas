@@ -29,13 +29,16 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.ComCtrls, Vcl.Forms,
   PPG.Types, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base,
-  PPG.Controls.Container, PPG.TabStrip;
+  PPG.Controls.Container, PPG.TabStrip, PPG.CustomDraw;
 
 type
   TPPGTabCloseQueryEvent = procedure(Sender: TObject; Index: Integer;
     var CanClose: Boolean) of object;
   TPPGTabCloseEvent = procedure(Sender: TObject; Index: Integer;
     var Action: TCloseAction) of object;
+  /// Wie TDrawTabEvent (OwnerDraw): Inhalt eines Reiters auf Canvas zeichnen.
+  TPPGDrawTabEvent = procedure(Control: TObject; TabIndex: Integer; const Rect: TRect;
+    Active: Boolean) of object;
 
   TPPGCustomTabs = class(TPPGCustomContainer, IPPGAccessibleChildren)
   private
@@ -48,7 +51,28 @@ type
     FPressedClose: Integer;
     FOnChange: TNotifyEvent;
     FOnChanging: TTabChangingEvent;
+    FTabStyles: TPPGTabStyles;
+    FMultiLine: Boolean;
+    FRaggedRight: Boolean;
+    FScrollOpposite: Boolean;
+    FStyle: TTabStyle;
+    FOwnerDraw: Boolean;
+    FOnDrawTab: TPPGDrawTabEvent;
+    FOnCustomDrawItem: TPPGCustomDrawItemEvent;
+    FDrawCanvas: TCanvas;
+    FInOwnerDraw: Boolean;
     procedure StripChanged(Sender: TObject);
+    procedure SetTabStyles(const Value: TPPGTabStyles);
+    procedure TabStylesChanged(Sender: TObject);
+    procedure SetMultiLine(const Value: Boolean);
+    procedure SetRaggedRight(const Value: Boolean);
+    procedure SetStyle(const Value: TTabStyle);
+    procedure SetOwnerDraw(const Value: Boolean);
+    function GetCanvas: TCanvas;
+    procedure StripDrawTab(Pos: Integer; const ACanvas: IPPGCanvas; const R: TRect;
+      Active: Boolean; var Style: TPPGDrawStyle; var DefaultDraw: Boolean);
+    function StripDrawContent(Pos: Integer; const ACanvas: IPPGCanvas; const R: TRect;
+      Active: Boolean): Boolean;
     procedure SetTabPosition(const Value: TTabPosition);
     procedure SetTabWidth(const Value: Integer);
     procedure SetTabHeight(const Value: Integer);
@@ -132,6 +156,21 @@ type
     property TabWidth: Integer read FTabWidth write SetTabWidth default 0;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnChanging: TTabChangingEvent read FOnChanging write FOnChanging;
+    /// Bereiche der Reiterleiste (Reiter, Hover, gewaehlt, Leiste, Unterstrich).
+    property TabStyles: TPPGTabStyles read FTabStyles write SetTabStyles;
+    /// Wie TPageControl: mehrere Reihen statt Blaetterpfeilen.
+    property MultiLine: Boolean read FMultiLine write SetMultiLine default False;
+    /// Mit MultiLine: Reihen nicht auf volle Breite strecken.
+    property RaggedRight: Boolean read FRaggedRight write SetRaggedRight default False;
+    /// Nur fuer DFM-Kompatibilitaet gespeichert (wirkt nicht).
+    property ScrollOpposite: Boolean read FScrollOpposite write FScrollOpposite default False;
+    /// Reiter, Knoepfe oder flache Knoepfe (wie TTabControl.Style).
+    property Style: TTabStyle read FStyle write SetStyle default tsTabs;
+    /// Mit OnDrawTab zeichnet die Anwendung den Inhalt der Reiter.
+    property OwnerDraw: Boolean read FOwnerDraw write SetOwnerDraw default False;
+    property OnDrawTab: TPPGDrawTabEvent read FOnDrawTab write FOnDrawTab;
+    /// Vor dem Zeichnen jedes Reiters: Style anpassen oder selbst zeichnen.
+    property OnCustomDrawItem: TPPGCustomDrawItemEvent read FOnCustomDrawItem write FOnCustomDrawItem;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -146,6 +185,8 @@ type
     /// Naechsten waehlbaren Reiter waehlen (wie Strg+Tab).
     procedure SelectNextTab(GoForward: Boolean);
     property Strip: TPPGTabStrip read FStrip;
+    /// Waehrend OnDrawTab: Canvas des Reiters (wie TTabControl.Canvas).
+    property Canvas: TCanvas read GetCanvas;
   end;
 
   TPPGCustomTabControl = class(TPPGCustomTabs)
@@ -187,7 +228,15 @@ type
     property Animation;
     property ShowCloseButtons;
     property HighContrastSupport;
+    property TabStyles;
     { wie TTabControl }
+    property MultiLine;
+    property OwnerDraw;
+    property RaggedRight;
+    property ScrollOpposite;
+    property Style;
+    property OnDrawTab;
+    property OnCustomDrawItem;
     property Align;
     property Anchors;
     property BiDiMode;
@@ -216,6 +265,8 @@ type
     property TabStop default True;
     property TabWidth;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnChanging;
     property OnClose;
@@ -261,6 +312,9 @@ begin
   FStrip.OnChange := StripChanged;
   FHotTrack := True;
   FPressedClose := -1;
+  FTabStyles := TPPGTabStyles.Create(Self);
+  FTabStyles.OnChange := TabStylesChanged;
+  FDrawCanvas := TCanvas.Create;
   Width := 289;
   Height := 193;
   TabStop := True;
@@ -274,6 +328,8 @@ begin
     FStrip.OnChange := nil;
   inherited Destroy;
   FreeAndNil(FStrip); // nach inherited: Kinder melden sich beim Zerstoeren noch ab
+  FreeAndNil(FDrawCanvas);
+  FreeAndNil(FTabStyles);
 end;
 
 procedure TPPGCustomTabs.CreateParams(var Params: TCreateParams);
@@ -373,6 +429,10 @@ begin
   FStrip.ShowClose := FShowCloseButtons;
   FStrip.Bottom := IsBottom;
   FStrip.RightToLeft := UseRightToLeftAlignment;
+  FStrip.MultiLine := FMultiLine;
+  FStrip.RaggedRight := FRaggedRight;
+  FStrip.ButtonStyle := TPPGTabButtonStyle(Ord(FStyle));
+  FStrip.AvailWidth := Width;
   FStrip.Layout(StripRect);
   if not (csLoading in ComponentState) and not (csDestroying in ComponentState) then
     Realign;
@@ -536,6 +596,107 @@ begin
   end;
 end;
 
+procedure TPPGCustomTabs.SetTabStyles(const Value: TPPGTabStyles);
+begin
+  FTabStyles.Assign(Value);
+end;
+
+procedure TPPGCustomTabs.TabStylesChanged(Sender: TObject);
+begin
+  // Schrift-Stile koennen die Reiterbreite aendern
+  LayoutTabs;
+end;
+
+procedure TPPGCustomTabs.SetMultiLine(const Value: Boolean);
+begin
+  if FMultiLine <> Value then
+  begin
+    FMultiLine := Value;
+    LayoutTabs;
+  end;
+end;
+
+procedure TPPGCustomTabs.SetRaggedRight(const Value: Boolean);
+begin
+  if FRaggedRight <> Value then
+  begin
+    FRaggedRight := Value;
+    LayoutTabs;
+  end;
+end;
+
+procedure TPPGCustomTabs.SetStyle(const Value: TTabStyle);
+begin
+  if FStyle <> Value then
+  begin
+    FStyle := Value;
+    LayoutTabs;
+  end;
+end;
+
+procedure TPPGCustomTabs.SetOwnerDraw(const Value: Boolean);
+begin
+  if FOwnerDraw <> Value then
+  begin
+    FOwnerDraw := Value;
+    Invalidate;
+  end;
+end;
+
+function TPPGCustomTabs.GetCanvas: TCanvas;
+begin
+  if FInOwnerDraw then
+    Result := FDrawCanvas
+  else
+    Result := inherited Canvas;
+end;
+
+procedure TPPGCustomTabs.StripDrawTab(Pos: Integer; const ACanvas: IPPGCanvas;
+  const R: TRect; Active: Boolean; var Style: TPPGDrawStyle; var DefaultDraw: Boolean);
+var
+  St: TPPGItemDrawState;
+  T: TPPGTabInfo;
+begin
+  T := FStrip.Tab(Pos);
+  St := [];
+  if Active then
+    Include(St, idsSelected);
+  if Pos = FStrip.HotTab then
+    Include(St, idsHot);
+  if not (Enabled and T.Enabled) then
+    Include(St, idsDisabled);
+  DefaultDraw := PPGRunCustomDraw(ACanvas, FDrawCanvas, Font, FOnCustomDrawItem, Self,
+    T.Index, R, St, Style);
+end;
+
+function TPPGCustomTabs.StripDrawContent(Pos: Integer; const ACanvas: IPPGCanvas;
+  const R: TRect; Active: Boolean): Boolean;
+var
+  DC: HDC;
+begin
+  // OwnerDraw wie TTabControl: Hintergrund ist gezeichnet, den Inhalt zeichnet
+  // die Anwendung auf Canvas
+  Result := True;
+  DC := ACanvas.BeginGdi;
+  try
+    FDrawCanvas.Handle := DC;
+    try
+      FDrawCanvas.Font := Font;
+      FDrawCanvas.Brush.Style := bsClear;
+      FInOwnerDraw := True;
+      try
+        FOnDrawTab(Self, FStrip.Tab(Pos).Index, R, Active);
+      finally
+        FInOwnerDraw := False;
+      end;
+    finally
+      FDrawCanvas.Handle := 0;
+    end;
+  finally
+    ACanvas.EndGdi(DC);
+  end;
+end;
+
 { ---- Zeichnen ---- }
 
 function TPPGCustomTabs.GetBackgroundColor: TColor;
@@ -614,6 +775,15 @@ begin
   Info.Focused := FocusVisible;
   Info.ShowAccel := AcceleratorCuesVisible;
   Info.Enabled := Enabled;
+  Info.Styles := FTabStyles;
+  Info.UseColors := not HC and not UseVclStyle;
+  Info.Dark := UseDarkMode;
+  Info.OnDrawTab := nil;
+  Info.OnDrawContent := nil;
+  if Assigned(FOnCustomDrawItem) then
+    Info.OnDrawTab := StripDrawTab;
+  if FOwnerDraw and Assigned(FOnDrawTab) then
+    Info.OnDrawContent := StripDrawContent;
   FStrip.Paint(ACanvas, TabRenderer, Info);
 end;
 

@@ -32,7 +32,7 @@ uses
   {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF}
   Vcl.Controls, Vcl.Graphics, Vcl.ImgList,
   PPG.Types, PPG.Appearance, PPG.Animation, PPG.Layout, PPG.Tokens,
-  PPG.Render.Intf, PPG.StyleManager, PPG.Accessibility, PPG.UIA;
+  PPG.Render.Intf, PPG.StyleManager, PPG.Accessibility, PPG.UIA, PPG.ElementStyle;
 
 type
   TPPGCustomControl = class(TCustomControl, IPPGStyleClient, IPPGAccessibleHost)
@@ -47,11 +47,15 @@ type
     FImageIndex: TPPGImageIndex;
     FHotImageIndex: TPPGImageIndex;
     FDisabledImageIndex: TPPGImageIndex;
+    FPressedImageIndex: TPPGImageIndex;
+    FImageTint: TPPGImageTint;
     FImagePosition: TPPGImagePosition;
     FSpacing: Integer;
     FWordWrap: Boolean;
     FShowFocusRect: Boolean;
     FHighContrastSupport: Boolean;
+    FRoundedCorners: TPPGCorners;
+    FShadow: TPPGShadow;
     FMouseInside: Boolean;
     FMousePressed: Boolean;
     FKeyPressed: Boolean;
@@ -69,20 +73,35 @@ type
     FStyledKind: Byte; // Inhalt des Caches: 0 = leer, 1 = VCL-Style, 2 = Dark Mode
     {$IFDEF PPG_HAS_IMAGENAME}
     FImageName: TImageName;
+    FHotImageName: TImageName;
+    FDisabledImageName: TImageName;
+    FPressedImageName: TImageName;
     procedure SetImageName(const Value: TImageName);
+    procedure SetStateImageName(Index: Integer; const Value: TImageName);
+    function GetStateImageName(Index: Integer): TImageName;
+    function IsStateImageNameStored(Index: Integer): Boolean;
     {$ENDIF}
     procedure ResolveImageName;
+    procedure ResolveStateImageNames;
     procedure InvalidateStyledAppearance;
     procedure ReleaseAccessible;
     procedure RefreshUIState;
     procedure SetAppearance(const Value: TPPGAppearance);
     procedure SetAnimation(const Value: TPPGAnimationSettings);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    procedure SetRoundedCorners(const Value: TPPGCorners);
+    procedure SetShadow(const Value: TPPGShadow);
+    procedure ShadowChanged(Sender: TObject);
     procedure SetPreset(const Value: string);
     procedure SetImages(const Value: TCustomImageList);
     procedure SetImageIndex(const Value: TPPGImageIndex);
     procedure SetHotImageIndex(const Value: TPPGImageIndex);
     procedure SetDisabledImageIndex(const Value: TPPGImageIndex);
+    procedure SetPressedImageIndex(const Value: TPPGImageIndex);
+    procedure SetImageTint(const Value: TPPGImageTint);
+    function IsHotImageIndexStored: Boolean;
+    function IsDisabledImageIndexStored: Boolean;
+    function IsPressedImageIndexStored: Boolean;
     procedure SetImagePosition(const Value: TPPGImagePosition);
     procedure SetSpacing(const Value: Integer);
     procedure SetWordWrap(const Value: Boolean);
@@ -201,8 +220,24 @@ type
     function LayoutBodyRect: TRect;
     function GetContentRect(const Body: TRect; const Style: TPPGSurfaceStyle): TRect; virtual;
     function GetCurrentImageIndex: Integer; virtual;
+    /// Ausrichtung von Bild und Text im Inhalt (Standard: zentriert).
+    function GetCaptionAlignment: TPPGHorzAlign; virtual;
+    /// Zeichnet das Bild des aktuellen Zustands.
+    procedure DrawStateImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer;
+      AEnabled: Boolean; const Style: TPPGSurfaceStyle); virtual;
     function GetTextFlags: Cardinal; virtual;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); virtual;
+    /// Platz fuer den Schatten je Seite (px; 0 ohne Schatten bzw. im Hochkontrast).
+    function ShadowInsets: TRect;
+    /// Schatten unter Body zeichnen (eckige Ecken wie RoundedCorners).
+    procedure PaintShadow(const ACanvas: IPPGCanvas; const Body: TRect; Radius: Integer);
+    /// Ecken ohne Rundung (Gegenstueck zu RoundedCorners).
+    function SquareCorners: TPPGCorners;
+    /// Gerundete Ecken; die uebrigen werden eckig (Button-Gruppen).
+    property RoundedCorners: TPPGCorners read FRoundedCorners write SetRoundedCorners
+      default [pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft];
+    /// Schatten unter der Flaeche (Elevation).
+    property Shadow: TPPGShadow read FShadow write SetShadow;
     procedure DoPaintBackground(const ACanvas: IPPGCanvas; const Body: TRect;
       const Style: TPPGSurfaceStyle); virtual;
     procedure DoPaintContent(const ACanvas: IPPGCanvas; const Body: TRect;
@@ -230,8 +265,24 @@ type
     {$IFDEF PPG_HAS_IMAGENAME}
     property ImageName: TImageName read FImageName write SetImageName stored IsImageNameStored;
     {$ENDIF}
-    property HotImageIndex: TPPGImageIndex read FHotImageIndex write SetHotImageIndex default -1;
-    property DisabledImageIndex: TPPGImageIndex read FDisabledImageIndex write SetDisabledImageIndex default -1;
+    property HotImageIndex: TPPGImageIndex read FHotImageIndex write SetHotImageIndex
+      stored IsHotImageIndexStored default -1;
+    property DisabledImageIndex: TPPGImageIndex read FDisabledImageIndex write SetDisabledImageIndex
+      stored IsDisabledImageIndexStored default -1;
+    /// Bild beim Druecken bzw. eingerastet (-1 = wie in Ruhe bzw. Hover).
+    property PressedImageIndex: TPPGImageIndex read FPressedImageIndex write SetPressedImageIndex
+      stored IsPressedImageIndexStored default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    property HotImageName: TImageName index 1 read GetStateImageName write SetStateImageName
+      stored IsStateImageNameStored;
+    property DisabledImageName: TImageName index 2 read GetStateImageName write SetStateImageName
+      stored IsStateImageNameStored;
+    property PressedImageName: TImageName index 3 read GetStateImageName write SetStateImageName
+      stored IsStateImageNameStored;
+    {$ENDIF}
+    /// itTextColor: Bild einfarbig in der Textfarbe des Zustands (einfarbige
+    /// Symbole folgen Hover, Dunkel und Deaktiviert).
+    property ImageTint: TPPGImageTint read FImageTint write SetImageTint default itNone;
     property ImagePosition: TPPGImagePosition read FImagePosition write SetImagePosition default ipLeft;
     property Spacing: Integer read FSpacing write SetSpacing default 4;
     property WordWrap: Boolean read FWordWrap write SetWordWrap default False;
@@ -273,7 +324,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, Vcl.Forms, Vcl.Themes,
+  System.SysUtils, System.Math, Vcl.Forms, Vcl.Themes,
   PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.DpiUtils,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Presets, PPG.VclStyles, PPG.Theme,
   PPG.UIA.Intf, Winapi.oleacc;
@@ -297,10 +348,14 @@ begin
   FImageIndex := -1;
   FHotImageIndex := -1;
   FDisabledImageIndex := -1;
+  FPressedImageIndex := -1;
   FImagePosition := ipLeft;
   FSpacing := 4;
   FShowFocusRect := True;
   FHighContrastSupport := True;
+  FRoundedCorners := PPGAllCorners;
+  FShadow := TPPGShadow.Create(Self);
+  FShadow.OnChange := ShadowChanged;
 
   FAppearance := TPPGAppearance.Create(Self);
   FAppearance.OnChange := AppearanceChanged;
@@ -339,6 +394,7 @@ begin
   if FAnimation <> nil then
     FAnimation.OnChange := nil;
   FreeAndNil(FStyledAppearance);
+  FreeAndNil(FShadow);
   FreeAndNil(FAnimation);
   FreeAndNil(FAppearance);
   FRenderer := nil;
@@ -413,6 +469,75 @@ begin
   // Unbekannter Name -> -1 (kein Bild), keine Exception: die ImageList kann
   // zur Laufzeit befuellt werden
   FImageIndex := FImages.GetIndexByName(FImageName);
+{$ENDIF}
+  ResolveStateImageNames;
+end;
+
+procedure TPPGCustomControl.ResolveStateImageNames;
+begin
+{$IFDEF PPG_HAS_IMAGENAME}
+  if (csLoading in ComponentState) or not ImageNameAvailable then
+    Exit;
+  if FHotImageName <> '' then
+    FHotImageIndex := FImages.GetIndexByName(FHotImageName);
+  if FDisabledImageName <> '' then
+    FDisabledImageIndex := FImages.GetIndexByName(FDisabledImageName);
+  if FPressedImageName <> '' then
+    FPressedImageIndex := FImages.GetIndexByName(FPressedImageName);
+{$ENDIF}
+end;
+
+{$IFDEF PPG_HAS_IMAGENAME}
+function TPPGCustomControl.GetStateImageName(Index: Integer): TImageName;
+begin
+  case Index of
+    1: Result := FHotImageName;
+    2: Result := FDisabledImageName;
+  else
+    Result := FPressedImageName;
+  end;
+end;
+
+procedure TPPGCustomControl.SetStateImageName(Index: Integer; const Value: TImageName);
+begin
+  case Index of
+    1: FHotImageName := Value;
+    2: FDisabledImageName := Value;
+  else
+    FPressedImageName := Value;
+  end;
+  ResolveStateImageNames;
+  Invalidate;
+end;
+
+function TPPGCustomControl.IsStateImageNameStored(Index: Integer): Boolean;
+begin
+  Result := ImageNameAvailable and (GetStateImageName(Index) <> '');
+end;
+{$ENDIF}
+
+function TPPGCustomControl.IsHotImageIndexStored: Boolean;
+begin
+  // Mit Namen wird nur der Name gespeichert (robust gegen Umsortieren)
+  Result := FHotImageIndex <> -1;
+{$IFDEF PPG_HAS_IMAGENAME}
+  Result := Result and not (ImageNameAvailable and (FHotImageName <> ''));
+{$ENDIF}
+end;
+
+function TPPGCustomControl.IsDisabledImageIndexStored: Boolean;
+begin
+  Result := FDisabledImageIndex <> -1;
+{$IFDEF PPG_HAS_IMAGENAME}
+  Result := Result and not (ImageNameAvailable and (FDisabledImageName <> ''));
+{$ENDIF}
+end;
+
+function TPPGCustomControl.IsPressedImageIndexStored: Boolean;
+begin
+  Result := FPressedImageIndex <> -1;
+{$IFDEF PPG_HAS_IMAGENAME}
+  Result := Result and not (ImageNameAvailable and (FPressedImageName <> ''));
 {$ENDIF}
 end;
 
@@ -652,7 +777,11 @@ begin
             IPPGThemeRenderer, TR);
         if TR <> nil then
           TR.ApplyThemeColors(FStyledAppearance, True);
+        // Eigene Dunkel-Farben (Appearance.Dark) nach den Preset-Farben
+        PPGApplyDarkColors(FStyledAppearance, FAppearance.Dark);
       end;
+      if Kind = 1 then
+        FStyledAppearance.Focused.Clear; // VCL-Style: keine eigenen Fokusfarben
     except
       FreeAndNil(FStyledAppearance);
       raise;
@@ -882,6 +1011,35 @@ begin
   if FHotImageIndex <> V then
   begin
     FHotImageIndex := V;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    if ImageNameAvailable then
+      FHotImageName := FImages.GetNameByIndex(V);
+    {$ENDIF}
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomControl.SetPressedImageIndex(const Value: TPPGImageIndex);
+var
+  V: TPPGImageIndex;
+begin
+  V := CheckImageIndex('PressedImageIndex', Value);
+  if FPressedImageIndex <> V then
+  begin
+    FPressedImageIndex := V;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    if ImageNameAvailable then
+      FPressedImageName := FImages.GetNameByIndex(V);
+    {$ENDIF}
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomControl.SetImageTint(const Value: TPPGImageTint);
+begin
+  if FImageTint <> Value then
+  begin
+    FImageTint := Value;
     Invalidate;
   end;
 end;
@@ -894,6 +1052,10 @@ begin
   if FDisabledImageIndex <> V then
   begin
     FDisabledImageIndex := V;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    if ImageNameAvailable then
+      FDisabledImageName := FImages.GetNameByIndex(V);
+    {$ENDIF}
     Invalidate;
   end;
 end;
@@ -1479,6 +1641,7 @@ end;
 function TPPGCustomControl.GetBodyRect(const Style: TPPGSurfaceStyle): TRect;
 var
   Inset: Integer;
+  SI: TRect;
 begin
   Result := ClientRect;
   // Inset aus dem MAXIMALEN Glow (Appearance), nicht aus dem aktuellen
@@ -1491,6 +1654,12 @@ begin
   if Inset > (Result.Bottom - Result.Top) div 4 then
     Inset := (Result.Bottom - Result.Top) div 4;
   InflateRect(Result, -Inset, -Inset);
+  // Platz fuer den Schatten (je Seite das Groessere von Glow und Schatten)
+  SI := ShadowInsets;
+  Result.Left := Max(Result.Left, SI.Left);
+  Result.Top := Max(Result.Top, SI.Top);
+  Result.Right := Min(Result.Right, ClientWidth - SI.Right);
+  Result.Bottom := Min(Result.Bottom, ClientHeight - SI.Bottom);
 end;
 
 function TPPGCustomControl.GetContentRect(const Body: TRect;
@@ -1503,6 +1672,30 @@ begin
   InflateRect(Result, -D, -D);
 end;
 
+function TPPGCustomControl.GetCaptionAlignment: TPPGHorzAlign;
+begin
+  Result := haCenter;
+end;
+
+procedure TPPGCustomControl.DrawStateImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer;
+  AEnabled: Boolean; const Style: TPPGSurfaceStyle);
+var
+  DC: HDC;
+begin
+  if FImageTint = itNone then
+  begin
+    ACanvas.DrawImage(FImages, Index, X, Y, AEnabled);
+    Exit;
+  end;
+  // Einfarbig in der Textfarbe des Zustands (deaktiviert: dessen Textfarbe)
+  DC := ACanvas.BeginGdi;
+  try
+    PPGGdiDrawImageTinted(DC, FImages, Index, X, Y, Style.TextColor);
+  finally
+    ACanvas.EndGdi(DC);
+  end;
+end;
+
 function TPPGCustomControl.GetCurrentImageIndex: Integer;
 begin
   Result := FImageIndex;
@@ -1511,6 +1704,8 @@ begin
     if FDisabledImageIndex >= 0 then
       Result := FDisabledImageIndex;
   end
+  else if IsDown and (FPressedImageIndex >= 0) then
+    Result := FPressedImageIndex
   else if IsHot and (FHotImageIndex >= 0) then
     Result := FHotImageIndex;
   if (FImages = nil) or (Result >= FImages.Count) then
@@ -1677,13 +1872,91 @@ procedure TPPGCustomControl.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TR
 var
   Style: TPPGSurfaceStyle;
   Body: TRect;
+  Square, Old: TPPGCorners;
 begin
   Style := GetCurrentStyle;
   // Koerper-Rechteck immer aus dem Hot-Stil ermitteln (maximaler Glow-Platz)
   Body := LayoutBodyRect;
-  DoPaintBackground(ACanvas, Body, Style);
+  // Eckige Ecken gelten fuer Flaeche und Fokus, nicht fuer den Inhalt
+  Square := SquareCorners;
+  Old := PPGSetSquareCorners(ACanvas, Square);
+  try
+    PaintShadow(ACanvas, Body, Style.Rounding);
+    DoPaintBackground(ACanvas, Body, Style);
+  finally
+    PPGSetSquareCorners(ACanvas, Old);
+  end;
   DoPaintContent(ACanvas, Body, Style);
-  DoPaintOverlay(ACanvas, Body, Style);
+  Old := PPGSetSquareCorners(ACanvas, Square);
+  try
+    DoPaintOverlay(ACanvas, Body, Style);
+  finally
+    PPGSetSquareCorners(ACanvas, Old);
+  end;
+end;
+
+function TPPGCustomControl.SquareCorners: TPPGCorners;
+begin
+  Result := PPGAllCorners - FRoundedCorners;
+end;
+
+function TPPGCustomControl.ShadowInsets: TRect;
+var
+  E, O: Integer;
+begin
+  Result := Rect(0, 0, 0, 0);
+  if (FShadow = nil) or not FShadow.IsVisible or (FHighContrastSupport and PPGIsHighContrast) then
+    Exit;
+  E := PPGScale(FShadow.Size, ScalePPI);
+  O := PPGScale(FShadow.OffsetY, ScalePPI);
+  Result := Rect(E, Max(0, E - O), E, Max(0, E + O));
+end;
+
+procedure TPPGCustomControl.PaintShadow(const ACanvas: IPPGCanvas; const Body: TRect; Radius: Integer);
+var
+  E, I, A: Integer;
+  R, SR: TRect;
+  C: TColor;
+begin
+  if (FShadow = nil) or not FShadow.IsVisible or (FHighContrastSupport and PPGIsHighContrast) or
+    IsRectEmpty(Body) then
+    Exit;
+  E := PPGScale(FShadow.Size, ScalePPI);
+  if E <= 0 then
+    Exit;
+  R := Body;
+  OffsetRect(R, 0, PPGScale(FShadow.OffsetY, ScalePPI));
+  C := PPGColorToRGB(FShadow.Color);
+  // Gestapelte Flaechen: an der Kante volle Deckkraft, nach aussen linear weniger
+  A := Max(1, FShadow.Opacity div E);
+  for I := E downto 1 do
+  begin
+    SR := R;
+    InflateRect(SR, I, I);
+    ACanvas.FillRoundRect(SR, Radius + I, C, A);
+  end;
+end;
+
+procedure TPPGCustomControl.SetRoundedCorners(const Value: TPPGCorners);
+begin
+  if FRoundedCorners <> Value then
+  begin
+    FRoundedCorners := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomControl.SetShadow(const Value: TPPGShadow);
+begin
+  FShadow.Assign(Value);
+end;
+
+procedure TPPGCustomControl.ShadowChanged(Sender: TObject);
+begin
+  // Der Schatten verkleinert die Flaeche: Inhalt (und Kinder) neu ausrichten
+  if not (csLoading in ComponentState) and not (csDestroying in ComponentState) then
+    Realign;
+  Invalidate;
 end;
 
 procedure TPPGCustomControl.DoPaintBackground(const ACanvas: IPPGCanvas; const Body: TRect;
@@ -1706,35 +1979,43 @@ var
   ImgIndex: Integer;
   Text: string;
   ImgEnabled: Boolean;
+  F, Temp: TFont;
 begin
   if IsRectEmpty(Content) then
     Exit;
   Text := Caption;
   ImgIndex := GetCurrentImageIndex;
+  Temp := nil;
+  try
+    // Zusaetzliche Schriftstile des Zustands (Appearance.Hot.FontStyle ...)
+    F := PPGStyledFont(Font, Style.FontStyle, Temp);
+    FillChar(Input, SizeOf(Input), 0);
+    Input.Bounds := Content;
+    if ImgIndex >= 0 then
+    begin
+      Input.ImageSize.cx := FImages.Width;
+      Input.ImageSize.cy := FImages.Height;
+    end;
+    if Text <> '' then
+      Input.TextSize := ACanvas.MeasureText(Text, F, Content.Right - Content.Left, FWordWrap);
+    Input.ImagePosition := FImagePosition;
+    Input.Spacing := PPGScale(FSpacing, ScalePPI);
+    Input.Alignment := GetCaptionAlignment;
+    Input.RightToLeft := UseRightToLeftAlignment;
+    Layout := TPPGLayoutEngine.Calculate(Input);
 
-  FillChar(Input, SizeOf(Input), 0);
-  Input.Bounds := Content;
-  if ImgIndex >= 0 then
-  begin
-    Input.ImageSize.cx := FImages.Width;
-    Input.ImageSize.cy := FImages.Height;
+    if ImgIndex >= 0 then
+    begin
+      // Graues Bild nur, wenn kein eigenes DisabledImageIndex gesetzt ist
+      ImgEnabled := Enabled or (FDisabledImageIndex >= 0);
+      DrawStateImage(ACanvas, ImgIndex, Layout.ImageRect.Left, Layout.ImageRect.Top,
+        ImgEnabled, Style);
+    end;
+    if Text <> '' then
+      ACanvas.DrawText(Layout.TextRect, Text, F, Style.TextColor, GetTextFlags);
+  finally
+    Temp.Free;
   end;
-  if Text <> '' then
-    Input.TextSize := ACanvas.MeasureText(Text, Font, Content.Right - Content.Left, FWordWrap);
-  Input.ImagePosition := FImagePosition;
-  Input.Spacing := PPGScale(FSpacing, ScalePPI);
-  Input.Alignment := haCenter;
-  Input.RightToLeft := UseRightToLeftAlignment;
-  Layout := TPPGLayoutEngine.Calculate(Input);
-
-  if ImgIndex >= 0 then
-  begin
-    // Graues Bild nur, wenn kein eigenes DisabledImageIndex gesetzt ist
-    ImgEnabled := Enabled or (FDisabledImageIndex >= 0);
-    ACanvas.DrawImage(FImages, ImgIndex, Layout.ImageRect.Left, Layout.ImageRect.Top, ImgEnabled);
-  end;
-  if Text <> '' then
-    ACanvas.DrawText(Layout.TextRect, Text, Font, Style.TextColor, GetTextFlags);
 end;
 
 procedure TPPGCustomControl.DoPaintOverlay(const ACanvas: IPPGCanvas; const Body: TRect;

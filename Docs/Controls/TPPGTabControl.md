@@ -11,6 +11,10 @@ Palette **PPGlow** - Unit `PPG.TabControl` - Basis `TPPGCustomTabControl`
 - `tpLeft`/`tpRight` werden wie oben/unten gezeichnet.
 - Überlauf mit Blätterpfeilen, gleitender Unterstrich, Schließen-Knöpfe.
 
+## Anpassung
+
+- `TabStyles`, `MultiLine`, `RaggedRight`, `Style`, `OwnerDraw`, `OnDrawTab` und `OnCustomDrawItem`.
+
 ## Verhalten (aus dem Quelltext)
 
 Reiter-Controls der Suite.
@@ -29,15 +33,15 @@ direkt im Innenbereich.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `ShowCloseButtons`, `HighContrastSupport`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `ShowCloseButtons`, `HighContrastSupport`, `TabStyles`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `BiDiMode`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HotTrack`, `Images`, `Padding`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabHeight`, `TabOrder`, `TabPosition`, `Tabs`, `TabIndex`, `TabStop`, `TabWidth`, `Visible`
+`MultiLine`, `OwnerDraw`, `RaggedRight`, `ScrollOpposite`, `Style`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HotTrack`, `Images`, `Padding`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabHeight`, `TabOrder`, `TabPosition`, `Tabs`, `TabIndex`, `TabStop`, `TabWidth`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnChanging`, `OnClose`, `OnCloseQuery`, `OnContextPopup`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnGetImageIndex`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnResize`, `OnStartDock`, `OnStartDrag`
+`OnDrawTab`, `OnCustomDrawItem`, `OnGesture`, `OnChange`, `OnChanging`, `OnClose`, `OnCloseQuery`, `OnContextPopup`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnGetImageIndex`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnResize`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTabControl.md`.

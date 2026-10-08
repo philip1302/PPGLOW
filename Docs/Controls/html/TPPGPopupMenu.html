@@ -14,6 +14,10 @@
 <li>Felder der Suite (Edit, Memo, ComboBox, …) zeigen ohne eigenes <code>PopupMenu</code> ein &#252;bersetztes Bearbeiten-Men&#252; in diesem Stil. <code>UseSystemContextMenu = True</code> stellt das Windows-Men&#252; wieder her.</li>
 <li>Screenreader: Ereignisse <code>EVENT_SYSTEM_MENUPOPUPSTART/END</code>, Eintr&#228;ge als Kinder mit Rolle Men&#252;eintrag.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>MenuStyles</code> (Men&#252;, Hover, Trennlinie, Tastenk&#252;rzel) und <code>OnCustomDrawItem</code>.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>PPGPopupMenu1.Preset := &#39;Fluent11&#39;;
 Panel1.PopupMenu := PPGPopupMenu1;   // Rechtsklick oder Umschalt+F10
@@ -30,7 +34,9 @@ Panel1.PopupMenu := PPGPopupMenu1;   // Rechtsklick oder Umschalt+F10
 <li>Owner-Draw fremder Menues (OnDrawItem/OnAdvancedDrawItem) wird weiter aufgerufen.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>StyleManager</code>, <code>Preset</code></p>
+<p><code>StyleManager</code>, <code>Preset</code>, <code>MenuStyles</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnCustomDrawItem</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGPopupMenu.md</code>.</p>
 </body></html>

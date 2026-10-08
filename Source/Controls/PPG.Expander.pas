@@ -20,13 +20,14 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics,
-  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Container;
+  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Container, PPG.ElementStyle;
 
 type
   TPPGExpandingEvent = procedure(Sender: TObject; var AllowChange: Boolean) of object;
 
   TPPGCustomExpander = class(TPPGCustomContainer)
   private
+    FHeaderStyle: TPPGElementStyle;
     FExpanded: Boolean;
     FDetail: string;
     FExpandedHeight: Integer;
@@ -37,6 +38,8 @@ type
     FOnExpanding: TPPGExpandingEvent;
     FOnExpanded: TNotifyEvent;
     FOnCollapsed: TNotifyEvent;
+    procedure SetHeaderStyle(const Value: TPPGElementStyle);
+    procedure HeaderStyleChanged(Sender: TObject);
     procedure SetExpanded(const Value: Boolean);
     procedure SetDetail(const Value: string);
     procedure SetExpandedHeight(const Value: Integer);
@@ -75,6 +78,8 @@ type
     property OnExpanding: TPPGExpandingEvent read FOnExpanding write FOnExpanding;
     property OnExpanded: TNotifyEvent read FOnExpanded write FOnExpanded;
     property OnCollapsed: TNotifyEvent read FOnCollapsed write FOnCollapsed;
+    /// Kopfzeile: Flaeche (Color), Text (TextColor), Schrift.
+    property HeaderStyle: TPPGElementStyle read FHeaderStyle write SetHeaderStyle;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -98,6 +103,7 @@ type
     property Animation;
     property HighContrastSupport;
     property Expanded;
+    property HeaderStyle;
     property Detail;
     property ExpandedHeight;
     { VCL-Standard }
@@ -123,6 +129,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnCollapsed;
     property OnContextPopup;
     property OnEnter;
@@ -156,9 +164,23 @@ var
 
 { TPPGCustomExpander }
 
+procedure TPPGCustomExpander.SetHeaderStyle(const Value: TPPGElementStyle);
+begin
+  FHeaderStyle.Assign(Value);
+end;
+
+procedure TPPGCustomExpander.HeaderStyleChanged(Sender: TObject);
+begin
+  RequestAutoSize;
+  Realign;
+  Invalidate;
+end;
+
 constructor TPPGCustomExpander.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FHeaderStyle := TPPGElementStyle.Create(Self);
+  FHeaderStyle.OnChange := HeaderStyleChanged;
   ControlStyle := ControlStyle - [csClickEvents, csSetCaption];
   FExpanded := True;
   TabStop := True;
@@ -177,15 +199,22 @@ begin
     FExpandAnim.OnStep := nil;
   FreeAndNil(FExpandAnim);
   inherited Destroy;
+  FreeAndNil(FHeaderStyle);
 end;
 
 function TPPGCustomExpander.HeaderHeight: Integer;
 var
   PPI, H: Integer;
   S: TSize;
+  Temp: TFont;
 begin
   PPI := ScalePPI;
-  S := PPGMeasureTextNoCanvas('Wg', Font, 0, False);
+  Temp := nil;
+  try
+    S := PPGMeasureTextNoCanvas('Wg', PPGElementFont(FHeaderStyle, Font, [], Temp), 0, False);
+  finally
+    Temp.Free;
+  end;
   H := S.cy;
   if FDetail <> '' then
     H := H + S.cy;
@@ -415,6 +444,7 @@ end;
 
 procedure TPPGCustomExpander.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
+  F, HF: TFont;
   Style: TPPGSurfaceStyle;
   HR, TR, DR, CR: TRect;
   PPI, HH, CX, CY, Half, Quarter, W, Dir: Integer;
@@ -438,6 +468,19 @@ begin
     DetailCol := PPGBlendColor(TextCol, Style.Color, 0.35)
   else
     DetailCol := TextCol;
+  // Eigene Flaeche und Textfarbe der Kopfzeile (HeaderStyle)
+  if not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle then
+  begin
+    if FHeaderStyle.HasFill(UseDarkMode) then
+    begin
+      TR := HR;
+      InflateRect(TR, -Style.BorderWidth, -Style.BorderWidth);
+      ACanvas.FillRoundRect(TR, Max(0, Style.Rounding - Style.BorderWidth),
+        FHeaderStyle.FillFor(UseDarkMode, clNone), 255);
+    end;
+    if Enabled then
+      TextCol := FHeaderStyle.TextFor(UseDarkMode, TextCol);
+  end;
   // Hover/Druck auf der Kopfzeile
   if Enabled and (FHeaderHot or FHeaderDown) then
   begin
@@ -487,19 +530,25 @@ begin
   Flags := DT_SINGLELINE or DT_END_ELLIPSIS or DT_NOCLIP;
   if not AcceleratorCuesVisible then
     Flags := Flags or DT_HIDEPREFIX;
-  if FDetail = '' then
-    ACanvas.DrawText(TR, Caption, Font, TextCol, DrawTextBiDiModeFlags(Flags or DT_VCENTER))
-  else
-  begin
-    S := PPGMeasureTextNoCanvas('Wg', Font, 0, False);
-    DR := TR;
-    TR.Top := (HR.Top + HR.Bottom) div 2 - S.cy;
-    TR.Bottom := TR.Top + S.cy;
-    DR.Top := TR.Bottom;
-    DR.Bottom := DR.Top + S.cy;
-    ACanvas.DrawText(TR, Caption, Font, TextCol, DrawTextBiDiModeFlags(Flags));
-    ACanvas.DrawText(DR, FDetail, Font, DetailCol,
-      DrawTextBiDiModeFlags(DT_SINGLELINE or DT_END_ELLIPSIS or DT_NOPREFIX));
+  HF := nil;
+  try
+    F := PPGElementFont(FHeaderStyle, Font, [], HF);
+    if FDetail = '' then
+      ACanvas.DrawText(TR, Caption, F, TextCol, DrawTextBiDiModeFlags(Flags or DT_VCENTER))
+    else
+    begin
+      S := PPGMeasureTextNoCanvas('Wg', F, 0, False);
+      DR := TR;
+      TR.Top := (HR.Top + HR.Bottom) div 2 - S.cy;
+      TR.Bottom := TR.Top + S.cy;
+      DR.Top := TR.Bottom;
+      DR.Bottom := DR.Top + S.cy;
+      ACanvas.DrawText(TR, Caption, F, TextCol, DrawTextBiDiModeFlags(Flags));
+      ACanvas.DrawText(DR, FDetail, Font, DetailCol,
+        DrawTextBiDiModeFlags(DT_SINGLELINE or DT_END_ELLIPSIS or DT_NOPREFIX));
+    end;
+  finally
+    HF.Free;
   end;
   if FocusVisible and Focused then
   begin

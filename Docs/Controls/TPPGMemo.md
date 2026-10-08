@@ -23,11 +23,11 @@ TPPGMemo - mehrzeiliges Eingabefeld in der Optik des Presets.
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Alignment`, `Anchors`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HideSelection`, `Lines`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ScrollBars`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `WantReturns`, `WantTabs`, `WordWrap`
+`Align`, `Alignment`, `Anchors`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HideSelection`, `Lines`, `MaxLength`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ScrollBars`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`, `WantReturns`, `WantTabs`, `WordWrap`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnMouseWheel`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnMouseWheel`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGMemo.md`.

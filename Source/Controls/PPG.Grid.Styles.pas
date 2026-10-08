@@ -17,7 +17,7 @@ unit PPG.Grid.Styles;
 interface
 
 uses
-  System.Classes, System.SysUtils, Vcl.Graphics, PPG.Types, PPG.Tokens;
+  System.Classes, System.SysUtils, Vcl.Graphics, PPG.Types, PPG.Tokens, PPG.ElementStyle;
 
 type
   TPPGCondRule = (crRange, crEqual, crContains, crTop, crBottom, crColorScale,
@@ -34,8 +34,42 @@ type
     BarColor: TColor;
     Icon: Integer;      // Symbolsatz: -1 = keins, 0 = runter, 1 = gleich, 2 = hoch
     IconColor: TColor;
+    /// Zusaetzliche Schriftstile (Bold bleibt aus Kompatibilitaet erhalten).
+    FontStyle: TFontStyles;
+    /// Andere Schrift ('' = Schrift der Spalte) bzw. Groesse in Punkt (0 = gleich).
+    FontName: string;
+    FontSize: Integer;
     procedure Reset;
     function IsDefault: Boolean;
+  end;
+
+  /// Bereiche des Grids (Anpassbarkeit). Nur gesetzte Werte ueberschreiben
+  /// die vom Preset berechneten Farben (clDefault = Preset).
+  TPPGGridStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Kopfzeilen und -spalten, Baender (Color, TextColor, BorderColor =
+    /// Linien im Kopf, Font).
+    property Header: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Summenzeile (ShowFooter) und Gruppenfuss; ohne Werte wie Header.
+    property Footer: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Auswahl bei Fokus. Mit Color deckend statt halbtransparent.
+    property Selection: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Auswahl ohne Fokus.
+    property SelectionInactive: TPPGElementStyle index 3 read GetItem write SetItem;
+    /// Zebra: jede zweite Datenzeile (Color setzen schaltet es ein).
+    property AlternateRow: TPPGElementStyle index 4 read GetItem write SetItem;
+    /// Zeile unter der Maus (Color setzen schaltet es ein).
+    property HotRow: TPPGElementStyle index 5 read GetItem write SetItem;
+    /// Gitterlinien: Color = Linienfarbe.
+    property GridLine: TPPGElementStyle index 6 read GetItem write SetItem;
+    /// Fokuszelle: BorderColor = Rahmen, Color = Flaeche, TextColor.
+    property FocusedCell: TPPGElementStyle index 7 read GetItem write SetItem;
+    /// Gruppenkopf-Zeilen.
+    property GroupRow: TPPGElementStyle index 8 read GetItem write SetItem;
+    /// Filterzeile.
+    property FilterRow: TPPGElementStyle index 9 read GetItem write SetItem;
   end;
 
   IPPGGridStylesHost = interface
@@ -125,6 +159,9 @@ uses
 
 procedure TPPGGridCellStyle.Reset;
 begin
+  FontStyle := [];
+  FontName := '';
+  FontSize := 0;
   Fill := clNone;
   TextColor := clNone;
   Bold := False;
@@ -136,7 +173,15 @@ end;
 
 function TPPGGridCellStyle.IsDefault: Boolean;
 begin
-  Result := (Fill = clNone) and (TextColor = clNone) and not Bold and (Bar < 0) and (Icon < 0);
+  Result := (Fill = clNone) and (TextColor = clNone) and not Bold and (Bar < 0) and (Icon < 0) and
+    (FontStyle = []) and (FontName = '') and (FontSize = 0);
+end;
+
+{ TPPGGridStyles }
+
+constructor TPPGGridStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 10);
 end;
 
 function PPGCondParseNumber(const S: string; out V: Double): Boolean;

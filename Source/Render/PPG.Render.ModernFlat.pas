@@ -16,7 +16,7 @@ type
   public
     function Name: string; override;
     procedure ApplyDefaults(Appearance: TPPGAppearance); override;
-    function Tokens(Dark: Boolean): TPPGTokens; override;
+    function BaseTokens(Dark: Boolean): TPPGTokens; override;
     function BodyInset(const Style: TPPGSurfaceStyle): Integer; override;
     procedure DrawSurface(const Canvas: IPPGCanvas; const Body: TRect;
       const Style: TPPGSurfaceStyle); override;
@@ -35,9 +35,9 @@ begin
   Result := PPGPresetModernFlat;
 end;
 
-function TPPGModernFlatRenderer.Tokens(Dark: Boolean): TPPGTokens;
+function TPPGModernFlatRenderer.BaseTokens(Dark: Boolean): TPPGTokens;
 begin
-  Result := PPGDefaultTokens(Dark);
+  Result := PPGBaseTokens(Dark);
   if not Dark then
   begin
     // Hell: exakt die bisherigen ModernFlat-Farben (bestehende DFMs/Optik)

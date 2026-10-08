@@ -10,6 +10,11 @@ Palette **PPGlow** - Unit `PPG.Edit` - Basis `TPPGCustomEdit`
 - `TextHint` wird selbst gezeichnet; `TextHintVisibleOnFocus` ist standardmäßig `False`. TMS `EmptyText` wird zu `TextHint`.
 - Zusätzlich: `ValidationState`/`ValidationHint`, `ShowClearButton`, `LeftButton`/`RightButton` (mit `DropDownMenu`).
 
+## Anpassung
+
+- `ReadOnlyStyle`: eigene Fläche, Text- und Randfarbe bei `ReadOnly` (alle Eingabefelder).
+- `RoundedCorners`: einzelne Ecken eckig, z. B. Feld + Button als Gruppe.
+
 ## Beispiel
 
 ```pascal
@@ -31,15 +36,15 @@ TPPGEdit - einzeiliges Eingabefeld in der Optik des Presets.
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `LeftButton`, `RightButton`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
+`RoundedCorners`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `LeftButton`, `RightButton`, `ShowClearButton`, `TextHint`, `UseSystemContextMenu`, `TextHintVisibleOnFocus`, `ValidationState`, `ValidationHint`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Alignment`, `Anchors`, `AutoSelect`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HideSelection`, `MaxLength`, `NumbersOnly`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PasswordChar`, `PopupMenu`, `ReadOnly`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`
+`Align`, `Alignment`, `Anchors`, `AutoSelect`, `AutoSize`, `BiDiMode`, `BorderStyle`, `CharCase`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HideSelection`, `MaxLength`, `NumbersOnly`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PasswordChar`, `PopupMenu`, `ReadOnly`, `ReadOnlyStyle`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Text`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnLeftButtonClick`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnMouseWheel`, `OnRightButtonClick`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnChange`, `OnClick`, `OnContextPopup`, `OnDblClick`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnLeftButtonClick`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnMouseWheel`, `OnRightButtonClick`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGEdit.md`.

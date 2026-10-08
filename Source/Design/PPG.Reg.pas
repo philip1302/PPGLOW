@@ -173,7 +173,7 @@ uses
   PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
   PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit,
-  PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
+  PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
   PPG.Editors.Logic, PPG.Editors.Forms;
 
 resourcestring
@@ -989,7 +989,7 @@ begin
     TPPGTaskDialog, TPPGWizard,
     TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
     TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit,
-    TPPGGridPrinter, TPPGPlannerPrinter, TPPGStyleManager]);
+    TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager]);
   // Seiten entstehen ueber den Komponenteneditor, nicht ueber die Palette
   RegisterClass(TPPGTabSheet);
   RegisterNoIcon([TPPGTabSheet]);
@@ -1014,6 +1014,7 @@ begin
   RegisterComponentEditor(TPPGTaskDialog, TPPGTaskDialogEditor);
   RegisterComponentEditor(TPPGGridPrinter, TPPGGridPrinterEditor);
   RegisterComponentEditor(TPPGPlannerPrinter, TPPGGridPrinterEditor);
+  RegisterComponentEditor(TPPGKanbanPrinter, TPPGGridPrinterEditor);
   RegisterComponentEditor(TPPGListBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGCheckListBox, TPPGCollectionEditor);
   RegisterComponentEditor(TPPGComboBox, TPPGCollectionEditor);

@@ -14,10 +14,31 @@ unit PPG.ItemPainter;
 interface
 
 uses
-  Winapi.Windows, System.Types, Vcl.Graphics, Vcl.ImgList,
-  PPG.Types, PPG.Items, PPG.Render.Intf, PPG.Markup;
+  Winapi.Windows, System.Classes, System.Types, Vcl.Graphics, Vcl.ImgList,
+  PPG.Types, PPG.Items, PPG.Render.Intf, PPG.Markup, PPG.ElementStyle;
 
 type
+  /// Bereiche einer Liste (ListBox, CheckListBox, TreeView, Combo-Liste).
+  /// Nur gesetzte Werte ueberschreiben das Preset (clDefault = Preset).
+  TPPGListStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Gewaehlte Eintraege bei Fokus: Color = deckende Flaeche, BorderColor =
+    /// Akzentbalken, TextColor, Schrift.
+    property Selection: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Gewaehlte Eintraege ohne Fokus.
+    property SelectionInactive: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Zebra: jede zweite Zeile (Color setzen schaltet es ein).
+    property AlternateRow: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Eintrag unter der Maus.
+    property HotItem: TPPGElementStyle index 3 read GetItem write SetItem;
+    /// Gruppen-Ueberschriften.
+    property GroupHeader: TPPGElementStyle index 4 read GetItem write SetItem;
+    /// Detailzeile (zweite Zeile) der Eintraege.
+    property Detail: TPPGElementStyle index 5 read GetItem write SetItem;
+  end;
+
   /// Alles, was fuer das Zeichnen einer Zeile ausser den Daten gebraucht wird.
   TPPGItemPaintInfo = record
     ListStyle: TPPGSurfaceStyle;      // Color = Hintergrund, TextColor, GlowColor = Akzent
@@ -28,11 +49,17 @@ type
     RightToLeft: Boolean;
     Enabled: Boolean;                 // Control aktiviert
     PPI: Integer;
+    // Anpassbarkeit (Styles darf nil sein)
+    Styles: TPPGListStyles;
+    UseColors: Boolean;  // False: Hochkontrast/VCL-Style (nur Schriften)
+    Dark: Boolean;
+    Focused: Boolean;    // Control hat den Fokus (Selection/SelectionInactive)
   end;
 
   TPPGItemPainter = class
   private
     FMarkup: TPPGMarkupLayout;
+    FFonts: TPPGFontCache;
   public
     constructor Create;
     destructor Destroy; override;
@@ -53,6 +80,18 @@ type
       Highlighted: Boolean);
     procedure PaintGroupHeader(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
       const R: TRect; const Text: string; const Info: TPPGItemPaintInfo);
+    /// Hintergrund mit Element-Stilen (Zebra, Farbe des Eintrags, Hover,
+    /// Auswahl) und danach Renderer. Index = Zeile (Zebra; -1 = keins).
+    procedure PaintItemBackground(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
+      const R: TRect; const Info: TPPGItemPaintInfo; const Data: TPPGItemData; Index: Integer;
+      Selected, Focused: Boolean; Hot: Single);
+    /// Inhalt mit Element-Stilen (Textfarbe und Schrift nach Eintrag, Zebra,
+    /// Hover und Auswahl).
+    procedure PaintItemContent(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
+      const R: TRect; const Data: TPPGItemData; const Info: TPPGItemPaintInfo; Index: Integer;
+      Selected: Boolean; Hot: Single);
+    /// Schriften dieses Zeichenvorgangs freigeben (am Ende von Paint).
+    procedure EndPaint;
     /// Text eines Eintrags fuer Suche/Screenreader (ohne Markup).
     class function PlainText(const Data: TPPGItemData): string;
   end;
@@ -77,16 +116,25 @@ begin
       IPPGItemRenderer, Result);
 end;
 
+{ TPPGListStyles }
+
+constructor TPPGListStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 6);
+end;
+
 { TPPGItemPainter }
 
 constructor TPPGItemPainter.Create;
 begin
   inherited Create;
   FMarkup := TPPGMarkupLayout.Create;
+  FFonts := TPPGFontCache.Create;
 end;
 
 destructor TPPGItemPainter.Destroy;
 begin
+  FreeAndNil(FFonts);
   FreeAndNil(FMarkup);
   inherited Destroy;
 end;
@@ -138,15 +186,136 @@ end;
 procedure TPPGItemPainter.PaintGroupHeader(const Canvas: IPPGCanvas;
   const IR: IPPGItemRenderer; const R: TRect; const Text: string;
   const Info: TPPGItemPaintInfo);
+var
+  L: TPPGSurfaceStyle;
+  F: TFont;
+  GS: TPPGElementStyle;
 begin
-  IR.DrawGroupHeader(Canvas, R, PPGStripMarkup(Text), Info.Font, Info.ListStyle,
-    Info.RightToLeft, Info.PPI);
+  L := Info.ListStyle;
+  F := Info.Font;
+  if Info.Styles <> nil then
+  begin
+    GS := Info.Styles.GroupHeader;
+    if Info.UseColors then
+    begin
+      if GS.HasFill(Info.Dark) then
+        Canvas.FillRoundRect(R, 0, GS.FillFor(Info.Dark, clNone), 255);
+      L.TextColor := GS.TextFor(Info.Dark, L.TextColor);
+      L.GlowColor := GS.BorderFor(Info.Dark, L.GlowColor);
+    end;
+    F := FFonts.ForStyle(GS, Info.Font);
+  end;
+  IR.DrawGroupHeader(Canvas, R, PPGStripMarkup(Text), F, L, Info.RightToLeft, Info.PPI);
+end;
+
+procedure TPPGItemPainter.EndPaint;
+begin
+  FFonts.Clear;
+end;
+
+function SelStyleOf(const Info: TPPGItemPaintInfo): TPPGElementStyle;
+begin
+  if Info.Styles = nil then
+    Result := nil
+  else if Info.Focused then
+    Result := Info.Styles.Selection
+  else
+    Result := Info.Styles.SelectionInactive;
+end;
+
+procedure TPPGItemPainter.PaintItemBackground(const Canvas: IPPGCanvas;
+  const IR: IPPGItemRenderer; const R: TRect; const Info: TPPGItemPaintInfo;
+  const Data: TPPGItemData; Index: Integer; Selected, Focused: Boolean; Hot: Single);
+var
+  L, H: TPPGSurfaceStyle;
+  S: TPPGListStyles;
+  SS: TPPGElementStyle;
+  Fill, C: TColor;
+  Body, Bar: TRect;
+  PPI, Rad, BarW, BarH: Integer;
+  OwnSel: Boolean;
+begin
+  L := Info.ListStyle;
+  H := Info.HighlightStyle;
+  S := Info.Styles;
+  OwnSel := False;
+  PPI := Info.PPI;
+  if Info.UseColors then
+  begin
+    // Flaeche der Zeile: Zebra, darueber die Farbe des Eintrags
+    Fill := clNone;
+    if (S <> nil) and (Index >= 0) and Odd(Index) and S.AlternateRow.HasFill(Info.Dark) then
+      Fill := S.AlternateRow.FillFor(Info.Dark, clNone);
+    if (Data.Color <> clDefault) and (Data.Color <> clNone) then
+      Fill := PPGColorToRGB(Data.Color);
+    if Fill <> clNone then
+      Canvas.FillRoundRect(R, 0, Fill, 255);
+    if S <> nil then
+    begin
+      // Hover: Farbe in alle Verlaufsfarben (Classic zeichnet einen Verlauf)
+      if S.HotItem.HasFill(Info.Dark) then
+      begin
+        C := S.HotItem.FillFor(Info.Dark, H.Color);
+        H.Color := C;
+        H.ColorTo := C;
+        H.ColorMirror := C;
+        H.ColorMirrorTo := C;
+      end;
+      SS := SelStyleOf(Info);
+      if Selected and SS.HasBorder(Info.Dark) then
+        L.GlowColor := SS.BorderFor(Info.Dark, L.GlowColor);
+      if Selected and SS.HasFill(Info.Dark) then
+      begin
+        // Eigene Auswahl deckend (gleiche Pille wie das Preset), Akzentbalken
+        // nur mit BorderColor
+        OwnSel := True;
+        Body := R;
+        InflateRect(Body, -PPGScale(4, PPI), -PPGScale(1, PPI));
+        if IsRectEmpty(Body) then
+          Body := R;
+        Rad := PPGScale(4, PPI);
+        if Rad * 2 > Body.Bottom - Body.Top then
+          Rad := (Body.Bottom - Body.Top) div 2;
+        Canvas.FillRoundRect(Body, Rad, SS.FillFor(Info.Dark, clNone), 255);
+        if SS.HasBorder(Info.Dark) then
+        begin
+          BarW := PPGScale(3, PPI);
+          BarH := (Body.Bottom - Body.Top) div 2;
+          if Info.RightToLeft then
+            Bar := Rect(Body.Right - BarW, 0, Body.Right, 0)
+          else
+            Bar := Rect(Body.Left, 0, Body.Left + BarW, 0);
+          Bar.Top := (Body.Top + Body.Bottom - BarH) div 2;
+          Bar.Bottom := Bar.Top + BarH;
+          Canvas.FillRoundRect(Bar, BarW div 2, L.GlowColor, 255);
+        end;
+      end;
+    end;
+  end;
+  if OwnSel then
+    // Renderer nur noch fuer Fokusrahmen (ohne Auswahl und Hover)
+    IR.DrawItemBackground(Canvas, R, L, H, False, Focused, 0, Info.RightToLeft, PPI)
+  else
+    IR.DrawItemBackground(Canvas, R, L, H, Selected, Focused, Hot, Info.RightToLeft, PPI);
 end;
 
 procedure TPPGItemPainter.PaintContent(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
   const R: TRect; const Data: TPPGItemData; const Info: TPPGItemPaintInfo;
   Highlighted: Boolean);
+begin
+  // Ohne Zeile und Zustand: hervorgehoben wie eine Auswahl
+  PaintItemContent(Canvas, IR, R, Data, Info, -1, Highlighted, 0);
+end;
+
+procedure TPPGItemPainter.PaintItemContent(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
+  const R: TRect; const Data: TPPGItemData; const Info: TPPGItemPaintInfo; Index: Integer;
+  Selected: Boolean; Hot: Single);
 var
+  Highlighted: Boolean;
+  S: TPPGListStyles;
+  SS: TPPGElementStyle;
+  Extra: TFontStyles;
+  F, DF: TFont;
   PPI, Gap, X, Y, LineH, BlockH: Integer;
   Content, TextR, DetailR, BadgeR: TRect;
   BS: TSize;
@@ -159,13 +328,50 @@ begin
   PPI := Info.PPI;
   Gap := PPGScale(PPGItemGap, PPI);
   ItemEnabled := Data.Enabled and Info.Enabled;
+  Highlighted := Selected or (Hot > 0);
   if Highlighted then
     TextColor := Info.HighlightStyle.TextColor
   else
     TextColor := Info.ListStyle.TextColor;
+  // Element-Stile: Eintrag -> Zebra -> Hover -> Auswahl (Farben nur ohne
+  // Hochkontrast/VCL-Style, Schriftstile immer)
+  S := Info.Styles;
+  Extra := Data.FontStyle;
+  if Info.UseColors and (Data.TextColor <> clDefault) and (Data.TextColor <> clNone) then
+    TextColor := PPGColorToRGB(Data.TextColor);
+  if S <> nil then
+  begin
+    if (Index >= 0) and Odd(Index) and S.AlternateRow.HasFill(Info.Dark) then
+    begin
+      if Info.UseColors then
+        TextColor := S.AlternateRow.TextFor(Info.Dark, TextColor);
+      Extra := Extra + S.AlternateRow.FontStyle;
+    end;
+    if Hot > 0 then
+    begin
+      if Info.UseColors then
+        TextColor := S.HotItem.TextFor(Info.Dark, TextColor);
+      Extra := Extra + S.HotItem.FontStyle;
+    end;
+    if Selected then
+    begin
+      SS := SelStyleOf(Info);
+      if Info.UseColors then
+        TextColor := SS.TextFor(Info.Dark, TextColor);
+      Extra := Extra + SS.FontStyle;
+    end;
+  end;
+  F := FFonts.Get(Info.Font, Extra);
   if not ItemEnabled then
     TextColor := PPGBlendColor(TextColor, Info.ListStyle.Color, 0.55);
   DetailColor := PPGBlendColor(TextColor, Info.ListStyle.Color, 0.35);
+  DF := Info.Font;
+  if S <> nil then
+  begin
+    if Info.UseColors then
+      DetailColor := S.Detail.TextFor(Info.Dark, DetailColor);
+    DF := FFonts.ForStyle(S.Detail, Info.Font);
+  end;
 
   Content := R;
   if Info.RightToLeft then
@@ -224,7 +430,7 @@ begin
     Exit;
 
   // Text (eine Zeile) und optional die Detailzeile darunter, als Block zentriert
-  LineH := TextLineHeight(Info.Font);
+  LineH := TextLineHeight(F);
   HasDetail := (Data.Detail <> '') and (Content.Bottom - Content.Top >= 2 * LineH);
   if HasDetail then
     BlockH := 2 * LineH
@@ -239,7 +445,7 @@ begin
     Flags := Flags or DT_RIGHT or DT_RTLREADING;
   if Info.AllowMarkup and not PPGIsPlainText(Data.Text) then
   begin
-    FMarkup.Layout(Data.Text, Info.Font, Info.Images, TextR.Right - TextR.Left, False);
+    FMarkup.Layout(Data.Text, F, Info.Images, TextR.Right - TextR.Left, False);
     if Info.RightToLeft then
       X := TextR.Right - FMarkup.Size.cx
     else
@@ -253,13 +459,13 @@ begin
     end;
   end
   else
-    Canvas.DrawText(TextR, Data.Text, Info.Font, TextColor, Flags);
+    Canvas.DrawText(TextR, Data.Text, F, TextColor, Flags);
 
   if HasDetail then
   begin
     DetailR := TextR;
     OffsetRect(DetailR, 0, LineH);
-    Canvas.DrawText(DetailR, PPGStripMarkup(Data.Detail), Info.Font, DetailColor, Flags);
+    Canvas.DrawText(DetailR, PPGStripMarkup(Data.Detail), DF, DetailColor, Flags);
   end;
 end;
 

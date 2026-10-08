@@ -6,8 +6,14 @@ unit PPG.TabStrip;
 
   - Geometrie: Breite aus Text, Bild und Schliessen-Knopf (oder fest per
     TabWidth), Hoehe aus der Schrift (oder TabHeight); RTL wird gespiegelt.
-  - Ueberlauf: reichen die Reiter nicht, erscheinen rechts zwei Blaetterpfeile
-    (keine mehrzeiligen Reiter).
+  - Ueberlauf: reichen die Reiter nicht, erscheinen rechts zwei Blaetterpfeile;
+    mit MultiLine stattdessen mehrere Reihen (die Reihe des gewaehlten Reiters
+    liegt an der Seite, wie bei Windows; ohne RaggedRight fuellen die Reiter
+    jede Reihe).
+  - Darstellung (ButtonStyle): Reiter, Knoepfe oder flache Knoepfe (wie
+    TTabControl.Style).
+  - Element-Stile (TPPGTabStyles), Farben je Reiter und eigenes Zeichnen ueber
+    OnDrawTab des Besitzers.
   - Hit-Test fuer Reiter, Schliessen-Knopf und Pfeile, Hover-Zustand.
   - Unterstrich (Indikator) gleitet beim Wechsel ueber den gemeinsamen
     Animator von der alten zur neuen Position.
@@ -19,7 +25,7 @@ interface
 
 uses
   Winapi.Windows, System.Classes, System.Types, Vcl.Graphics, Vcl.ImgList,
-  PPG.Types, PPG.Animation, PPG.Render.Intf;
+  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.ElementStyle, PPG.CustomDraw;
 
 type
   TPPGTabInfo = record
@@ -27,6 +33,39 @@ type
     ImageIndex: Integer;
     Enabled: Boolean;
     Index: Integer; // Index beim Besitzer (Tabs-Eintrag bzw. Seite)
+    // Anpassbarkeit: eigene Farben/Schrift des Reiters (clDefault = Stil)
+    Color: TColor;
+    TextColor: TColor;
+    FontStyle: TFontStyles;
+  end;
+
+  /// Darstellung der Reiter (wie Vcl.ComCtrls.TTabStyle).
+  TPPGTabButtonStyle = (tbsTabs, tbsButtons, tbsFlatButtons);
+
+  /// Eigenes Zeichnen eines Reiters (Pos = Position in der Leiste).
+  TPPGTabDrawProc = procedure(Pos: Integer; const ACanvas: IPPGCanvas; const R: TRect;
+    Active: Boolean; var Style: TPPGDrawStyle; var DefaultDraw: Boolean) of object;
+
+  /// Inhalt eines Reiters selbst zeichnen (Hintergrund ist gezeichnet); True =
+  /// gezeichnet, die Leiste zeichnet dann keinen Text/Bild.
+  TPPGTabContentProc = function(Pos: Integer; const ACanvas: IPPGCanvas; const R: TRect;
+    Active: Boolean): Boolean of object;
+
+  /// Bereiche der Reiterleiste. Nur gesetzte Werte zaehlen (clDefault = Preset).
+  TPPGTabStyles = class(TPPGStyleGroup)
+  public
+    constructor Create(AOwner: TPersistent);
+  published
+    /// Nicht gewaehlte Reiter (Color, TextColor, BorderColor, Schrift).
+    property Tab: TPPGElementStyle index 0 read GetItem write SetItem;
+    /// Reiter unter der Maus.
+    property HotTab: TPPGElementStyle index 1 read GetItem write SetItem;
+    /// Gewaehlter Reiter.
+    property ActiveTab: TPPGElementStyle index 2 read GetItem write SetItem;
+    /// Flaeche hinter den Reitern (Color).
+    property Strip: TPPGElementStyle index 3 read GetItem write SetItem;
+    /// Unterstrich des gewaehlten Reiters (Color).
+    property Indicator: TPPGElementStyle index 4 read GetItem write SetItem;
   end;
 
   TPPGTabHit = (thNone, thTab, thClose, thPrev, thNext);
@@ -44,6 +83,13 @@ type
     Focused: Boolean;            // Fokusrahmen um den gewaehlten Reiter
     ShowAccel: Boolean;          // &-Unterstriche sichtbar
     Enabled: Boolean;
+    // Anpassbarkeit (Styles darf nil sein)
+    Styles: TPPGTabStyles;
+    UseColors: Boolean;
+    Dark: Boolean;
+    OnDrawTab: TPPGTabDrawProc;
+    // Inhalt selbst gezeichnet (OwnerDraw/OnDrawTab des Besitzers)? True = ja
+    OnDrawContent: TPPGTabContentProc;
   end;
 
   TPPGTabStrip = class
@@ -73,6 +119,15 @@ type
     FIndicatorAnim: TPPGAnimation;
     FIndicatorFrom: TRect;
     FOnChange: TNotifyEvent;
+    FMultiLine: Boolean;
+    FRaggedRight: Boolean;
+    FButtonStyle: TPPGTabButtonStyle;
+    FAvailWidth: Integer;
+    FRowCount: Integer;
+    FFonts: TPPGFontCache;
+    /// Reihen fuer MultiLine: Startposition je Reihe (Reihenfolge der Reiter).
+    function PackRows(Avail: Integer; out Starts: TArray<Integer>): Integer;
+    procedure LayoutMultiLine(const StripRect: TRect);
     procedure AnimStep(Sender: TObject);
     procedure Changed;
     function Scale(Value: Integer): Integer;
@@ -85,6 +140,10 @@ type
     procedure Clear;
     procedure Add(const Caption: string; ImageIndex: Integer; Enabled: Boolean;
       OwnerIndex: Integer);
+    /// Eigene Farben/Schrift des zuletzt bzw. an Pos eingetragenen Reiters.
+    procedure SetTabStyle(Pos: Integer; AColor, ATextColor: TColor; AFontStyle: TFontStyles);
+    /// Anzahl Reihen nach dem letzten Layout (1 ohne MultiLine).
+    property RowCount: Integer read FRowCount;
     function Count: Integer;
     function Tab(Pos: Integer): TPPGTabInfo;
     /// Position eines Besitzer-Index in der Leiste, -1 = nicht vorhanden.
@@ -118,6 +177,11 @@ type
     property ShowClose: Boolean read FShowClose write FShowClose;
     property Bottom: Boolean read FBottom write FBottom;
     property RightToLeft: Boolean read FRightToLeft write FRightToLeft;
+    property MultiLine: Boolean read FMultiLine write FMultiLine;
+    property RaggedRight: Boolean read FRaggedRight write FRaggedRight;
+    property ButtonStyle: TPPGTabButtonStyle read FButtonStyle write FButtonStyle;
+    /// Breite fuer StripHeight mit MultiLine (setzt der Besitzer vor dem Layout).
+    property AvailWidth: Integer read FAvailWidth write FAvailWidth;
     property Overflow: Boolean read FOverflow;
     property FirstVisible: Integer read FFirst;
     property Selected: Integer read FSelected;
@@ -133,7 +197,7 @@ type
 implementation
 
 uses
-  System.SysUtils, PPG.Appearance, PPG.Accessibility, PPG.Render.Gdi;
+  System.SysUtils, System.UITypes, PPG.Appearance, PPG.Accessibility, PPG.Render.Gdi;
 
 const
   TabPadX = 12;     // logische px links/rechts im Reiter
@@ -153,6 +217,13 @@ begin
   Result.Bottom := A.Bottom + Round((B.Bottom - A.Bottom) * T);
 end;
 
+{ TPPGTabStyles }
+
+constructor TPPGTabStyles.Create(AOwner: TPersistent);
+begin
+  inherited Create(AOwner, 5);
+end;
+
 { TPPGTabStrip }
 
 constructor TPPGTabStrip.Create;
@@ -165,6 +236,8 @@ begin
   FIndicatorAnim := TPPGAnimation.Create(Self);
   FIndicatorAnim.OnStep := AnimStep;
   FIndicatorAnim.Jump(1);
+  FRowCount := 1;
+  FFonts := TPPGFontCache.Create;
 end;
 
 destructor TPPGTabStrip.Destroy;
@@ -172,6 +245,7 @@ begin
   if FIndicatorAnim <> nil then
     FIndicatorAnim.OnStep := nil;
   FreeAndNil(FIndicatorAnim); // meldet sich selbst beim Animator ab
+  FreeAndNil(FFonts);
   inherited Destroy;
 end;
 
@@ -212,6 +286,19 @@ begin
   FTabs[N].ImageIndex := ImageIndex;
   FTabs[N].Enabled := Enabled;
   FTabs[N].Index := OwnerIndex;
+  FTabs[N].Color := clDefault;
+  FTabs[N].TextColor := clDefault;
+  FTabs[N].FontStyle := [];
+end;
+
+procedure TPPGTabStrip.SetTabStyle(Pos: Integer; AColor, ATextColor: TColor;
+  AFontStyle: TFontStyles);
+begin
+  if (Pos < 0) or (Pos > High(FTabs)) then
+    Exit;
+  FTabs[Pos].Color := AColor;
+  FTabs[Pos].TextColor := ATextColor;
+  FTabs[Pos].FontStyle := AFontStyle;
 end;
 
 function TPPGTabStrip.Count: Integer;
@@ -237,6 +324,7 @@ end;
 function TPPGTabStrip.StripHeight: Integer;
 var
   H: Integer;
+  Starts: TArray<Integer>;
 begin
   if FTabHeight > 0 then
     H := Scale(FTabHeight)
@@ -251,6 +339,9 @@ begin
       H := FImages.Height + 2 * Scale(4);
   end;
   Result := H + Scale(StripPad);
+  // MultiLine: so viele Reihen, wie die Reiter bei AvailWidth brauchen
+  if FMultiLine and (FAvailWidth > 0) and (Length(FTabs) > 0) then
+    Result := Result + (PackRows(FAvailWidth - 2 * Scale(StripPad), Starts) - 1) * H;
 end;
 
 function TPPGTabStrip.TabWidthAt(Pos: Integer): Integer;
@@ -273,12 +364,135 @@ begin
     Result := Scale(40);
 end;
 
+function TPPGTabStrip.PackRows(Avail: Integer; out Starts: TArray<Integer>): Integer;
+var
+  I, X, W: Integer;
+begin
+  // Reiter der Reihe nach auffuellen; jede Reihe hat mindestens einen Reiter
+  SetLength(Starts, 0);
+  Result := 0;
+  X := 0;
+  for I := 0 to High(FTabs) do
+  begin
+    W := TabWidthAt(I);
+    if (Result = 0) or ((X > 0) and (X + Scale(TabGap) + W > Avail)) then
+    begin
+      SetLength(Starts, Result + 1);
+      Starts[Result] := I;
+      Inc(Result);
+      X := W;
+    end
+    else
+      Inc(X, Scale(TabGap) + W);
+  end;
+  if Result = 0 then
+    Result := 1;
+end;
+
 function TPPGTabStrip.Mirror(const R: TRect): TRect;
 begin
   if IsRectEmpty(R) then
     Exit(R);
   Result := Rect(FStrip.Left + FStrip.Right - R.Right, R.Top,
     FStrip.Left + FStrip.Right - R.Left, R.Bottom);
+end;
+
+procedure TPPGTabStrip.LayoutMultiLine(const StripRect: TRect);
+var
+  N, I, J, X, TabH, Left0, Right0, RowsN, R0, R1, RowSel, Slot, Extra, Sum, CS: Integer;
+  Starts: TArray<Integer>;
+  W: array of Integer;
+  Order: array of Integer;
+  R: TRect;
+begin
+  N := Length(FTabs);
+  Left0 := StripRect.Left + Scale(StripPad);
+  Right0 := StripRect.Right - Scale(StripPad);
+  RowsN := PackRows(Right0 - Left0, Starts);
+  FRowCount := RowsN;
+  TabH := (StripRect.Bottom - StripRect.Top - Scale(StripPad)) div RowsN;
+  if TabH < 1 then
+    TabH := 1;
+  SetLength(W, N);
+  for I := 0 to N - 1 do
+    W[I] := TabWidthAt(I);
+  // Reihe des gewaehlten Reiters liegt an der Seite (unten bzw. bei Reitern
+  // unten oben); die uebrigen Reihen behalten ihre Reihenfolge
+  RowSel := RowsN - 1;
+  for I := 0 to RowsN - 1 do
+    if (FSelected >= Starts[I]) and ((I = RowsN - 1) or (FSelected < Starts[I + 1])) then
+      RowSel := I;
+  SetLength(Order, RowsN);
+  J := 0;
+  for I := 0 to RowsN - 1 do
+    if I <> RowSel then
+    begin
+      Order[J] := I;
+      Inc(J);
+    end;
+  Order[RowsN - 1] := RowSel;
+  CS := Scale(CloseSize);
+  for Slot := 0 to RowsN - 1 do
+  begin
+    I := Order[Slot];
+    R0 := Starts[I];
+    if I = RowsN - 1 then
+      R1 := N - 1
+    else
+      R1 := Starts[I + 1] - 1;
+    // Ohne RaggedRight fuellt jede Reihe die ganze Breite (mehrere Reihen)
+    Extra := 0;
+    if not FRaggedRight and (RowsN > 1) then
+    begin
+      Sum := 0;
+      for J := R0 to R1 do
+        Inc(Sum, W[J]);
+      Inc(Sum, (R1 - R0) * Scale(TabGap));
+      Extra := (Right0 - Left0) - Sum;
+      if Extra < 0 then
+        Extra := 0;
+    end;
+    X := Left0;
+    for J := R0 to R1 do
+    begin
+      if FBottom then
+        R.Top := StripRect.Top + (RowsN - 1 - Slot) * TabH
+      else
+        R.Top := StripRect.Top + Scale(StripPad) + Slot * TabH;
+      R.Bottom := R.Top + TabH;
+      R.Left := X;
+      if Extra > 0 then
+        R.Right := X + W[J] + Extra div (R1 - R0 + 1) +
+          Ord(J - R0 < Extra mod (R1 - R0 + 1))
+      else
+        R.Right := X + W[J];
+      if R.Right > Right0 then
+        R.Right := Right0;
+      X := R.Right + Scale(TabGap);
+      FRects[J] := R;
+      if FShowClose then
+        FCloseRects[J] := Rect(R.Right - Scale(TabPadX) div 2 - CS,
+          (R.Top + R.Bottom - CS) div 2, R.Right - Scale(TabPadX) div 2,
+          (R.Top + R.Bottom + CS) div 2)
+      else
+        FCloseRects[J] := Rect(0, 0, 0, 0);
+    end;
+  end;
+  FOverflow := False;
+  FFirst := 0;
+  FMaxFirst := 0;
+  FPrevRect := Rect(0, 0, 0, 0);
+  FNextRect := Rect(0, 0, 0, 0);
+  FTabArea := Rect(Left0, StripRect.Top, Right0, StripRect.Bottom);
+  if FRightToLeft then
+  begin
+    for I := 0 to N - 1 do
+    begin
+      FRects[I] := Mirror(FRects[I]);
+      FCloseRects[I] := Mirror(FCloseRects[I]);
+    end;
+    FTabArea := Mirror(FTabArea);
+  end;
 end;
 
 procedure TPPGTabStrip.Layout(const StripRect: TRect);
@@ -292,6 +506,18 @@ begin
   SetLength(FRects, N);
   SetLength(FCloseRects, N);
   SetLength(W, N);
+  FRowCount := 1;
+  if FMultiLine and (N > 0) then
+  begin
+    LayoutMultiLine(StripRect);
+    if FHot > N - 1 then
+      FHot := -1;
+    if FHotClose > N - 1 then
+      FHotClose := -1;
+    if FSelected > N - 1 then
+      FSelected := -1;
+    Exit;
+  end;
   TabH := StripHeight - Scale(StripPad);
   if FBottom then
     Y0 := StripRect.Top
@@ -508,6 +734,8 @@ begin
   begin
     FIndicatorFrom := IndicatorRect;
     FSelected := NewPos;
+    if FMultiLine then
+      Layout(FStrip);
     MakeVisible(NewPos);
     FIndicatorAnim.Jump(0);
     FIndicatorAnim.AnimateTo(1, DurationMs, ekDecelerate);
@@ -515,6 +743,8 @@ begin
   else
   begin
     FSelected := NewPos;
+    if FMultiLine then
+      Layout(FStrip);
     MakeVisible(NewPos);
     FIndicatorAnim.Jump(1);
   end;
@@ -567,8 +797,83 @@ end;
 
 procedure TPPGTabStrip.Paint(const Canvas: IPPGCanvas; const Renderer: IPPGTabRenderer;
   const Info: TPPGTabPaintInfo);
+var
+  St: TPPGTabStyles;
 
-  procedure PaintContent(Pos: Integer; const R: TRect; Color: TColor; IsSelected: Boolean);
+  function TabElement(IsSelected, Hot: Boolean): TPPGElementStyle;
+  begin
+    if St = nil then
+      Result := nil
+    else if IsSelected then
+      Result := St.ActiveTab
+    else if Hot then
+      Result := St.HotTab
+    else
+      Result := St.Tab;
+  end;
+
+  function ApplyFill(Base: TPPGSurfaceStyle; Pos: Integer; E: TPPGElementStyle;
+    const DS: TPPGDrawStyle): TPPGSurfaceStyle;
+  var
+    C: TColor;
+  begin
+    // Flaeche: Element-Stil, Farbe des Reiters, eigenes Zeichnen
+    Result := Base;
+    if not Info.UseColors then
+      Exit;
+    C := clNone;
+    if (E <> nil) and E.HasFill(Info.Dark) then
+      C := E.FillFor(Info.Dark, clNone);
+    if (FTabs[Pos].Color <> clDefault) and (FTabs[Pos].Color <> clNone) then
+      C := PPGColorToRGB(FTabs[Pos].Color);
+    if DS.Fill <> clNone then
+      C := PPGColorToRGB(DS.Fill);
+    if C <> clNone then
+    begin
+      Result.Color := C;
+      Result.ColorTo := C;
+      Result.ColorMirror := C;
+      Result.ColorMirrorTo := C;
+    end;
+    if (E <> nil) and E.HasBorder(Info.Dark) then
+      Result.BorderColor := E.BorderFor(Info.Dark, Result.BorderColor);
+    if DS.BorderColor <> clNone then
+      Result.BorderColor := PPGColorToRGB(DS.BorderColor);
+  end;
+
+  function TextOf(Pos: Integer; Color: TColor; E: TPPGElementStyle;
+    const DS: TPPGDrawStyle; out F: TFont): TColor;
+  var
+    Extra: TFontStyles;
+  begin
+    Result := Color;
+    Extra := FTabs[Pos].FontStyle + DS.FontStyle;
+    if Info.UseColors then
+    begin
+      if E <> nil then
+        Result := E.TextFor(Info.Dark, Result);
+      if (FTabs[Pos].TextColor <> clDefault) and (FTabs[Pos].TextColor <> clNone) then
+        Result := PPGColorToRGB(FTabs[Pos].TextColor);
+      if DS.TextColor <> clNone then
+        Result := PPGColorToRGB(DS.TextColor);
+    end;
+    if E <> nil then
+      F := FFonts.ForStyle(E, FFont, Extra)
+    else
+      F := FFonts.Get(FFont, Extra);
+  end;
+
+  function RunDraw(Pos: Integer; const R: TRect; Active: Boolean;
+    var DS: TPPGDrawStyle): Boolean;
+  begin
+    DS.Reset;
+    Result := True;
+    if Assigned(Info.OnDrawTab) then
+      Info.OnDrawTab(Pos, Canvas, R, Active, DS, Result);
+  end;
+
+  procedure PaintContent(Pos: Integer; const R: TRect; Color: TColor; IsSelected: Boolean;
+    F: TFont);
   var
     C: TRect;
     T: TPPGTabInfo;
@@ -576,6 +881,8 @@ procedure TPPGTabStrip.Paint(const Canvas: IPPGCanvas; const Renderer: IPPGTabRe
     X, Y: Integer;
     ImgEnabled: Boolean;
   begin
+    if Assigned(Info.OnDrawContent) and Info.OnDrawContent(Pos, Canvas, R, IsSelected) then
+      Exit;
     T := FTabs[Pos];
     C := R;
     InflateRect(C, -Scale(TabPadX), 0);
@@ -606,13 +913,14 @@ procedure TPPGTabStrip.Paint(const Canvas: IPPGCanvas; const Renderer: IPPGTabRe
     if C.Right <= C.Left then
       Exit;
     Flags := DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
-    if FTabWidth > 0 then
+    // Feste Breite oder gefuellte Reihen (MultiLine): Text mittig
+    if (FTabWidth > 0) or (FMultiLine and not FRaggedRight and (FRowCount > 1)) then
       Flags := Flags or DT_CENTER;
     if FRightToLeft then
       Flags := Flags or DT_RIGHT or DT_RTLREADING;
     if not Info.ShowAccel then
       Flags := Flags or DT_HIDEPREFIX;
-    Canvas.DrawText(C, T.Caption, FFont, Color, Flags);
+    Canvas.DrawText(C, T.Caption, F, Color, Flags);
     if IsSelected and Info.Focused then
     begin
       C := R;
@@ -621,68 +929,178 @@ procedure TPPGTabStrip.Paint(const Canvas: IPPGCanvas; const Renderer: IPPGTabRe
     end;
   end;
 
+  procedure PaintButton(Pos: Integer; const R: TRect; IsSelected, Hot: Boolean);
+  var
+    Body: TRect;
+    Fill, Border, TC: TColor;
+    DS: TPPGDrawStyle;
+    E: TPPGElementStyle;
+    F: TFont;
+    S: TPPGSurfaceStyle;
+    Alpha: Byte;
+  begin
+    // Knoepfe (tsButtons) bzw. flache Knoepfe (tsFlatButtons) statt Reitern
+    if not RunDraw(Pos, R, IsSelected, DS) then
+      Exit;
+    E := TabElement(IsSelected, Hot);
+    Body := R;
+    InflateRect(Body, -Scale(1), -Scale(2));
+    if IsSelected then
+    begin
+      Fill := Info.Accent;
+      Alpha := 40;
+    end
+    else if Hot then
+    begin
+      Fill := Info.HotTab.Color;
+      Alpha := 255;
+    end
+    else
+    begin
+      Fill := Info.Tab.Color;
+      Alpha := 255 * Ord(FButtonStyle = tbsButtons);
+    end;
+    S := Info.Tab;
+    S.Color := Fill;
+    S := ApplyFill(S, Pos, E, DS);
+    if S.Color <> Fill then
+      Alpha := 255;
+    Border := Info.Tab.BorderColor;
+    if (E <> nil) and Info.UseColors then
+      Border := E.BorderFor(Info.Dark, Border);
+    if Alpha > 0 then
+      Canvas.FillRoundRect(Body, Scale(4), S.Color, Alpha);
+    if (FButtonStyle = tbsButtons) or IsSelected then
+      Canvas.FrameRoundRect(Body, Scale(4), 1, Border, 255);
+    if not (Info.Enabled and FTabs[Pos].Enabled) then
+      TC := Info.DisabledText
+    else if IsSelected then
+      TC := Info.Selected.TextColor
+    else if Hot then
+      TC := Info.HotTab.TextColor
+    else
+      TC := Info.Tab.TextColor;
+    TC := TextOf(Pos, TC, E, DS, F);
+    PaintContent(Pos, R, TC, IsSelected, F);
+  end;
+
 var
   I: Integer;
   R, Area: TRect;
   Hot: Boolean;
   Color: TColor;
+  SS: TPPGSurfaceStyle;
+  DS: TPPGDrawStyle;
+  E: TPPGElementStyle;
+  F: TFont;
+  Accent: TColor;
 begin
   if Renderer = nil then
     Exit;
-  Renderer.DrawTabStrip(Canvas, FStrip, Info.Strip, FBottom, FPPI);
-  // Reiter nur im Reiterbereich (nicht unter den Pfeilen); der gewaehlte
-  // darf um Overlap in die Seite ragen
-  Area := FTabArea;
-  if FBottom then
-    Dec(Area.Top, Info.Overlap)
-  else
-    Inc(Area.Bottom, Info.Overlap);
-  Canvas.PushClipRoundRect(Area, 0);
+  St := Info.Styles;
   try
-    for I := 0 to High(FRects) do
+    SS := Info.Strip;
+    if (St <> nil) and Info.UseColors and St.Strip.HasFill(Info.Dark) then
     begin
-      R := FRects[I];
-      if IsRectEmpty(R) or (I = FSelected) then
-        Continue;
-      Hot := Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot);
-      if Hot then
-        Renderer.DrawTab(Canvas, R, Info.HotTab, False, 1, FBottom, FPPI)
-      else
-        Renderer.DrawTab(Canvas, R, Info.Tab, False, 0, FBottom, FPPI);
-      if not (Info.Enabled and FTabs[I].Enabled) then
-        Color := Info.DisabledText
-      else if Hot then
-        Color := Info.HotTab.TextColor
-      else
-        Color := Info.Tab.TextColor;
-      PaintContent(I, R, Color, False);
+      SS.Color := St.Strip.FillFor(Info.Dark, clNone);
+      SS.ColorTo := SS.Color;
+      SS.ColorMirror := SS.Color;
+      SS.ColorMirrorTo := SS.Color;
     end;
-    if (FSelected >= 0) and not IsRectEmpty(TabRectAt(FSelected)) then
+    Renderer.DrawTabStrip(Canvas, FStrip, SS, FBottom, FPPI);
+    if FButtonStyle <> tbsTabs then
     begin
-      R := FRects[FSelected];
+      // Knoepfe: kein Hineinragen in die Seite, kein Unterstrich
+      Canvas.PushClipRoundRect(FTabArea, 0);
+      try
+        for I := 0 to High(FRects) do
+          if not IsRectEmpty(FRects[I]) then
+            PaintButton(I, FRects[I], I = FSelected,
+              Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot));
+      finally
+        Canvas.PopClip;
+      end;
+    end
+    else
+    begin
+      // Reiter nur im Reiterbereich (nicht unter den Pfeilen); der gewaehlte
+      // darf um Overlap in die Seite ragen
+      Area := FTabArea;
       if FBottom then
-        Dec(R.Top, Info.Overlap)
+        Dec(Area.Top, Info.Overlap)
       else
-        Inc(R.Bottom, Info.Overlap);
-      Renderer.DrawTab(Canvas, R, Info.Selected, True, 0, FBottom, FPPI);
-      if Info.Enabled and FTabs[FSelected].Enabled then
-        Color := Info.Selected.TextColor
-      else
-        Color := Info.DisabledText;
-      PaintContent(FSelected, FRects[FSelected], Color, True);
+        Inc(Area.Bottom, Info.Overlap);
+      Canvas.PushClipRoundRect(Area, 0);
+      try
+        for I := 0 to High(FRects) do
+        begin
+          R := FRects[I];
+          if IsRectEmpty(R) or (I = FSelected) then
+            Continue;
+          Hot := Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot);
+          if not RunDraw(I, R, False, DS) then
+            Continue;
+          E := TabElement(False, Hot);
+          // Nicht gewaehlte Reiter haben im Preset keine Flaeche: eigene Farbe
+          // (Stil, Reiter, eigenes Zeichnen) hier selbst fuellen
+          SS := ApplyFill(Info.Tab, I, E, DS);
+          if Info.UseColors and (SS.Color <> Info.Tab.Color) then
+            Canvas.FillRoundRect(Rect(R.Left + Scale(1), R.Top + Scale(2), R.Right - Scale(1),
+              R.Bottom), Scale(4), SS.Color, 255);
+          if Hot then
+            Renderer.DrawTab(Canvas, R, ApplyFill(Info.HotTab, I, E, DS), False, 1, FBottom, FPPI)
+          else
+            Renderer.DrawTab(Canvas, R, ApplyFill(Info.Tab, I, E, DS), False, 0, FBottom, FPPI);
+          if not (Info.Enabled and FTabs[I].Enabled) then
+            Color := Info.DisabledText
+          else if Hot then
+            Color := Info.HotTab.TextColor
+          else
+            Color := Info.Tab.TextColor;
+          Color := TextOf(I, Color, E, DS, F);
+          PaintContent(I, R, Color, False, F);
+        end;
+        if (FSelected >= 0) and not IsRectEmpty(TabRectAt(FSelected)) then
+        begin
+          R := FRects[FSelected];
+          if FBottom then
+            Dec(R.Top, Info.Overlap)
+          else
+            Inc(R.Bottom, Info.Overlap);
+          if RunDraw(FSelected, FRects[FSelected], True, DS) then
+          begin
+            E := TabElement(True, False);
+            Renderer.DrawTab(Canvas, R, ApplyFill(Info.Selected, FSelected, E, DS), True, 0,
+              FBottom, FPPI);
+            if Info.Enabled and FTabs[FSelected].Enabled then
+              Color := Info.Selected.TextColor
+            else
+              Color := Info.DisabledText;
+            Color := TextOf(FSelected, Color, E, DS, F);
+            PaintContent(FSelected, FRects[FSelected], Color, True, F);
+          end;
+        end;
+        R := IndicatorRect;
+        if not IsRectEmpty(R) and Info.Enabled then
+        begin
+          Accent := Info.Accent;
+          if (St <> nil) and Info.UseColors then
+            Accent := St.Indicator.FillFor(Info.Dark, Accent);
+          Renderer.DrawTabIndicator(Canvas, R, Accent, FBottom, FPPI);
+        end;
+      finally
+        Canvas.PopClip;
+      end;
     end;
-    R := IndicatorRect;
-    if not IsRectEmpty(R) and Info.Enabled then
-      Renderer.DrawTabIndicator(Canvas, R, Info.Accent, FBottom, FPPI);
+    if FOverflow then
+    begin
+      Renderer.DrawTabScrollArrow(Canvas, FPrevRect, Info.Tab.TextColor, FRightToLeft,
+        FHotArrow = thPrev, Info.Enabled and CanScroll(-1), FPPI);
+      Renderer.DrawTabScrollArrow(Canvas, FNextRect, Info.Tab.TextColor, not FRightToLeft,
+        FHotArrow = thNext, Info.Enabled and CanScroll(1), FPPI);
+    end;
   finally
-    Canvas.PopClip;
-  end;
-  if FOverflow then
-  begin
-    Renderer.DrawTabScrollArrow(Canvas, FPrevRect, Info.Tab.TextColor, FRightToLeft,
-      FHotArrow = thPrev, Info.Enabled and CanScroll(-1), FPPI);
-    Renderer.DrawTabScrollArrow(Canvas, FNextRect, Info.Tab.TextColor, not FRightToLeft,
-      FHotArrow = thNext, Info.Enabled and CanScroll(1), FPPI);
+    FFonts.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
   end;
 end;
 

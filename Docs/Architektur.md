@@ -661,6 +661,20 @@ Das Popup (`TPPGDropPopup`) antwortet auf Maus und Tasten mit einer Aktion (`pda
 
 **Tastatur und Screenreader.** Die Scroll-Basis darf die Pfeile nicht nehmen (`KeyboardScrolling := False`), sie gehören der Kartenauswahl. Kinder für MSAA sind je Spalte der Kopf und ihre Karten; die Ansage nach einem Verschieben steht vor dem Namen der fokussierten Karte und wird per `NAMECHANGE` gemeldet.
 
+## Anpassbarkeit (Element-Stile, Tokens, Zeichen-Ereignisse)
+
+*Anforderungen und Stand: `Docs\Anforderungen-Anpassbarkeit.md`.*
+
+**Element-Stile.** `TPPGElementStyle` (`PPG.ElementStyle`) beschreibt einen Bereich: `Color`, `TextColor`, `BorderColor`, je eine Dunkel-Variante, `ParentFont`/`Font` und `FontStyle`. `clDefault` heißt „vom Preset“, ein leerer Stil ändert also nichts und wird nicht gespeichert. Gruppen erben von `TPPGStyleGroup` (`Create(AOwner, Count)`, Properties über `index`), z. B. `TPPGGridStyles`, `TPPGListStyles`, `TPPGPlannerStyles`. Gezeichnet wird mit `FillFor`/`TextFor`/`BorderFor(Dark, Vorgabe)`. Farben gelten nur ohne Hochkontrast und ohne VCL-Style, Schriften immer. Schriften für einen Paint-Durchgang hält `TPPGFontCache` (DPI-korrigiert, nach dem Zeichnen geleert); dauerhafte GDI-Handles je Control gibt es dadurch nicht.
+
+**Tokens.** Die Renderer liefern nur noch `BaseTokens`; `Tokens` = `BaseTokens` + `PPGApplyTokenOverrides`. Die Überschreibungen (`TPPGTokenOverrides`: Akzent, Farben je Modus, Diagrammpalette, Versionszähler) setzt der `TPPGStyleManager` (`AccentColor`, `ThemeColors`, `ChartPalette`); gibt es mehrere Manager, gilt der zuletzt gesetzte, und sein Destruktor räumt nur eigene Werte ab. Ändern sich helle Farben, leitet der Manager die Appearance neu ab und meldet `TPPGTheme.Changed`. Die Theme-Datei (`PPG.ThemeFile`, INI per RTTI in Deklarationsreihenfolge) wird zuerst in einen Hilfs-Manager geladen, damit eine fehlerhafte Datei nichts halb übernimmt.
+
+**Zeichen-Ereignisse.** `PPG.CustomDraw`: `TPPGDrawStyle` (Fill, TextColor, BorderColor, FontStyle) und `PPGRunCustomDraw`. Das Ereignis läuft vor dem Zeichnen eines Elements mit dem berechneten Stil; Änderungen gelten für dieses Element, `DefaultDraw := False` überspringt das eingebaute Zeichnen. Reihenfolge der Farben: Preset < Bereichsstil < Element (`Item.Color`) < Ereignis.
+
+**Ecken und Schatten.** `IPPGCornerCanvas` ist eine optionale Erweiterung der Canvas (GDI und GDI+): eckige Ecken gelten für alle folgenden Round-Rect-Aufrufe, bis der Aufrufer den alten Wert zurücksetzt (`PPGSetSquareCorners`). Das Basis-Control setzt sie um Fläche und Fokus (`RoundedCorners`), nicht um den Inhalt, deshalb brauchen die Renderer keine Änderung. `Shadow` zeichnet gestapelte, halbtransparente Flächen unter dem Körper; `GetBodyRect` hält dafür Platz frei, Container ziehen ihn auch für die Kinder ab.
+
+**Layout speichern.** Grid, Kanban, Planer und Ribbon-Schnellzugriff speichern als Text im INI-Stil mit Kopfzeile (`[PPGGridLayout]`, `[PPGKanbanLayout]`, `[PPGPlannerLayout]`, `[PPGRibbonQuickAccess]`). Fremder Text ändert nichts; unbekannte Schlüssel und ungültige Werte werden einzeln übergangen, damit alte Dateien nach einem Update weiter laden.
+
 ## VCL-Styles
 
 Ist ein VCL-Style aktiv, verwendet ein Control beim Zeichnen `EffectiveAppearance`: Die Formen (Rundung, Rahmen, Glow-Größe und -Intensität) kommen aus dem Preset, die Farben aus dem Style. Das Classic-Preset bleibt dabei glänzend. Die gespeicherte `Appearance` wird nie verändert, Style-Farben landen also nicht in der DFM. Ab XE3 lässt sich das pro Control abschalten, indem `seClient` aus `StyleElements` entfernt wird.

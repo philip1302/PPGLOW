@@ -23,7 +23,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics, Vcl.ComCtrls, Vcl.Forms, Vcl.ActnList, Vcl.StdActns,
-  PPG.Types, PPG.Render.Intf, PPG.Markup, PPG.Accessibility, PPG.Controls.Base;
+  PPG.Types, PPG.Render.Intf, PPG.Markup, PPG.Accessibility, PPG.Controls.Base,
+  PPG.ElementStyle;
 
 type
   TPPGStatusBar = class;
@@ -42,7 +43,13 @@ type
     FBadgeCount: Integer;
     FImageIndex: TPPGImageIndex;
     FHint: string;
+    FColor: TColor;
+    FTextColor: TColor;
+    FFontStyle: TFontStyles;
     procedure SetText(const Value: string);
+    procedure SetColor(const Value: TColor);
+    procedure SetTextColor(const Value: TColor);
+    procedure SetFontStyle(const Value: TFontStyles);
     procedure SetWidth(const Value: Integer);
     procedure SetAlignment(const Value: TAlignment);
     procedure SetBevel(const Value: TStatusPanelBevel);
@@ -67,6 +74,10 @@ type
     property BadgeCount: Integer read FBadgeCount write SetBadgeCount default 0;
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex default -1;
     property Hint: string read FHint write FHint;
+    /// Flaeche, Text und zusaetzliche Schriftstile des Felds (clDefault = Leiste).
+    property Color: TColor read FColor write SetColor default clDefault;
+    property TextColor: TColor read FTextColor write SetTextColor default clDefault;
+    property FontStyle: TFontStyles read FFontStyle write SetFontStyle default [];
   end;
 
   TPPGStatusPanels = class(TOwnedCollection)
@@ -86,6 +97,8 @@ type
   TPPGStatusBar = class(TPPGCustomControl, IPPGAccessibleChildren)
   private
     FPanels: TPPGStatusPanels;
+    FBarStyle: TPPGElementStyle;
+    FFonts: TPPGFontCache;
     FSimplePanel: Boolean;
     FSimpleText: string;
     FSizeGrip: Boolean;
@@ -98,6 +111,8 @@ type
     FInOwnerDraw: Boolean;
     FOnDrawPanel: TPPGDrawPanelEvent;
     FOnHint: TNotifyEvent;
+    procedure SetBarStyle(const Value: TPPGElementStyle);
+    procedure BarStyleChanged(Sender: TObject);
     procedure SetPanels(const Value: TPPGStatusPanels);
     procedure SetSimplePanel(const Value: Boolean);
     procedure SetSimpleText(const Value: string);
@@ -158,6 +173,8 @@ type
     property SizeGrip: Boolean read FSizeGrip write SetSizeGrip default True;
     property AutoHint: Boolean read FAutoHint write FAutoHint default False;
     property UseSystemFont: Boolean read FUseSystemFont write SetUseSystemFont default True;
+    /// Leiste: Flaeche, Text, Trennlinien (BorderColor) und Schrift (clDefault = Preset).
+    property BarStyle: TPPGElementStyle read FBarStyle write SetBarStyle;
     property AllowMarkup: Boolean read FAllowMarkup write SetAllowMarkup default False;
     property Align default alBottom;
     property Anchors;
@@ -174,6 +191,8 @@ type
     property PopupMenu;
     property ShowHint;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnContextPopup;
     property OnDblClick;
@@ -211,6 +230,8 @@ begin
   FWidth := 50;
   FBevel := pbLowered;
   FImageIndex := -1;
+  FColor := clDefault;
+  FTextColor := clDefault;
 end;
 
 procedure TPPGStatusPanel.Assign(Source: TPersistent);
@@ -230,6 +251,9 @@ begin
     FBadgeCount := S.FBadgeCount;
     FImageIndex := S.FImageIndex;
     FHint := S.FHint;
+    FColor := S.FColor;
+    FTextColor := S.FTextColor;
+    FFontStyle := S.FFontStyle;
     Changed(False);
   end
   else if Source is TStatusPanel then
@@ -326,6 +350,33 @@ begin
   end;
 end;
 
+procedure TPPGStatusPanel.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGStatusPanel.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGStatusPanel.SetFontStyle(const Value: TFontStyles);
+begin
+  if FFontStyle <> Value then
+  begin
+    FFontStyle := Value;
+    Changed(False);
+  end;
+end;
+
 procedure TPPGStatusPanel.SetImageIndex(const Value: TPPGImageIndex);
 begin
   if FImageIndex <> Value then
@@ -368,6 +419,9 @@ begin
   FPanels := TPPGStatusPanels.Create(Self);
   FMarkup := TPPGMarkupLayout.Create;
   FPanelCanvas := TCanvas.Create;
+  FBarStyle := TPPGElementStyle.Create(Self);
+  FBarStyle.OnChange := BarStyleChanged;
+  FFonts := TPPGFontCache.Create;
   FSizeGrip := True;
   FUseSystemFont := True;
   ParentFont := False;
@@ -384,7 +438,19 @@ begin
   FreeAndNil(FPanelCanvas);
   FreeAndNil(FMarkup);
   FreeAndNil(FPanels);
+  FreeAndNil(FFonts);
+  FreeAndNil(FBarStyle);
   inherited Destroy;
+end;
+
+procedure TPPGStatusBar.SetBarStyle(const Value: TPPGElementStyle);
+begin
+  FBarStyle.Assign(Value);
+end;
+
+procedure TPPGStatusBar.BarStyleChanged(Sender: TObject);
+begin
+  Invalidate;
 end;
 
 procedure TPPGStatusBar.Loaded;
@@ -637,6 +703,9 @@ var
   Flags: Cardinal;
   S: string;
   Sz: TSize;
+  UseColors, Dk: Boolean;
+  PText: TColor;
+  PF: TFont;
 begin
   PPI := ScalePPI;
   T := Tokens;
@@ -661,6 +730,17 @@ begin
       TextCol := PPGColorToRGB(A.Normal.TextColor);
     end;
   end;
+  // Element-Stil der Leiste (BarStyle) und Farben je Feld (nur ohne
+  // Hochkontrast/VCL-Style)
+  UseColors := not HC and not UseVclStyle;
+  Dk := UseDarkMode;
+  if UseColors then
+  begin
+    Fill := FBarStyle.FillFor(Dk, Fill);
+    TextCol := FBarStyle.TextFor(Dk, TextCol);
+    Border := FBarStyle.BorderFor(Dk, Border);
+  end;
+  FFonts.Clear;
   if not Enabled then
   begin
     TextCol := T.TextDisabled;
@@ -689,6 +769,12 @@ begin
       R := PanelRect(I);
       if IsRectEmpty(R) then
         Continue;
+      PText := TextCol;
+      if UseColors and (P.Color <> clDefault) and (P.Color <> clNone) then
+        ACanvas.FillRoundRect(R, 0, PPGColorToRGB(P.Color), 255);
+      if UseColors and Enabled and (P.TextColor <> clDefault) and (P.TextColor <> clNone) then
+        PText := PPGColorToRGB(P.TextColor);
+      PF := FFonts.ForStyle(FBarStyle, Font, P.FontStyle);
       // Trennlinie rechts (RTL links), nicht nach dem letzten Panel
       if (P.Bevel <> pbNone) and (I < FPanels.Count - 1) then
       begin
@@ -762,7 +848,7 @@ begin
       else
         if FAllowMarkup then
         begin
-          FMarkup.Layout(P.Text, Font, Images, TR.Right - TR.Left, False);
+          FMarkup.Layout(P.Text, PF, Images, TR.Right - TR.Left, False);
           case P.Alignment of
             taRightJustify: X := TR.Right - FMarkup.Size.cx;
             taCenter: X := (TR.Left + TR.Right - FMarkup.Size.cx) div 2;
@@ -771,7 +857,7 @@ begin
           end;
           ACanvas.PushClipRoundRect(TR, 0);
           try
-            FMarkup.Draw(ACanvas, X, (TR.Top + TR.Bottom - FMarkup.Size.cy) div 2, TextCol, Accent, Enabled);
+            FMarkup.Draw(ACanvas, X, (TR.Top + TR.Bottom - FMarkup.Size.cy) div 2, PText, Accent, Enabled);
           finally
             ACanvas.PopClip;
           end;
@@ -783,7 +869,7 @@ begin
             taRightJustify: Flags := Flags or DT_RIGHT;
             taCenter: Flags := Flags or DT_CENTER;
           end;
-          ACanvas.DrawText(TR, P.Text, Font, TextCol, DrawTextBiDiModeFlags(Flags));
+          ACanvas.DrawText(TR, P.Text, PF, PText, DrawTextBiDiModeFlags(Flags));
         end;
       end;
     end;
@@ -806,6 +892,7 @@ begin
         ACanvas.FillRoundRect(BR, 0, TextCol, 160);
       end;
   end;
+  FFonts.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
 end;
 
 procedure TPPGStatusBar.WMNCHitTest(var Message: TWMNCHitTest);

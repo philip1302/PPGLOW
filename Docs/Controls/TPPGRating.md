@@ -21,11 +21,11 @@ TPPGRating - Sternebewertung (Phase 7a).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Value`, `MaxValue`, `AllowHalf`, `AllowClear`, `ReadOnly`, `StarSize`, `StarSpacing`, `StarColor`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `ParentBiDiMode`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `Value`, `MaxValue`, `AllowHalf`, `AllowClear`, `ReadOnly`, `StarSize`, `StarSpacing`, `StarColor`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Constraints`, `Enabled`, `ParentBiDiMode`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnEnter`, `OnExit`
+`OnGesture`, `OnChange`, `OnEnter`, `OnExit`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGRating.md`.

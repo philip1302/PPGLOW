@@ -33,11 +33,11 @@ TPPGDBChart - Diagramm aus einer Datenmenge (Phase 10e, Paket PPGlowDBR).
 
 ## PPGlow-Eigenschaften
 
-`DataSource`, `ValueFields`, `LabelField`, `XField`, `MaxRecords`, `ReloadDelay`, `ShowCurrentRecord`, `JumpToRecord`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Title`, `Series`, `Categories`, `XAxis`, `YAxis`, `Y2Axis`, `ReferenceLines`, `Stacking`, `LegendPosition`, `ShowTooltips`, `LegendToggle`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`DataSource`, `ValueFields`, `LabelField`, `XField`, `MaxRecords`, `ReloadDelay`, `ShowCurrentRecord`, `JumpToRecord`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Title`, `Series`, `Categories`, `XAxis`, `YAxis`, `Y2Axis`, `ReferenceLines`, `Stacking`, `LegendPosition`, `ShowTooltips`, `LegendToggle`, `ChartStyles`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnClick`, `OnDblClick`, `OnEnter`, `OnExit`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnPointClick`
+`OnGesture`, `OnClick`, `OnDblClick`, `OnEnter`, `OnExit`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnPointClick`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBChart.md`.

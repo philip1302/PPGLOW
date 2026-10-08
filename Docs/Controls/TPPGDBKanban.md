@@ -12,6 +12,10 @@ Palette **PPGlow DB** - Unit `PPG.DB.Kanban` - Basis `TPPGCustomDBKanban`
 - Ohne `KeyField` ist das Board schreibgeschützt (Verschieben wird abgelehnt).
 - Änderungen von außen laden nach `ReloadDelay` neu; die Auswahl bleibt an der Karte. `SyncRecord`: die gewählte Karte wird zum aktuellen Datensatz.
 
+## Anpassung
+
+- `KanbanStyles`, `OnCustomDrawCard`, `SaveLayout`/`LoadLayout` wie `TPPGKanban`.
+
 ## Beispiel
 
 ```pascal
@@ -38,11 +42,11 @@ TPPGDBKanban - Kanban-Board auf einer Datenmenge (Phase 14c, Paket PPGlowDBR).
 
 ## PPGlow-Eigenschaften
 
-`DataSource`, `KeyField`, `ColumnField`, `LaneField`, `OrderField`, `TitleField`, `TextField`, `LabelsField`, `AssigneeField`, `DueField`, `ProgressField`, `ColorField`, `MaxRecords`, `ReloadDelay`, `SyncRecord`, `Columns`, `Lanes`, `ColumnWidth`, `CardGap`, `MaxTextLines`, `AllowDrag`, `ReadOnly`, `WipMode`, `ShowCardCount`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`DataSource`, `KeyField`, `ColumnField`, `LaneField`, `OrderField`, `TitleField`, `TextField`, `LabelsField`, `AssigneeField`, `DueField`, `ProgressField`, `ColorField`, `MaxRecords`, `ReloadDelay`, `SyncRecord`, `Columns`, `Lanes`, `ColumnWidth`, `CardGap`, `MaxTextLines`, `AllowDrag`, `ReadOnly`, `WipMode`, `ShowCardCount`, `KanbanStyles`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `ScrollBarMode`, `SmoothScrolling`, `Align`, `Anchors`, `BiDiMode`, `Color`, `Constraints`, `Enabled`, `Font`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnCardMoving`, `OnCardMoved`, `OnCardClick`, `OnCardOpen`, `OnSelectionChange`, `OnColumnCollapse`, `OnEnter`, `OnExit`
+`OnCustomDrawCard`, `OnGesture`, `OnCardMoving`, `OnCardMoved`, `OnCardClick`, `OnCardOpen`, `OnSelectionChange`, `OnColumnCollapse`, `OnEnter`, `OnExit`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBKanban.md`.

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGKanbanPrinter</title><style>body{font-family:Segoe UI,sans-serif;max-width:56em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGKanbanPrinter</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Kanban.Print</code> - Basis <code>TPPGCustomPrinter</code></p>
+<p><strong>Vorbild:</strong> TPPGPlannerPrinter, Trello „Board drucken“</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Druckt ein <code>TPPGKanban</code> bzw. <code>TPPGDBKanban</code> (<code>Kanban</code>) &#252;ber denselben Weg wie Grid- und Planer-Drucker: Vorschau, „Seite einrichten“, PDF (<code>PrintToFile</code> mit „Microsoft Print to PDF“), Kopf-/Fu&#223;zeile mit Platzhaltern.</li>
+<li>Gezeichnet wird mit demselben Code wie auf dem Bildschirm, in der Aufl&#246;sung des Druckers, mit hellen Farben, ohne Auswahl und Hover. Spalten, Swimlanes, Karten, <code>KanbanStyles</code>, <code>OnCustomDrawCard</code> und <code>OnGetCard</code> werden &#252;bernommen; eingeklappte Spalten bleiben eingeklappt.</li>
+<li><code>FitToPageWidth</code> (Vorgabe, auch im Dialog „Seite einrichten“): alle Spalten auf die Seitenbreite verkleinern. Sonst gehen zu breite Boards auf Seiten nebeneinander weiter (Reihenfolge: erst nebeneinander, dann untereinander).</li>
+<li>Das Board wird so hoch gedruckt, wie die l&#228;ngste Spalte bzw. alle Swimlanes es brauchen; zu hohe Boards gehen auf Folgeseiten weiter. Karten an der Seitengrenze werden dabei geteilt.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGKanbanPrinter1.Kanban := PPGKanban1;
+PPGKanbanPrinter1.HeaderText := &#39;[Titel] - [Datum]&#39;;
+PPGKanbanPrinter1.Title := &#39;Sprint 12&#39;;
+PPGKanbanPrinter1.Orientation := poLandscape;
+PPGKanbanPrinter1.Preview;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Drucken des Kanban-Boards ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten).</p>
+<ul>
+<li>Gezeichnet wird mit demselben Code wie auf dem Bildschirm: ein unsichtbares Board in Druckeraufloesung (ScalePPI = Drucker-PPI) mit den Spalten, Swimlanes, Karten, Stilen und Ereignissen des Boards, helle Farben, ohne Auswahl und Hover. Das Board wird so hoch, dass alle Karten ohne Scrollen Platz haben.</li>
+<li>FitToPageWidth: alle Spalten auf die Seitenbreite verkleinern (kleinere Aufloesung); sonst werden zu breite Boards auf mehrere Seiten nebeneinander verteilt. Zu hohe Boards gehen auf Folgeseiten weiter.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p><code>Kanban</code>, <code>FitToPageWidth</code>, <code>Title</code>, <code>HeaderText</code>, <code>FooterText</code>, <code>Orientation</code>, <code>Margins</code>, <code>PrinterName</code></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGKanbanPrinter.md</code>.</p>
+</body></html>

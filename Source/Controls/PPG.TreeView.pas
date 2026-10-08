@@ -31,7 +31,7 @@ uses
   Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls, Vcl.ComCtrls,
   System.Generics.Collections,
   PPG.Types, PPG.Items, PPG.Animation, PPG.Render.Intf, PPG.ItemPainter, PPG.UIA,
-  PPG.Controls.ItemList;
+  PPG.Controls.ItemList, PPG.CustomDraw;
 
 type
   TPPGTreeNodes = class;
@@ -55,6 +55,12 @@ type
     FRow: Integer;
     FRowGen: Cardinal;
     FUiaId: Integer; // UI Automation: stabile Nummer (0 = noch keine)
+    FColor: TColor;
+    FTextColor: TColor;
+    FFontStyle: TFontStyles;
+    procedure SetColor(const Value: TColor);
+    procedure SetTextColor(const Value: TColor);
+    procedure SetFontStyle(const Value: TFontStyles);
     function GetCount: Integer;
     function GetItem(Index: Integer): TPPGTreeNode;
     function GetIndex: Integer;
@@ -124,6 +130,11 @@ type
     property Checked: Boolean read GetChecked write SetChecked;
     property Selected: Boolean read GetSelected write SetSelected;
     property Focused: Boolean read GetFocused;
+    /// Flaeche, Text und zusaetzliche Schriftstile dieses Knotens
+    /// (clDefault = Baum; nur zur Laufzeit, nicht in der DFM).
+    property Color: TColor read FColor write SetColor;
+    property TextColor: TColor read FTextColor write SetTextColor;
+    property FontStyle: TFontStyles read FFontStyle write SetFontStyle;
   end;
 
   TPPGTreeNodes = class(TPersistent)
@@ -186,6 +197,11 @@ type
   TPPGTVNodeDropEvent = procedure(Sender: TObject; Node, Target: TPPGTreeNode;
     Mode: TNodeAttachMode; var Allow: Boolean) of object;
 
+  /// Eigenes Zeichnen eines Knotens (vor dem Zeichnen; siehe PPG.CustomDraw).
+  TPPGTVCustomDrawEvent = procedure(Sender: TObject; Canvas: TCanvas; Node: TPPGTreeNode;
+    const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle;
+    var DefaultDraw: Boolean) of object;
+
   /// Editor fuer das Umbenennen (Enter/Esc gehoeren ihm, nicht dem Dialog).
   TPPGTreeEdit = class(TEdit)
   private
@@ -212,6 +228,9 @@ type
     FReadOnly: Boolean;
     FRowSelect: Boolean;
     FHideSelection: Boolean;
+    FHotTrack: Boolean;
+    FToolTips: Boolean;
+    FOnCustomDrawNode: TPPGTVCustomDrawEvent;
     FAutoExpand: Boolean;
     FMultiSelect: Boolean;
     FExpandAnim: TPPGAnimation;
@@ -235,6 +254,8 @@ type
     FOnChecked: TPPGTVChangedEvent;
     FOnCompare: TPPGTVCompareEvent;
     FOnNodeDrop: TPPGTVNodeDropEvent;
+    procedure SetHotTrack(const Value: Boolean);
+    procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure SetItems(const Value: TPPGTreeNodes);
     procedure SetIndent(const Value: Integer);
     procedure SetShowLines(const Value: Boolean);
@@ -278,6 +299,10 @@ type
     function TwoLineItems: Boolean; override;
     function ItemIndent(Index: Integer; const Data: TPPGItemData): Integer; override;
     function ItemPaintSelected(Index: Integer): Boolean; override;
+    function HasCustomDraw: Boolean; override;
+    function DoCustomDrawItem(const ACanvas: IPPGCanvas; Index: Integer; const R: TRect;
+      State: TPPGItemDrawState; var Style: TPPGDrawStyle): Boolean; override;
+    function ItemExtraFontStyle(Index: Integer; Hot: Boolean): TFontStyles; override;
     procedure PaintItem(const ACanvas: IPPGCanvas; Index: Integer; const R: TRect;
       const Data: TPPGItemData; const Info: TPPGItemPaintInfo); override;
     function ItemMouseDown(Index: Integer; Shift: TShiftState; X, Y: Integer): Boolean; override;
@@ -331,6 +356,13 @@ type
     /// Ganze Zeile hervorheben (Fluent-Standard; nur zur DFM-Kompatibilitaet).
     property RowSelect: Boolean read FRowSelect write FRowSelect default True;
     property HideSelection: Boolean read FHideSelection write SetHideSelection default False;
+    /// Wie TTreeView: Knoten unter der Maus unterstrichen.
+    property HotTrack: Boolean read FHotTrack write SetHotTrack default False;
+    /// Wie TTreeView: abgeschnittene Knotentexte als Hinweis (braucht ShowHint).
+    property ToolTips: Boolean read FToolTips write FToolTips default True;
+    /// Vor dem Zeichnen jedes Knotens: Style anpassen oder selbst zeichnen
+    /// (Pfeil, Linien und Kaestchen zeichnet der Baum immer).
+    property OnCustomDrawNode: TPPGTVCustomDrawEvent read FOnCustomDrawNode write FOnCustomDrawNode;
     /// Beim Waehlen per Tastatur/Maus automatisch aufklappen.
     property AutoExpand: Boolean read FAutoExpand write FAutoExpand default False;
     property MultiSelect: Boolean read FMultiSelect write SetMultiSelect default False;
@@ -379,6 +411,7 @@ type
     property Images;
     property AllowMarkup;
     property AllowReorder;
+    property Styles;
     property ScrollBarMode;
     property SmoothScrolling;
     property HighContrastSupport;
@@ -398,6 +431,7 @@ type
     property Enabled;
     property Font;
     property HideSelection;
+    property HotTrack;
     property Indent;
     property ItemHeight;
     property Items;
@@ -413,12 +447,15 @@ type
     property ShowHint;
     property ShowLines;
     property ShowRoot;
+    property ToolTips;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
     {$ENDIF}
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnChanging;
     property OnChecked;
@@ -426,6 +463,7 @@ type
     property OnCollapsed;
     property OnCollapsing;
     property OnCompare;
+    property OnCustomDrawNode;
     property OnContextPopup;
     property OnDblClick;
     property OnDeletion;
@@ -459,7 +497,7 @@ uses
   PPG.Lang,
   System.SysUtils, Winapi.oleacc, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Markup,
-  PPG.Selection, PPG.Render.Registry, Vcl.Forms;
+  PPG.Selection, PPG.Render.Registry, PPG.Render.Gdi, Vcl.Forms;
 
 type
   /// Zeilen des Baums als Quelle der Listen-Basis.
@@ -563,6 +601,8 @@ begin
   FSelectedIndex := -1;
   FEnabled := True;
   FRow := -1;
+  FColor := clDefault;
+  FTextColor := clDefault;
 end;
 
 destructor TPPGTreeNode.Destroy;
@@ -587,6 +627,9 @@ begin
     FEnabled := S.FEnabled;
     FHasChildren := S.FHasChildren;
     FData := S.FData;
+    FColor := S.FColor;
+    FTextColor := S.FTextColor;
+    FFontStyle := S.FFontStyle;
     Changed;
   end
   else
@@ -702,6 +745,33 @@ begin
   if FDetail <> Value then
   begin
     FDetail := Value;
+    Changed;
+  end;
+end;
+
+procedure TPPGTreeNode.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    Changed;
+  end;
+end;
+
+procedure TPPGTreeNode.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Changed;
+  end;
+end;
+
+procedure TPPGTreeNode.SetFontStyle(const Value: TFontStyles);
+begin
+  if FFontStyle <> Value then
+  begin
+    FFontStyle := Value;
     Changed;
   end;
 end;
@@ -1454,6 +1524,7 @@ begin
   FShowButtons := True;
   FAutoCheck := True;
   FRowSelect := True;
+  FToolTips := True;
   FRows := TList.Create;
   FItems := TPPGTreeNodes.Create(Self);
   FExpandAnim := TPPGAnimation.Create(Self);
@@ -1676,6 +1747,9 @@ begin
   Data.Checked := N.FCheckState;
   Data.Enabled := N.FEnabled;
   Data.Data := N;
+  Data.Color := N.FColor;
+  Data.TextColor := N.FTextColor;
+  Data.FontStyle := N.FFontStyle;
 end;
 
 { ---- Geometrie ---- }
@@ -2579,6 +2653,92 @@ begin
     FCheckBoxes := Value;
     Invalidate;
   end;
+end;
+
+procedure TPPGCustomTreeView.SetHotTrack(const Value: Boolean);
+begin
+  if FHotTrack <> Value then
+  begin
+    FHotTrack := Value;
+    Invalidate;
+  end;
+end;
+
+function TPPGCustomTreeView.ItemExtraFontStyle(Index: Integer; Hot: Boolean): TFontStyles;
+begin
+  if FHotTrack and Hot then
+    Result := [fsUnderline]
+  else
+    Result := [];
+end;
+
+function TPPGCustomTreeView.HasCustomDraw: Boolean;
+begin
+  Result := Assigned(FOnCustomDrawNode) or inherited HasCustomDraw;
+end;
+
+function TPPGCustomTreeView.DoCustomDrawItem(const ACanvas: IPPGCanvas; Index: Integer;
+  const R: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle): Boolean;
+var
+  N: TPPGTreeNode;
+  DC: HDC;
+begin
+  // Mit Knoten-Ereignis dieses, sonst das allgemeine OnCustomDrawItem (Zeile)
+  Style.Reset;
+  if not Assigned(FOnCustomDrawNode) then
+    Exit(inherited DoCustomDrawItem(ACanvas, Index, R, State, Style));
+  Result := True;
+  N := NodeOfRow(Index);
+  if N = nil then
+    Exit;
+  if N.FExpanded then
+    Include(State, idsExpanded);
+  DC := ACanvas.BeginGdi;
+  try
+    DrawCanvas.Handle := DC;
+    try
+      DrawCanvas.Font := Font;
+      DrawCanvas.Brush.Style := bsClear;
+      FOnCustomDrawNode(Self, DrawCanvas, N, R, State, Style, Result);
+    finally
+      DrawCanvas.Handle := 0;
+    end;
+  finally
+    ACanvas.EndGdi(DC);
+  end;
+end;
+
+procedure TPPGCustomTreeView.CMHintShow(var Message: TCMHintShow);
+var
+  N: TPPGTreeNode;
+  P: TPoint;
+  R: TRect;
+  Avail, W: Integer;
+  Row: Integer;
+  D: TPPGItemData;
+begin
+  inherited;
+  // ToolTips: abgeschnittener Knotentext als Hinweis (nur ohne eigenen Hint)
+  if not FToolTips or (Hint <> '') or (Message.HintInfo = nil) then
+    Exit;
+  P := Message.HintInfo^.CursorPos;
+  N := GetNodeAt(P.X, P.Y);
+  Row := RowOfNode(N);
+  if Row < 0 then
+    Exit;
+  R := ItemRect(Row);
+  if IsRectEmpty(R) then
+    Exit;
+  PPGInitItemData(D);
+  W := PPGMeasureTextNoCanvas(PPGStripMarkup(N.FText), Font, 0, False).cx;
+  Avail := (R.Right - R.Left) - ItemIndent(Row, D) -
+    PPGScale(PPGItemPadX + 6, ScalePPI);
+  if Images <> nil then
+    Dec(Avail, Images.Width + PPGScale(PPGItemGap, ScalePPI));
+  if W <= Avail then
+    Exit;
+  Message.HintInfo^.HintStr := PPGStripMarkup(N.FText);
+  Message.HintInfo^.CursorRect := R;
 end;
 
 procedure TPPGCustomTreeView.SetHideSelection(const Value: Boolean);

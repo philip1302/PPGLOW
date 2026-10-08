@@ -14,6 +14,10 @@
 <li>Der Tooltip ist Teil des Controls (kein eigenes Fenster) und erscheint deshalb auch in Screenshots. <code>SaveToBitmap</code>/<code>SaveToPng</code>/<code>CopyToClipboard</code> zeigen immer den Endzustand.</li>
 <li>Screenreader: Kinder sind die Datenpunkte (h&#246;chstens 500 je Serie).</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>ChartStyles</code> (Titel, Achse, Gitter, Legende), <code>TitleFont</code>, <code>LegendFont</code>; Serienfarben ohne eigene Farbe aus <code>TPPGStyleManager.ChartPalette</code>.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>var
   S: TPPGChartSeries;
@@ -42,9 +46,9 @@ end;
 <li>RTL: Y-Achse rechts, Legende von rechts; die X-Richtung bleibt (wie Excel).</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Title</code>, <code>Series</code>, <code>Categories</code>, <code>XAxis</code>, <code>YAxis</code>, <code>Y2Axis</code>, <code>ReferenceLines</code>, <code>Stacking</code>, <code>LegendPosition</code>, <code>ShowTooltips</code>, <code>LegendToggle</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>Hint</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code></p>
+<p><code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Title</code>, <code>Series</code>, <code>Categories</code>, <code>XAxis</code>, <code>YAxis</code>, <code>Y2Axis</code>, <code>ReferenceLines</code>, <code>Stacking</code>, <code>LegendPosition</code>, <code>ShowTooltips</code>, <code>LegendToggle</code>, <code>ChartStyles</code>, <code>Align</code>, <code>Anchors</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>Hint</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>ParentShowHint</code>, <code>PopupMenu</code>, <code>ShowHint</code>, <code>TabOrder</code>, <code>TabStop</code>, <code>Visible</code>, <code>Touch</code></p>
 <h2>Ereignisse</h2>
-<p><code>OnClick</code>, <code>OnDblClick</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetPoint</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnPointClick</code></p>
+<p><code>OnGesture</code>, <code>OnClick</code>, <code>OnDblClick</code>, <code>OnEnter</code>, <code>OnExit</code>, <code>OnGetPoint</code>, <code>OnMouseDown</code>, <code>OnMouseMove</code>, <code>OnMouseUp</code>, <code>OnPointClick</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGChart.md</code>.</p>
 </body></html>

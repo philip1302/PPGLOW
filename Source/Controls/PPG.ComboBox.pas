@@ -29,14 +29,17 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls,
-  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Field, PPG.Popup, PPG.Items;
+  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Field, PPG.Popup, PPG.Items,
+  PPG.ItemPainter, PPG.CustomDraw;
 
 type
   /// Filtern beim Tippen (csDropDown): keiner, Anfang, irgendwo im Text.
   TPPGFilterMode = (fmNone, fmPrefix, fmContains);
 
-  TPPGCustomComboBox = class(TPPGCustomField)
+  TPPGCustomComboBox = class(TPPGCustomField, IPPGListStylesSource)
   private
+    FListStyles: TPPGListStyles;
+    FOnCustomDrawItem: TPPGCustomDrawItemEvent;
     FItems: TStringList;
     FItemIndex: Integer;
     FLoadedItemIndex: Integer;
@@ -62,6 +65,10 @@ type
     FOnSelect: TNotifyEvent;
     FOnDropDown: TNotifyEvent;
     FOnCloseUp: TNotifyEvent;
+    procedure SetListStyles(const Value: TPPGListStyles);
+    { IPPGListStylesSource }
+    function GetListStyles: TPPGListStyles;
+    function GetCustomDrawItem: TPPGCustomDrawItemEvent;
     function GetItems: TStrings;
     procedure SetItems(const Value: TStrings);
     procedure SetItemIndex(const Value: Integer);
@@ -163,11 +170,16 @@ type
     property DroppedDown: Boolean read FDroppedDown write SetDroppedDown;
     /// Die Aufklappliste (nil, solange sie nie geoeffnet wurde).
     property PopupList: TPPGPopupList read FPopup;
+    /// Bereiche der Aufklappliste (Auswahl = aktueller Wert, Zebra, Hover ...).
+    property ListStyles: TPPGListStyles read FListStyles write SetListStyles;
+    /// Vor dem Zeichnen jedes Eintrags der Aufklappliste.
+    property OnCustomDrawItem: TPPGCustomDrawItemEvent read FOnCustomDrawItem write FOnCustomDrawItem;
     property Text: string read GetComboText write SetComboText;
   end;
 
   TPPGComboBox = class(TPPGCustomComboBox)
   published
+    property RoundedCorners;
     property Preset;
     property StyleManager;
     property Appearance;
@@ -175,6 +187,7 @@ type
     property Images;
     property ItemsEx;
     property FilterMode;
+    property ListStyles;
     property ShowClearButton;
     property TextHint;
     property UseSystemContextMenu;
@@ -220,7 +233,10 @@ type
     property TabStop;
     property Text;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
+    property OnCustomDrawItem;
     property OnClick;
     property OnCloseUp;
     property OnContextPopup;
@@ -287,6 +303,9 @@ begin
   Data.ImageIndex := It.ImageIndex;
   Data.Enabled := It.Enabled;
   Data.Data := It.Data;
+  Data.Color := It.Color;
+  Data.TextColor := It.TextColor;
+  Data.FontStyle := It.FontStyle;
 end;
 
 var
@@ -297,6 +316,21 @@ const
   WheelLines = 3;
 
 { TPPGCustomComboBox }
+
+procedure TPPGCustomComboBox.SetListStyles(const Value: TPPGListStyles);
+begin
+  FListStyles.Assign(Value);
+end;
+
+function TPPGCustomComboBox.GetListStyles: TPPGListStyles;
+begin
+  Result := FListStyles;
+end;
+
+function TPPGCustomComboBox.GetCustomDrawItem: TPPGCustomDrawItemEvent;
+begin
+  Result := FOnCustomDrawItem;
+end;
 
 constructor TPPGCustomComboBox.Create(AOwner: TComponent);
 begin
@@ -310,6 +344,7 @@ begin
   FAutoComplete := True;
   FItemsEx := TPPGItems.Create(Self);
   FItemsEx.OnChange := ItemsExChange;
+  FListStyles := TPPGListStyles.Create(Self);
   FItemsExSource := TComboExSource.Create;
   TComboExSource(FItemsExSource as TObject).FOwner := Self;
   FArrowAnim := TPPGAnimation.Create(Self);
@@ -329,6 +364,7 @@ begin
       ReleaseCapture;
   end;
   FreeAndNil(FPopup);
+  FreeAndNil(FListStyles);
   if FArrowAnim <> nil then
     FArrowAnim.OnStep := nil;
   FreeAndNil(FArrowAnim); // meldet sich selbst beim Animator ab

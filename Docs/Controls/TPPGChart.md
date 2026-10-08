@@ -14,6 +14,10 @@ Palette **PPGlow** - Unit `PPG.Chart` - Basis `TPPGCustomChart`
 - Der Tooltip ist Teil des Controls (kein eigenes Fenster) und erscheint deshalb auch in Screenshots. `SaveToBitmap`/`SaveToPng`/`CopyToClipboard` zeigen immer den Endzustand.
 - Screenreader: Kinder sind die Datenpunkte (höchstens 500 je Serie).
 
+## Anpassung
+
+- `ChartStyles` (Titel, Achse, Gitter, Legende), `TitleFont`, `LegendFont`; Serienfarben ohne eigene Farbe aus `TPPGStyleManager.ChartPalette`.
+
 ## Beispiel
 
 ```pascal
@@ -47,11 +51,11 @@ TPPGChart - Diagramm im Stil der Suite (Phase 10d).
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Title`, `Series`, `Categories`, `XAxis`, `YAxis`, `Y2Axis`, `ReferenceLines`, `Stacking`, `LegendPosition`, `ShowTooltips`, `LegendToggle`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `HighContrastSupport`, `Title`, `Series`, `Categories`, `XAxis`, `YAxis`, `Y2Axis`, `ReferenceLines`, `Stacking`, `LegendPosition`, `ShowTooltips`, `LegendToggle`, `ChartStyles`, `Align`, `Anchors`, `BiDiMode`, `Constraints`, `Enabled`, `Font`, `Hint`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnClick`, `OnDblClick`, `OnEnter`, `OnExit`, `OnGetPoint`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnPointClick`
+`OnGesture`, `OnClick`, `OnDblClick`, `OnEnter`, `OnExit`, `OnGetPoint`, `OnMouseDown`, `OnMouseMove`, `OnMouseUp`, `OnPointClick`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGChart.md`.

@@ -47,9 +47,26 @@ const
     $008A8AFF); // #FF8A8A
 
 function PPGChartColor(const Tokens: TPPGTokens; Dark: Boolean; Index: Integer): TColor;
+var
+  Custom: TArray<TColor>;
+  I: Integer;
 begin
   if Index < 0 then
     Index := 0;
+  // Eigene Palette (TPPGStyleManager.ChartPalette) hat Vorrang; im Dunkeln
+  // wird sie nur aufgehellt, wenn der Kontrast zum Hintergrund unter 3:1 liegt
+  Custom := TPPGTokenOverrides.ChartPalette;
+  if Length(Custom) > 0 then
+  begin
+    Result := PPGColorToRGB(Custom[Index mod Length(Custom)]);
+    if Dark then
+      for I := 1 to 12 do
+        if PPGContrastRatio(Result, Tokens.Background) < 3.0 then
+          Result := PPGLighten(Result, 0.15)
+        else
+          Break;
+    Exit;
+  end;
   Index := Index mod PPGChartPaletteSize;
   if Index = 0 then
     Result := Tokens.Accent

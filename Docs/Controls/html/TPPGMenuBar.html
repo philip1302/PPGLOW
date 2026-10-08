@@ -13,6 +13,10 @@
 <li>MDI-Men&#252;s (<code>Merge</code>/<code>Unmerge</code>) werden noch nicht zusammengef&#252;hrt.</li>
 <li>Screenreader: Rolle Men&#252;leiste, Ereignisse <code>EVENT_SYSTEM_MENUSTART/END</code>.</li>
 </ul>
+<h2>Anpassung</h2>
+<ul>
+<li><code>MenuStyles</code> und <code>OnCustomDrawItem</code> wie <code>TPPGPopupMenu</code>.</li>
+</ul>
 <h2>Beispiel</h2>
 <pre><code>PPGMenuBar1.Menu := MainMenu1;
 </code></pre>
@@ -26,7 +30,9 @@
 <li>Barrierefreiheit: Rolle MENUBAR mit Eintraegen als Kindern, EVENT_SYSTEM_MENUSTART/END.</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
-<p><code>Menu</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>Visible</code></p>
+<p><code>Menu</code>, <code>MenuStyles</code>, <code>Preset</code>, <code>StyleManager</code>, <code>Appearance</code>, <code>Animation</code>, <code>HighContrastSupport</code>, <code>Align</code>, <code>Anchors</code>, <code>AutoSize</code>, <code>BiDiMode</code>, <code>Constraints</code>, <code>Enabled</code>, <code>Font</code>, <code>ParentBiDiMode</code>, <code>ParentFont</code>, <code>Visible</code>, <code>Touch</code></p>
+<h2>Ereignisse</h2>
+<p><code>OnCustomDrawItem</code>, <code>OnGesture</code></p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGMenuBar.md</code>.</p>
 </body></html>

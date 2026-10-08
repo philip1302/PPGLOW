@@ -65,6 +65,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten und `Docs\Controls\notes`.
 | [TPPGTagEdit](TPPGTagEdit.md) | `PPG.TagEdit` | Stichwoerter als Chips (Phase 12f, Vorbild Outlook-Empfaenger, WinUI TokenizingTextBox). |
 | [TPPGGridPrinter](TPPGGridPrinter.md) | `PPG.Grid.Print` | Drucken von Tabellen (Phase 13e). |
 | [TPPGPlannerPrinter](TPPGPlannerPrinter.md) | `PPG.Planner.Print` | Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
+| [TPPGKanbanPrinter](TPPGKanbanPrinter.md) | `PPG.Kanban.Print` | Drucken des Kanban-Boards ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
 | [TPPGStyleManager](TPPGStyleManager.md) | `PPG.StyleManager` | Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster). |
 
 ## Palette PPGlow DB

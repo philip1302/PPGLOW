@@ -11,6 +11,13 @@ Palette **PPGlow** - Unit `PPG.Button` - Basis `TPPGCustomButton`
 - Split-Button: `Style = bsSplitButton` mit `DropDownMenu`; Klick auf den Pfeil öffnet das Menü ohne `OnClick`.
 - Bilder kommen aus `Images`/`ImageIndex` (ab 10.4 auch `ImageName`), nicht aus `Glyph`.
 
+## Anpassung
+
+- `Alignment` und `Margin` (wie `TBitBtn`) für die Lage von Bild und Text.
+- Bilder je Zustand: `HotImageIndex`, `DisabledImageIndex`, `PressedImageIndex` (bzw. `…ImageName` ab 10.4); `ImageTint = itTextColor` färbt einfarbige Symbole in der Textfarbe des Zustands.
+- `RoundedCorners` (Segment-Buttons, Button-Gruppen) und `Shadow` (Elevation).
+- Schriftstil je Zustand über `Appearance.Hot.FontStyle` usw.; `Appearance.Focused` und `Appearance.Dark` für Fokus- und Dunkel-Farben.
+
 ## Beispiel
 
 ```pascal
@@ -33,15 +40,15 @@ Stolpersteine:
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ImageIndex`, `ImageName`, `HotImageIndex`, `DisabledImageIndex`, `ImagePosition`, `Spacing`, `WordWrap`, `ShowFocusRect`, `HighContrastSupport`, `ModalResult`, `Default`, `Cancel`, `Style`, `DropDownMenu`, `GroupIndex`, `AllowAllUp`, `Down`
+`Preset`, `StyleManager`, `Appearance`, `Animation`, `Images`, `ImageIndex`, `ImageName`, `HotImageIndex`, `DisabledImageIndex`, `PressedImageIndex`, `HotImageName`, `DisabledImageName`, `PressedImageName`, `ImageTint`, `ImagePosition`, `Spacing`, `Alignment`, `Margin`, `RoundedCorners`, `Shadow`, `WordWrap`, `ShowFocusRect`, `HighContrastSupport`, `ModalResult`, `Default`, `Cancel`, `Style`, `DropDownMenu`, `GroupIndex`, `AllowAllUp`, `Down`
 
 ## Eigenschaften wie in der VCL
 
-`Action`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Caption`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `ParentBackground`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`
+`Action`, `Align`, `Anchors`, `AutoSize`, `BiDiMode`, `Caption`, `Color`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `ParentBackground`, `ParentBiDiMode`, `ParentColor`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabOrder`, `TabStop`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnDropDownClick`, `OnClick`, `OnContextPopup`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnStartDock`, `OnStartDrag`
+`OnDropDownClick`, `OnGesture`, `OnClick`, `OnContextPopup`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnKeyDown`, `OnKeyPress`, `OnKeyUp`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGButton.md`.

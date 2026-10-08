@@ -6,3 +6,7 @@
 - Pfeiltasten auf den Reitern laufen nicht um.
 - `tpLeft`/`tpRight` werden wie oben/unten gezeichnet.
 - Überlauf mit Blätterpfeilen, gleitender Unterstrich, Schließen-Knöpfe.
+
+## Anpassung
+
+- `TabStyles`, `MultiLine`, `RaggedRight`, `Style`, `OwnerDraw`, `OnDrawTab` und `OnCustomDrawItem`.

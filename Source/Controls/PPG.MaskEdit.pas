@@ -121,6 +121,7 @@ type
     property PasswordChar;
     property PopupMenu;
     property ReadOnly;
+    property ReadOnlyStyle;
     property ShowHint;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
@@ -129,6 +130,8 @@ type
     property TabStop;
     property Text;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnClick;
     property OnContextPopup;

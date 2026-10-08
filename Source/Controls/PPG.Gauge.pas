@@ -32,7 +32,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics,
   PPG.Types, PPG.Tokens, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base,
-  PPG.Sparkline;
+  PPG.Sparkline, PPG.ElementStyle;
 
 type
   TPPGGaugeRangeColor = (grcSuccess, grcWarning, grcDanger, grcAccent, grcNeutral, grcCustom);
@@ -75,6 +75,7 @@ type
 
   TPPGCustomGauge = class(TPPGCustomControl)
   private
+    FValueStyle: TPPGElementStyle;
     FMin: Double;
     FMax: Double;
     FValue: Double;
@@ -95,6 +96,8 @@ type
     FIncrement: Double;
     FDragging: Boolean;
     FOnChange: TNotifyEvent;
+    procedure SetValueStyle(const Value: TPPGElementStyle);
+    procedure ValueStyleChanged(Sender: TObject);
     procedure SetMin(const Value: Double);
     procedure SetMax(const Value: Double);
     procedure SetValue(const Value: Double);
@@ -159,6 +162,8 @@ type
     /// Schritt fuer Pfeiltasten (Bild = zehnfach).
     property Increment: Double read FIncrement write SetIncrement stored IsIncrementStored;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    /// Werttext: TextColor und Schrift (ohne eigene Schrift: fett, Groesse nach dem Bogen).
+    property ValueStyle: TPPGElementStyle read FValueStyle write SetValueStyle;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -194,6 +199,7 @@ type
     property ValueFormat;
     property Units;
     property ValueColor;
+    property ValueStyle;
     property ReadOnly;
     property Increment;
     property Caption;
@@ -212,6 +218,8 @@ type
     property TabOrder;
     property TabStop default False;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnChange;
     property OnClick;
     property OnEnter;
@@ -222,6 +230,8 @@ type
 
   TPPGCustomKpiTile = class(TPPGCustomControl)
   private
+    FTitleStyle: TPPGElementStyle;
+    FValueStyle: TPPGElementStyle;
     FTitle: string;
     FValue: Double;
     FValueText: string;
@@ -234,6 +244,10 @@ type
     FSparkline: TArray<Double>;
     FSparklineKind: TPPGSparklineKind;
     FShowSparkline: Boolean;
+    procedure SetTitleStyle(const Value: TPPGElementStyle);
+    procedure TitleStyleChanged(Sender: TObject);
+    procedure SetValueStyle(const Value: TPPGElementStyle);
+    procedure ValueStyleChanged(Sender: TObject);
     procedure SetTitle(const Value: string);
     procedure SetValue(const Value: Double);
     procedure SetValueText(const Value: string);
@@ -273,7 +287,12 @@ type
     property SparklineKind: TPPGSparklineKind read FSparklineKind write SetSparklineKind default skArea;
     property ShowSparkline: Boolean read FShowSparkline write SetShowSparkline default True;
     property SparklineText: string read GetSparklineText write SetSparklineText stored True;
+    /// Wert: TextColor und Schrift (ohne eigene Schrift: fett, Groesse nach der Kachel).
+    property ValueStyle: TPPGElementStyle read FValueStyle write SetValueStyle;
+    /// Titel: TextColor und Schrift.
+    property TitleStyle: TPPGElementStyle read FTitleStyle write SetTitleStyle;
   public
+    destructor Destroy; override;
     constructor Create(AOwner: TComponent); override;
     procedure SetSparkline(const AValues: array of Double);
     function Trend: TPPGTrend;
@@ -293,8 +312,10 @@ type
     property Animation;
     property HighContrastSupport;
     property Title;
+    property TitleStyle;
     property Value;
     property ValueText;
+    property ValueStyle;
     property ValueFormat;
     property Units;
     property Change;
@@ -319,6 +340,8 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property Touch;
+    property OnGesture;
     property OnClick;
     property OnEnter;
     property OnExit;
@@ -328,7 +351,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.Math, Winapi.oleacc,
+  System.Math, System.UITypes, Winapi.oleacc,
   PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.Appearance, PPG.DpiUtils,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Render.Shapes;
 
@@ -463,9 +486,23 @@ end;
 
 { TPPGCustomGauge }
 
+procedure TPPGCustomGauge.SetValueStyle(const Value: TPPGElementStyle);
+begin
+  FValueStyle.Assign(Value);
+end;
+
+procedure TPPGCustomGauge.ValueStyleChanged(Sender: TObject);
+begin
+  RequestAutoSize;
+  Realign;
+  Invalidate;
+end;
+
 constructor TPPGCustomGauge.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FValueStyle := TPPGElementStyle.Create(Self);
+  FValueStyle.OnChange := ValueStyleChanged;
   ControlStyle := ControlStyle - [csSetCaption, csDoubleClicks];
   FMax := 100;
   FStartAngle := -135;
@@ -492,6 +529,7 @@ begin
   FreeAndNil(FValueAnim); // meldet sich selbst beim Animator ab
   FreeAndNil(FRanges);
   inherited Destroy;
+  FreeAndNil(FValueStyle);
 end;
 
 procedure TPPGCustomGauge.Loaded;
@@ -969,9 +1007,21 @@ begin
   begin
     VF := TFont.Create;
     try
-      VF.Assign(Font);
-      VF.Style := [fsBold];
-      VF.Height := -System.Math.Max(Round(Rad * 0.42), 8);
+      if FValueStyle.HasOwnFont then
+      begin
+        VF.Assign(FValueStyle.Font);
+        VF.PixelsPerInch := Font.PixelsPerInch;
+        VF.Size := FValueStyle.Font.Size;
+        VF.Style := FValueStyle.Font.Style + FValueStyle.FontStyle;
+      end
+      else
+      begin
+        VF.Assign(Font);
+        VF.Style := [fsBold] + FValueStyle.FontStyle;
+        VF.Height := -System.Math.Max(Round(Rad * 0.42), 8);
+      end;
+      if not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle and Enabled then
+        TextCol := FValueStyle.TextFor(UseDarkMode, TextCol);
       TextTop := C.Y;
       if FShowValue then
       begin
@@ -1096,9 +1146,37 @@ const
   TilePad = 12;    // logische px Innenabstand
   TileGap = 4;
 
+procedure TPPGCustomKpiTile.SetValueStyle(const Value: TPPGElementStyle);
+begin
+  FValueStyle.Assign(Value);
+end;
+
+procedure TPPGCustomKpiTile.ValueStyleChanged(Sender: TObject);
+begin
+  RequestAutoSize;
+  Realign;
+  Invalidate;
+end;
+
+procedure TPPGCustomKpiTile.SetTitleStyle(const Value: TPPGElementStyle);
+begin
+  FTitleStyle.Assign(Value);
+end;
+
+procedure TPPGCustomKpiTile.TitleStyleChanged(Sender: TObject);
+begin
+  RequestAutoSize;
+  Realign;
+  Invalidate;
+end;
+
 constructor TPPGCustomKpiTile.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FTitleStyle := TPPGElementStyle.Create(Self);
+  FTitleStyle.OnChange := TitleStyleChanged;
+  FValueStyle := TPPGElementStyle.Create(Self);
+  FValueStyle.OnChange := ValueStyleChanged;
   ControlStyle := ControlStyle - [csSetCaption, csDoubleClicks];
   FValueFormat := DefaultKpiFormat;
   FChangeFormat := DefaultChangeFormat;
@@ -1108,6 +1186,13 @@ begin
   TabStop := True;
   Width := 200;
   Height := 120;
+end;
+
+destructor TPPGCustomKpiTile.Destroy;
+begin
+  inherited Destroy;
+  FreeAndNil(FTitleStyle);
+  FreeAndNil(FValueStyle);
 end;
 
 procedure TPPGCustomKpiTile.Changed;
@@ -1318,12 +1403,18 @@ procedure TPPGCustomKpiTile.GetLayout(out TitleR, ValueR, ChangeR, SparkR: TRect
 var
   PPI, Pad, Gap, TH, VH, CH: Integer;
   Inner: TRect;
+  Temp: TFont;
 begin
   PPI := ScalePPI;
   Pad := PPGScale(TilePad, PPI);
   Gap := PPGScale(TileGap, PPI);
   Inner := Rect(Pad, Pad, ClientWidth - Pad, ClientHeight - Pad);
-  TH := PPGMeasureTextNoCanvas('Wg', Font, 0, False).cy;
+  Temp := nil;
+  try
+    TH := PPGMeasureTextNoCanvas('Wg', PPGElementFont(FTitleStyle, Font, [], Temp), 0, False).cy;
+  finally
+    Temp.Free;
+  end;
   VH := Round(TH * 1.9);
   if FShowChange then
     CH := TH
@@ -1350,6 +1441,7 @@ var
   Opt: TPPGSparklineOptions;
   HC: Boolean;
   Arrow: array[0..2] of TPoint;
+  UseColors: Boolean;
 begin
   PPI := ScalePPI;
   T := Tokens;
@@ -1374,14 +1466,37 @@ begin
   Flags := DT_SINGLELINE or DT_END_ELLIPSIS or DT_NOPREFIX or DT_VCENTER;
   if UseRightToLeftAlignment then
     Flags := Flags or DT_RIGHT or DT_RTLREADING;
-  ACanvas.DrawText(TitleR, FTitle, Font, SecCol, Flags);
+  UseColors := not HC and not UseVclStyle and Enabled;
+  VF := nil;
+  try
+    if UseColors then
+      ACanvas.DrawText(TitleR, FTitle, PPGElementFont(FTitleStyle, Font, [], VF),
+        FTitleStyle.TextFor(UseDarkMode, SecCol), Flags)
+    else
+      ACanvas.DrawText(TitleR, FTitle, PPGElementFont(FTitleStyle, Font, [], VF), SecCol, Flags);
+  finally
+    FreeAndNil(VF);
+  end;
 
   VF := TFont.Create;
   try
-    VF.Assign(Font);
-    VF.Style := [fsBold];
-    VF.Height := -Round((ValueR.Bottom - ValueR.Top) * 0.8);
-    ACanvas.DrawText(ValueR, DisplayValueText, VF, TextCol, Flags);
+    if FValueStyle.HasOwnFont then
+    begin
+      VF.Assign(FValueStyle.Font);
+      VF.PixelsPerInch := Font.PixelsPerInch;
+      VF.Size := FValueStyle.Font.Size;
+      VF.Style := FValueStyle.Font.Style + FValueStyle.FontStyle;
+    end
+    else
+    begin
+      VF.Assign(Font);
+      VF.Style := [fsBold] + FValueStyle.FontStyle;
+      VF.Height := -Round((ValueR.Bottom - ValueR.Top) * 0.8);
+    end;
+    if UseColors then
+      ACanvas.DrawText(ValueR, DisplayValueText, VF, FValueStyle.TextFor(UseDarkMode, TextCol), Flags)
+    else
+      ACanvas.DrawText(ValueR, DisplayValueText, VF, TextCol, Flags);
   finally
     VF.Free;
   end;

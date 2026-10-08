@@ -10,6 +10,11 @@ Palette **PPGlow** - Unit `PPG.PageControl` - Basis `TPPGCustomTabs`
 - Schließen einer Seite blendet standardmäßig nur den Reiter aus (`caHide`).
 - Sind alle Reiter ausgeblendet, bleibt die aktive Seite aktiv und die Reiterleiste verschwindet (für die NavigationView).
 
+## Anpassung
+
+- Je TabSheet `TabColor`, `TabTextColor`, `TabFontStyle`; `TabStyles` (Reiter, Hover, aktiv, Leiste, Indikator).
+- Wie `TPageControl`: `MultiLine`, `RaggedRight`, `Style`, `OwnerDraw`, `OnDrawTab`.
+
 ## Verhalten (aus dem Quelltext)
 
 TPPGPageControl + TPPGTabSheet - Seiten mit Reitern, DFM-kompatibel zu
@@ -25,15 +30,15 @@ HotTrack, Images; Seiten mit Caption, ImageIndex, PageIndex, TabVisible).
 
 ## PPGlow-Eigenschaften
 
-`ActivePage`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `ShowCloseButtons`, `HighContrastSupport`
+`ActivePage`, `Preset`, `StyleManager`, `Appearance`, `Animation`, `ShowCloseButtons`, `TabStyles`, `MultiLine`, `OwnerDraw`, `RaggedRight`, `ScrollOpposite`, `Style`, `HighContrastSupport`
 
 ## Eigenschaften wie in der VCL
 
-`Align`, `Anchors`, `BiDiMode`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HotTrack`, `Images`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabHeight`, `TabOrder`, `TabPosition`, `TabStop`, `TabWidth`, `Visible`
+`Align`, `Anchors`, `BiDiMode`, `Constraints`, `DragCursor`, `DragKind`, `DragMode`, `Enabled`, `Font`, `HotTrack`, `Images`, `ParentBiDiMode`, `ParentFont`, `ParentShowHint`, `PopupMenu`, `ShowHint`, `StyleElements`, `TabHeight`, `TabOrder`, `TabPosition`, `TabStop`, `TabWidth`, `Visible`, `Touch`
 
 ## Ereignisse
 
-`OnChange`, `OnChanging`, `OnClose`, `OnCloseQuery`, `OnContextPopup`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnResize`, `OnStartDock`, `OnStartDrag`
+`OnGesture`, `OnChange`, `OnChanging`, `OnDrawTab`, `OnCustomDrawItem`, `OnClose`, `OnCloseQuery`, `OnContextPopup`, `OnDragDrop`, `OnDragOver`, `OnEndDock`, `OnEndDrag`, `OnEnter`, `OnExit`, `OnMouseDown`, `OnMouseEnter`, `OnMouseLeave`, `OnMouseMove`, `OnMouseUp`, `OnResize`, `OnStartDock`, `OnStartDrag`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPageControl.md`.

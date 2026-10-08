@@ -182,8 +182,16 @@ begin
 end;
 
 function TPPGCustomContainer.ChildSurface(out Body: TRect; out Style: TPPGSurfaceStyle): Boolean;
+var
+  SI: TRect;
 begin
   Body := Rect(0, 0, Width, Height);
+  // ohne den Platz fuer den Schatten (Panel)
+  SI := ShadowInsets;
+  Inc(Body.Left, SI.Left);
+  Inc(Body.Top, SI.Top);
+  Dec(Body.Right, SI.Right);
+  Dec(Body.Bottom, SI.Bottom);
   Style := GetContainerStyle(False);
   Result := True;
 end;

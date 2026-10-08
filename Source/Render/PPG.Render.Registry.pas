@@ -25,6 +25,10 @@ type
     procedure ApplyDefaults(Appearance: TPPGAppearance); virtual; abstract;
     { IPPGThemeRenderer - Standard: neutrale Windows-11-Palette und die
       Abbildung Ruhe/Hover/Druck/Deaktiviert/An auf die Appearance }
+    /// Tokens des Presets ohne anwendungsweite Ueberschreibungen (Presets
+    /// ueberschreiben diese Methode).
+    function BaseTokens(Dark: Boolean): TPPGTokens; virtual;
+    /// BaseTokens plus TPPGTokenOverrides (Marke, Firmen-Design).
     function Tokens(Dark: Boolean): TPPGTokens; virtual;
     procedure ApplyThemeColors(Appearance: TPPGAppearance; Dark: Boolean); virtual;
     function BodyInset(const Style: TPPGSurfaceStyle): Integer; virtual;
@@ -197,9 +201,15 @@ begin
   inherited Create;
 end;
 
+function TPPGRendererBase.BaseTokens(Dark: Boolean): TPPGTokens;
+begin
+  Result := PPGBaseTokens(Dark);
+end;
+
 function TPPGRendererBase.Tokens(Dark: Boolean): TPPGTokens;
 begin
-  Result := PPGDefaultTokens(Dark);
+  Result := BaseTokens(Dark);
+  PPGApplyTokenOverrides(Result, Dark);
 end;
 
 procedure TPPGRendererBase.ApplyThemeColors(Appearance: TPPGAppearance; Dark: Boolean);

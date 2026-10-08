@@ -23,11 +23,11 @@ das auf derselben Seite direkt angrenzt. Zusaetzlich:
 
 ## PPGlow-Eigenschaften
 
-`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `MinSize`, `AutoSnap`, `Beveled`, `ResizeStyle`, `Align`, `Color`, `Constraints`, `Enabled`, `ParentColor`, `ParentShowHint`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Width`
+`Preset`, `StyleManager`, `Appearance`, `HighContrastSupport`, `MinSize`, `AutoSnap`, `Beveled`, `ResizeStyle`, `Align`, `Color`, `Constraints`, `Enabled`, `ParentColor`, `ParentShowHint`, `ShowHint`, `TabOrder`, `TabStop`, `Visible`, `Touch`, `Width`
 
 ## Ereignisse
 
-`OnCanResize`, `OnMoved`, `OnPaint`
+`OnGesture`, `OnCanResize`, `OnMoved`, `OnPaint`
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGSplitter.md`.
