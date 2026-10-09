@@ -49,6 +49,8 @@ type
     procedure SetCustomColor(const Value: TColor);
     function IsStartStored: Boolean;
     function IsEndStored: Boolean;
+  protected
+    function GetDisplayName: string; override;
   public
     constructor Create(Collection: TCollection); override;
     procedure Assign(Source: TPersistent); override;
@@ -377,6 +379,11 @@ begin
 end;
 
 { TPPGGaugeRange }
+
+function TPPGGaugeRange.GetDisplayName: string;
+begin
+  Result := Format('%g - %g', [FStartValue, FEndValue]);
+end;
 
 constructor TPPGGaugeRange.Create(Collection: TCollection);
 begin

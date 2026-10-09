@@ -56,10 +56,13 @@ type
     FTextFont: TFont;
     FImages: TCustomImageList;
     FImageIndex: Integer;
+    FRounding: Integer;
     function Pad: Integer;
     function Gap: Integer;
     function HasImage: Boolean;
   public
+    /// Rundung in logischen px (Standard 4, Balloon 12).
+    property Rounding: Integer read FRounding write FRounding;
     constructor Create;
     destructor Destroy; override;
     /// Text ohne Markup wird maskiert (< und & bleiben sichtbar).
@@ -279,6 +282,7 @@ end;
 constructor TPPGHintContent.Create;
 begin
   inherited Create;
+  FRounding := 4;
   FLayout := TPPGMarkupLayout.Create;
   FTitleFont := TFont.Create;
   FTextFont := TFont.Create;
@@ -377,7 +381,7 @@ begin
   Style.Color := Fill;
   Style.BorderColor := Border;
   Style.BorderWidth := Max(MulDiv(1, FPPI, 96), 1);
-  Style.Rounding := MulDiv(4, FPPI, 96);
+  Style.Rounding := MulDiv(FRounding, FPPI, 96);
   if not Supports(TPPGRendererRegistry.Get(PPGHintPreset(nil, Preset)), IPPGHintRenderer, HR) then
     Supports(TPPGRendererRegistry.Get(TPPGRendererRegistry.DefaultName), IPPGHintRenderer, HR);
   // Ecken ausserhalb der Rundung: Hintergrund des Fensters
@@ -757,6 +761,11 @@ begin
   try
     GetWindowRect(HintWindow.Handle, R);
     PrepareFor(HintWindow, PPIAtPoint(R.TopLeft));
+    // Audit 5b: Style wirkt (Balloon = stark gerundet wie TBalloonHint)
+    if Style = bhsBalloon then
+      FContent.Rounding := 12
+    else
+      FContent.Rounding := 4;
     FContent.Paint(TCustomHintWindowAccess(HintWindow).Canvas, HintWindow.ClientRect, EffectivePreset);
     FPaintErrorReported := False;
   except

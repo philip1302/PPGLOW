@@ -175,6 +175,7 @@ type
     FShowGrid: Boolean;
     FKind: TPPGChartXKind;
     FDefaultGrid: Boolean;
+    FIsXAxis: Boolean;
     FOnChange: TNotifyEvent;
     procedure SetVisible(const Value: Boolean);
     procedure SetTitle(const Value: string);
@@ -195,6 +196,8 @@ type
     constructor Create(AOwner: TPersistent; DefaultGrid: Boolean);
     procedure Assign(Source: TPersistent); override;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    /// Nur die X-Achse kennt Kind (Kategorie, Zahl, Datum).
+    property IsXAxis: Boolean read FIsXAxis write FIsXAxis;
   published
     property Visible: Boolean read FVisible write SetVisible default True;
     property Title: string read FTitle write SetTitle;
@@ -222,6 +225,8 @@ type
     procedure SetColor(const AValue: TColor);
     procedure SetDashed(const AValue: Boolean);
     function IsValueStored: Boolean;
+  protected
+    function GetDisplayName: string; override;
   public
     constructor Create(Collection: TCollection); override;
     procedure Assign(Source: TPersistent); override;
@@ -249,7 +254,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.Math, Vcl.Controls,
+  System.Math, Vcl.Controls, System.TypInfo,
   PPG.Types, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.Sparkline;
 
 { TPPGChartSeries }
@@ -924,6 +929,15 @@ end;
 
 procedure TPPGChartAxis.SetKind(const Value: TPPGChartXKind);
 begin
+  // Audit 5b: an Y-Achsen wirkt Kind nicht - ablehnen statt still ignorieren
+  if not FIsXAxis and (Value <> cxkCategory) then
+  begin
+    if not PPGIsLoading(FOwner) then
+      raise EPPGPropertyError.CreateInvalid(FOwner, 'YAxis.Kind',
+        GetEnumName(TypeInfo(TPPGChartXKind), Ord(Value)));
+    TPPGErrorHandler.LogWarning(FOwner, 'YAxis.Kind: ' + GetEnumName(TypeInfo(TPPGChartXKind), Ord(Value)));
+    Exit;
+  end;
   if FKind <> Value then
   begin
     FKind := Value;
@@ -947,6 +961,14 @@ begin
 end;
 
 { TPPGChartReferenceLine }
+
+function TPPGChartReferenceLine.GetDisplayName: string;
+begin
+  if FCaption <> '' then
+    Result := FCaption
+  else
+    Result := Format('%g', [FValue]);
+end;
 
 constructor TPPGChartReferenceLine.Create(Collection: TCollection);
 begin

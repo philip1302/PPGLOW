@@ -102,6 +102,7 @@ type
     FOnPageChanged: TNotifyEvent;
     FOnFinish: TNotifyEvent;
     FOnCancel: TNotifyEvent;
+    procedure PaintDescription(const ACanvas: IPPGCanvas; const BarR: TRect; Color: TColor);
     function GetPage(Index: Integer): TPPGWizardPage;
     function GetPageCount: Integer;
     function GetActivePageIndex: Integer;
@@ -265,7 +266,11 @@ end;
 
 procedure TPPGWizardPage.SetDescription(const Value: string);
 begin
+  if FDescription = Value then
+    Exit;
   FDescription := Value;
+  if Parent <> nil then
+    Parent.Invalidate;
 end;
 
 procedure TPPGWizardPage.CMTextChanged(var Message: TMessage);
@@ -787,6 +792,37 @@ begin
   end;
 end;
 
+procedure TPPGWizard.PaintDescription(const ACanvas: IPPGCanvas; const BarR: TRect; Color: TColor);
+var
+  TR: TRect;
+  B: TPPGButton;
+  Edge: Integer;
+  RTL: Boolean;
+begin
+  // Platz neben den Buttons (RTL: rechts von ihnen)
+  RTL := UseRightToLeftAlignment;
+  if RTL then
+    Edge := BarR.Left
+  else
+    Edge := BarR.Right;
+  for B in [FBackButton, FNextButton, FCancelButton] do
+    if (B <> nil) and B.Visible then
+    begin
+      if RTL then
+        Edge := Max(Edge, B.Left + B.Width)
+      else
+        Edge := Min(Edge, B.Left);
+    end;
+  if RTL then
+    TR := Rect(Edge + S(16), BarR.Top, BarR.Right - S(16), BarR.Bottom)
+  else
+    TR := Rect(BarR.Left + S(16), BarR.Top, Edge - S(16), BarR.Bottom);
+  if TR.Right <= TR.Left then
+    Exit;
+  ACanvas.DrawText(TR, FActivePage.Description, Font, Color,
+    DrawTextBiDiModeFlags(DT_LEFT or DT_VCENTER or DT_SINGLELINE or DT_END_ELLIPSIS or DT_NOPREFIX));
+end;
+
 procedure TPPGWizard.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   Bg, Bar, Line, Txt, Sec, Acc, OnAcc, Fill, NumC, TitleC: TColor;
@@ -802,6 +838,9 @@ begin
   R := Rect(ClientR.Left, ClientR.Bottom - BarHeight, ClientR.Right, ClientR.Bottom);
   ACanvas.FillRoundRect(R, 0, Bar, 255);
   ACanvas.FillRoundRect(Rect(R.Left, R.Top, R.Right, R.Top + Max(1, S(1))), 0, Line, 255);
+  // Audit 5b: Beschreibung der aktiven Seite links in der Leiste
+  if (FActivePage <> nil) and (FActivePage.Description <> '') then
+    PaintDescription(ACanvas, R, Sec);
   if FStepPosition = wspNone then
     Exit;
   // Trennlinie zur Seite

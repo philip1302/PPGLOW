@@ -594,7 +594,11 @@ begin
   inherited MouseUp(Button, Shift, X, Y);
   // Nur ausloesen, wenn auf demselben Link losgelassen wurde
   if (Button = mbLeft) and (I >= 0) and (LinkAtPos(X, Y) = I) then
-    DoLinkClick(I);
+    DoLinkClick(I)
+  else if (Button = mbLeft) and (I < 0) and (LinkAtPos(X, Y) < 0) and
+    PtInRect(ClientRect, Point(X, Y)) then
+    // Audit 5b: OnClick fuer Klicks neben den Links (Links: OnLinkClick)
+    Click;
 end;
 
 procedure TPPGCustomLinkLabel.WMSetCursor(var Message: TWMSetCursor);

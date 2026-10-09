@@ -10,14 +10,15 @@ interface
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Variants, System.TypInfo, System.Generics.Collections, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Graphics,
-  Vcl.DBActns, Vcl.DBCtrls, Data.DB, Data.DBConsts, Datasnap.DBClient, MidasLib,
+  System.Types,   Vcl.DBActns, Vcl.DBCtrls, Data.DB, Data.DBConsts, Datasnap.DBClient, MidasLib,
   PPG.Types, PPG.Controls.Field, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Fields,
   PPG.DB.Navigator, PPG.DB.Kanban, PPG.DB.Grid, PPG.DB.Chart, PPG.Exceptions, PPG.ErrorHandler,
   PPG.NumberFormat, PPG.Grid, Vcl.Menus, Vcl.ExtCtrls, PPG.CheckComboBox, PPG.TagEdit, PPG.Grid.Print,
   PPG.PasswordEdit, PPG.Expander, PPG.ComboBox, PPG.TrackBar, PPG.ProgressBar, PPG.Hints,
   PPG.ToolBar, PPG.Ribbon, PPG.Notifications, PPG.Menus, PPG.StatusBar, PPG.NavigationView,
   PPG.FileEdit, PPG.Feedback, PPG.Kanban, PPG.Kanban.Items, PPG.Labels, PPG.PageControl,
-  PPG.ColumnComboBox, PPG.Panel, PPG.Tests.Controls;
+  PPG.ColumnComboBox, PPG.Panel, PPG.Chart, PPG.Chart.Series, PPG.Dialogs, PPG.Wizard, PPG.Gauge,
+  PPG.Tests.Controls;
 
 type
   TDBBindSpec = record
@@ -141,6 +142,22 @@ type
     procedure NavItemPageIndexShowsPage;
     procedure DesignerStartSelection;
     procedure PanelBevelDefaultsLikeTPanel;
+  end;
+
+  /// Audit 09.10.2026, Paket 5b: Properties, die vorher nichts bewirkten.
+  TEffectFixTests = class(TControlTestCase)
+  private
+    FClicks: Integer;
+    procedure Clicked(Sender: TObject);
+  published
+    procedure LinkLabelOnClickBesideLinks;
+    procedure YAxisKindRejected;
+    procedure TaskDialogWithoutOnNavigated;
+    procedure WizardShowsDescription;
+    procedure StatusPanelHintAsTooltip;
+    procedure NavigationSelectedIndexStreams;
+    procedure PrinterSettingsInvalidateLayout;
+    procedure CollectionItemNames;
   end;
 
 implementation
@@ -1486,12 +1503,177 @@ begin
   end;
 end;
 
+{ TEffectFixTests }
+
+procedure TEffectFixTests.Clicked(Sender: TObject);
+begin
+  Inc(FClicks);
+end;
+
+procedure TEffectFixTests.LinkLabelOnClickBesideLinks;
+var
+  L: TPPGLinkLabel;
+  R: TRect;
+begin
+  L := TPPGLinkLabel.Create(FForm);
+  L.Parent := FForm;
+  L.SetBounds(10, 10, 300, 24);
+  L.Caption := '<a href="x">Link</a> und Text';
+  L.OnClick := Clicked;
+  FForm.Show;
+  R := TLinkCrack(L).LinkRect(0);
+  FClicks := 0;
+  CheckTrue(L.ClientWidth > R.Right + 4, 'Text hinter dem Link');
+  L.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam((R.Right + L.ClientWidth) div 2, (R.Top + R.Bottom) div 2));
+  L.Perform(WM_LBUTTONUP, 0, MakeLParam((R.Right + L.ClientWidth) div 2, (R.Top + R.Bottom) div 2));
+  CheckEquals(1, FClicks, 'Klick neben dem Link: OnClick');
+  L.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+  L.Perform(WM_LBUTTONUP, 0, MakeLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+  CheckEquals(1, FClicks, 'Klick auf den Link: nur OnLinkClick');
+end;
+
+procedure TEffectFixTests.YAxisKindRejected;
+var
+  C: TPPGChart;
+  Raised: Boolean;
+begin
+  C := TPPGChart.Create(FForm);
+  C.XAxis.Kind := cxkNumeric;
+  CheckTrue(C.XAxis.Kind = cxkNumeric);
+  Raised := False;
+  try
+    C.YAxis.Kind := cxkDateTime;
+  except
+    on EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, 'Y-Achse: Kind wirkt nicht und wird abgelehnt');
+  CheckTrue(C.YAxis.Kind = cxkCategory);
+end;
+
+procedure TEffectFixTests.TaskDialogWithoutOnNavigated;
+begin
+  CheckFalse(IsPublishedProp(TPPGTaskDialog, 'OnNavigated'), 'wirkt nicht: nicht angeboten');
+end;
+
+procedure TEffectFixTests.WizardShowsDescription;
+var
+  W: TPPGWizard;
+  P: TPPGWizardPage;
+  B1, B2: TBitmap;
+  I, J, Diff: Integer;
+begin
+  W := TPPGWizard.Create(FForm);
+  W.Parent := FForm;
+  W.SetBounds(0, 0, 600, 300);
+  P := TPPGWizardPage.Create(FForm);
+  P.Wizard := W;
+  P.Caption := 'Eins';
+  FForm.Show;
+  B1 := RenderToBitmap(W);
+  try
+    P.Description := 'Beschreibung der ersten Seite';
+    B2 := RenderToBitmap(W);
+    try
+      Diff := 0;
+      for J := B1.Height - 50 to B1.Height - 5 do
+        for I := 10 to 200 do
+          if B1.Canvas.Pixels[I, J] <> B2.Canvas.Pixels[I, J] then
+            Inc(Diff);
+      CheckTrue(Diff > 20, 'Beschreibung erscheint links in der Leiste');
+    finally
+      B2.Free;
+    end;
+  finally
+    B1.Free;
+  end;
+end;
+
+procedure TEffectFixTests.StatusPanelHintAsTooltip;
+var
+  S: TPPGStatusBar;
+  Info: Vcl.Controls.THintInfo;
+  Msg: TCMHintShow;
+  R: TRect;
+begin
+  S := TPPGStatusBar.Create(FForm);
+  S.Parent := FForm;
+  S.Panels.Add.Width := 100;
+  S.Panels.Add.Width := 100;
+  S.Panels[1].Hint := 'Zweiter Abschnitt';
+  FForm.Show;
+  R := S.PanelRect(1);
+  FillChar(Info, SizeOf(Info), 0);
+  Info.CursorPos := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+  Info.HintControl := S;
+  Msg.Msg := CM_HINTSHOW;
+  Msg.HintInfo := @Info;
+  S.Dispatch(Msg);
+  CheckEquals('Zweiter Abschnitt', Info.HintStr);
+  CheckTrue(EqualRect(R, Info.CursorRect), 'Tooltip gilt fuer den Abschnitt');
+end;
+
+procedure TEffectFixTests.NavigationSelectedIndexStreams;
+var
+  N, N2: TPPGNavigationView;
+  M: TMemoryStream;
+begin
+  N := TPPGNavigationView.Create(FForm);
+  N.Items.AddItem('A');
+  N.Items.AddItem('B');
+  N.SelectedIndex := 1;
+  CheckTrue(N.Selected = N.Items[1]);
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(N);
+    M.Position := 0;
+    N2 := TPPGNavigationView.Create(nil);
+    try
+      M.ReadComponent(N2);
+      CheckEquals(1, N2.SelectedIndex, 'Startauswahl aus der DFM');
+    finally
+      N2.Free;
+    end;
+  finally
+    M.Free;
+  end;
+end;
+
+procedure TEffectFixTests.PrinterSettingsInvalidateLayout;
+begin
+  CheckTrue(IsPublishedProp(TPPGGridPrinter, 'RepeatHeader'));
+  CheckTrue(GetPropInfo(TPPGGridPrinter, 'RepeatHeader')^.SetProc <> nil);
+end;
+
+procedure TEffectFixTests.CollectionItemNames;
+var
+  G: TPPGGauge;
+  C: TPPGChart;
+begin
+  G := TPPGGauge.Create(FForm);
+  with G.Ranges.Add do
+  begin
+    StartValue := 0;
+    EndValue := 50;
+    CheckEquals(Format('%g - %g', [0.0, 50.0]), DisplayName, 'Bereich im Collection-Editor');
+  end;
+  C := TPPGChart.Create(FForm);
+  with C.ReferenceLines.Add do
+  begin
+    Value := 42;
+    CheckEquals('42', DisplayName);
+    Caption := 'Ziel';
+    CheckEquals('Ziel', DisplayName);
+  end;
+end;
+
 initialization
   RegisterTest('Audit45', TDBBindingHoldTests.Suite);
   RegisterTest('Audit45', TDBFixTests.Suite);
   RegisterTest('Audit45', TDBFix2Tests.Suite);
   RegisterTest('Audit45', TStreamingFixTests.Suite);
   RegisterTest('Audit45', TSetterFixTests.Suite);
+  RegisterTest('Audit45', TEffectFixTests.Suite);
   RegisterClasses([TPPGHintManager, TPanel, TPPGRibbon, TPPGTestRoot]);
 
 end.

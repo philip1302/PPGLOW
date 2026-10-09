@@ -177,6 +177,7 @@ end;
 procedure TPPGCustomMenuBar.SetMenuStyles(const Value: TPPGMenuStyles);
 begin
   FMenuStyles.Assign(Value);
+  Invalidate;
 end;
 
 destructor TPPGCustomMenuBar.Destroy;
@@ -801,6 +802,18 @@ begin
     else
       L.Color := PPGColorToRGB(GetBackgroundColor);
     L.TextColor := T.TextPrimary;
+    // Audit 5b: MenuStyles gelten auch fuer die Leiste (Menu = Leiste,
+    // HotItem = hervorgehobener Eintrag)
+    L.Color := FMenuStyles.Menu.FillFor(UseDarkMode, L.Color);
+    L.TextColor := FMenuStyles.Menu.TextFor(UseDarkMode, L.TextColor);
+    if not FMenuStyles.HotItem.IsEmpty then
+    begin
+      H.Color := FMenuStyles.HotItem.FillFor(UseDarkMode, H.Color);
+      H.ColorTo := H.Color;
+      H.ColorMirror := H.Color;
+      H.ColorMirrorTo := H.Color;
+      H.TextColor := FMenuStyles.HotItem.TextFor(UseDarkMode, L.TextColor);
+    end;
   end;
   if not Supports(Renderer, IPPGMenuRenderer, MR) then
     Supports(TPPGRendererRegistry.Get(TPPGRendererRegistry.DefaultName), IPPGMenuRenderer, MR);
@@ -826,6 +839,8 @@ begin
         TextCol := T.TextDisabled;
     end
     else if HC and ((I = FHot) or (I = FOpen)) then
+      TextCol := H.TextColor
+    else if not HC and ((I = FHot) or (I = FOpen)) and not FMenuStyles.HotItem.IsEmpty then
       TextCol := H.TextColor
     else
       TextCol := L.TextColor;

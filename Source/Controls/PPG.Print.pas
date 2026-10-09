@@ -69,6 +69,11 @@ type
     FOrientation: TPrinterOrientation;
     FMargins: TPPGPrintMargins;
     FPrinterName: string;
+    procedure SetFooterText(const Value: string);
+    procedure SetPrinterName(const Value: string);
+    procedure SetOrientation(const Value: TPrinterOrientation);
+    procedure SetHeaderText(const Value: string);
+    procedure SetTitle(const Value: string);
     procedure ReadFooterTextEmpty(Reader: TReader);
     procedure WriteFooterTextEmpty(Writer: TWriter);
     function IsFooterTextStored: Boolean;
@@ -112,14 +117,14 @@ type
     function GetOption(Index: Integer): Boolean; virtual;
     procedure SetOption(Index: Integer; Value: Boolean); virtual;
     // In den Endklassen published
-    property Title: string read FTitle write FTitle;
-    property HeaderText: string read FHeaderText write FHeaderText;
+    property Title: string read FTitle write SetTitle;
+    property HeaderText: string read FHeaderText write SetHeaderText;
     /// '' = keine Fusszeile; Vorgabe "Seite [Seite] von [Seiten]" (Sprache).
-    property FooterText: string read FFooterText write FFooterText stored IsFooterTextStored;
-    property Orientation: TPrinterOrientation read FOrientation write FOrientation default poPortrait;
+    property FooterText: string read FFooterText write SetFooterText stored IsFooterTextStored;
+    property Orientation: TPrinterOrientation read FOrientation write SetOrientation default poPortrait;
     property Margins: TPPGPrintMargins read FMargins write SetMargins;
     /// '' = Standarddrucker.
-    property PrinterName: string read FPrinterName write FPrinterName;
+    property PrinterName: string read FPrinterName write SetPrinterName;
   end;
 
   /// Seitenansicht in der Vorschau (zeichnet nur sichtbare Seiten).
@@ -380,6 +385,46 @@ end;
 procedure TPPGCustomPrinter.WriteFooterTextEmpty(Writer: TWriter);
 begin
   Writer.WriteBoolean(True);
+end;
+
+procedure TPPGCustomPrinter.SetTitle(const Value: string);
+begin
+  if FTitle = Value then
+    Exit;
+  FTitle := Value;
+  Invalidate; // Seitenzahl und Kopf neu berechnen
+end;
+
+procedure TPPGCustomPrinter.SetHeaderText(const Value: string);
+begin
+  if FHeaderText = Value then
+    Exit;
+  FHeaderText := Value;
+  Invalidate; // Seitenzahl und Kopf neu berechnen
+end;
+
+procedure TPPGCustomPrinter.SetOrientation(const Value: TPrinterOrientation);
+begin
+  if FOrientation = Value then
+    Exit;
+  FOrientation := Value;
+  Invalidate; // Seitenzahl und Kopf neu berechnen
+end;
+
+procedure TPPGCustomPrinter.SetPrinterName(const Value: string);
+begin
+  if FPrinterName = Value then
+    Exit;
+  FPrinterName := Value;
+  Invalidate; // Seitenzahl und Kopf neu berechnen
+end;
+
+procedure TPPGCustomPrinter.SetFooterText(const Value: string);
+begin
+  if FFooterText = Value then
+    Exit;
+  FFooterText := Value;
+  Invalidate;
 end;
 
 function TPPGCustomPrinter.IsFooterTextStored: Boolean;

@@ -353,6 +353,7 @@ begin
   FCategories := TStringList.Create;
   TStringList(FCategories).OnChange := CategoriesChanged;
   FXAxis := TPPGChartAxis.Create(Self, False);
+  FXAxis.IsXAxis := True;
   FXAxis.OnChange := AxisChanged;
   FYAxis := TPPGChartAxis.Create(Self, True);
   FYAxis.OnChange := AxisChanged;

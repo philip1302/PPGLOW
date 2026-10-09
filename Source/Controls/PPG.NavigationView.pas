@@ -167,6 +167,7 @@ type
     FFonts: TPPGFontCache;
     FItems: TPPGNavItems;
     FSelected: TPPGNavItem;
+    FLoadedSelectedIndex: Integer;
     FFocusItem: TPPGNavItem;
     FHotRow: Integer;       // -1 = keine, -2 = Menue-Knopf
     FDownRow: Integer;
@@ -198,6 +199,8 @@ type
     FOnSelectionChange: TNotifyEvent;
     FOnItemInvoked: TPPGNavItemEvent;
     FOnPaneChange: TNotifyEvent;
+    function GetSelectedIndex: Integer;
+    procedure SetSelectedIndex(const Value: Integer);
     procedure SetCompactModeThresholdWidth(const Value: Integer);
     procedure DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer; AEnabled: Boolean;
       Color: TColor);
@@ -298,6 +301,8 @@ type
     property HighContrastSupport;
     property Images;
     property Items: TPPGNavItems read FItems write SetItems;
+    /// Startauswahl (Index in Items, auch im Designer); -1 = keine.
+    property SelectedIndex: Integer read GetSelectedIndex write SetSelectedIndex default -1;
     property IsPaneOpen: Boolean read FIsPaneOpen write SetIsPaneOpen default True;
     property DisplayMode: TPPGNavDisplayMode read FDisplayMode write SetDisplayMode default pdmLeft;
     /// Breiten in logischen px (96 DPI).
@@ -858,6 +863,7 @@ begin
   FOpenPaneLength := 280;
   FCompactPaneLength := 48;
   FCompactThreshold := 640;
+  FLoadedSelectedIndex := -1;
   FShowMenuButton := True;
   FPaneAnim := TPPGAnimation.Create(Self);
   FPaneAnim.Jump(1);
@@ -904,9 +910,33 @@ begin
   Invalidate;
 end;
 
+function TPPGNavigationView.GetSelectedIndex: Integer;
+begin
+  if (FSelected <> nil) and (FSelected.Collection = FItems) then
+    Result := FSelected.Index
+  else
+    Result := -1;
+end;
+
+procedure TPPGNavigationView.SetSelectedIndex(const Value: Integer);
+begin
+  if csLoading in ComponentState then
+  begin
+    FLoadedSelectedIndex := Value; // Items kommen in der DFM ggf. spaeter
+    Exit;
+  end;
+  if Value < 0 then
+    Selected := nil
+  else
+    Selected := FItems[PPGCheckRange(Self, 'SelectedIndex', Value, 0, FItems.Count - 1)];
+end;
+
 procedure TPPGNavigationView.Loaded;
 begin
   inherited Loaded;
+  if (FLoadedSelectedIndex >= 0) and (FLoadedSelectedIndex < FItems.Count) then
+    Selected := FItems[FLoadedSelectedIndex];
+  FLoadedSelectedIndex := -1;
   FRowsValid := False;
   CheckAutoMode;
   if PaneOpenNow then

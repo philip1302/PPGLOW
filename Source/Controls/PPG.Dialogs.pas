@@ -230,7 +230,6 @@ type
     property OnDialogDestroyed;
     property OnExpanded;
     property OnHyperlinkClicked;
-    property OnNavigated;
     property OnRadioButtonClicked;
     property OnTimer;
     property OnVerificationClicked;

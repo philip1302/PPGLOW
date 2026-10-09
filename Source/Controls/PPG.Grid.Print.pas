@@ -118,13 +118,13 @@ type
     property FooterText;
     property Orientation;
     property Margins;
-    property RepeatHeader: Boolean read FRepeatHeader write FRepeatHeader default True;
-    property FitToPageWidth: Boolean read FFitToPageWidth write FFitToPageWidth default True;
-    property PrintGridLines: Boolean read FPrintGridLines write FPrintGridLines default True;
-    property PrintColors: Boolean read FPrintColors write FPrintColors default True;
+    property RepeatHeader: Boolean index 1 read GetOption write SetOption default True;
+    property FitToPageWidth: Boolean index 0 read GetOption write SetOption default True;
+    property PrintGridLines: Boolean index 2 read GetOption write SetOption default True;
+    property PrintColors: Boolean index 3 read GetOption write SetOption default True;
     /// Optik des Grids (Farben, Baender, Gruppen, Summen); False = grauer Kopf
     /// und nur Datenzeilen wie vor Phase 17.
-    property UseGridLook: Boolean read FUseGridLook write FUseGridLook default True;
+    property UseGridLook: Boolean index 4 read GetOption write SetOption default True;
     property PrinterName;
   end;
 

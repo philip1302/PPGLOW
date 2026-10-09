@@ -111,6 +111,7 @@ type
     FInOwnerDraw: Boolean;
     FOnDrawPanel: TPPGDrawPanelEvent;
     FOnHint: TNotifyEvent;
+    procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure SetBarStyle(const Value: TPPGElementStyle);
     procedure BarStyleChanged(Sender: TObject);
     procedure SetPanels(const Value: TPPGStatusPanels);
@@ -644,6 +645,20 @@ begin
   Result := Rect(X, 0, Min(X + W, Right), Height);
   if UseRightToLeftAlignment then
     Result := Rect(Width - Result.Right, Result.Top, Width - Result.Left, Result.Bottom);
+end;
+
+procedure TPPGStatusBar.CMHintShow(var Message: TCMHintShow);
+var
+  I: Integer;
+begin
+  inherited;
+  // Audit 5b: Hint eines Abschnitts als Tooltip (ShowHint muss an sein)
+  I := PanelAt(Message.HintInfo.CursorPos.X, Message.HintInfo.CursorPos.Y);
+  if (I >= 0) and (Panels[I].Hint <> '') then
+  begin
+    Message.HintInfo.HintStr := Panels[I].Hint;
+    Message.HintInfo.CursorRect := PanelRect(I);
+  end;
 end;
 
 function TPPGStatusBar.PanelAt(X, Y: Integer): Integer;
