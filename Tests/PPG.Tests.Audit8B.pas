@@ -24,6 +24,7 @@ type
     FCompareCalls: Integer;
     FVirt: array of string;
     FCustomCalls: Integer;
+    FVirtCalls: Integer;
     procedure CompareByLength(Sender: TObject; ACol, ARow1, ARow2: Integer;
       var Compare: Integer);
     procedure VirtText(Sender: TObject; ACol, ARow: Integer; var Text: string);
@@ -46,6 +47,7 @@ type
     procedure SortHeaderClickCycle;
     procedure SortCompareEventKeepsOldWay;
     procedure SortVirtualGrid;
+    procedure SortReadsEachRowOnce;
     procedure SortWithGroups;
     { #3, #7 Filtern }
     procedure FilterCaseInsensitive;
@@ -232,6 +234,7 @@ end;
 
 procedure TAudit8BTests.VirtText(Sender: TObject; ACol, ARow: Integer; var Text: string);
 begin
+  Inc(FVirtCalls);
   if (ARow >= 0) and (ARow < Length(FVirt)) and (ACol = 1) then
     Text := FVirt[ARow]
   else if ACol = 2 then
@@ -461,6 +464,30 @@ begin
   G.SortBy(1, False);
   Expected := RefSort(RowRange(1, 500), GridCompare(G, 1), False);
   CheckEquals(RowsStr(Expected), RowsStr(ViewRows(G)), 'virtuell nach Datenaenderung');
+end;
+
+procedure TAudit8BTests.SortReadsEachRowOnce;
+var
+  G: TPPGGrid;
+  R: Integer;
+begin
+  SetLength(FVirt, 2001);
+  for R := 1 to 2000 do
+    FVirt[R] := IntToStr((R * 7919) mod 2003);
+  G := NewGrid;
+  G.ColCount := 3;
+  G.OnGetCellText := VirtText;
+  G.RowCount := 2001;
+  FVirtCalls := 0;
+  G.SortBy(1, True);
+  // Schluessel einmal je Zeile (vorher zwei Texte je Vergleich, ~ 2 n log n)
+  CheckTrue(FVirtCalls <= 2000 + 200, Format('%d Abfragen', [FVirtCalls]));
+  CheckEquals(RowsStr(RefSort(RowRange(1, 2000), GridCompare(G, 1), True)), RowsStr(ViewRows(G)));
+  // Mit OnCompareCells der alte Weg
+  G.OnCompareCells := CompareByLength;
+  FCompareCalls := 0;
+  G.SortBy(1, False);
+  CheckTrue(FCompareCalls > 2000, 'OnCompareCells je Vergleich');
 end;
 
 procedure TAudit8BTests.SortWithGroups;

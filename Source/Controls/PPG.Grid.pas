@@ -133,8 +133,8 @@ type
   end;
 
   TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren, IPPGUiaSource,
-    IPPGGridColumnsHost, IPPGGridViewHost, IPPGTableSource, IPPGGridStylesHost,
-    IPPGGridPrintSource, IPPGTableExport, IPPGTableLook)
+    IPPGGridColumnsHost, IPPGGridViewHost, IPPGGridViewSortKeys, IPPGTableSource,
+    IPPGGridStylesHost, IPPGGridPrintSource, IPPGTableExport, IPPGTableLook)
   private
     FPaint: TPPGGridPaintColors;
     FColCount: Integer;
@@ -421,6 +421,12 @@ type
     { IPPGGridViewHost }
     function ViewRowPasses(ARow: Integer): Boolean;
     function ViewCompareRows(ACol, R1, R2: Integer): Integer;
+    { IPPGGridViewSortKeys (Audit 8c #1): nur mit dem Standardvergleich }
+    function ViewSortKeys(ACol: Integer; const Rows: TArray<Integer>;
+      out Keys: TArray<TPPGGridSortKey>): Boolean;
+    /// Vergleicht das Grid mit der Standardlogik (kein OnCompareCells, kein
+    /// ueberschriebenes CompareDataRows)?
+    function StandardCompare: Boolean;
     { IPPGTableSource (Druck, Export) }
     function TableColCount: Integer; virtual;
     function TableRowCount: Integer; virtual;
@@ -1578,6 +1584,33 @@ end;
 function TPPGCustomGrid.ViewCompareRows(ACol, R1, R2: Integer): Integer;
 begin
   Result := CompareDataRows(ACol, R1, R2);
+end;
+
+function TPPGCustomGrid.StandardCompare: Boolean;
+var
+  M: function(ACol, R1, R2: Integer): Integer of object;
+begin
+  M := CompareDataRows;
+  Result := not Assigned(FOnCompareCells) and
+    (TMethod(M).Code = @TPPGCustomGrid.CompareDataRows);
+end;
+
+function TPPGCustomGrid.ViewSortKeys(ACol: Integer; const Rows: TArray<Integer>;
+  out Keys: TArray<TPPGGridSortKey>): Boolean;
+var
+  I: Integer;
+begin
+  // Gleiche Logik wie CompareDataRows, nur einmal je Zeile: Text lesen
+  // (Cells bzw. OnGetCellText) und Zahl erkennen
+  Result := StandardCompare;
+  if not Result then
+    Exit;
+  SetLength(Keys, Length(Rows));
+  for I := 0 to High(Rows) do
+  begin
+    Keys[I].Text := GetCellText(ACol, Rows[I]);
+    Keys[I].IsNum := TryStrToFloat(Keys[I].Text, Keys[I].Num);
+  end;
 end;
 
 { ---- IPPGTableSource: Ansicht ohne feste Zeilen, alle Spalten ---- }
