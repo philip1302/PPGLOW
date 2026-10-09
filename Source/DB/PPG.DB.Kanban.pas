@@ -153,6 +153,13 @@ type
     property OnCardOpen;
     property OnSelectionChange;
     property OnColumnCollapse;
+    property FilterText;
+    property FilterLabels;
+    property FilterAssignee;
+    property AllowColumnDrag;
+    property OnFilterCard;
+    property OnColumnMoving;
+    property OnColumnMoved;
     property OnEnter;
     property OnExit;
   end;

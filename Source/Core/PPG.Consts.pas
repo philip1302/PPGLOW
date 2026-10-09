@@ -300,6 +300,10 @@ resourcestring
   SPPGApptEndsOn = 'Ends on';
   SPPGApptEndBeforeStart = 'The end must not be before the start.';
 
+  // Kanban: Filter und Spalten ziehen (Phase 20b)
+  SPPGKanbanCountHidden = '%d (+%d)';
+  SPPGKanbanColumnMoved = 'Column %s moved to position %d of %d';
+
 implementation
 
 end.

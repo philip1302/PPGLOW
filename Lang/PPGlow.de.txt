@@ -255,3 +255,5 @@ SPPGApptEndsNever=Endet nie
 SPPGApptEndsAfter=Endet nach
 SPPGApptEndsOn=Endet am
 SPPGApptEndBeforeStart=Das Ende darf nicht vor dem Beginn liegen.
+SPPGKanbanCountHidden=%d (+%d)
+SPPGKanbanColumnMoved=Spalte %s an Position %d von %d verschoben

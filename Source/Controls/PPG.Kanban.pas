@@ -59,6 +59,12 @@ type
   TPPGKanbanGetCardEvent = procedure(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer;
     var Data: TPPGKanbanCardData) of object;
   TPPGKanbanColumnEvent = procedure(Sender: TObject; Column: TPPGKanbanColumn) of object;
+  /// Eigene Filterregel (zusaetzlich zu FilterText/FilterLabels/FilterAssignee).
+  TPPGKanbanFilterEvent = procedure(Sender: TObject; Card: TPPGKanbanCard;
+    var Accept: Boolean) of object;
+  /// Spalte soll an die sichtbare Position NewIndex (abbrechbar).
+  TPPGKanbanColumnMovingEvent = procedure(Sender: TObject; Column: TPPGKanbanColumn;
+    NewIndex: Integer; var Allow: Boolean) of object;
 
   TPPGKanbanCell = record
     Cards: array of TPPGKanbanCard;  // leer bei virtuellen Spalten
@@ -75,6 +81,7 @@ type
     X, W: Integer;                   // Inhalts-Koordinaten (vor RTL-Spiegelung)
     Collapsed: Boolean;
     Cells: array of TPPGKanbanCell;  // je Swimlane
+    Hidden: Integer;                 // vom Filter ausgeblendete Karten
   end;
 
   TPPGKanbanLaneLayout = record
@@ -167,6 +174,25 @@ type
     FOnGetCard: TPPGKanbanGetCardEvent;
     FOnSelectionChange: TNotifyEvent;
     FOnColumnCollapse: TPPGKanbanColumnEvent;
+    { Filter und Spalten ziehen (Phase 20b) }
+    FFilterText: string;
+    FFilterLabels: string;
+    FFilterAssignee: string;
+    FOnFilterCard: TPPGKanbanFilterEvent;
+    FAllowColumnDrag: Boolean;
+    FColPress: Integer;
+    FColDragging: Boolean;
+    FColDragFrom: Integer;
+    FColDropAt: Integer;
+    FOnColumnMoving: TPPGKanbanColumnMovingEvent;
+    FOnColumnMoved: TPPGKanbanColumnEvent;
+    procedure SetFilterText(const Value: string);
+    procedure SetFilterLabels(const Value: string);
+    procedure SetFilterAssignee(const Value: string);
+    function CardPasses(Card: TPPGKanbanCard): Boolean;
+    procedure UpdateColumnDrop(X: Integer);
+    procedure EndColumnDrag(Commit: Boolean);
+    function ColumnDropX(Index: Integer): Integer;
     procedure SetKanbanStyles(const Value: TPPGKanbanStyles);
     procedure KanbanStylesChanged(Sender: TObject);
     procedure SetColumns(const Value: TPPGKanbanColumns);
@@ -294,8 +320,19 @@ type
     function CardData(C, L, I: Integer): TPPGKanbanCardData;
     /// Zelle und Position einer Karte (False = nicht sichtbar).
     function FindCard(Card: TPPGKanbanCard; out C, L, I: Integer): Boolean;
-    /// Karten einer Spalte ueber alle Swimlanes (fuer das WIP-Limit).
+    /// Sichtbare Karten einer Spalte ueber alle Swimlanes.
     function ColumnCardCount(C: Integer): Integer;
+    /// Alle Karten der Spalte, auch vom Filter ausgeblendete (WIP-Limit).
+    function ColumnTotalCount(C: Integer): Integer;
+    /// Vom Filter ausgeblendete Karten der Spalte.
+    function ColumnHiddenCount(C: Integer): Integer;
+    /// Ist ein Filter aktiv (FilterText, FilterLabels, FilterAssignee, OnFilterCard)?
+    function IsFiltered: Boolean;
+    /// Spalte C an die sichtbare Position ToIndex (0..ColumnCount, Einfuegen
+    /// davor) wie per Ziehen; True = verschoben.
+    function MoveColumn(C, ToIndex: Integer): Boolean;
+    property ColumnDragging: Boolean read FColDragging;
+    property ColumnDropIndex: Integer read FColDropAt;
     function WipState(C: Integer): TPPGKanbanWipState;
     function ColumnScroll(C: Integer): Integer;
     procedure ScrollColumn(C, Delta: Integer);
@@ -336,6 +373,18 @@ type
     property OnGetCard: TPPGKanbanGetCardEvent read FOnGetCard write FOnGetCard;
     property OnSelectionChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
     property OnColumnCollapse: TPPGKanbanColumnEvent read FOnColumnCollapse write FOnColumnCollapse;
+    /// Nur Karten zeigen, deren Titel, Text, Labels oder Person den Begriff
+    /// enthalten (ohne Gross-/Kleinschreibung); Treffer im Titel hervorgehoben.
+    property FilterText: string read FFilterText write SetFilterText;
+    /// Nur Karten mit mindestens einem dieser Labels (durch Komma getrennt).
+    property FilterLabels: string read FFilterLabels write SetFilterLabels;
+    /// Nur Karten dieser Personen (durch Komma getrennt).
+    property FilterAssignee: string read FFilterAssignee write SetFilterAssignee;
+    property OnFilterCard: TPPGKanbanFilterEvent read FOnFilterCard write FOnFilterCard;
+    /// Spalten am Kopf greifen und verschieben (Strg+Umschalt+Links/Rechts).
+    property AllowColumnDrag: Boolean read FAllowColumnDrag write FAllowColumnDrag default True;
+    property OnColumnMoving: TPPGKanbanColumnMovingEvent read FOnColumnMoving write FOnColumnMoving;
+    property OnColumnMoved: TPPGKanbanColumnEvent read FOnColumnMoved write FOnColumnMoved;
   end;
 
   TPPGKanban = class(TPPGCustomKanban)
@@ -385,6 +434,13 @@ type
     property OnGetCard;
     property OnSelectionChange;
     property OnColumnCollapse;
+    property FilterText;
+    property FilterLabels;
+    property FilterAssignee;
+    property AllowColumnDrag;
+    property OnFilterCard;
+    property OnColumnMoving;
+    property OnColumnMoved;
     property OnEnter;
     property OnExit;
     property OnKeyDown;
@@ -474,6 +530,10 @@ begin
   FMaxTextLines := 3;
   FAllowDrag := True;
   FShowCardCount := True;
+  FAllowColumnDrag := True;
+  FColPress := -1;
+  FColDragFrom := -1;
+  FColDropAt := -1;
   FFocus := NoHit;
   FHot := NoHit;
   FPress := NoHit;
@@ -870,6 +930,7 @@ begin
       W := Sc(FColumnWidth);
     FCols[NC].X := X;
     FCols[NC].W := W;
+    FCols[NC].Hidden := 0;
     SetLength(FCols[NC].Cells, NL);
     for L := 0 to NL - 1 do
     begin
@@ -911,6 +972,11 @@ begin
           // Karten unbekannter Swimlane: in die erste
           if L < 0 then
             L := 0;
+        end;
+        if not CardPasses(Card) then
+        begin
+          Inc(FCols[C].Hidden);
+          Break;
         end;
         with FCols[C].Cells[L] do
         begin
@@ -1121,7 +1187,22 @@ begin
   if (C < 0) or (C >= ColumnCount) then
     Result := kwsNone
   else
-    Result := PPGKanbanWipState(ColumnCardCount(C), FCols[C].Column.WipLimit);
+    Result := PPGKanbanWipState(ColumnTotalCount(C), FCols[C].Column.WipLimit);
+end;
+
+function TPPGCustomKanban.ColumnTotalCount(C: Integer): Integer;
+begin
+  Result := ColumnCardCount(C);
+  if (C >= 0) and (C <= High(FCols)) then
+    Inc(Result, FCols[C].Hidden);
+end;
+
+function TPPGCustomKanban.ColumnHiddenCount(C: Integer): Integer;
+begin
+  EnsureLayout;
+  Result := 0;
+  if (C >= 0) and (C <= High(FCols)) then
+    Result := FCols[C].Hidden;
 end;
 
 { ---- Koordinaten ---- }
@@ -1446,11 +1527,23 @@ function TPPGCustomKanban.SaveLayout: string;
 var
   L: TStringList;
   I: Integer;
+  S: string;
 begin
   L := TStringList.Create;
   try
     L.Add('[PPGKanbanLayout]');
-    L.Add('Version=1');
+    L.Add('Version=2');
+    S := '';
+    for I := 0 to FColumns.Count - 1 do
+    begin
+      if I > 0 then
+        S := S + ',';
+      S := S + IntToStr(FColumns[I].Id);
+    end;
+    L.Add('Order=' + S);
+    L.Add('FilterText=' + FFilterText);
+    L.Add('FilterLabels=' + FFilterLabels);
+    L.Add('FilterAssignee=' + FFilterAssignee);
     for I := 0 to FColumns.Count - 1 do
       L.Add(Format('Column.%d=%d,%d', [FColumns[I].Id, FColumns[I].Width,
         Ord(FColumns[I].Collapsed)]));
@@ -1465,8 +1558,9 @@ end;
 procedure TPPGCustomKanban.LoadLayout(const S: string);
 var
   L: TStringList;
-  I, P, Id, W, Cl: Integer;
+  I, P, Id, W, Cl, J, N: Integer;
   Key, Val: string;
+  Ids: TArray<string>;
   Col: TPPGKanbanColumn;
   Lane: TPPGKanbanLane;
 begin
@@ -1502,6 +1596,28 @@ begin
             end;
           end;
         end
+        else if SameText(Key, 'Order') then
+        begin
+          // Reihenfolge der Spalten nach Id; Unbekanntes uebergehen
+          Ids := PPGSplitString(Val, ',', True);
+          N := 0;
+          for J := 0 to High(Ids) do
+            if TryStrToInt(Trim(Ids[J]), Id) then
+            begin
+              Col := FColumns.FindById(Id);
+              if Col <> nil then
+              begin
+                Col.Index := N;
+                Inc(N);
+              end;
+            end;
+        end
+        else if SameText(Key, 'FilterText') then
+          FFilterText := Val
+        else if SameText(Key, 'FilterLabels') then
+          FFilterLabels := Val
+        else if SameText(Key, 'FilterAssignee') then
+          FFilterAssignee := Val
         else if SameText(Copy(Key, 1, 5), 'Lane.') and
           TryStrToInt(Copy(Key, 6, MaxInt), Id) and TryStrToInt(Val, Cl) then
         begin
@@ -1518,6 +1634,201 @@ begin
     L.Free;
   end;
   LayoutChanged;
+end;
+
+{ ---- Filter (Phase 20b) ---- }
+
+procedure TPPGCustomKanban.SetFilterText(const Value: string);
+begin
+  if FFilterText <> Value then
+  begin
+    FFilterText := Value;
+    LayoutChanged;
+  end;
+end;
+
+procedure TPPGCustomKanban.SetFilterLabels(const Value: string);
+begin
+  if FFilterLabels <> Value then
+  begin
+    FFilterLabels := Value;
+    LayoutChanged;
+  end;
+end;
+
+procedure TPPGCustomKanban.SetFilterAssignee(const Value: string);
+begin
+  if FFilterAssignee <> Value then
+  begin
+    FFilterAssignee := Value;
+    LayoutChanged;
+  end;
+end;
+
+function TPPGCustomKanban.IsFiltered: Boolean;
+begin
+  Result := (FFilterText <> '') or (Trim(FFilterLabels) <> '') or (Trim(FFilterAssignee) <> '') or
+    Assigned(FOnFilterCard);
+end;
+
+/// Text ohne Markup-Tags (fuer die Suche im Kartentext).
+function StripTags(const S: string): string;
+var
+  I: Integer;
+  InTag: Boolean;
+begin
+  Result := '';
+  InTag := False;
+  for I := 1 to Length(S) do
+    if S[I] = '<' then
+      InTag := True
+    else if S[I] = '>' then
+      InTag := False
+    else if not InTag then
+      Result := Result + S[I];
+end;
+
+function ListContains(const List, Value: string): Boolean;
+var
+  Parts: TArray<string>;
+  I: Integer;
+begin
+  Result := False;
+  Parts := PPGSplitString(List, ',', True);
+  for I := 0 to High(Parts) do
+    if SameText(Trim(Parts[I]), Trim(Value)) then
+      Exit(True);
+end;
+
+function TPPGCustomKanban.CardPasses(Card: TPPGKanbanCard): Boolean;
+var
+  U: string;
+  Parts: TArray<string>;
+  I: Integer;
+begin
+  Result := True;
+  if FFilterText <> '' then
+  begin
+    U := AnsiUpperCase(FFilterText);
+    Result := (Pos(U, AnsiUpperCase(Card.Title)) > 0) or
+      (Pos(U, AnsiUpperCase(StripTags(Card.Text))) > 0) or
+      (Pos(U, AnsiUpperCase(Card.Labels)) > 0) or (Pos(U, AnsiUpperCase(Card.Assignee)) > 0);
+    if not Result then
+      Exit;
+  end;
+  if Trim(FFilterLabels) <> '' then
+  begin
+    Result := False;
+    Parts := PPGSplitString(Card.Labels, ',', True);
+    for I := 0 to High(Parts) do
+      if ListContains(FFilterLabels, Parts[I]) then
+        Result := True;
+    if not Result then
+      Exit;
+  end;
+  if Trim(FFilterAssignee) <> '' then
+  begin
+    Result := ListContains(FFilterAssignee, Card.Assignee);
+    if not Result then
+      Exit;
+  end;
+  if Assigned(FOnFilterCard) then
+    FOnFilterCard(Self, Card, Result);
+end;
+
+{ ---- Spalten ziehen (Phase 20b) ---- }
+
+function TPPGCustomKanban.ColumnDropX(Index: Integer): Integer;
+var
+  CX: Integer;
+begin
+  // Mitte der Luecke vor Spalte Index (bzw. hinter der letzten), Client-X
+  if Index <= High(FCols) then
+    CX := FCols[Index].X - ColGap div 2
+  else
+    CX := FCols[High(FCols)].X + FCols[High(FCols)].W + ColGap div 2;
+  Result := ToClientX(CX, 0);
+end;
+
+procedure TPPGCustomKanban.UpdateColumnDrop(X: Integer);
+var
+  CX, C, NewAt: Integer;
+begin
+  CX := ToContentX(X);
+  NewAt := Length(FCols);
+  for C := 0 to High(FCols) do
+    if CX < FCols[C].X + FCols[C].W div 2 then
+    begin
+      NewAt := C;
+      Break;
+    end;
+  if NewAt <> FColDropAt then
+  begin
+    FColDropAt := NewAt;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomKanban.EndColumnDrag(Commit: Boolean);
+var
+  From, At: Integer;
+begin
+  From := FColDragFrom;
+  At := FColDropAt;
+  FColDragging := False;
+  FColDragFrom := -1;
+  FColDropAt := -1;
+  Invalidate;
+  if Commit and (From >= 0) then
+    MoveColumn(From, At);
+end;
+
+function TPPGCustomKanban.MoveColumn(C, ToIndex: Integer): Boolean;
+var
+  Col: TPPGKanbanColumn;
+  Allow: Boolean;
+  NewIdx, Visible: Integer;
+begin
+  Result := False;
+  EnsureLayout;
+  if FReadOnly or (C < 0) or (C > High(FCols)) then
+    Exit;
+  ToIndex := Max(0, Min(ToIndex, Length(FCols)));
+  // Einfuegen vor sich selbst oder hinter sich: keine Bewegung
+  if (ToIndex = C) or (ToIndex = C + 1) then
+    Exit;
+  Col := FCols[C].Column;
+  if ToIndex > C then
+    Visible := ToIndex - 1
+  else
+    Visible := ToIndex;
+  Allow := True;
+  if Assigned(FOnColumnMoving) then
+    FOnColumnMoving(Self, Col, Visible, Allow);
+  if not Allow then
+    Exit;
+  // Sichtbare Position -> Index in der Collection (ausgeblendete Spalten bleiben)
+  if ToIndex <= High(FCols) then
+  begin
+    NewIdx := FCols[ToIndex].Column.Index;
+    if Col.Index < NewIdx then
+      Dec(NewIdx);
+  end
+  else
+    NewIdx := FCols[High(FCols)].Column.Index;
+  FColumns.BeginUpdate;
+  try
+    Col.Index := NewIdx;
+  finally
+    FColumns.EndUpdate;
+  end;
+  EnsureLayout;
+  FocusHit(KHit(kpHeader, ColumnIndexOf(Col), -1, -1), True);
+  FAnnounce := Format(PPGStr(@SPPGKanbanColumnMoved), [Col.Title, ColumnIndexOf(Col) + 1, ColumnCount]);
+  NotifyAccessibility(EVENT_OBJECT_REORDER);
+  if Assigned(FOnColumnMoved) then
+    FOnColumnMoved(Self, Col);
+  Result := True;
 end;
 
 { ---- Zeichnen ---- }
@@ -1543,7 +1854,7 @@ var
   HC, Dark, RTL: Boolean;
   Inner, LR, TR, FR: TRect;
   Labels: TArray<string>;
-  I, X, W, Lh, TH, Av, Rad: Integer;
+  I, X, W, Lh, TH, Av, Rad, FP, FX, FW: Integer;
   S: string;
   Overdue: Boolean;
 begin
@@ -1665,6 +1976,18 @@ begin
     TH := PPGMeasureTextNoCanvas(D.Title, TitleF, Max(10, Inner.Right - Inner.Left), True).cy;
     TH := Max(Lh, Min(TH, 2 * Lh));
     TR := Rect(Inner.Left, Inner.Top, Inner.Right, Inner.Top + TH);
+    if (FFilterText <> '') and (TH = Lh) and not RTL then
+    begin
+      FP := Pos(AnsiUpperCase(FFilterText), AnsiUpperCase(D.Title));
+      if FP > 0 then
+      begin
+        FX := TR.Left + PPGMeasureTextNoCanvas(Copy(D.Title, 1, FP - 1), TitleF, 0, False).cx;
+        FW := PPGMeasureTextNoCanvas(Copy(D.Title, FP, Length(FFilterText)), TitleF, 0, False).cx;
+        if FX < TR.Right then
+          ACanvas.FillRoundRect(Rect(FX - Sc(1), TR.Top, Min(FX + FW + Sc(1), TR.Right), TR.Bottom), Sc(3),
+            SelCol, 64);
+      end;
+    end;
     ACanvas.DrawText(TR, D.Title, TitleF, TextCol, DrawTextBiDiModeFlags(DT_WORDBREAK or DT_NOPREFIX or
       DT_END_ELLIPSIS or DT_EDITCONTROL));
   finally
@@ -1862,10 +2185,13 @@ begin
   end;
   if FShowCardCount then
   begin
-    if FCols[C].Column.WipLimit > 0 then
-      S := IntToStr(Cnt) + ' / ' + IntToStr(FCols[C].Column.WipLimit)
+    // Ausgeblendete Karten (Filter) als "+n"; das Limit zaehlt alle
+    if FCols[C].Hidden > 0 then
+      S := Format(PPGStr(@SPPGKanbanCountHidden), [Cnt, FCols[C].Hidden])
     else
       S := IntToStr(Cnt);
+    if FCols[C].Column.WipLimit > 0 then
+      S := S + ' / ' + IntToStr(FCols[C].Column.WipLimit);
     case W of
       kwsOver: Sh := T.Danger;
       kwsFull: Sh := T.Warning;
@@ -2003,6 +2329,21 @@ begin
   ACanvas.FillRoundRect(View, 0, PPGColorToRGB(GetBackgroundColor), 255);
   for C := 0 to High(FCols) do
     PaintColumn(ACanvas, C, View);
+  if FColDragging and (FColDragFrom >= 0) and (FColDragFrom <= High(FCols)) then
+  begin
+    // Gezogene Spalte gedaempft, Einfuegemarke an der Zielstelle
+    R := ColumnRect(FColDragFrom);
+    if not IsRectEmpty(R) then
+      ACanvas.FillRoundRect(R, Sc(8), PPGColorToRGB(GetBackgroundColor), 150);
+    if (FColDropAt <> FColDragFrom) and (FColDropAt <> FColDragFrom + 1) then
+    begin
+      CR.Left := ColumnDropX(FColDropAt) - Sc(2);
+      CR.Right := CR.Left + Sc(4);
+      CR.Top := View.Top + Sc(4);
+      CR.Bottom := View.Bottom - Sc(4);
+      ACanvas.FillRoundRect(CR, Sc(2), PPGColorToRGB(EffectiveAppearance.FocusColor), 255);
+    end;
+  end;
   // Swimlane-Koepfe als Band ueber den Spalten (unter den stehenden Spaltenkoepfen)
   if HasLanes then
   begin
@@ -2334,7 +2675,7 @@ begin
   // WIP-Limit: im Sperrmodus keine Karte in eine volle Spalte
   if (C <> ToC) and (FWipMode = kwmBlock) and (FCols[ToC].Column.WipLimit > 0) then
   begin
-    Total := ColumnCardCount(ToC);
+    Total := ColumnTotalCount(ToC);
     if Total >= FCols[ToC].Column.WipLimit then
       Allow := False;
   end;
@@ -2480,7 +2821,10 @@ begin
         FThumbOffset := Y - ThumbRectOf(H.Col).Top;
       end;
     kpHeader:
-      FocusHit(H, True);
+      begin
+        FocusHit(H, True);
+        FColPress := H.Col;
+      end;
   end;
 end;
 
@@ -2507,6 +2851,22 @@ begin
     UpdateDrop(X, Y);
     AutoScrollAt(X, Y);
     ColumnAutoScroll(X, Y);
+    Exit;
+  end;
+  if FColDragging then
+  begin
+    UpdateColumnDrop(X);
+    AutoScrollAt(X, Y);
+    Exit;
+  end;
+  // Spalte ziehen beginnt nach ein paar Pixeln waagerecht
+  if (ssLeft in Shift) and (FColPress >= 0) and (FPress.Part = kpHeader) and FAllowColumnDrag and
+    not FReadOnly and (Length(FCols) > 1) and (Abs(X - FPressPt.X) > Sc(4)) then
+  begin
+    FColDragging := True;
+    FColDragFrom := FColPress;
+    FColDropAt := FColPress;
+    UpdateColumnDrop(X);
     Exit;
   end;
   // Ziehen beginnt nach ein paar Pixeln
@@ -2544,6 +2904,13 @@ begin
   inherited ContentMouseUp(Button, Shift, X, Y);
   P := FPress;
   FPress := NoHit;
+  FColPress := -1;
+  if FColDragging then
+  begin
+    UpdateColumnDrop(X);
+    EndColumnDrag(True);
+    Exit;
+  end;
   if FThumbCol >= 0 then
   begin
     FThumbCol := -1;
@@ -2684,6 +3051,26 @@ begin
       EndDrag(False);
       Key := 0;
     end;
+    Exit;
+  end;
+  if FColDragging then
+  begin
+    if Key = VK_ESCAPE then
+    begin
+      EndColumnDrag(False);
+      Key := 0;
+    end;
+    Exit;
+  end;
+  // Strg+Umschalt+Links/Rechts: Spalte verschieben (sichtbare Richtung)
+  if (ssCtrl in Shift) and (ssShift in Shift) and (Key in [VK_LEFT, VK_RIGHT]) and
+    (FFocus.Col >= 0) and (FFocus.Part in [kpCard, kpHeader]) then
+  begin
+    if (Key = VK_RIGHT) xor UseRightToLeftAlignment then
+      MoveColumn(FFocus.Col, FFocus.Col + 2)
+    else
+      MoveColumn(FFocus.Col, FFocus.Col - 1);
+    Key := 0;
     Exit;
   end;
   K := Key;

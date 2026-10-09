@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 253;
+  PPGLangDeCount = 255;
 
 implementation
 
@@ -528,6 +528,10 @@ begin
     'Endet am');
   PPGAddTranslation(PPGLangDeCode, @SPPGApptEndBeforeStart,
     'Das Ende darf nicht vor dem Beginn liegen.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanCountHidden,
+    '%d (+%d)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGKanbanColumnMoved,
+    'Spalte %s an Position %d von %d verschoben');
 end;
 
 initialization

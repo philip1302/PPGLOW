@@ -2,7 +2,8 @@ unit PPG.Tests.Phase20;
 
 { Tests fuer Phase 20: Fertigstellen bestehender Controls.
   20a: Planer - Serienabfrage (nur Vorkommen / ganze Serie), Ort direkt
-  bearbeiten, Termin-Dialog (Laden, Speichern, Pruefen, Haken). }
+  bearbeiten, Termin-Dialog (Laden, Speichern, Pruefen, Haken).
+  20b: Kanban - Filter (Text, Labels, Person, Ereignis), Spalten ziehen. }
 
 interface
 
@@ -10,7 +11,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.DateUtils, Vcl.Forms, Vcl.Controls,
   PPG.Calendar, PPG.Planner.Model, PPG.Planner.Recurrence, PPG.Planner, PPG.Planner.Dialog,
-  PPG.Tests.Controls;
+  Vcl.Graphics, PPG.Kanban.Items, PPG.Kanban.Layout, PPG.Kanban, PPG.Tests.Controls;
 
 type
   TPlannerSeriesTests = class(TControlTestCase)
@@ -46,10 +47,37 @@ type
     procedure StreamsNewProperties;
   end;
 
+  TKanbanFilterTests = class(TControlTestCase)
+  private
+    FLog: string;
+    FVeto: Boolean;
+    function NewBoard: TPPGKanban;
+    function Order(K: TPPGKanban): string;
+    procedure Key(K: TPPGKanban; AKey: Word; Shift: TShiftState = []);
+    procedure ColMoving(Sender: TObject; Column: TPPGKanbanColumn; NewIndex: Integer;
+      var Allow: Boolean);
+    procedure ColMoved(Sender: TObject; Column: TPPGKanbanColumn);
+    procedure OnlyAnna(Sender: TObject; Card: TPPGKanbanCard; var Accept: Boolean);
+  protected
+    procedure SetUp; override;
+  published
+    procedure FilterTextHidesAndCounts;
+    procedure FilterListsAndEvent;
+    procedure WipLimitCountsHiddenCards;
+    procedure MoveInsideFilterKeepsHiddenCards;
+    procedure MoveColumnByCode;
+    procedure ColumnDragByMouse;
+    procedure KeyboardMovesColumn;
+    procedure LayoutKeepsOrderAndFilter;
+    procedure PaintsFilteredAndDragging;
+    procedure StreamsFilterProperties;
+  end;
+
+
 implementation
 
 uses
-  PPG.Validator, PPG.Lang, PPG.Consts;
+  PPG.Validator, PPG.Lang, PPG.Consts, PPG.Render.Registry;
 
 type
   TWinControlAccess = class(TWinControl);
@@ -596,7 +624,317 @@ begin
   end;
 end;
 
+{ TKanbanFilterTests }
+
+type
+  TKanbanAccess = class(TPPGCustomKanban);
+
+procedure TKanbanFilterTests.SetUp;
+begin
+  inherited SetUp;
+  FLog := '';
+  FVeto := False;
+end;
+
+function TKanbanFilterTests.NewBoard: TPPGKanban;
+var
+  A, B, C: TPPGKanbanColumn;
+begin
+  Result := TPPGKanban.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 1080, 640);
+  Result.Animation.Enabled := False;
+  Result.SmoothScrolling := False;
+  Result.OnColumnMoving := ColMoving;
+  Result.OnColumnMoved := ColMoved;
+  A := Result.Columns.AddColumn('Offen');
+  B := Result.Columns.AddColumn('Arbeit', 2);
+  C := Result.Columns.AddColumn('Fertig');
+  with Result.Cards.AddCard(A.Id, 'Login-Fehler') do
+  begin
+    Labels := 'Bug, UI';
+    Assignee := 'Anna';
+  end;
+  with Result.Cards.AddCard(A.Id, 'Neue Startseite') do
+  begin
+    Labels := 'UI';
+    Assignee := 'Ben';
+  end;
+  with Result.Cards.AddCard(A.Id, 'Export', 'Excel mit <b>Bug</b>-Liste') do
+    Assignee := 'Anna';
+  with Result.Cards.AddCard(B.Id, 'Datenbank') do
+    Assignee := 'Ben';
+  with Result.Cards.AddCard(B.Id, 'Bug im Druck') do
+    Labels := 'Bug';
+  Result.Cards.AddCard(C.Id, 'Release 1.0');
+end;
+
+procedure TKanbanFilterTests.ColMoving(Sender: TObject; Column: TPPGKanbanColumn;
+  NewIndex: Integer; var Allow: Boolean);
+begin
+  FLog := FLog + Format('moving:%s>%d;', [Column.Title, NewIndex]);
+  if FVeto then
+    Allow := False;
+end;
+
+procedure TKanbanFilterTests.ColMoved(Sender: TObject; Column: TPPGKanbanColumn);
+begin
+  FLog := FLog + 'moved:' + Column.Title + ';';
+end;
+
+procedure TKanbanFilterTests.OnlyAnna(Sender: TObject; Card: TPPGKanbanCard; var Accept: Boolean);
+begin
+  Accept := Accept and (Card.Assignee = 'Anna');
+end;
+
+function TKanbanFilterTests.Order(K: TPPGKanban): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to K.ColumnCount - 1 do
+    Result := Result + K.LayoutColumn(I).Title + ' ';
+  Result := Trim(Result);
+end;
+
+procedure TKanbanFilterTests.FilterTextHidesAndCounts;
+var
+  K: TPPGKanban;
+begin
+  K := NewBoard;
+  CheckFalse(K.IsFiltered);
+  K.FilterText := 'bug';
+  CheckTrue(K.IsFiltered);
+  CheckEquals(2, K.ColumnCardCount(0), 'Titel, Label und Text (ohne Markup)');
+  CheckEquals(1, K.ColumnHiddenCount(0));
+  CheckEquals(3, K.ColumnTotalCount(0));
+  CheckEquals(1, K.ColumnCardCount(1), 'Bug im Druck');
+  CheckEquals(0, K.ColumnCardCount(2));
+  CheckEquals('Login-Fehler', K.CardAt(0, 0, 0).Title);
+  CheckEquals('Export', K.CardAt(0, 0, 1).Title, 'Treffer im Text');
+  K.FilterText := 'ANNA';
+  CheckEquals(2, K.ColumnCardCount(0), 'Person, ohne Gross-/Kleinschreibung');
+  K.FilterText := '';
+  CheckEquals(3, K.ColumnCardCount(0));
+  CheckEquals(0, K.ColumnHiddenCount(0));
+end;
+
+procedure TKanbanFilterTests.FilterListsAndEvent;
+var
+  K: TPPGKanban;
+begin
+  K := NewBoard;
+  K.FilterLabels := 'ui, Doku';
+  CheckEquals(2, K.ColumnCardCount(0), 'irgendein Label der Liste');
+  CheckEquals(0, K.ColumnCardCount(1));
+  K.FilterLabels := '';
+  K.FilterAssignee := 'Ben,Carla';
+  CheckEquals(1, K.ColumnCardCount(0));
+  CheckEquals(1, K.ColumnCardCount(1));
+  K.FilterAssignee := '';
+  K.OnFilterCard := OnlyAnna;
+  CheckTrue(K.IsFiltered);
+  CheckEquals(2, K.ColumnCardCount(0));
+  K.FilterText := 'export';
+  CheckEquals(1, K.ColumnCardCount(0), 'alle Bedingungen zusammen');
+  K.OnFilterCard := nil;
+end;
+
+procedure TKanbanFilterTests.WipLimitCountsHiddenCards;
+var
+  K: TPPGKanban;
+begin
+  K := NewBoard;
+  K.WipMode := kwmBlock;
+  K.FilterText := 'druck';
+  CheckEquals(1, K.ColumnCardCount(1));
+  CheckTrue(K.WipState(1) = kwsFull, 'Limit 2 mit einer ausgeblendeten Karte voll');
+  K.FilterText := '';
+  CheckFalse(K.MoveCard(0, 0, 0, 1, 0, 0), 'gesperrt: volle Spalte');
+end;
+
+procedure TKanbanFilterTests.MoveInsideFilterKeepsHiddenCards;
+var
+  K: TPPGKanban;
+  I: Integer;
+  S: string;
+begin
+  K := NewBoard;
+  K.FilterAssignee := 'Anna';
+  // sichtbar in "Offen": Login-Fehler, Export; ausgeblendet: Neue Startseite
+  CheckEquals(2, K.ColumnCardCount(0));
+  CheckTrue(K.MoveCard(0, 0, 1, 0, 0, 0), 'Export nach vorn');
+  CheckEquals('Export', K.CardAt(0, 0, 0).Title);
+  K.FilterAssignee := '';
+  S := '';
+  for I := 0 to K.CardCount(0, 0) - 1 do
+    S := S + K.CardAt(0, 0, I).Title + ';';
+  CheckEquals('Export;Login-Fehler;Neue Startseite;', S, 'ausgeblendete Karte bleibt hinter ihrem Nachbarn');
+end;
+
+procedure TKanbanFilterTests.MoveColumnByCode;
+var
+  K: TPPGKanban;
+begin
+  K := NewBoard;
+  CheckTrue(K.MoveColumn(0, 3));
+  CheckEquals('Arbeit Fertig Offen', Order(K));
+  CheckEquals('moving:Offen>2;moved:Offen;', FLog);
+  CheckTrue(K.Announcement <> '', 'Ansage fuer den Screenreader');
+  CheckFalse(K.MoveColumn(1, 1), 'vor sich selbst');
+  CheckFalse(K.MoveColumn(1, 2), 'hinter sich selbst');
+  FVeto := True;
+  CheckFalse(K.MoveColumn(2, 0), 'abgelehnt');
+  CheckEquals('Arbeit Fertig Offen', Order(K));
+  FVeto := False;
+  // Ausgeblendete Spalte behaelt ihren Platz in der Collection
+  K.Columns[1].Visible := False; // "Fertig" (Collection: Arbeit, Fertig, Offen)
+  CheckEquals('Arbeit Offen', Order(K));
+  CheckTrue(K.MoveColumn(1, 0));
+  CheckEquals('Offen Arbeit', Order(K));
+  K.Columns.FindById(3).Visible := True;
+  K.ReadOnly := True;
+  CheckFalse(K.MoveColumn(0, 2), 'schreibgeschuetzt');
+end;
+
+procedure TKanbanFilterTests.ColumnDragByMouse;
+var
+  K: TPPGKanban;
+  A, B: TPoint;
+  R: TRect;
+begin
+  K := NewBoard;
+  R := K.HeaderRect(0);
+  A := Point(R.Left + 30, (R.Top + R.Bottom) div 2);
+  B := Point(K.HeaderRect(2).Right - 10, A.Y);
+  K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(A.X, A.Y));
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(A.X + 20, A.Y));
+  CheckTrue(K.ColumnDragging, 'Ziehen beginnt');
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(B.X, B.Y));
+  CheckEquals(3, K.ColumnDropIndex, 'hinter die letzte');
+  K.Perform(WM_LBUTTONUP, 0, MakeLParam(B.X, B.Y));
+  CheckFalse(K.ColumnDragging);
+  CheckEquals('Arbeit Fertig Offen', Order(K));
+  // Esc bricht ab
+  R := K.HeaderRect(0);
+  A := Point(R.Left + 30, (R.Top + R.Bottom) div 2);
+  K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(A.X, A.Y));
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(B.X, B.Y));
+  CheckTrue(K.ColumnDragging);
+  Key(K, VK_ESCAPE);
+  CheckFalse(K.ColumnDragging);
+  K.Perform(WM_LBUTTONUP, 0, MakeLParam(B.X, B.Y));
+  CheckEquals('Arbeit Fertig Offen', Order(K), 'unveraendert');
+  K.AllowColumnDrag := False;
+  K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(A.X, A.Y));
+  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(B.X, B.Y));
+  CheckFalse(K.ColumnDragging, 'abgeschaltet');
+  K.Perform(WM_LBUTTONUP, 0, MakeLParam(B.X, B.Y));
+end;
+
+procedure TKanbanFilterTests.KeyboardMovesColumn;
+var
+  K: TPPGKanban;
+begin
+  K := NewBoard;
+  K.Select(0, 0, 0);
+  Key(K, VK_RIGHT, [ssCtrl, ssShift]);
+  CheckEquals('Arbeit Offen Fertig', Order(K));
+  CheckEquals(1, K.Focus.Col, 'Fokus wandert mit');
+  Key(K, VK_LEFT, [ssCtrl, ssShift]);
+  CheckEquals('Offen Arbeit Fertig', Order(K));
+end;
+
+procedure TKanbanFilterTests.LayoutKeepsOrderAndFilter;
+var
+  K: TPPGKanban;
+  S: string;
+begin
+  K := NewBoard;
+  K.MoveColumn(2, 0);
+  K.FilterText := 'bug';
+  K.FilterAssignee := 'Anna';
+  S := K.SaveLayout;
+  K.MoveColumn(0, 3);
+  K.FilterText := '';
+  K.FilterAssignee := '';
+  K.LoadLayout(S);
+  CheckEquals('Fertig Offen Arbeit', Order(K));
+  CheckEquals('bug', K.FilterText);
+  CheckEquals('Anna', K.FilterAssignee);
+  CheckEquals(2, K.ColumnCardCount(1), 'Filter wirkt nach dem Laden');
+end;
+
+procedure TKanbanFilterTests.PaintsFilteredAndDragging;
+var
+  K: TPPGKanban;
+  B: TBitmap;
+  Gdi: Boolean;
+  R: TRect;
+begin
+  K := NewBoard;
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      K.FilterText := 'bug';
+      B := RenderToBitmap(K);
+      B.Free;
+      R := K.HeaderRect(0);
+      K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(R.Left + 30, R.Top + 10));
+      K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(K.HeaderRect(1).Right - 5, R.Top + 10));
+      B := RenderToBitmap(K);
+      B.Free;
+      Key(K, VK_ESCAPE);
+      K.Perform(WM_LBUTTONUP, 0, MakeLParam(R.Left + 30, R.Top + 10));
+      K.BiDiMode := bdRightToLeft;
+      B := RenderToBitmap(K);
+      B.Free;
+      K.BiDiMode := bdLeftToRight;
+      K.FilterText := '';
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TKanbanFilterTests.StreamsFilterProperties;
+var
+  M: TMemoryStream;
+  K, K2: TPPGKanban;
+begin
+  K := NewBoard;
+  K.FilterText := 'x';
+  K.FilterLabels := 'Bug';
+  K.FilterAssignee := 'Anna';
+  K.AllowColumnDrag := False;
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(K);
+    M.Position := 0;
+    K2 := TPPGKanban.Create(FForm);
+    M.ReadComponent(K2);
+    CheckEquals('x', K2.FilterText);
+    CheckEquals('Bug', K2.FilterLabels);
+    CheckEquals('Anna', K2.FilterAssignee);
+    CheckFalse(K2.AllowColumnDrag);
+  finally
+    M.Free;
+  end;
+end;
+
+procedure TKanbanFilterTests.Key(K: TPPGKanban; AKey: Word; Shift: TShiftState);
+var
+  W: Word;
+begin
+  W := AKey;
+  TKanbanAccess(K).KeyDown(W, Shift);
+end;
+
+
 initialization
   RegisterTest('Phase20', TPlannerSeriesTests.Suite);
+  RegisterTest('Phase20', TKanbanFilterTests.Suite);
 
 end.
