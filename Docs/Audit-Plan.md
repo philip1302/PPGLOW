@@ -16,7 +16,7 @@ Die Befunde ballen sich in drei Mustern:
 | # | Frage | Entscheidung |
 |---|---|---|
 | 1 | Repo-Bereinigung (Artefakte aus dem Index, History verkleinern) | **Nicht jetzt.** Paket 0 bleibt zurückgestellt. |
-| 2 | Einheitliche Benennung über alle Komponenten | **Ja.** Umsetzung in Paket 5c; alte Namen bleiben per `DefineProperties` lesbar, damit bestehende DFMs laden (Vorschlag, beim Start von 5c bestätigen). |
+| 2 | Einheitliche Benennung über alle Komponenten | **Ja.** Umsetzung in Paket 5c, beim Start entschieden (09.10.2026): **ohne Aliase**, weil die Suite noch in keinem Projekt im Einsatz ist; nach der ersten Installation wird nicht mehr umbenannt. |
 | 3 | Abweichende VCL-Defaults | **PPG-Defaults behalten**, `migrate.ps1` schreibt die VCL-Werte ausdrücklich (Paket 6). |
 | 4 | Reihenfolge zu Phase 18 | **Wie vorgeschlagen:** Pakete 1, 2, 3, 6 sofort (berühren kaum Phase-18-Dateien), 7, 8, 9 nach Phase 18. |
 
@@ -449,9 +449,9 @@ Zur Erinnerung, falls später gewünscht: ~1.330 Artefakte (~150 MB: 1.276 `.dcu
 | 1 Abstürze und Datenverlust | **erledigt** (08.10.2026, Zweig `claude/audit-fixes`) |
 | 2 Fehlergrenzen, Zahlen, Lebensdauer | **erledigt** (08.10.2026); offen: NumberEdit Min > Max wirft nicht (vertauscht = ohne Grenze), NaN als Lücke im Chart erst mit Paket 4 |
 | 3 Dateiformate und Export | **weitgehend erledigt** (08.10.2026); offen: Kanban `'dd.mm.'`, TimePicker-Anzeigeformat aus `ShortTimeFormat`, Datumszellen im xlsx-Reader |
-| 6 Migration | **erledigt** (08.10.2026); Umbenennungen aus 5c kommen mit Paket 5 dazu |
-| 4 DB-Controls | offen |
-| 5 Properties, Objektinspektor, Benennung | offen |
+| 6 Migration | **erledigt** (08.10.2026); Umbenennungen aus 5c seit 09.10.2026 dabei (auch im Code der Unit) |
+| 4 DB-Controls | **erledigt** (09.10.2026, `Docs\Audit-Paket4-5-Plan.md`, Abschnitt Umsetzung) |
+| 5 Properties, Objektinspektor, Benennung | **erledigt** (09.10.2026); 5d Stufen 1–3, größere Funktionen auf eigener Liste; Appearance bei Badge/ProgressRing/Rating/Splitter mit Paket 7 |
 | 11 Tests, Build, Demo, Doku | offen |
 | 7 UI/UX-Konsistenz | offen (nach Phase 18) |
 | 8 Performance | offen (nach Phase 18) |

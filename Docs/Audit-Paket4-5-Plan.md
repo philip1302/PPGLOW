@@ -122,3 +122,25 @@ Gleiche Vorgaben für gleiche Konzepte als Konstanten in `PPG.Types`: `DropDownC
 2. **Alte Namen:** keine Aliase. „Die Komponenten sind bisher in keinem einzigen Projekt im Einsatz, also sollten wir die einfach umbenennen können ohne Aliase und ohne dass etwas bricht. Nachdem das erste Mal die Suite irgendwo installiert wurde, darf nicht mehr umbenannt werden.“
 3. **Umfang 5c:** die ganze Audit-Tabelle (auch Aufzählungswerte und Farb-Aufzählungen).
 4. **Umfang 5d:** Stufen 1–3; die größeren Funktionen kommen auf eine eigene Liste.
+
+## Umsetzung (09.10.2026)
+
+Commits auf `claude/task-elizkl`: 7b0b99a (Festhalte-Tests), ab05269 (4a), d9cfed2 und 89c5dae (4b/4c), e8ce0d2 (5a), 93eb8f7, 8186dfb und 097583a (5b), a24b46f (5c), 79695bc, 4883d55 und ba1754b (5d Stufe 1–3).
+
+Ergebnis: 1544 Tests Win32 und Win64 grün (vorher 1466), Leak-Lauf Win32/Win64 grün, alle sechs Projekte gebaut, Demo-Selbsttest 185/185, `migrate.ps1 -SelfTest` 8/8 (neue Fixture `Unit4`), `make-docs.ps1 -Missing` 0, Regel-Prüfer ohne Verstoß. Nichts installiert.
+
+**Paket 4:** `TPPGDBBinding` in `PPG.DB.Controls` trägt Anzeigen, Schreiben, Bearbeitbarkeit, Esc, Actions und `CM_GETDATALINK` für alle Feld-Controls; `TPPGDBValueBinding` (`PPG.DB.Fields`) für die `IPPGFieldValue`-Controls. Dazu die Fehler aus 4b (MaxLength aus dem Feld, Null im DatePicker, Esc überall, Lookup-Felder als DataField, Nachschlage-Editor im DB-Grid, Bearbeiten ab dem ersten Tastendruck, Ausrichtung der Spalten, `ShowRequired`, Chart ohne Null-Punkte, Lesezeichen) und die Designer-Punkte aus 4c.
+
+**Paket 5:** Streaming-Marker für leere Strings, `stored`-Funktionen, Setter mit Gleichheitsprüfung und `PPGCheckRange`, `ImageName` an Einträgen, Kategorie „PPGlow“ im Objektinspektor; einheitliche Namen ohne Aliase (Regeln in `Docs\Architektur.md`, Abschnitt „Namensregeln“); VCL-Properties und -Ereignisse bei allen 72 sichtbaren Controls (Test `PPG.Tests.Audit5d`).
+
+**Nebenbei gefundener Fehler (5d):** `TControl` ruft `DblClick` nur mit `csClickEvents` auf. ListBox, CheckListBox, TreeView, Grid, DB-Grid, Kanban und Ribbon nehmen diesen Stil heraus. Deshalb kam ein echter Doppelklick dort nie an (TreeView klappte nicht auf, Kanban `OnCardOpen` per Doppelklick fehlte). Die Basis ruft `DblClick` jetzt selbst auf, wenn `csDoubleClicks` gesetzt ist.
+
+**Abweichungen vom Plan:**
+- 4a: Die gemeinsame Bindung spart kaum Zeilen (netto etwa +40 statt der erhofften rund 600 weniger). Die Sonderregeln der Controls (Lookup, Memo-Laden, Radio-Werte, Tag-Liste) brauchen eigene Überschreibungen; gewonnen ist das einheitliche Verhalten.
+- 4b: Das Chart überspringt Null-Werte, statt eine Lücke in der Linie zu zeichnen. Lookup mit mehreren Schlüssel- bzw. DataField-Feldern wird nicht unterstützt, sondern gemeldet (`SPPGDBLookupMultiKey`). Large-Int-Werte über 2^53 sind im NumberEdit ungenau (Double).
+- 5b: Badge, ProgressRing, Rating und Splitter lesen weiterhin nicht alle Appearance-Werte. Das würde die Referenzbilder ändern und kommt mit Paket 7 (UI/UX). Die NC-Bevel bei abgerundeten Panels werden nicht unterdrückt. SearchEdit `AutoComplete` bleibt `False`.
+- 5d Stufe 1: `OnDblClick` gibt es nur bei Controls, die Doppelklicks annehmen. Button, CheckBox, RadioButton, ToggleSwitch, TrackBar, ProgressBar, Gauge, KpiTile, MenuBar, Breadcrumb, Calendar, NavigationView, Rating, Splitter, ToolBar und DB-Navigator haben es wie TButton nicht, damit schnelle Klicks einzeln zählen (beim Calendar ist das eine Abweichung von TMonthCalendar). Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfelder melden mit `OnClick` die Auswahl, wie in der VCL; ColorPicker, ColumnComboBox und CheckComboBox tun das jetzt auch. Ribbon fragt `OnContextPopup` vor dem eigenen Menü; TimePicker gibt `OnMouseWheel` vor dem eigenen Blättern.
+- 5d Stufe 2: `DoubleBuffered` ist ohne eigene Wirkung veröffentlicht (die Controls puffern immer); das innere Edit der Felder übernimmt es nicht.
+- 5d Stufe 3: TrackBar `Font` entfällt (TTrackBar hat keins, die Leiste zeichnet keinen Text). `ShowClearButton` gibt es für NumberEdit, PasswordEdit und TagEdit (leert alle Tags), nicht für SpinEdit und DatePicker: beide haben keinen leeren Wert, der Knopf würde nur den Text leeren, der beim Verlassen zurückspringt. TabSheet `Highlighted` zeichnet den Reiter wie unter der Maus.
+
+**Noch offen (eigene Liste, wie entschieden):** TreeView `StateImages`/`SortType`/`RightClickSelect`/`OnGetImageIndex`, Calendar `MultiSelect`/`OnGetMonthBoldInfo`, ComboBox `OnDrawItem`/`OnMeasureItem`, Grid `OnGetEditMask`/`OnRowMoved`, DB-Grid `OnDrawColumnCell`, IME-Properties, TrackBar `PositionToolTip`.

@@ -27,7 +27,15 @@
 - Prüfung: 1466 Tests Win32 und Win64, Leak-Lauf grün, Demo-Selbsttest 185/185, Benchmark eingehalten (zwei neue Messungen).
 - **Noch nicht installiert.**
 
-Als Nächstes laut Roadmap: Audit-Pakete 4 und 5, Phase 21 erst nach einer Inventur, Phase 16 (Tour, Kommando-Palette); Phase 15 bleibt zurückgestellt (Arbeitgeber). Vorher Bericht und OK.
+**09.10.2026: Audit-Pakete 4 und 5 fertig** (Details und Abweichungen: `Docs\Audit-Paket4-5-Plan.md`, Abschnitt Umsetzung):
+- 4: gemeinsame DB-Bindung `TPPGDBBinding` für alle DB-Controls, DB-Fehler und Designer-Punkte.
+- 5a/5b: Streaming, Setter, Wirkung, `ImageName` an Einträgen, Kategorie „PPGlow“.
+- 5c: einheitliche Namen **ohne Aliase** (Regeln: `Docs\Architektur.md`, „Namensregeln“). Nach der ersten Installation wird nicht mehr umbenannt. `migrate.ps1` bildet `TSpinEdit` Min/Max, `TTrackBar` ShowSlider und `OnTopLeftChange` ab, auch im Code der Unit.
+- 5d: VCL-Ereignisse und -Properties bei allen 72 sichtbaren Controls (Stufen 1–3). Dabei behoben: echte Doppelklicks kamen bei ListBox, TreeView, Grid und Kanban nie an.
+- Prüfung: 1544 Tests Win32 und Win64, Leak-Lauf Win32/Win64 grün, Demo-Selbsttest 185/185, `migrate.ps1 -SelfTest` 8/8, `make-docs` 0 fehlend.
+- **Noch nicht installiert.**
+
+Als Nächstes laut Roadmap: Phase 21 erst nach einer Inventur, Phase 16 (Tour, Kommando-Palette), aus dem Audit Paket 7 (UI/UX, dazu Appearance bei Badge/ProgressRing/Rating/Splitter), 8, 11; Phase 15 bleibt zurückgestellt (Arbeitgeber). Vorher Bericht und OK.
 
 **09.10.2026: Gesamt-Audit** (neun Prüfthemen, rund 260 Befunde, Plan und Stand in `Docs\Audit-Plan.md`). Pakete 1 (Abstürze/Datenverlust), 2 (Fehlergrenzen, NaN, Lebensdauer), 3 (xlsx/CSV/iCal/Zahlen-Parser) und 6 (`migrate.ps1`: Kodierung, `.bak`, abweichende VCL-Vorgaben) umgesetzt und in diesen Zweig gemergt (2bebd69). Danach: 1338 Tests Win32/Win64, Leak-Lauf grün, Demo-Selbsttest 160/160. Entscheidungen: Repo-Bereinigung zurückgestellt, einheitliche Benennung ja (Paket 5c), PPGlow-Vorgaben bleiben (migrate gleicht aus), Pakete 7–9 nach Phase 18. Als Nächstes aus dem Audit: Paket 4 (DB-Controls) und 5 (Properties/Benennung).
 
