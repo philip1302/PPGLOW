@@ -77,6 +77,8 @@ type
     FRatingResult: TPPGLabel;
     FVolume: TPPGTrackBar;
     FQuality: TPPGTrackBar;
+    FPrice: TPPGTrackBar;
+    FPriceValue: TPPGLabel;
     FVolumeBar: TPPGProgressBar;
     FVolumeRing: TPPGProgressRing;
     FVolumeValue: TPPGLabel;
@@ -701,8 +703,8 @@ begin
 
   // Regler und Fortschritt
   Card := NewCard(Own, Sheet, PageX, PageContentTop + 252 + 196 + 2 * CardGap, FullW, 196,
-    'Schieberegler und Fortschritt', 'Der Regler steuert Balken und Ring; der zweite Regler ' +
-    'rastet auf Stufen ein (Pfeiltasten, Bild auf/ab, Mausrad).');
+    'Schieberegler und Fortschritt', 'Lautst{ae}rke mit empfohlenem Bereich steuert Balken und ' +
+    'Ring, Qualit{ae}t rastet ein, der Preis hat zwei Griffe (Tab wechselt).');
   Y := Card.Tag;
   NewLabel(Own, Card, CardPad, Y + 8, 0, 'Lautst{ae}rke', tkBody);
   FVolume := TPPGTrackBar.Create(Own);
@@ -712,6 +714,8 @@ begin
   FVolume.Frequency := 10;
   FVolume.TickMarks := tmBottomRight;
   FVolume.Position := 65;
+  FVolume.SelStart := 40;
+  FVolume.SelEnd := 80;
   FVolume.OnChange := RangeChange;
   FVolumeValue := NewLabel(Own, Card, CardPad + 410, Y + 8, 0, '', tkStrong);
   FVolumeBar := TPPGProgressBar.Create(Own);
@@ -731,6 +735,20 @@ begin
   FQuality.Position := 4;
   FQuality.OnChange := RangeChange;
   FQualityValue := NewLabel(Own, Card, CardPad + 410, Y + 56, 0, '', tkStrong);
+  // Bereichsregler (Phase 20d): Preisfilter von/bis
+  NewLabel(Own, Card, CardPad + 520, Y + 56, 0, 'Preis', tkBody);
+  FPrice := TPPGTrackBar.Create(Own);
+  FPrice.Parent := Card;
+  FPrice.SetBounds(CardPad + 570, Y + 48, 230, 40);
+  FPrice.Max := 500;
+  FPrice.Frequency := 50;
+  FPrice.LineSize := 10;
+  FPrice.PageSize := 50;
+  FPrice.RangeMode := True;
+  FPrice.Position := 50;
+  FPrice.PositionEnd := 250;
+  FPrice.OnChange := RangeChange;
+  FPriceValue := NewLabel(Own, Card, CardPad + 810, Y + 56, 0, '', tkStrong);
   FRangeResult := NewResult(Own, Card, 'Einstellung');
   RangeChange(nil);
 
@@ -898,8 +916,12 @@ begin
   else
     FVolumeBar.State := pbsNormal;
   FQualityValue.Caption := Levels[FQuality.Position];
+  if FPrice <> nil then
+    FPriceValue.Caption := L(Format('%d{-}%d {EUR}', [FPrice.Position, FPrice.PositionEnd]));
   SetResult(FRangeResult, Format('Lautst{ae}rke %d %% {.} Qualit{ae}t %s',
     [FVolume.Position, Levels[FQuality.Position]]));
+  if (Sender = FPrice) and (FPrice <> nil) then
+    Host.Log('TrackBar', L(Format('Preis %d{-}%d {EUR}', [FPrice.Position, FPrice.PositionEnd])));
   if Sender = FQuality then
     Host.Log('TrackBar', L('Qualit{ae}t: ') + Levels[FQuality.Position]);
 end;
@@ -1257,6 +1279,13 @@ begin
   FVolume.Position := 30;
   Check('Auswahl: Regler steuert Balken und Ring', (FVolumeBar.Position = 30) and
     (FVolumeRing.Value = 30));
+  Check('Auswahl: empfohlener Bereich markiert', (FVolume.SelStart = 40) and (FVolume.SelEnd = 80));
+  FPrice.PositionEnd := 400;
+  FPrice.Position := 450;
+  Check('Auswahl: Preisfilter schiebt das Ende mit', (FPrice.Position = 450) and
+    (FPrice.PositionEnd = 450) and (Pos('450', FPriceValue.Caption) > 0));
+  FPrice.Position := 50;
+  FPrice.PositionEnd := 250;
   FPeriod.ItemIndex := 3;
   FDays.Checked[1] := True;
   GroupsChange(nil);

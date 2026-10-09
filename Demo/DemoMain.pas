@@ -1082,7 +1082,7 @@ begin
     R.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(P.X, P.Y));
     R.Perform(WM_LBUTTONUP, 0, MakeLParam(P.X, P.Y));
   end
-  else if SameText(Mode, 'group') then
+  else if SameText(Mode, 'group') or SameText(Mode, 'groupkeys') then
   begin
     R.Width := 520;
     R.UpdateLayout;
@@ -1092,6 +1092,12 @@ begin
         P := CenterPoint(R.GroupRect(G));
         R.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(P.X, P.Y));
         R.Perform(WM_LBUTTONUP, 0, MakeLParam(P.X, P.Y));
+        // groupkeys: Pfeil fuehrt die Tastatur ins Popup (Phase 20c)
+        if SameText(Mode, 'groupkeys') then
+        begin
+          PostMessage(Handle, WM_KEYDOWN, VK_DOWN, 0);
+          Application.ProcessMessages;
+        end;
         Break;
       end;
   end

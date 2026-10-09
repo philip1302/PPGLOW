@@ -9,7 +9,7 @@ unit DemoPages8;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Types, System.UITypes, System.Actions, Vcl.Controls,
+  Winapi.Windows,   System.SysUtils, System.Classes, System.Types, System.UITypes, System.Actions, Vcl.Controls,
   Vcl.Graphics, Vcl.StdCtrls,
   System.StrUtils, Vcl.Menus, Vcl.ActnList, Vcl.StdActns,
   PPG.Types, PPG.Items, PPG.Panel, PPG.Labels, PPG.Button, PPG.ComboBox, PPG.Memo, PPG.Menus,
@@ -85,8 +85,9 @@ var
   Y: Integer;
 begin
   NewPageHeader(Own, Sheet, 'Ribbon', L('TPPGRibbon: Registerkarten, Gruppen, gro{ss}e und kleine ') +
-    L('Befehle, Galerie, eingebettete Controls, Kontext-Registerkarten, Schnellzugriff und Backstage. ') +
-    L('Alt bzw. F10 zeigt die KeyTips, Doppelklick auf eine Karte klappt das Band ein.'));
+    L('Befehle, Galerie mit Kategorien, eingebettete Controls, Kontext-Registerkarten, Schnellzugriff ') +
+    L('und Backstage. Alt bzw. F10 zeigt die KeyTips; die Tastatur reicht bis in aufgeklappte ') +
+    L('Gruppen und Galerien (Esc eine Ebene zur{ue}ck).'));
   Y := PageContentTop;
   Card := NewCard(Own, Sheet, PageX, Y, FullW, CardH, 'Kleine Textverarbeitung',
     L('Ziehen Sie das Fenster schmaler: Die Gruppen schrumpfen von rechts (gro{ss} {>} klein {>} ') +
@@ -488,7 +489,15 @@ begin
   begin
     Data.Text := L(TableColorNames[Index]);
     Color := TableColors[Index];
-  end;
+  end
+  else if Item = FStyles then
+    // Kategorien der aufgeklappten Galerie (Phase 20c)
+    case Index of
+      0, 1: Data.Group := 'Dokument';
+      2, 3: Data.Group := L('{Ue}berschriften');
+    else
+      Data.Group := 'Text';
+    end;
 end;
 
 procedure TDemoRibbonPage.LauncherClick(Sender: TObject; Group: TPPGRibbonGroup);
@@ -531,6 +540,20 @@ begin
   // Galerie
   FRibbon.SelectGalleryItem(FStyles, 5);
   Check('Ribbon: Formatvorlage Code', (FStyles.GalleryIndex = 5) and (FMemo.Font.Name = 'Consolas'));
+  FRibbon.SelectGalleryItem(FStyles, 0);
+  // Aufgeklappte Galerie mit Kategorien und Tastatur (Phase 20c)
+  FRibbon.OpenGallery(FStyles);
+  Check('Ribbon: Galerie nach Kategorien', (FRibbon.GalleryPopup <> nil) and
+    FRibbon.GalleryPopup.IsOpen and FRibbon.GalleryPopup.Grouped);
+  if (FRibbon.GalleryPopup <> nil) and FRibbon.GalleryPopup.IsOpen then
+  begin
+    FRibbon.GalleryPopup.HandleKey(VK_HOME);
+    FRibbon.GalleryPopup.HandleKey(VK_DOWN);
+    Check('Ribbon: Pfeil springt in die naechste Kategorie', FRibbon.GalleryPopup.FocusIndex = 2);
+    FRibbon.GalleryPopup.HandleKey(VK_RETURN);
+    Check(L('Ribbon: Enter w{ae}hlt {Ue}berschrift 1'), FStyles.GalleryIndex = 2);
+  end;
+  FRibbon.ClosePopups;
   FRibbon.SelectGalleryItem(FStyles, 0);
   // Kontext-Registerkarte
   FRibbon.TabIndex := 1;

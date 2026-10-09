@@ -17,7 +17,7 @@ program PPGlowDemo;
     /style <Name>            VCL-Style aktivieren (z.B. Windows10Dark)
     /datepopup <datei.png>   DatePicker aufklappen, Bildschirmpixel speichern
     /toastcapture <datei.png> drei Toasts zeigen, Bildschirmecke speichern
-    /ribboncapture <modus> <datei.png>  Ribbon: keytips, keytips2, minimized, group, gallery
+    /ribboncapture <modus> <datei.png>  Ribbon: keytips, keytips2, minimized, group, groupkeys, gallery
     /busycapture <modus> <datei.png>    Bestellung: busy (Warte-Overlay) oder errors (Validator)
     /mica [/screencapture <datei.png>]  Prototyp Mica-Hintergrund
     /selftest <datei.txt>    Szenarien aller Seiten pruefen, Exit-Code = Fehlerzahl }

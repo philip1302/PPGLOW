@@ -2,13 +2,16 @@ unit DemoPages9;
 
 { Demo-Seite "Kanban" (Phase 14c): Aufgaben-Board mit WIP-Limits, Plaketten,
   Faelligkeit, Personen und Fortschritt; Swimlanes nach Person zuschaltbar,
-  WIP-Limit wahlweise sperrend. Ziehen mit der Maus oder Strg+Pfeile. }
+  WIP-Limit wahlweise sperrend. Ziehen mit der Maus oder Strg+Pfeile.
+  Phase 20b: Suche und Personenfilter (FilterText/FilterAssignee, Kopf zeigt
+  "+n" ausgeblendete), Spalten am Kopf ziehen oder Strg+Umschalt+Pfeile. }
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.Types, System.DateUtils, Vcl.Controls, Vcl.Graphics,
-  PPG.Types, PPG.Panel, PPG.Labels, PPG.Button, PPG.ToggleSwitch,
+  Vcl.StdCtrls, PPG.Types, PPG.Panel, PPG.Labels, PPG.Button, PPG.ToggleSwitch,
+  PPG.ComboBox, PPG.SearchEdit,
   PPG.Kanban.Layout, PPG.Kanban.Items, PPG.Kanban,
   DemoKit;
 
@@ -18,6 +21,8 @@ type
     FBoard: TPPGKanban;
     FLanes: TPPGToggleSwitch;
     FBlock: TPPGToggleSwitch;
+    FSearch: TPPGSearchEdit;
+    FPerson: TPPGComboBox;
     FResult: TPPGLabel;
     FNewCount: Integer;
     procedure FillBoard;
@@ -28,6 +33,9 @@ type
     procedure Moved(Sender: TObject; const Move: TPPGKanbanMove);
     procedure CardOpen(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer; Card: TPPGKanbanCard);
     procedure ColumnCollapse(Sender: TObject; Column: TPPGKanbanColumn);
+    procedure ColumnMoved(Sender: TObject; Column: TPPGKanbanColumn);
+    procedure FilterChange(Sender: TObject);
+    function HiddenTotal: Integer;
   protected
     procedure Build; override;
   public
@@ -54,8 +62,8 @@ var
   X: Integer;
 begin
   NewPageHeader(Own, Sheet, 'Kanban', L('TPPGKanban: Spalten mit WIP-Limit, Karten mit Markup, Plaketten, ') +
-    L('F{ae}lligkeit, Person und Fortschritt. Karten mit der Maus ziehen oder mit Strg+Pfeilen ') +
-    L('verschieben; Spalten einklappen {ue}ber den Pfeil im Kopf.'));
+    L('F{ae}lligkeit, Person und Fortschritt. Karten ziehen oder mit Strg+Pfeilen verschieben; ') +
+    L('Spalten am Kopf ziehen (Strg+Umschalt+Pfeile) oder einklappen. Suche und Person filtern.'));
   Card := NewCard(Own, Sheet, PageX, PageContentTop, FullW, CardH, 'Aufgaben',
     L('Jede Spalte scrollt f{ue}r sich (Mausrad). "In Arbeit" erlaubt drei, "Review" zwei Karten; ') +
     L('dar{ue}ber f{ae}rbt sich die Spalte rot oder lehnt ab ("WIP-Limit sperrt").'));
@@ -73,6 +81,20 @@ begin
   FBlock.OnChange := BlockChange;
   Inc(X, 196);
   NewButton(Own, Card, X, Card.Tag, 140, 'Neue Karte', NewCardClick, True);
+  Inc(X, 152);
+  FSearch := TPPGSearchEdit.Create(Own);
+  FSearch.Parent := Card;
+  FSearch.SetBounds(X, Card.Tag, 200, CtlH);
+  FSearch.TextHint := 'Karten suchen';
+  FSearch.OnChange := FilterChange;
+  Inc(X, 208);
+  FPerson := TPPGComboBox.Create(Own);
+  FPerson.Parent := Card;
+  FPerson.Style := csDropDownList;
+  FPerson.SetBounds(X, Card.Tag, FullW - CardPad - X, CtlH);
+  FPerson.Items.CommaText := '"Alle Personen","Anna Berg","Ben Kraus","Clara Diaz"';
+  FPerson.ItemIndex := 0;
+  FPerson.OnChange := FilterChange;
   FBoard := TPPGKanban.Create(Own);
   FBoard.Parent := Card;
   FBoard.SetBounds(CardPad, Card.Tag + CtlH + 12, FullW - 2 * CardPad, CardH - (Card.Tag + CtlH + 12) - 52);
@@ -82,6 +104,7 @@ begin
   FBoard.OnCardMoved := Moved;
   FBoard.OnCardOpen := CardOpen;
   FBoard.OnColumnCollapse := ColumnCollapse;
+  FBoard.OnColumnMoved := ColumnMoved;
   FillBoard;
   FResult := NewResult(Own, Card, 'Letzte Aktion');
   Host.RegisterSpecial('kanban', FBoard);
@@ -212,9 +235,38 @@ begin
   SetResult(FResult, 'Spalte "' + Column.Title + '" ' + IfThenStr(Column.Collapsed, 'eingeklappt', 'aufgeklappt'));
 end;
 
+procedure TDemoKanbanPage.ColumnMoved(Sender: TObject; Column: TPPGKanbanColumn);
+begin
+  SetResult(FResult, 'Spalte "' + Column.Title + '" an Position ' + IntToStr(Column.Index + 1));
+  Host.Log('Kanban', 'Spalte verschoben: ' + Column.Title);
+end;
+
+function TDemoKanbanPage.HiddenTotal: Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 0 to FBoard.ColumnCount - 1 do
+    Inc(Result, FBoard.ColumnHiddenCount(I));
+end;
+
+procedure TDemoKanbanPage.FilterChange(Sender: TObject);
+begin
+  FBoard.FilterText := FSearch.Text;
+  if FPerson.ItemIndex > 0 then
+    FBoard.FilterAssignee := FPerson.Text
+  else
+    FBoard.FilterAssignee := '';
+  if FBoard.IsFiltered then
+    SetResult(FResult, Format('Filter: %d Karten ausgeblendet', [HiddenTotal]))
+  else
+    SetResult(FResult, 'Filter aus');
+end;
+
 procedure TDemoKanbanPage.SelfTest(Check: TDemoCheck);
 var
   N: Integer;
+  Col: TPPGKanbanColumn;
 begin
   FBoard.EnsureLayout;
   Check('Kanban: vier Spalten', FBoard.ColumnCount = 4);
@@ -242,6 +294,22 @@ begin
   Check('Kanban: neue Karte gewaehlt', (FBoard.SelectedCard <> nil) and (FBoard.Cards.Count = 12));
   FBoard.Cards.Delete(FBoard.Cards.Count - 1);
   Dec(FNewCount);
+  // Filter (Phase 20b)
+  FSearch.Text := 'Druck';
+  FilterChange(nil);
+  Check('Kanban: Suche filtert', FBoard.IsFiltered and (HiddenTotal = 10));
+  FSearch.Text := '';
+  FPerson.ItemIndex := 2; // Ben Kraus
+  FilterChange(nil);
+  Check('Kanban: Personenfilter', HiddenTotal = 8);
+  FPerson.ItemIndex := 0;
+  FilterChange(nil);
+  Check('Kanban: Filter aus', not FBoard.IsFiltered and (HiddenTotal = 0));
+  // Spalten verschieben und zurueck
+  Col := FBoard.Columns[3];
+  Check('Kanban: Spalte verschoben', FBoard.MoveColumn(3, 0) and (FBoard.Columns[0] = Col));
+  FBoard.MoveColumn(0, 4); // 4 = hinter die letzte Spalte (Einfuegen davor)
+  Check('Kanban: Spalte zurueck', FBoard.Columns[3] = Col);
 end;
 
 end.

@@ -2,14 +2,16 @@ unit DemoPages7;
 
 { Demo-Seite "Planer" (Phase 14a): Team-Woche mit Ressourcen, verbundener
   Kalender, Ansichten, Ziehen/Anlegen mit Ereignissen, Druckvorschau und
-  iCalendar-Export. Die Termine liegen rund um die aktuelle Woche. }
+  iCalendar-Export. Die Termine liegen rund um die aktuelle Woche.
+  Phase 20a: Serienabfrage (Auswahl in der Werkzeugzeile), Termin-Dialog per
+  Doppelklick/Enter, Ort direkt bearbeiten mit Umschalt+F2. }
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.Types, System.DateUtils, Vcl.Controls, Vcl.StdCtrls,
   PPG.Types, PPG.Panel, PPG.Labels, PPG.Button, PPG.ComboBox, PPG.Calendar,
-  PPG.Planner.Model, PPG.Planner, PPG.Planner.Print, PPG.Planner.ICal,
+  PPG.Planner.Model, PPG.Planner, PPG.Planner.Print, PPG.Planner.ICal, PPG.Planner.Dialog,
   DemoKit;
 
 type
@@ -19,6 +21,7 @@ type
     FCalendar: TPPGCalendar;
     FView: TPPGComboBox;
     FGroup: TPPGComboBox;
+    FSeries: TPPGComboBox;
     FPrinter: TPPGPlannerPrinter;
     FResult: TPPGLabel;
     FRange: TPPGLabel;
@@ -26,6 +29,8 @@ type
     procedure UpdateRange;
     procedure ViewChange(Sender: TObject);
     procedure GroupChange(Sender: TObject);
+    procedure SeriesChange(Sender: TObject);
+    function FindItem(const Subject: string): Integer;
     procedure PrevClick(Sender: TObject);
     procedure TodayClick(Sender: TObject);
     procedure NextClick(Sender: TObject);
@@ -38,7 +43,6 @@ type
     procedure Changed(Sender: TObject; Appointment: TPPGAppointment);
     procedure Created(Sender: TObject; Appointment: TPPGAppointment);
     procedure Deleting(Sender: TObject; Appointment: TPPGAppointment; var Allow: Boolean);
-    procedure Opened(Sender: TObject; Appointment: TPPGAppointment);
   protected
     procedure Build; override;
   public
@@ -60,6 +64,13 @@ begin
   Result := FormatDateTime('ddd dd.mm. hh:nn', T);
 end;
 
+function DemoDialogHook(Planner: TComponent; A: TPPGAppointment; AllowSeries: Boolean): Boolean;
+begin
+  // Selbsttest: der "Anwender" aendert den Ort und bestaetigt
+  A.Location := 'Raum Alster';
+  Result := True;
+end;
+
 procedure TDemoPlannerPage.Build;
 var
   Card: TPPGPanel;
@@ -67,7 +78,8 @@ var
 begin
   NewPageHeader(Own, Sheet, 'Planer', L('TPPGPlanner: Tag, Arbeitswoche, Woche, Monat, Zeitleiste und ') +
     L('Agenda. Termine ziehen (Strg kopiert), an der Kante die Dauer {ae}ndern, auf freier Fl{ae}che ') +
-    L('ziehen und tippen oder doppelklicken legt einen Termin an. Gespeichert wird in UTC.'));
+    L('ziehen legt einen an. Doppelklick {oe}ffnet den Termin-Dialog, F2/Umschalt+F2 bearbeiten ') +
+    L('Betreff/Ort, bei Serien fragt der Planer nach.'));
   Y := PageContentTop;
   Card := NewCard(Own, Sheet, PageX, Y, FullW, PlanH, 'Team-Woche',
     L('Personen als Spalten ("Nach Personen") oder Zeilen (Zeitleiste), Wiederholungen nach ') +
@@ -106,6 +118,18 @@ begin
   NewButton(Own, Card, X, Card.Tag, 120, 'Druckvorschau', PrintClick);
   Inc(X, 126);
   NewButton(Own, Card, X, Card.Tag, 120, 'iCal-Export', ICalClick);
+  Inc(X, 128);
+  FSeries := TPPGComboBox.Create(Own);
+  FSeries.Parent := Card;
+  FSeries.Style := csDropDownList;
+  FSeries.SetBounds(X, Card.Tag, FullW - CardPad - X, CtlH);
+  FSeries.Items.Add('Serie: nachfragen');
+  FSeries.Items.Add('Serie: nur Vorkommen');
+  FSeries.Items.Add('Serie: ganze Serie');
+  FSeries.ItemIndex := 0;
+  FSeries.Hint := L('Was beim {AE}ndern eines Serientermins gilt (SeriesEditMode)');
+  FSeries.ShowHint := True;
+  FSeries.OnChange := SeriesChange;
   FRange := NewLabel(Own, Card, CardPad, Card.Tag + CtlH + 8, FullW - 2 * CardPad, '', tkStrong);
   // Kalender und Planer
   FCalendar := TPPGCalendar.Create(Own);
@@ -130,7 +154,6 @@ begin
   FPlanner.OnAppointmentChanged := Changed;
   FPlanner.OnAppointmentCreated := Created;
   FPlanner.OnDeleting := Deleting;
-  FPlanner.OnAppointmentOpen := Opened;
   FPlanner.OnRangeChange := RangeChange;
   FillAppointments;
   FPlanner.Calendar := FCalendar;
@@ -222,6 +245,23 @@ begin
   FPlanner.GroupByResource := FGroup.ItemIndex = 0;
 end;
 
+procedure TDemoPlannerPage.SeriesChange(Sender: TObject);
+begin
+  if FSeries.ItemIndex >= 0 then
+    FPlanner.SeriesEditMode := TPPGSeriesEditMode(FSeries.ItemIndex);
+  Host.Log('Planer', FSeries.Text);
+end;
+
+function TDemoPlannerPage.FindItem(const Subject: string): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  for I := 0 to FPlanner.ItemCount - 1 do
+    if FPlanner.Item(I).Appointment.Subject = Subject then
+      Exit(I);
+end;
+
 procedure TDemoPlannerPage.PrevClick(Sender: TObject);
 begin
   FPlanner.PrevPage;
@@ -292,12 +332,6 @@ begin
   Host.Log('Planer', L('Gel{oe}scht: ') + Appointment.Subject);
 end;
 
-procedure TDemoPlannerPage.Opened(Sender: TObject; Appointment: TPPGAppointment);
-begin
-  SetResult(FResult, L('Ge{oe}ffnet: ') + Appointment.Subject + ' (' + Appointment.Location + ')');
-  FPlanner.BeginEditSubject;
-end;
-
 procedure TDemoPlannerPage.SelfTest(Check: TDemoCheck);
 var
   N, I: Integer;
@@ -305,6 +339,8 @@ var
   Occ: TPPGOccurrence;
   S: string;
   Other: TPPGAppointments;
+  Series: TPPGAppointment;
+  OldStart: TDateTime;
 begin
   FPlanner.GoToToday;
   FPlanner.View := pvWorkWeek;
@@ -342,6 +378,45 @@ begin
   Check('Planer: angelegt', (A <> nil) and (FPlanner.Appointments.Count = N + 1));
   FPlanner.SelectAppointment(A);
   Check(L('Planer: gel{oe}scht'), FPlanner.DeleteSelected and (FPlanner.Appointments.Count = N));
+  // Serien (Phase 20a): ganze Serie verschieben, dann nur ein Vorkommen
+  FPlanner.GoToToday;
+  FSeries.ItemIndex := Ord(semSeries);
+  SeriesChange(nil);
+  I := FindItem('Standup');
+  Check('Planer: Serientermin gefunden', (I >= 0) and FPlanner.Item(I).Recurring);
+  if I >= 0 then
+  begin
+    Occ := FPlanner.Item(I);
+    Series := Occ.Appointment;
+    OldStart := Series.Start;
+    FPlanner.ChangeAppointment(Occ, ackMove, Occ.Start + 15 / MinsPerDay,
+      Occ.Finish + 15 / MinsPerDay, Series.ResourceId);
+    Check('Planer: ganze Serie verschoben', Abs(Series.Start - OldStart - 15 / MinsPerDay) < 1 / SecsPerDay);
+    FSeries.ItemIndex := Ord(semOccurrence);
+    SeriesChange(nil);
+    N := FPlanner.Appointments.Count;
+    I := FindItem('Standup');
+    Occ := FPlanner.Item(I);
+    FPlanner.ChangeAppointment(Occ, ackMove, Occ.Start + 1 / 24, Occ.Finish + 1 / 24, Occ.Appointment.ResourceId);
+    Check(L('Planer: Vorkommen herausgel{oe}st'), FPlanner.Appointments.Count = N + 1);
+    // Zurueck: Ausnahme loeschen, Serie zurueckschieben
+    FPlanner.Appointments.Delete(FPlanner.Appointments.Count - 1);
+    Series.ExDates := '';
+    Series.ShiftSeries(-15 / MinsPerDay, Series.Finish - Series.Start);
+  end;
+  FSeries.ItemIndex := Ord(semAsk);
+  SeriesChange(nil);
+  // Termin-Dialog (ohne Bediener ueber den Haken)
+  PPGAppointmentDialogHook := DemoDialogHook;
+  try
+    I := FindItem('Retro');
+    Check('Planer: Termin-Dialog', (I >= 0) and FPlanner.EditAppointment(I) and
+      (FPlanner.Item(FindItem('Retro')).Appointment.Location = 'Raum Alster'));
+    if FindItem('Retro') >= 0 then
+      FPlanner.Item(FindItem('Retro')).Appointment.Location := 'Raum Elbe';
+  finally
+    PPGAppointmentDialogHook := nil;
+  end;
   // Drucken und iCalendar
   FPrinter.TakeFromPlanner;
   Check('Planer: Druckseite', FPrinter.PageCount(FPrinter.PrinterDevice) = 1);
