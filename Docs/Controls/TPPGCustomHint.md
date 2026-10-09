@@ -60,7 +60,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `Style` |  | `bhsStandard` | Darstellungsart (je nach Control). |
 
-Tests: `PPG.Tests.Audit7C` (THighContrastTokenTests); `PPG.Tests.Phase11b` (THintTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Audit7C` (THighContrastTokenTests); `PPG.Tests.Phase11b` (THintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGCustomHint.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

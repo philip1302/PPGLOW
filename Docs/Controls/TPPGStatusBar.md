@@ -94,7 +94,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 
-Tests: `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests, TSetterFixTests); `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit8A` (TAudit8ARepaintCountTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.Phase7c` (TPhase7cPaintTests, TStatusBarTests); `PPG.Tests.Streaming` (TStreamingTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests, TSetterFixTests); `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit8A` (TAudit8ARepaintCountTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.Phase7c` (TPhase7cPaintTests, TStatusBarTests); `PPG.Tests.Streaming` (TDfmStreamingTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGStatusBar.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

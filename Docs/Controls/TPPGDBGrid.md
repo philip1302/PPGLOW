@@ -150,7 +150,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnColExit` | `TNotifyEvent` `(Sender: TObject)` | Die Fokusspalte wird verlassen; die alte Spalte ist noch aktiv (wie TDBGrid.OnColExit). |
 | `OnEditButtonClick` | `TNotifyEvent` `(Sender: TObject)` | Der „…“-Knopf im Editor einer Spalte mit ButtonStyle = cbsEllipsis wurde geklickt oder Strg+Enter gedrückt (wie TDBGrid.OnEditButtonClick). Typisch: Auswahldialog öffnen und den Wert ins Feld schreiben. Nutzung: `procedure TForm1.Grid1EditButtonClick(Sender: TObject); begin if KundeWaehlen(Nr) then Table1.FieldByName('KundeNr').AsInteger := Nr; end;` |
 
-Tests: `PPG.Tests.Audit45` (TDBFix2Tests, TDBFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Custom` (TCustomGridTests); `PPG.Tests.Phase13g` (TDBGridColumnTests); `PPG.Tests.Phase9c` (TDBGridTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit45` (TDBFix2Tests, TDBFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Custom` (TCustomGridTests); `PPG.Tests.Phase13g` (TDBGridColumnTests); `PPG.Tests.Phase9c` (TDBGridTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBGrid.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

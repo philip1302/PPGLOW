@@ -44,7 +44,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Margins` | [TPPGPrintMargins](types/TPPGPrintMargins.md) |  | Seitenränder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten" änderbar. |
 | `PrinterName` | `string` |  | Name des Druckers; leer = Standarddrucker. Für PDF z. B. „Microsoft Print to PDF" mit PrintToFile. Nutzung: `PPGGridPrinter1.PrintToFile('Microsoft Print to PDF', 'C:\Export\Liste.pdf');` |
 
-Tests: `PPG.Tests.Custom` (TCustomRestTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Custom` (TCustomRestTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanbanPrinter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

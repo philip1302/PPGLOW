@@ -127,7 +127,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnUnDock` | `TUnDockEvent` `(Sender: TObject; Client: TControl; NewTarget: TWinControl; var Allow: Boolean)` | Ein angedocktes Control wird gelöst; Allow steuert, ob das erlaubt ist. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
-Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TPanelScrollTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TPanelScrollTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGScrollBox.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

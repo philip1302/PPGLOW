@@ -57,7 +57,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MaxWidth` | `Integer` | `360` | Größte Breite eines Hints in logischen Pixeln (80..2000); längerer Text bricht um. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus erscheinen die Hinweise in den Systemfarben für Tooltips statt in den Farben des Presets. |
 
-Tests: `PPG.Tests.Audit45` (TStreamingFixTests); `PPG.Tests.Audit7C` (THighContrastTokenTests); `PPG.Tests.Phase11b` (THintTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Audit45` (TStreamingFixTests); `PPG.Tests.Audit7C` (THighContrastTokenTests); `PPG.Tests.Phase11b` (THintTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGHintManager.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

@@ -122,7 +122,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
-Tests: `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Phase9c` (TDBOtherControlTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Phase9c` (TDBOtherControlTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBMemo.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.
