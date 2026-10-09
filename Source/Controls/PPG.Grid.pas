@@ -139,7 +139,8 @@ type
   end;
 
   TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren, IPPGUiaSource,
-    IPPGGridColumnsHost, IPPGGridViewHost, IPPGGridViewSortKeys, IPPGTableSource,
+    IPPGGridColumnsHost, IPPGGridViewHost, IPPGGridViewSortKeys, IPPGGridViewFilterKey,
+    IPPGTableSource,
     IPPGGridStylesHost, IPPGGridPrintSource, IPPGTableExport, IPPGTableLook)
   private
     FPaint: TPPGGridPaintColors;
@@ -185,6 +186,8 @@ type
     FAggHasCustom: Boolean;      // agCustom in der letzten Rechnung
     FAggRowLeaf: TArray<Integer>; // Datenzeile -> unterste Gruppe (bei Bedarf)
     FDataVersion: Integer;       // zaehlt Datenaenderungen (Cells, Zeilenzahl)
+    FAggViewKey: string;         // Zeilenmenge der letzten Rechnung (Audit 8c #7)
+    FFilterEvalCount: Integer;   // Aufrufe von RowPassesFilter (Tests)
     FDropToGroup: Boolean;
     FGroupMarkup: TPPGMarkupLayout;
     FCondFormats: TPPGGridConditionalFormats;
@@ -462,6 +465,14 @@ type
     /// Vergleicht das Grid mit der Standardlogik (kein OnCompareCells, kein
     /// ueberschriebenes CompareDataRows)?
     function StandardCompare: Boolean;
+    { IPPGGridViewFilterKey (Audit 8c #7): Filtertexte + Datenstand; '' bei
+      virtuellen Texten oder eigenem RowPassesFilter }
+    function ViewFilterKey: string;
+    /// Schluessel der Zeilenmenge, ueber die summiert wird ('' = immer neu
+    /// rechnen): gleich = reines Umsortieren, die Summen bleiben.
+    function AggViewKey: string;
+    /// Zaehler fuer Tests: Aufrufe von RowPassesFilter.
+    property FilterEvalCount: Integer read FFilterEvalCount;
     { IPPGTableSource (Druck, Export) }
     function TableColCount: Integer; virtual;
     function TableRowCount: Integer; virtual;
@@ -1565,6 +1576,7 @@ begin
   // Filtertexte stehen schon in Grossbuchstaben (PrepareFilters, einmal je Lauf)
   if Length(FFilterUpper) <> Length(FFilters) then
     PrepareFilters;
+  Inc(FFilterEvalCount);
   Result := True;
   for C := 0 to High(FFilters) do
     if (FFilters[C] <> '') and
@@ -1625,8 +1637,12 @@ begin
   FView.Group.SortAscending := FSortAscending;
   FView.Group.Footers := FGroupFooter;
   FView.Rebuild(Self, FFixedRows, FRowCount);
-  // Summen gehoeren zur Ansicht: gleich mit neu (nicht beim Zeichnen)
-  RecalcAggregates;
+  // Summen gehoeren zur Ansicht: gleich mit neu (nicht beim Zeichnen).
+  // Reines Umsortieren ohne Gruppen aendert die Zeilenmenge nicht: die
+  // Summen (und Statistiken) bleiben (Audit 8c #7)
+  if FAggDirty or (FAggViewKey = '') or (AggViewKey <> FAggViewKey) or
+    (AggSignature <> FAggSig) then
+    RecalcAggregates;
   // Fokus bleibt an der Datenzeile (sonst erste sichtbare Datenzeile)
   if FocusData >= 0 then
     I := VisualRow(FocusData)
@@ -1651,6 +1667,36 @@ end;
 function TPPGCustomGrid.ViewCompareRows(ACol, R1, R2: Integer): Integer;
 begin
   Result := CompareDataRows(ACol, R1, R2);
+end;
+
+function TPPGCustomGrid.ViewFilterKey: string;
+var
+  M: function(ARow: Integer): Boolean of object;
+  I: Integer;
+begin
+  Result := '';
+  // Virtuelle Texte koennen sich unbemerkt aendern; eigener Filter: unbekannt
+  M := RowPassesFilter;
+  if not PlainCellText or (TMethod(M).Code <> @TPPGCustomGrid.RowPassesFilter) then
+    Exit;
+  Result := IntToStr(FDataVersion) + '|' + IntToStr(FFixedRows) + '|' + IntToStr(FRowCount);
+  for I := 0 to High(FFilters) do
+    Result := Result + #1 + FFilters[I];
+end;
+
+function TPPGCustomGrid.AggViewKey: string;
+begin
+  Result := '';
+  if not CanGroup or FView.Grouped or (Length(FGroupCols) > 0) or not PlainCellText then
+    Exit;
+  if FView.Filter.Active then
+  begin
+    Result := ViewFilterKey;
+    if Result <> '' then
+      Result := 'F' + Result;
+  end
+  else
+    Result := 'A|' + IntToStr(FFixedRows) + '|' + IntToStr(FRowCount);
 end;
 
 function TPPGCustomGrid.StandardCompare: Boolean;
@@ -3322,6 +3368,7 @@ begin
   ClearPendingAggregates;
   FAggRowLeaf := nil;
   FAggHasCustom := False;
+  FAggViewKey := '';
   // Spalten mit Zusammenfassung
   SetLength(FAggCols, FColCount);
   NAgg := 0;
@@ -3341,6 +3388,9 @@ begin
   SetLength(FFooterAcc, NAgg);
   SetLength(FFooterCustom, NAgg);
   FAggHasCustom := HasCustom;
+  // agCustom kann von der Reihenfolge abhaengen: dann immer neu rechnen
+  if not HasCustom then
+    FAggViewKey := AggViewKey;
   for K := 0 to NAgg - 1 do
   begin
     FFooterAcc[K].Reset;

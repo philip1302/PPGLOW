@@ -52,6 +52,7 @@ type
     { #3, #7 Filtern }
     procedure FilterCaseInsensitive;
     procedure FilterThenResortFollowsData;
+    procedure FilterResortReusesResult;
     procedure FilterVirtualResortFollowsData;
     { #6 Summen }
     procedure AggregatesAfterSingleChanges;
@@ -648,6 +649,47 @@ begin
   G.SortBy(1, False);
   CheckTrue(G.VisualRow(70) >= 0, 'neue Zeile sichtbar');
   CheckEquals(-1, G.VisualRow(65), 'leere neue Zeile gefiltert');
+end;
+
+procedure TAudit8BTests.FilterResortReusesResult;
+var
+  G: TPPGGrid;
+  N, A: Integer;
+  Sum: string;
+begin
+  G := AggGrid;
+  G.RowCount := 401;
+  G.Cells[3, 300] := '7';
+  G.Cells[2, 300] := 'Kiwi';
+  G.Filters[2] := 'i';
+  Sum := G.FooterText(3);
+  N := TGridAccess(G).FilterEvalCount;
+  A := TGridAccess(G).AggRecalcCount;
+  G.SortBy(3, True);
+  G.SortBy(3, False);
+  G.SortBy(2, True);
+  G.SortBy(-1);
+  CheckEquals(N, TGridAccess(G).FilterEvalCount, 'Umsortieren filtert nicht neu');
+  CheckEquals(A, TGridAccess(G).AggRecalcCount, 'Summen bleiben beim Umsortieren');
+  CheckEquals(Sum, G.FooterText(3));
+  // Datenaenderung: neu filtern und neu summieren
+  G.Cells[2, 2] := 'Kiwi';
+  G.SortBy(3, True);
+  CheckTrue(TGridAccess(G).FilterEvalCount > N, 'nach Datenaenderung neu gefiltert');
+  CheckTrue(G.VisualRow(2) >= 0);
+  CheckAggConsistent(G, 'nach Datenaenderung');
+  // Ohne Filter: Umsortieren ohne neue Summen
+  G.ClearFilters;
+  A := TGridAccess(G).AggRecalcCount;
+  G.SortBy(5, True);
+  G.SortBy(5, False);
+  CheckEquals(A, TGridAccess(G).AggRecalcCount, 'ohne Filter');
+  // Gruppiert: immer neu (Gruppen haengen an der Reihenfolge)
+  G.GroupBy([1]);
+  A := TGridAccess(G).AggRecalcCount;
+  G.SortBy(3, True);
+  CheckEquals(A + 1, TGridAccess(G).AggRecalcCount, 'gruppiert');
+  CheckAggConsistent(G, 'gruppiert');
 end;
 
 procedure TAudit8BTests.FilterVirtualResortFollowsData;

@@ -69,12 +69,18 @@ type
     procedure StageApply(var Rows: TArray<Integer>; const Host: IPPGGridViewHost);
   end;
 
+  /// Filter (Audit 8c #7: das Ergebnis wird mit dem Schluessel des Hosts
+  /// zwischengespeichert; reines Umsortieren filtert nicht erneut).
   TPPGGridFilterStage = class(TInterfacedObject, IPPGGridViewStage)
   private
     FActive: Boolean;
+    FCacheKey: string;
+    FCacheRows: TArray<Integer>;
   public
     function StageActive: Boolean;
     procedure StageApply(var Rows: TArray<Integer>; const Host: IPPGGridViewHost);
+    /// Zwischengespeichertes Ergebnis verwerfen.
+    procedure ClearCache;
     property Active: Boolean read FActive write FActive;
   end;
 
@@ -241,7 +247,25 @@ end;
 procedure TPPGGridFilterStage.StageApply(var Rows: TArray<Integer>; const Host: IPPGGridViewHost);
 var
   I, N: Integer;
+  FK: IPPGGridViewFilterKey;
+  Key: string;
 begin
+  // Gleicher Schluessel (Filter, Datenstand) und gleiche Eingabe: Ergebnis
+  // wiederverwenden
+  Key := '';
+  if Supports(Host, IPPGGridViewFilterKey, FK) then
+    Key := FK.ViewFilterKey;
+  if Key <> '' then
+  begin
+    Key := Key + '#' + IntToStr(Length(Rows));
+    if Length(Rows) > 0 then
+      Key := Key + '#' + IntToStr(Rows[0]) + '#' + IntToStr(Rows[High(Rows)]);
+    if Key = FCacheKey then
+    begin
+      Rows := Copy(FCacheRows);
+      Exit;
+    end;
+  end;
   N := 0;
   for I := 0 to High(Rows) do
     if Host.ViewRowPasses(Rows[I]) then
@@ -250,6 +274,17 @@ begin
       Inc(N);
     end;
   SetLength(Rows, N);
+  FCacheKey := Key;
+  if Key <> '' then
+    FCacheRows := Copy(Rows)
+  else
+    FCacheRows := nil;
+end;
+
+procedure TPPGGridFilterStage.ClearCache;
+begin
+  FCacheKey := '';
+  FCacheRows := nil;
 end;
 
 { TPPGGridSortStage }
@@ -686,6 +721,8 @@ begin
   FFirst := First;
   FEnd := EndRow;
   FMapped := False;
+  if not FFilter.Active then
+    FFilter.ClearCache;
   for I := 0 to High(FStageRefs) do
     if FStageRefs[I].StageActive then
       FMapped := True;
