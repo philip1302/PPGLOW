@@ -342,7 +342,7 @@ begin
     finally
       TV.Items.EndUpdate;
     end;
-    Measure('TreeView 10 000 Wurzeln: Items[]-Schleife', High(Cardinal),
+    Measure('TreeView 10 000 Wurzeln: Items[]-Schleife', 100,
       procedure
       var
         J, N: Integer;
@@ -354,7 +354,7 @@ begin
         if N <> 10000 then
           Writeln('  Fehler: Anzahl ', N);
       end);
-    Measure('TreeView 10 000 Wurzeln: AlphaSort', High(Cardinal),
+    Measure('TreeView 10 000 Wurzeln: AlphaSort', 100,
       procedure
       begin
         TV.AlphaSort(True);
@@ -367,7 +367,7 @@ begin
   try
     TV.Parent := Form;
     TV.SetBounds(0, 0, 300, 600);
-    Measure('TreeView 10 000 Wurzeln ohne BeginUpdate', High(Cardinal),
+    Measure('TreeView 10 000 Wurzeln ohne BeginUpdate', 100,
       procedure
       var
         J: Integer;
@@ -387,7 +387,7 @@ begin
     TV.Parent := Form;
     TV.SetBounds(0, 0, 300, 600);
     TV.CheckBoxes := True;
-    Measure('TreeView AutoCheck: 10 000 Kinder in BeginUpdate', High(Cardinal),
+    Measure('TreeView AutoCheck: 10 000 Kinder in BeginUpdate', 100,
       procedure
       var
         J: Integer;
@@ -420,7 +420,7 @@ begin
     finally
       CLB.ItemsEx.EndUpdate;
     end;
-    Measure('CheckListBox 10 000 (ItemsEx): CheckAll an + aus', High(Cardinal),
+    Measure('CheckListBox 10 000 (ItemsEx): CheckAll an + aus', 100,
       procedure
       begin
         CLB.CheckAll(cbChecked);
@@ -441,7 +441,7 @@ begin
     finally
       LB.ItemsEx.EndUpdate;
     end;
-    Measure('ListBox 100 000 mit Gruppen: 5 x Layout + zeichnen', High(Cardinal),
+    Measure('ListBox 100 000 mit Gruppen: 5 x Layout + zeichnen', 100,
       procedure
       var
         J: Integer;
@@ -458,7 +458,7 @@ begin
     LB.Free;
   end;
 
-  Measure('Markup-Layout 20 000 x (gleiche Grundschrift)', High(Cardinal),
+  Measure('Markup-Layout 20 000 x (gleiche Grundschrift)', 1300,
     procedure
     var
       J: Integer;
@@ -477,7 +477,7 @@ begin
   CB := TPPGComboBox.Create(Form);
   try
     CB.Parent := Form;
-    Measure('ComboBox 10 000 x ItemsEx.Add (unsortiert)', High(Cardinal),
+    Measure('ComboBox 10 000 x ItemsEx.Add (unsortiert)', 100,
       procedure
       var
         J: Integer;
@@ -493,7 +493,7 @@ begin
   try
     CB.Parent := Form;
     CB.Sorted := True;
-    Measure('ComboBox 2 000 x ItemsEx.Add (sortiert)', High(Cardinal),
+    Measure('ComboBox 2 000 x ItemsEx.Add (sortiert)', 100,
       procedure
       var
         J: Integer;
@@ -505,7 +505,7 @@ begin
     CB.Free;
   end;
 
-  Measure('Auswahl 100 000: 10 000 x ItemIndex (Single)', High(Cardinal),
+  Measure('Auswahl 100 000: 10 000 x ItemIndex (Single)', 100,
     procedure
     var
       J, N: Integer;
@@ -525,7 +525,7 @@ begin
       end;
     end);
 
-  Measure('Auswahl 100 000: 10 000 x vorne einfuegen + loeschen', High(Cardinal),
+  Measure('Auswahl 100 000: 10 000 x vorne einfuegen + loeschen', 100,
     procedure
     var
       J: Integer;
