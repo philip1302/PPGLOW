@@ -44,6 +44,12 @@
   - LANG        jede resourcestring ist in Lang\PPGlow.*.txt uebersetzt, die
                 Platzhalter passen, und die erzeugten PPG.Lang.*.pas sind aktuell
                 (Build\make-lang.ps1 -Check)
+  - TESTS       Testintegritaet in Tests\*.pas: kein CheckTrue(True)/
+                Check(True)/CheckFalse(False); Check/Fail in einem try, dessen
+                except alles faengt (ohne "on", "on Exception", "on EAbort",
+                "on ETestFailure", "else") ohne raise bzw. Klassenpruefung
+                (DUnits ETestFailure erbt von EAbort); Exit in einer published
+                Testmethode vor der ersten Pruefung nur direkt nach Skip(...)
 
   -SelfTest prueft den Pruefer selbst an den Beispieldateien in
   Build\check-rules-tests: jede .pas-Datei nennt in Zeile 1 die erwarteten
@@ -277,6 +283,131 @@ function Test-CatchAll([string]$File, [string[]]$Code, [string[]]$Comments) {
   }
 }
 
+# Woerter des reinen Codes mit Zeile und Spalte; Call = Pruefaufruf
+# (Check...(...) bzw. Fail(...), nicht als Feld "X.Check")
+function Get-TestWords([string[]]$Code) {
+  $result = New-Object System.Collections.Generic.List[object]
+  for ($n = 0; $n -lt $Code.Count; $n++) {
+    $line = $Code[$n]
+    foreach ($m in [regex]::Matches($line, '[A-Za-z_]\w*')) {
+      $isCall = $false
+      if ($m.Value -match '^(?i)(Check\w*|Fail)$') {
+        $before = ''
+        if ($m.Index -gt 0) { $before = $line.Substring(0, $m.Index).TrimEnd() }
+        $after = $line.Substring($m.Index + $m.Length)
+        $isCall = ($after -match '^\s*\(') -and -not $before.EndsWith('.')
+      }
+      $result.Add([pscustomobject]@{ Text = $m.Value; Line = $n + 1; Col = $m.Index; Call = $isCall })
+    }
+  }
+  return $result
+}
+
+# Regel TESTS (nur Tests\*.pas): Pruefungen, die nichts pruefen oder deren
+# Fehlschlag verschluckt wird (DUnits ETestFailure erbt von EAbort), und
+# stilles Ueberspringen per Exit.
+function Test-TestRules([string]$File, [string[]]$Code) {
+  # 1. Immer wahr: CheckTrue(True / Check(True / CheckFalse(False
+  for ($n = 0; $n -lt $Code.Count; $n++) {
+    if ($Code[$n] -match '(?i)(?<![\w.])(CheckTrue|Check)\s*\(\s*True\s*[,)]' -or
+        $Code[$n] -match '(?i)(?<![\w.])CheckFalse\s*\(\s*False\s*[,)]') {
+      Add-Finding $File ($n + 1) 'TESTS' 'Pruefung ist immer erfuellt (CheckTrue(True)/CheckFalse(False)) - fachliche Bedingung pruefen'
+    }
+  }
+  $words = Get-TestWords $Code
+  # 2. Check/Fail im try-Teil, der Handler faengt alles ohne raise
+  for ($i = 0; $i -lt $words.Count; $i++) {
+    if ($words[$i].Text -ine 'try') { continue }
+    $depth = 0
+    $hasCheck = $false
+    $k = $i + 1
+    $partner = -1
+    while ($k -lt $words.Count) {
+      $t = $words[$k].Text
+      if ($t -ieq 'begin' -or $t -ieq 'try' -or $t -ieq 'case' -or $t -ieq 'asm') { $depth++ }
+      elseif ($t -ieq 'end') { if ($depth -eq 0) { break }; $depth-- }
+      elseif ($depth -eq 0 -and ($t -ieq 'except' -or $t -ieq 'finally')) { $partner = $k; break }
+      elseif ($words[$k].Call) { $hasCheck = $true }
+      $k++
+    }
+    if ($partner -lt 0 -or $words[$partner].Text -ine 'except' -or -not $hasCheck) { continue }
+    # Handler bis zum end auf Tiefe 0
+    $catchAll = ($partner + 1 -lt $words.Count -and $words[$partner + 1].Text -ine 'on')
+    $from = $partner
+    $handled = $false
+    $depth = 0
+    $k = $partner + 1
+    while ($k -lt $words.Count) {
+      $t = $words[$k].Text
+      if ($t -ieq 'begin' -or $t -ieq 'try' -or $t -ieq 'case' -or $t -ieq 'asm') { $depth++ }
+      elseif ($t -ieq 'end') { if ($depth -eq 0) { break }; $depth-- }
+      elseif ($depth -eq 0 -and $t -ieq 'on' -and $k + 2 -lt $words.Count) {
+        $w1 = $words[$k + 1].Text; $w2 = $words[$k + 2].Text
+        $w3 = ''; if ($k + 3 -lt $words.Count) { $w3 = $words[$k + 3].Text }
+        $cls = ''
+        if ($w2 -ieq 'do') { $cls = $w1 } elseif ($w3 -ieq 'do') { $cls = $w2 }
+        if ($cls -match '^(?i)(Exception|EAbort|ETestFailure)$' -and -not $catchAll) { $catchAll = $true; $from = $k }
+      }
+      elseif ($depth -eq 0 -and $t -ieq 'else' -and -not $catchAll) { $catchAll = $true; $from = $k }
+      elseif ($k -gt $from -and ($t -ieq 'raise' -or $t -ieq 'is' -or $t -ieq 'CheckIs' -or $t -ieq 'ClassType' -or $t -ieq 'InheritsFrom')) {
+        if ($catchAll) { $handled = $true }
+      }
+      $k++
+    }
+    if ($catchAll -and -not $handled) {
+      Add-Finding $File $words[$partner].Line 'TESTS' 'Check/Fail im try, "except" faengt alles (auch ETestFailure) ohne raise - konkrete Klasse (on EPPG... do) oder raise'
+    }
+  }
+  # 3. Exit vor dem ersten Check in einer published Testmethode nur nach Skip(
+  $published = @{}
+  $cls = ''
+  $inPublished = $false
+  for ($n = 0; $n -lt $Code.Count; $n++) {
+    $c = $Code[$n]
+    if ($c -match '^\s*(T\w+)\s*=\s*class\b') { $cls = $Matches[1]; $inPublished = $false; continue }
+    if ($cls -eq '') { continue }
+    if ($c -match '^\s*published\b') { $inPublished = $true; continue }
+    if ($c -match '^\s*(private|protected|public|strict)\b') { $inPublished = $false; continue }
+    if ($c -match '^\s*end\s*;') { $cls = ''; $inPublished = $false; continue }
+    if ($inPublished -and $c -match '^\s*procedure\s+(\w+)\s*;') { $published[($cls + '.' + $Matches[1]).ToLowerInvariant()] = $true }
+  }
+  if ($published.Count -eq 0) { return }
+  $byLine = @{}
+  foreach ($w in $words) {
+    if (-not $byLine.ContainsKey($w.Line)) { $byLine[$w.Line] = New-Object System.Collections.Generic.List[object] }
+    $byLine[$w.Line].Add($w)
+  }
+  $n = 0
+  while ($n -lt $Code.Count) {
+    if (-not ($Code[$n] -match '^procedure\s+(\w+\.\w+)\s*;' -and $published.ContainsKey($Matches[1].ToLowerInvariant()))) { $n++; continue }
+    # Hauptrumpf: erstes "begin" in Spalte 0 (lokale Routinen sind eingerueckt)
+    $b = $n + 1
+    while ($b -lt $Code.Count -and $Code[$b] -notmatch '^begin\b') { $b++ }
+    $e = $b + 1
+    while ($e -lt $Code.Count -and $Code[$e] -notmatch '^end\s*;') { $e++ }
+    $prev = ''
+    $stop = $false
+    for ($m = $b; $m -le $e -and $m -lt $Code.Count -and -not $stop; $m++) {
+      if (-not $byLine.ContainsKey($m + 1)) { $prev = $prev + ' ' + $Code[$m]; continue }
+      foreach ($w in $byLine[$m + 1]) {
+        if ($w.Call) { $stop = $true; break }
+        if ($w.Text -ieq 'Exit') {
+          # Vorherige Anweisung muss Skip(...) / PPGSkip(...) sein
+          $stmt = $prev + ' ' + $Code[$m].Substring(0, $w.Col)
+          $parts = $stmt -split ';'
+          $last = ''
+          if ($parts.Count -ge 2) { $last = $parts[$parts.Count - 2] }
+          if ($last -notmatch '(?i)(?<![\w.])(PPG)?Skip\s*\(') {
+            Add-Finding $File ($m + 1) 'TESTS' 'Exit vor der ersten Pruefung nur direkt nach Skip(Grund) - stilles Ueberspringen'
+          }
+        }
+      }
+      $prev = $prev + ' ' + $Code[$m]
+    }
+    $n = $e + 1
+  }
+}
+
 # ---------------------------------------------------------------------------
 # Regeln je Datei
 # ---------------------------------------------------------------------------
@@ -460,6 +591,10 @@ function Test-SourceFile([string]$File, [string]$Rel) {
   # except ohne Klassenfilter nur an Grenzen
   if ($isSrc -and $layer -ne 'Access' -and $base -ne 'PPG.ErrorHandler' -and $base -ne 'PPG.Animation') {
     Test-CatchAll $File $code $parts.Comments
+  }
+  # Testintegritaet (Regel TESTS)
+  if ($Rel -match '^Tests[\\/][^\\/]+\.pas$') {
+    Test-TestRules $File $code
   }
 }
 
