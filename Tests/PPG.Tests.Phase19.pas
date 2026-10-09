@@ -1138,7 +1138,7 @@ begin
   Bar.Parent := FForm;
   Bar.Align := alTop;
   FV.SummaryBar := Bar;
-  CheckFalse(Bar.IsOpen, 'ohne Ergebnis zu');
+  CheckFalse(Bar.Open, 'ohne Ergebnis zu');
   E1 := NewEdit('E1', 60);
   E1.TextHint := 'Vorname';
   E2 := NewEdit('E2', 100);
@@ -1148,9 +1148,9 @@ begin
   E1.Perform(CM_EXIT, 0, 0);
   Application.ProcessMessages;
   CheckEquals(1, FV.ErrorCount);
-  CheckFalse(Bar.IsOpen, 'automatische Pruefung oeffnet die Leiste nicht');
+  CheckFalse(Bar.Open, 'automatische Pruefung oeffnet die Leiste nicht');
   CheckFalse(FV.Validate);
-  CheckTrue(Bar.IsOpen);
+  CheckTrue(Bar.Open);
   CheckTrue(Bar.Severity = psError);
   CheckEquals(Format(PPGStr(@SPPGValErrors), [2]), Bar.Title);
   CheckEquals('Vorname, Nachname', Bar.Message);
@@ -1160,7 +1160,7 @@ begin
   CheckEquals(PPGStr(@SPPGValOneError), Bar.Title, 'live aktualisiert');
   E2.Text := 'Berg';
   Application.ProcessMessages;
-  CheckFalse(Bar.IsOpen, 'alles gueltig: zu');
+  CheckFalse(Bar.Open, 'alles gueltig: zu');
 end;
 
 procedure TValidatorComfortTests.SummaryBarChainsActionAndRestores;

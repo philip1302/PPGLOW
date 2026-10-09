@@ -74,8 +74,8 @@ TPPGCustomKanban.FilterAssignee = Nur Karten dieser Personen zeigen (durch Komma
 TPPGCustomKanban.FilterLabels = Nur Karten mit mindestens einem dieser Labels zeigen (durch Komma getrennt); leer = alle.
 TPPGCustomKanban.FilterText = Suchbegriff: nur Karten zeigen, deren Titel, Text, Labels oder Person ihn enthalten (ohne Groß-/Kleinschreibung); Treffer im Titel werden hervorgehoben. Ausgeblendete Karten zeigt der Spaltenkopf als „+n“, das WIP-Limit zählt weiter alle.
 > `Kanban1.FilterText := SearchEdit1.Text;`
-TPPGCustomKanban.KanbanStyles =Bereiche des Boards einzeln gestalten: Spalten, Karten, Karte unter der Maus, gewählte Karte, Swimlane-Köpfe. Nicht gesetzte Werte kommen aus dem Preset.
-> `Kanban1.KanbanStyles.Card.Color := $00FAFAFA;`
+TPPGCustomKanban.Styles =Bereiche des Boards einzeln gestalten: Spalten, Karten, Karte unter der Maus, gewählte Karte, Swimlane-Köpfe. Nicht gesetzte Werte kommen aus dem Preset.
+> `Kanban1.Styles.Card.Color := $00FAFAFA;`
 TPPGCustomKanban.Lanes = Swimlanes (Zeilen, Collection). Ohne sichtbare Lanes gibt es eine einzige Zeile und jede Spalte scrollt für sich; mit Lanes scrollt das ganze Board senkrecht.
 TPPGCustomKanban.MaxTextLines = Höchstzahl der Textzeilen je Karte (0 bis 50); längerer Text wird gekürzt. 0 = Kartentext nicht anzeigen.
 TPPGCustomKanban.OnCardClick = Eine Karte wurde angeklickt. Column und Index nennen ihre Lage; Card ist nil bei virtuellen Spalten.
@@ -94,7 +94,7 @@ TPPGCustomKanban.OnFilterCard = Eigene Filterregel zusätzlich zu FilterText, Fi
 > `Accept := Card.Progress < 100; // Erledigtes ausblenden`
 TPPGCustomKanban.OnGetCard =Liefert den Inhalt einer Karte virtueller Spalten (Column.VirtualCount > 0): Data für Column und Index füllen. Wird nur für sichtbare Karten aufgerufen.
 > `Data.Title := Liste[Index].Name;`
-TPPGCustomKanban.OnSelectionChange = Die gewählte Karte hat sich durch den Anwender geändert (SelectedCard).
+TPPGCustomKanban.OnChange = Die gewählte Karte hat sich durch den Anwender geändert (SelectedCard).
 TPPGCustomKanban.ReadOnly = True: Karten können weder gezogen noch per Tastatur verschoben werden; Auswahl, Öffnen und Einklappen bleiben möglich.
 TPPGCustomKanban.ShowCardCount = True: Im Spaltenkopf steht die Zahl der Karten (mit WIP-Limit als „3 / 5").
 TPPGCustomKanban.VirtualCardHeight = Feste Höhe der Karten virtueller Spalten in logischen Pixeln (0 bis 1000); 0 = aus der Schrift berechnet.
@@ -116,7 +116,7 @@ TPPGCustomPlanner.DayStartHour = Erste gezeigte Stunde des Zeitrasters (0 bis 23
 TPPGCustomPlanner.DefaultEditor = True: Ohne OnAppointmentOpen öffnen Doppelklick und Enter den eingebauten Termin-Dialog (Unit PPG.Planner.Dialog). False: der Betreff wird direkt im Planer bearbeitet.
 TPPGCustomPlanner.FirstDayOfWeek = Erster Wochentag der Wochen- und Monatsansicht; fdLocale = nach den Ländereinstellungen von Windows.
 TPPGCustomPlanner.GroupByResource = True: In Tag- und Wochenansicht bekommt jede Ressource ihre eigene Spaltengruppe (nur mit Resources). In der Zeitleiste sind Ressourcen immer Zeilen.
-TPPGCustomPlanner.OnAppointmentChanged = Ein Termin wurde vom Anwender geändert (verschoben, in der Dauer geändert, kopiert oder umbenannt); beim DB-Planer ist er bereits gespeichert.
+TPPGCustomPlanner.OnAppointmentChange = Ein Termin wurde vom Anwender geändert (verschoben, in der Dauer geändert, kopiert oder umbenannt); beim DB-Planer ist er bereits gespeichert.
 TPPGCustomPlanner.OnAppointmentChanging = Vor einer Änderung durch den Anwender. Kind nennt die Art (Verschieben, Größe, Kopie, Betreff). NewStart, NewFinish und NewResourceId lassen sich anpassen, Allow := False bricht ab.
 > `if DayOfWeek(NewStart) in [1, 7] then Allow := False; // kein Wochenende`
 TPPGCustomPlanner.OnAppointmentCreated = Ein neuer Termin wurde angelegt (Doppelklick, Enter, Tippen auf freier Fläche oder Kopie); hier z. B. Standardwerte setzen.
@@ -129,11 +129,11 @@ TPPGCustomPlanner.OnDeleting = Bevor ein Termin gelöscht wird (Entf); Allow := 
 TPPGCustomPlanner.OnGetAppointmentColor = Liefert die Farbe eines Termins zuletzt: AColor kommt mit der berechneten Farbe (Kategorie, Ressource oder Akzent) und kann überschrieben werden.
 > `if Appointment.Location = 'Extern' then AColor := clTeal;`
 TPPGCustomPlanner.OnRangeChange = Der sichtbare Zeitraum hat sich geändert (Blättern, Ansicht, Date per Code). Die DB-Variante lädt darüber nach.
-TPPGCustomPlanner.OnSelectionChange = Auswahl geändert (gewählter Termin oder gewählte Zeitfelder).
+TPPGCustomPlanner.OnChange = Auswahl geändert (gewählter Termin oder gewählte Zeitfelder).
 TPPGCustomPlanner.OnSeriesEdit = Ersetzt die Abfrage bei Serienterminen: Occurrence und Action (Verschieben, Dauer, Betreff, Ort, Löschen, Dialog) nennen den Fall, Choice kommt mit scOccurrence und lässt sich auf scSeries oder scCancel setzen. Nur bei SeriesEditMode = semAsk.
 > `if Action = saDelete then Choice := scCancel; // Serien nie per Entf`
-TPPGCustomPlanner.PlannerStyles = Bereiche des Planers einzeln gestalten: Hintergrund, Kopf, Zeitleiste, Nicht-Arbeitszeit, Heute, Jetzt-Linie, Termine, gewählte Zeitfelder. Nicht gesetzte Werte kommen aus dem Preset.
-> `Planner1.PlannerStyles.NonWorkHours.Color := $00F4F4F4;`
+TPPGCustomPlanner.Styles = Bereiche des Planers einzeln gestalten: Hintergrund, Kopf, Zeitleiste, Nicht-Arbeitszeit, Heute, Jetzt-Linie, Termine, gewählte Zeitfelder. Nicht gesetzte Werte kommen aus dem Preset.
+> `Planner1.Styles.NonWorkHours.Color := $00F4F4F4;`
 TPPGCustomPlanner.ReadOnly = True: Termine können weder angelegt, verschoben, in der Dauer geändert noch gelöscht werden; Auswahl und Öffnen bleiben möglich.
 TPPGCustomPlanner.Resources = Ressourcen (Personen, Räume) mit Id, Name und Farbe; Termine gehören über ResourceId dazu.
 > `Planner1.Resources.AddResource(1, 'Raum A');`

@@ -156,7 +156,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnSorted` | `TNotifyEvent` `(Sender: TObject)` | Die Ansicht wurde neu sortiert (Klick auf den Kopf oder Code). |
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
-| `OnTopLeftChanged` | `TNotifyEvent` `(Sender: TObject)` | Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen geändert. |
+| `OnTopLeftChange` | `TNotifyEvent` `(Sender: TObject)` | Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen geändert. |
 | `OnValidateCell` | `TPPGValidateCellEvent` `(Sender: TObject; ACol, ARow: Integer; var Value: string; var Accept: Boolean)` | Vor dem Übernehmen eines bearbeiteten Werts: Value prüfen oder korrigieren; Accept := False lehnt ab (der Editor bleibt offen). Nutzung: `Accept := TryStrToFloat(Value, X); if not Accept then ShowMessage('Bitte eine Zahl eingeben');` |
 
 ---

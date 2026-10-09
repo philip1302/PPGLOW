@@ -28,12 +28,12 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
-| `Severity` | `TPPGSeverity` | `psInformational` | Art der Meldung: Information, Erfolg, Warnung oder Fehler. Bestimmt Symbol und Signalfarbe (aus den Tokens, anpassbar über ThemeColors bzw. BarStyle); Screenreader melden sie als Alarm. Werte: `psInformational`, `psSuccess`, `psWarning`, `psError`. |
+| `Severity` | `TPPGSeverity` | `psInformational` | Art der Meldung: Information, Erfolg, Warnung oder Fehler. Bestimmt Symbol und Signalfarbe (aus den Tokens, anpassbar über ThemeColors bzw. Style); Screenreader melden sie als Alarm. Werte: `psInformational`, `psSuccess`, `psWarning`, `psError`. |
 | `Title` | `string` |  | Fett hervorgehobener Titel vor Message; leer = nur Message. |
 | `Message` | `string` |  | Meldungstext; darf Mini-Markup enthalten (<b>, <i>, <a href=...>). |
-| `IsOpen` | `Boolean` | `True` | Sichtbarkeit der Leiste; True/False blendet sie animiert ein bzw. aus. Wird beim Schließen durch den Anwender False. Nutzung: `InfoBar1.Severity := psError; InfoBar1.Message := 'Speichern fehlgeschlagen'; InfoBar1.IsOpen := True;` |
-| `IsClosable` | `Boolean` | `True` | True: Ein Schließen-Kreuz wird angezeigt (Klick oder Esc schließt, mit OnClosing/OnClose). |
-| `BarStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Eigene Optik der Leiste: Fläche, Rand, Text und Schrift. Ohne Angabe wird die Leiste aus der Signalfarbe von Severity getönt. Nutzung: `InfoBar1.BarStyle.Color := $00E8F4FF;` |
+| `Open` | `Boolean` | `True` | Sichtbarkeit der Leiste; True/False blendet sie animiert ein bzw. aus. Wird beim Schließen durch den Anwender False. Nutzung: `InfoBar1.Severity := psError; InfoBar1.Message := 'Speichern fehlgeschlagen'; InfoBar1.Open := True;` |
+| `ShowCloseButton` | `Boolean` | `True` | True: Ein Schließen-Kreuz wird angezeigt (Klick oder Esc schließt, mit OnClosing/OnClose). |
+| `Style` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Eigene Optik der Leiste: Fläche, Rand, Text und Schrift. Ohne Angabe wird die Leiste aus der Signalfarbe von Severity getönt. Nutzung: `InfoBar1.Style.Color := $00E8F4FF;` |
 | `ActionCaption` | `string` |  | Beschriftung eines Aktions-Buttons in der Leiste; leer = kein Button. Ein Klick löst OnActionClick aus. Nutzung: `InfoBar1.ActionCaption := 'Erneut versuchen';` |
 
 ## Eigenschaften wie in der VCL
@@ -64,7 +64,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
 | `OnActionClick` | `TNotifyEvent` `(Sender: TObject)` | Klick (oder Enter/Leertaste) auf den Aktions-Button aus ActionCaption. |
-| `OnClose` | `TNotifyEvent` `(Sender: TObject)` | Die Leiste wurde vom Anwender geschlossen (IsOpen ist bereits False). |
+| `OnClose` | `TNotifyEvent` `(Sender: TObject)` | Die Leiste wurde vom Anwender geschlossen (Open ist bereits False). |
 | `OnClosing` | `TPPGInfoBarClosingEvent` `(Sender: TObject; var AllowClose: Boolean)` | Vor dem Schließen durch den Anwender; AllowClose := False hält die Leiste offen. |
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |

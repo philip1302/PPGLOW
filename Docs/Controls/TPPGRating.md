@@ -29,8 +29,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
-| `Value` | `Double` |  | Bewertung von 0 bis MaxValue, mit AllowHalf auch halbe Werte (z. B. 3,5). Nutzung: `Rating1.Value := 4;` |
-| `MaxValue` | `Integer` | `5` | Anzahl der Sterne (1..50). |
+| `Value` | `Double` |  | Bewertung von 0 bis Max, mit AllowHalf auch halbe Werte (z. B. 3,5). Nutzung: `Rating1.Value := 4;` |
+| `Max` | `Integer` | `5` | Anzahl der Sterne (1..50). |
 | `AllowHalf` | `Boolean` | `False` | True: Halbe Sterne möglich (Klick auf die linke Sternhälfte, Tastatur in 0,5-Schritten). |
 | `AllowClear` | `Boolean` | `True` | True: Ein Klick auf den aktuellen Wert setzt ihn auf 0 zurück. |
 | `ReadOnly` | `Boolean` | `False` | True: nur Anzeige (keine Vorschau, keine Eingabe); bleibt fokussierbar für Screenreader. |

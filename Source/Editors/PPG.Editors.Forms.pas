@@ -342,8 +342,8 @@ begin
   Result := TPPGSpinEdit.Create(Self);
   Result.Parent := AParent;
   Result.SetBounds(S(ALeft), S(ATop), S(AWidth), S(23));
-  Result.MinValue := AMin;
-  Result.MaxValue := AMax;
+  Result.Min := AMin;
+  Result.Max := AMax;
   Result.Value := AMin;
   Result.OnChange := AOnChange;
 end;

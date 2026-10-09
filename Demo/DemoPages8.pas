@@ -136,7 +136,7 @@ begin
   FRibbon.OnGalleryClick := GalleryClick;
   FRibbon.OnGetGalleryItem := GetGalleryItem;
   FRibbon.OnLauncherClick := LauncherClick;
-  FRibbon.OnTabChange := TabChange;
+  FRibbon.OnChange := TabChange;
   FRibbon.OnBackstageChange := BackstageChange;
   FRibbon.OnQuickAccessChange := QuickChange;
   FPasteMenu := TPPGPopupMenu.Create(Own);

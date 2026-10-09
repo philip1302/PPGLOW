@@ -460,7 +460,7 @@ begin
   // der DFM. Ganzzahl ohne ",00", BCD/Currency exakt ueber Currency.
   if csDesigning in ComponentState then
     Exit;
-  if not FFormatFromField and ((NumberKind <> nkFloat) or (Decimals <> 2)) then
+  if not FFormatFromField and ((Kind <> nkFloat) or (Decimals <> 2)) then
     Exit;
   F := FBinding.Field;
   K := nkFloat;
@@ -484,7 +484,7 @@ begin
             K := nkCurrency;
         end;
     end;
-  NumberKind := K;
+  Kind := K;
   Decimals := D;
   FFormatFromField := (K <> nkFloat) or (D <> 2);
 end;

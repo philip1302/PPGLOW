@@ -473,7 +473,7 @@ begin
   TA.TickMarks := tmBoth;
   TA.TickStyle := tsManual;
   TA.ThumbLength := 26;
-  TA.SliderVisible := False;
+  TA.ShowSlider := False;
   TB := nil;
   S := TMemoryStream.Create;
   try
@@ -490,7 +490,7 @@ begin
     CheckTrue(TB.TickMarks = tmBoth);
     CheckTrue(TB.TickStyle = tsManual);
     CheckEquals(26, TB.ThumbLength);
-    CheckFalse(TB.SliderVisible);
+    CheckFalse(TB.ShowSlider);
   finally
     TB.Free;
     S.Free;
@@ -1311,7 +1311,7 @@ begin
             case V of
               1: T.TickMarks := tmBoth;
               2: T.Orientation := trVertical;
-              3: begin T.BiDiMode := bdRightToLeft; T.SliderVisible := False; end;
+              3: begin T.BiDiMode := bdRightToLeft; T.ShowSlider := False; end;
             end;
             if T.Enabled then
               T.SetFocus;

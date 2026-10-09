@@ -311,8 +311,8 @@ type
     /// Name des Kontexts ('' = normale Registerkarte). Benachbarte Karten mit
     /// gleichem Namen bilden eine Gruppe.
     property ContextName: string read FContextName write SetContextName;
-    /// Farbe des Kontexts (clNone = Akzent des Presets).
-    property ContextColor: TColor read FContextColor write SetContextColor default clNone;
+    /// Farbe des Kontexts (clDefault = Akzent des Presets).
+    property ContextColor: TColor read FContextColor write SetContextColor default clDefault;
     property Tag: NativeInt read FTag write FTag default 0;
   end;
 
@@ -1220,7 +1220,7 @@ begin
   inherited Create(Collection);
   FGroups := TPPGRibbonGroups.Create(Self);
   FVisible := True;
-  FContextColor := clNone;
+  FContextColor := clDefault;
 end;
 
 destructor TPPGRibbonTab.Destroy;

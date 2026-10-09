@@ -44,7 +44,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `Tags` | `TStrings` |  | Die aktuellen Tags, je Zeile eines. Änderungen aus Code lösen keine Ereignisse aus. Nutzung: `TagEdit1.Tags.Add('Wichtig');` |
 | `Suggestions` | `TStrings` |  | Vorschläge, die beim Tippen im Aufklappfenster erscheinen. Nutzung: `TagEdit1.Suggestions.CommaText := 'Vertrieb,Einkauf,Technik';` |
-| `Delimiters` | `string` |  | Zeichen, die beim Tippen ein Tag abschließen (z. B. „;," ). Enter schließt immer ab; eingefügtes „a; b; c" ergibt drei Tags. |
+| `InputDelimiters` | `string` |  | Zeichen, die beim Tippen ein Tag abschließen (z. B. „;," ). Enter schließt immer ab; eingefügtes „a; b; c" ergibt drei Tags. |
 | `Delimiter` | `Char` | `';'` | Trennzeichen der Tags in TagsText bzw. im DB-Feld. Vorgabe „;". |
 | `AllowNew` | `Boolean` | `True` | False: Nur Einträge aus Suggestions sind erlaubt (Auswahlliste statt freier Eingabe). |
 | `AllowDuplicates` | `Boolean` | `False` | True: Dasselbe Tag darf mehrfach vorkommen. |

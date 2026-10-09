@@ -42,7 +42,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
 | `ItemsEx` | [TPPGItems](types/TPPGItems.md) |  | Reiche Einträge mit Bild (aus Images), Detailzeile, Plakette und Markup. Sind welche vorhanden, sind sie die Einträge der Liste. Nutzung: `with ComboBox1.ItemsEx.Add('Berlin', 2) do Detail := '3,7 Mio. Einwohner';` |
 | `FilterMode` | `TPPGFilterMode` | `fmNone` | Filtern beim Tippen (nur Style = csDropDown): fmNone zeigt immer alle Einträge, fmPrefix nur die mit diesem Anfang, fmContains alle, die den Text irgendwo enthalten. Die Liste klappt dabei auf. Werte: `fmNone`, `fmPrefix`, `fmContains`. Nutzung: Für lange Listen: `ComboBox1.FilterMode := fmContains;` |
-| `ListStyles` | [TPPGListStyles](types/TPPGListStyles.md) |  | Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: `ComboBox1.ListStyles.AlternateRow.Color := $00FAF7F2;` |
+| `Styles` | [TPPGListStyles](types/TPPGListStyles.md) |  | Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: `ComboBox1.Styles.AlternateRow.Color := $00FAF7F2;` |
 | `ShowClearButton` | `Boolean` | `False` | True: Ein „×"-Knopf im Feld löscht den Text (nur sichtbar, wenn Text vorhanden und das Feld bearbeitbar ist). |
 | `TextHint` | `string` |  | Platzhaltertext im leeren Feld (z. B. „Suchen …"). Nutzung: `Edit1.TextHint := 'E-Mail-Adresse';` |
 | `UseSystemContextMenu` | `Boolean` | `False` | True: Rechtsklick zeigt das native Windows-Menü des Edits statt des PPGlow-Menüs (Rückgängig, Ausschneiden, Kopieren, Einfügen, Löschen, Alles markieren; übersetzt und im Preset-Stil). |
@@ -55,7 +55,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `AutoDropDown` | `Boolean` | `False` | True: Die Liste klappt beim Tippen automatisch auf. |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
 | `CharCase` | `TEditCharCase` | `ecNormal` | Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase). |
-| `DropDownCount` | `Integer` | `8` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
+| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
 | `DropDownWidth` | `Integer` | `0` | Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. Nützlich für lange Einträge in schmalen Feldern. |
 | `ItemHeight` | `Integer` | `0` | Mindesthöhe einer Listenzeile in logischen Pixeln (0..1000); 0 = aus der Schrift. Einträge mit Detailzeile werden entsprechend höher. |
 | `Items` | `TStrings` |  | Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte. |

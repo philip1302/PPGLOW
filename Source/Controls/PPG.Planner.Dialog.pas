@@ -230,8 +230,8 @@ begin
     Interval := TPPGSpinEdit.Create(Self);
     Interval.Parent := SeriesBox;
     Interval.SetBounds(270, 30, 70, CtlH);
-    Interval.MinValue := 1;
-    Interval.MaxValue := 99;
+    Interval.Min := 1;
+    Interval.Max := 99;
     Interval.Value := 1;
     IntervalUnit := NewLabel(Self, SeriesBox, 348, 36, '', nil);
     WeekDays := TPPGCheckGroup.Create(Self);
@@ -255,8 +255,8 @@ begin
     EndCount := TPPGSpinEdit.Create(Self);
     EndCount.Parent := SeriesBox;
     EndCount.SetBounds(176, 120, 80, CtlH);
-    EndCount.MinValue := 1;
-    EndCount.MaxValue := 999;
+    EndCount.Min := 1;
+    EndCount.Max := 999;
     EndCount.Value := 10;
     EndDate := TPPGDatePicker.Create(Self);
     EndDate.Parent := SeriesBox;

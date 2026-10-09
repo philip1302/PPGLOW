@@ -48,7 +48,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle: Preset und Appearance wie bei den Controls. Ohne Manager übernimmt das Menü die Optik des auslösenden Controls. |
 | `Preset` | `string` |  | Optik-Vorlage des Menüs, wenn kein StyleManager gesetzt ist; leer = Preset des auslösenden Controls bzw. Standard. |
-| `MenuStyles` | [TPPGMenuStyles](types/TPPGMenuStyles.md) |  | Aussehen des Menüs in Bereichen (Fläche, Hover, Trennlinien, Tastenkürzel); clDefault = vom Preset. |
+| `Styles` | [TPPGMenuStyles](types/TPPGMenuStyles.md) |  | Aussehen des Menüs in Bereichen (Fläche, Hover, Trennlinien, Tastenkürzel); clDefault = vom Preset. |
 
 ## Ereignisse
 

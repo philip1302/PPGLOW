@@ -8,5 +8,5 @@
 
 ## Anpassung
 
-- Je TabSheet `TabColor`, `TabTextColor`, `TabFontStyle`; `TabStyles` (Reiter, Hover, aktiv, Leiste, Indikator).
+- Je TabSheet `TabColor`, `TabTextColor`, `TabFontStyle`; `Styles` (Reiter, Hover, aktiv, Leiste, Indikator).
 - Wie `TPageControl`: `MultiLine`, `RaggedRight`, `Style`, `OwnerDraw`, `OnDrawTab`.

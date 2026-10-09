@@ -481,7 +481,7 @@ begin
   FWizard.Preset := DemoPreset;
   FWizard.SetBounds(CardPad, Card.Tag, FullW - 2 * CardPad, WizardH - Card.Tag - 44);
   FWizard.OnCanAdvance := WizardCanAdvance;
-  FWizard.OnPageChanged := WizardChanged;
+  FWizard.OnChange := WizardChanged;
   FWizard.OnFinish := WizardFinish;
   FWizard.OnCancel := WizardCancel;
 

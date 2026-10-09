@@ -157,7 +157,7 @@ type
     property Tags: TStrings read FTags write SetTags;
     property Suggestions: TStrings read FSuggestions write SetSuggestions;
     /// Zeichen, die ein Tag beenden.
-    property Delimiters: string read FDelimiters write FDelimiters stored IsDelimitersStored;
+    property InputDelimiters: string read FDelimiters write FDelimiters stored IsDelimitersStored;
     /// Trenner fuer TagsText (DB-Wert).
     property Delimiter: Char read FDelimiter write SetDelimiter default ';';
     property AllowNew: Boolean read FAllowNew write FAllowNew default True;
@@ -293,7 +293,7 @@ procedure TPPGTagEdit.DefineProperties(Filer: TFiler);
 begin
   inherited DefineProperties(Filer);
   // Leer mit nicht leerer Vorgabe: der Writer schreibt '' nie - eigene Marke
-  Filer.DefineProperty('DelimitersEmpty', ReadDelimitersEmpty, WriteDelimitersEmpty, FDelimiters = '');
+  Filer.DefineProperty('InputDelimitersEmpty', ReadDelimitersEmpty, WriteDelimitersEmpty, FDelimiters = '');
 end;
 
 procedure TPPGTagEdit.ReadDelimitersEmpty(Reader: TReader);

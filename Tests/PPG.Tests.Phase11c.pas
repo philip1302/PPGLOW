@@ -722,7 +722,7 @@ begin
     P.Wizard := Result;
   end;
   Result.OnCanAdvance := CanAdvance;
-  Result.OnPageChanged := Changed;
+  Result.OnChange := Changed;
   Result.OnFinish := Finished;
   Result.OnCancel := Cancelled;
 end;

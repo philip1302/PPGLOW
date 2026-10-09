@@ -174,7 +174,7 @@ begin
   for I := 1 to 4 do
     FTabs.Tabs.Add('Dokument ' + IntToStr(I));
   FTabCount := 4;
-  FTabs.ShowCloseButtons := True;
+  FTabs.ShowCloseButton := True;
   FTabs.TabIndex := 0;
   FTabs.OnChange := TabChange;
   FTabs.OnClose := TabClose;
@@ -308,7 +308,7 @@ begin
   NV.Items.AddItem('Kontakte', $E716);
   NV.Items.AddItem('Kalender', $E787);
   NV.Items.AddItem('Einstellungen', $E713).Footer := True;
-  NV.OnSelectionChange := NavChange;
+  NV.OnChange := NavChange;
   FNavContent := NewLabel(Own, Host2, 64, 12, 0, '', tkSubtitle);
   FNavResult := NewResult(Own, Card, 'Gew{ae}hlt');
   NV.Selected := NV.Items[0];
@@ -506,14 +506,14 @@ begin
   Bd.Top := Y + 7;
   Bd.Kind := bkText;
   Bd.Caption := 'Neu';
-  Bd.BadgeColor := bcSuccess;
+  Bd.Severity := bsvSuccess;
   Bd := TPPGBadge.Create(Own);
   Bd.Parent := Card;
   Bd.Left := CardPad + 300;
   Bd.Top := Y + 7;
   Bd.Kind := bkText;
   Bd.Caption := 'Beta';
-  Bd.BadgeColor := bcWarning;
+  Bd.Severity := bsvWarning;
   for I := 0 to 2 do
   begin
     Bd := TPPGBadge.Create(Own);
@@ -521,10 +521,10 @@ begin
     Bd.Kind := bkDot;
     Bd.SetBounds(CardPad + 360 + I * 20, Y + 12, 8, 8);
     case I of
-      0: Bd.BadgeColor := bcSuccess;
-      1: Bd.BadgeColor := bcWarning;
+      0: Bd.Severity := bsvSuccess;
+      1: Bd.Severity := bsvWarning;
     else
-      Bd.BadgeColor := bcError;
+      Bd.Severity := bsvError;
     end;
   end;
   for I := 0 to 3 do
@@ -559,7 +559,7 @@ var
 begin
   N := 0;
   for I := 0 to 3 do
-    if FBars[I].IsOpen then
+    if FBars[I].Open then
       Inc(N);
   SetResult(FBarResult, Format('%d von 4', [N]));
 end;
@@ -576,7 +576,7 @@ var
 begin
   Bar := TPPGInfoBar(Sender);
   Host.Log('InfoBar', 'Aktion: ' + Bar.ActionCaption);
-  Bar.IsOpen := False;
+  Bar.Open := False;
   UpdateBarResult;
   if Bar = FBars[2] then
     Host.Notifier.Show('Gespeichert', L('Die 3 {Ae}nderungen wurden gespeichert.'), psSuccess)
@@ -592,7 +592,7 @@ begin
   for I := 0 to 3 do
   begin
     FBars[I].Top := I * 100;
-    FBars[I].IsOpen := True;
+    FBars[I].Open := True;
   end;
   UpdateBarResult;
   Host.Log('InfoBar', 'Alle wieder angezeigt');
@@ -820,7 +820,7 @@ begin
   FStyleInfo.SetBounds(CardPad, Card.Tag + 42, Col3W - 2 * CardPad, 40);
   FStyleInfo.Severity := psWarning;
   FStyleInfo.Title := '';
-  FStyleInfo.IsOpen := False;
+  FStyleInfo.Open := False;
 
   Card := NewCard(Own, Sheet, PageX + 2 * (Col3W + CardGap), PageContentTop + 270 + CardGap, Col3W,
     190, 'Zeichnen und Sprache', 'GDI-Fallback ohne GDI+; Sprache der eingebauten Texte.');
@@ -928,13 +928,13 @@ begin
     Exit;
   try
     Host.ApplyVclStyle(FStyleCombo.Items[FStyleCombo.ItemIndex]);
-    FStyleInfo.IsOpen := False;
+    FStyleInfo.Open := False;
     Host.Log('Darstellung', 'VCL-Style: ' + FStyleCombo.Items[FStyleCombo.ItemIndex]);
   except
     on E: Exception do
     begin
       FStyleInfo.Message := MarkupEscape(E.Message);
-      FStyleInfo.IsOpen := True;
+      FStyleInfo.Open := True;
     end;
   end;
 end;
@@ -1059,7 +1059,7 @@ procedure TDemoFeedbackPage.SelfTest(Check: TDemoCheck);
 var
   I: Integer;
 begin
-  FBars[1].IsOpen := False;
+  FBars[1].Open := False;
   UpdateBarResult;
   Check('Rueckmeldung: InfoBar schliessen', Pos('3 von 4', FBarResult.Caption) > 0);
   ReopenClick(nil);

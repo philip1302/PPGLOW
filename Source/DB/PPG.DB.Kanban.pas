@@ -120,7 +120,7 @@ type
     property ReadOnly;
     property WipMode;
     property ShowCardCount;
-    property KanbanStyles;
+    property Styles;
     property VirtualCardHeight;
     property OnCustomDrawCard;
     property OnKeyDown;
@@ -154,7 +154,7 @@ type
     property OnCardMoved;
     property OnCardClick;
     property OnCardOpen;
-    property OnSelectionChange;
+    property OnChange;
     property OnColumnCollapse;
     property FilterText;
     property FilterLabels;
@@ -436,7 +436,7 @@ begin
         if (FColor <> nil) and not FColor.IsNull then
           Card.Color := TColor(FColor.AsInteger)
         else
-          Card.Color := clNone;
+          Card.Color := clDefault;
         Row.Key := Key;
         if (FOrd <> nil) and not FOrd.IsNull then
           Row.Order := FOrd.AsFloat

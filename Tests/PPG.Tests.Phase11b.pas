@@ -656,7 +656,7 @@ var
   T, R: TRect;
   P: TPoint;
 begin
-  NewTip.Placement := tpBottom;
+  NewTip.Placement := ttpBottom;
   FTip.ShowFor(FTarget);
   Pump;
   CheckTrue(FTip.IsOpen);
@@ -679,7 +679,7 @@ procedure TTeachingTipTests.FollowsTargetMoves;
 var
   R1, R2: TRect;
 begin
-  NewTip.Placement := tpBottom;
+  NewTip.Placement := ttpBottom;
   FTip.ShowFor(FTarget);
   Pump;
   R1 := WindowRect;
@@ -899,7 +899,7 @@ var
 begin
   NewTip.ActionButtonText := 'Weiter';
   FTip.Icon := tiWarning;
-  FTip.Placement := tpLeft;
+  FTip.Placement := ttpLeft;
   FTip.LightDismiss := True;
   FTip.MaxWidth := 280;
   FTip.ShowCloseButton := False;
@@ -913,7 +913,7 @@ begin
     CheckEquals(FTip.Text, T2.Text);
     CheckEquals('Weiter', T2.ActionButtonText);
     CheckTrue(T2.Icon = tiWarning);
-    CheckTrue(T2.Placement = tpLeft);
+    CheckTrue(T2.Placement = ttpLeft);
     CheckTrue(T2.LightDismiss);
     CheckEquals(280, T2.MaxWidth);
     CheckFalse(T2.ShowCloseButton);
@@ -940,7 +940,7 @@ begin
     for P := 0 to Names.Count - 1 do
       for Dark := False to True do
         for Gdi := False to True do
-          for Pl := tpTop to tpRight do
+          for Pl := ttpTop to ttpRight do
           begin
             if Dark then
               TPPGTheme.Mode := tmDark
@@ -961,7 +961,7 @@ end;
 
 procedure TTeachingTipTests.TeachingTipGallery;
 const
-  Places: array[0..3] of TPPGTipPlacementMode = (tpBottom, tpTop, tpRight, tpLeft);
+  Places: array[0..3] of TPPGTipPlacementMode = (ttpBottom, ttpTop, ttpRight, ttpLeft);
 var
   Names: TStringList;
   P, Row, I, X: Integer;

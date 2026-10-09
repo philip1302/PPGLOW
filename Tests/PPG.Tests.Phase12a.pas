@@ -359,7 +359,7 @@ var
   E: TPPGNumberEdit;
 begin
   E := NewNumber;
-  E.NumberKind := nkCurrency;
+  E.Kind := nkCurrency;
   E.Value := 1234.5;
   CheckEquals('1.234,50 '#$20AC, E.Text, 'ohne Fokus formatiert');
   E.SetFocus;
@@ -420,9 +420,9 @@ var
   E: TPPGNumberEdit;
 begin
   E := NewNumber;
-  E.NumberKind := nkInteger;
-  E.MinValue := 0;
-  E.MaxValue := 10;
+  E.Kind := nkInteger;
+  E.Min := 0;
+  E.Max := 10;
   E.Value := 50;
   CheckEquals(10, E.Value, 1E-9, 'still begrenzt');
   E.SetFocus;
@@ -440,7 +440,7 @@ begin
   E.Value := 0;
   CheckFalse(TNumberAccess(E).ButtonEnabled(PPGSpinButtonDown), 'Untergrenze');
   // Integer rundet kaufmaennisch
-  E.MaxValue := 0;
+  E.Max := 0;
   E.Value := 2.5;
   CheckEquals(3, E.Value, 1E-9);
 end;
@@ -450,7 +450,7 @@ var
   E: TPPGNumberEdit;
 begin
   E := NewNumber;
-  E.NumberKind := nkCurrency;
+  E.Kind := nkCurrency;
   E.Decimals := 2;
   E.AsCurrency := 2.345;
   CheckTrue(E.AsCurrency = 2.35, 'kaufmaennisch, nicht zur geraden Ziffer: ' +
@@ -533,7 +533,7 @@ begin
   CheckEquals(12.5, E.Value, 1E-9);
   FV.SetFieldValue(Null);
   CheckTrue(FV.FieldIsNull);
-  E.NumberKind := nkCurrency;
+  E.Kind := nkCurrency;
   FV.SetFieldValue(1.1);
   CheckEquals(varCurrency, VarType(FV.GetFieldValue));
   FV := nil;
@@ -548,7 +548,7 @@ begin
   // Audit 08.10.2026: Auch bei nkFloat wurde nach Currency gewandelt;
   // 1E15 bzw. NaN warfen EInvalidOp beim Verlassen bzw. beim Setzen.
   E := NewNumber;
-  E.NumberKind := nkFloat;
+  E.Kind := nkFloat;
   E.SetFocus;
   TypeText(E, '1000000000000000');
   FDummy.SetFocus;
@@ -563,9 +563,9 @@ begin
     on Ex: EPPGPropertyError do
       Inc(Raised);
   end;
-  E.NumberKind := nkFloat;
+  E.Kind := nkFloat;
   E.Value := 5;
-  E.NumberKind := nkCurrency;
+  E.Kind := nkCurrency;
   try
     E.Value := 1E16;
   except
@@ -589,7 +589,7 @@ begin
   // Audit 08.10.2026: Round(LargeIncrement / Increment) Schritte: 0,4/1 = kein
   // Schritt, 10/3 = 9
   E := NewNumber;
-  E.NumberKind := nkFloat;
+  E.Kind := nkFloat;
   E.Value := 0;
   E.Increment := 1;
   E.LargeIncrement := 0.4;
@@ -611,10 +611,10 @@ var
   MS: TMemoryStream;
 begin
   E := NewNumber;
-  E.NumberKind := nkPercent;
+  E.Kind := nkPercent;
   E.Decimals := 1;
-  E.MinValue := -5;
-  E.MaxValue := 200;
+  E.Min := -5;
+  E.Max := 200;
   E.Increment := 0.5;
   E.Value := 12.5;
   E.ShowSpinButtons := True;
@@ -624,10 +624,10 @@ begin
     MS.WriteComponent(E);
     MS.Position := 0;
     MS.ReadComponent(E2);
-    CheckTrue(E2.NumberKind = nkPercent);
+    CheckTrue(E2.Kind = nkPercent);
     CheckEquals(1, E2.Decimals);
-    CheckEquals(-5, E2.MinValue, 1E-9);
-    CheckEquals(200, E2.MaxValue, 1E-9);
+    CheckEquals(-5, E2.Min, 1E-9);
+    CheckEquals(200, E2.Max, 1E-9);
     CheckEquals(0.5, E2.Increment, 1E-9);
     CheckEquals(12.5, E2.Value, 1E-9);
     CheckTrue(E2.ShowSpinButtons);

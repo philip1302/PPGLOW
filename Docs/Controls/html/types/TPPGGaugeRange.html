@@ -3,14 +3,14 @@
 <p><a href="../index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGGaugeRange</h1>
 <p>Typ in Unit <code>PPG.Gauge</code> - Basis <code>TCollectionItem</code></p>
-<p>Ein farbiger Bereich auf dem Bogen: Anfangs- und Endwert, Signalfarbe (RangeColor) oder eigene Farbe (CustomColor).</p>
+<p>Ein farbiger Bereich auf dem Bogen: Anfangs- und Endwert, Signalfarbe (Kind) oder eigene Farbe (Color).</p>
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
 <tr><td><code>StartValue</code></td><td><code>Double</code></td><td></td><td>Beginn des Abschnitts als Skalenwert.</td></tr>
 <tr><td><code>EndValue</code></td><td><code>Double</code></td><td></td><td>Ende des Abschnitts als Skalenwert.</td></tr>
-<tr><td><code>RangeColor</code></td><td><code>TPPGGaugeRangeColor</code></td><td><code>grcSuccess</code></td><td>Farbe des Abschnitts aus den Tokens: Erfolg (gr&#252;n), Warnung (gelb), Gefahr (rot), Akzent, neutral, oder eigene Farbe (CustomColor). Die Token-Farben passen sich Preset und Dark Mode an. Werte: <code>grcSuccess</code>, <code>grcWarning</code>, <code>grcDanger</code>, <code>grcAccent</code>, <code>grcNeutral</code>, <code>grcCustom</code>.</td></tr>
-<tr><td><code>CustomColor</code></td><td><code>TColor</code></td><td><code>clNone</code></td><td>Eigene Farbe des Abschnitts; wirkt nur mit RangeColor = grcCustom.</td></tr>
+<tr><td><code>Kind</code></td><td><code>TPPGGaugeRangeKind</code></td><td><code>grkSuccess</code></td><td>Farbe des Abschnitts aus den Tokens: Erfolg (gr&#252;n), Warnung (gelb), Gefahr (rot), Akzent, neutral, oder eigene Farbe (grkCustom mit Color). Die Token-Farben passen sich Preset und Dark Mode an. Werte: <code>grkSuccess</code>, <code>grkWarning</code>, <code>grkError</code>, <code>grkAccent</code>, <code>grkNeutral</code>, <code>grkCustom</code>.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Farbe des Abschnitts; wirkt nur mit Kind = grkCustom (clDefault = nicht gesetzt).</td></tr>
 </table>
 <h2>Verwendet in</h2>
 <p><a href="TPPGGaugeRanges.html">TPPGGaugeRanges</a></p>

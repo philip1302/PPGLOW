@@ -16,7 +16,9 @@
   - Properties: bekannte Umbenennungen (z.B. TMS EmptyText -> TextHint,
     TDBGrid-Spalten Title.Caption -> Title, Title.Alignment -> TitleAlignment,
     Title.Font/Title.Color -> TitleStyle, Font/Color -> Style,
-    TToggleSwitch State -> Checked).
+    TToggleSwitch State -> Checked, TSpinEdit MinValue/MaxValue -> Min/Max,
+    TTrackBar SliderVisible -> ShowSlider, OnTopLeftChanged -> OnTopLeftChange).
+    Dieselben Umbenennungen auch im Code der .pas ("Spin1.MinValue" -> "Spin1.Min").
   - Properties, die die PPGlow-Klasse nicht hat, werden entfernt und im
     Bericht genannt. Die erlaubten Properties liest das Skript aus den
     PPGlow-Quelltexten (published-Abschnitte).
@@ -109,6 +111,11 @@ $Renames = @{
   'TBitBtn'      = @{ 'Kind' = '' ; 'Glyph.Data' = ''; 'NumGlyphs' = ''; 'Layout' = '' }
   'TSpeedButton' = @{ 'Glyph.Data' = ''; 'NumGlyphs' = ''; 'Flat' = ''; 'Layout' = '' }
   'TSearchBox'   = @{ 'OnInvokeSearch' = 'OnSearch' }
+  # Audit 5c: einheitliche Namen in PPGlow (Min/Max, ShowSlider, On...Change)
+  'TSpinEdit'      = @{ 'MinValue' = 'Min'; 'MaxValue' = 'Max' }
+  'TTrackBar'      = @{ 'SliderVisible' = 'ShowSlider' }
+  'TStringGrid'    = @{ 'OnTopLeftChanged' = 'OnTopLeftChange' }
+  'TAdvStringGrid' = @{ 'OnTopLeftChanged' = 'OnTopLeftChange' }
 }
 
 # VCL-Vorgaben, die bei PPGlow anders sind. Die IDE schreibt Vorgabewerte
@@ -301,6 +308,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         $entry.Allowed = Get-AllowedProps $new
         $line = (' ' * $indent) + "$kw ${name}: $new$rest"
         $report.Add("$File : $name $cls -> $new")
+        if ($Renames.ContainsKey($cls)) { $script:CodeRenames[$name] = $Renames[$cls] }
         $changed = $true
         if ($cls -eq 'TTreeView') { $report.Add("$File :   $name - Knoten (Items.NodeData) gehen verloren, im Editor neu anlegen") }
       }
@@ -460,6 +468,19 @@ function Convert-Pas([string]$File, $Units, [hashtable]$Handlers) {
     # Felddeklarationen im Formular: "Name: TButton;"
     $text = [regex]::Replace($text, "(?m)^(\s+\w+(\s*,\s*\w+)*\s*:\s*)$cls(\s*;)", "`${1}$new`${3}")
   }
+  # Umbenannte Properties im Code: "SpinEdit1.MinValue" -> "SpinEdit1.Min"
+  # (nur mit Komponentenname davor; in with-Bloecken nicht erkennbar)
+  foreach ($comp in $script:CodeRenames.Keys) {
+    foreach ($old in $script:CodeRenames[$comp].Keys) {
+      $newName = $script:CodeRenames[$comp][$old]
+      if ($newName -eq '' -or $old.Contains('.')) { continue }
+      $pattern = "(?i)\b$comp\.$old\b"
+      if ($text -match $pattern) {
+        $text = [regex]::Replace($text, $pattern, "$comp.$newName")
+        $report.Add("$File :   Code $comp.$old -> $comp.$newName")
+      }
+    }
+  }
   # Handler-Signaturen (TColumn -> TPPGDBGridColumn)
   foreach ($h in $Handlers.Keys) {
     $text = [regex]::Replace($text, "(procedure\s+(\w+\.)?$h\s*\([^)]*Column\s*:\s*)TColumn", "`${1}$($Handlers[$h])")
@@ -522,6 +543,7 @@ else {
 
 foreach ($dfm in $dfms) {
   $handlers = @{}
+  $script:CodeRenames = @{}
   $res = Convert-Dfm $dfm.FullName $handlers
   if ($null -eq $res -or -not $res.Changed) { continue }
   $pas = [IO.Path]::ChangeExtension($dfm.FullName, '.pas')

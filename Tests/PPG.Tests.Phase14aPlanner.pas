@@ -129,7 +129,7 @@ begin
   Result.Date := Mon + 2;
   Result.NowOverride := DT(Mon + 2, 10, 15);
   Result.OnAppointmentChanging := Changing;
-  Result.OnAppointmentChanged := Changed;
+  Result.OnAppointmentChange := Changed;
   Result.OnAppointmentCreated := Created;
   Result.OnDeleting := Deleting;
   Result.OnCreateAppointment := Creating;

@@ -36,12 +36,12 @@
 <tr><td><code>EditorEnabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Der Wert l&#228;sst sich nur &#252;ber die Pfeil-Buttons, Pfeiltasten und das Mausrad &#228;ndern, nicht durch Tippen.</td></tr>
 <tr><td><code>Increment</code></td><td><code>Integer</code></td><td><code>1</code></td><td>Schrittweite f&#252;r Buttons, Pfeiltasten und Mausrad; Bild auf/ab &#228;ndert um das Zehnfache.</td></tr>
 <tr><td><code>MaxLength</code></td><td><code>Integer</code></td><td><code>0</code></td><td>H&#246;chstzahl der Zeichen; 0 = unbegrenzt.</td></tr>
-<tr><td><code>MaxValue</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Obergrenze f&#252;r Value. MinValue = MaxValue bedeutet „keine Grenze&quot; (wie TSpinEdit).</td></tr>
-<tr><td><code>MinValue</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Untergrenze f&#252;r Value. MinValue = MaxValue bedeutet „keine Grenze&quot;; die Reihenfolge beim Setzen ist egal. Nutzung: <code>Spin.MinValue := 1; Spin.MaxValue := 99;</code></td></tr>
+<tr><td><code>Max</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Obergrenze f&#252;r Value. Min = Max bedeutet „keine Grenze&quot; (wie TSpinEdit).</td></tr>
+<tr><td><code>Min</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Untergrenze f&#252;r Value. Min = Max bedeutet „keine Grenze&quot;; die Reihenfolge beim Setzen ist egal. Nutzung: <code>Spin.Min := 1; Spin.Max := 99;</code></td></tr>
 <tr><td><code>ReadOnly</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Text kann gelesen, markiert und kopiert, aber nicht ge&#228;ndert werden. Die Optik bestimmt ReadOnlyStyle.</td></tr>
 <tr><td><code>ReadOnlyStyle</code></td><td><a href="types/TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Eigene Optik bei ReadOnly: Fl&#228;che, Text- und Randfarbe (je auch f&#252;r Dunkel). clDefault = wie im bearbeitbaren Zustand. Nutzung: <code>Edit1.ReadOnlyStyle.Color := $00F0F0F0; Edit1.ReadOnlyStyle.TextColor := clGrayText;</code></td></tr>
 <tr><td><code>TabStop</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Das Feld ist mit Tab erreichbar.</td></tr>
-<tr><td><code>Value</code></td><td><code>Integer</code></td><td></td><td>Aktueller Wert; wird still auf MinValue..MaxValue begrenzt. Ung&#252;ltige Eingaben werden beim Verlassen bzw. mit Enter auf Value zur&#252;ckgesetzt.</td></tr>
+<tr><td><code>Value</code></td><td><code>Integer</code></td><td></td><td>Aktueller Wert; wird still auf Min..Max begrenzt. Ung&#252;ltige Eingaben werden beim Verlassen bzw. mit Enter auf Value zur&#252;ckgesetzt.</td></tr>
 </table>
 <h2>Eigenschaften wie in der VCL</h2>
 <table>

@@ -183,7 +183,7 @@ type
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnIsDateDisabled: TPPGDateDisabledEvent read FOnIsDateDisabled write FOnIsDateDisabled;
     /// Bereiche (Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende ...).
-    property CalendarStyles: TPPGCalendarStyles read FCalendarStyles write SetCalendarStyles;
+    property Styles: TPPGCalendarStyles read FCalendarStyles write SetCalendarStyles;
     /// Vor dem Zeichnen jedes Tages (Monatsansicht).
     property OnCustomDrawDay: TPPGCalendarDrawDayEvent read FOnCustomDrawDay write FOnCustomDrawDay;
     property OnViewChange: TNotifyEvent read FOnViewChange write FOnViewChange;
@@ -263,7 +263,7 @@ type
     property OnEnter;
     property OnExit;
     property OnIsDateDisabled;
-    property CalendarStyles;
+    property Styles;
     property OnCustomDrawDay;
     property OnViewChange;
   end;
@@ -1399,7 +1399,7 @@ begin
       DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
     end;
   end;
-  // Element-Stile (CalendarStyles): Farben nur ohne Hochkontrast/VCL-Style
+  // Element-Stile (Styles): Farben nur ohne Hochkontrast/VCL-Style
   CS := FCalendarStyles;
   UseColors := not HC and not UseVclStyle;
   Dk := UseDarkMode;

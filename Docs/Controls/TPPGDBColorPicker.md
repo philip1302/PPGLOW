@@ -34,6 +34,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
+| `ShowRequired` | `Boolean` | `False` | True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet. |
 | `DataField` | `string` |  | Ganzzahl-Feld mit der Farbe als TColor-Wert; Null bzw. leer = „Keine" (clNone). |
 | `DataSource` | `TDataSource` |  | Datenquelle mit der Datenmenge, aus der DataField kommt. |
 | `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. |

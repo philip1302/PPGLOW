@@ -9,4 +9,4 @@
 
 ## Anpassung
 
-- Je Eintrag `Color`, `TextColor`, `FontStyle`; `NavStyles` und `OnCustomDrawItem`; `ImageTint` für einfarbige Symbole.
+- Je Eintrag `Color`, `TextColor`, `FontStyle`; `Styles` und `OnCustomDrawItem`; `ImageTint` für einfarbige Symbole.

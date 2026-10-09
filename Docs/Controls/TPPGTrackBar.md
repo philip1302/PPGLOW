@@ -46,7 +46,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
-| `Min` | `Integer` |  | Kleinster Wert. Muss ≤ Max sein (sonst EPPGPropertyError). |
+| `Min` | `Integer` | `0` | Kleinster Wert. Muss ≤ Max sein (sonst EPPGPropertyError). |
 | `Max` | `Integer` | `10` | Größter Wert. Muss ≥ Min sein (sonst EPPGPropertyError); beim Laden der DFM wird erst danach geprüft. |
 | `Position` | `Integer` | `0` | Aktueller Wert zwischen Min und Max. Werte außerhalb werden auf den Bereich geklemmt (kein Fehler), daher ist `Position := Position + 10` sicher. Änderungen werden weich animiert. Nutzung: `TrackBar1.Min := 0; TrackBar1.Max := 100; TrackBar1.Position := 50;` |
 | `Orientation` | `TTrackBarOrientation` | `trHorizontal` | Waagerecht (trHorizontal) oder senkrecht (trVertical, Min oben wie TTrackBar). |
@@ -56,7 +56,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `TickMarks` | `TTickMark` | `tmBottomRight` | Lage der Teilstriche: tmBottomRight, tmTopLeft oder tmBoth. |
 | `TickStyle` | `TTickStyle` | `tsAuto` | tsAuto = Teilstriche im Abstand Frequency, tsNone = keine, tsManual = nur Anfang und Ende (manuelle Ticks per SetTick werden nicht unterstützt). |
 | `ThumbLength` | `Integer` | `20` | Durchmesser des Griffs in logischen 96-DPI-Pixeln (8..100), wie TTrackBar. |
-| `SliderVisible` | `Boolean` | `True` | False: Der Griff wird nicht gezeichnet (reine Anzeige wie ein Füllbalken). |
+| `ShowSlider` | `Boolean` | `True` | False: Der Griff wird nicht gezeichnet (reine Anzeige wie ein Füllbalken). |
 | `SelStart` | `Integer` | `0` | Anfang des hervorgehobenen Bereichs auf der Schiene (wie TTrackBar), z. B. ein empfohlener Bereich; ändert Position nicht. Nutzung: `TrackBar1.SelStart := 40; TrackBar1.SelEnd := 80;` |
 | `SelEnd` | `Integer` | `0` | Ende des hervorgehobenen Bereichs auf der Schiene (wie TTrackBar); gezeichnet, wenn SelEnd > SelStart. |
 | `ShowSelRange` | `Boolean` | `True` | False: Der Bereich aus SelStart/SelEnd wird nicht gezeichnet (wie TTrackBar). |

@@ -55,7 +55,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Icon` | `TPPGTipIcon` | `tiNone` | Symbol links neben dem Titel: keins, Info, Erfolg, Warnung oder Fehler. Werte: `tiNone`, `tiInfo`, `tiSuccess`, `tiWarning`, `tiError`. |
 | `ShowCloseButton` | `Boolean` | `True` | True: Kreuz oben rechts (nur ohne CloseButtonText, wie WinUI). |
 | `LightDismiss` | `Boolean` | `False` | True: Ein Klick daneben oder der Wechsel in eine andere Anwendung schließt die Blase (der Klick erreicht trotzdem sein Ziel). False: nur Buttons oder Esc; dann nimmt die Blase die Tastatur. |
-| `Placement` | `TPPGTipPlacementMode` | `tpAuto` | Seite des Ziels, an der die Blase erscheint: tpAuto wählt die erste Seite (oben, unten, links, rechts), auf die sie ganz passt. Werte: `tpAuto`, `tpTop`, `tpBottom`, `tpLeft`, `tpRight`. |
+| `Placement` | `TPPGTipPlacementMode` | `ttpAuto` | Seite des Ziels, an der die Blase erscheint: ttpAuto wählt die erste Seite (oben, unten, links, rechts), auf die sie ganz passt. Werte: `ttpAuto`, `ttpTop`, `ttpBottom`, `ttpLeft`, `ttpRight`. |
 | `MaxWidth` | `Integer` | `320` | Breite der Blase in logischen Pixeln (120..2000). |
 | `Preset` | `string` |  | Optik-Vorlage der Blase ('' = Standard bzw. StyleManager). |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben. |

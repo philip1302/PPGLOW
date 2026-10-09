@@ -567,7 +567,7 @@ type
     property OnGetEditText: TGetEditEvent read FOnGetEditText write FOnGetEditText;
     property OnSetEditText: TSetEditEvent read FOnSetEditText write FOnSetEditText;
     property OnFixedCellClick: TFixedCellClickEvent read FOnFixedCellClick write FOnFixedCellClick;
-    property OnTopLeftChanged: TNotifyEvent read FOnTopLeftChanged write FOnTopLeftChanged;
+    property OnTopLeftChange: TNotifyEvent read FOnTopLeftChanged write FOnTopLeftChanged;
     property OnSorted: TNotifyEvent read FOnSorted write FOnSorted;
     property Bands: TPPGGridBands read FBands write SetBands;
     /// Anzahl Spalten, die rechts stehen bleiben (z.B. Aktionsspalte).
@@ -793,7 +793,7 @@ type
     property OnSorted;
     property OnStartDock;
     property OnStartDrag;
-    property OnTopLeftChanged;
+    property OnTopLeftChange;
     property OnValidateCell;
   end;
 

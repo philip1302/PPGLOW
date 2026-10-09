@@ -230,7 +230,7 @@ type
     property Bar: IPPGMenuBarHost read FBar write FBar;
     property OnClosed: TNotifyEvent read FOnClosed write FOnClosed;
     /// Stile und eigenes Zeichnen des Ausloesers (gehoeren ihm, nicht der Schleife).
-    property MenuStyles: TPPGMenuStyles read FMenuStyles write FMenuStyles;
+    property Styles: TPPGMenuStyles read FMenuStyles write FMenuStyles;
     property OnCustomDrawItem: TPPGMenuCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
     property DrawSender: TObject read FDrawSender write FDrawSender;
   end;
@@ -266,7 +266,7 @@ type
     /// Preset ohne StyleManager ('' = des Ausloesers bzw. Standard).
     property Preset: string read FPreset write SetPreset;
     /// Bereiche des Menues (Flaeche, Hover, Trennlinien, Kuerzel).
-    property MenuStyles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
+    property Styles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
     /// Vor dem Zeichnen jedes Eintrags: Style anpassen oder selbst zeichnen.
     property OnCustomDrawItem: TPPGMenuCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
   end;
@@ -785,7 +785,7 @@ var
   ShortCol: TColor;
 begin
   It := FItems[Index];
-  MS := FLoop.MenuStyles;
+  MS := FLoop.Styles;
   PPI := ScalePPI;
   T := Tokens;
   HC := HighContrastSupport and PPGIsHighContrast;
@@ -981,7 +981,7 @@ var
   Dk: Boolean;
   C: TColor;
 begin
-  MS := FLoop.MenuStyles;
+  MS := FLoop.Styles;
   if (MS = nil) or (HighContrastSupport and PPGIsHighContrast) or UseVclStyle then
     Exit;
   Dk := UseDarkMode;
@@ -1875,7 +1875,7 @@ begin
     Loop.StyleManager := FStyleManager;
     Loop.Preset := FPreset;
     Loop.BiDiMode := BiDiMode;
-    Loop.MenuStyles := FMenuStyles;
+    Loop.Styles := FMenuStyles;
     Loop.OnCustomDrawItem := FOnCustomDrawItem;
     Loop.DrawSender := Self;
     Loop.ShowAccelerators := ShowAccelerators;

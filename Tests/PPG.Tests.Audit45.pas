@@ -17,7 +17,7 @@ uses
   PPG.PasswordEdit, PPG.Expander, PPG.ComboBox, PPG.TrackBar, PPG.ProgressBar, PPG.Hints,
   PPG.ToolBar, PPG.Ribbon, PPG.Notifications, PPG.Menus, PPG.StatusBar, PPG.NavigationView,
   PPG.FileEdit, PPG.Feedback, PPG.Kanban, PPG.Kanban.Items, PPG.Labels, PPG.PageControl,
-  PPG.ColumnComboBox, PPG.Panel, PPG.Chart, PPG.Chart.Series, PPG.Dialogs, PPG.Wizard, PPG.Gauge,
+  PPG.ColumnComboBox, PPG.Panel, PPG.NumberEdit, PPG.SpinEdit, PPG.Rating, PPG.CheckListBox, PPG.Chart, PPG.Chart.Series, PPG.Dialogs, PPG.Wizard, PPG.Gauge,
   Vcl.Imaging.pngimage
   {$IF CompilerVersion >= 34.0}, Vcl.ImageCollection, Vcl.VirtualImageList{$IFEND},
   PPG.Tests.Controls;
@@ -161,6 +161,21 @@ type
     procedure PrinterSettingsInvalidateLayout;
     procedure CollectionItemNames;
     procedure ItemImageNameResolvesAndFollows;
+  end;
+
+  /// Audit 09.10.2026, Paket 5c: einheitliche Namen und Vorgaben.
+  TNamingTests = class(TControlTestCase)
+  private
+    FItemChecks: Integer;
+    FLastIndex: Integer;
+    procedure ItemChecked(Sender: TObject; Index: Integer);
+  published
+    procedure OldNamesNotPublished;
+    procedure ProgressRingRange;
+    procedure ProgressRingRangeStreams;
+    procedure SharedDefaults;
+    procedure CheckListBoxOnItemCheck;
+    procedure UnsetColorIsClDefault;
   end;
 
 implementation
@@ -844,20 +859,20 @@ begin
   E.Parent := FForm;
   E.DataSource := FSource;
   E.DataField := 'ID';
-  CheckTrue(E.NumberKind = nkInteger, 'Ganzzahlfeld');
+  CheckTrue(E.Kind = nkInteger, 'Ganzzahlfeld');
   CheckEquals(0, E.Decimals);
   CheckEquals('1', E.Text, 'kein ",00"');
   E.DataField := 'Betrag';
-  CheckTrue(E.NumberKind = nkCurrency, 'BCD mit 2 Stellen: exakt ueber Currency');
+  CheckTrue(E.Kind = nkCurrency, 'BCD mit 2 Stellen: exakt ueber Currency');
   CheckEquals(2, E.Decimals);
   CheckTrue(E.AsCurrency = 12.34);
   E.DataField := 'Preis';
-  CheckTrue(E.NumberKind = nkFloat, 'Gleitkomma: Vorgaben');
+  CheckTrue(E.Kind = nkFloat, 'Gleitkomma: Vorgaben');
   CheckEquals(2, E.Decimals);
   // Eigene Art hat Vorrang
-  E.NumberKind := nkPercent;
+  E.Kind := nkPercent;
   E.DataField := 'ID';
-  CheckTrue(E.NumberKind = nkPercent);
+  CheckTrue(E.Kind = nkPercent);
 end;
 
 procedure TDBFix2Tests.LookupFieldAsDataField;
@@ -1149,7 +1164,7 @@ begin
   C := TPPGCheckComboBox.Create(FForm);
   C.DisplayDelimiter := '';
   T := TPPGTagEdit.Create(FForm);
-  T.Delimiters := '';
+  T.InputDelimiters := '';
   M := TMemoryStream.Create;
   try
     M.WriteComponent(C);
@@ -1167,7 +1182,7 @@ begin
     T2 := TPPGTagEdit.Create(nil);
     try
       M.ReadComponent(T2);
-      CheckEquals('', T2.Delimiters);
+      CheckEquals('', T2.InputDelimiters);
     finally
       T2.Free;
     end;
@@ -1416,7 +1431,7 @@ begin
   Col := K.Columns.AddColumn('Viele');
   for I := 1 to 40 do
     Last := K.Cards.AddCard(Col.Id, 'Karte ' + IntToStr(I), '');
-  K.OnSelectionChange := SelChange;
+  K.OnChange := SelChange;
   FSelChanges := 0;
   K.SelectedCard := Last;
   CheckTrue(K.SelectedCard = Last);
@@ -1431,12 +1446,12 @@ begin
   B := TPPGInfoBar.Create(FForm);
   B.Parent := FForm;
   B.Animation.Enabled := False;
-  CheckTrue(B.IsOpen);
+  CheckTrue(B.Open);
   B.Visible := False;
-  CheckFalse(B.IsOpen, 'Visible = False schliesst');
+  CheckFalse(B.Open, 'Visible = False schliesst');
   B.Visible := True;
-  CheckTrue(B.IsOpen, 'Visible = True oeffnet');
-  B.IsOpen := False;
+  CheckTrue(B.Open, 'Visible = True oeffnet');
+  B.Open := False;
   CheckFalse(B.Visible);
 end;
 
@@ -1740,6 +1755,171 @@ begin
 end;
 {$IFEND}
 
+{ TNamingTests }
+
+type
+  TCheckListCrack = class(TPPGCheckListBox);
+
+procedure TNamingTests.ItemChecked(Sender: TObject; Index: Integer);
+begin
+  Inc(FItemChecks);
+  FLastIndex := Index;
+end;
+
+procedure TNamingTests.OldNamesNotPublished;
+type
+  TPair = record
+    Cls: TClass;
+    Old, New: string;
+  end;
+  function P(Cls: TClass; const Old, New: string): TPair;
+  begin
+    Result.Cls := Cls;
+    Result.Old := Old;
+    Result.New := New;
+  end;
+var
+  Pairs: TArray<TPair>;
+  X: TPair;
+begin
+  // Keine Aliase (Entscheidung 09.10.2026): der alte Name ist weg, der neue da
+  Pairs := [
+    P(TPPGNumberEdit, 'MinValue', 'Min'), P(TPPGNumberEdit, 'MaxValue', 'Max'),
+    P(TPPGNumberEdit, 'NumberKind', 'Kind'), P(TPPGSpinEdit, 'MinValue', 'Min'),
+    P(TPPGSpinEdit, 'MaxValue', 'Max'), P(TPPGRating, 'MaxValue', 'Max'),
+    P(TPPGTrackBar, 'SliderVisible', 'ShowSlider'), P(TPPGBadge, 'BadgeColor', 'Severity'),
+    P(TPPGInfoBar, 'IsOpen', 'Open'), P(TPPGInfoBar, 'IsClosable', 'ShowCloseButton'),
+    P(TPPGInfoBar, 'BarStyle', 'Style'), P(TPPGStatusBar, 'BarStyle', 'Style'),
+    P(TPPGTagEdit, 'Delimiters', 'InputDelimiters'), P(TPPGColumnComboBox, 'ColumnDelimiter', 'Delimiter'),
+    P(TPPGPageControl, 'OnCloseQuery', 'OnClosing'), P(TPPGPageControl, 'ShowCloseButtons', 'ShowCloseButton'),
+    P(TPPGPageControl, 'TabStyles', 'Styles'), P(TPPGComboBox, 'ListStyles', 'Styles'),
+    P(TPPGKanban, 'KanbanStyles', 'Styles'), P(TPPGKanban, 'OnSelectionChange', 'OnChange'),
+    P(TPPGNavigationView, 'NavStyles', 'Styles'), P(TPPGNavigationView, 'OnItemInvoked', 'OnItemClick'),
+    P(TPPGNavigationView, 'OnSelectionChange', 'OnChange'), P(TPPGRibbon, 'OnTabChange', 'OnChange'),
+    P(TPPGRibbon, 'OnTabChanging', 'OnChanging'), P(TPPGRibbon, 'OnDrawGalleryItem', 'OnCustomDrawGalleryItem'),
+    P(TPPGWizard, 'OnPageChanged', 'OnChange'), P(TPPGGrid, 'OnTopLeftChanged', 'OnTopLeftChange'),
+    P(TPPGChart, 'ChartStyles', 'Styles'), P(TPPGGaugeRange, 'RangeColor', 'Kind'),
+    P(TPPGGaugeRange, 'CustomColor', 'Color'), P(TPPGNotificationCenter, 'Animations', 'Animation'),
+    P(TPPGPopupMenu, 'MenuStyles', 'Styles')];
+  for X in Pairs do
+  begin
+    CheckTrue(GetPropInfo(X.Cls, X.Old) = nil, X.Cls.ClassName + '.' + X.Old + ' noch veroeffentlicht');
+    CheckTrue(GetPropInfo(X.Cls, X.New) <> nil, X.Cls.ClassName + '.' + X.New + ' fehlt');
+  end;
+end;
+
+procedure TNamingTests.ProgressRingRange;
+var
+  R: TPPGProgressRing;
+begin
+  R := TPPGProgressRing.Create(FForm);
+  R.Parent := FForm;
+  CheckEquals(0, R.Min);
+  CheckEquals(100, R.Max);
+  R.Max := 250;
+  R.Value := 200;
+  CheckEquals(200, R.Value, 'Wert ueber 100 im neuen Bereich');
+  R.Max := 150;
+  CheckEquals(150, R.Value, 'kleineres Max zieht den Wert nach');
+  R.Min := 50;
+  CheckEquals(50, R.Min);
+  try
+    R.Min := 150;
+    Fail('Min >= Max muss abgelehnt werden');
+  except
+    on EPPGPropertyError do ;
+  end;
+  try
+    R.Value := 10;
+    Fail('Wert unter Min muss abgelehnt werden');
+  except
+    on EPPGPropertyError do ;
+  end;
+  CheckEquals(150, R.Value);
+end;
+
+procedure TNamingTests.ProgressRingRangeStreams;
+const
+  // Value steht vor Max: beim Laden wird erst in Loaded geprueft
+  Dfm =
+    'object Root: TPPGTestRoot'#13#10 +
+    '  object R: TPPGProgressRing'#13#10 +
+    '    Value = 180'#13#10 +
+    '    Min = 20'#13#10 +
+    '    Max = 200'#13#10 +
+    '  end'#13#10 +
+    'end';
+var
+  Root: TPPGTestRoot;
+  R: TPPGProgressRing;
+begin
+  Root := TPPGTestRoot.CreateNew(nil);
+  try
+    ReadRoot(Root, Dfm);
+    R := TPPGProgressRing(Root.FindComponent('R'));
+    CheckEquals(20, R.Min);
+    CheckEquals(200, R.Max);
+    CheckEquals(180, R.Value);
+  finally
+    Root.Free;
+  end;
+end;
+
+procedure TNamingTests.SharedDefaults;
+var
+  C: TPPGComboBox;
+  CC: TPPGCheckComboBox;
+  CO: TPPGColumnComboBox;
+begin
+  C := TPPGComboBox.Create(FForm);
+  CC := TPPGCheckComboBox.Create(FForm);
+  CO := TPPGColumnComboBox.Create(FForm);
+  CheckEquals(PPGDefaultDropDownCount, C.DropDownCount, 'ComboBox');
+  CheckEquals(PPGDefaultDropDownCount, CC.DropDownCount, 'CheckComboBox');
+  CheckEquals(PPGDefaultDropDownCount, CO.DropDownCount, 'ColumnComboBox');
+  CO.DropDownCount := PPGMaxDropDownCount;
+  try
+    CO.DropDownCount := PPGMaxDropDownCount + 1;
+    Fail('DropDownCount ueber der Grenze');
+  except
+    on EPPGPropertyError do ;
+  end;
+  // ShowHint hat die VCL-Vorgabe (False), auch bei ToolBar und Ribbon
+  CheckFalse(TPPGToolBar.Create(FForm).ShowHint, 'ToolBar');
+  CheckFalse(TPPGNavigationView.Create(FForm).ShowHint, 'NavigationView');
+  CheckFalse(TPPGRibbon.Create(FForm).ShowHint, 'Ribbon');
+end;
+
+procedure TNamingTests.CheckListBoxOnItemCheck;
+var
+  L: TPPGCheckListBox;
+begin
+  L := TPPGCheckListBox.Create(FForm);
+  L.Parent := FForm;
+  L.Items.CommaText := 'A,B,C';
+  L.OnItemCheck := ItemChecked;
+  L.Checked[0] := True;
+  CheckEquals(0, FItemChecks, 'Code loest nichts aus');
+  TCheckListCrack(L).ToggleByUser(2);
+  CheckEquals(1, FItemChecks);
+  CheckEquals(2, FLastIndex);
+  CheckTrue(L.Checked[2]);
+end;
+
+procedure TNamingTests.UnsetColorIsClDefault;
+var
+  G: TPPGGauge;
+  K: TPPGKanban;
+begin
+  G := TPPGGauge.Create(FForm);
+  CheckEquals(Integer(clDefault), Integer(G.Ranges.Add.Color), 'GaugeRange');
+  K := TPPGKanban.Create(FForm);
+  CheckEquals(Integer(clDefault), Integer(K.Columns.Add.Color), 'Kanban-Spalte');
+  CheckFalse(PPGColorIsSet(clDefault));
+  CheckFalse(PPGColorIsSet(clNone));
+  CheckTrue(PPGColorIsSet(clRed));
+end;
+
 initialization
   RegisterTest('Audit45', TDBBindingHoldTests.Suite);
   RegisterTest('Audit45', TDBFixTests.Suite);
@@ -1747,6 +1927,7 @@ initialization
   RegisterTest('Audit45', TStreamingFixTests.Suite);
   RegisterTest('Audit45', TSetterFixTests.Suite);
   RegisterTest('Audit45', TEffectFixTests.Suite);
-  RegisterClasses([TPPGHintManager, TPanel, TPPGRibbon, TPPGTestRoot]);
+  RegisterTest('Audit45', TNamingTests.Suite);
+  RegisterClasses([TPPGHintManager, TPanel, TPPGRibbon, TPPGTestRoot, TPPGProgressRing]);
 
 end.

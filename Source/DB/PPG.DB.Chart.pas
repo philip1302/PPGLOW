@@ -122,7 +122,7 @@ type
     property LegendPosition;
     property ShowTooltips;
     property LegendToggle;
-    property ChartStyles;
+    property Styles;
     property Align;
     property Anchors;
     property BiDiMode;

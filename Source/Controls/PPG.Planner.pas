@@ -22,8 +22,8 @@ unit PPG.Planner;
     (OnCreateAppointment, abbrechbar) und oeffnet die Bearbeitung des
     Betreffs. Vorkommen einer Serie werden beim Aendern herausgeloest.
   - Ereignisse: OnAppointmentChanging (abbrechbar, Werte aenderbar),
-    OnAppointmentChanged, OnAppointmentCreated, OnDeleting, OnAppointmentOpen,
-    OnSelectionChange, OnRangeChange. Code (Date := ...) loest nur
+    OnAppointmentChange, OnAppointmentCreated, OnDeleting, OnAppointmentOpen,
+    OnChange, OnRangeChange. Code (Date := ...) loest nur
     OnRangeChange aus (die DB-Variante laedt darueber nach).
   - Tastatur: Pfeile wandern durch die Zeitfelder (Umschalt erweitert), Tab
     durch die Termine, Strg+Pfeile verschieben den gewaehlten Termin,
@@ -456,7 +456,7 @@ type
     /// Kategorien mit Name und Farbe (Appointment.Category = Index).
     property Categories: TPPGPlannerCategories read FCategories write SetCategories;
     /// Bereiche (Hintergrund, Kopf, Zeitleiste, Arbeitszeit, Heute, Jetzt-Linie ...).
-    property PlannerStyles: TPPGPlannerStyles read FPlannerStyles write SetPlannerStyles;
+    property Styles: TPPGPlannerStyles read FPlannerStyles write SetPlannerStyles;
     property OnCustomDrawAppointment: TPPGPlannerDrawEvent read FOnCustomDrawAppointment
       write FOnCustomDrawAppointment;
     property View: TPPGPlannerView read FView write SetView default pvWeek;
@@ -487,13 +487,13 @@ type
     property TimeZoneMode: TPPGTimeZoneMode read GetTimeZoneMode write SetTimeZoneMode default tzmUtc;
     property Calendar: TPPGCustomCalendar read FCalendar write SetCalendar;
     property OnAppointmentChanging: TPPGAppointmentChangingEvent read FOnAppointmentChanging write FOnAppointmentChanging;
-    property OnAppointmentChanged: TPPGAppointmentEvent read FOnAppointmentChanged write FOnAppointmentChanged;
+    property OnAppointmentChange: TPPGAppointmentEvent read FOnAppointmentChanged write FOnAppointmentChanged;
     property OnAppointmentCreated: TPPGAppointmentEvent read FOnAppointmentCreated write FOnAppointmentCreated;
     property OnAppointmentOpen: TPPGAppointmentEvent read FOnAppointmentOpen write FOnAppointmentOpen;
     property OnDeleting: TPPGAppointmentAllowEvent read FOnDeleting write FOnDeleting;
     property OnCreateAppointment: TPPGCreateAppointmentEvent read FOnCreateAppointment write FOnCreateAppointment;
     property OnGetAppointmentColor: TPPGAppointmentColorEvent read FOnGetAppointmentColor write FOnGetAppointmentColor;
-    property OnSelectionChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
+    property OnChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
     property OnRangeChange: TNotifyEvent read FOnRangeChange write FOnRangeChange;
     property SeriesEditMode: TPPGSeriesEditMode read FSeriesEditMode write FSeriesEditMode default semAsk;
     /// Ohne OnAppointmentOpen: Doppelklick/Enter oeffnen den Termin-Dialog
@@ -580,7 +580,7 @@ type
     property Appointments;
     property Resources;
     property Categories;
-    property PlannerStyles;
+    property Styles;
     property View;
     property Date;
     property DayCount;
@@ -625,14 +625,14 @@ type
     property Touch;
     property OnGesture;
     property OnAppointmentChanging;
-    property OnAppointmentChanged;
+    property OnAppointmentChange;
     property OnAppointmentCreated;
     property OnAppointmentOpen;
     property OnDeleting;
     property OnCreateAppointment;
     property OnGetAppointmentColor;
     property OnCustomDrawAppointment;
-    property OnSelectionChange;
+    property OnChange;
     property OnRangeChange;
     property SeriesEditMode;
     property DefaultEditor;
@@ -682,7 +682,7 @@ type
   TPlannerColors = record
     HC: Boolean;
     Fill, Alt, Line, LineSoft, Text, Secondary, Accent, OnAccent, NowCol, Header: TColor;
-    // Anpassbarkeit (PlannerStyles)
+    // Anpassbarkeit (Styles)
     HeaderText, RulerText, TodayText, TodayBar, AppText, SelSlot: TColor;
   end;
 

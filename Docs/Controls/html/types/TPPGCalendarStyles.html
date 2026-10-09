@@ -5,16 +5,16 @@
 <p>Typ in Unit <code>PPG.Calendar</code> - Basis <code>TPPGStyleGroup</code></p>
 <p>Bereiche des Kalenders (nur gesetzte Werte zaehlen, clDefault = Preset).</p>
 <p>Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, Tage anderer Monate und Kalenderwochen. Nicht gesetzte Werte kommen aus dem Preset.</p>
-<p>Nutzung: <code>PPGCalendar1.CalendarStyles.Weekend.TextColor := clMaroon;</code></p>
+<p>Nutzung: <code>PPGCalendar1.Styles.Weekend.TextColor := clMaroon;</code></p>
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
-<tr><td><code>Background</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Hintergrund des Kalenders: Color = Fl&#228;che, TextColor = Text der Tage, BorderColor = Rahmen. Nutzung: <code>Cal.CalendarStyles.Background.Color := $00FAFAFA;</code></td></tr>
-<tr><td><code>Header</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Titelzeile (Monat und Jahr) samt Bl&#228;tterpfeilen: TextColor und Schrift. Nutzung: <code>Cal.CalendarStyles.Header.FontStyle := [fsBold];</code></td></tr>
+<tr><td><code>Background</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Hintergrund des Kalenders: Color = Fl&#228;che, TextColor = Text der Tage, BorderColor = Rahmen. Nutzung: <code>Cal.Styles.Background.Color := $00FAFAFA;</code></td></tr>
+<tr><td><code>Header</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Titelzeile (Monat und Jahr) samt Bl&#228;tterpfeilen: TextColor und Schrift. Nutzung: <code>Cal.Styles.Header.FontStyle := [fsBold];</code></td></tr>
 <tr><td><code>DayNames</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Zeile mit den Wochentagsnamen (Mo, Di …): TextColor und Schrift.</td></tr>
 <tr><td><code>Today</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Markierung von heute: BorderColor = Ring um den Tag, TextColor = Schrift.</td></tr>
 <tr><td><code>Selected</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Gew&#228;hlte Tage: Color = Fl&#228;che der Markierung, TextColor = Schrift darauf.</td></tr>
-<tr><td><code>Weekend</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Samstag und Sonntag: Color, TextColor und Schrift, z. B. Wochenenden rot hervorheben. Nutzung: <code>Cal.CalendarStyles.Weekend.TextColor := clMaroon;</code></td></tr>
+<tr><td><code>Weekend</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Samstag und Sonntag: Color, TextColor und Schrift, z. B. Wochenenden rot hervorheben. Nutzung: <code>Cal.Styles.Weekend.TextColor := clMaroon;</code></td></tr>
 <tr><td><code>OtherMonth</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Tage des Vor- und Folgemonats, die die Monatsansicht auff&#252;llen: TextColor (meist ged&#228;mpft).</td></tr>
 <tr><td><code>WeekNumbers</code></td><td><a href="TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Spalte der Kalenderwochen (sichtbar mit ShowWeekNumbers): TextColor und Schrift.</td></tr>
 </table>

@@ -7,4 +7,4 @@
 
 ## Anpassung
 
-- Je Feld `Color`, `TextColor`, `FontStyle`; `BarStyle` für die Leiste.
+- Je Feld `Color`, `TextColor`, `FontStyle`; `Style` für die Leiste.

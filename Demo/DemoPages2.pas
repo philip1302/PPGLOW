@@ -282,8 +282,8 @@ begin
   FJump := TPPGSpinEdit.Create(Own);
   FJump.Parent := Card;
   FJump.SetBounds(CardPad + 290, Y + 24, 150, CtlH);
-  FJump.MinValue := 1;
-  FJump.MaxValue := 1000000;
+  FJump.Min := 1;
+  FJump.Max := 1000000;
   FJump.Increment := 1000;
   FJump.Value := 500000;
   FJumpBtn := NewButton(Own, Card, CardPad + 290, Y + 66, 150, 'Springen', JumpClick, True);
@@ -575,7 +575,7 @@ begin
     FSetup.Items.EndUpdate;
   end;
   FSetup.FullExpand;
-  FSetup.OnChecked := SetupChecked;
+  FSetup.OnItemCheck := SetupChecked;
   FSetupResult := NewResult(Own, Card, 'Ausgew{ae}hlt');
   SetupChecked(nil, nil);
 
@@ -978,7 +978,7 @@ begin
   FVirtual.DefaultColWidth := 90;
   FVirtual.ColWidths[0] := 80;
   FVirtual.OnGetCellText := VirtualText;
-  FVirtual.OnTopLeftChanged := VirtualScroll;
+  FVirtual.OnTopLeftChange := VirtualScroll;
   FVirtual.OnScroll := VirtualScroll;
   FVirtualResult := NewResult(Own, Card, 'Sichtbar ab Zeile');
   VirtualScroll(nil);

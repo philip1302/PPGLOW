@@ -558,11 +558,11 @@ type
     property LargeImages: TCustomImageList read FLargeImages write SetLargeImages;
     property KeyTipsEnabled: Boolean read FKeyTipsEnabled write FKeyTipsEnabled default True;
     property OnItemClick: TPPGRibbonItemEvent read FOnItemClick write FOnItemClick;
-    property OnTabChange: TNotifyEvent read FOnTabChange write FOnTabChange;
-    property OnTabChanging: TPPGRibbonTabChangingEvent read FOnTabChanging write FOnTabChanging;
+    property OnChange: TNotifyEvent read FOnTabChange write FOnTabChange;
+    property OnChanging: TPPGRibbonTabChangingEvent read FOnTabChanging write FOnTabChanging;
     property OnGalleryClick: TPPGRibbonGalleryEvent read FOnGalleryClick write FOnGalleryClick;
     property OnGetGalleryItem: TPPGRibbonGetGalleryItemEvent read FOnGetGalleryItem write FOnGetGalleryItem;
-    property OnDrawGalleryItem: TPPGRibbonDrawGalleryItemEvent read FOnDrawGalleryItem
+    property OnCustomDrawGalleryItem: TPPGRibbonDrawGalleryItemEvent read FOnDrawGalleryItem
       write FOnDrawGalleryItem;
     property OnLauncherClick: TPPGRibbonGroupEvent read FOnLauncherClick write FOnLauncherClick;
     property OnMinimizedChange: TNotifyEvent read FOnMinimizedChange write FOnMinimizedChange;
@@ -604,16 +604,16 @@ type
     property ParentFont;
     property ParentShowHint;
     property PopupMenu;
-    property ShowHint default True;
+    property ShowHint;
     property Visible;
     property Touch;
     property OnGesture;
     property OnItemClick;
-    property OnTabChange;
-    property OnTabChanging;
+    property OnChange;
+    property OnChanging;
     property OnGalleryClick;
     property OnGetGalleryItem;
-    property OnDrawGalleryItem;
+    property OnCustomDrawGalleryItem;
     property OnLauncherClick;
     property OnMinimizedChange;
     property OnQuickAccessChange;
@@ -1383,7 +1383,6 @@ begin
   FDown := NoHit;
   FContextHit := NoHit;
   TabStop := False;
-  ShowHint := True;
   Align := alTop;
   Width := 600;
   Height := 140;
@@ -3326,7 +3325,7 @@ begin
     if IsRectEmpty(FTabRects[I]) or not FTabs[I].IsContextual then
       Continue;
     Ctx := FTabs[I].ContextColor;
-    if (Ctx = clNone) or C.HC then
+    if not PPGColorIsSet(Ctx) or C.HC then
       Ctx := C.Accent
     else
       Ctx := PPGColorToRGB(Ctx);
@@ -3382,7 +3381,7 @@ begin
     else if FTabs[I].IsContextual and not C.HC then
     begin
       Ctx := FTabs[I].ContextColor;
-      if Ctx = clNone then
+      if not PPGColorIsSet(Ctx) then
         Ctx := C.Accent
       else
         Ctx := PPGColorToRGB(Ctx);

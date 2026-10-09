@@ -465,7 +465,7 @@ begin
     FNav.EndItemsUpdate;
   end;
   FNav.PageControl := FPages;
-  FNav.OnSelectionChange := NavSelectionChange;
+  FNav.OnChange := NavSelectionChange;
   FNav.Selected := FNav.Items[0];
 end;
 
@@ -1135,7 +1135,7 @@ begin
   FReport := TStringList.Create;
   try
     FFailures := 0;
-    FNotify.Animations := False;
+    FNotify.Animation.Enabled := False;
     for I := 0 to FPageObjects.Count - 1 do
     begin
       ShowPage(I);

@@ -800,7 +800,7 @@ begin
   try
     Num := TPPGNumberEdit.Create(FForm);
     Num.Parent := FForm;
-    Num.NumberKind := nkCurrency;
+    Num.Kind := nkCurrency;
     Num.ShowSpinButtons := True;
     Num.Value := 1234.5;
     Mask := TPPGMaskEdit.Create(FForm);

@@ -30,7 +30,7 @@ TPPGWizard + TPPGWizardPage - Schritt-Assistent (Phase 11g).
 - Seiten wie beim TPPGPageControl: jede TPPGWizardPage mit diesem Parent ist ein Schritt (DFM-Reihenfolge = Schrittfolge, GetChildren). Nur die aktive Seite ist sichtbar, auch im Designer (csNoDesignVisible).
 - Schritt-Anzeige oben oder links (StepPosition): Kreise mit Nummer bzw. Haekchen, verbindende Linie, Titel = Caption der Seite. Seiten mit PageVisible = False werden uebersprungen und nicht angezeigt.
 - Leiste unten: Zurueck / Weiter (auf dem letzten Schritt: Fertig) / Abbrechen. Enter = Weiter (Default), Esc = Abbrechen, Mnemonics uebersetzbar (Alt+W/Alt+Z im Deutschen).
-- Ereignisse nur bei Anwenderaktionen (Buttons, Next/Back/Finish/Cancel als deren Gegenstueck): OnCanAdvance(Page, Allow) vor jedem Weiter/Fertig, OnPageChanged, OnFinish, OnCancel. ActivePage aus Code: ohne Ereignisse.
+- Ereignisse nur bei Anwenderaktionen (Buttons, Next/Back/Finish/Cancel als deren Gegenstueck): OnCanAdvance(Page, Allow) vor jedem Weiter/Fertig, OnChange, OnFinish, OnCancel. ActivePage aus Code: ohne Ereignisse.
 - Ohne OnFinish/OnCancel in einem modalen Formular: ModalResult mrOk bzw. mrCancel.
 - Klick auf einen erledigten Schritt geht dorthin zurueck; im Designer wechselt ein Klick auf einen Schritt die Seite.
 - Screenreader: Name "Schritt x von y: Titel", Seiten mit Rolle Eigenschaftsseite.
@@ -75,7 +75,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
 | `OnCanAdvance` | `TPPGWizardCanAdvanceEvent` `(Sender: TObject; Page: TPPGWizardPage; var Allow: Boolean)` | Vor jedem „Weiter" bzw. „Fertig"; Page ist der aktuelle Schritt, Allow := False bleibt auf der Seite (z. B. bei unvollständigen Eingaben). Nutzung: `Allow := (Page <> pgAdresse) or (edName.Text <> '');` |
-| `OnPageChanged` | `TNotifyEvent` `(Sender: TObject)` | Der Anwender hat den Schritt gewechselt (Weiter, Zurück oder Klick auf einen erledigten Schritt). |
+| `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Der Anwender hat den Schritt gewechselt (Weiter, Zurück oder Klick auf einen erledigten Schritt). |
 | `OnFinish` | `TNotifyEvent` `(Sender: TObject)` | „Fertig" auf dem letzten Schritt wurde gewählt (nach OnCanAdvance). Ohne Ereignis schließt ein modales Formular mit mrOk. |
 | `OnCancel` | `TNotifyEvent` `(Sender: TObject)` | „Abbrechen" (bzw. Esc) wurde gewählt. Ohne Ereignis schließt ein modales Formular mit mrCancel. |
 | `OnResize` | `TNotifyEvent` `(Sender: TObject)` | Nach einer Größenänderung. |

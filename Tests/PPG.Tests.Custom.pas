@@ -1422,11 +1422,11 @@ begin
   C.ItemsEx.Add('Drei');
   C.ItemsEx.Add('Vier');
   C.ItemsEx.Add('Fuenf');
-  C.ListStyles.AlternateRow.Color := clAqua;
+  C.Styles.AlternateRow.Color := clAqua;
   C.Animation.Enabled := False; // Liste sofort in voller Groesse
   C.OnCustomDrawItem := DrawItem;
   CheckTrue(Supports(C, IPPGListStylesSource, LS));
-  CheckTrue(LS.GetListStyles = C.ListStyles);
+  CheckTrue(LS.GetListStyles = C.Styles);
   FForm.Show;
   try
     C.DroppedDown := True;
@@ -1530,7 +1530,7 @@ var
 begin
   PC := NewPages(3);
   PC.Pages[1].TabColor := clYellow;
-  PC.TabStyles.ActiveTab.Color := clAqua;
+  PC.Styles.ActiveTab.Color := clAqua;
   R := PC.TabRect(1);
   CheckEquals(Integer(clYellow), Integer(Px(PC, R.Left + 4, (R.Top + R.Bottom) div 2)), 'TabColor');
   R := PC.TabRect(0);
@@ -1616,11 +1616,11 @@ begin
     T.ScrollOpposite := True;
     T.Style := tsFlatButtons;
     T.OwnerDraw := True;
-    T.TabStyles.HotTab.TextColor := clRed;
+    T.Styles.HotTab.TextColor := clRed;
     S := ComponentToText(T);
     CheckTrue(Pos('MultiLine = True', S) > 0, S);
     CheckTrue(Pos('Style = tsFlatButtons', S) > 0, S);
-    CheckTrue(Pos('TabStyles.HotTab.TextColor = clRed', S) > 0, S);
+    CheckTrue(Pos('Styles.HotTab.TextColor = clRed', S) > 0, S);
     T.MultiLine := False;
     TextToComponent(S, T);
     CheckTrue(T.MultiLine);
@@ -1672,7 +1672,7 @@ begin
   N := TPPGNavigationView.Create(FForm);
   N.Parent := FForm;
   N.SetBounds(0, 0, 250, 280);
-  N.NavStyles.Pane.Color := clOlive;
+  N.Styles.Pane.Color := clOlive;
   CheckEquals(Integer(clOlive), Integer(Px(N, 120, N.Height - 6)));
 end;
 
@@ -1686,7 +1686,7 @@ begin
   S.Align := alNone;
   S.SetBounds(0, 0, 300, 28);
   S.SizeGrip := False;
-  S.BarStyle.Color := clSilver;
+  S.Style.Color := clSilver;
   P := S.Panels.Add;
   P.Width := 100;
   P.Color := clYellow;
@@ -1739,12 +1739,12 @@ begin
   It := TMenuItem.Create(M);
   It.Caption := 'B';
   M.Items.Add(It);
-  M.MenuStyles.Menu.Color := clYellow;
+  M.Styles.Menu.Color := clYellow;
   FForm.Show;
   L := TPPGMenuLoop.Create;
   try
     L.Animate := False;
-    L.MenuStyles := M.MenuStyles;
+    L.Styles := M.Styles;
     L.OnCustomDrawItem := DrawMenu;
     L.DrawSender := M;
     L.OpenPopup(M.Items, Rect(100, 100, 100, 100), ppsBelow, False);
@@ -1844,9 +1844,9 @@ begin
   C.SetBounds(0, 0, 300, 300);
   C.Date := EncodeDate(2026, 10, 14);
   N := Count(C, clYellow);
-  C.CalendarStyles.Weekend.Color := clYellow;
+  C.Styles.Weekend.Color := clYellow;
   CheckTrue(Count(C, clYellow) > N + 200, 'Wochenende');
-  C.CalendarStyles.Selected.Color := clLime;
+  C.Styles.Selected.Color := clLime;
   CheckTrue(Count(C, clLime) > 100, 'Auswahl');
   FHoliday := EncodeDate(2026, 10, 15);
   C.OnCustomDrawDay := DrawDay;
@@ -1861,9 +1861,9 @@ var
 begin
   D := TPPGDatePicker.Create(nil);
   try
-    D.CalendarStyles.Today.BorderColor := clRed;
+    D.Styles.Today.BorderColor := clRed;
     S := ComponentToText(D);
-    CheckTrue(Pos('CalendarStyles.Today.BorderColor = clRed', S) > 0, S);
+    CheckTrue(Pos('Styles.Today.BorderColor = clRed', S) > 0, S);
   finally
     D.Free;
   end;
@@ -1888,7 +1888,7 @@ begin
   A.Subject := 'Termin';
   A.Category := 0;
   CheckTrue(Count(P, $00008000) > 20, 'Kategoriefarbe als Streifen');
-  P.PlannerStyles.NonWorkHours.Color := clYellow;
+  P.Styles.NonWorkHours.Color := clYellow;
   P.WorkStart := 9 * 60;
   CheckTrue(Count(P, clYellow) > 200, 'Ausserhalb der Arbeitszeit');
   CheckEquals(0, FErrors.Count, FErrors.Text);
@@ -1931,8 +1931,8 @@ begin
   Card := K.Cards.Add;
   Card.Title := 'B';
   Card.ColumnId := Col.Id;
-  K.KanbanStyles.Column.Color := clYellow;
-  K.KanbanStyles.Card.Color := clAqua;
+  K.Styles.Column.Color := clYellow;
+  K.Styles.Card.Color := clAqua;
   CheckTrue(Count(K, clYellow) > 500, 'Spaltenflaeche');
   CheckTrue(Count(K, clAqua) > 500, 'Kartenflaeche');
   K.OnCustomDrawCard := DrawCard;
@@ -1952,10 +1952,10 @@ begin
   S := C.Series.Add;
   S.Title := 'Serie';
   S.ValuesText := '1;5;3;8';
-  C.ChartStyles.Title.TextColor := clRed;
-  C.ChartStyles.Title.Font.Size := 20;
-  C.ChartStyles.Grid.Color := clLime;
-  C.ChartStyles.Legend.TextColor := clBlue;
+  C.Styles.Title.TextColor := clRed;
+  C.Styles.Title.Font.Size := 20;
+  C.Styles.Grid.Color := clLime;
+  C.Styles.Legend.TextColor := clBlue;
   CheckTrue(Count(C, clRed) > 50, 'Titelfarbe');
   CheckTrue(CountGreenish(C) > 50, 'Gitterlinien (geglaettet)');
   CheckTrue(Count(C, clBlue) > 5, 'Legende');
@@ -2008,7 +2008,7 @@ begin
   I.Parent := FForm;
   I.SetBounds(0, 0, 300, 60);
   I.Message := 'Hinweis';
-  I.BarStyle.Color := clYellow;
+  I.Style.Color := clYellow;
   CheckTrue(Count(I, clYellow) > 1000, 'InfoBar-Flaeche');
 end;
 

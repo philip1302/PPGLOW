@@ -251,7 +251,7 @@ type
     property ParentFont;
     property ParentShowHint;
     property PopupMenu;
-    property ShowHint default True;
+    property ShowHint;
     property TabOrder;
     property TabStop default True;
     property Visible;
@@ -778,7 +778,6 @@ begin
   FDownPart := -1;
   FFocusPart := -1;
   TabStop := True;
-  ShowHint := True;
   Align := alTop;
   Width := 400;
   Height := 40;

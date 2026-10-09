@@ -13,7 +13,7 @@ Eine Registerkarte: Beschriftung, Gruppen, KeyTip und Kontext (für farbig marki
 | `Visible` | `Boolean` | `True` | False: Registerkarte ausgeblendet (typisch für Kontext-Karten). |
 | `KeyTip` | `string` |  | Eigener KeyTip der Registerkarte; leer = automatisch aus der Beschriftung. |
 | `ContextName` | `string` |  | Name des Kontexts (z. B. „Bildtools"); leer = normale Registerkarte. Benachbarte Karten mit gleichem Namen bilden eine farbige Gruppe; meist zusammen mit Visible nur bei passender Auswahl zeigen. Nutzung: `tabBildFormat.ContextName := 'Bildtools'; tabBildFormat.Visible := BildGewaehlt;` |
-| `ContextColor` | `TColor` | `clNone` | Farbe einer Kontext-Registerkarte (Band über der Karte); clNone = Akzentfarbe des Presets. |
+| `ContextColor` | `TColor` | `clDefault` | Farbe einer Kontext-Registerkarte (Band über der Karte); clNone = Akzentfarbe des Presets. |
 | `Tag` | `NativeInt` | `0` | Freier Ganzzahlwert. |
 
 ## Verwendet in

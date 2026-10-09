@@ -29,7 +29,9 @@ Datenmenge (Phase 9c), wie TDBLookupComboBox.
 - DataSource/DataField: das Schluesselfeld der Haupt-Datenmenge. Auswahl schreibt KeyField des gewaehlten Eintrags hinein.
 - Die Liste wird beim Oeffnen bzw. Aendern der Listen-Datenmenge einmal vollstaendig gelesen (DisableControls, Lesezeichen wird wiederhergestellt). Fuer sehr grosse Nachschlage-Tabellen ist ein Filter in der Abfrage der bessere Weg.
 - Immer csDropDownList: Tippen sucht wie bei der ComboBox (Tippsuche).
-- Nicht unterstuetzt: Nachschlagefelder (TField.FieldKind = fkLookup) als DataField - dafuer ListSource/KeyField/ListField direkt setzen.
+- Nachschlagefeld (TField.FieldKind = fkLookup) als DataField (Audit 4b): geschrieben wird sein Schluesselfeld, Liste, KeyField und ListField kommen aus dem Feld, solange sie nicht gesetzt sind. Mehrfachschluessel ('A;B') werden nicht unterstuetzt und als Warnung gemeldet.
+- NullValueKey (wie TDBLookupComboBox): diese Taste leert den Wert.
+- Aendert sich die Listen-Datenmenge, wird die Liste gebuendelt neu gelesen (eine gepostete Nachricht fuer mehrere Aenderungen) bzw. spaetestens, wenn sie gebraucht wird.
 
 ## PPGlow-Eigenschaften
 
@@ -40,9 +42,11 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `KeyField` | `string` |  | Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben. |
 | `ListField` | `string` |  | Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile. Nutzung: `Lookup1.ListSource := dsKunden; Lookup1.KeyField := 'ID'; Lookup1.ListField := 'Name;Ort';` |
 | `ListSource` | `TDataSource` |  | Datenquelle der Nachschlage-Tabelle. Ihre Datenmenge wird beim Öffnen einmal vollständig gelesen; für sehr große Tabellen vorher in der Abfrage filtern. |
+| `NullValueKey` | `TShortCut` | `0` | Tastenkürzel, das den Wert leert und Null ins Feld schreibt (z. B. Entf oder Strg+Entf); 0 = keines. Wie TDBLookupComboBox.NullValueKey. Nutzung: `Lookup1.NullValueKey := ShortCut(VK_DELETE, [ssCtrl]);` |
 | `Items` | `TStrings` |  | Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte. |
 | `ItemsEx` | [TPPGItems](types/TPPGItems.md) |  | Reiche Einträge mit Bild (aus Images), Detailzeile, Plakette und Markup. Sind welche vorhanden, sind sie die Einträge der Liste. Nutzung: `with ComboBox1.ItemsEx.Add('Berlin', 2) do Detail := '3,7 Mio. Einwohner';` |
 | `Style` | `TComboBoxStyle` | `csDropDownList` | csDropDown: freie Eingabe im Feld plus Liste (mit AutoComplete und FilterMode); csDropDownList: nur Auswahl aus der Liste, Tippen springt per Anfangsbuchstaben. csSimple verhält sich wie csDropDown, csOwnerDraw* wie csDropDownList (Zeichnen über OnCustomDrawItem). |
+| `ShowRequired` | `Boolean` | `False` | True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet. |
 | `DataField` | `string` |  | Feld, das angezeigt und geschrieben wird. Bei TPPGDBComboBox der gewählte bzw. eingegebene Text; bei TPPGDBLookupComboBox das Schlüsselfeld der Haupt-Datenmenge (bekommt KeyField des gewählten Eintrags). |
 | `DataSource` | `TDataSource` |  | Datenquelle mit der Datenmenge, aus der DataField kommt. |
 | `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. |
@@ -55,7 +59,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
 | `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
 | `FilterMode` | `TPPGFilterMode` | `fmNone` | Filtern beim Tippen (nur Style = csDropDown): fmNone zeigt immer alle Einträge, fmPrefix nur die mit diesem Anfang, fmContains alle, die den Text irgendwo enthalten. Die Liste klappt dabei auf. Werte: `fmNone`, `fmPrefix`, `fmContains`. Nutzung: Für lange Listen: `ComboBox1.FilterMode := fmContains;` |
-| `ListStyles` | [TPPGListStyles](types/TPPGListStyles.md) |  | Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: `ComboBox1.ListStyles.AlternateRow.Color := $00FAF7F2;` |
+| `Styles` | [TPPGListStyles](types/TPPGListStyles.md) |  | Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: `ComboBox1.Styles.AlternateRow.Color := $00FAF7F2;` |
 | `ShowClearButton` | `Boolean` | `False` | True: Ein „×"-Knopf im Feld löscht den Text (nur sichtbar, wenn Text vorhanden und das Feld bearbeitbar ist). |
 | `TextHint` | `string` |  | Platzhaltertext im leeren Feld (z. B. „Suchen …"). Nutzung: `Edit1.TextHint := 'E-Mail-Adresse';` |
 | `UseSystemContextMenu` | `Boolean` | `False` | True: Rechtsklick zeigt das native Windows-Menü des Edits statt des PPGlow-Menüs (Rückgängig, Ausschneiden, Kopieren, Einfügen, Löschen, Alles markieren; übersetzt und im Preset-Stil). |
@@ -68,7 +72,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `AutoDropDown` | `Boolean` | `False` | True: Die Liste klappt beim Tippen automatisch auf. |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
 | `CharCase` | `TEditCharCase` | `ecNormal` | Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase). |
-| `DropDownCount` | `Integer` | `8` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
+| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
 | `DropDownWidth` | `Integer` | `0` | Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. Nützlich für lange Einträge in schmalen Feldern. |
 | `ItemHeight` | `Integer` | `0` | Mindesthöhe einer Listenzeile in logischen Pixeln (0..1000); 0 = aus der Schrift. Einträge mit Detailzeile werden entsprechend höher. |
 | `MaxLength` | `Integer` | `0` | Höchstzahl der Zeichen; 0 = unbegrenzt. |

@@ -15,11 +15,17 @@ TPPGDBComboBox, TPPGDBDatePicker.
 
 Eigenes Package (PPGlowDBR): Anwendungen ohne Datenbank linken kein Data.DB.
 Die Controls erben von den PPGlow-Controls und fuegen nur die Anbindung
-hinzu (TFieldDataLink) - keine zweite Zeichenlogik.
+hinzu - keine zweite Zeichenlogik.
+
+Gemeinsame Anbindung (Audit 4a): TPPGDBBinding haelt den Link und erledigt,
+was alle DB-Controls gleich machen (auch PPG.DB.Fields, PPG.DB.Lookup und
+TPPGDBRadioGroup). Das Control liefert nur Anzeigen (OnShow) und Schreiben
+(OnWrite) und reicht DataField/DataSource/ReadOnly, CM_GETDATALINK,
+CM_EXIT, Esc und Actions weiter.
 
 Ablauf wie bei den VCL-DB-Controls:
 - Datensatz wechselt (DataChange): Wert aus dem Feld anzeigen (mit Fokus Field.Text, ohne Field.DisplayText).
-- Anwender aendert: zuerst den Datensatz in den Bearbeiten-Modus setzen (TPPGFieldDataLink.EditByUser), dann Modified. Waehrend EditByUser darf DataChange den neuen Wert nicht ueberschreiben (Sperre).
+- Anwender aendert: zuerst den Datensatz in den Bearbeiten-Modus setzen (TPPGFieldDataLink.EditByUser), dann Modified. Waehrend EditByUser darf DataChange den neuen Wert nicht ueberschreiben (Sperre). Geht das nicht, wird der Feldwert wieder angezeigt.
 - Verlassen (CM_EXIT): UpdateRecord schreibt ins Feld. Ein ungueltiger Wert setzt ValidationState = pvsError mit der Meldung als ValidationHint, behaelt den Fokus und bricht still ab (kein Dialog).
 - Esc waehrend der Bearbeitung: Wert aus dem Feld zuruecksetzen.
 
@@ -33,6 +39,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
+| `ShowRequired` | `Boolean` | `False` | True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet. |
 | `DataField` | `string` |  | Datums- bzw. Datum-Zeit-Feld, das angezeigt und bearbeitet wird; leeres Feld = Null. |
 | `DataSource` | `TDataSource` |  | Datenquelle mit der Datenmenge, aus der DataField kommt. |
 | `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. |
@@ -58,7 +65,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MinDate` | `TDate` |  | Frühestes wählbares Datum; 0 = keine Grenze. Nutzung: `DatePicker1.MinDate := Date;` (nur heute und später) |
 | `ParseInput` | `Boolean` | `False` | True: Beim Übernehmen der Eingabe wird zuerst OnUserInput gefragt (eigene Auswertung, z. B. „morgen“ oder „+3“). DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert; AllowChange := False lehnt ab (ValidationState = pvsError). Ohne Ereignis gilt die normale Prüfung. Nutzung: `DatePicker1.ParseInput := True; DatePicker1.OnUserInput := Eingabe;` |
 | `ShowCheckbox` | `Boolean` | `False` | True: Links im Feld erscheint ein Kontrollkästchen; ohne Haken (Checked = False) gilt „kein Datum". |
-| `CalendarStyles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern). Nutzung: `DatePicker1.CalendarStyles.Weekend.TextColor := clRed;` |
+| `Styles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern). Nutzung: `DatePicker1.Styles.Weekend.TextColor := clRed;` |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
 
 ## Eigenschaften wie in der VCL

@@ -10,7 +10,7 @@
 
 ## Anpassung
 
-- `KanbanStyles`, `OnCustomDrawCard`, `SaveLayout`/`LoadLayout` wie `TPPGKanban`.
+- `Styles`, `OnCustomDrawCard`, `SaveLayout`/`LoadLayout` wie `TPPGKanban`.
 
 ## Beispiel
 

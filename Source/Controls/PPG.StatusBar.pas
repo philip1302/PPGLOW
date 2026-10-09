@@ -192,7 +192,7 @@ type
     property AutoHint: Boolean read FAutoHint write FAutoHint default False;
     property UseSystemFont: Boolean read FUseSystemFont write SetUseSystemFont default True;
     /// Leiste: Flaeche, Text, Trennlinien (BorderColor) und Schrift (clDefault = Preset).
-    property BarStyle: TPPGElementStyle read FBarStyle write SetBarStyle;
+    property Style: TPPGElementStyle read FBarStyle write SetBarStyle;
     property AllowMarkup: Boolean read FAllowMarkup write SetAllowMarkup default False;
     property Align default alBottom;
     property Anchors;
@@ -798,7 +798,7 @@ begin
       TextCol := PPGColorToRGB(A.Normal.TextColor);
     end;
   end;
-  // Element-Stil der Leiste (BarStyle) und Farben je Feld (nur ohne
+  // Element-Stil der Leiste (Style) und Farben je Feld (nur ohne
   // Hochkontrast/VCL-Style)
   UseColors := not HC and not UseVclStyle;
   Dk := UseDarkMode;

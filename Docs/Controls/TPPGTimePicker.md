@@ -41,7 +41,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ClockFormat` | `TPPGClockFormat` | `pcfLocale` | 12- oder 24-Stunden-Anzeige; pcfLocale = aus den Windows-Ländereinstellungen. Werte: `pcfLocale`, `pcf12Hour`, `pcf24Hour`. |
 | `MinuteIncrement` | `Integer` | `15` | Abstand der Zeiten in der Aufklappliste in Minuten (1..60, Vorgabe 15). |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
-| `DropDownCount` | `Integer` | `8` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
+| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
 
 ## Eigenschaften wie in der VCL

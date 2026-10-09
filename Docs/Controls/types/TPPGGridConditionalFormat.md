@@ -13,7 +13,7 @@ Eine Regel der bedingten Formatierung: Spalte, Regel, Vergleichswerte, Farbe, Zi
 | `Value1` | `string` |  | Erster Vergleichswert: bei crRange „von" (leer = offen), bei crEqual/crContains der Wert, bei crTop/crBottom die Anzahl („10" oder „10%"). Nutzung: `Rule := crTop; Value1 := '10%';` |
 | `Value2` | `string` |  | Zweiter Vergleichswert: bei crRange „bis" (leer = offen). |
 | `Color` | `TPPGCondColor` | `ccWarning` | Farbe der Regel aus dem Theme: ccWarning, ccSuccess, ccDanger, ccAccent oder ccCustom (= CustomColor). Bei Farbskalen bestimmt ccSuccess/ccDanger die Richtung (niedrig rot, hoch grün bzw. umgekehrt). Werte: `ccWarning`, `ccSuccess`, `ccDanger`, `ccAccent`, `ccCustom`. |
-| `CustomColor` | `TColor` | `clNone` | Eigene Farbe bei Color = ccCustom. |
+| `CustomColor` | `TColor` | `clDefault` | Eigene Farbe bei Color = ccCustom. |
 | `Target` | `TPPGCondTarget` | `ctFill` | Was eingefärbt wird: ctFill (Zellfläche) oder ctText (Schrift). Werte: `ctFill`, `ctText`. |
 | `Bold` | `Boolean` | `False` | True: Treffer werden zusätzlich fett dargestellt. |
 | `Enabled` | `Boolean` | `True` | False: Die Regel ist vorübergehend abgeschaltet. |

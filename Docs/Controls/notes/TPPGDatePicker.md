@@ -8,4 +8,4 @@
 
 ## Anpassung
 
-- `CalendarStyles` und `OnCustomDrawDay` gelten für den aufgeklappten Kalender.
+- `Styles` und `OnCustomDrawDay` gelten für den aufgeklappten Kalender.

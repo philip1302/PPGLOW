@@ -31,7 +31,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Expanded` | `Boolean` | `True` | True: aufgeklappt (Inhalt sichtbar, Höhe = ExpandedHeight); False: nur die Kopfzeile. Setzen im Code klappt animiert, löst aber keine Ereignisse aus. Im zugeklappten Zustand sind die Kinder per Tab nicht erreichbar. Nutzung: `PPGExpander1.Expanded := True;` |
 | `HeaderStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Aussehen der Kopfzeile: Fläche (Color), Text (TextColor), Rand und eigene Schrift (Font/FontStyle); clDefault = vom Preset. Nutzung: `PPGExpander1.HeaderStyle.FontStyle := [fsBold];` |
 | `Detail` | `string` |  | Zweite, kleinere Textzeile unter dem Titel (Caption) in der Kopfzeile, z. B. eine Zusammenfassung des Inhalts; leer = nur Titel. Nutzung: `PPGExpander1.Detail := '3 Einstellungen geändert';` |
-| `ExpandedHeight` | `Integer` | `0` | Höhe im aufgeklappten Zustand in Pixeln (0..100000); 0 = die aktuelle Höhe beim Zuklappen wird gemerkt. |
+| `ExpandedHeight` | `Integer` |  | Höhe im aufgeklappten Zustand in Pixeln (0..100000); 0 = die aktuelle Höhe beim Zuklappen wird gemerkt. |
 
 ## Eigenschaften wie in der VCL
 

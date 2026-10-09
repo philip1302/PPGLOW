@@ -25,7 +25,9 @@
 <tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>&#220;berg&#228;nge zwischen den Zust&#228;nden (Hover, Dr&#252;cken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen&quot; beachtet wird.</td></tr>
 <tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen f&#252;r Barrierefreiheit).</td></tr>
 <tr><td><code>Indeterminate</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: rotierender Bogen f&#252;r unbestimmte Wartezeit; False: Bogen nach Value (0–100 %). Ohne Animationen steht ein Viertelbogen.</td></tr>
-<tr><td><code>Value</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Fortschritt in Prozent (0..100) bei Indeterminate = False.</td></tr>
+<tr><td><code>Min</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Untergrenze des Wertebereichs (Vorgabe 0), wie TPPGProgressBar.Min; Value liegt in Min..Max. Nutzung: <code>Ring1.Min := 0; Ring1.Max := 250; Ring1.Value := 125;</code> zeigt einen halben Bogen.</td></tr>
+<tr><td><code>Max</code></td><td><code>Integer</code></td><td><code>100</code></td><td>Obergrenze des Wertebereichs (Vorgabe 100); muss gr&#246;&#223;er als Min sein, sonst Ausnahme.</td></tr>
+<tr><td><code>Value</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Fortschritt zwischen Min und Max (Vorgabe 0..100) bei Indeterminate = False.</td></tr>
 <tr><td><code>Thickness</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Strichst&#228;rke in logischen Pixeln (0..100); 0 = aus der Gr&#246;&#223;e berechnet.</td></tr>
 <tr><td><code>ShowTrack</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Der volle Kreis wird als dezente Spur hinter dem Bogen gezeichnet.</td></tr>
 </table>

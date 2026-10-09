@@ -29,12 +29,13 @@
 <p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>ShowRequired</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.</td></tr>
 <tr><td><code>DataField</code></td><td><code>string</code></td><td></td><td>Textfeld, in dem die Tags getrennt durch Delimiter stehen.</td></tr>
 <tr><td><code>DataSource</code></td><td><code>TDataSource</code></td><td></td><td>Datenquelle mit der Datenmenge, aus der DataField kommt.</td></tr>
 <tr><td><code>ReadOnly</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Text kann gelesen, markiert und kopiert, aber nicht ge&#228;ndert werden. Die Optik bestimmt ReadOnlyStyle.</td></tr>
 <tr><td><code>Tags</code></td><td><code>TStrings</code></td><td></td><td>Die aktuellen Tags, je Zeile eines. &#196;nderungen aus Code l&#246;sen keine Ereignisse aus. Nutzung: <code>TagEdit1.Tags.Add(&#39;Wichtig&#39;);</code></td></tr>
 <tr><td><code>Suggestions</code></td><td><code>TStrings</code></td><td></td><td>Vorschl&#228;ge, die beim Tippen im Aufklappfenster erscheinen. Nutzung: <code>TagEdit1.Suggestions.CommaText := &#39;Vertrieb,Einkauf,Technik&#39;;</code></td></tr>
-<tr><td><code>Delimiters</code></td><td><code>string</code></td><td></td><td>Zeichen, die beim Tippen ein Tag abschlie&#223;en (z. B. „;,&quot; ). Enter schlie&#223;t immer ab; eingef&#252;gtes „a; b; c&quot; ergibt drei Tags.</td></tr>
+<tr><td><code>InputDelimiters</code></td><td><code>string</code></td><td></td><td>Zeichen, die beim Tippen ein Tag abschlie&#223;en (z. B. „;,&quot; ). Enter schlie&#223;t immer ab; eingef&#252;gtes „a; b; c&quot; ergibt drei Tags.</td></tr>
 <tr><td><code>Delimiter</code></td><td><code>Char</code></td><td><code>&#39;;&#39;</code></td><td>Trennzeichen der Tags in TagsText bzw. im DB-Feld. Vorgabe „;&quot;.</td></tr>
 <tr><td><code>AllowNew</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Nur Eintr&#228;ge aus Suggestions sind erlaubt (Auswahlliste statt freier Eingabe).</td></tr>
 <tr><td><code>AllowDuplicates</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Dasselbe Tag darf mehrfach vorkommen.</td></tr>

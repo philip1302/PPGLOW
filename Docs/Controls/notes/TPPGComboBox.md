@@ -10,5 +10,5 @@
 
 ## Anpassung
 
-- `ListStyles` für die Aufklappliste (Zebra, Auswahl, Hover) und `OnCustomDrawItem`.
+- `Styles` für die Aufklappliste (Zebra, Auswahl, Hover) und `OnCustomDrawItem`.
 - `RoundedCorners` für zusammengesetzte Eingabegruppen.

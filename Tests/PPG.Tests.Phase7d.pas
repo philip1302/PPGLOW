@@ -132,7 +132,7 @@ end;
 function TNotificationTests.NewCenter: TPPGNotificationCenter;
 begin
   Result := TPPGNotificationCenter.Create(FForm);
-  Result.Animations := False;
+  Result.Animation.Enabled := False;
   Result.RespectQuietHours := False;
   Result.OnClose := LogClose;
   Result.OnAction := LogAction;
@@ -314,7 +314,7 @@ var
   C: TQuietCenter;
 begin
   C := TQuietCenter.Create(FForm);
-  C.Animations := False;
+  C.Animation.Enabled := False;
   C.Quiet := True;
   C.Show('Spaeter', 'Vollbild', psInformational, 0);
   CheckEquals(0, C.VisibleCount, 'wartet');

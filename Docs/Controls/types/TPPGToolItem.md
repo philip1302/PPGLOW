@@ -13,9 +13,10 @@ Ein Element der Werkzeugleiste: Art, Beschriftung, Bild, Action, Umschaltzustand
 | `Hint` | `string` |  | Tooltip des Befehls. |
 | `Style` | `TPPGToolItemStyle` | `tisButton` | Art: tisButton (Befehl), tisCheck (Umschalt-Button) oder tisSeparator (Trennlinie). Werte: `tisButton`, `tisCheck`, `tisSeparator`. |
 | `ImageIndex` | `TPPGImageIndex` | `-1` | Bild aus ToolBar.Images; -1 = keins. |
+| `ImageName` | `TImageName` |  | Bild per Namen aus den Images des Besitzers (TVirtualImageList, ab Delphi 10.4). Robust gegen Umsortieren; setzt ImageIndex passend, ein unbekannter Name ergibt „kein Bild". Nutzung: `ToolBar1.Images := VirtualImageList1; ToolBar1.Items[0].ImageName := 'save';` |
 | `IconChar` | `Word` | `0` | Symbol aus der Icon-Schrift als Zeichencode (0 = keins); Alternative zu ImageIndex. |
-| `Down` | `Boolean` | `False` | Eingerastet (nur Style = tisCheck); Setzen im Code ohne Ereignis. |
 | `GroupIndex` | `Integer` | `0` | Umschalt-Buttons (tisCheck) mit gleichem GroupIndex <> 0 schließen sich gegenseitig aus wie Radiobuttons. |
+| `Down` | `Boolean` | `False` | Eingerastet (nur Style = tisCheck); Setzen im Code ohne Ereignis. |
 | `Enabled` | `Boolean` | `True` | False: Befehl grau und nicht auslösbar. |
 | `Visible` | `Boolean` | `True` | False: Befehl ausgeblendet. |
 | `Tag` | `NativeInt` | `0` | Freier Ganzzahlwert, z. B. eine Befehls-ID. |

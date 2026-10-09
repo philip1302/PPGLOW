@@ -39,7 +39,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ToastWidth` | `Integer` | `360` | Breite eines Toasts in logischen Pixeln (160..1000). |
 | `Preset` | `string` |  | Optik-Vorlage der Toasts ('' = Standard bzw. StyleManager). |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben der Toasts. |
-| `Animations` | `Boolean` | `True` | True: Toasts gleiten ein und aus, der Stapel rückt animiert nach (nur, wenn Windows Animationen erlaubt). |
+| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Ein- und Ausblenden der Toasts wie Animation der Controls: Enabled = False schaltet ab, Duration und Easing steuern den Verlauf. Toasts gleiten ein und aus, der Stapel rückt animiert nach (nur, wenn Windows Animationen erlaubt). |
 | `RespectQuietHours` | `Boolean` | `True` | True: Läuft eine Vollbild-Anwendung oder Präsentation, warten neue Toasts, bis sie beendet ist. |
 
 ## Ereignisse

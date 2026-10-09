@@ -2,7 +2,7 @@
 
 ## Unterschiede und Hinweise
 
-- `Columns` enthält Titel, Breite in logischen Pixeln, Ausrichtung und Sichtbarkeit. Die Zeilen kommen aus `Items`, jede Zeile mit den Zellen getrennt durch `ColumnDelimiter` (`1001|Albers|Hamburg`).
+- `Columns` enthält Titel, Breite in logischen Pixeln, Ausrichtung und Sichtbarkeit. Die Zeilen kommen aus `Items`, jede Zeile mit den Zellen getrennt durch `Delimiter` (`1001|Albers|Hamburg`).
 - Virtuell: `VirtualRowCount` > 0 und `OnGetCellText` liefern die Zellen. Auch 100 000 Zeilen klappen ohne Kopie auf.
 - Ein Klick auf die Kopfzeile sortiert die Ansicht, ein zweiter Klick kehrt die Richtung um. Die Daten bleiben unverändert.
 - `KeyColumn`/`KeyValue` liefern den Schlüssel, `DisplayColumn` den Text im Feld. Die Tippsuche arbeitet in der Anzeigespalte, offen und geschlossen.

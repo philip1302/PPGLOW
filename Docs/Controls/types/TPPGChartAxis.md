@@ -15,7 +15,7 @@ Eine Achse des Diagramms (X, Y oder zweite Y-Achse): Bereich, Teilung, Format de
 | `Min` | `Double` |  | Feste Untergrenze; wirkt nur mit AutoMin = False. |
 | `Max` | `Double` |  | Feste Obergrenze; wirkt nur mit AutoMax = False. |
 | `Format` | `string` |  | FormatFloat-Maske der Achsenbeschriftung; leer = passende Nachkommastellen aus der Schrittweite. Bei einer Datumsachse eine FormatDateTime-Maske. Nutzung: `Chart.YAxis.Format := '#,##0 €';` oder `Chart.XAxis.Format := 'dd.mm.';` |
-| `ShowGrid` | `Boolean` |  | Gitterlinien an den Teilstrichen dieser Achse. Vorgabe: an bei der Y-Achse, aus bei X- und zweiter Y-Achse. Farbe über ChartStyles.Grid. |
+| `ShowGrid` | `Boolean` |  | Gitterlinien an den Teilstrichen dieser Achse. Vorgabe: an bei der Y-Achse, aus bei X- und zweiter Y-Achse. Farbe über Styles.Grid. |
 | `Kind` | `TPPGChartXKind` | `cxkCategory` | Nur für die X-Achse: Art der Werte. Kategorien verteilen die Punkte gleichmäßig (X = Index, Text aus Categories), Zahlen und Datum/Zeit setzen die Punkte nach ihrem X-Wert (Series.AddXY). Werte: `cxkCategory`, `cxkNumeric`, `cxkDateTime`. Nutzung: `Chart.XAxis.Kind := cxkDateTime; Chart.Series[0].AddXY(Date, 42);` |
 
 ## Verwendet in

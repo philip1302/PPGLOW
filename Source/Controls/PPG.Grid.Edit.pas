@@ -240,8 +240,8 @@ procedure TPPGGridSpin.CellEditorBegin(const Text: string; Column: TPPGGridColum
 begin
   if Column <> nil then
   begin
-    MinValue := Column.MinValue;
-    MaxValue := Column.MaxValue;
+    Min := Column.MinValue;
+    Max := Column.MaxValue;
   end;
   Value := StrToIntDef(Text, 0);
 end;

@@ -24,7 +24,7 @@ TPPGNavigationView - Seitenleiste wie WinUI NavigationView (Phase 7c).
 - Der Auswahl-Indikator gleitet zum gewaehlten Eintrag (ekDecelerate). Ist der gewaehlte Eintrag verborgen (zugeklappter Elterneintrag, kompakt), steht der Indikator am sichtbaren Vorfahren.
 - PageControl: Ist eins verbunden, zeigt die Auswahl die Seite Item.PageIndex.
 - Tastatur: Oben/Unten, Pos1/Ende, Enter/Leertaste waehlen, Rechts/Links klappen auf/zu (bzw. springen zum Elterneintrag).
-- Code (Selected := ...) loest kein Ereignis aus; der Anwender loest OnItemInvoked und bei geaenderter Auswahl OnSelectionChange aus.
+- Code (Selected := ...) loest kein Ereignis aus; der Anwender loest OnItemClick und bei geaenderter Auswahl OnChange aus.
 - Screenreader: Gliederung; Kinder sind die sichtbaren Zeilen und der Menue-Knopf.
 
 ## PPGlow-Eigenschaften
@@ -40,6 +40,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
 | `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
 | `Items` | [TPPGNavItems](types/TPPGNavItems.md) |  | Einträge der Leiste (verschachtelt über Item.Items), mit Symbol, Text, Plakette, Überschriften, Trennern und Fußbereich. Nutzung: Im Designer per Collection-Editor; im Code `with PPGNavigationView1.Items.AddItem('Kunden', $E716, 2) do BadgeCount := 3;` |
+| `SelectedIndex` | `Integer` | `-1` | Index des gewählten Eintrags in Items; -1 = keiner. Wird gespeichert, damit die Startauswahl im Designer festgelegt werden kann (Selected ist nur zur Laufzeit). |
 | `IsPaneOpen` | `Boolean` | `True` | True: Leiste in voller Breite (OpenPaneLength); False: kompakt (CompactPaneLength). Der Wechsel ist animiert. |
 | `DisplayMode` | `TPPGNavDisplayMode` | `pdmLeft` | Verhalten der Leiste: pdmLeft (immer links, Menü-Knopf klappt zwischen voll und kompakt), pdmLeftCompact (startet kompakt), pdmAuto (wechselt nach der Breite des Parents, siehe CompactModeThresholdWidth). Werte: `pdmLeft`, `pdmLeftCompact`, `pdmAuto`. |
 | `OpenPaneLength` | `Integer` | `280` | Breite der offenen Leiste in logischen Pixeln (96 DPI), 48..2000. |
@@ -49,7 +50,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ShowMenuButton` | `Boolean` | `True` | True: Der Hamburger-Knopf zum Auf- und Zuklappen der Leiste ist sichtbar. |
 | `ImageTint` | `TPPGImageTint` | `itNone` | itTextColor färbt das Bild einfarbig in der Textfarbe des aktuellen Zustands. Ideal für einfarbige Symbole (SVG, Icon-Fonts), die so Hover, Dark Mode und Deaktiviert automatisch folgen. Werte: `itNone`, `itTextColor`. Nutzung: `PPGButton1.ImageTint := itTextColor;` |
 | `PageControl` | `TPPGPageControl` |  | Verbundenes PageControl: Die Auswahl eines Eintrags zeigt dort die Seite Item.PageIndex. Nutzung: `PPGNavigationView1.PageControl := PPGPageControl1;` Die Reiter des PageControls dann ausblenden (TabVisible = False). |
-| `NavStyles` | [TPPGNavStyles](types/TPPGNavStyles.md) |  | Aussehen der Leiste in Bereichen (Hintergrund, Einträge, Hover, Auswahl, Indikator, Überschriften); clDefault = vom Preset. |
+| `Styles` | [TPPGNavStyles](types/TPPGNavStyles.md) |  | Aussehen der Leiste in Bereichen (Hintergrund, Einträge, Hover, Auswahl, Indikator, Überschriften); clDefault = vom Preset. |
 
 ## Eigenschaften wie in der VCL
 
@@ -67,7 +68,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. |
 | `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
 | `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
-| `ShowHint` | `Boolean` | `True` | True: Hint wird als Tooltip angezeigt. |
+| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
 | `TabOrder` | `TTabOrder` |  | Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst). |
 | `TabStop` | `Boolean` | `True` | True: Das Control ist mit Tab erreichbar. |
 | `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
@@ -81,9 +82,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
-| `OnItemInvoked` | `TPPGNavItemEvent` `(Sender: TObject; Item: TPPGNavItem)` | Der Anwender hat einen Eintrag ausgelöst (Klick, Enter, Screenreader), auch wenn er schon gewählt war; Item ist der Eintrag. Nutzung: Befehle ohne eigene Seite ausführen, z. B. über Item.Tag. |
+| `OnItemClick` | `TPPGNavItemEvent` `(Sender: TObject; Item: TPPGNavItem)` | Der Anwender hat einen Eintrag ausgelöst (Klick, Enter, Screenreader), auch wenn er schon gewählt war; Item ist der Eintrag. Nutzung: Befehle ohne eigene Seite ausführen, z. B. über Item.Tag. |
 | `OnPaneChange` | `TNotifyEvent` `(Sender: TObject)` | Die Leiste wurde über den Menü-Knopf auf- oder zugeklappt. |
-| `OnSelectionChange` | `TNotifyEvent` `(Sender: TObject)` | Die Auswahl hat sich durch den Anwender geändert (nicht beim Setzen von Selected im Code). |
+| `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Die Auswahl hat sich durch den Anwender geändert (nicht beim Setzen von Selected im Code). |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGNavigationView.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

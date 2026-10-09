@@ -221,8 +221,8 @@ begin
   Docs.Items.AddItem('Rechnungen');
   Result.Items.AddSeparator;
   Result.Items.AddItem('Einstellungen', PPGNavIconSettings).Footer := True;
-  Result.OnSelectionChange := LogSelection;
-  Result.OnItemInvoked := LogInvoked;
+  Result.OnChange := LogSelection;
+  Result.OnItemClick := LogInvoked;
   Result.HandleNeeded;
 end;
 

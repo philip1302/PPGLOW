@@ -12,7 +12,7 @@
 
 ## Anpassung
 
-- `MenuStyles` (Menü, Hover, Trennlinie, Tastenkürzel) und `OnCustomDrawItem`.
+- `Styles` (Menü, Hover, Trennlinie, Tastenkürzel) und `OnCustomDrawItem`.
 
 ## Beispiel
 

@@ -44,7 +44,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `AutoComplete` | `Boolean` | `False` | True: Bei Style = csDropDown ergänzt das Feld den getippten Anfang zum ersten passenden Eintrag (der Rest ist markiert und wird beim Weitertippen ersetzt). |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
 | `CharCase` | `TEditCharCase` | `ecNormal` | Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase). |
-| `DropDownCount` | `Integer` | `8` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
+| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
 | `DropDownWidth` | `Integer` | `0` | Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. Nützlich für lange Einträge in schmalen Feldern. |
 | `ItemHeight` | `Integer` | `0` | Mindesthöhe einer Listenzeile in logischen Pixeln (0..1000); 0 = aus der Schrift. Einträge mit Detailzeile werden entsprechend höher. |
 | `Items` | `TStrings` |  | Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte. |

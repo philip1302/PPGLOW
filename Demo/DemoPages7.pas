@@ -151,7 +151,7 @@ begin
   FPlanner.Resources.AddResource(2, 'Ben');
   FPlanner.Resources.AddResource(3, 'Raum Elbe').Color := $0050A0E0;
   FPlanner.OnAppointmentChanging := Changing;
-  FPlanner.OnAppointmentChanged := Changed;
+  FPlanner.OnAppointmentChange := Changed;
   FPlanner.OnAppointmentCreated := Created;
   FPlanner.OnDeleting := Deleting;
   FPlanner.OnRangeChange := RangeChange;

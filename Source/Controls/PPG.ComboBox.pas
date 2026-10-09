@@ -139,7 +139,8 @@ type
     property AutoCloseUp: Boolean read FAutoCloseUp write FAutoCloseUp default False;
     property AutoComplete: Boolean read FAutoComplete write FAutoComplete default True;
     property AutoDropDown: Boolean read FAutoDropDown write FAutoDropDown default False;
-    property DropDownCount: Integer read FDropDownCount write SetDropDownCount default 8;
+    property DropDownCount: Integer read FDropDownCount write SetDropDownCount
+      default PPGDefaultDropDownCount;
     property DropDownWidth: Integer read FDropDownWidth write SetDropDownWidth default 0;
     property ItemHeight: Integer read FItemHeight write SetItemHeight default 0;
     property ItemIndex: Integer read FItemIndex write SetItemIndex default -1;
@@ -166,7 +167,7 @@ type
     /// Die Aufklappliste (nil, solange sie nie geoeffnet wurde).
     property PopupList: TPPGPopupList read GetPopupList;
     /// Bereiche der Aufklappliste (Auswahl = aktueller Wert, Zebra, Hover ...).
-    property ListStyles: TPPGListStyles read FListStyles write SetListStyles;
+    property Styles: TPPGListStyles read FListStyles write SetListStyles;
     /// Vor dem Zeichnen jedes Eintrags der Aufklappliste.
     property OnCustomDrawItem: TPPGCustomDrawItemEvent read FOnCustomDrawItem write FOnCustomDrawItem;
     property Text: string read GetComboText write SetComboText;
@@ -182,7 +183,7 @@ type
     property Images;
     property ItemsEx;
     property FilterMode;
-    property ListStyles;
+    property Styles;
     property ShowClearButton;
     property TextHint;
     property UseSystemContextMenu;
@@ -331,7 +332,7 @@ begin
   FItemIndex := -1;
   FLoadedItemIndex := -2;
   FStyle := csDropDown;
-  FDropDownCount := 8;
+  FDropDownCount := PPGDefaultDropDownCount;
   FAutoComplete := True;
   FItemsEx := TPPGItems.Create(Self);
   FItemsEx.OnChange := ItemsExChange;
@@ -346,7 +347,7 @@ end;
 destructor TPPGCustomComboBox.Destroy;
 begin
   // Zuerst das Popup schliessen und freigeben (ohne Ereignisse): es greift
-  // beim Zeichnen auf ListStyles und Items zu
+  // beim Zeichnen auf Styles und Items zu
   FreePopup;
   FreeAndNil(FListStyles);
   if FArrowAnim <> nil then
@@ -498,7 +499,7 @@ end;
 
 procedure TPPGCustomComboBox.SetDropDownCount(const Value: Integer);
 begin
-  FDropDownCount := PPGCheckRange(Self, 'DropDownCount', Value, 1, MaxInt);
+  FDropDownCount := PPGCheckRange(Self, 'DropDownCount', Value, 1, PPGMaxDropDownCount);
 end;
 
 procedure TPPGCustomComboBox.SetDropDownWidth(const Value: Integer);

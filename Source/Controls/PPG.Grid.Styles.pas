@@ -123,7 +123,7 @@ type
     property Value1: string read FValue1 write SetValue1;
     property Value2: string read FValue2 write SetValue2;
     property Color: TPPGCondColor read FColor write SetColor default ccWarning;
-    property CustomColor: TColor read FCustomColor write SetCustomColor default clNone;
+    property CustomColor: TColor read FCustomColor write SetCustomColor default clDefault;
     property Target: TPPGCondTarget read FTarget write SetTarget default ctFill;
     property Bold: Boolean read FBold write SetBold default False;
     property Enabled: Boolean read FEnabled write SetEnabled default True;
@@ -194,7 +194,7 @@ end;
 constructor TPPGGridConditionalFormat.Create(Collection: TCollection);
 begin
   FColumn := -1;
-  FCustomColor := clNone;
+  FCustomColor := clDefault;
   FEnabled := True;
   inherited Create(Collection);
 end;
@@ -284,7 +284,7 @@ begin
     ccDanger: Result := Tokens.Danger;
     ccAccent: Result := Tokens.Accent;
     ccCustom:
-      if FCustomColor <> clNone then
+      if PPGColorIsSet(FCustomColor) then
         Result := FCustomColor
       else
         Result := Tokens.Warning;

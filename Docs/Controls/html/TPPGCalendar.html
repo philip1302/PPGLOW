@@ -39,9 +39,9 @@
 <tr><td><code>MinDate</code></td><td><code>TDate</code></td><td></td><td>Fr&#252;hestes w&#228;hlbares Datum; fr&#252;here Tage sind gesperrt. 0 = ohne Grenze. Nutzung: <code>Cal.MinDate := Date;</code> erlaubt nur heute und sp&#228;ter.</td></tr>
 <tr><td><code>MaxDate</code></td><td><code>TDate</code></td><td></td><td>Sp&#228;testes w&#228;hlbares Datum; sp&#228;tere Tage sind gesperrt. 0 = ohne Grenze.</td></tr>
 <tr><td><code>ShowWeekNumbers</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Links steht die Kalenderwoche nach ISO 8601.</td></tr>
-<tr><td><code>ShowToday</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Der heutige Tag ist mit einem Ring markiert (Farbe &#252;ber CalendarStyles.Today).</td></tr>
+<tr><td><code>ShowToday</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Der heutige Tag ist mit einem Ring markiert (Farbe &#252;ber Styles.Today).</td></tr>
 <tr><td><code>FirstDayOfWeek</code></td><td><code>TPPGFirstDayOfWeek</code></td><td><code>fdLocale</code></td><td>Erster Wochentag der Monatsansicht; fdLocale = aus den Windows-L&#228;ndereinstellungen. Werte: <code>fdLocale</code>, <code>fdMonday</code>, <code>fdTuesday</code>, <code>fdWednesday</code>, <code>fdThursday</code>, <code>fdFriday</code>, <code>fdSaturday</code>, <code>fdSunday</code>.</td></tr>
-<tr><td><code>CalendarStyles</code></td><td><a href="types/TPPGCalendarStyles.html">TPPGCalendarStyles</a></td><td></td><td>Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, andere Monate, Wochennummern. Nicht gesetzte Werte kommen aus dem Preset. Nutzung: <code>Cal.CalendarStyles.Weekend.TextColor := clRed;</code></td></tr>
+<tr><td><code>Styles</code></td><td><a href="types/TPPGCalendarStyles.html">TPPGCalendarStyles</a></td><td></td><td>Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, andere Monate, Wochennummern. Nicht gesetzte Werte kommen aus dem Preset. Nutzung: <code>Cal.Styles.Weekend.TextColor := clRed;</code></td></tr>
 </table>
 <h2>Eigenschaften wie in der VCL</h2>
 <table>

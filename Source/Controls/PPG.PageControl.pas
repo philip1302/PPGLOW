@@ -94,7 +94,7 @@ type
     property ParentShowHint;
     property PopupMenu;
     property ShowHint;
-    /// Flaeche, Text und zusaetzliche Schriftstile des Reiters (clDefault = TabStyles).
+    /// Flaeche, Text und zusaetzliche Schriftstile des Reiters (clDefault = Styles).
     property TabColor: TColor read FTabColor write SetTabColor default clDefault;
     property TabTextColor: TColor read FTabTextColor write SetTabTextColor default clDefault;
     property TabFontStyle: TFontStyles read FTabFontStyle write SetTabFontStyle default [];
@@ -172,8 +172,8 @@ type
     property StyleManager;
     property Appearance;
     property Animation;
-    property ShowCloseButtons;
-    property TabStyles;
+    property ShowCloseButton;
+    property Styles;
     property MultiLine;
     property OwnerDraw;
     property RaggedRight;
@@ -213,7 +213,7 @@ type
     property OnDrawTab;
     property OnCustomDrawItem;
     property OnClose: TPPGPageCloseEvent read FOnClose write FOnClose;
-    property OnCloseQuery: TPPGPageCloseQueryEvent read FOnCloseQuery write FOnCloseQuery;
+    property OnClosing: TPPGPageCloseQueryEvent read FOnCloseQuery write FOnCloseQuery;
     property OnContextPopup;
     property OnDragDrop;
     property OnDragOver;

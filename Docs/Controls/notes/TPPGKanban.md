@@ -12,12 +12,12 @@
 - **Spalten verschieben:** Kopf ziehen (`AllowColumnDrag`, Esc bricht ab) oder Strg+Umschalt+Links/Rechts; `MoveColumn` im Code. `OnColumnMoving` kann ablehnen, `OnColumnMoved` meldet die neue Lage.
 - **Tastatur:** Pfeile wandern zwischen den Karten (leere Spalten werden übersprungen), Strg+Pfeile verschieben die gewählte Karte (auch in eine leere Spalte; Strg+Oben/Unten am Rand in die nächste Swimlane), Pos1/Ende, Bild auf/ab, Enter = `OnCardOpen`.
 - **Screenreader:** Bereich; Kinder sind je Spalte der Kopf („Spalte X, n Karten, Limit m“) und die Karten („Titel, Spalte X, Position Y von N, fällig …, Person, Labels“). Nach einem Verschieben steht „Verschoben nach Spalte X, Position Y von N“ vor dem Namen der fokussierten Karte (`Announcement`).
-- Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnSelectionChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
+- Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
 - Ziehen zwischen Anwendungen (OLE) gibt es nicht.
 
 ## Anpassung
 
-- `KanbanStyles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
+- `Styles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
 - `SaveLayout`/`LoadLayout`: Spaltenbreiten, Reihenfolge, Filter und eingeklappte Spalten/Swimlanes (nach `Id`; ältere Layouts ohne Reihenfolge laden weiter). Drucken mit `TPPGKanbanPrinter`.
 
 ## Beispiel

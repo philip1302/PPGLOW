@@ -48,7 +48,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MaxDisplayItems` | `Integer` | `2` | Bei DisplayMode = cdmCompact: so viele Namen werden ausgeschrieben, der Rest als „+n" (1..100). |
 | `ShowSelectAll` | `Boolean` | `False` | True: Erste Zeile der Liste ist „Alle auswählen" zum An- und Abhaken aller Einträge. |
 | `FilterThreshold` | `Integer` | `12` | Ab dieser Zahl von Einträgen erscheint oben in der Liste eine Filterzeile; getippte Zeichen filtern die Einträge. 0 = nie. |
-| `DropDownCount` | `Integer` | `8` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (1..100). |
+| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (1..100). |
 | `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
@@ -89,7 +89,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Ereignis | Typ und Parameter | Wann und wozu |
 |---|---|---|
-| `OnItemCheck` | `TPPGCheckItemEvent` `(Sender: TObject; Index: Integer)` | Der Anwender hat einen Eintrag an- oder abgehakt (auch über „Alle auswählen"); Index ist der Eintrag in Items. Danach folgt OnChange. Änderungen aus Code lösen es nicht aus. Nutzung: `procedure TForm1.CheckItem(Sender: TObject; Index: Integer); begin Log(Items[Index]); end;` |
+| `OnItemCheck` | `TPPGCheckItemEvent` | Der Anwender hat einen Eintrag an- oder abgehakt (auch über „Alle auswählen"); Index ist der Eintrag in Items. Danach folgt OnChange. Änderungen aus Code lösen es nicht aus. Nutzung: `procedure TForm1.CheckItem(Sender: TObject; Index: Integer); begin Log(Items[Index]); end;` |
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
 | `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Der Text wurde geändert (Tippen, Einfügen, Code). |
 | `OnCloseUp` | `TNotifyEvent` `(Sender: TObject)` | Die Aufklappliste wurde geschlossen (mit oder ohne Auswahl). |

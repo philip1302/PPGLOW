@@ -114,7 +114,7 @@ type
     FToastWidth: Integer;
     FPreset: string;
     FStyleManager: TPPGStyleManager;
-    FAnimations: Boolean;
+    FAnimation: TPPGAnimationSettings;
     FRespectQuietHours: Boolean;
     FPoll: TPPGAnimation;
     FWnd: HWND;
@@ -125,6 +125,7 @@ type
     FOnToastClick: TPPGToastEvent;
     FOnClose: TPPGToastCloseEvent;
     FOnShow: TPPGToastEvent;
+    procedure SetAnimation(const Value: TPPGAnimationSettings);
     procedure SetPosition(const Value: TPPGToastPosition);
     procedure SetPreset(const Value: string);
     procedure SetMaxVisible(const Value: Integer);
@@ -168,7 +169,8 @@ type
     property ToastWidth: Integer read FToastWidth write SetToastWidth default 360;
     property Preset: string read FPreset write SetPreset;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
-    property Animations: Boolean read FAnimations write FAnimations default True;
+    /// Ein-/Ausblenden und Verschieben (wie Animation der Controls).
+    property Animation: TPPGAnimationSettings read FAnimation write SetAnimation;
     /// Bei Vollbild/Praesentation warten (SHQueryUserNotificationState).
     property RespectQuietHours: Boolean read FRespectQuietHours write FRespectQuietHours default True;
     property OnAction: TPPGToastActionEvent read FOnAction write FOnAction;
@@ -639,7 +641,7 @@ begin
     FLife.Stop;
   if FCenter <> nil then
     FCenter.ToastClosed(Self);
-  if FShown and HandleAllocated and (FCenter <> nil) and FCenter.FAnimations and
+  if FShown and HandleAllocated and (FCenter <> nil) and FCenter.FAnimation.EffectiveEnabled and
     PPGSystemAnimationsEnabled then
     FAppear.AnimateTo(0, 200, ekSmooth)
   else
@@ -677,10 +679,15 @@ begin
   FDuration := 5000;
   FMaxVisible := 3;
   FToastWidth := 360;
-  FAnimations := True;
+  FAnimation := TPPGAnimationSettings.Create(Self);
   FRespectQuietHours := True;
   FPoll := TPPGAnimation.Create(Self);
   FPoll.OnStep := PollStep;
+end;
+
+procedure TPPGNotificationCenter.SetAnimation(const Value: TPPGAnimationSettings);
+begin
+  FAnimation.Assign(Value);
 end;
 
 destructor TPPGNotificationCenter.Destroy;
@@ -690,6 +697,7 @@ begin
   if FPoll <> nil then
     FPoll.OnStep := nil;
   FreeAndNil(FPoll);
+  FreeAndNil(FAnimation);
   // Toasts ohne Ereignisse freigeben
   if FToasts <> nil then
     for T in FToasts do
@@ -880,7 +888,7 @@ begin
     T.HandleNeeded;
     T.FShown := True;
     Arrange(False);
-    if FAnimations and PPGSystemAnimationsEnabled then
+    if FAnimation.EffectiveEnabled then
     begin
       T.FAppear.Jump(0);
       T.ApplyWindow;
@@ -946,7 +954,7 @@ begin
       else
         Dec(Y, Gap);
       Dec(Y, T.Height);
-      if Animate and (T.FToY <> Y) and FAnimations and PPGSystemAnimationsEnabled then
+      if Animate and (T.FToY <> Y) and FAnimation.EffectiveEnabled then
       begin
         T.FFromY := T.CurrentY;
         T.FToY := Y;
@@ -967,7 +975,7 @@ begin
         Inc(Y, Margin)
       else
         Inc(Y, Gap);
-      if Animate and (T.FToY <> Y) and FAnimations and PPGSystemAnimationsEnabled then
+      if Animate and (T.FToY <> Y) and FAnimation.EffectiveEnabled then
       begin
         T.FFromY := T.CurrentY;
         T.FToY := Y;

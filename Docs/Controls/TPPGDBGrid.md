@@ -64,6 +64,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Bands` | [TPPGGridBands](types/TPPGGridBands.md) |  | Bänder: Überschriften über mehreren Spalten, auch mehrstufig (ParentBand). Welche Spalten darunter stehen, legt Column.Band fest. Nutzung: `Grid1.Bands.Add.Caption := 'Adresse'; Grid1.Columns[2].Band := 0; Grid1.Columns[3].Band := 0;` |
 | `ConditionalFormats` | [TPPGGridConditionalFormats](types/TPPGGridConditionalFormats.md) |  | Bedingte Formate ohne Code: Regeln je Spalte (Wertbereich, gleich, enthält, oberste/unterste N, Farbskala, Datenbalken, Symbolsatz) mit Farben aus dem Theme. Nutzung: `with Grid1.ConditionalFormats.Add do begin Column := 3; Rule := crDataBar; Color := ccAccent; end;` |
 | `ExportMaxRecords` | `Integer` | `100000` | Drucken und Export lesen höchstens so viele Datensätze (Schutz vor sehr großen Tabellen). Vorgabe 100000. |
+| `ShowRequired` | `Boolean` | `False` | True: Spalten mit Pflichtfeldern (TField.Required) zeigen im Titel ein Sternchen. |
 | `FixedColsRight` | `Integer` | `0` | Anzahl Spalten, die rechts fest stehen bleiben (0..100), z. B. eine Aktions- oder Summenspalte. |
 | `HeaderMenu` | `Boolean` | `True` | True: Rechtsklick auf den Kopf öffnet ein Menü zum Sortieren, Ausblenden, Wählen der Spalten und Anpassen der Breite. Ergänzen lässt es sich in OnHeaderMenu. |
 | `ShowFooter` | `Boolean` | `False` | True: Unten steht eine Summenzeile; was je Spalte berechnet wird, legt Column.Aggregate fest (gilt für die gefilterte Ansicht). |

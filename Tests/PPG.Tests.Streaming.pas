@@ -163,12 +163,12 @@ begin
   R := TPPGRating.Create(FForm);
   R.Parent := FForm;
   R.AllowHalf := True;
-  R.MaxValue := 10;
+  R.Max := 10;
   R.Value := 7.5;
   R2 := RoundTrip(R) as TPPGRating;
   try
     CheckEquals(7.5, R2.Value, 0);
-    CheckEquals(10, R2.MaxValue);
+    CheckEquals(10, R2.Max);
   finally
     R2.Free;
   end;

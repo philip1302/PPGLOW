@@ -319,7 +319,7 @@ begin
     CheckTrue(T.TabPosition = tpTop);
     CheckTrue(T.HotTrack);
     CheckTrue(T.TabStop);
-    CheckFalse(T.ShowCloseButtons);
+    CheckFalse(T.ShowCloseButton);
     CheckEquals(0, T.TabWidth);
     CheckEquals(0, T.TabHeight);
   finally
@@ -466,8 +466,8 @@ begin
   FForm.Show;
   try
     T := NewTabControl('Eins,Zwei,Drei');
-    T.ShowCloseButtons := True;
-    T.OnCloseQuery := TabCloseQuery;
+    T.ShowCloseButton := True;
+    T.OnClosing := TabCloseQuery;
     T.OnClose := TabClose;
     T.TabIndex := 1;
     R := T.Strip.CloseRectAt(1);
@@ -777,8 +777,8 @@ begin
   FForm.Show;
   try
     PC := NewPageControl(3);
-    PC.ShowCloseButtons := True;
-    PC.OnCloseQuery := PageCloseQuery;
+    PC.ShowCloseButton := True;
+    PC.OnClosing := PageCloseQuery;
     PC.OnClose := PageClose;
     FLog.Clear;
     FCanClose := False;
@@ -1111,7 +1111,7 @@ begin
           PC.Preset := Presets[I];
           T.Preset := Presets[I];
           PC.TabPosition := TTabPosition(J mod 2);
-          PC.ShowCloseButtons := J >= 2;
+          PC.ShowCloseButton := J >= 2;
           PC.BiDiMode := TBiDiMode(Ord(J = 3) * Ord(bdRightToLeft));
           PC.Enabled := J <> 4;
           PC.Width := 120 + J * 60; // mit Ueberlauf
@@ -1146,7 +1146,7 @@ procedure TPhase4cPaintTests.NoHandleOrMemoryLeaks;
       PC := NewPageControl(4);
       PC.OnChange := nil;
       PC.OnChanging := nil;
-      PC.ShowCloseButtons := True;
+      PC.ShowCloseButton := True;
       ClickTab(PC, 2);
       RenderToBitmap(PC).Free;
       AccOf(PC);

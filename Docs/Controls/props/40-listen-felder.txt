@@ -2,26 +2,27 @@
 
 # --- TPPGCalendarStyles ---
 TPPGCalendarStyles.Background = Hintergrund des Kalenders: Color = Fläche, TextColor = Text der Tage, BorderColor = Rahmen.
-> `Cal.CalendarStyles.Background.Color := $00FAFAFA;`
+> `Cal.Styles.Background.Color := $00FAFAFA;`
 TPPGCalendarStyles.DayNames = Zeile mit den Wochentagsnamen (Mo, Di …): TextColor und Schrift.
 TPPGCalendarStyles.Header = Titelzeile (Monat und Jahr) samt Blätterpfeilen: TextColor und Schrift.
-> `Cal.CalendarStyles.Header.FontStyle := [fsBold];`
+> `Cal.Styles.Header.FontStyle := [fsBold];`
 TPPGCalendarStyles.OtherMonth = Tage des Vor- und Folgemonats, die die Monatsansicht auffüllen: TextColor (meist gedämpft).
 TPPGCalendarStyles.Selected = Gewählte Tage: Color = Fläche der Markierung, TextColor = Schrift darauf.
 TPPGCalendarStyles.Today = Markierung von heute: BorderColor = Ring um den Tag, TextColor = Schrift.
 TPPGCalendarStyles.WeekNumbers = Spalte der Kalenderwochen (sichtbar mit ShowWeekNumbers): TextColor und Schrift.
 TPPGCalendarStyles.Weekend = Samstag und Sonntag: Color, TextColor und Schrift, z. B. Wochenenden rot hervorheben.
-> `Cal.CalendarStyles.Weekend.TextColor := clMaroon;`
+> `Cal.Styles.Weekend.TextColor := clMaroon;`
 
 # --- TPPGColumnComboBox ---
-TPPGColumnComboBox.ColumnDelimiter = Trennzeichen zwischen den Zellen einer Zeile in Items (Vorgabe senkrechter Strich).
-> `Combo.ColumnDelimiter := ';'; Combo.Items.Add('1001;Müller;Berlin');`
+TPPGColumnComboBox.Delimiter = Trennzeichen zwischen den Zellen einer Zeile in Items (Vorgabe senkrechter Strich).
+> `Combo.Delimiter := ';'; Combo.Items.Add('1001;Müller;Berlin');`
 TPPGColumnComboBox.Columns = Spalten der Aufklappliste (Titel, Breite, Ausrichtung, sichtbar). Die Kopfzeile im Popup sortiert per Klick die Ansicht, nicht die Daten.
 > Im Designer per Doppelklick; im Code `with Combo.Columns.Add do begin Title := 'Nr.'; Width := 60; end;`
 TPPGColumnComboBox.DisplayColumn = Index der Spalte, deren Text im Feld steht; in ihr sucht auch die Tippsuche.
 TPPGColumnComboBox.DropDownCount = Sichtbare Zeilen der Aufklappliste, bevor gescrollt wird (1..100).
 TPPGColumnComboBox.DropDownWidth = Breite der Aufklappliste in logischen Pixeln; 0 = Summe der Spaltenbreiten.
-TPPGColumnComboBox.Items = Zeilen der Liste, jede mit den Zellen getrennt durch ColumnDelimiter. Wird nicht benutzt, wenn VirtualRowCount > 0 ist.
+TPPGColumnComboBox.ItemIndex = Gewählte Zeile (Index in Items bzw. der virtuellen Liste); -1 = keine. Wird mit gespeichert, damit eine Startauswahl im Designer möglich ist.
+TPPGColumnComboBox.Items = Zeilen der Liste, jede mit den Zellen getrennt durch Delimiter. Wird nicht benutzt, wenn VirtualRowCount > 0 ist.
 TPPGColumnComboBox.KeyColumn = Index der Spalte mit dem Schlüssel; KeyValue liest bzw. wählt die Zeile über diesen Wert (z. B. für die DB-Anbindung).
 > `Combo.KeyColumn := 0; Combo.KeyValue := '1001';`
 TPPGColumnComboBox.OnGetCellText = Virtueller Modus (VirtualRowCount > 0): liefert den Text einer Zelle. Row und Column benennen die Zelle, das Ergebnis kommt in den var-Parameter Text.
@@ -35,8 +36,8 @@ TPPGComboColumn.Visible = False: Die Spalte wird nicht angezeigt (ihre Daten ble
 TPPGComboColumn.Width = Breite der Spalte in logischen Pixeln (wird mit der DPI skaliert).
 
 # --- TPPGCustomCalendar ---
-TPPGCustomCalendar.CalendarStyles = Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, andere Monate, Wochennummern. Nicht gesetzte Werte kommen aus dem Preset.
-> `Cal.CalendarStyles.Weekend.TextColor := clRed;`
+TPPGCustomCalendar.Styles = Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, andere Monate, Wochennummern. Nicht gesetzte Werte kommen aus dem Preset.
+> `Cal.Styles.Weekend.TextColor := clRed;`
 TPPGCustomCalendar.Date = Gewähltes Datum (bei Bereich bzw. Mehrfachauswahl der Fokus-Tag). Setzen im Code springt zum Monat und löst kein OnChange aus.
 > `Cal.Date := EncodeDate(2026, 12, 24);`
 TPPGCustomCalendar.FirstDayOfWeek = Erster Wochentag der Monatsansicht; fdLocale = aus den Windows-Ländereinstellungen.
@@ -50,11 +51,13 @@ TPPGCustomCalendar.OnIsDateDisabled = Fragt je Tag, ob er gesperrt ist; Disabled
 > `Disabled := DayOfTheWeek(ADate) in [6, 7];` sperrt Wochenenden.
 TPPGCustomCalendar.OnViewChange = Die Ansicht (Monat, Jahr, Dekade) oder der angezeigte Zeitraum hat gewechselt, z. B. nach Blättern.
 TPPGCustomCalendar.SelectionMode = Auswahlart: ein Tag, ein Bereich (zwei Klicks bzw. Umschalt+Klick) oder mehrere einzelne Tage (Klick schaltet um).
-TPPGCustomCalendar.ShowToday = True: Der heutige Tag ist mit einem Ring markiert (Farbe über CalendarStyles.Today).
+TPPGCustomCalendar.ShowToday = True: Der heutige Tag ist mit einem Ring markiert (Farbe über Styles.Today).
 TPPGCustomCalendar.ShowWeekNumbers = True: Links steht die Kalenderwoche nach ISO 8601.
 TPPGCustomCalendar.View = Aktuelle Ansicht: Monat (Tage), Jahr (Monate) oder Dekade (Jahre). Der Anwender zoomt per Klick auf den Titel bzw. Strg+Oben/Unten.
 
 # --- TPPGCustomCheckListBox ---
+TPPGCustomCheckListBox.OnItemCheck = Der Anwender hat das Kästchen eines Eintrags umgeschaltet; Index ist der Eintrag. Wie OnClickCheck, aber mit Index (gleiche Signatur wie bei CheckComboBox).
+> `procedure TForm1.List1ItemCheck(Sender: TObject; Index: Integer); begin Caption := List1.Items[Index]; end;`
 TPPGCustomCheckListBox.AllowGrayed = True: Ein Klick schaltet aus → an → gemischt (cbGrayed), z. B. für „teilweise".
 TPPGCustomCheckListBox.Flat = True: Kästchen im Stil des Presets. False: natives Windows-Kästchen (mit aktivem VCL-Style dessen Kästchen, ohne Themes das klassische 3D-Kästchen). Im Hochkontrast immer Preset-Stil.
 TPPGCustomCheckListBox.HeaderBackgroundColor = Hintergrund der Überschriften (Header[]). Die Vorgabe clInfoBk bedeutet „wie das Preset“; jede andere Farbe füllt die Überschriftszeilen, solange Styles.GroupHeader.Color nichts Eigenes setzt. Gilt im Hellen.
@@ -124,10 +127,10 @@ TPPGCustomSearchEdit.SearchDelay = Wartezeit in Millisekunden nach dem Tippen bi
 TPPGCustomSpinEdit.AutoSelect = True: Beim Fokus wird der ganze Text markiert, damit man direkt überschreiben kann.
 TPPGCustomSpinEdit.EditorEnabled = False: Der Wert lässt sich nur über die Pfeil-Buttons, Pfeiltasten und das Mausrad ändern, nicht durch Tippen.
 TPPGCustomSpinEdit.Increment = Schrittweite für Buttons, Pfeiltasten und Mausrad; Bild auf/ab ändert um das Zehnfache.
-TPPGCustomSpinEdit.MaxValue = Obergrenze für Value. MinValue = MaxValue bedeutet „keine Grenze" (wie TSpinEdit).
-TPPGCustomSpinEdit.MinValue = Untergrenze für Value. MinValue = MaxValue bedeutet „keine Grenze"; die Reihenfolge beim Setzen ist egal.
-> `Spin.MinValue := 1; Spin.MaxValue := 99;`
-TPPGCustomSpinEdit.Value = Aktueller Wert; wird still auf MinValue..MaxValue begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt.
+TPPGCustomSpinEdit.Max = Obergrenze für Value. Min = Max bedeutet „keine Grenze" (wie TSpinEdit).
+TPPGCustomSpinEdit.Min = Untergrenze für Value. Min = Max bedeutet „keine Grenze"; die Reihenfolge beim Setzen ist egal.
+> `Spin.Min := 1; Spin.Max := 99;`
+TPPGCustomSpinEdit.Value = Aktueller Wert; wird still auf Min..Max begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt.
 
 # --- TPPGCustomTimePicker ---
 TPPGCustomTimePicker.ClockFormat = 12- oder 24-Stunden-Anzeige; pcfLocale = aus den Windows-Ländereinstellungen.
@@ -139,7 +142,7 @@ TPPGCustomTimePicker.Time = Gewählte Uhrzeit. Setzen im Code löst kein OnChang
 # --- TPPGCustomTreeView ---
 TPPGCustomTreeView.AutoCheck = Nur mit CheckBoxes: Umschalten eines Knotens gibt den Zustand an alle Kinder weiter und berechnet die Eltern (alle an, alle aus oder gemischt).
 TPPGCustomTreeView.AutoExpand = True: Ein Knoten klappt beim Wählen per Maus oder Tastatur automatisch auf.
-TPPGCustomTreeView.CheckBoxes = True: Jeder Knoten zeigt ein Kästchen mit drei Zuständen (Node.CheckState); Änderungen meldet OnChecked.
+TPPGCustomTreeView.CheckBoxes = True: Jeder Knoten zeigt ein Kästchen mit drei Zuständen (Node.CheckState); Änderungen meldet OnItemCheck.
 TPPGCustomTreeView.HideSelection = True: Die Auswahl wird ohne Fokus nicht hervorgehoben.
 TPPGCustomTreeView.HotTrack = Wie TTreeView: Der Knoten unter der Maus wird unterstrichen.
 TPPGCustomTreeView.Indent = Einzug je Ebene in logischen Pixeln (0..200, Vorgabe 19).
@@ -148,7 +151,7 @@ TPPGCustomTreeView.Items = Die Knoten (API wie TTreeNodes: Add, AddChild, Insert
 TPPGCustomTreeView.MultiSelect = True: Mehrere Knoten sind gleichzeitig wählbar (Strg/Umschalt+Klick).
 TPPGCustomTreeView.OnChange = Der gewählte Knoten hat sich geändert (auch bei Selected im Code, wie TTreeView).
 TPPGCustomTreeView.OnChanging = Bevor die Auswahl wechselt; AllowChange := False verhindert den Wechsel zu Node.
-TPPGCustomTreeView.OnChecked = Das Kästchen eines Knotens wurde umgeschaltet (Node = der umgeschaltete Knoten).
+TPPGCustomTreeView.OnItemCheck = Das Kästchen eines Knotens wurde umgeschaltet (Node = der umgeschaltete Knoten).
 TPPGCustomTreeView.OnCollapsed = Ein Knoten wurde zugeklappt.
 TPPGCustomTreeView.OnCollapsing = Bevor ein Knoten zuklappt; AllowCollapse := False verhindert es.
 TPPGCustomTreeView.OnCompare = Eigene Sortierung für AlphaSort: Compare < 0, wenn Node1 vor Node2 gehört, > 0 danach, 0 bei Gleichheit.

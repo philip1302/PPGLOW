@@ -29,6 +29,7 @@ type
     FHeaderBackgroundColor: TColor;
     FHeaderStyles: TPPGListStyles;
     FOnClickCheck: TNotifyEvent;
+    FOnItemCheck: TPPGItemCheckEvent;
     FOnSetChecked: TPPGSetCheckedEvent;
     procedure SetFlat(const Value: Boolean);
     procedure SetHeaderColor(const Value: TColor);
@@ -76,6 +77,8 @@ type
     property HeaderBackgroundColor: TColor read FHeaderBackgroundColor
       write SetHeaderBackgroundColor default clInfoBk;
     property OnClickCheck: TNotifyEvent read FOnClickCheck write FOnClickCheck;
+    /// Wie OnClickCheck, mit dem Index des Eintrags (einheitlich mit CheckComboBox, TreeView).
+    property OnItemCheck: TPPGItemCheckEvent read FOnItemCheck write FOnItemCheck;
     /// Virtueller Stil: Anwender hat ein Kaestchen umgeschaltet.
     property OnSetChecked: TPPGSetCheckedEvent read FOnSetChecked write FOnSetChecked;
   public
@@ -148,6 +151,7 @@ type
     property ItemIndex;
     property OnClick;
     property OnClickCheck;
+    property OnItemCheck;
     property OnContextPopup;
     property OnData;
     property OnDataFind;
@@ -527,6 +531,8 @@ begin
     ItemChanged(Index);
     NotifyAccessibilityChild(EVENT_OBJECT_STATECHANGE, Index + 1);
     ClickCheck;
+    if Assigned(FOnItemCheck) then
+      FOnItemCheck(Self, Index);
   end;
 end;
 

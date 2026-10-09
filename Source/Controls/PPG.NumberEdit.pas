@@ -112,12 +112,12 @@ type
     function GetFieldValue: Variant;
     procedure SetFieldValue(const Value: Variant);
 
-    property NumberKind: TPPGNumberKind read FKind write SetKind default nkFloat;
+    property Kind: TPPGNumberKind read FKind write SetKind default nkFloat;
     property Value: Double read GetValue write SetValue stored IsValueStored;
     property AllowNull: Boolean read FAllowNull write SetAllowNull default False;
     property Decimals: Integer read FDecimals write SetDecimals default 2;
-    property MinValue: Double read FMinValue write SetMinValue stored IsMinStored;
-    property MaxValue: Double read FMaxValue write SetMaxValue stored IsMaxStored;
+    property Min: Double read FMinValue write SetMinValue stored IsMinStored;
+    property Max: Double read FMaxValue write SetMaxValue stored IsMaxStored;
     property Increment: Double read FIncrement write SetIncrement stored IsIncrementStored;
     property LargeIncrement: Double read FLargeIncrement write SetLargeIncrement
       stored IsLargeIncrementStored;
@@ -152,10 +152,10 @@ type
     property StyleManager;
     property Appearance;
     property Animation;
-    property NumberKind;
+    property Kind;
     property Decimals;
-    property MinValue;
-    property MaxValue;
+    property Min;
+    property Max;
     property Increment;
     property LargeIncrement;
     property ShowSpinButtons;
@@ -408,7 +408,7 @@ begin
     end
     else
     begin
-      FValue := RoundHalfUp(Clamp(NewValue), Min(D, 15));
+      FValue := RoundHalfUp(Clamp(NewValue), System.Math.Min(D, 15));
       FCurr := 0;
     end;
   end

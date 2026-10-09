@@ -39,7 +39,7 @@ uses
   PPG.Accessibility, PPG.Controls.Base, PPG.Popup, PPG.Popup.Placement;
 
 type
-  TPPGTipPlacementMode = (tpAuto, tpTop, tpBottom, tpLeft, tpRight);
+  TPPGTipPlacementMode = (ttpAuto, ttpTop, ttpBottom, ttpLeft, ttpRight);
   TPPGTipIcon = (tiNone, tiInfo, tiSuccess, tiWarning, tiError);
   /// Grund fuer das Schliessen. tcrProgrammatic nur fuer Hide aus Code
   /// (dann ohne Ereignisse).
@@ -200,7 +200,7 @@ type
     /// Kreuz oben rechts (nur ohne CloseButtonText, wie WinUI).
     property ShowCloseButton: Boolean read FShowCloseButton write SetShowCloseButton default True;
     property LightDismiss: Boolean read FLightDismiss write FLightDismiss default False;
-    property Placement: TPPGTipPlacementMode read FPlacement write SetPlacement default tpAuto;
+    property Placement: TPPGTipPlacementMode read FPlacement write SetPlacement default ttpAuto;
     /// Breite der Flaeche in logischen px.
     property MaxWidth: Integer read FMaxWidth write SetMaxWidth default 320;
     property Preset: string read FPreset write SetPreset;
@@ -924,7 +924,7 @@ constructor TPPGTeachingTip.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FShowCloseButton := True;
-  FPlacement := tpAuto;
+  FPlacement := ttpAuto;
   FMaxWidth := 320;
 end;
 
@@ -1181,14 +1181,14 @@ begin
     Gap := PPGScale(4, PPI);
     InflateRect(A, Gap, Gap);
     case FPlacement of
-      tpTop: Pref := ppsAbove;
-      tpLeft: Pref := ppsLeft;
-      tpRight: Pref := ppsRight;
+      ttpTop: Pref := ppsAbove;
+      ttpLeft: Pref := ppsLeft;
+      ttpRight: Pref := ppsRight;
     else
       Pref := ppsBelow;
     end;
     Pl := PPGPlaceTip(A, S.cx, S.cy, FWindow.TailLen,
-      FWindow.PopupRounding + FWindow.TailHalf, Pref, FPlacement = tpAuto, WA);
+      FWindow.PopupRounding + FWindow.TailHalf, Pref, FPlacement = ttpAuto, WA);
     FWindow.Arrange(Pl, True);
   end
   else

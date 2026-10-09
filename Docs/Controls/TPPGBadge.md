@@ -29,7 +29,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Kind` | `TPPGBadgeKind` | `bkNumber` | Inhalt der Plakette: bkNumber zeigt Value (über MaxValue als „99+"), bkDot nur einen Punkt, bkText den Text aus Caption. Werte: `bkNumber`, `bkDot`, `bkText`. Nutzung: `Badge1.Kind := bkText; Badge1.Caption := 'Neu';` |
 | `Value` | `Integer` | `0` | Angezeigte Zahl bei Kind = bkNumber. Nutzung: `Badge1.Value := UngeleseneMails;` |
 | `MaxValue` | `Integer` | `99` | Größte angezeigte Zahl; größere Werte erscheinen als „MaxValue+" (z. B. „99+"). 0 = ohne Grenze. |
-| `BadgeColor` | `TPPGBadgeColor` | `bcAccent` | Farbe der Plakette aus den Theme-Tokens: Akzent, Erfolg (grün), Warnung (gelb), Fehler (rot) oder neutral (dezentes Grau). Folgt automatisch Dark Mode und Markenfarbe. Werte: `bcAccent`, `bcSuccess`, `bcWarning`, `bcError`, `bcNeutral`. Nutzung: `Badge1.BadgeColor := bcError;` für ungelesene Fehlermeldungen. |
+| `Severity` | `TPPGBadgeSeverity` | `bsvAccent` | Farbe der Plakette aus den Theme-Tokens: Akzent, Erfolg (grün), Warnung (gelb), Fehler (rot) oder neutral (dezentes Grau). Folgt automatisch Dark Mode und Markenfarbe. Werte: `bsvAccent`, `bsvSuccess`, `bsvWarning`, `bsvError`, `bsvNeutral`. Nutzung: `Badge1.Severity := bsvError;` für ungelesene Fehlermeldungen. |
 
 ## Eigenschaften wie in der VCL
 

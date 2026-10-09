@@ -1065,8 +1065,8 @@ begin
   begin
     FMargin[I] := TPPGSpinEdit.Create(Self);
     FMargin[I].Parent := Self;
-    FMargin[I].MinValue := 0;
-    FMargin[I].MaxValue := 100;
+    FMargin[I].Min := 0;
+    FMargin[I].Max := 100;
     FMargin[I].SetBounds(S(16) + I * S(86), Y, S(78), S(28));
   end;
   FMargin[0].Value := APrinter.Margins.Left;

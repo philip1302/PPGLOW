@@ -148,7 +148,7 @@ PPGExportXlsx(Grid1 as IPPGTableSource, &#39;Liste.xlsx&#39;);
 <tr><td><code>OnSorted</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Ansicht wurde neu sortiert (Klick auf den Kopf oder Code).</td></tr>
 <tr><td><code>OnStartDock</code></td><td><code>TStartDockEvent</code> <code>(Sender: TObject; var DragObject: TDragDockObject)</code></td><td>Beginn des Andockens dieses Controls.</td></tr>
 <tr><td><code>OnStartDrag</code></td><td><code>TStartDragEvent</code> <code>(Sender: TObject; var DragObject: TDragObject)</code></td><td>Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden.</td></tr>
-<tr><td><code>OnTopLeftChanged</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen ge&#228;ndert.</td></tr>
+<tr><td><code>OnTopLeftChange</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen ge&#228;ndert.</td></tr>
 <tr><td><code>OnValidateCell</code></td><td><code>TPPGValidateCellEvent</code> <code>(Sender: TObject; ACol, ARow: Integer; var Value: string; var Accept: Boolean)</code></td><td>Vor dem &#220;bernehmen eines bearbeiteten Werts: Value pr&#252;fen oder korrigieren; Accept := False lehnt ab (der Editor bleibt offen). Nutzung: <code>Accept := TryStrToFloat(Value, X); if not Accept then ShowMessage(&#39;Bitte eine Zahl eingeben&#39;);</code></td></tr>
 </table>
 <hr>

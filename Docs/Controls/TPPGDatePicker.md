@@ -54,7 +54,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MinDate` | `TDate` |  | Frühestes wählbares Datum; 0 = keine Grenze. Nutzung: `DatePicker1.MinDate := Date;` (nur heute und später) |
 | `ParseInput` | `Boolean` | `False` | True: Beim Übernehmen der Eingabe wird zuerst OnUserInput gefragt (eigene Auswertung, z. B. „morgen“ oder „+3“). DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert; AllowChange := False lehnt ab (ValidationState = pvsError). Ohne Ereignis gilt die normale Prüfung. Nutzung: `DatePicker1.ParseInput := True; DatePicker1.OnUserInput := Eingabe;` |
 | `ShowCheckbox` | `Boolean` | `False` | True: Links im Feld erscheint ein Kontrollkästchen; ohne Haken (Checked = False) gilt „kein Datum". |
-| `CalendarStyles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern). Nutzung: `DatePicker1.CalendarStyles.Weekend.TextColor := clRed;` |
+| `Styles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern). Nutzung: `DatePicker1.Styles.Weekend.TextColor := clRed;` |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
 | `Time` | `TTime` |  | Uhrzeitanteil des Werts (wie TDateTimePicker.Time); die Anzeige zeigt nur das Datum. |
 

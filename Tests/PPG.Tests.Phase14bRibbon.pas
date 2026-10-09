@@ -248,8 +248,8 @@ begin
   Result.Font.Name := 'Segoe UI';
   Result.Font.Height := -12;
   Result.OnItemClick := RibbonItemClick;
-  Result.OnTabChanging := TabChanging;
-  Result.OnTabChange := TabChange;
+  Result.OnChanging := TabChanging;
+  Result.OnChange := TabChange;
   Result.OnGalleryClick := GalleryClick;
   Result.OnLauncherClick := LauncherClick;
   Result.OnMinimizedChange := MinimizedChange;

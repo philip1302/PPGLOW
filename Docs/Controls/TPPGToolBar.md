@@ -57,7 +57,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. |
 | `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
 | `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
-| `ShowHint` | `Boolean` | `True` | True: Hint wird als Tooltip angezeigt. |
+| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
 | `TabOrder` | `TTabOrder` |  | Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst). |
 | `TabStop` | `Boolean` | `True` | True: Das Control ist mit Tab erreichbar. |
 | `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |

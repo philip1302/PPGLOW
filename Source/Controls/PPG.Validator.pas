@@ -1358,7 +1358,7 @@ begin
   Warns := WarningCount;
   if not FSummaryShown or (Errs + Warns = 0) then
   begin
-    Bar.IsOpen := False;
+    Bar.Open := False;
     Exit;
   end;
   Title := '';
@@ -1402,7 +1402,7 @@ begin
   Bar.Title := Title;
   Bar.Message := Names;
   Bar.Visible := True;
-  Bar.IsOpen := True;
+  Bar.Open := True;
 end;
 
 function TPPGValidator.FieldInfo(AControl: TControl; out Info: TPPGFieldRuleInfo): Boolean;

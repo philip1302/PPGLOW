@@ -88,7 +88,7 @@ type
     function AccName: string; override;
     property Menu: TMainMenu read FMenu write SetMenu;
     /// Bereiche der Untermenues (Flaeche, Hover, Trennlinien, Kuerzel).
-    property MenuStyles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
+    property Styles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
     /// Vor dem Zeichnen jedes Eintrags der Untermenues.
     property OnCustomDrawItem: TPPGMenuCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
   public
@@ -117,7 +117,7 @@ type
   TPPGMenuBar = class(TPPGCustomMenuBar)
   published
     property Menu;
-    property MenuStyles;
+    property Styles;
     property OnCustomDrawItem;
     property Preset;
     property StyleManager;
@@ -430,7 +430,7 @@ begin
   R := Rect(P.X, P.Y, P.X + R.Right - R.Left, P.Y + R.Bottom - R.Top);
   FLoop.StyleSource := Self;
   FLoop.BiDiMode := BiDiMode;
-  FLoop.MenuStyles := FMenuStyles;
+  FLoop.Styles := FMenuStyles;
   FLoop.OnCustomDrawItem := FOnCustomDrawItem;
   FLoop.DrawSender := Self;
   FLoop.ShowAccelerators := SelectFirst or FKeyboardMode;
@@ -802,7 +802,7 @@ begin
     else
       L.Color := PPGColorToRGB(GetBackgroundColor);
     L.TextColor := T.TextPrimary;
-    // Audit 5b: MenuStyles gelten auch fuer die Leiste (Menu = Leiste,
+    // Audit 5b: Styles gelten auch fuer die Leiste (Menu = Leiste,
     // HotItem = hervorgehobener Eintrag)
     L.Color := FMenuStyles.Menu.FillFor(UseDarkMode, L.Color);
     L.TextColor := FMenuStyles.Menu.TextFor(UseDarkMode, L.TextColor);

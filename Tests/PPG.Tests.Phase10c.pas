@@ -325,15 +325,15 @@ begin
   Rg := G.Ranges.Add;
   Rg.StartValue := 0;
   Rg.EndValue := 60;
-  Rg.RangeColor := grcSuccess;
+  Rg.Kind := grkSuccess;
   Rg := G.Ranges.Add;
   Rg.StartValue := 60;
   Rg.EndValue := 85;
-  Rg.RangeColor := grcWarning;
+  Rg.Kind := grkWarning;
   Rg := G.Ranges.Add;
   Rg.StartValue := 100;
   Rg.EndValue := 85; // vertauscht: zaehlt trotzdem
-  Rg.RangeColor := grcDanger;
+  Rg.Kind := grkError;
   CheckEquals(T.Success, G.ArcColor(30));
   CheckEquals(T.Warning, G.ArcColor(70));
   CheckEquals(T.Danger, G.ArcColor(95));
@@ -342,8 +342,8 @@ begin
   CheckEquals(PPGColorToRGB(TGaugeAccess(G).EffectiveAppearance.FocusColor), G.ArcColor(30));
   G.ValueColor := clFuchsia;
   CheckEquals(ColorToRGB(clFuchsia), G.ArcColor(30));
-  Rg.RangeColor := grcCustom;
-  Rg.CustomColor := clTeal;
+  Rg.Kind := grkCustom;
+  Rg.Color := clTeal;
   G.ValueColorFromRange := True;
   G.ValueColor := clDefault;
   CheckEquals(ColorToRGB(clTeal), G.ArcColor(95));
@@ -449,12 +449,12 @@ begin
   Rg := G.Ranges.Add;
   Rg.StartValue := -50;
   Rg.EndValue := 0;
-  Rg.RangeColor := grcAccent;
+  Rg.Kind := grkAccent;
   Rg := G.Ranges.Add;
   Rg.StartValue := 30;
   Rg.EndValue := 50;
-  Rg.RangeColor := grcCustom;
-  Rg.CustomColor := clMaroon;
+  Rg.Kind := grkCustom;
+  Rg.Color := clMaroon;
   G.ShowTarget := True;
   G.TargetValue := 21;
   G.ReadOnly := False;
@@ -466,8 +466,8 @@ begin
     CheckEquals('Temperatur', G2.Caption);
     CheckEquals(' C', G2.Units);
     CheckEquals(2, G2.Ranges.Count);
-    CheckTrue(G2.Ranges[0].RangeColor = grcAccent);
-    CheckEquals(clMaroon, G2.Ranges[1].CustomColor);
+    CheckTrue(G2.Ranges[0].Kind = grkAccent);
+    CheckEquals(clMaroon, G2.Ranges[1].Color);
     CheckEquals(30, G2.Ranges[1].StartValue, 1E-12);
     CheckTrue(G2.ShowTarget);
     CheckEquals(21, G2.TargetValue, 1E-12);
@@ -493,7 +493,7 @@ begin
     Rg := G.Ranges.Add;
     Rg.StartValue := 0;
     Rg.EndValue := 50;
-    Rg.RangeColor := grcSuccess;
+    Rg.Kind := grkSuccess;
     G.Value := 40;
     G.ShowTarget := True;
     G.TargetValue := 70;

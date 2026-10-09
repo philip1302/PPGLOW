@@ -5,7 +5,7 @@
 - Chips (Text mit ×) stehen vor dem Eingabebereich und brechen über mehrere Zeilen um. Mit `AutoSize` wächst die Höhe mit. Das Layout wird nur bei Änderung der Tags, der Breite oder der Schrift neu berechnet.
 - Ein Tag entsteht:
   - mit Enter
-  - mit einem Zeichen aus `Delimiters` (`;` `,`)
+  - mit einem Zeichen aus `InputDelimiters` (`;` `,`)
   - beim Verlassen (`AddOnExit`)
   - eingefügtes `a; b; c` ergibt drei Tags
 - Rücktaste im leeren Feld markiert zuerst das letzte Tag und löscht es beim zweiten Druck (wie Outlook). Pfeil links/rechts wandert zwischen den Chips, Entf löscht das markierte.

@@ -35,17 +35,17 @@ uses
   PPG.Sparkline, PPG.ElementStyle;
 
 type
-  TPPGGaugeRangeColor = (grcSuccess, grcWarning, grcDanger, grcAccent, grcNeutral, grcCustom);
+  TPPGGaugeRangeKind = (grkSuccess, grkWarning, grkError, grkAccent, grkNeutral, grkCustom);
 
   TPPGGaugeRange = class(TCollectionItem)
   private
     FStartValue: Double;
     FEndValue: Double;
-    FRangeColor: TPPGGaugeRangeColor;
+    FRangeColor: TPPGGaugeRangeKind;
     FCustomColor: TColor;
     procedure SetStartValue(const Value: Double);
     procedure SetEndValue(const Value: Double);
-    procedure SetRangeColor(const Value: TPPGGaugeRangeColor);
+    procedure SetRangeColor(const Value: TPPGGaugeRangeKind);
     procedure SetCustomColor(const Value: TColor);
     function IsStartStored: Boolean;
     function IsEndStored: Boolean;
@@ -58,8 +58,8 @@ type
   published
     property StartValue: Double read FStartValue write SetStartValue stored IsStartStored;
     property EndValue: Double read FEndValue write SetEndValue stored IsEndStored;
-    property RangeColor: TPPGGaugeRangeColor read FRangeColor write SetRangeColor default grcSuccess;
-    property CustomColor: TColor read FCustomColor write SetCustomColor default clNone;
+    property Kind: TPPGGaugeRangeKind read FRangeColor write SetRangeColor default grkSuccess;
+    property Color: TColor read FCustomColor write SetCustomColor default clDefault;
   end;
 
   TPPGGaugeRanges = class(TOwnedCollection)
@@ -286,7 +286,7 @@ type
     property ShowChange: Boolean read FShowChange write SetShowChange default True;
     /// True = sinkende Werte sind gut (z.B. Fehlerquote).
     property InvertTrend: Boolean read FInvertTrend write SetInvertTrend default False;
-    property SparklineKind: TPPGSparklineKind read FSparklineKind write SetSparklineKind default skArea;
+    property Kind: TPPGSparklineKind read FSparklineKind write SetSparklineKind default skArea;
     property ShowSparkline: Boolean read FShowSparkline write SetShowSparkline default True;
     property SparklineText: string read GetSparklineText write SetSparklineText stored True;
     /// Wert: TextColor und Schrift (ohne eigene Schrift: fett, Groesse nach der Kachel).
@@ -324,7 +324,7 @@ type
     property ChangeFormat;
     property ShowChange;
     property InvertTrend;
-    property SparklineKind;
+    property Kind;
     property ShowSparkline;
     property SparklineText;
     property Align;
@@ -362,16 +362,17 @@ const
   DefaultChangeFormat = '+0.0%;-0.0%;0.0%';
   DefaultKpiFormat = '#,##0';
 
-function RangeColorOf(const T: TPPGTokens; Kind: TPPGGaugeRangeColor; Custom: TColor): TColor;
+function RangeColorOf(const T: TPPGTokens; Kind: TPPGGaugeRangeKind; Custom: TColor): TColor;
 begin
   case Kind of
-    grcSuccess: Result := T.Success;
-    grcWarning: Result := T.Warning;
-    grcDanger: Result := T.Danger;
-    grcAccent: Result := T.Accent;
-    grcNeutral: Result := T.TextSecondary;
+    grkSuccess: Result := T.Success;
+    grkWarning: Result := T.Warning;
+    grkError: Result := T.Danger;
+    grkAccent: Result := T.Accent;
+    grkNeutral: Result := T.TextSecondary;
   else
-    if Custom = clNone then
+    // Nicht gesetzt = clDefault (vorher clNone; beides gilt als leer)
+    if (Custom = clDefault) or (Custom = clNone) then
       Result := T.TextSecondary
     else
       Result := PPGColorToRGB(Custom);
@@ -388,7 +389,7 @@ end;
 constructor TPPGGaugeRange.Create(Collection: TCollection);
 begin
   inherited Create(Collection);
-  FCustomColor := clNone;
+  FCustomColor := clDefault;
 end;
 
 procedure TPPGGaugeRange.Assign(Source: TPersistent);
@@ -441,7 +442,7 @@ begin
   end;
 end;
 
-procedure TPPGGaugeRange.SetRangeColor(const Value: TPPGGaugeRangeColor);
+procedure TPPGGaugeRange.SetRangeColor(const Value: TPPGGaugeRangeKind);
 begin
   if FRangeColor <> Value then
   begin
@@ -935,7 +936,7 @@ begin
   begin
     Rg := FRanges.RangeAt(V);
     if Rg <> nil then
-      Exit(RangeColorOf(Tokens, Rg.RangeColor, Rg.CustomColor));
+      Exit(RangeColorOf(Tokens, Rg.Kind, Rg.Color));
   end;
   Result := PPGColorToRGB(EffectiveAppearance.FocusColor);
 end;
@@ -992,7 +993,7 @@ begin
       A1 := AngleOfValue(System.Math.Max(Rg.StartValue, Rg.EndValue));
       if A1 - A0 < 0.5 then
         Continue;
-      RC := RangeColorOf(T, Rg.RangeColor, Rg.CustomColor);
+      RC := RangeColorOf(T, Rg.Kind, Rg.Color);
       if not Enabled then
         RC := T.TextDisabled;
       PPGShapeArcPoints(C, Rad, A0, A1 - A0, Pts);

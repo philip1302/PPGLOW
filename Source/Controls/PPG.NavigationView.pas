@@ -19,7 +19,7 @@ unit PPG.NavigationView;
   - Tastatur: Oben/Unten, Pos1/Ende, Enter/Leertaste waehlen, Rechts/Links
     klappen auf/zu (bzw. springen zum Elterneintrag).
   - Code (Selected := ...) loest kein Ereignis aus; der Anwender loest
-    OnItemInvoked und bei geaenderter Auswahl OnSelectionChange aus.
+    OnItemClick und bei geaenderter Auswahl OnChange aus.
   - Screenreader: Gliederung; Kinder sind die sichtbaren Zeilen und der
     Menue-Knopf. }
 
@@ -123,7 +123,7 @@ type
     property Hint: string read FHint write FHint;
     property Tag: NativeInt read FTag write FTag default 0;
     property Items: TPPGNavItems read FItems write SetItems;
-    /// Flaeche, Text und zusaetzliche Schriftstile des Eintrags (clDefault = NavStyles).
+    /// Flaeche, Text und zusaetzliche Schriftstile des Eintrags (clDefault = Styles).
     property Color: TColor read FColor write SetColor default clDefault;
     property TextColor: TColor read FTextColor write SetTextColor default clDefault;
     property FontStyle: TFontStyles read FFontStyle write SetFontStyle default [];
@@ -332,7 +332,7 @@ type
     property ImageTint: TPPGImageTint read FImageTint write SetImageTint default itNone;
     property PageControl: TPPGPageControl read FPageControl write SetPageControl;
     /// Bereiche der Leiste (Hintergrund, Eintraege, Hover, Auswahl, Ueberschriften).
-    property NavStyles: TPPGNavStyles read FNavStyles write SetNavStyles;
+    property Styles: TPPGNavStyles read FNavStyles write SetNavStyles;
     /// Vor dem Zeichnen jedes Eintrags: Style anpassen oder selbst zeichnen.
     property OnCustomDrawItem: TPPGNavCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
     property Align default alLeft;
@@ -347,7 +347,7 @@ type
     property ParentFont;
     property ParentShowHint;
     property PopupMenu;
-    property ShowHint default True;
+    property ShowHint;
     property TabOrder;
     property TabStop default True;
     property Visible;
@@ -355,9 +355,9 @@ type
     property OnGesture;
     property OnEnter;
     property OnExit;
-    property OnItemInvoked: TPPGNavItemEvent read FOnItemInvoked write FOnItemInvoked;
+    property OnItemClick: TPPGNavItemEvent read FOnItemInvoked write FOnItemInvoked;
     property OnPaneChange: TNotifyEvent read FOnPaneChange write FOnPaneChange;
-    property OnSelectionChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
+    property OnChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
   end;
 
 const
@@ -931,7 +931,6 @@ begin
   FIndicatorAnim.Jump(1);
   FIndicatorAnim.OnStep := IndicatorStep;
   TabStop := True;
-  ShowHint := True;
   Align := alLeft;
   Width := 280;
   Height := 400;
@@ -1898,7 +1897,7 @@ begin
       DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
     end;
   end;
-  // Element-Stile (NavStyles): Leiste, Ueberschriften; Eintraege unten
+  // Element-Stile (Styles): Leiste, Ueberschriften; Eintraege unten
   NS := FNavStyles;
   UseColors := not HC and not UseVclStyle;
   Dk := UseDarkMode;

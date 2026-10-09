@@ -10,11 +10,12 @@
 </ul>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox, TPPGDBDatePicker.</p>
-<p>Eigenes Package (PPGlowDBR): Anwendungen ohne Datenbank linken kein Data.DB. Die Controls erben von den PPGlow-Controls und fuegen nur die Anbindung hinzu (TFieldDataLink) - keine zweite Zeichenlogik.</p>
+<p>Eigenes Package (PPGlowDBR): Anwendungen ohne Datenbank linken kein Data.DB. Die Controls erben von den PPGlow-Controls und fuegen nur die Anbindung hinzu - keine zweite Zeichenlogik.</p>
+<p>Gemeinsame Anbindung (Audit 4a): TPPGDBBinding haelt den Link und erledigt, was alle DB-Controls gleich machen (auch PPG.DB.Fields, PPG.DB.Lookup und TPPGDBRadioGroup). Das Control liefert nur Anzeigen (OnShow) und Schreiben (OnWrite) und reicht DataField/DataSource/ReadOnly, CM_GETDATALINK, CM_EXIT, Esc und Actions weiter.</p>
 <p>Ablauf wie bei den VCL-DB-Controls:</p>
 <ul>
 <li>Datensatz wechselt (DataChange): Wert aus dem Feld anzeigen (mit Fokus Field.Text, ohne Field.DisplayText).</li>
-<li>Anwender aendert: zuerst den Datensatz in den Bearbeiten-Modus setzen (TPPGFieldDataLink.EditByUser), dann Modified. Waehrend EditByUser darf DataChange den neuen Wert nicht ueberschreiben (Sperre).</li>
+<li>Anwender aendert: zuerst den Datensatz in den Bearbeiten-Modus setzen (TPPGFieldDataLink.EditByUser), dann Modified. Waehrend EditByUser darf DataChange den neuen Wert nicht ueberschreiben (Sperre). Geht das nicht, wird der Feldwert wieder angezeigt.</li>
 <li>Verlassen (CM_EXIT): UpdateRecord schreibt ins Feld. Ein ungueltiger Wert setzt ValidationState = pvsError mit der Meldung als ValidationHint, behaelt den Fokus und bricht still ab (kein Dialog).</li>
 <li>Esc waehrend der Bearbeitung: Wert aus dem Feld zuruecksetzen.</li>
 </ul>
@@ -23,6 +24,7 @@
 <p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>ShowRequired</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.</td></tr>
 <tr><td><code>DataField</code></td><td><code>string</code></td><td></td><td>Feld, das angezeigt und geschrieben wird. Bei TPPGDBComboBox der gew&#228;hlte bzw. eingegebene Text; bei TPPGDBLookupComboBox das Schl&#252;sselfeld der Haupt-Datenmenge (bekommt KeyField des gew&#228;hlten Eintrags).</td></tr>
 <tr><td><code>DataSource</code></td><td><code>TDataSource</code></td><td></td><td>Datenquelle mit der Datenmenge, aus der DataField kommt.</td></tr>
 <tr><td><code>ReadOnly</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Text kann gelesen, markiert und kopiert, aber nicht ge&#228;ndert werden. Die Optik bestimmt ReadOnlyStyle.</td></tr>
@@ -36,7 +38,7 @@
 <tr><td><code>Images</code></td><td><code>TCustomImageList</code></td><td></td><td>Bildliste f&#252;r ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten).</td></tr>
 <tr><td><code>ItemsEx</code></td><td><a href="types/TPPGItems.html">TPPGItems</a></td><td></td><td>Reiche Eintr&#228;ge mit Bild (aus Images), Detailzeile, Plakette und Markup. Sind welche vorhanden, sind sie die Eintr&#228;ge der Liste. Nutzung: <code>with ComboBox1.ItemsEx.Add(&#39;Berlin&#39;, 2) do Detail := &#39;3,7 Mio. Einwohner&#39;;</code></td></tr>
 <tr><td><code>FilterMode</code></td><td><code>TPPGFilterMode</code></td><td><code>fmNone</code></td><td>Filtern beim Tippen (nur Style = csDropDown): fmNone zeigt immer alle Eintr&#228;ge, fmPrefix nur die mit diesem Anfang, fmContains alle, die den Text irgendwo enthalten. Die Liste klappt dabei auf. Werte: <code>fmNone</code>, <code>fmPrefix</code>, <code>fmContains</code>. Nutzung: F&#252;r lange Listen: <code>ComboBox1.FilterMode := fmContains;</code></td></tr>
-<tr><td><code>ListStyles</code></td><td><a href="types/TPPGListStyles.html">TPPGListStyles</a></td><td></td><td>Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: <code>ComboBox1.ListStyles.AlternateRow.Color := $00FAF7F2;</code></td></tr>
+<tr><td><code>Styles</code></td><td><a href="types/TPPGListStyles.html">TPPGListStyles</a></td><td></td><td>Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: <code>ComboBox1.Styles.AlternateRow.Color := $00FAF7F2;</code></td></tr>
 <tr><td><code>ShowClearButton</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Ein „&#215;&quot;-Knopf im Feld l&#246;scht den Text (nur sichtbar, wenn Text vorhanden und das Feld bearbeitbar ist).</td></tr>
 <tr><td><code>TextHint</code></td><td><code>string</code></td><td></td><td>Platzhaltertext im leeren Feld (z. B. „Suchen …&quot;). Nutzung: <code>Edit1.TextHint := &#39;E-Mail-Adresse&#39;;</code></td></tr>
 <tr><td><code>UseSystemContextMenu</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Rechtsklick zeigt das native Windows-Men&#252; des Edits statt des PPGlow-Men&#252;s (R&#252;ckg&#228;ngig, Ausschneiden, Kopieren, Einf&#252;gen, L&#246;schen, Alles markieren; &#252;bersetzt und im Preset-Stil).</td></tr>
@@ -49,7 +51,7 @@
 <tr><td><code>AutoDropDown</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Die Liste klappt beim Tippen automatisch auf.</td></tr>
 <tr><td><code>BorderStyle</code></td><td><code>TBorderStyle</code></td><td><code>bsSingle</code></td><td>bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Fl&#228;chen).</td></tr>
 <tr><td><code>CharCase</code></td><td><code>TEditCharCase</code></td><td><code>ecNormal</code></td><td>Erzwingt Gro&#223;- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase).</td></tr>
-<tr><td><code>DropDownCount</code></td><td><code>Integer</code></td><td><code>8</code></td><td>Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1).</td></tr>
+<tr><td><code>DropDownCount</code></td><td><code>Integer</code></td><td><code>PPGDefaultDropDownCount</code></td><td>Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1).</td></tr>
 <tr><td><code>DropDownWidth</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. N&#252;tzlich f&#252;r lange Eintr&#228;ge in schmalen Feldern.</td></tr>
 <tr><td><code>ItemHeight</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Mindesth&#246;he einer Listenzeile in logischen Pixeln (0..1000); 0 = aus der Schrift. Eintr&#228;ge mit Detailzeile werden entsprechend h&#246;her.</td></tr>
 <tr><td><code>Items</code></td><td><code>TStrings</code></td><td></td><td>Die Eintr&#228;ge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Eintr&#228;ge vorhanden, enth&#228;lt Items deren Texte.</td></tr>

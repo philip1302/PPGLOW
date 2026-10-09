@@ -176,8 +176,8 @@ Alle drei erben von `TPPGCustomField` (`Source\Controls\PPG.Controls.Field.pas`)
 - **Buttons im Feld** (`GetButtons`, `ButtonClick` …) werden gezeichnet und sind keine Kind-Controls. Beispiele: Löschen (`ShowClearButton`, sichtbar nur bei Text und Hover/Fokus, Platz bleibt reserviert), `LeftButton`/`RightButton` (Bild aus `Images`, optional `DropDownMenu`), Auf/Ab im SpinEdit. Bei RTL wird alles gespiegelt.
 - **AutoSize** (Standard bei Edit und SpinEdit): Nur die Höhe folgt der Schrift. Das einzeilige `EDIT` zentriert nicht vertikal, deshalb setzt das Feld das innere Edit selbst in die Mitte.
 - **SpinEdit** verhält sich wie `TSpinEdit`:
-  - `MinValue = MaxValue` bedeutet keine Grenze.
-  - `MinValue > MaxValue` wirft bewusst **nicht**, damit `MinValue := 10; MaxValue := 100` in jeder Reihenfolge funktioniert. Der Text wird nur bei stimmigem Bereich angepasst.
+  - `Min = Max` bedeutet keine Grenze.
+  - `Min > Max` wirft bewusst **nicht**, damit `Min := 10; Max := 100` in jeder Reihenfolge funktioniert. Der Text wird nur bei stimmigem Bereich angepasst.
   - Freie Eingabe wird mit Enter und beim Verlassen auf `Value` gesetzt.
   - Gedrückt halten wiederholt nach 400 ms alle 50 ms. Der Takt kommt vom gemeinsamen Animator, es gibt keinen eigenen Timer.
 - **Memo:** Die Scrollbalken bleiben nativ (mit VCL-Style färbt sie der Style-Hook). Kein `AutoSize`.
@@ -247,7 +247,7 @@ Alle drei erben von `TPPGCustomField` (`Source\Controls\PPG.Controls.Field.pas`)
   - `Left`/`Top`/`Width`/`Height`/`PageIndex` der Seiten werden nicht gespeichert (`Align = alClient`).
   - `ActivePage` wird per Fixup vor `Loaded` gesetzt.
   - `TPPGTabSheet` wird zur Laufzeit registriert (`RegisterClass`), damit DFMs ohne Formularfeld (Frames, dynamisch geladen) die Klasse finden.
-- **Schließen-Knopf** (`ShowCloseButtons`): `OnCloseQuery(…, CanClose)`, dann `OnClose(…, Action)`.
+- **Schließen-Knopf** (`ShowCloseButton`): `OnClosing(…, CanClose)`, dann `OnClose(…, Action)`.
   - PageControl: Standard `caHide` (Reiter ausblenden); `caFree` gibt die Seite frei, `caNone` tut nichts.
   - TabControl: Standard `caFree` (Reiter löschen).
 - **Designer:**
@@ -693,6 +693,19 @@ Plan, Umsetzung und Abweichungen: `Docs\Phase20-Plan.md`.
 - **Ribbon-Tastatur in Popups:** Die Tastaturbedienung kennt eine aktuelle Ansicht (`NavView`): das Band oder die Ansicht eines offenen Gruppen- bzw. Karten-Popups. Enter auf einer geschrumpften Gruppe öffnet das Popup und wechselt die Ansicht, Esc schließt es und kehrt zur Gruppe zurück (eine Ebene). Die Galerie baut für Kategorien Zeilen (`TPPGGalleryRow`: Überschrift oder Kacheln), die Pfeiltasten gehen über diese Zeilen.
 - **Bereichsregler:** Die Geometrie-Funktion des TrackBar liefert beide Griffe, Zeichnen und Treffertest bleiben so gleich. Tab gehört dem Control nur, solange es noch einen Griff weiter gibt (`WM_GETDLGCODE` prüft die Taste in der mitgegebenen Nachricht). Screenreader-Kinder über `IPPGAccessibleChildren`.
 - **ComboBox auf der Aufklapp-Basis:** `TPPGDropPopup` und `TPPGDropAction` liegen jetzt in `PPG.Popup`; `TPPGPopupList` erbt davon und setzt Maus, Tasten, Rad und Größe (`DropDownCount`, `DropDownWidth`) selbst um. Die Basis bekam `CanDropDown`, `PopupOpened`/`PopupClosed`, `RepositionPopup` und `FreePopup`. `TPPGCustomComboBox` (und damit SearchEdit, TimePicker, DBComboBox) hat keine eigene Popup-, Capture-, Tastatur- und Screenreader-Logik mehr; sie behält nur ihre Abweichungen (Zeichen gehen ins Edit, Pos1/Ende im Edit, `ReadOnly` sperrt das Aufklappen nicht). Abgesichert durch festhaltende Tests, die vor dem Umbau gegen den alten Code liefen.
+
+## Namensregeln (Audit 5c)
+
+Seit dem Audit-Paket 5 (`Docs\Audit-Paket4-5-Plan.md`) gelten für alle Controls dieselben Namen. Neue Controls halten sich daran. Umbenannt wurde ohne Alias, solange die Suite noch nirgends installiert war; danach wird nicht mehr umbenannt.
+
+- **Element-Stile:** Die Sammlung der Bereiche heißt immer `Styles` (Typ je Control, z. B. `TPPGCalendarStyles`), ein einzelner Stil `Style`.
+- **Wertebereich:** `Min`, `Max`, `Value` (ProgressBar, TrackBar, SpinEdit, NumberEdit, ProgressRing; Rating nur `Max`). Grid-Spalten und Validator-Regeln behalten `MinValue`/`MaxValue`, weil dort `Min`/`Max` keine eigene Bedeutung hätten. In Klassen mit `Min`/`Max` ruft der Code die Funktionen als `System.Math.Min/Max` auf.
+- **Ereignisse:** Auswahl/Wechsel durch den Anwender `OnChange`, vorher abbrechbar `OnChanging`; geänderter Eintrag `On<Ding>Change` (`OnAppointmentChange`, `OnTopLeftChange`); Klick auf einen Eintrag `OnItemClick`; Kästchen umgeschaltet `OnItemCheck` (`TPPGItemCheckEvent` mit Index); Schließen abfragen `OnClosing`, danach `OnClose`; eigenes Zeichnen `OnCustomDraw<Ding>`.
+- **Art und Signalfarbe:** Auswahl einer Variante heißt `Kind`, Signalfarben `Severity` (Badge, InfoBar). Aufzählungswerte tragen ein Präfix aus dem Typnamen (`grk…` für `TPPGGaugeRangeKind`, `ttp…` für die TeachingTip-Platzierung), damit sie nicht mit anderen kollidieren.
+- **Sichtbarkeit von Teilen:** `Show<Teil>` (`ShowSlider`, `ShowCloseButton`), Zustand `Open` statt `IsOpen`.
+- **Farben:** „nicht gesetzt“ ist überall `clDefault` (`PPGColorIsSet`); `clNone` bedeutet „keine Farbe“.
+- **Gleiche Vorgaben:** `DropDownCount` 8 bis höchstens 100 (`PPGDefaultDropDownCount`, `PPGMaxDropDownCount`), Kanban-Spalten mindestens `PPGKanbanMinColumnWidth`. `ShowHint` hat die VCL-Vorgabe.
+- **Optik im Objektinspektor:** Preset, StyleManager, Appearance, Animation, Styles/Style usw. stehen in der Kategorie „PPGlow“.
 
 ## Anpassbarkeit (Element-Stile, Tokens, Zeichen-Ereignisse)
 

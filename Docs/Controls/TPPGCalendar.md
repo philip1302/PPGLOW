@@ -42,9 +42,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MinDate` | `TDate` |  | Frühestes wählbares Datum; frühere Tage sind gesperrt. 0 = ohne Grenze. Nutzung: `Cal.MinDate := Date;` erlaubt nur heute und später. |
 | `MaxDate` | `TDate` |  | Spätestes wählbares Datum; spätere Tage sind gesperrt. 0 = ohne Grenze. |
 | `ShowWeekNumbers` | `Boolean` | `False` | True: Links steht die Kalenderwoche nach ISO 8601. |
-| `ShowToday` | `Boolean` | `True` | True: Der heutige Tag ist mit einem Ring markiert (Farbe über CalendarStyles.Today). |
+| `ShowToday` | `Boolean` | `True` | True: Der heutige Tag ist mit einem Ring markiert (Farbe über Styles.Today). |
 | `FirstDayOfWeek` | `TPPGFirstDayOfWeek` | `fdLocale` | Erster Wochentag der Monatsansicht; fdLocale = aus den Windows-Ländereinstellungen. Werte: `fdLocale`, `fdMonday`, `fdTuesday`, `fdWednesday`, `fdThursday`, `fdFriday`, `fdSaturday`, `fdSunday`. |
-| `CalendarStyles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, andere Monate, Wochennummern. Nicht gesetzte Werte kommen aus dem Preset. Nutzung: `Cal.CalendarStyles.Weekend.TextColor := clRed;` |
+| `Styles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, andere Monate, Wochennummern. Nicht gesetzte Werte kommen aus dem Preset. Nutzung: `Cal.Styles.Weekend.TextColor := clRed;` |
 
 ## Eigenschaften wie in der VCL
 

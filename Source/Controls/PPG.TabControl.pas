@@ -7,7 +7,7 @@ unit PPG.TabControl;
     Seite als Container-Flaeche. Der gewaehlte Reiter haengt mit der Seite
     zusammen; ModernFlat zeigt zusaetzlich einen gleitenden Unterstrich.
   - Maus: Klick waehlt (OnChanging kann abbrechen, danach OnChange),
-    Schliessen-Knopf (ShowCloseButtons), Blaetterpfeile bei Ueberlauf.
+    Schliessen-Knopf (ShowCloseButton), Blaetterpfeile bei Ueberlauf.
   - Tastatur: Strg+Tab / Strg+Umschalt+Tab / Strg+Bild auf/ab, wenn der
     Fokus im Control liegt (das innerste Reiter-Control gewinnt);
     Links/Rechts/Pos1/Ende, wenn das Control selbst den Fokus hat;
@@ -155,14 +155,14 @@ type
     procedure DesignerModified;
 
     property HotTrack: Boolean read FHotTrack write SetHotTrack default True;
-    property ShowCloseButtons: Boolean read FShowCloseButtons write SetShowCloseButtons default False;
+    property ShowCloseButton: Boolean read FShowCloseButtons write SetShowCloseButtons default False;
     property TabHeight: Integer read FTabHeight write SetTabHeight default 0;
     property TabPosition: TTabPosition read FTabPosition write SetTabPosition default tpTop;
     property TabWidth: Integer read FTabWidth write SetTabWidth default 0;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnChanging: TTabChangingEvent read FOnChanging write FOnChanging;
     /// Bereiche der Reiterleiste (Reiter, Hover, gewaehlt, Leiste, Unterstrich).
-    property TabStyles: TPPGTabStyles read FTabStyles write SetTabStyles;
+    property Styles: TPPGTabStyles read FTabStyles write SetTabStyles;
     /// Wie TPageControl: mehrere Reihen statt Blaetterpfeilen.
     property MultiLine: Boolean read FMultiLine write SetMultiLine default False;
     /// Mit MultiLine: Reihen nicht auf volle Breite strecken.
@@ -219,7 +219,7 @@ type
     property Tabs: TStrings read GetTabs write SetTabs;
     property TabIndex: Integer read FTabIndex write SetTabIndex default -1;
     property OnClose: TPPGTabCloseEvent read FOnClose write FOnClose;
-    property OnCloseQuery: TPPGTabCloseQueryEvent read FOnCloseQuery write FOnCloseQuery;
+    property OnClosing: TPPGTabCloseQueryEvent read FOnCloseQuery write FOnCloseQuery;
     property OnGetImageIndex: TTabGetImageEvent read FOnGetImageIndex write FOnGetImageIndex;
   public
     constructor Create(AOwner: TComponent); override;
@@ -232,9 +232,9 @@ type
     property StyleManager;
     property Appearance;
     property Animation;
-    property ShowCloseButtons;
+    property ShowCloseButton;
     property HighContrastSupport;
-    property TabStyles;
+    property Styles;
     { wie TTabControl }
     property MultiLine;
     property OwnerDraw;
@@ -276,7 +276,7 @@ type
     property OnChange;
     property OnChanging;
     property OnClose;
-    property OnCloseQuery;
+    property OnClosing;
     property OnContextPopup;
     property OnDragDrop;
     property OnDragOver;

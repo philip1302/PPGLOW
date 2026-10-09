@@ -80,7 +80,7 @@ var
 begin
   E := TPPGDBNumberEdit.Create(FForm);
   E.Parent := FForm;
-  E.NumberKind := nkCurrency;
+  E.Kind := nkCurrency;
   E.DataSource := FSource;
   E.DataField := 'Betrag';
   CheckTrue(E.AllowNull, 'DB: Null ist Vorgabe');
@@ -99,7 +99,7 @@ var
 begin
   E := TPPGDBNumberEdit.Create(FForm);
   E.Parent := FForm;
-  E.NumberKind := nkCurrency;
+  E.Kind := nkCurrency;
   E.DataSource := FSource;
   E.DataField := 'Betrag';
   E.SetFocus;

@@ -39,12 +39,12 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `EditorEnabled` | `Boolean` | `True` | False: Der Wert lässt sich nur über die Pfeil-Buttons, Pfeiltasten und das Mausrad ändern, nicht durch Tippen. |
 | `Increment` | `Integer` | `1` | Schrittweite für Buttons, Pfeiltasten und Mausrad; Bild auf/ab ändert um das Zehnfache. |
 | `MaxLength` | `Integer` | `0` | Höchstzahl der Zeichen; 0 = unbegrenzt. |
-| `MaxValue` | `Integer` | `0` | Obergrenze für Value. MinValue = MaxValue bedeutet „keine Grenze" (wie TSpinEdit). |
-| `MinValue` | `Integer` | `0` | Untergrenze für Value. MinValue = MaxValue bedeutet „keine Grenze"; die Reihenfolge beim Setzen ist egal. Nutzung: `Spin.MinValue := 1; Spin.MaxValue := 99;` |
+| `Max` | `Integer` | `0` | Obergrenze für Value. Min = Max bedeutet „keine Grenze" (wie TSpinEdit). |
+| `Min` | `Integer` | `0` | Untergrenze für Value. Min = Max bedeutet „keine Grenze"; die Reihenfolge beim Setzen ist egal. Nutzung: `Spin.Min := 1; Spin.Max := 99;` |
 | `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. |
 | `ReadOnlyStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Eigene Optik bei ReadOnly: Fläche, Text- und Randfarbe (je auch für Dunkel). clDefault = wie im bearbeitbaren Zustand. Nutzung: `Edit1.ReadOnlyStyle.Color := $00F0F0F0; Edit1.ReadOnlyStyle.TextColor := clGrayText;` |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
-| `Value` | `Integer` |  | Aktueller Wert; wird still auf MinValue..MaxValue begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt. |
+| `Value` | `Integer` |  | Aktueller Wert; wird still auf Min..Max begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt. |
 
 ## Eigenschaften wie in der VCL
 

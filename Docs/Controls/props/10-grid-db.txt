@@ -44,8 +44,8 @@ TPPGCustomComboBox.ItemIndex = Index des gewählten Eintrags; -1 = keiner. Setze
 TPPGCustomComboBox.Items = Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte.
 TPPGCustomComboBox.ItemsEx = Reiche Einträge mit Bild (aus Images), Detailzeile, Plakette und Markup. Sind welche vorhanden, sind sie die Einträge der Liste.
 > `with ComboBox1.ItemsEx.Add('Berlin', 2) do Detail := '3,7 Mio. Einwohner';`
-TPPGCustomComboBox.ListStyles = Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset.
-> `ComboBox1.ListStyles.AlternateRow.Color := $00FAF7F2;`
+TPPGCustomComboBox.Styles = Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset.
+> `ComboBox1.Styles.AlternateRow.Color := $00FAF7F2;`
 TPPGCustomComboBox.OnCloseUp = Die Aufklappliste wurde geschlossen (mit oder ohne Übernahme).
 TPPGCustomComboBox.OnCustomDrawItem = Vor dem Zeichnen jedes Eintrags der Aufklappliste: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen.
 > `if Index = 0 then Style.FontStyle := [fsBold];`
@@ -69,8 +69,8 @@ TPPGCustomDBGrid.ReadOnly = True: Keine Bearbeitung im Grid, auch wenn die Daten
 
 # --- TPPGCustomDatePicker ---
 TPPGCustomDatePicker.CalAlignment = Ausrichtung des aufklappenden Kalenders am Feld: dtaLeft = linke Kante, dtaRight = rechte Kante (bei RTL gespiegelt).
-TPPGCustomDatePicker.CalendarStyles = Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern).
-> `DatePicker1.CalendarStyles.Weekend.TextColor := clRed;`
+TPPGCustomDatePicker.Styles = Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern).
+> `DatePicker1.Styles.Weekend.TextColor := clRed;`
 TPPGCustomDatePicker.Checked = Nur mit ShowCheckbox: True = ein Datum ist gesetzt, False = „kein Datum".
 TPPGCustomDatePicker.Date = Das gewählte Datum (ohne Uhrzeit). Setzen aus Code löst kein OnChange aus; Werte außerhalb MinDate/MaxDate werden begrenzt.
 > `DatePicker1.Date := IncDay(Date, 7);`
@@ -150,7 +150,7 @@ TPPGCustomGrid.OnLinkClick = Eine Link-Zelle (CellKind = ckLink) oder ein Link i
 TPPGCustomGrid.OnSelectCell = Vor dem Wechsel der Fokuszelle; CanSelect := False verhindert ihn.
 TPPGCustomGrid.OnSetEditText = Wie TStringGrid: der Editor hat einen neuen Wert in die Zelle geschrieben.
 TPPGCustomGrid.OnSorted = Die Ansicht wurde neu sortiert (Klick auf den Kopf oder Code).
-TPPGCustomGrid.OnTopLeftChanged = Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen geändert.
+TPPGCustomGrid.OnTopLeftChange = Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen geändert.
 TPPGCustomGrid.OnValidateCell = Vor dem Übernehmen eines bearbeiteten Werts: Value prüfen oder korrigieren; Accept := False lehnt ab (der Editor bleibt offen).
 > `Accept := TryStrToFloat(Value, X); if not Accept then ShowMessage('Bitte eine Zahl eingeben');`
 TPPGCustomGrid.Options = Verhalten wie bei TStringGrid: goEditing (bearbeiten), goRowSelect (ganze Zeile wählen), goRangeSelect (Bereich wählen), goColSizing/goRowSizing (Breite/Höhe ziehen), goColMoving (Spalten verschieben), goTabs (Tab wechselt Zelle), goVertLine/goHorzLine und goFixedVertLine/goFixedHorzLine (Gitterlinien), goAlwaysShowEditor, goThumbTracking.
@@ -180,15 +180,15 @@ TPPGCustomMemo.WantTabs = True: Tab fügt ein Tabulatorzeichen ein statt zum nä
 # --- TPPGCustomNumberEdit ---
 TPPGCustomNumberEdit.AllowExpressions = True: Die Eingabe darf rechnen („2*19,99", „(100-15)/2"); ausgerechnet wird bei Enter und beim Verlassen.
 TPPGCustomNumberEdit.AllowNull = True: Ein leeres Feld bedeutet „kein Wert" (IsNull, bei DB-Feldern Null); False: leer wird zu 0.
-TPPGCustomNumberEdit.CurrencyString = Währungszeichen bei NumberKind = nkCurrency; leer = Zeichen aus den Ländereinstellungen (z. B. „€").
+TPPGCustomNumberEdit.CurrencyString = Währungszeichen bei Kind = nkCurrency; leer = Zeichen aus den Ländereinstellungen (z. B. „€").
 > `NumberEdit1.CurrencyString := 'CHF';`
 TPPGCustomNumberEdit.Decimals = Nachkommastellen in der Anzeige und beim Runden (0..10; kaufmännisch gerundet). Bei nkInteger ohne Wirkung.
 TPPGCustomNumberEdit.Increment = Schrittweite für Pfeil auf/ab, Mausrad und Spin-Buttons.
 TPPGCustomNumberEdit.LargeIncrement = Schrittweite für Bild auf/ab.
-TPPGCustomNumberEdit.MaxValue = Größter erlaubter Wert; größere werden still begrenzt. MinValue = MaxValue bedeutet keine Grenze (wie TSpinEdit).
-TPPGCustomNumberEdit.MinValue = Kleinster erlaubter Wert; kleinere werden still begrenzt. MinValue = MaxValue bedeutet keine Grenze.
-> `NumberEdit1.MinValue := 0; NumberEdit1.MaxValue := 100;`
-TPPGCustomNumberEdit.NumberKind = Art der Zahl: nkInteger (Ganzzahl), nkFloat (Kommazahl), nkCurrency (Geldbetrag, intern Currency ohne Rundungsfehler, mit Währungszeichen), nkPercent (Prozent; Value 12,5 wird als „12,5 %" angezeigt).
+TPPGCustomNumberEdit.Max = Größter erlaubter Wert; größere werden still begrenzt. Min = Max bedeutet keine Grenze (wie TSpinEdit).
+TPPGCustomNumberEdit.Min = Kleinster erlaubter Wert; kleinere werden still begrenzt. Min = Max bedeutet keine Grenze.
+> `NumberEdit1.Min := 0; NumberEdit1.Max := 100;`
+TPPGCustomNumberEdit.Kind = Art der Zahl: nkInteger (Ganzzahl), nkFloat (Kommazahl), nkCurrency (Geldbetrag, intern Currency ohne Rundungsfehler, mit Währungszeichen), nkPercent (Prozent; Value 12,5 wird als „12,5 %" angezeigt).
 TPPGCustomNumberEdit.ShowSpinButtons = True: Rechts im Feld erscheinen Auf/Ab-Schaltflächen (Schritt = Increment).
 TPPGCustomNumberEdit.ShowThousandSeparator = True: Ohne Fokus wird mit Tausendertrennzeichen angezeigt („1.234,50").
 TPPGCustomNumberEdit.Value = Der Zahlenwert. Ohne Fokus formatiert angezeigt, mit Fokus roh. Setzen aus Code löst kein OnChange aus; OnChange kommt nur bei Änderungen durch den Anwender.
@@ -213,29 +213,41 @@ TPPGDBCheckBox.ValueChecked = Wert(e) für „angehakt" bei Feldern, die kein Bo
 TPPGDBCheckBox.ValueUnchecked = Wert(e) für „nicht angehakt"; mehrere durch Semikolon getrennt, geschrieben wird der erste.
 TPPGDBCheckComboBox.DataField = Feld, in dem die angehakten Einträge als CheckedText (getrennt durch Delimiter) stehen.
 TPPGDBCheckComboBox.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBCheckComboBox.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBColorPicker.DataField = Ganzzahl-Feld mit der Farbe als TColor-Wert; Null bzw. leer = „Keine" (clNone).
 TPPGDBColorPicker.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBColorPicker.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBComboBox.DataField = Feld, das angezeigt und geschrieben wird. Bei TPPGDBComboBox der gewählte bzw. eingegebene Text; bei TPPGDBLookupComboBox das Schlüsselfeld der Haupt-Datenmenge (bekommt KeyField des gewählten Eintrags).
 TPPGDBComboBox.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBComboBox.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBDatePicker.DataField = Datums- bzw. Datum-Zeit-Feld, das angezeigt und bearbeitet wird; leeres Feld = Null.
 TPPGDBDatePicker.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBDatePicker.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBEdit.DataField = Feld, das angezeigt und bearbeitet wird. Mit Fokus erscheint Field.Text, ohne Fokus Field.DisplayText; beim Verlassen wird geschrieben (Fehler erscheinen als ValidationState statt Dialog).
 > `DBEdit1.DataSource := DataSource1; DBEdit1.DataField := 'Name';`
 TPPGDBEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBGrid.TitleFont = Wie TDBGrid.TitleFont: Schrift der Titelzeile. Ist ein Alias für Styles.Header.Font und wird nicht eigens gespeichert.
+TPPGCustomDBGrid.ShowRequired = True: Spalten mit Pflichtfeldern (TField.Required) zeigen im Titel ein Sternchen.
 TPPGDBLookupComboBox.KeyField = Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben.
 TPPGDBLookupComboBox.ListField = Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile.
 > `Lookup1.ListSource := dsKunden; Lookup1.KeyField := 'ID'; Lookup1.ListField := 'Name;Ort';`
 TPPGDBLookupComboBox.ListSource = Datenquelle der Nachschlage-Tabelle. Ihre Datenmenge wird beim Öffnen einmal vollständig gelesen; für sehr große Tabellen vorher in der Abfrage filtern.
+TPPGDBLookupComboBox.NullValueKey = Tastenkürzel, das den Wert leert und Null ins Feld schreibt (z. B. Entf oder Strg+Entf); 0 = keines. Wie TDBLookupComboBox.NullValueKey.
+> `Lookup1.NullValueKey := ShortCut(VK_DELETE, [ssCtrl]);`
 TPPGDBMaskEdit.DataField = Feld, das angezeigt und bearbeitet wird. Hat das Control keine eigene EditMask, wird Field.EditMask übernommen.
 TPPGDBMaskEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBMaskEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBMemo.AutoDisplay = False: Memo- und BLOB-Felder werden erst bei Doppelklick oder Enter geladen (spart Zeit beim Blättern; wie TDBMemo).
 TPPGDBMemo.DataField = Text- oder Memo-Feld, das angezeigt und bearbeitet wird.
 TPPGDBMemo.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBMemo.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBNumberEdit.DataField = Zahlenfeld (Ganzzahl, Gleitkomma, BCD, Währung); leeres Feld = Null bei AllowNull.
 TPPGDBNumberEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBNumberEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBTagEdit.DataField = Textfeld, in dem die Tags getrennt durch Delimiter stehen.
 TPPGDBTagEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBTagEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 
 # --- TPPGGridBand ---
 TPPGGridBand.Alignment = Ausrichtung der Band-Überschrift (links, zentriert, rechts).
@@ -309,7 +321,7 @@ TPPGTagEdit.AllowDuplicates = True: Dasselbe Tag darf mehrfach vorkommen.
 TPPGTagEdit.AllowNew = False: Nur Einträge aus Suggestions sind erlaubt (Auswahlliste statt freier Eingabe).
 TPPGTagEdit.CaseSensitive = True: Groß-/Kleinschreibung zählt beim Prüfen auf Doppelte und beim Abgleich mit Suggestions.
 TPPGTagEdit.Delimiter = Trennzeichen der Tags in TagsText bzw. im DB-Feld. Vorgabe „;".
-TPPGTagEdit.Delimiters = Zeichen, die beim Tippen ein Tag abschließen (z. B. „;," ). Enter schließt immer ab; eingefügtes „a; b; c" ergibt drei Tags.
+TPPGTagEdit.InputDelimiters = Zeichen, die beim Tippen ein Tag abschließen (z. B. „;," ). Enter schließt immer ab; eingefügtes „a; b; c" ergibt drei Tags.
 TPPGTagEdit.MaxTags = Höchstzahl der Tags; 0 = ohne Grenze.
 TPPGTagEdit.OnTagAdding = Bevor ein Tag durch den Anwender entsteht: Tag kann geändert (z. B. getrimmt) werden, Allow := False lehnt ab.
 > `Allow := Pos('@', Tag) > 0; // nur E-Mail-Adressen`

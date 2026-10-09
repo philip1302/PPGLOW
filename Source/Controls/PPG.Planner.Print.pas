@@ -318,7 +318,7 @@ begin
     P.BiDiMode := Acc(FPlanner).BiDiMode;
     P.OnGetAppointmentColor := Acc(FPlanner).OnGetAppointmentColor;
     P.Categories := Acc(FPlanner).Categories;
-    P.PlannerStyles := Acc(FPlanner).PlannerStyles;
+    P.Styles := Acc(FPlanner).Styles;
     P.OnCustomDrawAppointment := Acc(FPlanner).OnCustomDrawAppointment;
     P.ShowNowLine := False;
     P.HighContrastSupport := False;

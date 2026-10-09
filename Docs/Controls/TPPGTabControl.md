@@ -21,7 +21,7 @@ Reiter-Controls der Suite.
 
 TPPGCustomTabs - gemeinsame Basis von TPPGTabControl und TPPGPageControl:
 - Reiterleiste (TPPGTabStrip) oben oder unten, darunter bzw. darueber die Seite als Container-Flaeche. Der gewaehlte Reiter haengt mit der Seite zusammen; ModernFlat zeigt zusaetzlich einen gleitenden Unterstrich.
-- Maus: Klick waehlt (OnChanging kann abbrechen, danach OnChange), Schliessen-Knopf (ShowCloseButtons), Blaetterpfeile bei Ueberlauf.
+- Maus: Klick waehlt (OnChanging kann abbrechen, danach OnChange), Schliessen-Knopf (ShowCloseButton), Blaetterpfeile bei Ueberlauf.
 - Tastatur: Strg+Tab / Strg+Umschalt+Tab / Strg+Bild auf/ab, wenn der Fokus im Control liegt (das innerste Reiter-Control gewinnt); Links/Rechts/Pos1/Ende, wenn das Control selbst den Fokus hat; Accelerator (&) in den Beschriftungen.
 - Designer: Klicks auf die Reiter erreichen das Control (CM_DESIGNHITTEST).
 - Barrierefreiheit: Rolle PAGETABLIST mit virtuellen PAGETAB-Kindern.
@@ -41,15 +41,15 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
-| `ShowCloseButtons` | `Boolean` | `False` | True: Jeder Reiter zeigt einen Schließen-Knopf („×"); der Klick löst OnCloseQuery und OnClose aus. |
+| `ShowCloseButton` | `Boolean` | `False` | True: Jeder Reiter zeigt einen Schließen-Knopf („×"); der Klick löst OnClosing und OnClose aus. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
-| `TabStyles` | [TPPGTabStyles](types/TPPGTabStyles.md) |  | Aussehen der Reiterleiste einzeln: Tab (nicht gewählte Reiter), HotTab (Maus darüber), ActiveTab (gewählt), Strip (Fläche hinter den Reitern) und Indicator (Unterstrich); clDefault = vom Preset. Nutzung: `PPGPageControl1.TabStyles.ActiveTab.FontStyle := [fsBold];` |
+| `Styles` | [TPPGTabStyles](types/TPPGTabStyles.md) |  | Aussehen der Reiterleiste einzeln: Tab (nicht gewählte Reiter), HotTab (Maus darüber), ActiveTab (gewählt), Strip (Fläche hinter den Reitern) und Indicator (Unterstrich); clDefault = vom Preset. Nutzung: `PPGPageControl1.Styles.ActiveTab.FontStyle := [fsBold];` |
 | `MultiLine` | `Boolean` | `False` | True: Passen nicht alle Reiter in eine Zeile, werden sie auf mehrere Reihen verteilt (wie TPageControl); die Reihe mit dem gewählten Reiter liegt an der Seite. False: eine Reihe mit Blätterpfeilen. |
 | `OwnerDraw` | `Boolean` | `False` | True: Der Inhalt der Reiter wird über OnDrawTab gezeichnet; Fläche und Rahmen kommen weiter aus dem Preset. |
 | `RaggedRight` | `Boolean` | `False` | Nur mit MultiLine: True = Reihen werden nicht auf die volle Breite gestreckt. |
 | `ScrollOpposite` | `Boolean` | `False` | Nur mit MultiLine und Reitern oben oder unten: Die Reihen zwischen dem gewählten Reiter und der Seite wechseln auf die Gegenseite (unter bzw. über die Seite), wie bei TPageControl. Wechselt die Auswahl in eine andere Reihe, ändern sich Aufteilung und Seitengröße. Nutzung: `PageControl1.MultiLine := True; PageControl1.ScrollOpposite := True;` |
 | `Style` | `TTabStyle` | `tsTabs` | Darstellung wie TTabControl.Style: tsTabs (Reiter), tsButtons (Knöpfe) oder tsFlatButtons (flache Knöpfe). |
-| `HotTrack` | `Boolean` | `True` | True: Der Reiter unter der Maus wird hervorgehoben (TabStyles.HotTab). |
+| `HotTrack` | `Boolean` | `True` | True: Der Reiter unter der Maus wird hervorgehoben (Styles.HotTab). |
 | `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
 | `TabHeight` | `Integer` | `0` | Höhe der Reiter in Pixeln (0..1000); 0 = aus der Schrift berechnet. |
 | `TabPosition` | `TTabPosition` | `tpTop` | Lage der Reiterleiste: tpTop, tpBottom, tpLeft (Leiste links, Reiter untereinander) oder tpRight (rechts). Senkrecht ist die Leiste so breit wie der breiteste Reiter; der gewählte Reiter hat einen Indikator an der Kante zur Seite, bei zu vielen Reitern erscheinen Pfeile hoch/runter. MultiLine und ScrollOpposite gelten nur oben/unten. Nutzung: `PageControl1.TabPosition := tpLeft;` |
@@ -91,8 +91,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
 | `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Der gewählte Reiter bzw. die aktive Seite hat sich durch den Anwender geändert (nicht beim Setzen im Code). |
 | `OnChanging` | `TTabChangingEvent` `(Sender: TObject; var AllowChange: Boolean)` | Vor einem Reiterwechsel durch den Anwender; AllowChange := False verhindert ihn (z. B. wenn die aktuelle Seite ungültige Eingaben hat). |
-| `OnClose` | `TPPGTabCloseEvent` `(Sender: TObject; Index: Integer; var Action: TCloseAction)` | Ein Reiter soll über seinen Schließen-Knopf geschlossen werden (nach OnCloseQuery); Index ist der Reiter. Action = caFree (Standard) entfernt ihn aus Tabs, caNone behält ihn. |
-| `OnCloseQuery` | `TPPGTabCloseQueryEvent` `(Sender: TObject; Index: Integer; var CanClose: Boolean)` | Vor dem Schließen eines Reiters; CanClose := False bricht ab (z. B. bei ungespeicherten Änderungen). |
+| `OnClose` | `TPPGTabCloseEvent` `(Sender: TObject; Index: Integer; var Action: TCloseAction)` | Ein Reiter soll über seinen Schließen-Knopf geschlossen werden (nach OnClosing); Index ist der Reiter. Action = caFree (Standard) entfernt ihn aus Tabs, caNone behält ihn. |
+| `OnClosing` | `TPPGTabCloseQueryEvent` `(Sender: TObject; Index: Integer; var CanClose: Boolean)` | Vor dem Schließen eines Reiters; CanClose := False bricht ab (z. B. bei ungespeicherten Änderungen). |
 | `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
 | `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. |
 | `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. |

@@ -11,6 +11,7 @@
 <tr><td><code>Kind</code></td><td><code>TPPGNavItemKind</code></td><td><code>nikItem</code></td><td>Art: nikItem (w&#228;hlbarer Eintrag), nikHeader (Gruppen&#252;berschrift) oder nikSeparator (Trennlinie). Werte: <code>nikItem</code>, <code>nikHeader</code>, <code>nikSeparator</code>.</td></tr>
 <tr><td><code>IconChar</code></td><td><code>Word</code></td><td><code>0</code></td><td>Symbol aus der Icon-Schrift (Segoe Fluent Icons bzw. MDL2) als Zeichencode; 0 = keins (dann ImageIndex). Nutzung: <code>Item.IconChar := $E80F; // Start</code></td></tr>
 <tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus NavigationView.Images, wenn IconChar = 0; -1 = kein Bild.</td></tr>
+<tr><td><code>ImageName</code></td><td><code>TImageName</code></td><td></td><td>Bild per Namen aus den Images des Besitzers (TVirtualImageList, ab Delphi 10.4). Robust gegen Umsortieren; setzt ImageIndex passend, ein unbekannter Name ergibt „kein Bild&quot;.</td></tr>
 <tr><td><code>BadgeCount</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Zahl auf der Plakette des Eintrags (z. B. ungelesene Nachrichten); 0 = keine Zahl. Nutzung: <code>PPGNavigationView1.Items[2].BadgeCount := 12;</code></td></tr>
 <tr><td><code>BadgeDot</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Ein Punkt statt einer Zahl weist auf Neues hin (wird gezeigt, solange BadgeCount = 0).</td></tr>
 <tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Eintrag grau und nicht w&#228;hlbar.</td></tr>
@@ -19,10 +20,10 @@
 <tr><td><code>PageIndex</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Seite im verbundenen PageControl, die bei Auswahl gezeigt wird; -1 = keine.</td></tr>
 <tr><td><code>Expanded</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Untereintr&#228;ge (Items) sind aufgeklappt. Der Anwender klappt per Klick bzw. Rechts/Links.</td></tr>
 <tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Tooltip des Eintrags (zus&#228;tzlich zum Text in der kompakten Leiste).</td></tr>
-<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert, z. B. eine Befehls-ID f&#252;r OnItemInvoked.</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert, z. B. eine Befehls-ID f&#252;r OnItemClick.</td></tr>
 <tr><td><code>Items</code></td><td><a href="TPPGNavItems.html">TPPGNavItems</a></td><td></td><td>Untereintr&#228;ge; der Eintrag wird damit aufklappbar.</td></tr>
-<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Fl&#228;chenfarbe dieses Eintrags; clDefault = aus NavStyles. Zusammen mit TextColor und FontStyle zum Hervorheben einzelner Eintr&#228;ge.</td></tr>
-<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Textfarbe dieses Eintrags; clDefault = aus NavStyles.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Fl&#228;chenfarbe dieses Eintrags; clDefault = aus Styles. Zusammen mit TextColor und FontStyle zum Hervorheben einzelner Eintr&#228;ge.</td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Textfarbe dieses Eintrags; clDefault = aus Styles.</td></tr>
 <tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile nur f&#252;r diesen Eintrag, z. B. [fsBold].</td></tr>
 </table>
 <h2>Verwendet in</h2>

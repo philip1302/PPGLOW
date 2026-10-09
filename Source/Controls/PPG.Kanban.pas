@@ -368,14 +368,14 @@ type
     property WipMode: TPPGKanbanWipMode read FWipMode write FWipMode default kwmWarn;
     property ShowCardCount: Boolean read FShowCardCount write SetShowCardCount default True;
     /// Bereiche (Spalten, Karten, Hover, Auswahl, Swimlane-Koepfe).
-    property KanbanStyles: TPPGKanbanStyles read FKanbanStyles write SetKanbanStyles;
+    property Styles: TPPGKanbanStyles read FKanbanStyles write SetKanbanStyles;
     property OnCustomDrawCard: TPPGKanbanDrawCardEvent read FOnCustomDrawCard write FOnCustomDrawCard;
     property OnCardMoving: TPPGKanbanMovingEvent read FOnCardMoving write FOnCardMoving;
     property OnCardMoved: TPPGKanbanMovedEvent read FOnCardMoved write FOnCardMoved;
     property OnCardClick: TPPGKanbanCardEvent read FOnCardClick write FOnCardClick;
     property OnCardOpen: TPPGKanbanCardEvent read FOnCardOpen write FOnCardOpen;
     property OnGetCard: TPPGKanbanGetCardEvent read FOnGetCard write FOnGetCard;
-    property OnSelectionChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
+    property OnChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
     property OnColumnCollapse: TPPGKanbanColumnEvent read FOnColumnCollapse write FOnColumnCollapse;
     /// Nur Karten zeigen, deren Titel, Text, Labels oder Person den Begriff
     /// enthalten (ohne Gross-/Kleinschreibung); Treffer im Titel hervorgehoben.
@@ -409,7 +409,7 @@ type
     property ReadOnly;
     property WipMode;
     property ShowCardCount;
-    property KanbanStyles;
+    property Styles;
     property OnCustomDrawCard;
     property ScrollBarMode;
     property SmoothScrolling;
@@ -436,7 +436,7 @@ type
     property OnCardClick;
     property OnCardOpen;
     property OnGetCard;
-    property OnSelectionChange;
+    property OnChange;
     property OnColumnCollapse;
     property FilterText;
     property FilterLabels;
@@ -688,7 +688,7 @@ procedure TPPGCustomKanban.SetColumnWidth(const Value: Integer);
 var
   V: Integer;
 begin
-  V := PPGCheckRange(Self, 'ColumnWidth', Value, 120, 2000);
+  V := PPGCheckRange(Self, 'ColumnWidth', Value, PPGKanbanMinColumnWidth, 2000);
   if V <> FColumnWidth then
   begin
     FColumnWidth := V;
@@ -754,7 +754,7 @@ var
   C, L, I: Integer;
 begin
   // Audit 5b: wie eine Auswahl (sichtbar machen, Screenreader, DB-Abgleich),
-  // aber ohne OnSelectionChange (Code setzt still)
+  // aber ohne OnChange (Code setzt still)
   EnsureLayout;
   if (Value <> nil) and FindCard(Value, C, L, I) then
     FocusHit(KHit(kpCard, C, L, I), False)
@@ -832,7 +832,7 @@ var
   TitleF, Temp: TFont;
 begin
   Inner := W - 2 * CardPad;
-  if D.Color <> clNone then
+  if PPGColorIsSet(D.Color) then
     Dec(Inner, Sc(4));
   Result := CardPad;
   if D.Labels <> '' then
@@ -1900,7 +1900,7 @@ begin
     Stroke := T.Stroke;
     TextCol := T.TextPrimary;
     Sec := T.TextSecondary;
-    // Element-Stile (KanbanStyles) und eigenes Zeichnen
+    // Element-Stile (Styles) und eigenes Zeichnen
     if not UseVclStyle then
     begin
       KS := FKanbanStyles;
@@ -1930,7 +1930,7 @@ begin
   Inner := R;
   InflateRect(Inner, -CardPad, -CardPad);
   // Farbstreifen
-  if D.Color <> clNone then
+  if PPGColorIsSet(D.Color) then
   begin
     if RTL then
     begin
@@ -2145,7 +2145,7 @@ begin
   if (R.Right < View.Left) or (R.Left > View.Right) then
     Exit;
   Col := FCols[C].Column.Color;
-  if (Col = clNone) or HC then
+  if not PPGColorIsSet(Col) or HC then
     Col := Accent
   else
     Col := PPGColorToRGB(Col);

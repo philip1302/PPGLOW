@@ -61,7 +61,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `AutoCheck` | `Boolean` | `True` | Nur mit CheckBoxes: Umschalten eines Knotens gibt den Zustand an alle Kinder weiter und berechnet die Eltern (alle an, alle aus oder gemischt). |
 | `AutoExpand` | `Boolean` | `False` | True: Ein Knoten klappt beim Wählen per Maus oder Tastatur automatisch auf. |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen. |
-| `CheckBoxes` | `Boolean` | `False` | True: Jeder Knoten zeigt ein Kästchen mit drei Zuständen (Node.CheckState); Änderungen meldet OnChecked. |
+| `CheckBoxes` | `Boolean` | `False` | True: Jeder Knoten zeigt ein Kästchen mit drei Zuständen (Node.CheckState); Änderungen meldet OnItemCheck. |
 | `HideSelection` | `Boolean` | `False` | True: Die Auswahl wird ohne Fokus nicht hervorgehoben. |
 | `HotTrack` | `Boolean` | `False` | Wie TTreeView: Der Knoten unter der Maus wird unterstrichen. |
 | `Indent` | `Integer` | `19` | Einzug je Ebene in logischen Pixeln (0..200, Vorgabe 19). |
@@ -108,7 +108,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
 | `OnChange` | `TPPGTVChangedEvent` `(Sender: TObject; Node: TPPGTreeNode)` | Der gewählte Knoten hat sich geändert (auch bei Selected im Code, wie TTreeView). |
 | `OnChanging` | `TPPGTVChangingEvent` `(Sender: TObject; Node: TPPGTreeNode; var AllowChange: Boolean)` | Bevor die Auswahl wechselt; AllowChange := False verhindert den Wechsel zu Node. |
-| `OnChecked` | `TPPGTVChangedEvent` `(Sender: TObject; Node: TPPGTreeNode)` | Das Kästchen eines Knotens wurde umgeschaltet (Node = der umgeschaltete Knoten). |
+| `OnItemCheck` | `TPPGTVChangedEvent` `(Sender: TObject; Node: TPPGTreeNode)` | Das Kästchen eines Knotens wurde umgeschaltet (Node = der umgeschaltete Knoten). |
 | `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
 | `OnCollapsed` | `TPPGTVExpandedEvent` `(Sender: TObject; Node: TPPGTreeNode)` | Ein Knoten wurde zugeklappt. |
 | `OnCollapsing` | `TPPGTVCollapsingEvent` `(Sender: TObject; Node: TPPGTreeNode; var AllowCollapse: Boolean)` | Bevor ein Knoten zuklappt; AllowCollapse := False verhindert es. |

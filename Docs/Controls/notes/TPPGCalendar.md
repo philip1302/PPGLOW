@@ -7,4 +7,4 @@
 
 ## Anpassung
 
-- `CalendarStyles` (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate …) und `OnCustomDrawDay` (z. B. Feiertage fett).
+- `Styles` (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate …) und `OnCustomDrawDay` (z. B. Feiertage fett).

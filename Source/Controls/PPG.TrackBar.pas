@@ -132,7 +132,7 @@ type
     property PageSize: Integer read FPageSize write SetPageSize default 2;
     /// Durchmesser des Griffs in logischen 96-DPI-Pixeln (wie TTrackBar).
     property ThumbLength: Integer read FThumbLength write SetThumbLength default 20;
-    property SliderVisible: Boolean read FSliderVisible write SetSliderVisible default True;
+    property ShowSlider: Boolean read FSliderVisible write SetSliderVisible default True;
     /// Hervorgehobener Bereich auf der Schiene (wie TTrackBar); gleich = keiner.
     property SelStart: Integer read FSelStart write SetSelStart default 0;
     property SelEnd: Integer read FSelEnd write SetSelEnd default 0;
@@ -164,7 +164,7 @@ type
     property TickMarks;
     property TickStyle;
     property ThumbLength;
-    property SliderVisible;
+    property ShowSlider;
     property SelStart;
     property SelEnd;
     property ShowSelRange;

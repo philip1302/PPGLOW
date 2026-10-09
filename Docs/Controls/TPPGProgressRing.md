@@ -28,7 +28,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
 | `Indeterminate` | `Boolean` | `True` | True: rotierender Bogen für unbestimmte Wartezeit; False: Bogen nach Value (0–100 %). Ohne Animationen steht ein Viertelbogen. |
-| `Value` | `Integer` | `0` | Fortschritt in Prozent (0..100) bei Indeterminate = False. |
+| `Min` | `Integer` | `0` | Untergrenze des Wertebereichs (Vorgabe 0), wie TPPGProgressBar.Min; Value liegt in Min..Max. Nutzung: `Ring1.Min := 0; Ring1.Max := 250; Ring1.Value := 125;` zeigt einen halben Bogen. |
+| `Max` | `Integer` | `100` | Obergrenze des Wertebereichs (Vorgabe 100); muss größer als Min sein, sonst Ausnahme. |
+| `Value` | `Integer` | `0` | Fortschritt zwischen Min und Max (Vorgabe 0..100) bei Indeterminate = False. |
 | `Thickness` | `Integer` | `0` | Strichstärke in logischen Pixeln (0..100); 0 = aus der Größe berechnet. |
 | `ShowTrack` | `Boolean` | `True` | True: Der volle Kreis wird als dezente Spur hinter dem Bogen gezeichnet. |
 

@@ -141,7 +141,7 @@ type
     property OnGetRange;
     property Resources;
     property Categories;
-    property PlannerStyles;
+    property Styles;
     property View;
     property Date;
     property DayCount;
@@ -186,14 +186,14 @@ type
     property Touch;
     property OnGesture;
     property OnAppointmentChanging;
-    property OnAppointmentChanged;
+    property OnAppointmentChange;
     property OnAppointmentCreated;
     property OnAppointmentOpen;
     property OnDeleting;
     property OnCreateAppointment;
     property OnGetAppointmentColor;
     property OnCustomDrawAppointment;
-    property OnSelectionChange;
+    property OnChange;
     property OnRangeChange;
     property SeriesEditMode;
     property DefaultEditor;

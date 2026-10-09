@@ -66,9 +66,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
 | `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
 | `BevelEdges` | `TBevelEdges` |  | Kanten, an denen der VCL-Rahmen (Bevel) gezeichnet wird. Nur wirksam mit BevelKind <> bkNone. |
-| `BevelInner` | `TBevelCut` |  | Innere VCL-Rahmenkante (bvNone, bvLowered, bvRaised, bvSpace). Meist bvNone lassen; die PPGlow-Optik kommt aus Appearance. |
+| `BevelInner` | `TBevelCut` | `bvNone` | Innere VCL-Rahmenkante (bvNone, bvLowered, bvRaised, bvSpace). Meist bvNone lassen; die PPGlow-Optik kommt aus Appearance. |
 | `BevelKind` | `TBevelKind` |  | Art des zusätzlichen VCL-Rahmens. Für die PPGlow-Optik bkNone lassen. |
-| `BevelOuter` | `TBevelCut` |  | Äußere VCL-Rahmenkante. Für die PPGlow-Optik bvNone lassen. |
+| `BevelOuter` | `TBevelCut` | `bvRaised` | Äußere VCL-Rahmenkante. Für die PPGlow-Optik bvNone lassen. |
 | `BevelWidth` | `TBevelWidth` |  | Breite der VCL-Rahmenkanten in Pixeln. |
 | `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. |
 | `BorderWidth` | `TBorderWidth` |  | Innerer Rand in Pixeln zwischen Kante und Inhalt bzw. Kind-Controls. |

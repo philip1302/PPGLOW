@@ -59,7 +59,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ChangeFormat` | `string` |  | FormatFloat-Maske der Veränderung mit Abschnitten für positiv;negativ;null (Vorgabe "+0.0%;-0.0%;0.0%"; % multipliziert mit 100). |
 | `ShowChange` | `Boolean` | `True` | True: Die Veränderungszeile mit Trendpfeil zeigen. |
 | `InvertTrend` | `Boolean` | `False` | True: Sinkende Werte gelten als gut (grün), steigende als schlecht – z. B. für Fehlerquote oder Kosten. |
-| `SparklineKind` | `TPPGSparklineKind` | `skArea` | Art des eingebetteten Verlaufs (Linie, Fläche, Säulen, Gewinn/Verlust); Vorgabe Fläche. Werte: `skLine`, `skArea`, `skColumn`, `skWinLoss`. |
+| `Kind` | `TPPGSparklineKind` | `skArea` | Art des eingebetteten Verlaufs (Linie, Fläche, Säulen, Gewinn/Verlust); Vorgabe Fläche. Werte: `skLine`, `skArea`, `skColumn`, `skWinLoss`. |
 | `ShowSparkline` | `Boolean` | `True` | True: Den kleinen Verlauf (SparklineText) unten in der Kachel zeigen. |
 | `SparklineText` | `string` |  | Werte des eingebetteten Verlaufs als Text, getrennt durch Semikolon, Punkt als Dezimaltrenner; im Code auch über SetSparkline. Nutzung: `Kpi.SparklineText := '12;15;14;18;21';` |
 

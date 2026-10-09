@@ -16,7 +16,7 @@ with PPGGauge1.Ranges.Add do
 begin
   StartValue := 85;
   EndValue := 100;
-  RangeColor := grcDanger;
+  Kind := grkError;
 end;
 PPGGauge1.Value := Auslastung;
 ```

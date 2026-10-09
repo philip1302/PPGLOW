@@ -249,7 +249,7 @@ begin
   // Betrag als Zahlenfeld (Phase 12): Waehrung, rechnet, Null bleibt Null
   FSales := TPPGDBNumberEdit.Create(Own);
   FSales.Parent := Card;
-  FSales.NumberKind := nkCurrency;
+  FSales.Kind := nkCurrency;
   FSales.SetBounds(X2, Y + 20, Col3W, CtlH);
   FSales.DataSource := FSource;
   FSales.DataField := 'Sales';

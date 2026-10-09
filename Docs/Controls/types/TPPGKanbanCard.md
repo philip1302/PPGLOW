@@ -17,7 +17,7 @@ Eine Karte: Titel, Text, Labels, Person, Fälligkeit, Fortschritt, Farbe sowie S
 | `Assignee` | `string` |  | Name der zuständigen Person; die Karte zeigt die Initialen in einem runden Symbol. |
 | `Due` | `TDateTime` |  | Fälligkeitsdatum; 0 = keins. Überfällige Karten werden hervorgehoben. |
 | `Progress` | `Integer` | `-1` | Fortschritt in Prozent (0 bis 100) als Balken auf der Karte; -1 = keine Anzeige. |
-| `Color` | `TColor` | `clNone` | Farbe des Streifens am Kartenrand; clNone = kein Streifen. |
+| `Color` | `TColor` | `clDefault` | Farbe des Streifens am Kartenrand; clNone = kein Streifen. |
 | `Tag` | `NativeInt` | `0` | Freier Ganzzahlwert der Anwendung. |
 
 ## Verwendet in

@@ -74,6 +74,8 @@ const
 
 /// Wandelt clXxx-Systemfarben in echte RGB-Werte um.
 function PPGColorToRGB(Color: TColor): TColor;
+/// True, wenn eine Farbe gesetzt ist (clDefault und clNone gelten als "nicht gesetzt").
+function PPGColorIsSet(Color: TColor): Boolean;
 /// Mischt zwei Farben; T = 0 -> A, T = 1 -> B.
 function PPGBlendColor(A, B: TColor; T: Single): TColor;
 function PPGLighten(Color: TColor; Amount: Single): TColor;
@@ -108,6 +110,16 @@ procedure PPGCheckFinite(Sender: TPersistent; const PropName: string; const Valu
 function PPGCheckFloat(Sender: TPersistent; const PropName: string; const Value: Double;
   Valid: Boolean; const Fallback: Double): Double;
 
+const
+  /// Gleiche Vorgaben fuer gleiche Konzepte (Audit 5c).
+  PPGDefaultDropDownCount = 8;
+  PPGMaxDropDownCount = 100;
+  PPGKanbanMinColumnWidth = 80;
+
+type
+  /// Ein Eintrag wurde vom Anwender an- oder abgehakt.
+  TPPGItemCheckEvent = procedure(Sender: TObject; Index: Integer) of object;
+
 implementation
 
 uses
@@ -116,6 +128,11 @@ uses
 
 type
   TPersistentAccess = class(TPersistent);
+
+function PPGColorIsSet(Color: TColor): Boolean;
+begin
+  Result := (Color <> clDefault) and (Color <> clNone);
+end;
 
 function PPGColorToRGB(Color: TColor): TColor;
 begin

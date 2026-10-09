@@ -68,8 +68,8 @@ type
   published
     property Id: Integer read FId write SetId;
     property Title: string read FTitle write SetTitle;
-    /// Farbe der Kopfleiste (clNone = Akzent des Presets).
-    property Color: TColor read FColor write SetColor default clNone;
+    /// Farbe der Kopfleiste (clDefault = Akzent des Presets).
+    property Color: TColor read FColor write SetColor default clDefault;
     /// Hoechstzahl Karten (0 = ohne Limit); darueber wird die Spalte gewarnt.
     property WipLimit: Integer read FWipLimit write SetWipLimit default 0;
     property Collapsed: Boolean read FCollapsed write SetCollapsed default False;
@@ -188,7 +188,7 @@ type
     property Due: TDateTime read FDue write SetDue;
     /// Fortschritt 0..100, -1 = keine Anzeige.
     property Progress: Integer read FProgress write SetProgress default -1;
-    property Color: TColor read FColor write SetColor default clNone;
+    property Color: TColor read FColor write SetColor default clDefault;
     property Tag: NativeInt read FTag write FTag default 0;
   end;
 
@@ -239,7 +239,7 @@ end;
 constructor TPPGKanbanColumn.Create(Collection: TCollection);
 begin
   inherited Create(Collection);
-  FColor := clNone;
+  FColor := clDefault;
   FVisible := True;
   if Collection is TPPGKanbanColumns then
   begin
@@ -343,7 +343,7 @@ var
 begin
   V := Value;
   if V <> 0 then
-    V := PPGCheckRange(Self, 'Width', Value, 80, 2000);
+    V := PPGCheckRange(Self, 'Width', Value, PPGKanbanMinColumnWidth, 2000);
   if FWidth <> V then
   begin
     FWidth := V;
@@ -588,7 +588,7 @@ constructor TPPGKanbanCard.Create(Collection: TCollection);
 begin
   inherited Create(Collection);
   FProgress := -1;
-  FColor := clNone;
+  FColor := clDefault;
   if Collection is TPPGKanbanCards then
   begin
     FId := TPPGKanbanCards(Collection).FNextId;

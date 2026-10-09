@@ -100,7 +100,7 @@ begin
   FTiles[1].Title := 'Bestellungen';
   FTiles[1].Value := 18420;
   FTiles[1].Change := 2.1;
-  FTiles[1].SparklineKind := skColumn;
+  FTiles[1].Kind := skColumn;
   FTiles[1].SparklineText := '12;14;13;15;17;16;18;19;18;21;22;24';
   FTiles[2].Title := 'Retourenquote';
   FTiles[2].ValueText := FormatFloat('0.0', 2.7) + ' %';
@@ -110,7 +110,7 @@ begin
   FTiles[3].Title := 'Live (Anfragen/s)';
   FTiles[3].ValueFormat := '0';
   FTiles[3].ChangeFormat := '+0;-0;0';
-  FTiles[3].SparklineKind := skLine;
+  FTiles[3].Kind := skLine;
   Host.RegisterSpecial('kpi', FTiles[0]);
 
   // ---- Umsatz: Saeulen + Linie ----
@@ -172,15 +172,15 @@ begin
   FGauge.Units := ' %';
   Rg := FGauge.Ranges.Add;
   Rg.EndValue := 60;
-  Rg.RangeColor := grcSuccess;
+  Rg.Kind := grkSuccess;
   Rg := FGauge.Ranges.Add;
   Rg.StartValue := 60;
   Rg.EndValue := 85;
-  Rg.RangeColor := grcWarning;
+  Rg.Kind := grkWarning;
   Rg := FGauge.Ranges.Add;
   Rg.StartValue := 85;
   Rg.EndValue := 100;
-  Rg.RangeColor := grcDanger;
+  Rg.Kind := grkError;
   FGauge.ShowTarget := True;
   FGauge.TargetValue := 80;
   FGauge.ReadOnly := False;

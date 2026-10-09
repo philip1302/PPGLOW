@@ -67,7 +67,7 @@ Farben aus Stilen gelten nicht im Hochkontrast und nicht mit VCL-Style; Schrifte
 | B7 | Text- und Bildlage im Button: Ausrichtung, Innenabstand (`Margin`) | S | ✔ | Umgesetzt: `Alignment` und `Margin` (wie `TBitBtn`) |
 | B8 | Bilder je Zustand | M | ✔ | Umgesetzt: `PressedImageIndex`, `HotImageName`/`DisabledImageName`/`PressedImageName` (ab 10.4), `ImageTint = itTextColor` (Button, ToolBar, NavigationView) |
 | B9 | Schrift über `Font`/`ParentFont` | M | ✔ | Bei allen Text-Controls (nicht bei Rating, ProgressRing, Sparkline; dort gibt es keinen Text) |
-| B10 | Signalfarben einstellbar (InfoBar-Schwere, Badge, Validierung, Toast) | S | ✔ | Signalfarben über `ThemeColors` (Danger/Warning/Success), dazu `InfoBar.BarStyle`, `TPPGBadge.BadgeColor` |
+| B10 | Signalfarben einstellbar (InfoBar-Schwere, Badge, Validierung, Toast) | S | ✔ | Signalfarben über `ThemeColors` (Danger/Warning/Success), dazu `InfoBar.Style`, `TPPGBadge.Severity` |
 
 ### C. Komplexe Controls: Bereiche einzeln gestalten
 
@@ -75,7 +75,7 @@ Das ist der wichtigste Teil, weil Suiten sich vor allem hier von der VCL abheben
 
 | ID | Anforderung | Prio | Stand | Befund |
 |---|---|---|---|---|
-| C1 | **Kopf- bzw. Fixed-Bereich:** Farbe und Textfarbe | M | ✔ | Umgesetzt: Grid/DB-Grid `Styles.Header` (+ `FixedColor` als Alias), `PlannerStyles`, `KanbanStyles.Column`, `CalendarStyles` |
+| C1 | **Kopf- bzw. Fixed-Bereich:** Farbe und Textfarbe | M | ✔ | Umgesetzt: Grid/DB-Grid `Styles.Header` (+ `FixedColor` als Alias), `Styles`, `Styles.Column`, `Styles` |
 | C2 | **Auswahl:** Farbe, Textfarbe, eigene Farbe bei Fokus-Verlust („inaktiv“) | M | ✔ | Umgesetzt: `Styles.Selection`/`SelectionInactive` (Grid, ListBox, CheckListBox, TreeView, Combo-Liste) |
 | C3 | **Zebra-Zeilen** (abwechselnde Zeilenfarbe) | M | ✔ | Umgesetzt: `Styles.AlternateRow` (Grid, Listen, Combo-Liste) |
 | C4 | Hover-Zeile hervorheben, Farbe einstellbar | S | ✔ | Umgesetzt: `Styles.HotRow` (Grid), `Styles.HotItem` (Listen), `HotTrack` im TreeView |
@@ -85,10 +85,10 @@ Das ist der wichtigste Teil, weil Suiten sich vor allem hier von der VCL abheben
 | C8 | Stil je Zelle per Ereignis | M | ✔ | `OnGetCellStyle` (Grid, DB-Grid), jetzt auch mit `FontStyle`, `FontName`, `FontSize` |
 | C9 | Bedingte Formatierung ohne Code | S | ✔ | `ConditionalFormats` (Grid, DB-Grid) |
 | C10 | **Eigenes Zeichnen** (Owner-/Custom-Draw) | M | ✔ | Umgesetzt: einheitliches `OnCustomDrawItem` (ListBox, CheckListBox, Combo-Liste, Menüs, MenuBar, NavigationView), `OnCustomDrawNode` (TreeView), `OnDrawTab`/`OwnerDraw` (Tab-/PageControl), `OnCustomDrawDay` (Kalender, DatePicker), `OnCustomDrawCard` (Kanban), `OnCustomDrawAppointment` (Planer) |
-| C11 | Kalender: Tage hervorheben (fett, Farbe, Markierung), z. B. Feiertage | S | ✔ | Umgesetzt: `OnCustomDrawDay` und `CalendarStyles` (Wochenende, Heute, Auswahl …) |
+| C11 | Kalender: Tage hervorheben (fett, Farbe, Markierung), z. B. Feiertage | S | ✔ | Umgesetzt: `OnCustomDrawDay` und `Styles` (Wochenende, Heute, Auswahl …) |
 | C12 | **Farbe/Stil je Element** (Item, Knoten, Reiter, Navigationseintrag, Statusfeld) | S | ✔ | Umgesetzt: `Color`/`TextColor`/`FontStyle` bei `TPPGItem`, TreeView-Knoten (Laufzeit), TabSheet (`TabColor` …), `TPPGNavItem`, `TPPGStatusPanel`, `TPPGToolItem` |
 | C13 | Planer: Kategorien mit Name und Farbe (wie Outlook) | S | ✔ | Umgesetzt: `Categories` (Name, Farbe) im Planer und DB-Planer |
-| C14 | Diagramm: eigene Farbpalette, Schrift für Titel, Achsen und Legende | S | ✔ | Umgesetzt: `ChartPalette` am StyleManager, `ChartStyles` (Titel, Achse, Gitter, Legende), `TitleFont`, `LegendFont` |
+| C14 | Diagramm: eigene Farbpalette, Schrift für Titel, Achsen und Legende | S | ✔ | Umgesetzt: `ChartPalette` am StyleManager, `Styles` (Titel, Achse, Gitter, Legende), `TitleFont`, `LegendFont` |
 
 ### D. Grundausstattung und Praxis
 
@@ -116,7 +116,7 @@ Stand nach der Umsetzung (08.10.2026):
 | Gruppe | Farben | Schriften | Bereiche/Elemente | Eigenes Zeichnen | Gesamt |
 |---|---|---|---|---|---|
 | Button, Check, Radio, Toggle | ✔ je Zustand, Fokus, Dunkel | ✔ Stil je Zustand | ✔ Ecken, Schatten (Button) | – (kaum nötig) | **sehr gut** |
-| Edit, Memo, Spin, Number, Mask, Password, File, Date, Time, Combo, Search, Tag, ColorPicker | ✔ inkl. ReadOnly-Optik | ✔ | ✔ Combo-Liste mit `ListStyles` | ✔ Combo-Liste | **sehr gut** |
+| Edit, Memo, Spin, Number, Mask, Password, File, Date, Time, Combo, Search, Tag, ColorPicker | ✔ inkl. ReadOnly-Optik | ✔ | ✔ Combo-Liste mit `Styles` | ✔ Combo-Liste | **sehr gut** |
 | Panel, GroupBox, Expander, Splitter | ✔ | ✔ (`CaptionStyle`, `HeaderStyle`) | ✔ Ecken, Schatten (Panel) | ◐ | **sehr gut** |
 | ProgressBar, TrackBar, ProgressRing, Rating, Badge, Gauge, Sparkline, KPI | ✔ | ✔ (`ValueStyle`, `TitleStyle`) | ◐ | – | **gut** |
 | ListBox, CheckListBox | ✔ | ✔ | ✔ Zebra, Auswahl, Hover, Item-Farbe | ✔ | **sehr gut** |
@@ -126,7 +126,7 @@ Stand nach der Umsetzung (08.10.2026):
 | Kalender, Planer | ✔ | ✔ | ✔ Tage, Kategorien, Ressourcen | ✔ | **sehr gut** |
 | Kanban | ✔ | ✔ | ✔ | ✔ | **sehr gut** |
 | Chart | ✔ Palette | ✔ Titel, Legende, Achsen | ✔ | – | **sehr gut** |
-| InfoBar, Toast, TeachingTip, Hints, Dialoge | ✔ über Tokens, `BarStyle` | ◐ | – | – | **gut** |
+| InfoBar, Toast, TeachingTip, Hints, Dialoge | ✔ über Tokens, `Style` | ◐ | – | – | **gut** |
 
 ## 5. Empfehlung: drei Bausteine schließen fast alle Lücken
 

@@ -15,10 +15,11 @@ Ein Befehl im Ribbon: Art, Größe, Bild bzw. Symbol, Beschriftung, Action, Umsc
 | `Size` | `TPPGRibbonSize` | `rsLarge` | Größe, solange die Gruppe genug Platz hat: rsLarge (großes Symbol, Text darunter), rsMedium (kleines Symbol mit Text), rsSmall (nur Symbol). Werte: `rsLarge`, `rsMedium`, `rsSmall`. |
 | `MinSize` | `TPPGRibbonSize` | `rsSmall` | Kleinste Größe, auf die das Item schrumpfen darf, wenn die Breite nicht reicht (rsLarge = bleibt groß). Werte: `rsLarge`, `rsMedium`, `rsSmall`. |
 | `ImageIndex` | `TPPGImageIndex` | `-1` | Kleines Bild (16 px) aus Ribbon.Images; -1 = keins. |
+| `ImageName` | `TImageName` |  | Bild per Namen aus den Images des Besitzers (TVirtualImageList, ab Delphi 10.4). Robust gegen Umsortieren; setzt ImageIndex passend, ein unbekannter Name ergibt „kein Bild". |
 | `LargeImageIndex` | `TPPGImageIndex` | `-1` | Großes Bild (32 px) aus Ribbon.LargeImages für Size = rsLarge; -1 = ImageIndex verwenden. |
 | `IconChar` | `Word` | `0` | Symbol aus der Icon-Schrift als Zeichencode (0 = keins), z. B. $E8C8 für „Kopieren"; Alternative zu ImageIndex. |
-| `Down` | `Boolean` | `False` | Eingerastet (Kind = rikCheck). Setzen im Code ohne Ereignis; mit GroupIndex wie Radiobuttons. |
 | `GroupIndex` | `Integer` | `0` | Umschalt-Items (rikCheck) mit gleichem GroupIndex <> 0 schließen sich gegenseitig aus (im ganzen Ribbon), z. B. Links/Zentriert/Rechts. |
+| `Down` | `Boolean` | `False` | Eingerastet (Kind = rikCheck). Setzen im Code ohne Ereignis; mit GroupIndex wie Radiobuttons. |
 | `Enabled` | `Boolean` | `True` | False: Befehl grau und nicht auslösbar. |
 | `Visible` | `Boolean` | `True` | False: Item ausgeblendet. |
 | `Tag` | `NativeInt` | `0` | Freier Ganzzahlwert, z. B. eine Befehls-ID für OnItemClick. |

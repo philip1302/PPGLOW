@@ -1011,8 +1011,8 @@ begin
   FLicenses := TPPGSpinEdit.Create(Own);
   FLicenses.Parent := Card;
   FLicenses.SetBounds(P.X, P.Y, 130, CtlH);
-  FLicenses.MinValue := 1;
-  FLicenses.MaxValue := 500;
+  FLicenses.Min := 1;
+  FLicenses.Max := 500;
   FLicenses.Value := 5;
   P := Field(Card, 1, 4, 'Kennwort');
   FPassword := NewEdit(P, 270, 'mindestens 8 Zeichen');
@@ -1044,7 +1044,7 @@ begin
   FInfo := TPPGInfoBar.Create(Own);
   FInfo.Parent := Card;
   FInfo.SetBounds(CardPad, P.Y + 162, FormW - 2 * CardPad, 48);
-  FInfo.IsOpen := False;
+  FInfo.Open := False;
 
   // Liste der gespeicherten Kontakte
   Card := NewCard(Own, Sheet, PageX + FormW + CardGap, PageContentTop, FullW - FormW - CardGap,
@@ -1179,7 +1179,7 @@ begin
   FInfo.Severity := psSuccess;
   FInfo.Title := 'Gespeichert';
   FInfo.Message := MarkupEscape(C.FirstName + ' ' + C.LastName) + L(' steht jetzt in der Liste.');
-  FInfo.IsOpen := True;
+  FInfo.Open := True;
   Host.Notifier.Show('Kontakt gespeichert', MarkupEscape(C.FirstName + ' ' + C.LastName) +
     ' (' + MarkupEscape(C.Country) + ')', psSuccess);
   Host.Log('Formular', 'Gespeichert: ' + C.FirstName + ' ' + C.LastName);
@@ -1199,7 +1199,7 @@ begin
   FNotes.Lines.Clear;
   FTerms.Checked := False;
   FValidator.ClearResults;
-  FInfo.IsOpen := False;
+  FInfo.Open := False;
   Host.Log('Formular', L('Zur{ue}ckgesetzt'));
 end;
 
@@ -1236,7 +1236,7 @@ begin
   FCountry.Text := C.Country;
   FSalutation.ItemIndex := FSalutation.Items.IndexOf(C.Salutation);
   FLicenses.Value := C.Licenses;
-  FInfo.IsOpen := False;
+  FInfo.Open := False;
   Host.Log('ListBox', 'Kontakt geladen: ' + C.FirstName + ' ' + C.LastName);
 end;
 
@@ -1326,17 +1326,17 @@ begin
   FPlz.OnChange := SpecialChange;
   FAmount := TPPGNumberEdit.Create(Own);
   Place(FAmount, Pos(1, 0, L('Betrag (rechnet: 2*19,99)')));
-  FAmount.NumberKind := nkCurrency;
+  FAmount.Kind := nkCurrency;
   FAmount.ShowSpinButtons := True;
-  FAmount.MinValue := 0;
-  FAmount.MaxValue := 100000;
+  FAmount.Min := 0;
+  FAmount.Max := 100000;
   FAmount.Value := 1234.5;
   FAmount.OnChange := SpecialChange;
   FDiscount := TPPGNumberEdit.Create(Own);
   Place(FDiscount, Pos(2, 0, 'Rabatt'));
-  FDiscount.NumberKind := nkPercent;
+  FDiscount.Kind := nkPercent;
   FDiscount.Decimals := 1;
-  FDiscount.MaxValue := 100;
+  FDiscount.Max := 100;
   FDiscount.Value := 12.5;
   FDiscount.OnChange := SpecialChange;
   FPin := TPPGPasswordEdit.Create(Own);
@@ -1457,7 +1457,7 @@ begin
   FOrderBar := TPPGInfoBar.Create(Own);
   FOrderBar.Parent := Card;
   FOrderBar.SetBounds(X, Card.Tag, FullW - X - CardPad, 64);
-  FOrderBar.IsOpen := False;
+  FOrderBar.Open := False;
   FOrderBtn := NewButton(Own, Card, X, Card.Tag + 150, 150, 'Bestellen', OrderClick, True);
   FOrderResult := NewResult(Own, Card, 'Bestellung');
 
@@ -1573,7 +1573,7 @@ begin
   ResetClick(nil);
   N := Length(FContacts);
   DemoClick(FSaveBtn);
-  Check('Formular: leeres Speichern wird abgelehnt', FInfo.IsOpen and (FInfo.Severity = psError) and
+  Check('Formular: leeres Speichern wird abgelehnt', FInfo.Open and (FInfo.Severity = psError) and
     (FFirst.ValidationState = pvsError) and (Length(FContacts) = N));
   Check('Validator: Sammelleiste nennt die Felder', Pos('Vorname', FInfo.Message) > 0);
   // Nach einem Fehler prueft der Validator live (gepostet, daher Nachrichten abholen)
@@ -1606,7 +1606,7 @@ begin
   FIban.Text := 'DE00 1234';
   DemoClick(FOrderBtn);
   Check('Validator: Sprung auf den Reiter mit dem Fehler', FOrderPages.ActivePage = FOrderPay);
-  Check('Validator: Sammelleiste der Bestellung', FOrderBar.IsOpen and (FOrderBar.Severity = psError));
+  Check('Validator: Sammelleiste der Bestellung', FOrderBar.Open and (FOrderBar.Severity = psError));
   FIban.Text := 'DE89 3704 0044 0532 0130 00';
   FShipTo.Date := FShipFrom.Date - 1;
   DemoClick(FOrderBtn);
@@ -1616,7 +1616,7 @@ begin
   DemoClick(FOrderBtn);
   Check(L('Warte-Overlay: Bestellung l{ae}uft im Hintergrund durch'), not FOrderBusy.Active and
     (FOrderBusy.Progress = 100) and not FOrderBusy.Cancelled);
-  Check('Validator: Sammelleiste zu, wenn alles stimmt', not FOrderBar.IsOpen);
+  Check('Validator: Sammelleiste zu, wenn alles stimmt', not FOrderBar.Open);
   FOrderStepMs := 120;
 end;
 

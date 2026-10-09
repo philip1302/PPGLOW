@@ -5,7 +5,7 @@ TPPGAppointments = Die Termine des Planers (Collection). Termine mit Wiederholun
 > `with PPGPlanner1.Appointments.AddAppointment(Start, Ende, 'Besprechung') do Location := 'Raum 2';`
 TPPGAppointment = Ein Termin des Planers: Zeitraum, Betreff, Ort, Ressource, Kategorie, Farbe und Wiederholung.
 TPPGCalendarStyles = Bereiche des Kalenders einzeln gestalten: Hintergrund, Kopf, Wochentage, Heute, Auswahl, Wochenende, Tage anderer Monate und Kalenderwochen. Nicht gesetzte Werte kommen aus dem Preset.
-> `PPGCalendar1.CalendarStyles.Weekend.TextColor := clMaroon;`
+> `PPGCalendar1.Styles.Weekend.TextColor := clMaroon;`
 TPPGChartAxis = Eine Achse des Diagramms (X, Y oder zweite Y-Achse): Bereich, Teilung, Format der Beschriftung und Sichtbarkeit.
 TPPGChartReferenceLines = Waagerechte oder senkrechte Referenzlinien (z. B. Ziel- oder Grenzwerte), die über dem Diagramm liegen.
 TPPGChartReferenceLine = Eine Referenzlinie: Wert, Achse, Farbe, Strichart und Beschriftung.
@@ -13,14 +13,14 @@ TPPGChartSeriesList = Die Datenreihen des Diagramms (Collection). Jede Reihe hat
 > `with PPGChart1.Series.Add do begin Title := 'Umsatz'; ValuesText := '12;15;9;20'; end;`
 TPPGChartSeries = Eine Datenreihe: Art der Darstellung, Werte, Farbe, Achse, Beschriftung und Stapelung.
 TPPGChartStyles = Bereiche des Diagramms einzeln gestalten: Titel, Achsen, Gitterlinien und Legende (Farben und Schriften).
-> `PPGChart1.ChartStyles.Title.Font.Size := 14;`
+> `PPGChart1.Styles.Title.Font.Size := 14;`
 TPPGComboColumns = Die Spalten der Aufklappliste einer TPPGColumnComboBox (Collection).
 TPPGComboColumn = Eine Spalte der Aufklappliste: Titel, Breite, Ausrichtung und Sichtbarkeit.
 TPPGEditButton = Ein Knopf im Eingabefeld (links oder rechts): Symbol, Sichtbarkeit, Hint und optional ein Menü.
 > `Edit1.RightButton.Visible := True; Edit1.RightButton.DropDownMenu := PopupMenu1;`
 TPPGGaugeRanges = Farbige Bereiche auf dem Bogen der Anzeige (z. B. grün/gelb/rot).
-> `with PPGGauge1.Ranges.Add do begin StartValue := 80; EndValue := 100; RangeColor := grcDanger; end;`
-TPPGGaugeRange = Ein farbiger Bereich auf dem Bogen: Anfangs- und Endwert, Signalfarbe (RangeColor) oder eigene Farbe (CustomColor).
+> `with PPGGauge1.Ranges.Add do begin StartValue := 80; EndValue := 100; Kind := grkError; end;`
+TPPGGaugeRange = Ein farbiger Bereich auf dem Bogen: Anfangs- und Endwert, Signalfarbe (Kind) oder eigene Farbe (Color).
 TPPGGridBands = Bänder über den Spaltenköpfen: fassen benachbarte Spalten unter einer gemeinsamen Überschrift zusammen.
 TPPGGridBand = Ein Band über den Spaltenköpfen: Titel; die Zuordnung der Spalten erfolgt über deren Band-Index.
 TPPGGridColumns = Die Spalten des Grids bzw. DB-Grids (Collection). Ohne Spalten zeigt das Grid ColCount Spalten ohne eigene Einstellungen.
@@ -43,7 +43,7 @@ TPPGKanbanColumn = Eine Spalte: Titel, WIP-Limit, Farbe, Breite, eingeklappt und
 TPPGKanbanLanes = Die Swimlanes des Boards (waagerechte Bänder, z. B. je Person oder Priorität).
 TPPGKanbanLane = Eine Swimlane: Titel, Sichtbarkeit, eingeklappt und eine feste Id für die Zuordnung der Karten.
 TPPGKanbanStyles = Bereiche des Boards einzeln gestalten: Spalte, Karte, Karte unter der Maus, gewählte Karte und Swimlane-Kopf.
-> `PPGKanban1.KanbanStyles.Card.Color := clWhite;`
+> `PPGKanban1.Styles.Card.Color := clWhite;`
 TPPGListStyles = Bereiche einer Liste einzeln gestalten: Auswahl, Auswahl ohne Fokus, Zebra-Zeile, Eintrag unter der Maus, Gruppenkopf und Detailzeile.
 > `PPGListBox1.Styles.Selection.Color := $00F5E6D2;`
 TPPGMenuStyles = Bereiche der Menüs einzeln gestalten: Menüfläche, Eintrag unter der Maus, Trennlinie und Tastenkürzel.
@@ -69,7 +69,7 @@ TPPGRibbonItem = Ein Befehl im Ribbon: Art, Größe, Bild bzw. Symbol, Beschrift
 TPPGStatusPanels = Die Felder der Statusleiste (Collection).
 TPPGStatusPanel = Ein Feld der Statusleiste: Text, Breite, Ausrichtung, Symbol, Plakette sowie eigene Farben.
 TPPGTabStyles = Bereiche der Reiterleiste einzeln gestalten: Reiter, Reiter unter der Maus, aktiver Reiter, Leiste und Indikator.
-> `PPGPageControl1.TabStyles.ActiveTab.FontStyle := [fsBold];`
+> `PPGPageControl1.Styles.ActiveTab.FontStyle := [fsBold];`
 TPPGThemeColors = Token-Farben des Themes überschreiben, getrennt für Hell (Light) und Dunkel (Dark). Nur gesetzte Werte (≠ clDefault) gelten, für alle Presets.
 > `PPGStyleManager1.ThemeColors.Light.Danger := $002020C0;`
 TPPGToolItems = Die Elemente der Werkzeugleiste (Collection): Buttons, Umschalter, Dropdowns, Trenner.

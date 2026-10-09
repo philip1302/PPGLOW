@@ -89,8 +89,8 @@ type
     property AutoSelect: Boolean read GetAutoSelect write SetAutoSelect default True;
     property EditorEnabled: Boolean read FEditorEnabled write SetEditorEnabled default True;
     property Increment: Integer read FIncrement write SetIncrement default 1;
-    property MaxValue: Integer read FMaxValue write SetMaxValue default 0;
-    property MinValue: Integer read FMinValue write SetMinValue default 0;
+    property Max: Integer read FMaxValue write SetMaxValue default 0;
+    property Min: Integer read FMinValue write SetMinValue default 0;
     property ReadOnly: Boolean read FReadOnly write SetSpinReadOnly default False;
     property Value: Integer read GetValue write SetValue;
   public
@@ -132,8 +132,8 @@ type
     property Font;
     property Increment;
     property MaxLength;
-    property MaxValue;
-    property MinValue;
+    property Max;
+    property Min;
     property ParentBiDiMode;
     property ParentColor default False;
     property ParentFont;

@@ -21,6 +21,7 @@ Voraussetzungen: Die Formulare sind als **Text** gespeichert (in der IDE: Rechts
 2. **Units** der neuen Klassen in die `uses`-Liste des interface-Teils eintragen (die alten bleiben stehen).
 3. **Properties umbenennen**, wo die Bedeutung gleich ist (Tabelle unten).
 4. **Properties entfernen**, die die PPGlow-Klasse nicht hat. Welche es gibt, liest das Skript aus den PPGlow-Quelltexten (published-Abschnitte), damit es immer zum aktuellen Stand passt. Jede Entfernung steht im Bericht.
+   Umbenannte Properties werden auch im Code der Unit angepasst, wenn der Komponentenname davorsteht (`Spin1.MinValue` → `Spin1.Min`). In `with`-Blöcken erkennt das Skript sie nicht; dort meldet der Compiler den alten Namen.
 5. **Ereignis-Handler** anpassen, deren Parametertyp sich ändert (DB-Grid: `TColumn` → `TPPGDBGridColumn`).
 6. **Abweichende Vorgaben** ausdrücklich schreiben: Wo PPGlow eine andere Vorgabe hat als die VCL, fehlt der Wert in der alten DFM (die IDE speichert Vorgaben nicht). Das Skript trägt dann den VCL-Wert ein, damit sich das Verhalten nicht still ändert (Tabelle unten).
 7. **Sicherung** jeder geänderten Datei als `*.bak`; eine vorhandene `*.bak` wird nie überschrieben (ein zweiter Lauf behält das Original). Bericht `migrate-report.txt` im Zielordner.
@@ -78,6 +79,9 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TAdvEdit, TAdvComboBox | `EmptyText` | `TextHint` |
 | TToggleSwitch | `State = tssOn/tssOff` | `Checked = True/False` |
 | TSearchBox | `OnInvokeSearch` | `OnSearch` |
+| TSpinEdit | `MinValue`, `MaxValue` | `Min`, `Max` (auch im Code: `Spin1.MinValue` → `Spin1.Min`) |
+| TTrackBar | `SliderVisible` | `ShowSlider` (auch im Code) |
+| TStringGrid, TAdvStringGrid | `OnTopLeftChanged` | `OnTopLeftChange` (auch Zuweisungen im Code; der Handler-Name bleibt) |
 | TDBGrid-Spalten | `Title.Caption` | `Title` |
 | TDBGrid-Spalten | `Title.Alignment` | `TitleAlignment` (`gtaLeft`/`gtaCenter`/`gtaRight`) |
 | TDBGrid-Spalten | `Title.Font.*`, `Title.Color` | `TitleStyle.Font.*` (mit `TitleStyle.ParentFont = False`), `TitleStyle.Color` |

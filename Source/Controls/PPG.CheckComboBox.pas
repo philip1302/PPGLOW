@@ -26,7 +26,7 @@ uses
 
 type
   TPPGCheckComboDisplay = (cdmCompact, cdmList, cdmCount);
-  TPPGCheckItemEvent = procedure(Sender: TObject; Index: Integer) of object;
+  TPPGCheckItemEvent = TPPGItemCheckEvent;
 
   TPPGCheckComboBox = class;
 
@@ -138,7 +138,8 @@ type
     property ShowSelectAll: Boolean read FShowSelectAll write FShowSelectAll default False;
     /// Filterzeile ab so vielen Eintraegen (0 = nie).
     property FilterThreshold: Integer read FFilterThreshold write SetFilterThreshold default 12;
-    property DropDownCount: Integer read FDropDownCount write SetDropDownCount default 8;
+    property DropDownCount: Integer read FDropDownCount write SetDropDownCount
+      default PPGDefaultDropDownCount;
     property OnItemCheck: TPPGCheckItemEvent read FOnItemCheck write FOnItemCheck;
     property Preset;
     property StyleManager;
@@ -445,7 +446,7 @@ begin
   FDisplayMode := cdmCompact;
   FMaxDisplayItems := 2;
   FFilterThreshold := 12;
-  FDropDownCount := 8;
+  FDropDownCount := PPGDefaultDropDownCount;
   SetInnerVisible(False);
 end;
 
@@ -693,7 +694,7 @@ end;
 
 procedure TPPGCheckComboBox.SetDropDownCount(const Value: Integer);
 begin
-  FDropDownCount := PPGCheckRange(Self, 'DropDownCount', Value, 1, 100);
+  FDropDownCount := PPGCheckRange(Self, 'DropDownCount', Value, 1, PPGMaxDropDownCount);
 end;
 
 function TPPGCheckComboBox.DisplayText: string;

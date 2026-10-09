@@ -13,7 +13,7 @@ unit PPG.Wizard;
     uebersetzbar (Alt+W/Alt+Z im Deutschen).
   - Ereignisse nur bei Anwenderaktionen (Buttons, Next/Back/Finish/Cancel als
     deren Gegenstueck): OnCanAdvance(Page, Allow) vor jedem Weiter/Fertig,
-    OnPageChanged, OnFinish, OnCancel. ActivePage aus Code: ohne Ereignisse.
+    OnChange, OnFinish, OnCancel. ActivePage aus Code: ohne Ereignisse.
   - Ohne OnFinish/OnCancel in einem modalen Formular: ModalResult mrOk bzw.
     mrCancel.
   - Klick auf einen erledigten Schritt geht dorthin zurueck; im Designer
@@ -195,7 +195,7 @@ type
     property Touch;
     property OnGesture;
     property OnCanAdvance: TPPGWizardCanAdvanceEvent read FOnCanAdvance write FOnCanAdvance;
-    property OnPageChanged: TNotifyEvent read FOnPageChanged write FOnPageChanged;
+    property OnChange: TNotifyEvent read FOnPageChanged write FOnPageChanged;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnCancel: TNotifyEvent read FOnCancel write FOnCancel;
     property OnResize;

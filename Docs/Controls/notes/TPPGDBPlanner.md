@@ -13,7 +13,7 @@
 
 ## Anpassung
 
-- `Categories`, `PlannerStyles`, `OnCustomDrawAppointment`, `SaveLayout`/`LoadLayout` wie `TPPGPlanner`.
+- `Categories`, `Styles`, `OnCustomDrawAppointment`, `SaveLayout`/`LoadLayout` wie `TPPGPlanner`.
 
 ## Beispiel
 

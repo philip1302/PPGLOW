@@ -27,18 +27,18 @@ uses
 type
   TPPGSeverity = (psInformational, psSuccess, psWarning, psError);
   TPPGBadgeKind = (bkNumber, bkDot, bkText);
-  TPPGBadgeColor = (bcAccent, bcSuccess, bcWarning, bcError, bcNeutral);
+  TPPGBadgeSeverity = (bsvAccent, bsvSuccess, bsvWarning, bsvError, bsvNeutral);
 
   TPPGCustomBadge = class(TPPGCustomControl)
   private
     FKind: TPPGBadgeKind;
     FValue: Integer;
     FMaxValue: Integer;
-    FBadgeColor: TPPGBadgeColor;
+    FBadgeColor: TPPGBadgeSeverity;
     procedure SetKind(const Value: TPPGBadgeKind);
     procedure SetValue(const Value: Integer);
     procedure SetMaxValue(const Value: Integer);
-    procedure SetBadgeColor(const Value: TPPGBadgeColor);
+    procedure SetBadgeColor(const Value: TPPGBadgeSeverity);
     procedure CMTextChanged(var Message: TMessage); message CM_TEXTCHANGED;
   protected
     function IsHot: Boolean; override;
@@ -51,7 +51,7 @@ type
     property Value: Integer read FValue write SetValue default 0;
     /// Groessere Zahlen erscheinen als "99+" (0 = ohne Grenze).
     property MaxValue: Integer read FMaxValue write SetMaxValue default 99;
-    property BadgeColor: TPPGBadgeColor read FBadgeColor write SetBadgeColor default bcAccent;
+    property Severity: TPPGBadgeSeverity read FBadgeColor write SetBadgeColor default bsvAccent;
   public
     constructor Create(AOwner: TComponent); override;
     /// Angezeigter Text ("" beim Punkt).
@@ -68,7 +68,7 @@ type
     property Kind;
     property Value;
     property MaxValue;
-    property BadgeColor;
+    property Severity;
     property Caption;
     property Align;
     property Anchors;
@@ -89,11 +89,15 @@ type
   TPPGCustomProgressRing = class(TPPGCustomControl)
   private
     FIndeterminate: Boolean;
+    FMin: Integer;
+    FMax: Integer;
     FValue: Integer;
     FThickness: Integer;
     FShowTrack: Boolean;
     FLoop: TPPGAnimation;
     procedure SetIndeterminate(const Value: Boolean);
+    procedure SetMin(const Value: Integer);
+    procedure SetMax(const Value: Integer);
     procedure SetValue(const Value: Integer);
     procedure SetThickness(const Value: Integer);
     procedure SetShowTrack(const Value: Boolean);
@@ -111,6 +115,9 @@ type
     function AccState: Integer; override;
     function AccValue: string; override;
     property Indeterminate: Boolean read FIndeterminate write SetIndeterminate default True;
+    /// Wertebereich (Audit 5c, wie ProgressBar); Value liegt in Min..Max.
+    property Min: Integer read FMin write SetMin default 0;
+    property Max: Integer read FMax write SetMax default 100;
     property Value: Integer read FValue write SetValue default 0;
     /// Strichstaerke in logischen px (0 = aus der Groesse).
     property Thickness: Integer read FThickness write SetThickness default 0;
@@ -130,6 +137,8 @@ type
     property Animation;
     property HighContrastSupport;
     property Indeterminate;
+    property Min;
+    property Max;
     property Value;
     property Thickness;
     property ShowTrack;
@@ -206,14 +215,14 @@ type
     property Severity: TPPGSeverity read FSeverity write SetSeverity default psInformational;
     property Title: string read FTitle write SetTitle;
     property Message: string read FMessage write SetMessage;
-    property IsOpen: Boolean read FIsOpen write SetIsOpen default True;
-    property IsClosable: Boolean read FIsClosable write SetIsClosable default True;
+    property Open: Boolean read FIsOpen write SetIsOpen default True;
+    property ShowCloseButton: Boolean read FIsClosable write SetIsClosable default True;
     property ActionCaption: string read FActionCaption write SetActionCaption;
     property OnActionClick: TNotifyEvent read FOnActionClick write FOnActionClick;
     property OnClosing: TPPGInfoBarClosingEvent read FOnClosing write FOnClosing;
     property OnClose: TNotifyEvent read FOnClose write FOnClose;
     /// Leiste: Flaeche, Rand, Text und Schrift (sonst aus der Signalfarbe getoent).
-    property BarStyle: TPPGElementStyle read FBarStyle write SetBarStyle;
+    property Style: TPPGElementStyle read FBarStyle write SetBarStyle;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -235,9 +244,9 @@ type
     property Severity;
     property Title;
     property Message;
-    property IsOpen;
-    property IsClosable;
-    property BarStyle;
+    property Open;
+    property ShowCloseButton;
+    property Style;
     property ActionCaption;
     property Align;
     property Anchors;
@@ -277,7 +286,7 @@ implementation
 uses
   PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.IconFont, PPG.ItemPainter,
+  PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.IconFont, PPG.ItemPainter,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Render.Shapes;
 
 var
@@ -351,10 +360,10 @@ begin
     Exit(PPGColorToRGB(clHighlight));
   T := Tokens;
   case FBadgeColor of
-    bcSuccess: Result := T.Success;
-    bcWarning: Result := T.Warning;
-    bcError: Result := T.Danger;
-    bcNeutral: Result := T.TextSecondary;
+    bsvSuccess: Result := T.Success;
+    bsvWarning: Result := T.Warning;
+    bsvError: Result := T.Danger;
+    bsvNeutral: Result := T.TextSecondary;
   else
     Result := PPGColorToRGB(EffectiveAppearance.FocusColor);
   end;
@@ -434,7 +443,7 @@ begin
   Invalidate;
 end;
 
-procedure TPPGCustomBadge.SetBadgeColor(const Value: TPPGBadgeColor);
+procedure TPPGCustomBadge.SetBadgeColor(const Value: TPPGBadgeSeverity);
 begin
   if FBadgeColor <> Value then
   begin
@@ -470,6 +479,7 @@ begin
   inherited Create(AOwner);
   ControlStyle := ControlStyle - [csSetCaption];
   FIndeterminate := True;
+  FMax := 100;
   FShowTrack := True;
   Width := 32;
   Height := 32;
@@ -489,6 +499,13 @@ end;
 procedure TPPGCustomProgressRing.Loaded;
 begin
   inherited Loaded;
+  // Aus der DFM: Min > Max korrigieren, Value in den Bereich holen
+  if FMin >= FMax then
+    FMax := FMin + 1;
+  if FValue < FMin then
+    FValue := FMin
+  else if FValue > FMax then
+    FValue := FMax;
   UpdateLoop;
 end;
 
@@ -566,11 +583,41 @@ begin
   end;
 end;
 
+procedure TPPGCustomProgressRing.SetMin(const Value: Integer);
+begin
+  if FMin = Value then
+    Exit;
+  if not (csLoading in ComponentState) and (Value >= FMax) then
+    raise EPPGPropertyError.CreateInvalid(Self, 'Min', IntToStr(Value));
+  FMin := Value;
+  if not (csLoading in ComponentState) and (FValue < FMin) then
+    FValue := FMin;
+  Invalidate;
+end;
+
+procedure TPPGCustomProgressRing.SetMax(const Value: Integer);
+begin
+  if FMax = Value then
+    Exit;
+  if not (csLoading in ComponentState) and (Value <= FMin) then
+    raise EPPGPropertyError.CreateInvalid(Self, 'Max', IntToStr(Value));
+  FMax := Value;
+  if not (csLoading in ComponentState) and (FValue > FMax) then
+    FValue := FMax;
+  Invalidate;
+end;
+
+
 procedure TPPGCustomProgressRing.SetValue(const Value: Integer);
 var
   V: Integer;
 begin
-  V := PPGCheckRange(Self, 'Value', Value, 0, 100);
+  if csLoading in ComponentState then
+  begin
+    FValue := Value; // Min/Max ggf. noch nicht gelesen: Loaded prueft
+    Exit;
+  end;
+  V := PPGCheckRange(Self, 'Value', Value, FMin, FMax);
   if FValue <> V then
   begin
     FValue := V;
@@ -655,7 +702,7 @@ begin
   else
   begin
     Start := 0;
-    Sweep := 3.6 * FValue;
+    Sweep := 360 * (FValue - FMin) / (FMax - FMin);
   end;
   if Sweep <= 0.5 then
     Exit;
@@ -680,7 +727,7 @@ begin
   if FIndeterminate then
     Result := ''
   else
-    Result := IntToStr(FValue) + ' %';
+    Result := IntToStr(Round((FValue - FMin) * 100 / (FMax - FMin))) + ' %';
 end;
 
 { TPPGCustomInfoBar }

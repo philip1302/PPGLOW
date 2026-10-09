@@ -6,7 +6,7 @@ Bereiche des Boards (nur gesetzte Werte zaehlen, clDefault = Preset).
 
 Bereiche des Boards einzeln gestalten: Spalte, Karte, Karte unter der Maus, gewählte Karte und Swimlane-Kopf.
 
-Nutzung: `PPGKanban1.KanbanStyles.Card.Color := clWhite;`
+Nutzung: `PPGKanban1.Styles.Card.Color := clWhite;`
 
 ## Eigenschaften
 

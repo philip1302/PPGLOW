@@ -14,7 +14,7 @@
 <tr><td><code>Min</code></td><td><code>Double</code></td><td></td><td>Feste Untergrenze; wirkt nur mit AutoMin = False.</td></tr>
 <tr><td><code>Max</code></td><td><code>Double</code></td><td></td><td>Feste Obergrenze; wirkt nur mit AutoMax = False.</td></tr>
 <tr><td><code>Format</code></td><td><code>string</code></td><td></td><td>FormatFloat-Maske der Achsenbeschriftung; leer = passende Nachkommastellen aus der Schrittweite. Bei einer Datumsachse eine FormatDateTime-Maske. Nutzung: <code>Chart.YAxis.Format := &#39;#,##0 €&#39;;</code> oder <code>Chart.XAxis.Format := &#39;dd.mm.&#39;;</code></td></tr>
-<tr><td><code>ShowGrid</code></td><td><code>Boolean</code></td><td></td><td>Gitterlinien an den Teilstrichen dieser Achse. Vorgabe: an bei der Y-Achse, aus bei X- und zweiter Y-Achse. Farbe &#252;ber ChartStyles.Grid.</td></tr>
+<tr><td><code>ShowGrid</code></td><td><code>Boolean</code></td><td></td><td>Gitterlinien an den Teilstrichen dieser Achse. Vorgabe: an bei der Y-Achse, aus bei X- und zweiter Y-Achse. Farbe &#252;ber Styles.Grid.</td></tr>
 <tr><td><code>Kind</code></td><td><code>TPPGChartXKind</code></td><td><code>cxkCategory</code></td><td>Nur f&#252;r die X-Achse: Art der Werte. Kategorien verteilen die Punkte gleichm&#228;&#223;ig (X = Index, Text aus Categories), Zahlen und Datum/Zeit setzen die Punkte nach ihrem X-Wert (Series.AddXY). Werte: <code>cxkCategory</code>, <code>cxkNumeric</code>, <code>cxkDateTime</code>. Nutzung: <code>Chart.XAxis.Kind := cxkDateTime; Chart.Series[0].AddXY(Date, 42);</code></td></tr>
 </table>
 <h2>Verwendet in</h2>

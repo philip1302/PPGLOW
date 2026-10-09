@@ -41,7 +41,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `SizeGrip` | `Boolean` | `True` | True: Griff unten rechts (RTL links) zum Vergrößern des Formulars; wirkt nur bei veränderbarem, nicht maximiertem Formular. |
 | `AutoHint` | `Boolean` | `False` | True: Hinweise der Anwendung (Langtext des Hints, Teil nach dem senkrechten Strich) erscheinen automatisch im ersten Panel bzw. in SimpleText; mit OnHint übernimmt die Anwendung die Anzeige. |
 | `UseSystemFont` | `Boolean` | `True` | True: Die Leiste nutzt die Statusleisten-Schrift von Windows; wird False, sobald Font geändert wird. |
-| `BarStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Aussehen der Leiste: Fläche, Text, Trennlinien (BorderColor) und Schrift; clDefault = vom Preset. |
+| `Style` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Aussehen der Leiste: Fläche, Text, Trennlinien (BorderColor) und Schrift; clDefault = vom Preset. |
 | `AllowMarkup` | `Boolean` | `False` | True: Texte der Panels dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). Nutzung: `PPGStatusBar1.Panels[0].Text := 'Status: <b>verbunden</b>';` |
 
 ## Eigenschaften wie in der VCL

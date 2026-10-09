@@ -16,11 +16,17 @@ TPPGDBComboBox, TPPGDBDatePicker.
 
 Eigenes Package (PPGlowDBR): Anwendungen ohne Datenbank linken kein Data.DB.
 Die Controls erben von den PPGlow-Controls und fuegen nur die Anbindung
-hinzu (TFieldDataLink) - keine zweite Zeichenlogik.
+hinzu - keine zweite Zeichenlogik.
+
+Gemeinsame Anbindung (Audit 4a): TPPGDBBinding haelt den Link und erledigt,
+was alle DB-Controls gleich machen (auch PPG.DB.Fields, PPG.DB.Lookup und
+TPPGDBRadioGroup). Das Control liefert nur Anzeigen (OnShow) und Schreiben
+(OnWrite) und reicht DataField/DataSource/ReadOnly, CM_GETDATALINK,
+CM_EXIT, Esc und Actions weiter.
 
 Ablauf wie bei den VCL-DB-Controls:
 - Datensatz wechselt (DataChange): Wert aus dem Feld anzeigen (mit Fokus Field.Text, ohne Field.DisplayText).
-- Anwender aendert: zuerst den Datensatz in den Bearbeiten-Modus setzen (TPPGFieldDataLink.EditByUser), dann Modified. Waehrend EditByUser darf DataChange den neuen Wert nicht ueberschreiben (Sperre).
+- Anwender aendert: zuerst den Datensatz in den Bearbeiten-Modus setzen (TPPGFieldDataLink.EditByUser), dann Modified. Waehrend EditByUser darf DataChange den neuen Wert nicht ueberschreiben (Sperre). Geht das nicht, wird der Feldwert wieder angezeigt.
 - Verlassen (CM_EXIT): UpdateRecord schreibt ins Feld. Ein ungueltiger Wert setzt ValidationState = pvsError mit der Meldung als ValidationHint, behaelt den Fokus und bricht still ab (kein Dialog).
 - Esc waehrend der Bearbeitung: Wert aus dem Feld zuruecksetzen.
 

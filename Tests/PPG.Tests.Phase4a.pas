@@ -891,16 +891,16 @@ begin
   CheckEquals('0', S.Text);
   S.Value := 1000000;
   CheckEquals(1000000, S.Value, 'MinValue = MaxValue = 0: keine Grenze');
-  S.MinValue := 10; // Max noch 0 -> vorlaeufig "verkehrt", wie bei TSpinEdit kein Fehler
-  S.MaxValue := 20;
+  S.Min := 10; // Max noch 0 -> vorlaeufig "verkehrt", wie bei TSpinEdit kein Fehler
+  S.Max := 20;
   CheckEquals(20, S.Value, 'auf Max begrenzt');
   S.Value := 5;
   CheckEquals(10, S.Value);
   CheckEquals('10', S.Text);
   S.Value := 25;
   CheckEquals(20, S.Value);
-  S.MinValue := 15;
-  S.MaxValue := 15;
+  S.Min := 15;
+  S.Max := 15;
   S.Value := 99;
   CheckEquals(99, S.Value, 'Min = Max: keine Grenze');
 end;
@@ -983,8 +983,8 @@ var
   P: TPoint;
 begin
   S := NewSpin;
-  S.MaxValue := 3;
-  S.MinValue := 0;
+  S.Max := 3;
+  S.Min := 0;
   S.Value := 3;
   P := CenterOf(TSpinAccess(S).ButtonRect(PPGSpinButtonUp));
   CheckEquals(-1, TSpinAccess(S).ButtonAt(P.X, P.Y), 'Auf an Max inaktiv');
@@ -1005,8 +1005,8 @@ begin
   FForm.Show;
   try
     S := NewSpin;
-    S.MinValue := 1;
-    S.MaxValue := 50;
+    S.Min := 1;
+    S.Max := 50;
     I := TSpinAccess(S).Inner;
     I.Perform(WM_CHAR, Ord('x'), 0);
     CheckEquals('1', S.Text, 'Buchstaben werden abgewiesen');
@@ -1044,8 +1044,9 @@ const
   Dfm =
     'object SpinEdit1: TPPGSpinEdit'#13#10 +
     '  Increment = 5'#13#10 +
-    '  MaxValue = 50'#13#10 +
-    '  MinValue = 10'#13#10 +
+    // Audit 5c: MinValue/MaxValue von TSpinEdit heissen Min/Max (migrate.ps1 stellt um)
+    '  Max = 50'#13#10 +
+    '  Min = 10'#13#10 +
     '  TabOrder = 0'#13#10 +
     '  Value = 99'#13#10 +
     'end'#13#10;
@@ -1056,8 +1057,8 @@ begin
   try
     LoadDfm(Dfm, S);
     CheckEquals(5, S.Increment);
-    CheckEquals(50, S.MaxValue);
-    CheckEquals(10, S.MinValue);
+    CheckEquals(50, S.Max);
+    CheckEquals(10, S.Min);
     CheckEquals(50, S.Value, 'nach dem Laden begrenzt');
     CheckEquals('50', S.Text);
   finally

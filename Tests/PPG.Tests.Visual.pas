@@ -563,15 +563,15 @@ begin
         Rg := TPPGGauge(Result).Ranges.Add;
         Rg.StartValue := 0;
         Rg.EndValue := 60;
-        Rg.RangeColor := grcSuccess;
+        Rg.Kind := grkSuccess;
         Rg := TPPGGauge(Result).Ranges.Add;
         Rg.StartValue := 60;
         Rg.EndValue := 85;
-        Rg.RangeColor := grcWarning;
+        Rg.Kind := grkWarning;
         Rg := TPPGGauge(Result).Ranges.Add;
         Rg.StartValue := 85;
         Rg.EndValue := 100;
-        Rg.RangeColor := grcDanger;
+        Rg.Kind := grkError;
         TPPGGauge(Result).ShowTarget := True;
         TPPGGauge(Result).TargetValue := 80;
         TPPGGauge(Result).Value := 68;
@@ -723,7 +723,7 @@ begin
     // Toast: eigenes Fenster
     Center := TPPGNotificationCenter.Create(FForm);
     try
-      Center.Animations := False;
+      Center.Animation.Enabled := False;
       Center.RespectQuietHours := False;
       Center.Preset := Presets[Variant];
       Toast := Center.Show('Gespeichert', 'Die Datei wurde gespeichert.', psSuccess, 0, ['Oeffnen']);

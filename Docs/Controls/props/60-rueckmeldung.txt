@@ -1,8 +1,8 @@
 # Bereich E: Rückmeldung, Buttons, Labels, Hints, Dialoge, StyleManager.
 
 # --- TPPGBadge ---
-TPPGCustomBadge.BadgeColor = Farbe der Plakette aus den Theme-Tokens: Akzent, Erfolg (grün), Warnung (gelb), Fehler (rot) oder neutral (dezentes Grau). Folgt automatisch Dark Mode und Markenfarbe.
-> `Badge1.BadgeColor := bcError;` für ungelesene Fehlermeldungen.
+TPPGCustomBadge.Severity = Farbe der Plakette aus den Theme-Tokens: Akzent, Erfolg (grün), Warnung (gelb), Fehler (rot) oder neutral (dezentes Grau). Folgt automatisch Dark Mode und Markenfarbe.
+> `Badge1.Severity := bsvError;` für ungelesene Fehlermeldungen.
 TPPGCustomBadge.Kind = Inhalt der Plakette: bkNumber zeigt Value (über MaxValue als „99+"), bkDot nur einen Punkt, bkText den Text aus Caption.
 > `Badge1.Kind := bkText; Badge1.Caption := 'Neu';`
 TPPGCustomBadge.MaxValue = Größte angezeigte Zahl; größere Werte erscheinen als „MaxValue+" (z. B. „99+"). 0 = ohne Grenze.
@@ -36,16 +36,16 @@ TPPGCustomHint.StyleManager = Zentrale Stilquelle; gesetzt kommt das Preset vom 
 # --- TPPGInfoBar ---
 TPPGCustomInfoBar.ActionCaption = Beschriftung eines Aktions-Buttons in der Leiste; leer = kein Button. Ein Klick löst OnActionClick aus.
 > `InfoBar1.ActionCaption := 'Erneut versuchen';`
-TPPGCustomInfoBar.BarStyle = Eigene Optik der Leiste: Fläche, Rand, Text und Schrift. Ohne Angabe wird die Leiste aus der Signalfarbe von Severity getönt.
-> `InfoBar1.BarStyle.Color := $00E8F4FF;`
-TPPGCustomInfoBar.IsClosable = True: Ein Schließen-Kreuz wird angezeigt (Klick oder Esc schließt, mit OnClosing/OnClose).
-TPPGCustomInfoBar.IsOpen = Sichtbarkeit der Leiste; True/False blendet sie animiert ein bzw. aus. Wird beim Schließen durch den Anwender False.
-> `InfoBar1.Severity := psError; InfoBar1.Message := 'Speichern fehlgeschlagen'; InfoBar1.IsOpen := True;`
+TPPGCustomInfoBar.Style = Eigene Optik der Leiste: Fläche, Rand, Text und Schrift. Ohne Angabe wird die Leiste aus der Signalfarbe von Severity getönt.
+> `InfoBar1.Style.Color := $00E8F4FF;`
+TPPGCustomInfoBar.ShowCloseButton = True: Ein Schließen-Kreuz wird angezeigt (Klick oder Esc schließt, mit OnClosing/OnClose).
+TPPGCustomInfoBar.Open = Sichtbarkeit der Leiste; True/False blendet sie animiert ein bzw. aus. Wird beim Schließen durch den Anwender False.
+> `InfoBar1.Severity := psError; InfoBar1.Message := 'Speichern fehlgeschlagen'; InfoBar1.Open := True;`
 TPPGCustomInfoBar.Message = Meldungstext; darf Mini-Markup enthalten (<b>, <i>, <a href=...>).
 TPPGCustomInfoBar.OnActionClick = Klick (oder Enter/Leertaste) auf den Aktions-Button aus ActionCaption.
-TPPGCustomInfoBar.OnClose = Die Leiste wurde vom Anwender geschlossen (IsOpen ist bereits False).
+TPPGCustomInfoBar.OnClose = Die Leiste wurde vom Anwender geschlossen (Open ist bereits False).
 TPPGCustomInfoBar.OnClosing = Vor dem Schließen durch den Anwender; AllowClose := False hält die Leiste offen.
-TPPGCustomInfoBar.Severity = Art der Meldung: Information, Erfolg, Warnung oder Fehler. Bestimmt Symbol und Signalfarbe (aus den Tokens, anpassbar über ThemeColors bzw. BarStyle); Screenreader melden sie als Alarm.
+TPPGCustomInfoBar.Severity = Art der Meldung: Information, Erfolg, Warnung oder Fehler. Bestimmt Symbol und Signalfarbe (aus den Tokens, anpassbar über ThemeColors bzw. Style); Screenreader melden sie als Alarm.
 TPPGCustomInfoBar.Title = Fett hervorgehobener Titel vor Message; leer = nur Message.
 
 # --- TPPGLinkLabel ---
@@ -66,9 +66,12 @@ TPPGCustomProgressBar.Style = pbstNormal = Fortschritt nach Position; pbstMarque
 
 # --- TPPGProgressRing ---
 TPPGCustomProgressRing.Indeterminate = True: rotierender Bogen für unbestimmte Wartezeit; False: Bogen nach Value (0–100 %). Ohne Animationen steht ein Viertelbogen.
+TPPGCustomProgressRing.Max = Obergrenze des Wertebereichs (Vorgabe 100); muss größer als Min sein, sonst Ausnahme.
+TPPGCustomProgressRing.Min = Untergrenze des Wertebereichs (Vorgabe 0), wie TPPGProgressBar.Min; Value liegt in Min..Max.
+> `Ring1.Min := 0; Ring1.Max := 250; Ring1.Value := 125;` zeigt einen halben Bogen.
 TPPGCustomProgressRing.ShowTrack = True: Der volle Kreis wird als dezente Spur hinter dem Bogen gezeichnet.
 TPPGCustomProgressRing.Thickness = Strichstärke in logischen Pixeln (0..100); 0 = aus der Größe berechnet.
-TPPGCustomProgressRing.Value = Fortschritt in Prozent (0..100) bei Indeterminate = False.
+TPPGCustomProgressRing.Value = Fortschritt zwischen Min und Max (Vorgabe 0..100) bei Indeterminate = False.
 
 # --- TPPGRadioButton ---
 TPPGCustomRadioButton.GroupIndex = Gruppennummer: Innerhalb desselben Parents und GroupIndex ist höchstens ein RadioButton eingeschaltet. So lassen sich mehrere Gruppen in einem Container ohne GroupBox trennen.
@@ -84,14 +87,14 @@ TPPGCustomRangeControl.Position = Aktueller Wert zwischen Min und Max. Werte au�
 # --- TPPGRating ---
 TPPGCustomRating.AllowClear = True: Ein Klick auf den aktuellen Wert setzt ihn auf 0 zurück.
 TPPGCustomRating.AllowHalf = True: Halbe Sterne möglich (Klick auf die linke Sternhälfte, Tastatur in 0,5-Schritten).
-TPPGCustomRating.MaxValue = Anzahl der Sterne (1..50).
+TPPGCustomRating.Max = Anzahl der Sterne (1..50).
 TPPGCustomRating.OnChange = Der Anwender hat den Wert geändert (Klick, Tastatur). Setzen von Value im Code löst es nicht aus.
 TPPGCustomRating.ReadOnly = True: nur Anzeige (keine Vorschau, keine Eingabe); bleibt fokussierbar für Screenreader.
 TPPGCustomRating.StarColor = Farbe der gefüllten Sterne; clDefault = Akzentfarbe.
 > `Rating1.StarColor := $0000C0FF;` für klassisches Gold.
 TPPGCustomRating.StarSize = Größe eines Sterns in logischen Pixeln (8..128).
 TPPGCustomRating.StarSpacing = Abstand zwischen den Sternen in logischen Pixeln (0..64).
-TPPGCustomRating.Value = Bewertung von 0 bis MaxValue, mit AllowHalf auch halbe Werte (z. B. 3,5).
+TPPGCustomRating.Value = Bewertung von 0 bis Max, mit AllowHalf auch halbe Werte (z. B. 3,5).
 > `Rating1.Value := 4;`
 
 # --- TPPGTrackBar ---
@@ -99,7 +102,7 @@ TPPGCustomTrackBar.Frequency = Abstand der Teilstriche in Werten (≥ 1), wie TT
 TPPGCustomTrackBar.LineSize = Schrittweite für Pfeiltasten und eine Mausrad-Raste (≥ 1).
 TPPGCustomTrackBar.Orientation = Waagerecht (trHorizontal) oder senkrecht (trVertical, Min oben wie TTrackBar).
 TPPGCustomTrackBar.PageSize = Schrittweite für Bild auf/ab (≥ 1).
-TPPGCustomTrackBar.SliderVisible = False: Der Griff wird nicht gezeichnet (reine Anzeige wie ein Füllbalken).
+TPPGCustomTrackBar.ShowSlider = False: Der Griff wird nicht gezeichnet (reine Anzeige wie ein Füllbalken).
 TPPGCustomTrackBar.ThumbLength = Durchmesser des Griffs in logischen 96-DPI-Pixeln (8..100), wie TTrackBar.
 TPPGCustomTrackBar.TickMarks = Lage der Teilstriche: tmBottomRight, tmTopLeft oder tmBoth.
 TPPGCustomTrackBar.TickStyle = tsAuto = Teilstriche im Abstand Frequency, tsNone = keine, tsManual = nur Anfang und Ende (manuelle Ticks per SetTick werden nicht unterstützt).
@@ -127,7 +130,7 @@ TPPGLabel.AllowMarkup = True: Caption darf Mini-Markup enthalten (fett, kursiv, 
 TPPGLabel.Secondary = True: dezente Textfarbe (TextSecondary aus dem Theme), z. B. für Hinweise und Beschreibungen; folgt dem Dark Mode.
 
 # --- TPPGNotificationCenter ---
-TPPGNotificationCenter.Animations = True: Toasts gleiten ein und aus, der Stapel rückt animiert nach (nur, wenn Windows Animationen erlaubt).
+TPPGNotificationCenter.Animation = Ein- und Ausblenden der Toasts wie Animation der Controls: Enabled = False schaltet ab, Duration und Easing steuern den Verlauf. Toasts gleiten ein und aus, der Stapel rückt animiert nach (nur, wenn Windows Animationen erlaubt).
 TPPGNotificationCenter.Duration = Anzeigedauer in Millisekunden (0..600000); 0 = bis zum Schließen. Solange die Maus über dem Toast steht, ist die Zeit angehalten. Show kann pro Toast eine eigene Dauer angeben.
 TPPGNotificationCenter.MaxVisible = Höchstzahl gleichzeitig sichtbarer Toasts (1..20); weitere warten in einer Schlange.
 TPPGNotificationCenter.OnAction = Ein Aktions-Button eines Toasts wurde geklickt; ActionIndex = Nummer der Aktion (0-basiert, Reihenfolge wie bei Show).
@@ -172,7 +175,7 @@ TPPGTeachingTip.OnActionClick = Klick auf den Aktions-Button. Die Anwendung ents
 TPPGTeachingTip.OnClose = Die Blase wurde durch den Anwender geschlossen; Reason: Schließen-Button, Klick daneben, Esc.
 TPPGTeachingTip.OnClosing = Vor dem Schließen durch den Anwender; über den var-Parameter lässt sich das Schließen verhindern.
 TPPGTeachingTip.OnLinkClick = Ein Link im Text (<a href="...">) wurde geklickt; Link = href-Ziel.
-TPPGTeachingTip.Placement = Seite des Ziels, an der die Blase erscheint: tpAuto wählt die erste Seite (oben, unten, links, rechts), auf die sie ganz passt.
+TPPGTeachingTip.Placement = Seite des Ziels, an der die Blase erscheint: ttpAuto wählt die erste Seite (oben, unten, links, rechts), auf die sie ganz passt.
 TPPGTeachingTip.Preset = Optik-Vorlage der Blase ('' = Standard bzw. StyleManager).
 TPPGTeachingTip.ShowCloseButton = True: Kreuz oben rechts (nur ohne CloseButtonText, wie WinUI).
 TPPGTeachingTip.StyleManager = Zentrale Stilquelle für Preset und Farben.

@@ -97,7 +97,6 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnDialogDestroyed` | `TNotifyEvent` `(Sender: TObject)` | Der Dialog wurde geschlossen und zerstört. |
 | `OnExpanded` | `TNotifyEvent` `(Sender: TObject)` | Der Aufklapper für ExpandedText wurde umgeschaltet. |
 | `OnHyperlinkClicked` | `TNotifyEvent` `(Sender: TObject)` | Ein Link (<a href="...">) in Text oder FooterText wurde geklickt (braucht Flag tfEnableHyperlinks); die Adresse steht in URL. |
-| `OnNavigated` | `TNotifyEvent` `(Sender: TObject)` | Navigation zu einer neuen Seite im Dialog. |
 | `OnRadioButtonClicked` | `TNotifyEvent` `(Sender: TObject)` | Ein Optionsfeld wurde gewählt. |
 | `OnTimer` | `TTaskDlgTimerEvent` `(Sender: TObject; TickCount: Cardinal; var Reset: Boolean)` | Wird etwa alle 200 ms aufgerufen (braucht Flag tfCallbackTimer), z. B. um ProgressBar fortzuschreiben. |
 | `OnVerificationClicked` | `TNotifyEvent` `(Sender: TObject)` | Das Kontrollkästchen (VerificationText) wurde umgeschaltet. |

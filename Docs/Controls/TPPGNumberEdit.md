@@ -55,15 +55,15 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
-| `NumberKind` | `TPPGNumberKind` | `nkFloat` | Art der Zahl: nkInteger (Ganzzahl), nkFloat (Kommazahl), nkCurrency (Geldbetrag, intern Currency ohne Rundungsfehler, mit Währungszeichen), nkPercent (Prozent; Value 12,5 wird als „12,5 %" angezeigt). Werte: `nkInteger`, `nkFloat`, `nkCurrency`, `nkPercent`. |
+| `Kind` | `TPPGNumberKind` | `nkFloat` | Art der Zahl: nkInteger (Ganzzahl), nkFloat (Kommazahl), nkCurrency (Geldbetrag, intern Currency ohne Rundungsfehler, mit Währungszeichen), nkPercent (Prozent; Value 12,5 wird als „12,5 %" angezeigt). Werte: `nkInteger`, `nkFloat`, `nkCurrency`, `nkPercent`. |
 | `Decimals` | `Integer` | `2` | Nachkommastellen in der Anzeige und beim Runden (0..10; kaufmännisch gerundet). Bei nkInteger ohne Wirkung. |
-| `MinValue` | `Double` |  | Kleinster erlaubter Wert; kleinere werden still begrenzt. MinValue = MaxValue bedeutet keine Grenze. Nutzung: `NumberEdit1.MinValue := 0; NumberEdit1.MaxValue := 100;` |
-| `MaxValue` | `Double` |  | Größter erlaubter Wert; größere werden still begrenzt. MinValue = MaxValue bedeutet keine Grenze (wie TSpinEdit). |
+| `Min` | `Double` |  | Kleinster erlaubter Wert; kleinere werden still begrenzt. Min = Max bedeutet keine Grenze. Nutzung: `NumberEdit1.Min := 0; NumberEdit1.Max := 100;` |
+| `Max` | `Double` |  | Größter erlaubter Wert; größere werden still begrenzt. Min = Max bedeutet keine Grenze (wie TSpinEdit). |
 | `Increment` | `Double` |  | Schrittweite für Pfeil auf/ab, Mausrad und Spin-Buttons. |
 | `LargeIncrement` | `Double` |  | Schrittweite für Bild auf/ab. |
 | `ShowSpinButtons` | `Boolean` | `False` | True: Rechts im Feld erscheinen Auf/Ab-Schaltflächen (Schritt = Increment). |
 | `ShowThousandSeparator` | `Boolean` | `True` | True: Ohne Fokus wird mit Tausendertrennzeichen angezeigt („1.234,50"). |
-| `CurrencyString` | `string` |  | Währungszeichen bei NumberKind = nkCurrency; leer = Zeichen aus den Ländereinstellungen (z. B. „€"). Nutzung: `NumberEdit1.CurrencyString := 'CHF';` |
+| `CurrencyString` | `string` |  | Währungszeichen bei Kind = nkCurrency; leer = Zeichen aus den Ländereinstellungen (z. B. „€"). Nutzung: `NumberEdit1.CurrencyString := 'CHF';` |
 | `AllowExpressions` | `Boolean` | `True` | True: Die Eingabe darf rechnen („2*19,99", „(100-15)/2"); ausgerechnet wird bei Enter und beim Verlassen. |
 | `AllowNull` | `Boolean` | `False` | True: Ein leeres Feld bedeutet „kein Wert" (IsNull, bei DB-Feldern Null); False: leer wird zu 0. |
 | `Value` | `Double` |  | Der Zahlenwert. Ohne Fokus formatiert angezeigt, mit Fokus roh. Setzen aus Code löst kein OnChange aus; OnChange kommt nur bei Änderungen durch den Anwender. Nutzung: `Gesamt := NumberEdit1.Value * 1.19;` |

@@ -177,7 +177,7 @@ begin
     K.VirtualCardHeight := Src.VirtualCardHeight;
     K.WipMode := Src.WipMode;
     K.ShowCardCount := Src.ShowCardCount;
-    K.KanbanStyles := Src.KanbanStyles;
+    K.Styles := Src.Styles;
     K.OnCustomDrawCard := Src.OnCustomDrawCard;
     K.OnGetCard := Src.OnGetCard;
     K.Columns := Src.Columns;

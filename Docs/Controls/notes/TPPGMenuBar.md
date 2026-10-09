@@ -11,7 +11,7 @@
 
 ## Anpassung
 
-- `MenuStyles` und `OnCustomDrawItem` wie `TPPGPopupMenu`.
+- `Styles` und `OnCustomDrawItem` wie `TPPGPopupMenu`.
 
 ## Beispiel
 

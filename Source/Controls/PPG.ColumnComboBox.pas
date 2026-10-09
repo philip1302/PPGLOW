@@ -4,7 +4,7 @@ unit PPG.ColumnComboBox;
   Vorbild TMS TAdvMultiColumnComboBox).
 
   - Columns (Titel, Breite in logischen px, Ausrichtung) und Zeilen aus Items:
-    jede Zeile enthaelt die Zellen getrennt durch ColumnDelimiter ("1001|Mueller|Berlin").
+    jede Zeile enthaelt die Zellen getrennt durch Delimiter ("1001|Mueller|Berlin").
     Virtuell: VirtualRowCount > 0 und OnGetCellText liefern die Zellen
     (z.B. 100 000 Zeilen ohne Kopie).
   - Kopfzeile im Popup; Klick sortiert (aufsteigend/absteigend), die
@@ -156,12 +156,13 @@ type
     property Items: TStrings read FItems write SetItems;
     /// Startauswahl (auch im Designer); -1 = keine.
     property ItemIndex: Integer read FItemIndex write SetItemIndex default -1;
-    property ColumnDelimiter: Char read FColumnDelimiter write SetColumnDelimiter default '|';
+    property Delimiter: Char read FColumnDelimiter write SetColumnDelimiter default '|';
     /// > 0: Zeilen kommen aus OnGetCellText (Items wird nicht benutzt).
     property VirtualRowCount: Integer read FVirtualRowCount write SetVirtualRowCount default 0;
     property KeyColumn: Integer read FKeyColumn write SetKeyColumn default 0;
     property DisplayColumn: Integer read FDisplayColumn write SetDisplayColumn default 0;
-    property DropDownCount: Integer read FDropDownCount write SetDropDownCount default 10;
+    property DropDownCount: Integer read FDropDownCount write SetDropDownCount
+      default PPGDefaultDropDownCount;
     /// Breite des Popups in logischen px (0 = Summe der Spalten).
     property DropDownWidth: Integer read FDropDownWidth write FDropDownWidth default 0;
     property OnGetCellText: TPPGGetCellTextEvent read FOnGetCellText write FOnGetCellText;
@@ -588,7 +589,7 @@ begin
   TStringList(FItems).OnChange := ItemsChanged;
   FColumnDelimiter := '|';
   FItemIndex := -1;
-  FDropDownCount := 10;
+  FDropDownCount := PPGDefaultDropDownCount;
   SetInnerVisible(False);
 end;
 
@@ -652,7 +653,7 @@ end;
 
 procedure TPPGColumnComboBox.SetDropDownCount(const Value: Integer);
 begin
-  FDropDownCount := PPGCheckRange(Self, 'DropDownCount', Value, 1, 100);
+  FDropDownCount := PPGCheckRange(Self, 'DropDownCount', Value, 1, PPGMaxDropDownCount);
 end;
 
 function TPPGColumnComboBox.RowCount: Integer;

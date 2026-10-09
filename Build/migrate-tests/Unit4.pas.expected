@@ -1,0 +1,36 @@
+unit Unit4;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.Grids, Vcl.ComCtrls, Vcl.Samples.Spin,
+  PPG.SpinEdit, PPG.Grid, PPG.TrackBar;
+
+type
+  TForm4 = class(TForm)
+    Spin1: TPPGSpinEdit;
+    Grid1: TPPGGrid;
+    Track1: TPPGTrackBar;
+    procedure Grid1TopLeftChanged(Sender: TObject);
+  private
+    procedure Limit(Value: Integer);
+  end;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm4.Grid1TopLeftChanged(Sender: TObject);
+begin
+end;
+
+procedure TForm4.Limit(Value: Integer);
+begin
+  Spin1.Max := Value;
+  if Spin1.Min > Value then
+    Spin1.Min := 0;
+  Track1.ShowSlider := Value > 0;
+  Grid1.OnTopLeftChange := nil;
+end;
+
+end.

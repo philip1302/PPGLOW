@@ -12,7 +12,7 @@
 
 ## Anpassung
 
-- `ChartStyles` (Titel, Achse, Gitter, Legende), `TitleFont`, `LegendFont`; Serienfarben ohne eigene Farbe aus `TPPGStyleManager.ChartPalette`.
+- `Styles` (Titel, Achse, Gitter, Legende), `TitleFont`, `LegendFont`; Serienfarben ohne eigene Farbe aus `TPPGStyleManager.ChartPalette`.
 
 ## Beispiel
 

@@ -114,7 +114,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. |
 | `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
 | `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
-| `ShowHint` | `Boolean` | `True` | True: Hint wird als Tooltip angezeigt. |
+| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
 | `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
 | `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
 
@@ -124,11 +124,11 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
 | `OnItemClick` | `TPPGRibbonItemEvent` `(Sender: TObject; Item: TPPGRibbonItem)` | Ein Item wurde ausgelöst (Klick, KeyTip, Tastatur, Schnellzugriff); kommt nach Item.OnClick bzw. Action.Execute. Gut für eine zentrale Behandlung aller Befehle über Item.Tag. |
-| `OnTabChange` | `TNotifyEvent` `(Sender: TObject)` | Die aktive Registerkarte wurde durch den Anwender gewechselt (nicht bei TabIndex im Code). |
-| `OnTabChanging` | `TPPGRibbonTabChangingEvent` `(Sender: TObject; NewTab: TPPGRibbonTab; var AllowChange: Boolean)` | Vor einem Wechsel der Registerkarte durch den Anwender; NewTab ist das Ziel, AllowChange := False verhindert den Wechsel. |
+| `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Die aktive Registerkarte wurde durch den Anwender gewechselt (nicht bei TabIndex im Code). |
+| `OnChanging` | `TPPGRibbonTabChangingEvent` `(Sender: TObject; NewTab: TPPGRibbonTab; var AllowChange: Boolean)` | Vor einem Wechsel der Registerkarte durch den Anwender; NewTab ist das Ziel, AllowChange := False verhindert den Wechsel. |
 | `OnGalleryClick` | `TPPGRibbonGalleryEvent` `(Sender: TObject; Item: TPPGRibbonItem; Index: Integer)` | Ein Galerie-Eintrag wurde gewählt (in der Leiste oder in der aufgeklappten Galerie); Index ist der Eintrag, Item.GalleryIndex ist schon gesetzt. |
 | `OnGetGalleryItem` | `TPPGRibbonGetGalleryItemEvent` `(Sender: TObject; Item: TPPGRibbonItem; Index: Integer; var Data: TPPGItemData; var Color: TColor)` | Liefert den Inhalt eines virtuellen Galerie-Eintrags (Item.GalleryCount > 0): Data mit Text, Bild usw. füllen; Color setzt optional ein Farbfeld. Nutzung: `Data.Text := Vorlagen[Index].Name;` |
-| `OnDrawGalleryItem` | `TPPGRibbonDrawGalleryItemEvent` `(Sender: TObject; Item: TPPGRibbonItem; Index: Integer; Canvas: TCanvas; const Rect: TRect; Selected, Hot: Boolean; var Handled: Boolean)` | Eigenes Zeichnen eines Galerie-Eintrags: Item ist die Galerie, Index der Eintrag, Canvas/Rect die Zeichenfläche, Selected/Hot der Zustand. Handled := True ersetzt das Standard-Zeichnen. Nutzung: Für Vorschauen wie Formatvorlagen oder Farbfelder. |
+| `OnCustomDrawGalleryItem` | `TPPGRibbonDrawGalleryItemEvent` `(Sender: TObject; Item: TPPGRibbonItem; Index: Integer; Canvas: TCanvas; const Rect: TRect; Selected, Hot: Boolean; var Handled: Boolean)` | Eigenes Zeichnen eines Galerie-Eintrags: Item ist die Galerie, Index der Eintrag, Canvas/Rect die Zeichenfläche, Selected/Hot der Zustand. Handled := True ersetzt das Standard-Zeichnen. Nutzung: Für Vorschauen wie Formatvorlagen oder Farbfelder. |
 | `OnLauncherClick` | `TPPGRibbonGroupEvent` `(Sender: TObject; Group: TPPGRibbonGroup)` | Der kleine Pfeil unten rechts in einer Gruppe (Dialog-Starter) wurde geklickt; Group ist die Gruppe. Nutzung: Typisch: den passenden Einstellungsdialog öffnen. |
 | `OnMinimizedChange` | `TNotifyEvent` `(Sender: TObject)` | Minimized wurde durch den Anwender umgeschaltet. |
 | `OnQuickAccessChange` | `TNotifyEvent` `(Sender: TObject)` | Der Anwender hat den Schnellzugriff geändert (hinzugefügt, entfernt, geladen). Nutzung: Hier `SaveQuickAccess` aufrufen und das Ergebnis z. B. in einer INI-Datei speichern. |

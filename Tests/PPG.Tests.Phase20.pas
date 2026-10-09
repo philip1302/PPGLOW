@@ -204,7 +204,7 @@ begin
   Result.TimeZone := 'Europe/Berlin';
   Result.Date := Mon + 2;
   Result.NowOverride := DT(Mon + 2, 10, 15);
-  Result.OnAppointmentChanged := Changed;
+  Result.OnAppointmentChange := Changed;
 end;
 
 function TPlannerSeriesTests.FindOcc(P: TPPGPlanner; AStart: TDateTime): Integer;

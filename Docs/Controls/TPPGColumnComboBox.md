@@ -29,7 +29,7 @@ PPGColumnComboBox1.KeyValue := '1001';
 TPPGColumnComboBox - mehrspaltige Auswahl mit Kopfzeile (Phase 12e,
 Vorbild TMS TAdvMultiColumnComboBox).
 
-- Columns (Titel, Breite in logischen px, Ausrichtung) und Zeilen aus Items: jede Zeile enthaelt die Zellen getrennt durch ColumnDelimiter ("1001|Mueller|Berlin"). Virtuell: VirtualRowCount > 0 und OnGetCellText liefern die Zellen (z.B. 100 000 Zeilen ohne Kopie).
+- Columns (Titel, Breite in logischen px, Ausrichtung) und Zeilen aus Items: jede Zeile enthaelt die Zellen getrennt durch Delimiter ("1001|Mueller|Berlin"). Virtuell: VirtualRowCount > 0 und OnGetCellText liefern die Zellen (z.B. 100 000 Zeilen ohne Kopie).
 - Kopfzeile im Popup; Klick sortiert (aufsteigend/absteigend), die Reihenfolge der Daten bleibt unveraendert (nur die Ansicht).
 - KeyColumn/KeyValue fuer den Schluessel (DB-Anbindung), DisplayColumn fuer den Text im Feld. Tippsuche in der Anzeigespalte (offen und geschlossen).
 - Zeichnen: schlanke eigene Zeile; die Zellroutine des Grids (TPPGCellPainter, Phase 13) soll das spaeter uebernehmen.
@@ -42,12 +42,13 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
 | `Columns` | [TPPGComboColumns](types/TPPGComboColumns.md) |  | Spalten der Aufklappliste (Titel, Breite, Ausrichtung, sichtbar). Die Kopfzeile im Popup sortiert per Klick die Ansicht, nicht die Daten. Nutzung: Im Designer per Doppelklick; im Code `with Combo.Columns.Add do begin Title := 'Nr.'; Width := 60; end;` |
-| `Items` | `TStrings` |  | Zeilen der Liste, jede mit den Zellen getrennt durch ColumnDelimiter. Wird nicht benutzt, wenn VirtualRowCount > 0 ist. |
-| `ColumnDelimiter` | `Char` | `'\|'` | Trennzeichen zwischen den Zellen einer Zeile in Items (Vorgabe senkrechter Strich). Nutzung: `Combo.ColumnDelimiter := ';'; Combo.Items.Add('1001;Müller;Berlin');` |
+| `Items` | `TStrings` |  | Zeilen der Liste, jede mit den Zellen getrennt durch Delimiter. Wird nicht benutzt, wenn VirtualRowCount > 0 ist. |
+| `ItemIndex` | `Integer` | `-1` | Gewählte Zeile (Index in Items bzw. der virtuellen Liste); -1 = keine. Wird mit gespeichert, damit eine Startauswahl im Designer möglich ist. |
+| `Delimiter` | `Char` | `'\|'` | Trennzeichen zwischen den Zellen einer Zeile in Items (Vorgabe senkrechter Strich). Nutzung: `Combo.Delimiter := ';'; Combo.Items.Add('1001;Müller;Berlin');` |
 | `VirtualRowCount` | `Integer` | `0` | Größer 0: Die Liste hat so viele Zeilen und holt ihre Zellen aus OnGetCellText, ohne Kopie in Items (z. B. 100 000 Zeilen). |
 | `KeyColumn` | `Integer` | `0` | Index der Spalte mit dem Schlüssel; KeyValue liest bzw. wählt die Zeile über diesen Wert (z. B. für die DB-Anbindung). Nutzung: `Combo.KeyColumn := 0; Combo.KeyValue := '1001';` |
 | `DisplayColumn` | `Integer` | `0` | Index der Spalte, deren Text im Feld steht; in ihr sucht auch die Tippsuche. |
-| `DropDownCount` | `Integer` | `10` | Sichtbare Zeilen der Aufklappliste, bevor gescrollt wird (1..100). |
+| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, bevor gescrollt wird (1..100). |
 | `DropDownWidth` | `Integer` | `0` | Breite der Aufklappliste in logischen Pixeln; 0 = Summe der Spaltenbreiten. |
 | `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |

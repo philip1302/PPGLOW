@@ -16,6 +16,7 @@
 <tr><td><code>Progress</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Fortschritt in Prozent bei Kind = spkProgress (0..100, wird begrenzt).</td></tr>
 <tr><td><code>BadgeCount</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Zahl auf der Plakette bei Kind = spkBadge (0 = Text statt Zahl).</td></tr>
 <tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus StatusBar.Images vor dem Inhalt; -1 = keins.</td></tr>
+<tr><td><code>ImageName</code></td><td><code>TImageName</code></td><td></td><td>Bild per Namen aus den Images des Besitzers (TVirtualImageList, ab Delphi 10.4). Robust gegen Umsortieren; setzt ImageIndex passend, ein unbekannter Name ergibt „kein Bild&quot;.</td></tr>
 <tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Beschreibung des Felds; der Screenreader liest sie vor dem Fortschritt bzw. der Plakette vor (z. B. „Upload: 40 %&quot;).</td></tr>
 <tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Fl&#228;chenfarbe dieses Felds; clDefault = wie die Leiste. Zusammen mit TextColor und FontStyle z. B. f&#252;r Warnungen. Nutzung: <code>PPGStatusBar1.Panels[1].Color := $00C0E0FF;</code></td></tr>
 <tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Eigene Textfarbe dieses Felds; clDefault = wie die Leiste.</td></tr>

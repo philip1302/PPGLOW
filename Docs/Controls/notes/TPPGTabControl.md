@@ -9,4 +9,4 @@
 
 ## Anpassung
 
-- `TabStyles`, `MultiLine`, `RaggedRight`, `Style`, `OwnerDraw`, `OnDrawTab` und `OnCustomDrawItem`.
+- `Styles`, `MultiLine`, `RaggedRight`, `Style`, `OwnerDraw`, `OnDrawTab` und `OnCustomDrawItem`.

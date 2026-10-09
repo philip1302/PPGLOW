@@ -378,7 +378,7 @@ type
     property OnEditing: TPPGTVEditingEvent read FOnEditing write FOnEditing;
     property OnEdited: TPPGTVEditedEvent read FOnEdited write FOnEdited;
     property OnDeletion: TPPGTVExpandedEvent read FOnDeletion write FOnDeletion;
-    property OnChecked: TPPGTVChangedEvent read FOnChecked write FOnChecked;
+    property OnItemCheck: TPPGTVChangedEvent read FOnChecked write FOnChecked;
     property OnCompare: TPPGTVCompareEvent read FOnCompare write FOnCompare;
     property OnNodeDrop: TPPGTVNodeDropEvent read FOnNodeDrop write FOnNodeDrop;
   public
@@ -461,7 +461,7 @@ type
     property OnGesture;
     property OnChange;
     property OnChanging;
-    property OnChecked;
+    property OnItemCheck;
     property OnClick;
     property OnCollapsed;
     property OnCollapsing;

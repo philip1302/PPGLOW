@@ -59,7 +59,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `StartAngle` | `Integer` | `-135` | Beginn des Bogens in Grad (-360..360); 0 = oben, positiv im Uhrzeigersinn. Vorgabe -135 (mit SweepAngle 270 ein nach unten offener Bogen). Nutzung: Halbrund: `Gauge.StartAngle := -90; Gauge.SweepAngle := 180;` |
 | `SweepAngle` | `Integer` | `270` | Länge des Bogens in Grad (10..360; 360 = Vollkreis). |
 | `Thickness` | `Integer` | `0` | Strichstärke des Bogens in logischen Pixeln (0..200; 0 = aus der Größe des Controls berechnet). |
-| `Ranges` | [TPPGGaugeRanges](types/TPPGGaugeRanges.md) |  | Farbige Abschnitte der Spur (z. B. grün/gelb/rot), je mit Start- und Endwert und Farbe. Mit ValueColorFromRange übernimmt der Wertbogen die Farbe seines Abschnitts. Nutzung: `with Gauge.Ranges.Add do begin StartValue := 80; EndValue := 100; RangeColor := grcDanger; end;` |
+| `Ranges` | [TPPGGaugeRanges](types/TPPGGaugeRanges.md) |  | Farbige Abschnitte der Spur (z. B. grün/gelb/rot), je mit Start- und Endwert und Farbe. Mit ValueColorFromRange übernimmt der Wertbogen die Farbe seines Abschnitts. Nutzung: `with Gauge.Ranges.Add do begin StartValue := 80; EndValue := 100; Kind := grkError; end;` |
 | `ValueColorFromRange` | `Boolean` | `True` | True: Der Wertbogen nimmt die Farbe des Abschnitts (Ranges) an, in dem der Wert liegt. Gilt nur, solange ValueColor = clDefault. |
 | `ShowTarget` | `Boolean` | `False` | True: Eine Zielmarke bei TargetValue auf dem Bogen zeigen. |
 | `TargetValue` | `Double` |  | Wert der Zielmarke (sichtbar mit ShowTarget). |

@@ -126,7 +126,7 @@ type
     FOnGetPoint: TPPGChartGetPointEvent;
     procedure SetChartStyles(const Value: TPPGChartStyles);
     procedure ChartStylesChanged(Sender: TObject);
-    /// Titel-Schrift: eigene (ChartStyles.Title) bzw. 1,25-fach fett; Temp freigeben.
+    /// Titel-Schrift: eigene (Styles.Title) bzw. 1,25-fach fett; Temp freigeben.
     function TitleFont(var Temp: TFont): TFont;
     function LegendFont: TFont;
     procedure SetSeries(const Value: TPPGChartSeriesList);
@@ -211,7 +211,7 @@ type
     /// Klick auf einen Legendeneintrag blendet die Serie aus/ein.
     property LegendToggle: Boolean read FLegendToggle write FLegendToggle default True;
     /// Bereiche (Titel, Achsen, Gitter, Legende).
-    property ChartStyles: TPPGChartStyles read FChartStyles write SetChartStyles;
+    property Styles: TPPGChartStyles read FChartStyles write SetChartStyles;
     property OnPointClick: TPPGChartPointEvent read FOnPointClick write FOnPointClick;
     property OnGetPoint: TPPGChartGetPointEvent read FOnGetPoint write FOnGetPoint;
   public
@@ -263,7 +263,7 @@ type
     property LegendPosition;
     property ShowTooltips;
     property LegendToggle;
-    property ChartStyles;
+    property Styles;
     property Align;
     property Anchors;
     property BiDiMode;

@@ -64,7 +64,7 @@ type
     function AccState: Integer; override;
     function AccValue: string; override;
     property Value: Double read FValue write SetValue;
-    property MaxValue: Integer read FMaxValue write SetMaxValue default 5;
+    property Max: Integer read FMaxValue write SetMaxValue default 5;
     property AllowHalf: Boolean read FAllowHalf write SetAllowHalf default False;
     property AllowClear: Boolean read FAllowClear write FAllowClear default True;
     property ReadOnly: Boolean read FReadOnly write SetReadOnly default False;
@@ -90,7 +90,7 @@ type
     property Appearance;
     property HighContrastSupport;
     property Value;
-    property MaxValue;
+    property Max;
     property AllowHalf;
     property AllowClear;
     property ReadOnly;
@@ -354,7 +354,7 @@ begin
     if UseFont then
       PPGDrawIcon(ACanvas, R, igStar, EmptyColor, R.Bottom - R.Top)
     else
-      ACanvas.DrawPolyline(Pts, Max(1, (R.Right - R.Left) div 16), EmptyColor, 255);
+      ACanvas.DrawPolyline(Pts, System.Math.Max(1, (R.Right - R.Left) div 16), EmptyColor, 255);
   end;
   if Fill <= 0 then
     Exit;

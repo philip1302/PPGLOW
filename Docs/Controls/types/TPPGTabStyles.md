@@ -6,7 +6,7 @@ Bereiche der Reiterleiste. Nur gesetzte Werte zaehlen (clDefault = Preset).
 
 Bereiche der Reiterleiste einzeln gestalten: Reiter, Reiter unter der Maus, aktiver Reiter, Leiste und Indikator.
 
-Nutzung: `PPGPageControl1.TabStyles.ActiveTab.FontStyle := [fsBold];`
+Nutzung: `PPGPageControl1.Styles.ActiveTab.FontStyle := [fsBold];`
 
 ## Eigenschaften
 

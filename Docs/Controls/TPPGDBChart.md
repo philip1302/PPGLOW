@@ -50,7 +50,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
-| `Title` | `string` |  | Überschrift über dem Diagramm (leer = keine). Gestaltung über ChartStyles.Title. |
+| `Title` | `string` |  | Überschrift über dem Diagramm (leer = keine). Gestaltung über Styles.Title. |
 | `Series` | [TPPGChartSeriesList](types/TPPGChartSeriesList.md) |  | Die Datenreihen (Collection von TPPGChartSeries) mit Art, Farbe, Achse und Werten. Nutzung: `with Chart.Series.Add do begin Title := 'Umsatz'; Kind := cskColumn; SetValues([12, 18, 9]); end;` |
 | `Categories` | `TStrings` |  | Beschriftungen der Kategorieachse, eine Zeile je Punktindex. Ohne Eintrag gilt der Text des Punktes bzw. 1, 2, 3 … Nutzung: `Chart.Categories.CommaText := 'Jan,Feb,Mrz,Apr';` |
 | `XAxis` | [TPPGChartAxis](types/TPPGChartAxis.md) |  | Waagerechte Achse: Art (Kategorie, Zahl, Datum), Grenzen, Format, Titel, Gitter. Bei Balkendiagrammen liegt sie senkrecht. |
@@ -61,7 +61,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `LegendPosition` | `TPPGChartLegendPosition` | `clpBottom` | Lage der Legende (oben, unten, rechts) oder keine. Bei Kreis und Ring zeigt die Legende die Kategorien. Werte: `clpNone`, `clpTop`, `clpBottom`, `clpRight`. |
 | `ShowTooltips` | `Boolean` | `True` | True: Beim Überfahren erscheint ein Tooltip mit den Werten (rastet auf den nächsten X-Wert über alle Serien bzw. auf das Kreissegment ein). Er ist Teil des Bildes und erscheint auch im Export. |
 | `LegendToggle` | `Boolean` | `True` | True: Ein Klick auf einen Legendeneintrag blendet die Serie aus bzw. wieder ein. |
-| `ChartStyles` | [TPPGChartStyles](types/TPPGChartStyles.md) |  | Bereiche einzeln gestalten: Titel, Achsen, Gitter, Legende. Nicht gesetzte Farben kommen aus dem Preset. |
+| `Styles` | [TPPGChartStyles](types/TPPGChartStyles.md) |  | Bereiche einzeln gestalten: Titel, Achsen, Gitter, Legende. Nicht gesetzte Farben kommen aus dem Preset. |
 
 ## Eigenschaften wie in der VCL
 

@@ -135,7 +135,7 @@ type
     property MaxDate: TDate read FMaxDate write SetMaxDate;
     property ShowCheckbox: Boolean read FShowCheckbox write SetShowCheckbox default False;
     /// Bereiche des aufklappenden Kalenders.
-    property CalendarStyles: TPPGCalendarStyles read FCalendarStyles write SetCalendarStyles;
+    property Styles: TPPGCalendarStyles read FCalendarStyles write SetCalendarStyles;
     /// Vor dem Zeichnen jedes Tages im aufklappenden Kalender.
     property OnCustomDrawDay: TPPGCalendarDrawDayEvent read FOnCustomDrawDay write FOnCustomDrawDay;
     property Checked: Boolean read FChecked write SetChecked default True;
@@ -209,7 +209,7 @@ type
     property ParseInput;
     property PopupMenu;
     property ShowCheckbox;
-    property CalendarStyles;
+    property Styles;
     property OnCustomDrawDay;
     property ShowHint;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
@@ -336,7 +336,7 @@ begin
   // Stile und eigenes Zeichnen der Tage vom Datumsfeld
   if Source is TPPGCustomDatePicker then
   begin
-    FCalendar.CalendarStyles := TPPGCustomDatePicker(Source).FCalendarStyles;
+    FCalendar.Styles := TPPGCustomDatePicker(Source).FCalendarStyles;
     FCalendar.OnCustomDrawDay := TPPGCustomDatePicker(Source).FOnCustomDrawDay;
   end;
 end;

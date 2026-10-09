@@ -10,7 +10,7 @@ Eine Spalte: Titel, WIP-Limit, Farbe, Breite, eingeklappt und eine feste Id für
 |---|---|---|---|
 | `Id` | `Integer` |  | Eindeutige Nummer der Spalte; Karten verweisen über ColumnId darauf. |
 | `Title` | `string` |  | Titel im Spaltenkopf. |
-| `Color` | `TColor` | `clNone` | Farbe der Kopfleiste der Spalte; clNone = Akzent des Presets. |
+| `Color` | `TColor` | `clDefault` | Farbe der Kopfleiste der Spalte; clNone = Akzent des Presets. |
 | `WipLimit` | `Integer` | `0` | Höchstzahl der Karten (0 bis 9999; 0 = ohne Limit). Darüber wird die Spalte als Warnung gefärbt bzw. bei WipMode = kwmBlock gesperrt. |
 | `Collapsed` | `Boolean` | `False` | True: Die Spalte ist eingeklappt (schmaler Streifen mit senkrechtem Titel). Der Anwender schaltet über den Pfeil im Kopf um. |
 | `Width` | `Integer` | `0` | Eigene Breite der Spalte in logischen Pixeln (80 bis 2000); 0 = Board.ColumnWidth. |

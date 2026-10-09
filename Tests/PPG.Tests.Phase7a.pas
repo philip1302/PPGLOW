@@ -580,18 +580,18 @@ begin
   I.OnClose := LogClose;
   FAllow := False;
   CheckFalse(I.CloseByUser, 'abgelehnt');
-  CheckTrue(I.IsOpen);
+  CheckTrue(I.Open);
   CheckTrue(I.Visible);
   FAllow := True;
   CheckTrue(I.CloseByUser);
   CheckEquals('closing,closing,close', FEvents.CommaText);
-  CheckFalse(I.IsOpen);
+  CheckFalse(I.Open);
   CheckFalse(I.Visible, 'geschlossen = unsichtbar');
   FEvents.Clear;
-  I.IsOpen := True;
+  I.Open := True;
   CheckTrue(I.Visible);
   CheckEquals(0, FEvents.Count, 'Code ohne Ereignisse');
-  I.IsClosable := False;
+  I.ShowCloseButton := False;
   CheckFalse(I.CloseByUser);
   CheckTrue(IsRectEmpty(I.PartRect(ipClose)));
 end;
@@ -616,7 +616,7 @@ begin
   CheckTrue(I.FocusPart = ipClose);
   Key7(I, VK_SPACE);
   CheckEquals('action,close', FEvents.CommaText);
-  I.IsOpen := True;
+  I.Open := True;
   FEvents.Clear;
   Key7(I, VK_ESCAPE);
   CheckEquals('close', FEvents.CommaText, 'Esc schliesst');
@@ -673,7 +673,7 @@ begin
     I.Message := 'Hinweis';
     I.HandleNeeded;
     CheckEquals(48, I.Height);
-    I.IsOpen := False;
+    I.Open := False;
     if I.Animation.EffectiveEnabled then
       CheckTrue(I.Visible, 'schliesst animiert: noch sichtbar');
     T0 := GetTickCount;
@@ -688,7 +688,7 @@ begin
     CheckFalse(I.Visible, 'am Ende unsichtbar');
     if I.Animation.EffectiveEnabled then
       CheckTrue(Seen, 'Zwischenhoehe beim Schliessen');
-    I.IsOpen := True;
+    I.Open := True;
     CheckTrue(I.Visible);
     T0 := GetTickCount;
     while (I.Height < 48) and (GetTickCount - T0 < 2000) do
@@ -698,7 +698,7 @@ begin
     end;
     CheckEquals(48, I.Height, 'volle Hoehe nach dem Oeffnen');
     I.Animation.Enabled := False;
-    I.IsOpen := False;
+    I.Open := False;
     CheckFalse(I.Visible, 'ohne Animation sofort');
   finally
     FForm.Hide;
@@ -1178,7 +1178,7 @@ begin
   CheckEquals(4, R.Value, 0, 'ganze');
   R.Value := 99;
   CheckEquals(5, R.Value, 0, 'begrenzt');
-  R.MaxValue := 3;
+  R.Max := 3;
   CheckEquals(3, R.Value, 0);
   CheckEquals('3 / 3', TRatingAccess(R).AccValue);
 end;
@@ -1217,7 +1217,7 @@ begin
   R := NewRating(FForm);
   R.OnChange := LogRating;
   R.Value := 4;
-  R.MaxValue := 10;
+  R.Max := 10;
   CheckEquals(4, R.Value, 0);
   CheckEquals(0, FEvents.Count);
 end;
@@ -1230,7 +1230,7 @@ begin
   // Audit 08.10.2026: Round(1E20) warf EInvalidOp aus der RTL
   R := NewRating(FForm);
   R.Value := 1E20;
-  CheckEquals(R.MaxValue, R.Value, 1E-12, 'auf MaxValue begrenzt');
+  CheckEquals(R.Max, R.Value, 1E-12, 'auf Max begrenzt');
   R.Value := -1E20;
   CheckEquals(0, R.Value, 1E-12);
   Raised := False;

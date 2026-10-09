@@ -1190,8 +1190,7 @@ begin
   // Audit 5b: Optik der Suite in einer eigenen Kategorie
   RegisterPropertiesInCategory(PPGCategoryName, TPPGCustomControl, ['Preset', 'StyleManager',
     'Appearance', 'Animation', 'RoundedCorners', 'Shadow', 'HighContrastSupport', 'ReadOnlyStyle',
-    'Styles', 'Style', 'ListStyles', 'CalendarStyles', 'ChartStyles', 'KanbanStyles', 'PlannerStyles',
-    'NavStyles', 'TabStyles', 'MenuStyles', 'BarStyle']);
+    'Styles', 'Style']);
   RegisterPropertiesInCategory(PPGCategoryName, TComponent, ['Preset', 'StyleManager']);
   // Bildindex/-name an Eintraegen und Seiten (Images des Besitzers)
   RegisterPropertyEditor(TypeInfo(TPPGImageIndex), TPPGToolItem, 'ImageIndex', TPPGItemImageIndexProperty);

@@ -102,7 +102,7 @@ begin
   Result.OnCardMoved := Moved;
   Result.OnCardClick := CardClick;
   Result.OnCardOpen := CardOpen;
-  Result.OnSelectionChange := SelChange;
+  Result.OnChange := SelChange;
   Result.OnColumnCollapse := ColCollapse;
   Result.OnGetCard := GetCard;
   Result.Columns.AddColumn('Backlog');

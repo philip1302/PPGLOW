@@ -33,7 +33,7 @@ type
     procedure OnDeletionWalk(Sender: TObject; Node: TPPGTreeNode);
     procedure OnExpandingRefuse(Sender: TObject; Node: TPPGTreeNode; var AllowExpansion: Boolean);
     procedure OnExpandingLazy(Sender: TObject; Node: TPPGTreeNode; var AllowExpansion: Boolean);
-    procedure OnChecked(Sender: TObject; Node: TPPGTreeNode);
+    procedure OnItemCheck(Sender: TObject; Node: TPPGTreeNode);
     procedure OnEdited(Sender: TObject; Node: TPPGTreeNode; var S: string);
     procedure OnEditingRefuse(Sender: TObject; Node: TPPGTreeNode; var AllowEdit: Boolean);
     procedure OnNodeDrop(Sender: TObject; Node, Target: TPPGTreeNode; Mode: TNodeAttachMode;
@@ -176,7 +176,7 @@ begin
   end;
 end;
 
-procedure TTreeTests.OnChecked(Sender: TObject; Node: TPPGTreeNode);
+procedure TTreeTests.OnItemCheck(Sender: TObject; Node: TPPGTreeNode);
 begin
   Inc(FChecked);
 end;
@@ -512,7 +512,7 @@ var
 begin
   T := SampleTree;
   T.CheckBoxes := True;
-  T.OnChecked := OnChecked;
+  T.OnItemCheck := OnItemCheck;
   A := Find(T, 'A');
   A.Checked := True;
   CheckTrue(Find(T, 'A1').Checked, 'an Kinder weitergegeben');
@@ -525,12 +525,12 @@ begin
   CheckTrue(A.CheckState = cbGrayed, 'neues leeres Kind -> gemischt');
   Find(T, 'Neu').Delete;
   CheckTrue(A.CheckState = cbChecked, 'nach dem Loeschen wieder an');
-  CheckEquals(0, FChecked, 'Code loest kein OnChecked aus');
+  CheckEquals(0, FChecked, 'Code loest kein OnItemCheck aus');
   T.Selected := Find(T, 'B');
   Key(T, VK_SPACE);
   CheckTrue(Find(T, 'B').Checked);
   CheckTrue(Find(T, 'B1').Checked);
-  CheckEquals(1, FChecked, 'Leertaste: OnChecked');
+  CheckEquals(1, FChecked, 'Leertaste: OnItemCheck');
   T.AutoCheck := False;
   Find(T, 'B').Checked := False;
   CheckTrue(Find(T, 'B1').Checked, 'ohne AutoCheck keine Weitergabe');

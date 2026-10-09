@@ -12,9 +12,10 @@
 <tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Tooltip des Befehls.</td></tr>
 <tr><td><code>Style</code></td><td><code>TPPGToolItemStyle</code></td><td><code>tisButton</code></td><td>Art: tisButton (Befehl), tisCheck (Umschalt-Button) oder tisSeparator (Trennlinie). Werte: <code>tisButton</code>, <code>tisCheck</code>, <code>tisSeparator</code>.</td></tr>
 <tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus ToolBar.Images; -1 = keins.</td></tr>
+<tr><td><code>ImageName</code></td><td><code>TImageName</code></td><td></td><td>Bild per Namen aus den Images des Besitzers (TVirtualImageList, ab Delphi 10.4). Robust gegen Umsortieren; setzt ImageIndex passend, ein unbekannter Name ergibt „kein Bild&quot;. Nutzung: <code>ToolBar1.Images := VirtualImageList1; ToolBar1.Items[0].ImageName := &#39;save&#39;;</code></td></tr>
 <tr><td><code>IconChar</code></td><td><code>Word</code></td><td><code>0</code></td><td>Symbol aus der Icon-Schrift als Zeichencode (0 = keins); Alternative zu ImageIndex.</td></tr>
-<tr><td><code>Down</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Eingerastet (nur Style = tisCheck); Setzen im Code ohne Ereignis.</td></tr>
 <tr><td><code>GroupIndex</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Umschalt-Buttons (tisCheck) mit gleichem GroupIndex &lt;&gt; 0 schlie&#223;en sich gegenseitig aus wie Radiobuttons.</td></tr>
+<tr><td><code>Down</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Eingerastet (nur Style = tisCheck); Setzen im Code ohne Ereignis.</td></tr>
 <tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Befehl grau und nicht ausl&#246;sbar.</td></tr>
 <tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Befehl ausgeblendet.</td></tr>
 <tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freier Ganzzahlwert, z. B. eine Befehls-ID.</td></tr>
