@@ -221,6 +221,7 @@ uses
   PPG.Tests.Audit8B in 'PPG.Tests.Audit8B.pas',
   PPG.Tests.Audit8C in 'PPG.Tests.Audit8C.pas',
   PPG.Tests.Audit8D in 'PPG.Tests.Audit8D.pas',
+  PPG.Tests.Audit11C in 'PPG.Tests.Audit11C.pas',
   PPG.Tests.Phase13g in 'PPG.Tests.Phase13g.pas',
   PPG.Tests.Phase14a in 'PPG.Tests.Phase14a.pas',
   PPG.Tests.Phase14aPlanner in 'PPG.Tests.Phase14aPlanner.pas',
