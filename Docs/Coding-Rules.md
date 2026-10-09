@@ -39,6 +39,7 @@ Diese Regeln sind verbindlich für jede neue Unit und jedes neue Control. Sie si
 - Jede GDI-/GDI+-Ressource bekommt ihr **eigenes** `try/finally`. Dazu gehören auch `SaveDC`/`RestoreDC`.
 - Keine dauerhaften GDI-Handles pro Control (Puffer pro Paint anlegen).
 - Timer laufen nur über den gemeinsamen Animator.
+- Ausnahme Grid-Schriften (Audit 8c #10): Der Font-Cache des Grids (`TPPGFontCache`) behält seine Schrift-Handles über Zeichenvorgänge; er wird bei Änderung von Schrift, Element-Stil, Spalten, DPI oder Theme geleert und hält höchstens 64 Schriften.
 
 ## Paint
 - `Paint` zeichnet nur: kein `Invalidate`, keine Zustandsänderung und **keine Fensternachrichten** (auch kein `SendMessage` an sich selbst).
