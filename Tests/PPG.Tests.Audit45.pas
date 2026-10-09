@@ -1894,6 +1894,8 @@ procedure TNamingTests.CheckListBoxOnItemCheck;
 var
   L: TPPGCheckListBox;
 begin
+  // DUnit verwendet Testobjekte im Leak-Lauf wieder: Zaehler zuruecksetzen.
+  FItemChecks := 0;
   L := TPPGCheckListBox.Create(FForm);
   L.Parent := FForm;
   L.Items.CommaText := 'A,B,C';
