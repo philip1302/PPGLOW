@@ -133,6 +133,8 @@ type
     function TextColor: TColor;
     function AccRole: Integer; override;
     function AccName: string; override;
+    function AccDefaultAction: string; override;
+    procedure AccDoDefaultAction; override;
     { IPPGAccessibleChildren }
     function AccChildCount: Integer;
     function AccChildName(Id: Integer): string;
@@ -714,6 +716,23 @@ end;
 function TPPGCustomLinkLabel.AccName: string;
 begin
   Result := PPGStripMarkup(Caption);
+end;
+
+function TPPGCustomLinkLabel.AccDefaultAction: string;
+begin
+  // Audit 7d: genau ein Link = das Control ist der Link (wie die Link-Kinder);
+  // sonst hat nur jeder Link seine Aktion
+  if LinkCount = 1 then
+    Result := PPGStr(@SPPGAccJump)
+  else
+    Result := '';
+end;
+
+procedure TPPGCustomLinkLabel.AccDoDefaultAction;
+begin
+  // Nie im COM-Aufruf ausloesen: wie AccChildDoDefault posten
+  if (LinkCount = 1) and HandleAllocated then
+    PostMessage(Handle, GMsgLinkAction, 0, 0);
 end;
 
 function TPPGCustomLinkLabel.AccChildCount: Integer;

@@ -295,6 +295,7 @@ type
     function AccName: string; override;
     function AccRole: Integer; override;
     function AccValue: string; override;
+    function AccDefaultAction: string; override;
     property Title: string read FTitle write SetTitle;
     property Value: Double read FValue write SetValue stored IsValueStored;
     /// Freier Text statt Value (z.B. "n/a" oder "3:45 h").
@@ -1637,6 +1638,15 @@ begin
     Result := ROLE_SYSTEM_PUSHBUTTON
   else
     Result := ROLE_SYSTEM_STATICTEXT;
+end;
+
+function TPPGCustomKpiTile.AccDefaultAction: string;
+begin
+  // Audit 7d: nur eine anklickbare Kachel ist ein Button
+  if Assigned(OnClick) then
+    Result := PPGStr(@SPPGAccPress)
+  else
+    Result := '';
 end;
 
 function TPPGCustomKpiTile.AccValue: string;

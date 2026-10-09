@@ -1564,7 +1564,8 @@ end;
 
 function TPPGCustomControl.AccRole: Integer;
 begin
-  Result := ROLE_SYSTEM_PUSHBUTTON;
+  // Audit 7d: neutral; Buttons und andere Rollen ueberschreiben das
+  Result := ROLE_SYSTEM_CLIENT;
 end;
 
 function TPPGCustomControl.AccState: Integer;
@@ -1601,11 +1602,15 @@ end;
 
 function TPPGCustomControl.AccDefaultAction: string;
 begin
-  Result := PPGStr(@SPPGAccPress);
+  // Audit 7d: keine Standardaktion; nur Buttons melden "Druecken"
+  Result := '';
 end;
 
 procedure TPPGCustomControl.AccDoDefaultAction;
 begin
+  // Ohne Standardaktion (Rolle ohne Aktion) nichts ausloesen
+  if AccDefaultAction = '' then
+    Exit;
   if HandleAllocated and (GMsgAccDefaultAction <> 0) then
     PostMessage(Handle, GMsgAccDefaultAction, 0, 0);
 end;
