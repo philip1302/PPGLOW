@@ -119,5 +119,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 
+Tests: `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit7A` (TDatePickerPinTests, TDateSegmentTests, TDropDownFieldTests); `PPG.Tests.Custom` (TCustomRestTests, TCustomVclPropTests, TCustomViewTests); `PPG.Tests.Phase19` (TValidatorTests); `PPG.Tests.Phase7b` (TCalendarTests, TDatePickerTests, TPhase7bPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDatePicker.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

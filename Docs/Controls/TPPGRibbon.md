@@ -162,5 +162,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit45` (TNamingTests); `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit8D` (TAudit8DCountTests, TAudit8DTests); `PPG.Tests.Custom` (TCustomRestTests); `PPG.Tests.Phase14bRibbon` (TRibbonTests); `PPG.Tests.Phase20` (TRibbonPopupKeyTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGRibbon.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

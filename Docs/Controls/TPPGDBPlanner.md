@@ -172,5 +172,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Phase14aDB` (TDBPlannerTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBPlanner.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

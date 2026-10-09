@@ -126,5 +126,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
+Tests: `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Audit7A` (TDatePickerPinTests, TDateSegmentTests, TDropDownFieldTests, TWheelTests); `PPG.Tests.Audit7D` (TAudit7DTests); `PPG.Tests.Custom` (TCustomRestTests); `PPG.Tests.Phase11a` (TFieldMenuTests); `PPG.Tests.Phase11c` (TDialogTests); `PPG.Tests.Phase12a` (TFieldBaseTests, TMaskEditTests, TNumberEditTests); `PPG.Tests.Phase12b` (TColorPickerTests); `PPG.Tests.Phase12c`; `PPG.Tests.Phase12d` (TDBFieldTests); `PPG.Tests.Phase18` (TPanelScrollTests); `PPG.Tests.Phase19` (TBusyOverlayTests, TValidatorComfortTests, TValidatorTests); `PPG.Tests.Phase4a` (TFieldTests, TPhase4aPaintTests); `PPG.Tests.Phase4c` (TPageControlTests, TTabControlTests); `PPG.Tests.Phase8` (TFluent11Tests, TThemeTests, TTokenTests); `PPG.Tests.Phase9c` (TDBEditTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGEdit.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

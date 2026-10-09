@@ -92,5 +92,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit45` (TStreamingFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Custom` (TCustomViewTests); `PPG.Tests.Phase19` (TValidatorTests); `PPG.Tests.Phase7a` (TExpanderTests, TFeedbackTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGExpander.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

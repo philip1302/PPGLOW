@@ -128,5 +128,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit8D` (TAudit8DCountTests, TAudit8DTests); `PPG.Tests.Custom` (TCustomViewTests); `PPG.Tests.Phase10d` (TChartBehaviourTests, TChartInteractionTests, TChartLayoutTests, TChartSeriesTests, TPhase10PaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGChart.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

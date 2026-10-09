@@ -164,5 +164,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Audit7A` (TWheelTests); `PPG.Tests.Audit7C` (TAudit7CTests); `PPG.Tests.Audit8A` (TAudit8AAnimatorTests); `PPG.Tests.Audit8D` (TAudit8DCountTests, TAudit8DTests, TAudit8EBoardTests); `PPG.Tests.Custom` (TCustomRestTests, TCustomViewTests); `PPG.Tests.Phase14aPlanner` (TPlannerTests); `PPG.Tests.Phase20` (TPlannerSeriesTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPlanner.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

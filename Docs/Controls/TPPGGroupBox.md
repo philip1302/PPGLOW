@@ -98,5 +98,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
+Tests: `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Custom` (TCustomViewTests); `PPG.Tests.Phase3` (TContainerTests, TPhase3PaintTests); `PPG.Tests.Phase5` (TParentBackgroundTests); `PPG.Tests.Phase8` (TFluent11Tests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGGroupBox.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

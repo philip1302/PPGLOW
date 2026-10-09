@@ -91,5 +91,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
 
+Tests: `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Audit7C` (TAudit7CTests, THighContrastTokenTests); `PPG.Tests.Phase11c` (TDialogTests); `PPG.Tests.Phase19` (TValidatorTests); `PPG.Tests.Phase7a` (TLabelTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGLabel.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

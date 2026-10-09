@@ -133,5 +133,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 
+Tests: `PPG.Tests.Audit45` (TNamingTests); `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit7A` (TDropDownFieldTests, TWheelTests); `PPG.Tests.Phase12a` (TFieldBaseTests, TNumberEditTests, TPasswordEditTests); `PPG.Tests.Phase12c` (TFieldsGalleryTests); `PPG.Tests.Phase13a` (TGridPaintEditTests); `PPG.Tests.Phase19` (TValidatorTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGNumberEdit.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

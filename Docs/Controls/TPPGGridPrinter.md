@@ -56,5 +56,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `UseGridLook` | `Boolean` | `True` | True (Vorgabe): Der Ausdruck sieht aus wie das Grid in heller Darstellung – Schrift, Kopf- und Bandzeilen, Spalten- und Zebra-Stile, bedingte Formate, Gruppenzeilen, verbundene Zellen und die Summenzeile am Ende der letzten Seite; ein Gruppenkopf bleibt nie allein am Seitenende. False: grauer, fetter Kopf und nur Datenzeilen wie früher. Auch im Dialog „Seite einrichten“ umschaltbar. |
 | `PrinterName` | `string` |  | Name des Druckers; leer = Standarddrucker. Für PDF z. B. „Microsoft Print to PDF" mit PrintToFile. Nutzung: `PPGGridPrinter1.PrintToFile('Microsoft Print to PDF', 'C:\Export\Liste.pdf');` |
 
+Tests: `PPG.Tests.Audit45` (TEffectFixTests, TStreamingFixTests); `PPG.Tests.Phase13e` (TGridPrintTests); `PPG.Tests.Phase13f` (TExportTests); `PPG.Tests.Phase13g` (TDBGridColumnTests); `PPG.Tests.Phase17` (TGridLookPrintTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGGridPrinter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

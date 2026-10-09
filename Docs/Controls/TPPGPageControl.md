@@ -116,5 +116,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit45` (TNamingTests, TSetterFixTests); `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Audit8D` (TAudit8DCountTests, TAudit8DTests); `PPG.Tests.Custom` (TCustomBarTests, TCustomVclPropTests); `PPG.Tests.Phase19` (TValidatorTests); `PPG.Tests.Phase4c` (TPageControlTests, TPhase4cPaintTests, TTabControlTests, TTabsAccessibilityTests); `PPG.Tests.Phase5` (TParentBackgroundTests); `PPG.Tests.Phase7c` (TNavigationViewTests); `PPG.Tests.Phase8` (TFluent11Tests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPageControl.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

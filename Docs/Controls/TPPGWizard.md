@@ -102,5 +102,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
 
+Tests: `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase11c` (TWizardTests); `PPG.Tests.Phase19` (TValidatorComfortTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGWizard.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

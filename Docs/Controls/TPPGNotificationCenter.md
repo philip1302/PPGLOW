@@ -51,5 +51,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnShow` | `TPPGToastEvent` `(Sender: TObject; Toast: TPPGToast)` | Ein Toast ist erschienen (nach Warteschlange bzw. Ruhezeit). |
 | `OnToastClick` | `TPPGToastEvent` `(Sender: TObject; Toast: TPPGToast)` | Der Anwender hat auf die Fläche eines Toasts geklickt (nicht auf Buttons), z. B. um zum Vorgang zu springen. |
 
+Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Audit8A` (TAudit8AAnimatorTests); `PPG.Tests.Phase7d` (TNotificationTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGNotificationCenter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

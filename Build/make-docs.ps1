@@ -6,7 +6,10 @@
     Docs\Controls\html\<Klasse>.html und index.html (HTML-Hilfe)
   dazu je Unterobjekt-Typ (Appearance, Styles, Spalten, Items ...) eine Seite
     Docs\Controls\types\<Typ>.md und html\types\<Typ>.html
-  sowie Docs\Controls\README.md als Uebersicht.
+  sowie Docs\Controls\README.md als Uebersicht und Docs\Controls\Tests.md
+  (mit html\Tests.html) als Index "Control -> Testunits": Suche nach dem
+  Klassennamen in Tests\*.pas; jede Control-Seite bekommt eine Zeile "Tests:".
+  Nach neuen oder umbenannten Testunits einfach erneut ausfuehren.
 
   Quellen je Seite:
   - Kopfkommentar der Unit und ///-Kommentar der Klasse (Zweck, Verhalten)
@@ -197,6 +200,52 @@ $VclEvents = @{
   TDTParseInputEvent = '(Sender: TObject; const UserString: string; var DateAndTime: TDateTime; var AllowChange: Boolean)'
 }
 
+# --- Tests je Control (Index "Control -> Testunits") -------------------------
+
+function Get-TestIndex([string]$TestDir) {
+  # Klassenname -> (Testunit -> Liste der Testklassen). Gezaehlt wird jedes
+  # Vorkommen des ganzen Bezeichners (TPPGButton, nicht TPPGButtonX) ausserhalb
+  # von Kommentaren. Testklasse ist die Klasse der Methode, in der das
+  # Vorkommen steht, sofern sie per RegisterTest(..Suite) angemeldet ist;
+  # sonst (uses, Hilfsklassen) zaehlt nur die Unit.
+  $idx = @{}
+  if (-not (Test-Path $TestDir)) { return $idx }
+  foreach ($f in Get-ChildItem -Path $TestDir -Filter '*.pas' -File | Sort-Object Name) {
+    $unit = [IO.Path]::GetFileNameWithoutExtension($f.Name)
+    $text = [IO.File]::ReadAllText($f.FullName)
+    $text = [regex]::Replace($text, '(?s)\{.*?\}|\(\*.*?\*\)', { param($m) [regex]::Replace($m.Value, '[^\n]', ' ') })
+    $text = [regex]::Replace($text, "'[^'\r\n]*'", "''")
+    $text = [regex]::Replace($text, '//[^\r\n]*', '')
+    $registered = @{}
+    foreach ($m in [regex]::Matches($text, '\b(T\w+)\.Suite\b')) { $registered[$m.Groups[1].Value] = $true }
+    $current = ''
+    foreach ($l in ($text -split "`n")) {
+      $h = [regex]::Match($l, '^\s*(?:class\s+)?(?:procedure|function|constructor|destructor)\s+(T\w+)\.\w+')
+      if ($h.Success) { $current = $h.Groups[1].Value }
+      elseif ($l -match '^\s*(implementation|initialization)\b') { $current = '' }
+      foreach ($m in [regex]::Matches($l, '\bTPPG\w+\b')) {
+        $cls = $m.Value
+        if (-not $idx.ContainsKey($cls)) { $idx[$cls] = @{} }
+        if (-not $idx[$cls].ContainsKey($unit)) { $idx[$cls][$unit] = New-Object System.Collections.Generic.List[string] }
+        if ($current -ne '' -and $registered.ContainsKey($current) -and -not $idx[$cls][$unit].Contains($current)) {
+          $idx[$cls][$unit].Add($current)
+        }
+      }
+    }
+  }
+  return $idx
+}
+
+function Format-TestRefs([string]$Cls) {
+  # "Unit (KlasseA, KlasseB); Unit2" oder '' ohne Treffer
+  if (-not $script:TestIndex.ContainsKey($Cls)) { return '' }
+  $parts = foreach ($u in ($script:TestIndex[$Cls].Keys | Sort-Object)) {
+    $tc = @($script:TestIndex[$Cls][$u] | Sort-Object)
+    if ($tc.Count -gt 0) { "``$u`` ($($tc -join ', '))" } else { "``$u``" }
+  }
+  return ($parts -join '; ')
+}
+
 # --- Formatierung ------------------------------------------------------------
 
 function Esc([string]$S) { return $S.Replace('|', '\|') }
@@ -340,6 +389,10 @@ function Build-Page($Model, $Info, [string]$Group) {
     [void]$sb.Append((Build-EventRows $Model $Info.Name $ev))
     [void]$sb.AppendLine('')
   }
+  $refs = Format-TestRefs $Info.Name
+  if ($refs -eq '') { $refs = 'keine Testunit verwendet die Klasse direkt.' }
+  [void]$sb.AppendLine("Tests: $refs (Uebersicht: [Control -> Testunits](Tests.md))")
+  [void]$sb.AppendLine('')
   [void]$sb.AppendLine('---')
   [void]$sb.AppendLine('Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\' + $Info.Name + '.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.')
   return $sb.ToString()
@@ -474,12 +527,13 @@ function ConvertTo-Html([string]$Md, [string]$Title, [string]$IndexHref) {
 # --- Lauf --------------------------------------------------------------------
 
 $model = Read-PPGSources (P 'Source')
+$script:TestIndex = Get-TestIndex (P 'Tests')
 Read-Descriptions
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $index = New-Object System.Text.StringBuilder
 [void]$index.AppendLine('# PPGlow - Hilfe pro Control')
 [void]$index.AppendLine('')
-[void]$index.AppendLine('Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und `Docs\Controls\props`. Jede Seite listet alle Eigenschaften und Ereignisse mit Typ, Vorgabe und Wirkung; Unterobjekte (Appearance, Styles, Spalten ...) stehen unter [Typen](#typen). HTML-Fassung: `Docs\Controls\html\index.html`.')
+[void]$index.AppendLine('Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und `Docs\Controls\props`. Jede Seite listet alle Eigenschaften und Ereignisse mit Typ, Vorgabe und Wirkung; Unterobjekte (Appearance, Styles, Spalten ...) stehen unter [Typen](#typen). Welche Testunits ein Control verwenden, zeigt [Control -> Testunits](Tests.md). HTML-Fassung: `Docs\Controls\html\index.html`.')
 [void]$index.AppendLine('')
 $count = 0
 $usedBy = @{}
@@ -549,6 +603,35 @@ foreach ($t in $sortedTypes) {
 [void]$index.AppendLine('')
 [IO.File]::WriteAllText((Join-Path $DocsDir 'README.md'), $index.ToString(), $utf8)
 [IO.File]::WriteAllText((Join-Path $HtmlDir 'index.html'), (ConvertTo-Html $index.ToString() 'PPGlow-Hilfe' 'index.html'), $utf8)
-$miss = @($script:MissingList | Sort-Object -Unique)
+# Index Control -> Testunits
+$tix = New-Object System.Text.StringBuilder
+[void]$tix.AppendLine('# PPGlow - Control -> Testunits')
+[void]$tix.AppendLine('')
+[void]$tix.AppendLine('Erzeugt von `Build\make-docs.ps1` durch Suche in `Tests\*.pas`: jede Testunit, die den Klassennamen als ganzen Bezeichner ausserhalb von Kommentaren verwendet. In Klammern die angemeldeten Testklassen (`RegisterTest`), in deren Methoden die Klasse vorkommt; ohne Klammer steht sie nur in `uses`, Typen oder Hilfsroutinen. Zurueck zur [Uebersicht](README.md).')
+[void]$tix.AppendLine('')
+$without = New-Object System.Collections.Generic.List[string]
+foreach ($g in $groups.Keys) {
+  [void]$tix.AppendLine("## Palette $g")
+  [void]$tix.AppendLine('')
+  [void]$tix.AppendLine('| Control | Units | Testunits und Testklassen |')
+  [void]$tix.AppendLine('|---|---|---|')
+  foreach ($cls in $groups[$g]) {
+    $refs = Format-TestRefs $cls
+    $n = 0
+    if ($script:TestIndex.ContainsKey($cls)) { $n = $script:TestIndex[$cls].Count }
+    if ($n -eq 0) { $without.Add($cls); $refs = 'keine' }
+    [void]$tix.AppendLine("| [$cls]($cls.md) | $n | $(Esc $refs) |")
+  }
+  [void]$tix.AppendLine('')
+}
+[void]$tix.AppendLine('## Ohne Testunit')
+[void]$tix.AppendLine('')
+if ($without.Count -eq 0) { [void]$tix.AppendLine('Jedes Paletten-Control wird von mindestens einer Testunit verwendet.') }
+else { [void]$tix.AppendLine((($without | ForEach-Object { "[$_]($_.md)" }) -join ', ')) }
+[void]$tix.AppendLine('')
+[IO.File]::WriteAllText((Join-Path $DocsDir 'Tests.md'), $tix.ToString(), $utf8)
+[IO.File]::WriteAllText((Join-Path $HtmlDir 'Tests.html'), (ConvertTo-Html $tix.ToString() 'PPGlow - Control -> Testunits' 'index.html'), $utf8)
+$miss = @(
+$script:MissingList | Sort-Object -Unique)
 if ($Missing -ne '') { [IO.File]::WriteAllLines($Missing, $miss, $utf8) }
 Write-Output "$count Seiten und $done Typ-Seiten in $DocsDir; ohne Beschreibung: $($miss.Count)"

@@ -143,5 +143,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
+Tests: `PPG.Tests.Audit45` (TDBBindingHoldTests, TDBFix2Tests, TDBFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Phase9c` (TDBOtherControlTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBLookupComboBox.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

@@ -122,5 +122,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 | `OnTracking` | `TNotifyEvent` `(Sender: TObject)` | Während der Anwender den Griff zieht, bei jeder Wertänderung (vor dem Loslassen); OnChange kommt zusätzlich. Wie TTrackBar.OnTracking. |
 
+Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit7A` (TWheelTests); `PPG.Tests.Phase20` (TTrackRangeTests); `PPG.Tests.Phase3` (TContainerTests, TPhase3PaintTests, TRangeTests, TTrackBarTests); `PPG.Tests.Phase8` (TFluent11Tests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTrackBar.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

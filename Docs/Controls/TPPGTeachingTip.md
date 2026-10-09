@@ -69,5 +69,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnClosing` | `TPPGTipClosingEvent` `(Sender: TObject; Reason: TPPGTipCloseReason; var Allow: Boolean)` | Vor dem Schließen durch den Anwender; über den var-Parameter lässt sich das Schließen verhindern. |
 | `OnClose` | `TPPGTipCloseEvent` `(Sender: TObject; Reason: TPPGTipCloseReason)` | Die Blase wurde durch den Anwender geschlossen; Reason: Schließen-Button, Klick daneben, Esc. |
 
+Tests: `PPG.Tests.Audit8D` (TAudit8DTests); `PPG.Tests.Phase11b` (TTeachingTipTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTeachingTip.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

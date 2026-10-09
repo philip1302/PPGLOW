@@ -74,5 +74,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnShow` | `TNotifyEvent` `(Sender: TObject)` | Die Karte ist erschienen (nach Delay). |
 | `OnHide` | `TNotifyEvent` `(Sender: TObject)` | Die Karte ist verschwunden. |
 
+Tests: `PPG.Tests.Phase19` (TBusyOverlayTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGBusyOverlay.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

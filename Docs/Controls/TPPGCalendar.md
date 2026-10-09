@@ -101,5 +101,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Audit7A` (TWheelTests); `PPG.Tests.Custom` (TCustomViewTests); `PPG.Tests.Phase14aPlanner` (TPlannerTests); `PPG.Tests.Phase7b` (TCalendarTests, TPhase7bPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGCalendar.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

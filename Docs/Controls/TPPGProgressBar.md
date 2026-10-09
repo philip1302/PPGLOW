@@ -98,5 +98,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
 
+Tests: `PPG.Tests.Audit45` (TStreamingFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Custom` (TCustomVclPropTests); `PPG.Tests.Phase3` (TContainerTests, TPhase3PaintTests, TProgressBarTests, TRangeTests); `PPG.Tests.Phase8` (TFluent11Tests, TTokenTests); `PPG.Tests.Phase9d` (TLanguageTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGProgressBar.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

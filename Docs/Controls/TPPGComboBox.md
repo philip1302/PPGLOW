@@ -127,5 +127,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
+Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Audit7A` (TDropDownFieldTests, TWheelTests); `PPG.Tests.Audit8C` (TAudit8CTests); `PPG.Tests.Custom` (TCustomListTests); `PPG.Tests.Phase14bRibbon` (TRibbonTests); `PPG.Tests.Phase20` (TComboDropBaseTests); `PPG.Tests.Phase4b` (TComboAccessibilityTests, TComboBoxTests, TPhase4bPaintTests); `PPG.Tests.Phase6a` (TComboExTests); `PPG.Tests.Phase8` (TFluent11Tests, TThemeTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGComboBox.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

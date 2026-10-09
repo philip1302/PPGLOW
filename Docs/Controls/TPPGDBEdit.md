@@ -137,5 +137,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
+Tests: `PPG.Tests.Audit45` (TDBBindingHoldTests, TDBFix2Tests, TDBFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase19` (TValidatorComfortTests); `PPG.Tests.Phase9c` (TDBEditTests, TDBGridTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBEdit.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

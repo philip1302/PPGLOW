@@ -64,5 +64,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnValidated` | `TNotifyEvent` `(Sender: TObject)` | Nach jeder Prüfung, auch der automatischen beim Verlassen eines Felds; Results und ErrorCount sind dann aktuell. |
 | `OnShowError` | `TPPGShowErrorEvent` `(Sender: TObject; Control: TControl; const Message: string; Severity: TPPGValidationState)` | Das Ergebnis eines Controls hat sich geändert: neue oder geänderte Meldung bzw. behoben (Severity = pvsNone). Für eigene Anzeigen, z. B. bei Controls ohne ValidationState. Nutzung: `if Severity = pvsNone then MyLabel.Caption := '' else MyLabel.Caption := Message;` |
 
+Tests: `PPG.Tests.Audit7D` (TAudit7DTests); `PPG.Tests.Phase19` (TValidatorComfortTests, TValidatorTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGValidator.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

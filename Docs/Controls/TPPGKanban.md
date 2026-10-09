@@ -150,5 +150,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
+Tests: `PPG.Tests.Audit45` (TNamingTests, TSetterFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit7A` (TWheelTests); `PPG.Tests.Audit7C` (TAudit7CTests); `PPG.Tests.Audit8D` (TAudit8DCountTests, TAudit8DTests, TAudit8EBoardTests); `PPG.Tests.Custom` (TCustomRestTests, TCustomViewTests); `PPG.Tests.Phase14cKanban` (TKanbanTests); `PPG.Tests.Phase20` (TKanbanFilterTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanban.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

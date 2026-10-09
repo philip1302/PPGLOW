@@ -94,5 +94,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 
+Tests: `PPG.Tests.Audit45` (TEffectFixTests, TSetterFixTests, TStreamingFixTests); `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Audit7C` (TAudit7CTests, THighContrastTokenTests); `PPG.Tests.Audit7D` (TAudit7DTests); `PPG.Tests.Phase7a` (TLabelTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGLinkLabel.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

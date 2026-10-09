@@ -91,5 +91,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 
+Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Audit8D` (TAudit8DCountTests, TAudit8DTests); `PPG.Tests.Phase11a` (TMenuBarTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGMenuBar.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

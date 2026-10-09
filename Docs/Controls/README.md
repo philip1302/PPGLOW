@@ -1,6 +1,6 @@
 # PPGlow - Hilfe pro Control
 
-Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und `Docs\Controls\props`. Jede Seite listet alle Eigenschaften und Ereignisse mit Typ, Vorgabe und Wirkung; Unterobjekte (Appearance, Styles, Spalten ...) stehen unter [Typen](#typen). HTML-Fassung: `Docs\Controls\html\index.html`.
+Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und `Docs\Controls\props`. Jede Seite listet alle Eigenschaften und Ereignisse mit Typ, Vorgabe und Wirkung; Unterobjekte (Appearance, Styles, Spalten ...) stehen unter [Typen](#typen). Welche Testunits ein Control verwenden, zeigt [Control -> Testunits](Tests.md). HTML-Fassung: `Docs\Controls\html\index.html`.
 
 ## Palette PPGlow
 

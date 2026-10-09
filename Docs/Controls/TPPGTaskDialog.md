@@ -102,5 +102,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnTimer` | `TTaskDlgTimerEvent` `(Sender: TObject; TickCount: Cardinal; var Reset: Boolean)` | Wird etwa alle 200 ms aufgerufen (braucht Flag tfCallbackTimer), z. B. um ProgressBar fortzuschreiben. |
 | `OnVerificationClicked` | `TNotifyEvent` `(Sender: TObject)` | Das Kontrollkästchen (VerificationText) wurde umgeschaltet. |
 
+Tests: `PPG.Tests.Audit45` (TEffectFixTests); `PPG.Tests.Audit7C` (THighContrastTokenTests); `PPG.Tests.Phase11c` (TDialogTests) (Uebersicht: [Control -> Testunits](Tests.md))
+
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGTaskDialog.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.
