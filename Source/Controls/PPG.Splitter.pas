@@ -649,30 +649,39 @@ end;
 
 procedure TPPGCustomSplitter.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
-  PPI, CX, CY, D, I, LineW: Integer;
+  PPI, CX, CY, D, I, LineW, BW: Integer;
   LineCol, DotCol: TColor;
   R: TRect;
   HC, Active, Show: Boolean;
+  A: TPPGAppearance;
 begin
   PPI := ScalePPI;
+  A := EffectiveAppearance;
   HC := HighContrastSupport and PPGIsHighContrast;
   Active := FDragging or (Focused and FocusVisible);
   Show := Active or (MouseInside and Enabled) or (csDesigning in ComponentState);
+  // Linienbreite aus Appearance.BorderWidth (aktiv doppelt)
+  BW := A.BorderWidth;
+  if BW < 1 then
+    BW := 1;
+  LineW := Max(1, PPGScale(BW, PPI));
+  CX := (ClientR.Left + ClientR.Right) div 2;
+  CY := (ClientR.Top + ClientR.Bottom) div 2;
   if not Show then
   begin
-    // Ruhend unsichtbar wie in WinUI; mit Beveled eine dezente Linie
+    // Ruhend unsichtbar wie in WinUI; mit Beveled eine dezente Linie (Rand in Ruhe)
     if FBeveled then
     begin
       if HC then
         LineCol := PPGColorToRGB(clWindowText)
+      else if Enabled then
+        LineCol := PPGColorToRGB(A.Normal.BorderColor)
       else
-        LineCol := PPGBlendColor(PPGColorToRGB(GetBackgroundColor), Tokens.TextPrimary, 0.18);
-      CX := (ClientR.Left + ClientR.Right) div 2;
-      CY := (ClientR.Top + ClientR.Bottom) div 2;
+        LineCol := PPGColorToRGB(A.Disabled.BorderColor);
       if Horizontal then
-        R := Rect(CX, ClientR.Top, CX + 1, ClientR.Bottom)
+        R := Rect(CX - LineW div 2, ClientR.Top, CX - LineW div 2 + LineW, ClientR.Bottom)
       else
-        R := Rect(ClientR.Left, CY, ClientR.Right, CY + 1);
+        R := Rect(ClientR.Left, CY - LineW div 2, ClientR.Right, CY - LineW div 2 + LineW);
       ACanvas.FillRoundRect(R, 0, LineCol, 255);
     end;
     DoUserPaint(ACanvas);
@@ -686,21 +695,29 @@ begin
       LineCol := PPGColorToRGB(clWindowText);
     DotCol := LineCol;
   end
+  else if FDragging then
+  begin
+    // Ziehen: Rand des gedrueckten Zustands
+    LineCol := PPGColorToRGB(A.Down.BorderColor);
+    DotCol := LineCol;
+  end
   else if Active then
   begin
-    LineCol := PPGColorToRGB(EffectiveAppearance.FocusColor);
+    // Tastaturfokus: eigene Fokusfarbe (Appearance.Focused) bzw. FocusColor
+    if PPGColorIsSet(A.Focused.BorderColor) then
+      LineCol := PPGColorToRGB(A.Focused.BorderColor)
+    else
+      LineCol := PPGColorToRGB(A.FocusColor);
     DotCol := LineCol;
   end
   else
   begin
-    LineCol := PPGBlendColor(PPGColorToRGB(GetBackgroundColor), Tokens.TextPrimary, 0.25);
-    DotCol := Tokens.TextSecondary;
+    // Hover (bzw. Designer): Rand und Text des Hot-Zustands
+    LineCol := PPGColorToRGB(A.Hot.BorderColor);
+    DotCol := PPGColorToRGB(A.Hot.TextColor);
   end;
-  CX := (ClientR.Left + ClientR.Right) div 2;
-  CY := (ClientR.Top + ClientR.Bottom) div 2;
-  LineW := Max(1, PPGScale(1, PPI));
   if Active then
-    LineW := Max(2, PPGScale(2, PPI));
+    LineW := Max(2, PPGScale(2 * BW, PPI));
   // Linie ueber die ganze Laenge
   if Horizontal then
     R := Rect(CX - LineW div 2, ClientR.Top, CX - LineW div 2 + LineW, ClientR.Bottom)

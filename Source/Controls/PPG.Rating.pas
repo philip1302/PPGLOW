@@ -168,7 +168,8 @@ end;
 
 function TPPGCustomRating.IsHot: Boolean;
 begin
-  Result := False;
+  // Hover gilt der Sternvorschau (nur, wenn sie aktiv ist)
+  Result := FHoverValue >= 0;
 end;
 
 function TPPGCustomRating.IsDown: Boolean;
@@ -439,38 +440,50 @@ procedure TPPGCustomRating.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRe
 var
   I, PPI: Integer;
   Shown, F: Double;
-  FillCol, EmptyCol, HoverCol: TColor;
+  FillCol, EmptyCol, HoverCol, Back, FocusCol: TColor;
   R: TRect;
   HC: Boolean;
+  A: TPPGAppearance;
 begin
   PPI := ScalePPI;
+  A := EffectiveAppearance;
   HC := HighContrastSupport and PPGIsHighContrast;
+  Back := PPGColorToRGB(GetBackgroundColor);
   if HC then
   begin
     FillCol := PPGColorToRGB(clHighlight);
     EmptyCol := PPGColorToRGB(clWindowText);
   end
+  else if not Enabled then
+  begin
+    // Deaktiviert: Farben des Disabled-Zustands
+    FillCol := PPGColorToRGB(A.Disabled.TextColor);
+    EmptyCol := PPGColorToRGB(A.Disabled.BorderColor);
+  end
   else
   begin
+    // Gefuellt: StarColor bzw. Akzentrolle (Checked/FocusColor); leer: Rand in
+    // Ruhe, mit mindestens 3:1 zum Hintergrund (WCAG 1.4.11)
     if FStarColor = clDefault then
-      FillCol := PPGColorToRGB(EffectiveAppearance.FocusColor)
+      FillCol := PPGAccentColor(A)
     else
       FillCol := PPGColorToRGB(FStarColor);
-    EmptyCol := Tokens.TextSecondary;
-  end;
-  if not Enabled then
-  begin
-    FillCol := PPGBlendColor(FillCol, PPGColorToRGB(GetBackgroundColor), 0.55);
-    EmptyCol := PPGBlendColor(EmptyCol, PPGColorToRGB(GetBackgroundColor), 0.55);
+    EmptyCol := PPGColorToRGB(A.Normal.BorderColor);
+    I := 0;
+    while (I < 10) and (PPGContrastRatio(EmptyCol, Back) < 3.0) do
+    begin
+      EmptyCol := PPGBlendColor(EmptyCol, PPGColorToRGB(A.Normal.TextColor), 0.15);
+      Inc(I);
+    end;
   end;
   HoverCol := FillCol;
   Shown := FValue;
   if FHoverValue >= 0 then
   begin
     Shown := FHoverValue;
-    // Vorschau etwas heller als der feste Wert
+    // Vorschau etwas heller als der feste Wert: zur Hover-Flaeche hin gemischt
     if not HC then
-      HoverCol := PPGBlendColor(FillCol, PPGColorToRGB(GetBackgroundColor), 0.3);
+      HoverCol := PPGBlendColor(FillCol, PPGColorToRGB(A.Hot.Color), 0.3);
   end;
   for I := 0 to FMaxValue - 1 do
   begin
@@ -486,8 +499,13 @@ begin
   if FocusVisible and Focused then
   begin
     R := ClientR;
-    ACanvas.FrameRoundRect(R, PPGScale(4, PPI), PPGScale(2, PPI),
-      PPGColorToRGB(EffectiveAppearance.FocusColor), 255);
+    if HC then
+      FocusCol := PPGColorToRGB(clHighlight)
+    else if PPGColorIsSet(A.Focused.BorderColor) then
+      FocusCol := PPGColorToRGB(A.Focused.BorderColor)
+    else
+      FocusCol := PPGColorToRGB(A.FocusColor);
+    ACanvas.FrameRoundRect(R, PPGScale(A.Rounding, PPI), PPGScale(2, PPI), FocusCol, 255);
   end;
 end;
 
@@ -502,7 +520,7 @@ begin
   if H <> FHoverValue then
   begin
     FHoverValue := H;
-    Invalidate;
+    UpdateVisualState(False);
   end;
 end;
 
@@ -512,7 +530,7 @@ begin
   if FHoverValue >= 0 then
   begin
     FHoverValue := -1;
-    Invalidate;
+    UpdateVisualState(False);
   end;
 end;
 
