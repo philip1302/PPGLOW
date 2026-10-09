@@ -61,7 +61,12 @@ type
     FOnCustomDrawItem: TPPGCustomDrawItemEvent;
     FDrawCanvas: TCanvas;
     FInOwnerDraw: Boolean;
+    // Audit 8D: BeginUpdate/EndUpdate buendeln Reiter- und Seitenaenderungen
+    FTabsUpdate: Integer;
+    FTabsPending: Boolean;
+    FActivePending: Boolean;
     procedure StripChanged(Sender: TObject);
+    procedure InvalidateStrip(const R: TRect);
     procedure SetTabStyles(const Value: TPPGTabStyles);
     procedure TabStylesChanged(Sender: TObject);
     procedure SetMultiLine(const Value: Boolean);
@@ -93,6 +98,8 @@ type
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
   protected
+    /// Anzahl Neuaufbauten der Reiterleiste (Tests).
+    FTabsBuildCount: Integer;
     procedure CreateParams(var Params: TCreateParams); override;
     procedure Loaded; override;
     procedure Resize; override;
@@ -181,6 +188,11 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     /// Reiter unter dem Punkt (Client-Koordinaten), -1 = keiner.
+    /// Mehrere Aenderungen an Reitern bzw. Seiten buendeln (Einfuegen,
+    /// Entfernen, Verschieben): die Leiste wird erst bei EndUpdate einmal
+    /// neu aufgebaut. ActivePage und Seitenreihenfolge gelten sofort.
+    procedure BeginUpdate;
+    procedure EndUpdate;
     function IndexOfTabAt(X, Y: Integer): Integer;
     /// Rechteck eines Reiters, leer = nicht sichtbar (Ueberlauf, TabVisible).
     function TabRect(Index: Integer): TRect;
@@ -380,7 +392,16 @@ end;
 
 procedure TPPGCustomTabs.StripChanged(Sender: TObject);
 begin
-  Invalidate;
+  // Audit 8D: Unterstrich-Animation zeichnet nur ihren Bereich neu
+  InvalidateStrip(FStrip.DirtyRect);
+end;
+
+procedure TPPGCustomTabs.InvalidateStrip(const R: TRect);
+begin
+  if IsRectEmpty(R) or not HandleAllocated then
+    Invalidate
+  else
+    Winapi.Windows.InvalidateRect(Handle, @R, False);
 end;
 
 function TPPGCustomTabs.IsBottom: Boolean;
@@ -530,11 +551,43 @@ begin
     LayoutTabs;
 end;
 
+procedure TPPGCustomTabs.BeginUpdate;
+begin
+  inherited BeginUpdate;
+  Inc(FTabsUpdate);
+end;
+
+procedure TPPGCustomTabs.EndUpdate;
+begin
+  if FTabsUpdate > 0 then
+    Dec(FTabsUpdate);
+  if FTabsUpdate = 0 then
+  begin
+    if FTabsPending then
+    begin
+      FTabsPending := False;
+      TabsChanged;
+    end;
+    if FActivePending then
+    begin
+      FActivePending := False;
+      ActiveTabChanged(False);
+    end;
+  end;
+  inherited EndUpdate;
+end;
+
 procedure TPPGCustomTabs.TabsChanged;
 begin
   if (FStrip = nil) or (csLoading in ComponentState) or
     (csDestroying in ComponentState) then
     Exit;
+  if FTabsUpdate > 0 then
+  begin
+    FTabsPending := True;
+    Exit;
+  end;
+  Inc(FTabsBuildCount);
   FStrip.Clear;
   FillTabs(FStrip);
   LayoutTabs;
@@ -549,6 +602,13 @@ var
 begin
   if (FStrip = nil) or (csLoading in ComponentState) then
     Exit;
+  if FTabsUpdate > 0 then
+  begin
+    // Leiste noch nicht neu aufgebaut: Unterstrich und Meldung bei EndUpdate
+    FActivePending := True;
+    Invalidate;
+    Exit;
+  end;
   Duration := 0;
   if Animate and Animation.EffectiveEnabled and HandleAllocated and
     IsWindowVisible(Handle) and not (csDesigning in ComponentState) then
@@ -910,7 +970,7 @@ procedure TPPGCustomTabs.MouseMove(Shift: TShiftState; X, Y: Integer);
 begin
   inherited MouseMove(Shift, X, Y);
   if FStrip.UpdateHot(X, Y) then
-    Invalidate;
+    InvalidateStrip(FStrip.DirtyRect);
 end;
 
 procedure TPPGCustomTabs.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -929,7 +989,7 @@ procedure TPPGCustomTabs.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
   if FStrip.ClearHot then
-    Invalidate;
+    InvalidateStrip(FStrip.DirtyRect);
 end;
 
 procedure TPPGCustomTabs.CMDesignHitTest(var Message: TCMDesignHitTest);

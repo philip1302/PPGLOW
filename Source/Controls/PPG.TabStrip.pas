@@ -134,6 +134,18 @@ type
     FScrollOpposite: Boolean;
     FOppRect: TRect;
     FOppRow: array of Boolean;
+    // Audit 8D: Textbreite je Reiter (-1 = noch nicht gemessen), gueltig fuer
+    // die gemerkte Schrift
+    FTextW: array of Integer;
+    FWFont: TFont;
+    FWName: string;
+    FWHeight: Integer;
+    FWStyle: TFontStyles;
+    FWCharset: TFontCharset;
+    FWQuality: TFontQuality;
+    FDirty: TRect;
+    function TextWidthAt(Pos: Integer): Integer;
+    function HotPartRect(Pos, Close: Integer; Arrow: TPPGTabHit): TRect;
     procedure LayoutVertical(const StripRect: TRect);
     function SelectedRow(const Starts: TArray<Integer>; RowsN: Integer): Integer;
     /// Reihen fuer MultiLine: Startposition je Reihe (Reihenfolge der Reiter).
@@ -214,6 +226,9 @@ type
     property PrevRect: TRect read FPrevRect;
     property NextRect: TRect read FNextRect;
     property StripRect: TRect read FStrip;
+    /// Bereich, der sich bei der letzten Meldung (OnChange, UpdateHot, ClearHot)
+    /// geaendert hat; leer = alles neu zeichnen.
+    property DirtyRect: TRect read FDirty;
     /// Neu zeichnen (Animation, Hover).
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
@@ -221,7 +236,7 @@ type
 implementation
 
 uses
-  System.SysUtils, System.UITypes, PPG.Appearance, PPG.Accessibility, PPG.Render.Gdi;
+  System.SysUtils, System.UITypes, System.Math, PPG.Appearance, PPG.Accessibility, PPG.Render.Gdi;
 
 const
   TabPadX = 12;     // logische px links/rechts im Reiter
@@ -232,6 +247,17 @@ const
   ImageGap = 6;     // logische px zwischen Bild und Text
   IndicatorH = 3;   // logische px Hoehe des Unterstrichs
   IndicatorInset = 10;
+
+function JoinRect(const A, B: TRect): TRect;
+begin
+  // Huelle zweier Rechtecke; ein leeres zaehlt nicht
+  if IsRectEmpty(A) then
+    Exit(B);
+  if IsRectEmpty(B) then
+    Exit(A);
+  Result := Rect(Min(A.Left, B.Left), Min(A.Top, B.Top), Max(A.Right, B.Right),
+    Max(A.Bottom, B.Bottom));
+end;
 
 function LerpRect(const A, B: TRect; T: Single): TRect;
 begin
@@ -274,8 +300,21 @@ begin
 end;
 
 procedure TPPGTabStrip.AnimStep(Sender: TObject);
+var
+  Target: TRect;
 begin
+  // Audit 8D: Der Unterstrich gleitet zwischen alter und neuer Lage - nur
+  // diesen Bereich neu zeichnen (die Reiter selbst aendern sich nicht)
+  Target := IndicatorFor(FSelected);
+  if IsRectEmpty(FIndicatorFrom) or IsRectEmpty(Target) then
+    FDirty := Rect(0, 0, 0, 0)
+  else
+  begin
+    FDirty := JoinRect(FIndicatorFrom, Target);
+    InflateRect(FDirty, Scale(2), Scale(2));
+  end;
   Changed;
+  FDirty := Rect(0, 0, 0, 0);
 end;
 
 procedure TPPGTabStrip.Changed;
@@ -292,6 +331,7 @@ end;
 procedure TPPGTabStrip.Clear;
 begin
   SetLength(FTabs, 0);
+  SetLength(FTextW, 0);
   SetLength(FRects, 0);
   SetLength(FCloseRects, 0);
   FSelected := -1;
@@ -306,6 +346,8 @@ var
 begin
   N := Length(FTabs);
   SetLength(FTabs, N + 1);
+  SetLength(FTextW, N + 1);
+  FTextW[N] := -1;
   FTabs[N].Caption := Caption;
   FTabs[N].ImageIndex := ImageIndex;
   FTabs[N].Enabled := Enabled;
@@ -432,17 +474,49 @@ begin
     Result := N * TabRowHeight + Scale(StripPad);
 end;
 
-function TPPGTabStrip.TabWidthAt(Pos: Integer): Integer;
+function TPPGTabStrip.TextWidthAt(Pos: Integer): Integer;
 var
+  I: Integer;
   S: string;
+begin
+  // Audit 8D: Textbreiten merken (Layout, StripHeight, PackRows und
+  // MakeVisible fragen sie mehrfach je Aenderung ab)
+  if FFont = nil then
+    Exit(0);
+  if (FWFont <> FFont) or (FWHeight <> FFont.Height) or (FWStyle <> FFont.Style) or
+    (FWCharset <> FFont.Charset) or (FWQuality <> FFont.Quality) or (FWName <> FFont.Name) then
+  begin
+    FWFont := FFont;
+    FWName := FFont.Name;
+    FWHeight := FFont.Height;
+    FWStyle := FFont.Style;
+    FWCharset := FFont.Charset;
+    FWQuality := FFont.Quality;
+    for I := 0 to High(FTextW) do
+      FTextW[I] := -1;
+  end;
+  if Length(FTextW) <> Length(FTabs) then
+  begin
+    SetLength(FTextW, Length(FTabs));
+    for I := 0 to High(FTextW) do
+      FTextW[I] := -1;
+  end;
+  if FTextW[Pos] < 0 then
+  begin
+    S := PPGAccStripHotkey(FTabs[Pos].Caption);
+    if S <> '' then
+      FTextW[Pos] := PPGMeasureTextNoCanvas(S, FFont, 0, False).cx
+    else
+      FTextW[Pos] := 0;
+  end;
+  Result := FTextW[Pos];
+end;
+
+function TPPGTabStrip.TabWidthAt(Pos: Integer): Integer;
 begin
   if FTabWidth > 0 then
     Exit(Scale(FTabWidth));
-  S := PPGAccStripHotkey(FTabs[Pos].Caption);
-  if (S <> '') and (FFont <> nil) then
-    Result := PPGMeasureTextNoCanvas(S, FFont, 0, False).cx
-  else
-    Result := 0;
+  Result := TextWidthAt(Pos);
   Inc(Result, 2 * Scale(TabPadX));
   if (FImages <> nil) and (FTabs[Pos].ImageIndex >= 0) then
     Inc(Result, FImages.Width + Scale(ImageGap));
@@ -879,6 +953,11 @@ begin
       Arrow := Hit;
   end;
   Result := (Pos <> FHot) or (Close <> FHotClose) or (Arrow <> FHotArrow);
+  // Audit 8D: alte und neue Hover-Flaeche (der Besitzer zeichnet nur sie neu)
+  if Result then
+    FDirty := JoinRect(HotPartRect(FHot, FHotClose, FHotArrow), HotPartRect(Pos, Close, Arrow))
+  else
+    FDirty := Rect(0, 0, 0, 0);
   FHot := Pos;
   FHotClose := Close;
   FHotArrow := Arrow;
@@ -887,9 +966,30 @@ end;
 function TPPGTabStrip.ClearHot: Boolean;
 begin
   Result := (FHot >= 0) or (FHotClose >= 0) or (FHotArrow <> thNone);
+  FDirty := HotPartRect(FHot, FHotClose, FHotArrow);
   FHot := -1;
   FHotClose := -1;
   FHotArrow := thNone;
+end;
+
+function TPPGTabStrip.HotPartRect(Pos, Close: Integer; Arrow: TPPGTabHit): TRect;
+var
+  R: TRect;
+begin
+  // Reiter (samt Schliessen-Knopf) bzw. Pfeil; mit Rand fuer Rahmen und Schein
+  Result := TabRectAt(Pos);
+  if Close >= 0 then
+    Result := JoinRect(Result, TabRectAt(Close));
+  case Arrow of
+    thPrev: R := FPrevRect;
+    thNext: R := FNextRect;
+  else
+    R := Rect(0, 0, 0, 0);
+  end;
+  if not IsRectEmpty(R) then
+    Result := JoinRect(Result, R);
+  if not IsRectEmpty(Result) then
+    InflateRect(Result, Scale(4), Scale(4));
 end;
 
 function TPPGTabStrip.IndicatorFor(Pos: Integer): TRect;
@@ -967,8 +1067,17 @@ end;
 
 procedure TPPGTabStrip.MakeVisible(Pos: Integer);
 var
-  Guard: Integer;
-  R: TRect;
+  F, I, Sum, Avail, Gap, TabH: Integer;
+
+  function Fits: Boolean;
+  begin
+    // Wie das Layout: waagerecht ganz vor dem Rand, senkrecht ganz sichtbar
+    if FVertical then
+      Result := FTabArea.Top + (Pos - F) * (TabH + Gap) + TabH <= FTabArea.Bottom
+    else
+      Result := Sum <= Avail;
+  end;
+
 begin
   if (Pos < 0) or (Pos >= Length(FTabs)) or not FOverflow then
     Exit;
@@ -978,16 +1087,32 @@ begin
     Layout(FStrip);
     Exit;
   end;
-  // Nach rechts weiterblaettern, bis der Reiter ganz sichtbar ist
-  Guard := Length(FTabs);
-  R := TabRectAt(Pos);
-  while (Guard > 0) and (FFirst < Pos) and (FFirst < FMaxFirst) and
-    (IsRectEmpty(R) or (not FVertical and (R.Right - R.Left < TabWidthAt(Pos)))) do
+  // Audit 8D: Nach rechts weiterblaettern, bis der Reiter ganz sichtbar ist -
+  // gerechnet aus den Breiten statt je Schritt das ganze Layout (vorher
+  // quadratisch). Die Lage der Pfeile und der Platz haengen nicht vom
+  // ersten Reiter ab.
+  F := FFirst;
+  Gap := Scale(TabGap);
+  Avail := FTabArea.Right - FTabArea.Left;
+  TabH := TabRowHeight;
+  Sum := 0;
+  if not FVertical then
+    for I := F to Pos do
+    begin
+      Inc(Sum, TabWidthAt(I));
+      if I > F then
+        Inc(Sum, Gap);
+    end;
+  while (F < Pos) and (F < FMaxFirst) and not Fits do
   begin
-    Inc(FFirst);
+    if not FVertical then
+      Dec(Sum, TabWidthAt(F) + Gap);
+    Inc(F);
+  end;
+  if F <> FFirst then
+  begin
+    FFirst := F;
     Layout(FStrip);
-    R := TabRectAt(Pos);
-    Dec(Guard);
   end;
 end;
 
@@ -1007,6 +1132,7 @@ begin
     Exit;
   Inc(FFirst, Delta);
   Layout(FStrip);
+  FDirty := Rect(0, 0, 0, 0);
   Changed;
 end;
 
