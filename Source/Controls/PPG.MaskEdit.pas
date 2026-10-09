@@ -147,6 +147,13 @@ type
     property OnMouseMove;
     property OnMouseUp;
     property OnValidationError;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
   end;
 
 implementation

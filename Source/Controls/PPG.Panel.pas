@@ -222,6 +222,8 @@ type
     property OnStartDock;
     property OnStartDrag;
     property OnUnDock;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseActivate;
   end;
 
   /// Wie TScrollBox: AutoScroll = True, ohne Beschriftung; BorderStyle bsNone
@@ -301,6 +303,8 @@ type
     property OnStartDock;
     property OnStartDrag;
     property OnUnDock;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseActivate;
   end;
 
 implementation

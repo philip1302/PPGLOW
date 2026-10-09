@@ -795,6 +795,9 @@ type
     property OnStartDrag;
     property OnTopLeftChange;
     property OnValidateCell;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseWheel;
+    property OnMouseActivate;
   end;
 
 implementation

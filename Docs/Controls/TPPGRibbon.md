@@ -13,7 +13,7 @@ Palette **PPGlow** - Unit `PPG.Ribbon` - Basis `TPPGCustomRibbon`
 - **Schrumpfen:** Passt die Breite nicht, schrumpfen die Gruppen in fester Reihenfolge: erst alle auf „mittel“, dann „nur Symbol“, dann „als Dropdown“. Innerhalb einer Stufe zuerst die Gruppen mit kleinerem `ReduceOrder`, bei Gleichstand von rechts. Ein Schritt, der eine Gruppe nicht schmaler macht, wird übersprungen; eine Gruppe aus lauter kleinen Items wird deshalb nicht zum Dropdown, wenn das Dropdown breiter wäre. Die Galerie zeigt erst weniger Spalten, dann einen Dropdown-Button.
 - Eine als Dropdown geschrumpfte Gruppe öffnet ein Popup mit der voll aufgeklappten Gruppe; eingebettete Controls wandern mit. Symbol der geschrumpften Gruppe: `ImageIndex`/`IconChar` der Gruppe, sonst das erste Item mit Symbol.
 - `ShowLauncher` zeigt unten rechts in der Gruppe den Startknopf für einen Dialog (`OnLauncherClick`).
-- Galerie: Einträge aus `GalleryItems` oder virtuell (`GalleryCount` + `OnGetGalleryItem`, auch mit Farbfeld), eigenes Zeichnen über `OnDrawGalleryItem`. In der Leiste blättern die Pfeile rechts zeilenweise (auch mit dem Mausrad), der untere klappt die Galerie auf (Pfeile, Enter, Esc). Auswahl: `GalleryIndex`, `OnGalleryClick`. **Kategorien:** Einträge als „Kategorie|Text“ oder `Data.Group` in `OnGetGalleryItem`; die aufgeklappte Galerie zeigt je Kategorie eine Überschrift und beginnt eine neue Zeile, die Pfeile halten die Spalte und überspringen die Überschriften.
+- Galerie: Einträge aus `GalleryItems` oder virtuell (`GalleryCount` + `OnGetGalleryItem`, auch mit Farbfeld), eigenes Zeichnen über `OnCustomDrawGalleryItem`. In der Leiste blättern die Pfeile rechts zeilenweise (auch mit dem Mausrad), der untere klappt die Galerie auf (Pfeile, Enter, Esc). Auswahl: `GalleryIndex`, `OnGalleryClick`. **Kategorien:** Einträge als „Kategorie|Text“ oder `Data.Group` in `OnGetGalleryItem`; die aufgeklappte Galerie zeigt je Kategorie eine Überschrift und beginnt eine neue Zeile, die Pfeile halten die Spalte und überspringen die Überschriften.
 - **Actions** (`Item.Action`) liefern Caption, Hint, Enabled, Checked, Visible, ImageIndex und OnExecute, wie bei Menü und ToolBar.
 - **KeyTips:** Alt bzw. F10 zeigt Plaketten über „Datei“, Schnellzugriff (1, 2, …) und Registerkarten; Alt+Buchstabe springt direkt in eine Karte. Danach zeigen die Befehle der Karte ihre Plaketten; Esc geht eine Ebene zurück. Vergeben werden sie automatisch aus der Beschriftung (`&`-Buchstabe, Wortanfänge, sonst zwei Zeichen); eigene über `KeyTip`. Die Plaketten zeichnet ein eigenes Overlay-Fenster je Monitor, auch über Popups.
 - **Tastatur ohne Maus:** Nach Alt wechseln die Pfeiltasten in die Tastaturbedienung (Fokusrahmen; links/rechts innerhalb der Zeile, hoch/runter zwischen Karten und Band, Enter/Leertaste löst aus, Esc verlässt). Die Tastatur reicht bis in aufgeklappte Gruppen und Karten des eingeklappten Bands: Enter öffnet das Popup mit dem Fokus auf dem ersten Befehl, Tab und Pfeile bleiben darin, Esc geht eine Ebene zurück. Nach einem Öffnen mit der Maus führt ein Pfeil in das Popup.
@@ -21,7 +21,7 @@ Palette **PPGlow** - Unit `PPG.Ribbon` - Basis `TPPGCustomRibbon`
 - **Schnellzugriff:** `QuickAccess` (über oder unter dem Band, `QuickAccessPosition`). Rechtsklick auf einen Befehl fügt ihn hinzu, Rechtsklick im Schnellzugriff entfernt ihn (`QuickAccessCustomizable`, `OnQuickAccessChange`). Ein Schnellzugriff-Item wirkt auf das Item im Band mit gleicher Action bzw. gleicher Beschriftung, Art und Symbol (`QuickSource`).
 - **Kontext-Registerkarten:** `ContextName` und `ContextColor` (farbige Leiste und Tönung). Die Anwendung schaltet `Visible` und `TabIndex` je nach Auswahl.
 - **Datei:** Ist `Backstage` gesetzt (ein beliebiges Control, z. B. ein Panel oder PageControl), legt „Datei“ es über das ganze Formular bzw. seinen Parent; Esc oder `HideBackstage` schließt. Ohne Backstage öffnet „Datei“ `ApplicationMenu`. Vorher kommt immer `OnApplicationButtonClick`.
-- Code setzt Werte ohne Ereignisse (`TabIndex`, `Minimized`, `Down`, `GalleryIndex`); Anwenderaktionen lösen `OnTabChanging`/`OnTabChange`, `OnItemClick`, `OnGalleryClick`, `OnMinimizedChange` usw. aus.
+- Code setzt Werte ohne Ereignisse (`TabIndex`, `Minimized`, `Down`, `GalleryIndex`); Anwenderaktionen lösen `OnChanging`/`OnChange`, `OnItemClick`, `OnGalleryClick`, `OnMinimizedChange` usw. aus.
 - Im Designer wechselt ein Klick auf eine Registerkarte die Karte; das Kontextmenü bietet „Edit tabs…“, „Edit groups of the active tab…“, „Edit Quick Access items…“, „New Tab“, „Next/Previous Tab“. Eingebettete Controls legt man auf das Ribbon und weist sie einem Item zu.
 - Screenreader: Gruppierung „Menüband“; Kinder sind Datei, Schnellzugriff, Registerkarten (gewählt) und die Befehle der aktiven Karte mit Rolle (Button, Split-Button, Umschalt-Button, Menü-Button). RTL gespiegelt.
 - Nicht unterstützt: Ribbon in der Titelleiste, MDI-Zusammenführung, Speichern des Schnellzugriffs (die Anwendung tut das in `OnQuickAccessChange`).
@@ -117,6 +117,11 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
 | `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
 | `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
+| `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. |
+| `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. |
+| `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). |
+| `Color` | `TColor` |  | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. |
+| `ParentColor` | `Boolean` |  | True: Color wird vom Parent übernommen. |
 
 ## Ereignisse
 
@@ -134,6 +139,25 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnQuickAccessChange` | `TNotifyEvent` `(Sender: TObject)` | Der Anwender hat den Schnellzugriff geändert (hinzugefügt, entfernt, geladen). Nutzung: Hier `SaveQuickAccess` aufrufen und das Ergebnis z. B. in einer INI-Datei speichern. |
 | `OnApplicationButtonClick` | `TNotifyEvent` `(Sender: TObject)` | Der „Datei"-Button wurde geklickt; kommt vor dem Öffnen von Backstage bzw. ApplicationMenu. |
 | `OnBackstageChange` | `TNotifyEvent` `(Sender: TObject)` | Der Backstage-Bereich wurde ein- oder ausgeblendet (Abfrage über BackstageVisible). |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
+| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. |
+| `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. |
+| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
+| `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |
+| `OnMouseEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Maus ist in das Control hineinbewegt worden. |
+| `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
+| `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
+| `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. |
+| `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. |
+| `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
+| `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
+| `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
+| `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
+| `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` |
+| `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
+| `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGRibbon.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

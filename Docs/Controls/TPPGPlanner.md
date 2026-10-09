@@ -15,7 +15,7 @@ Palette **PPGlow** - Unit `PPG.Planner` - Basis `TPPGCustomPlanner`
 - Bedienung: Ziehen verschiebt (Strg kopiert), die Kante ändert die Dauer. Alles rastet an `SlotMinutes`. Ziehen auf freier Fläche wählt Zeitfelder; Doppelklick, Enter oder Tippen legt einen Termin an und öffnet die Bearbeitung des Betreffs (Esc verwirft einen neuen, leeren Termin).
 - **Serien:** Wird ein Vorkommen geändert (Ziehen, Dauer, Betreff, Ort, Dialog, Löschen), fragt der Planer wie Outlook „nur dieses Vorkommen“ oder „ganze Serie“ (`SeriesEditMode = semAsk`, Vorgabe; `semOccurrence`/`semSeries` fragen nicht). `OnSeriesEdit` ersetzt die Abfrage. Nur das Vorkommen: es wird herausgelöst (`RecurrenceParent`), die Serie bekommt eine Ausnahme. Ganze Serie: Verschieben verschiebt die Serie samt Wochentagen, vorhandene Ausnahmen bleiben. Ohne sichtbares Fenster wird nicht gefragt (wie `semOccurrence`).
 - **Termin-Dialog:** Ohne `OnAppointmentOpen` öffnen Doppelklick und Enter den eingebauten Dialog (`DefaultEditor`, Unit `PPG.Planner.Dialog`: Betreff, Ort, Beginn/Ende, ganztägig, Person, Kategorie, Wiederholung, Notiz; Prüfung über `TPPGValidator`). `EditAppointment` öffnet ihn im Code, `PPGAppointmentDialogHook` ersetzt ihn durch einen eigenen.
-- Ereignisse: `OnAppointmentChanging` (abbrechbar, neue Werte änderbar), `OnAppointmentChanged`, `OnAppointmentCreated`, `OnCreateAppointment` (abbrechbar), `OnDeleting`, `OnAppointmentOpen`, `OnSeriesEdit`, `OnSelectionChange`, `OnRangeChange`. Zuweisungen im Code (`Date := ...`) lösen nur `OnRangeChange` aus.
+- Ereignisse: `OnAppointmentChanging` (abbrechbar, neue Werte änderbar), `OnAppointmentChange`, `OnAppointmentCreated`, `OnCreateAppointment` (abbrechbar), `OnDeleting`, `OnAppointmentOpen`, `OnSeriesEdit`, `OnChange`, `OnRangeChange`. Zuweisungen im Code (`Date := ...`) lösen nur `OnRangeChange` aus.
 - Tastatur: Pfeile wandern durch die Felder (Umschalt erweitert), Tab durch die Termine, Strg+Pfeile verschieben den gewählten Termin, Strg+Umschalt+Oben/Unten ändern die Dauer, Enter öffnet bzw. legt an, F2 bearbeitet den Betreff, Umschalt+F2 den Ort, Entf löscht, Bild auf/ab blättert, Pos1 springt zu heute.
 - `Calendar`: ein verbundener `TPPGCalendar` zeigt Tage mit Terminen fett, seine Auswahl stellt den Zeitraum ein.
 - „Jetzt“-Linie (`ShowNowLine`) über den gemeinsamen Animator, ohne eigenen Timer.
@@ -24,7 +24,7 @@ Palette **PPGlow** - Unit `PPG.Planner` - Basis `TPPGCustomPlanner`
 
 ## Anpassung
 
-- `Categories` (Name, Farbe; `Category` des Termins ist der Index), `PlannerStyles` und `OnCustomDrawAppointment`.
+- `Categories` (Name, Farbe; `Category` des Termins ist der Index), `Styles` und `OnCustomDrawAppointment`.
 - `SaveLayout`/`LoadLayout`: Ansicht, Tage, Raster und Gruppierung.
 
 ## Beispiel
@@ -119,6 +119,11 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `TabStop` | `Boolean` | `True` | True: Das Control ist mit Tab erreichbar. |
 | `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
 | `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
+| `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. |
+| `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. |
+| `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). |
+| `Color` | `TColor` |  | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. |
+| `ParentColor` | `Boolean` |  | True: Color wird vom Parent übernommen. |
 
 ## Ereignisse
 
@@ -143,6 +148,19 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. |
 | `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
+| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. |
+| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
+| `OnMouseEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Maus ist in das Control hineinbewegt worden. |
+| `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
+| `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
+| `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. |
+| `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. |
+| `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
+| `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
+| `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPlanner.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

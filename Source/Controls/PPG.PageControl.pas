@@ -229,6 +229,16 @@ type
     property OnResize;
     property OnStartDock;
     property OnStartDrag;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property Color;
+    property ParentColor;
   end;
 
 implementation

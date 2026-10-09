@@ -140,6 +140,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnTitleClick` | `TPPGDBGridColumnEvent` `(Column: TPPGDBGridColumn)` | Klick auf einen Spaltentitel (mit dgTitleClick in Options). Sortieren ist Sache der Datenmenge, z. B. IndexFieldNames setzen. Nutzung: `FDQuery1.IndexFieldNames := Column.FieldName;` |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBGrid.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

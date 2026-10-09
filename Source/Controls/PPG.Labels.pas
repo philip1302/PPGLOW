@@ -92,6 +92,8 @@ type
     property OnMouseLeave;
     property OnStartDock;
     property OnStartDrag;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseWheel;
   end;
 
   TPPGCustomLinkLabel = class(TPPGCustomControl, IPPGAccessibleChildren)
@@ -199,6 +201,18 @@ type
     property OnMouseLeave;
     property OnMouseMove;
     property OnMouseUp;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnDblClick;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property Color;
+    property ParentColor;
   end;
 
 implementation

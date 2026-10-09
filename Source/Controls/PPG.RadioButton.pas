@@ -102,6 +102,9 @@ type
     property OnMouseUp;
     property OnStartDock;
     property OnStartDrag;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseWheel;
+    property OnMouseActivate;
   end;
 
 implementation

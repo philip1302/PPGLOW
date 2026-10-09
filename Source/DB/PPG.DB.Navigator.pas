@@ -198,6 +198,26 @@ type
     property OnEnter;
     property OnExit;
     property OnResize;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property Color;
+    property ParentColor;
   end;
 
   TPPGDBRadioGroup = class(TPPGRadioGroup)

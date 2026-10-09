@@ -218,6 +218,23 @@ type
     property OnKeyDown;
     property OnKeyPress;
     property OnKeyUp;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
   end;
 
 implementation
@@ -1064,7 +1081,10 @@ begin
     AddRecentColor(AColor);
   Invalidate;
   if Changed then
+  begin
+    Click; // Audit 5d: wie TColorBox
     Change;
+  end;
 end;
 
 procedure TPPGColorPicker.SetSelected(const Value: TColor);

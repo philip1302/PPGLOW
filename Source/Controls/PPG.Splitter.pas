@@ -124,6 +124,29 @@ type
     property OnCanResize;
     property OnMoved;
     property OnPaint;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property PopupMenu;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
   end;
 
 implementation
@@ -137,7 +160,7 @@ uses
 constructor TPPGCustomSplitter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  ControlStyle := ControlStyle - [csSetCaption, csClickEvents, csDoubleClicks];
+  ControlStyle := ControlStyle - [csSetCaption, csDoubleClicks]; // Audit 5d: OnClick wie TControl
   FMinSize := 30;
   FAutoSnap := True;
   FResizeStyle := rsUpdate;

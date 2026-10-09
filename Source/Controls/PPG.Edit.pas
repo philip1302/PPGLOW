@@ -159,6 +159,8 @@ type
     property OnRightButtonClick;
     property OnStartDock;
     property OnStartDrag;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseActivate;
   end;
 
 const

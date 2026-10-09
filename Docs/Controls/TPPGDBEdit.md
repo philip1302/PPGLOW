@@ -133,6 +133,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnRightButtonClick` | `TNotifyEvent` `(Sender: TObject)` | Die rechte Schaltfläche (RightButton) wurde geklickt, z. B. um einen Suchdialog zu öffnen. |
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBEdit.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

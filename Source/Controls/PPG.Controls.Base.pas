@@ -127,6 +127,7 @@ type
     procedure WMSetFocus(var Message: TWMSetFocus); message WM_SETFOCUS;
     procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
     procedure WMLButtonUp(var Message: TWMLButtonUp); message WM_LBUTTONUP;
+    procedure WMLButtonDblClk(var Message: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
     procedure WMCaptureChanged(var Message: TMessage); message WM_CAPTURECHANGED;
     procedure WMUpdateUIState(var Message: TMessage); message WM_UPDATEUISTATE;
     procedure CMDialogChar(var Message: TCMDialogChar); message CM_DIALOGCHAR;
@@ -1358,6 +1359,16 @@ begin
   inherited KeyUp(Key, Shift);
   if WasPressed and Enabled then
     Click;
+end;
+
+procedure TPPGCustomControl.WMLButtonDblClk(var Message: TWMLButtonDblClk);
+begin
+  // Audit 5d: TControl ruft DblClick nur mit csClickEvents auf. Controls, die
+  // Klicks selbst melden (Listen, Grid, Kanban), aber Doppelklicks annehmen,
+  // bekommen DblClick trotzdem (wie die VCL: vor dem MouseDown mit ssDouble).
+  if (csDoubleClicks in ControlStyle) and not (csClickEvents in ControlStyle) then
+    DblClick;
+  inherited;
 end;
 
 procedure TPPGCustomControl.CMDialogChar(var Message: TCMDialogChar);

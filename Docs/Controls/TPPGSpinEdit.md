@@ -6,7 +6,7 @@ Palette **PPGlow** - Unit `PPG.SpinEdit` - Basis `TPPGCustomSpinEdit`
 
 ## Unterschiede und Hinweise
 
-- `MinValue > MaxValue` wirft **nicht** (wie `TSpinEdit`), sonst scheitert `MinValue := 10; MaxValue := 100`.
+- `Min > Max` wirft **nicht** (wie `TSpinEdit`), sonst scheitert `Min := 10; Max := 100`.
 - Wiederholung beim Halten der Buttons über den Animator.
 
 ## Verhalten (aus dem Quelltext)
@@ -98,6 +98,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGSpinEdit.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

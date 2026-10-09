@@ -148,6 +148,24 @@ type
     property OnMouseMove;
     property OnMouseUp;
     property OnPointClick;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property Color;
+    property ParentColor;
   end;
 
 implementation

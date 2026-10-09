@@ -129,6 +129,20 @@ type
     property OnSearch;
     property OnSelect;
     property OnSubmit;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
   end;
 
 const

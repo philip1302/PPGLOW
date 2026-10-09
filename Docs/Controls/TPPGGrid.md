@@ -158,6 +158,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnTopLeftChange` | `TNotifyEvent` `(Sender: TObject)` | Die oberste sichtbare Zeile oder die linke sichtbare Spalte hat sich durch Scrollen geändert. |
 | `OnValidateCell` | `TPPGValidateCellEvent` `(Sender: TObject; ACol, ARow: Integer; var Value: string; var Accept: Boolean)` | Vor dem Übernehmen eines bearbeiteten Werts: Value prüfen oder korrigieren; Accept := False lehnt ab (der Editor bleibt offen). Nutzung: `Accept := TryStrToFloat(Value, X); if not Accept then ShowMessage('Bitte eine Zahl eingeben');` |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGGrid.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

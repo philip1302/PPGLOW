@@ -145,6 +145,20 @@ type
     property OnMouseMove;
     property OnMouseUp;
     property OnResize;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
   end;
 
 implementation
@@ -183,7 +197,7 @@ begin
   inherited Create(AOwner);
   FHeaderStyle := TPPGElementStyle.Create(Self);
   FHeaderStyle.OnChange := HeaderStyleChanged;
-  ControlStyle := ControlStyle - [csClickEvents, csSetCaption];
+  ControlStyle := ControlStyle - [csSetCaption]; // Audit 5d: OnClick wie TPanel
   FExpanded := True;
   TabStop := True;
   Width := 300;

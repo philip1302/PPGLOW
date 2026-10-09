@@ -449,6 +449,26 @@ type
     property OnExit;
     property OnKeyDown;
     property OnScroll;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnKeyPress;
+    property OnKeyUp;
   end;
 
 /// "Spalte, n Karten, Limit m" bzw. "Titel, Spalte X, Position Y von N, ..." (Screenreader).
@@ -513,7 +533,7 @@ end;
 constructor TPPGCustomKanban.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  ControlStyle := ControlStyle + [csDoubleClicks] - [csSetCaption, csClickEvents];
+  ControlStyle := ControlStyle + [csDoubleClicks] - [csSetCaption]; // Audit 5d: OnClick wie TControl
   FColumns := TPPGKanbanColumns.Create(Self);
   FLanes := TPPGKanbanLanes.Create(Self);
   FCards := TPPGKanbanCards.Create(Self);

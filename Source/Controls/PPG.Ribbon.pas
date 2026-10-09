@@ -619,6 +619,31 @@ type
     property OnQuickAccessChange;
     property OnApplicationButtonClick;
     property OnBackstageChange;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property Color;
+    property ParentColor;
   end;
 
 implementation
@@ -1362,7 +1387,7 @@ end;
 constructor TPPGCustomRibbon.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  ControlStyle := ControlStyle + [csAcceptsControls, csDoubleClicks] - [csSetCaption, csClickEvents];
+  ControlStyle := ControlStyle + [csAcceptsControls, csDoubleClicks] - [csSetCaption]; // Audit 5d: OnClick wie TControl
   FTabs := TPPGRibbonTabs.Create(Self);
   FQuickAccess := TPPGRibbonItems.Create(Self);
   FMainView := TPPGRibbonView.Create;
@@ -4464,11 +4489,10 @@ var
   Hit: TPPGRibbonHit;
   P: TPoint;
 begin
-  if (csDesigning in ComponentState) or not FQuickAccessCustomizable then
-  begin
-    inherited DoContextPopup(MousePos, Handled);
+  // Audit 5d: OnContextPopup zuerst; Handled = True unterdrueckt das eigene Menue
+  inherited DoContextPopup(MousePos, Handled);
+  if Handled or (csDesigning in ComponentState) or not FQuickAccessCustomizable then
     Exit;
-  end;
   if (MousePos.X = -1) and (MousePos.Y = -1) then
     Hit := NoHit
   else

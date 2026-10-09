@@ -358,6 +358,26 @@ type
     property OnItemClick: TPPGNavItemEvent read FOnItemInvoked write FOnItemInvoked;
     property OnPaneChange: TNotifyEvent read FOnPaneChange write FOnPaneChange;
     property OnChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
   end;
 
 const
@@ -908,7 +928,7 @@ end;
 constructor TPPGNavigationView.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  ControlStyle := ControlStyle - [csSetCaption, csClickEvents, csDoubleClicks];
+  ControlStyle := ControlStyle - [csSetCaption, csDoubleClicks]; // Audit 5d: OnClick wie TControl
   FItems := TPPGNavItems.Create(Self);
   FNavStyles := TPPGNavStyles.Create(Self);
   FNavStyles.OnChange := NavStylesChanged;

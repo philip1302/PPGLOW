@@ -342,6 +342,7 @@
         <DCCReference Include="PPG.Tests.Phase19.pas"/>
         <DCCReference Include="PPG.Tests.Phase20.pas"/>
         <DCCReference Include="PPG.Tests.Audit45.pas"/>
+        <DCCReference Include="PPG.Tests.Audit5d.pas"/>
         <DCCReference Include="PPG.Tests.Phase13g.pas"/>
         <DCCReference Include="PPG.Tests.Phase14a.pas"/>
         <DCCReference Include="PPG.Tests.Phase14aPlanner.pas"/>

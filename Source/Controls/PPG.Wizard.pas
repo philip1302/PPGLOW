@@ -199,6 +199,27 @@ type
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnCancel: TNotifyEvent read FOnCancel write FOnCancel;
     property OnResize;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property Color;
+    property ParentColor;
   end;
 
 implementation

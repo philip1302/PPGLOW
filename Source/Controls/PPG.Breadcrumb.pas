@@ -123,6 +123,28 @@ type
     property OnEnter;
     property OnExit;
     property OnItemClick;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property Color;
+    property ParentColor;
   end;
 
 implementation
@@ -144,7 +166,7 @@ var
 constructor TPPGCustomBreadcrumb.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  ControlStyle := ControlStyle - [csSetCaption, csClickEvents, csDoubleClicks];
+  ControlStyle := ControlStyle - [csSetCaption, csDoubleClicks]; // Audit 5d: OnClick wie TControl
   FItems := TStringList.Create;
   FItems.OnChange := ItemsChange;
   FHotPart := -1;

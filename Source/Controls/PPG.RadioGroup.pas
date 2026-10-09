@@ -285,6 +285,16 @@ type
     property OnMouseLeave;
     property OnStartDock;
     property OnStartDrag;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
   end;
 
   TPPGCheckGroup = class(TPPGCustomChoiceGroup)
@@ -349,6 +359,16 @@ type
     property OnMouseLeave;
     property OnStartDock;
     property OnStartDrag;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
   end;
 
 implementation

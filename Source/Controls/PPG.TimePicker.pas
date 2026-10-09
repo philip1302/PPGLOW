@@ -122,6 +122,20 @@ type
     property OnKeyUp;
     property OnMouseEnter;
     property OnMouseLeave;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
   end;
 
 /// True, wenn das Gebietsschema 24 Stunden verwendet.
@@ -496,6 +510,12 @@ function TPPGCustomTimePicker.DoMouseWheel(Shift: TShiftState; WheelDelta: Integ
 begin
   if DroppedDown or ReadOnly or not FieldFocused then
     Exit(inherited DoMouseWheel(Shift, WheelDelta, MousePos));
+  // Audit 5d: das Ereignis zuerst, Handled = True verhindert das Blaettern
+  Result := False;
+  if Assigned(OnMouseWheel) then
+    OnMouseWheel(Self, Shift, WheelDelta, MousePos, Result);
+  if Result then
+    Exit;
   if WheelDelta > 0 then
     StepSegment(SegmentAtCaret, 1)
   else if WheelDelta < 0 then

@@ -84,6 +84,24 @@ type
     property OnClick;
     property OnMouseDown;
     property OnMouseUp;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnDblClick;
+    property OnMouseMove;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property PopupMenu;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property Color;
+    property ParentColor;
   end;
 
   TPPGCustomProgressRing = class(TPPGCustomControl)
@@ -150,6 +168,27 @@ type
     property Visible;
     property Touch;
     property OnGesture;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property PopupMenu;
+    property StyleElements;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property Color;
+    property ParentColor;
   end;
 
   TPPGInfoBarPart = (ipNone, ipAction, ipClose);
@@ -273,6 +312,28 @@ type
     property OnClosing;
     property OnEnter;
     property OnExit;
+    // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseActivate;
+    property OnContextPopup;
+    property DragMode;
+    property DragCursor;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnStartDrag;
+    property OnEndDrag;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property Color;
+    property ParentColor;
   end;
 
 /// Signalfarbe einer Schwere aus den Tokens.
@@ -754,7 +815,7 @@ begin
   inherited Create(AOwner);
   FBarStyle := TPPGElementStyle.Create(Self);
   FBarStyle.OnChange := BarStyleChanged;
-  ControlStyle := ControlStyle - [csSetCaption, csClickEvents];
+  ControlStyle := ControlStyle - [csSetCaption]; // Audit 5d: OnClick wie TControl
   FIsOpen := True;
   FIsClosable := True;
   FMarkup := TPPGMarkupLayout.Create;

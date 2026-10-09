@@ -83,6 +83,7 @@
 <tr><td><code>OnMouseLeave</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus hat das Control verlassen.</td></tr>
 <tr><td><code>OnStartDock</code></td><td><code>TStartDockEvent</code> <code>(Sender: TObject; var DragObject: TDragDockObject)</code></td><td>Beginn des Andockens dieses Controls.</td></tr>
 <tr><td><code>OnStartDrag</code></td><td><code>TStartDragEvent</code> <code>(Sender: TObject; var DragObject: TDragObject)</code></td><td>Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden.</td></tr>
+<tr><td><code>OnMouseWheel</code></td><td><code>TMouseWheelEvent</code> <code>(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)</code></td><td>Mausrad gedreht; Handled := True verhindert das Standard-Scrollen.</td></tr>
 </table>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGLabel.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>

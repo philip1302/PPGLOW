@@ -126,6 +126,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnSetChecked` | `TPPGSetCheckedEvent` `(Sender: TObject; Index: Integer; Value: TCheckBoxState)` | Virtueller Stil (Style = lbVirtual): Der Anwender hat das Kästchen der Zeile Index auf Value umgeschaltet; die Anwendung speichert den Zustand selbst (und liefert ihn in OnGetItem über Data.Checked zurück). |
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGCheckListBox.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

@@ -204,6 +204,7 @@ uses
   PPG.Tests.Phase19 in 'PPG.Tests.Phase19.pas',
   PPG.Tests.Phase20 in 'PPG.Tests.Phase20.pas',
   PPG.Tests.Audit45 in 'PPG.Tests.Audit45.pas',
+  PPG.Tests.Audit5d in 'PPG.Tests.Audit5d.pas',
   PPG.Tests.Phase13g in 'PPG.Tests.Phase13g.pas',
   PPG.Tests.Phase14a in 'PPG.Tests.Phase14a.pas',
   PPG.Tests.Phase14aPlanner in 'PPG.Tests.Phase14aPlanner.pas',

@@ -16,12 +16,12 @@ Palette **PPGlow** - Unit `PPG.Kanban` - Basis `TPPGCustomKanban`
 - **Spalten verschieben:** Kopf ziehen (`AllowColumnDrag`, Esc bricht ab) oder Strg+Umschalt+Links/Rechts; `MoveColumn` im Code. `OnColumnMoving` kann ablehnen, `OnColumnMoved` meldet die neue Lage.
 - **Tastatur:** Pfeile wandern zwischen den Karten (leere Spalten werden übersprungen), Strg+Pfeile verschieben die gewählte Karte (auch in eine leere Spalte; Strg+Oben/Unten am Rand in die nächste Swimlane), Pos1/Ende, Bild auf/ab, Enter = `OnCardOpen`.
 - **Screenreader:** Bereich; Kinder sind je Spalte der Kopf („Spalte X, n Karten, Limit m“) und die Karten („Titel, Spalte X, Position Y von N, fällig …, Person, Labels“). Nach einem Verschieben steht „Verschoben nach Spalte X, Position Y von N“ vor dem Namen der fokussierten Karte (`Announcement`).
-- Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnSelectionChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
+- Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
 - Ziehen zwischen Anwendungen (OLE) gibt es nicht.
 
 ## Anpassung
 
-- `KanbanStyles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
+- `Styles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
 - `SaveLayout`/`LoadLayout`: Spaltenbreiten, Reihenfolge, Filter und eingeklappte Spalten/Swimlanes (nach `Id`; ältere Layouts ohne Reihenfolge laden weiter). Drucken mit `TPPGKanbanPrinter`.
 
 ## Beispiel
@@ -107,6 +107,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `TabStop` | `Boolean` | `True` | True: Das Control ist mit Tab erreichbar. |
 | `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
 | `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
+| `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. |
+| `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. |
+| `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). |
 
 ## Ereignisse
 
@@ -128,6 +131,22 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
 | `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` |
 | `OnScroll` | `TNotifyEvent` `(Sender: TObject)` | Die Scrollposition hat sich geändert (Rad, Leiste, Tastatur oder Code). Nutzung: Z. B. um eine Positionsanzeige zu aktualisieren: `lblZeile.Caption := IntToStr(Grid.TopRow);` |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
+| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. |
+| `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. |
+| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
+| `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |
+| `OnMouseEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Maus ist in das Control hineinbewegt worden. |
+| `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
+| `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
+| `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. |
+| `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. |
+| `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
+| `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
+| `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
+| `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGKanban.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.
