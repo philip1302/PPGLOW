@@ -130,6 +130,18 @@ type
     procedure CachedShadowMatchesDirect;
   end;
 
+  /// Audit 11e: ForceGdiFallback mit Setter; eine Aenderung zeichnet ueber
+  /// den Haken aus PPG.Theme alle Fenster neu (Demo braucht keinen Workaround).
+  TAudit11DRenderModeTests = class(TControlTestCase)
+  private
+    procedure ShowAndValidate(C: TWinControl);
+  published
+    procedure ThemeInstallsRedrawHook;
+    procedure SetterCallsHookOnlyOnChange;
+    procedure FallbackSwitchInvalidatesWindows;
+    procedure SameValueKeepsWindowsValid;
+  end;
+
   /// 8.0 #1: Control wird waehrend einer beobachteten Nachricht freigegeben.
   TAppHooksLifetimeTests = class(TTestCase)
   private
@@ -148,7 +160,8 @@ type
 implementation
 
 uses
-  Winapi.GDIPAPI, Winapi.GDIPOBJ, PPG.Render.Gdi, PPG.Render.GdiPlus, PPG.Tests.Visual;
+  Winapi.GDIPAPI, Winapi.GDIPOBJ, PPG.Render.Gdi, PPG.Render.GdiPlus, PPG.Tests.Visual,
+  PPG.Render.Registry;
 
 const
   WM_AUDIT8_FREE = WM_USER + 801;
@@ -1360,6 +1373,99 @@ begin
   end;
 end;
 
+{ TAudit11DRenderModeTests }
+
+var
+  GHookCalls: Integer;
+
+procedure CountHookCall;
+begin
+  Inc(GHookCalls);
+end;
+
+procedure TAudit11DRenderModeTests.ShowAndValidate(C: TWinControl);
+begin
+  FForm.Show;
+  FForm.Update;
+  Application.ProcessMessages;
+  // Alles gezeichnet: kein Fenster hat noch einen ungueltigen Bereich
+  RedrawWindow(FForm.Handle, nil, 0, RDW_VALIDATE or RDW_ALLCHILDREN or RDW_NOERASE or
+    RDW_NOFRAME);
+  CheckFalse(GetUpdateRect(C.Handle, nil, False), 'Vorbedingung: Control gueltig');
+  CheckFalse(GetUpdateRect(FForm.Handle, nil, False), 'Vorbedingung: Formular gueltig');
+end;
+
+procedure TAudit11DRenderModeTests.ThemeInstallsRedrawHook;
+begin
+  // PPG.Theme (im Testprojekt gelinkt) setzt den Haken beim Laden
+  CheckTrue(Assigned(TPPGRendererRegistry.OnFallbackChanged),
+    'PPG.Theme muss OnFallbackChanged setzen');
+end;
+
+procedure TAudit11DRenderModeTests.SetterCallsHookOnlyOnChange;
+var
+  Old: TPPGFallbackChangedProc;
+begin
+  Old := TPPGRendererRegistry.OnFallbackChanged;
+  GHookCalls := 0;
+  TPPGRendererRegistry.OnFallbackChanged := CountHookCall;
+  try
+    TPPGRendererRegistry.ForceGdiFallback := False;
+    CheckEquals(0, GHookCalls, 'gleicher Wert: kein Aufruf');
+    TPPGRendererRegistry.ForceGdiFallback := True;
+    CheckEquals(1, GHookCalls, 'Wechsel auf GDI: ein Aufruf');
+    CheckTrue(TPPGRendererRegistry.ForceGdiFallback, 'Wert uebernommen');
+    TPPGRendererRegistry.ForceGdiFallback := True;
+    CheckEquals(1, GHookCalls, 'erneut True: kein Aufruf');
+    TPPGRendererRegistry.ForceGdiFallback := False;
+    CheckEquals(2, GHookCalls, 'zurueck auf GDI+: ein Aufruf');
+    CheckFalse(TPPGRendererRegistry.ForceGdiFallback, 'Wert zurueck');
+  finally
+    TPPGRendererRegistry.OnFallbackChanged := Old;
+    TPPGRendererRegistry.ForceGdiFallback := False;
+  end;
+end;
+
+procedure TAudit11DRenderModeTests.FallbackSwitchInvalidatesWindows;
+var
+  B: TPPGButton;
+  Other: TForm;
+begin
+  B := NewButton('GDI');
+  Other := TForm.CreateNew(nil);
+  try
+    Other.SetBounds(420, 0, 200, 120);
+    Other.Show;
+    Other.Update;
+    ShowAndValidate(B);
+    RedrawWindow(Other.Handle, nil, 0, RDW_VALIDATE or RDW_ALLCHILDREN or RDW_NOERASE or
+      RDW_NOFRAME);
+    TPPGRendererRegistry.ForceGdiFallback := True;
+    // Ohne Zutun der Anwendung: Control, Formular und das zweite Formular
+    CheckTrue(GetUpdateRect(B.Handle, nil, False), 'Control wird neu gezeichnet');
+    CheckTrue(GetUpdateRect(FForm.Handle, nil, False), 'Formular wird neu gezeichnet');
+    CheckTrue(GetUpdateRect(Other.Handle, nil, False), 'zweites Formular wird neu gezeichnet');
+    // Der Paint danach laeuft mit dem GDI-Canvas und ohne Fehler
+    FForm.Update;
+    CheckEquals(0, FErrors.Count, 'Paint ohne Fehler: ' + FErrors.Text);
+    ShowAndValidate(B);
+    TPPGRendererRegistry.ForceGdiFallback := False;
+    CheckTrue(GetUpdateRect(B.Handle, nil, False), 'zurueck: Control wird neu gezeichnet');
+  finally
+    Other.Free;
+  end;
+end;
+
+procedure TAudit11DRenderModeTests.SameValueKeepsWindowsValid;
+var
+  B: TPPGButton;
+begin
+  B := NewButton('GDI+');
+  ShowAndValidate(B);
+  TPPGRendererRegistry.ForceGdiFallback := TPPGRendererRegistry.ForceGdiFallback;
+  CheckFalse(GetUpdateRect(B.Handle, nil, False), 'gleicher Wert: kein Neuzeichnen');
+end;
+
 { TAppHooksLifetimeTests }
 
 procedure TAppHooksLifetimeTests.SetUp;
@@ -1417,5 +1523,6 @@ initialization
   RegisterTest('Audit8A', TAudit8AMeasureTests.Suite);
   RegisterTest('Audit8A', TAudit8ARenderTests.Suite);
   RegisterTest('Audit8A', TAppHooksLifetimeTests.Suite);
+  RegisterTest('Audit11D', TAudit11DRenderModeTests.Suite);
 
 end.

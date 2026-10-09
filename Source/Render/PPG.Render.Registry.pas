@@ -140,9 +140,14 @@ type
 
   TPPGRendererClass = class of TPPGRendererBase;
 
+  /// Wird nach jeder Aenderung von ForceGdiFallback gerufen (Audit 11e).
+  TPPGFallbackChangedProc = procedure;
+
   TPPGRendererRegistry = class
   private
     class var FForceGdiFallback: Boolean;
+    class var FOnFallbackChanged: TPPGFallbackChangedProc;
+    class procedure SetForceGdiFallback(const Value: Boolean); static;
   public
     class procedure RegisterRenderer(const AName: string; AClass: TPPGRendererClass); static;
     class procedure UnregisterRenderer(const AName: string); static;
@@ -157,7 +162,14 @@ type
     /// Erzeugt einen Zeichen-Canvas fuer den DC (GDI+ oder GDI-Fallback).
     class function CreateCanvas(DC: HDC): IPPGCanvas; static;
     /// Erzwingt den GDI-Fallback (Tests, Terminalserver-Policies, Diagnose).
-    class property ForceGdiFallback: Boolean read FForceGdiFallback write FForceGdiFallback;
+    /// Eine Aenderung ruft OnFallbackChanged; mit PPG.Theme zeichnen sich
+    /// dadurch alle Fenster der Anwendung neu (kein Neuzeichnen von Hand).
+    class property ForceGdiFallback: Boolean read FForceGdiFallback write SetForceGdiFallback;
+    /// Haken nach einer Aenderung von ForceGdiFallback. Render kennt Theme
+    /// nicht: PPG.Theme setzt hier beim Laden das Neuzeichnen aller Fenster
+    /// des Hauptthreads ein. nil = nichts tun.
+    class property OnFallbackChanged: TPPGFallbackChangedProc read FOnFallbackChanged
+      write FOnFallbackChanged;
   end;
 
 /// Begrenzt die Rundung auf die halbe kurze Seite (Pillenform als Maximum).
@@ -1385,6 +1397,15 @@ end;
 class function TPPGRendererRegistry.DefaultName: string;
 begin
   Result := PPGDefaultPreset;
+end;
+
+class procedure TPPGRendererRegistry.SetForceGdiFallback(const Value: Boolean);
+begin
+  if FForceGdiFallback = Value then
+    Exit;
+  FForceGdiFallback := Value;
+  if Assigned(FOnFallbackChanged) then
+    FOnFallbackChanged;
 end;
 
 class function TPPGRendererRegistry.CreateCanvas(DC: HDC): IPPGCanvas;
