@@ -207,6 +207,10 @@ type
 
 implementation
 
+uses
+  // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
+  PPG.DB.Validator;
+
 type
   TFieldAccess = class(TPPGCustomField);
 

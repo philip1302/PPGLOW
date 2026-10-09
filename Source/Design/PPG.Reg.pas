@@ -81,6 +81,17 @@ type
     procedure Edit; override;
   end;
 
+  /// Validator: Regeln bearbeiten, Pflicht-Regeln fuer alle Felder anlegen.
+  TPPGValidatorEditor = class(TDefaultEditor)
+  private
+    procedure AddRequiredRules;
+  public
+    function GetVerbCount: Integer; override;
+    function GetVerb(Index: Integer): string; override;
+    procedure ExecuteVerb(Index: Integer); override;
+    procedure Edit; override;
+  end;
+
   /// Grid- und Planer-Drucker: Seitenansicht und Seite einrichten im Designer.
   TPPGGridPrinterEditor = class(TDefaultEditor)
   public
@@ -172,7 +183,7 @@ uses
   PPG.Sparkline, PPG.Gauge, PPG.Chart,
   PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
-  PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator,
+  PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator, PPG.Controls.Field,
   PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
   PPG.Editors.Logic, PPG.Editors.Forms;
 
@@ -207,6 +218,8 @@ resourcestring
   SVerbRibbonNextTab = 'Ne&xt Tab';
   SVerbRibbonPrevTab = '&Previous Tab';
   SVerbKanbanColumns = 'Edit columns...';
+  SVerbValidatorRules = 'Edit rules...';
+  SVerbValidatorRequired = 'Add required rules for all fields';
   STestToastTitle = 'PPGlow';
   STestToastText = 'This is how notifications look with the current settings.';
   SGalleryDone = '%d components changed to "%s".';
@@ -568,6 +581,68 @@ end;
 procedure TPPGGridPrinterEditor.Edit;
 begin
   ExecuteVerb(0);
+end;
+
+{ TPPGValidatorEditor }
+
+function TPPGValidatorEditor.GetVerbCount: Integer;
+begin
+  Result := 2;
+end;
+
+function TPPGValidatorEditor.GetVerb(Index: Integer): string;
+begin
+  if Index = 0 then
+    Result := SVerbValidatorRules
+  else
+    Result := SVerbValidatorRequired;
+end;
+
+procedure TPPGValidatorEditor.ExecuteVerb(Index: Integer);
+begin
+  if Index = 0 then
+    ShowCollectionEditor(Designer, Component, TPPGValidator(Component).Rules, 'Rules')
+  else
+    AddRequiredRules;
+end;
+
+procedure TPPGValidatorEditor.Edit;
+begin
+  ExecuteVerb(0);
+end;
+
+procedure TPPGValidatorEditor.AddRequiredRules;
+var
+  V: TPPGValidator;
+  Root: TComponent;
+  I, J: Integer;
+  C: TControl;
+  Has: Boolean;
+begin
+  // Eingabefelder und Auswahlgruppen ohne Regel; Kaestchen bewusst nicht
+  // (ein Pflicht-Haken ist die Ausnahme, z.B. AGB)
+  V := TPPGValidator(Component);
+  Root := Designer.Root;
+  V.Rules.BeginUpdate;
+  try
+    for I := 0 to Root.ComponentCount - 1 do
+    begin
+      if not (Root.Components[I] is TControl) then
+        Continue;
+      C := TControl(Root.Components[I]);
+      if not ((C is TPPGCustomField) or (C is TPPGCustomChoiceGroup)) then
+        Continue;
+      Has := False;
+      for J := 0 to V.Rules.Count - 1 do
+        if V.Rules[J].Control = C then
+          Has := True;
+      if not Has then
+        V.Rules.AddRule(C, vrRequired);
+    end;
+  finally
+    V.Rules.EndUpdate;
+  end;
+  Designer.Modified;
 end;
 
 { TPPGCollectionEditor }
@@ -1014,6 +1089,7 @@ begin
   RegisterComponentEditor(TPPGWizardPage, TPPGWizardEditor);
   RegisterComponentEditor(TPPGTaskDialog, TPPGTaskDialogEditor);
   RegisterComponentEditor(TPPGGridPrinter, TPPGGridPrinterEditor);
+  RegisterComponentEditor(TPPGValidator, TPPGValidatorEditor);
   RegisterComponentEditor(TPPGPlannerPrinter, TPPGGridPrinterEditor);
   RegisterComponentEditor(TPPGKanbanPrinter, TPPGGridPrinterEditor);
   RegisterComponentEditor(TPPGListBox, TPPGCollectionEditor);

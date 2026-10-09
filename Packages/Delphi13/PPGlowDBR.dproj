@@ -93,6 +93,7 @@
         <DCCReference Include="..\..\Source\DB\PPG.DB.Planner.pas"/>
         <DCCReference Include="..\..\Source\DB\PPG.DB.Kanban.pas"/>
         <DCCReference Include="..\..\Source\DB\PPG.DB.Navigator.pas"/>
+        <DCCReference Include="..\..\Source\DB\PPG.DB.Validator.pas"/>
         <DCCReference Include="..\..\Source\DB\PPG.DB.Fields.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

@@ -275,6 +275,7 @@
         <DCCReference Include="..\Source\DB\PPG.DB.Planner.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Kanban.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Navigator.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Validator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Fields.pas"/>
         <DCCReference Include="DemoKit.pas"/>
         <DCCReference Include="DemoPages1.pas"/>

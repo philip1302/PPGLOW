@@ -251,6 +251,12 @@ resourcestring
   SPPGValGreaterOrEqual = '%s must not be less than %s.';
   SPPGValInvalid = '%s is invalid.';
   SPPGValUnsupported = 'The validator cannot read the value of %s (%s).';
+  SPPGValOneError = '1 error';
+  SPPGValErrors = '%d errors';
+  SPPGValOneWarning = '1 warning';
+  SPPGValWarnings = '%d warnings';
+  SPPGValAndMore = '%s and %d more';
+  SPPGValGoToError = 'Go to error';
 
 implementation
 

@@ -38,8 +38,8 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Variants,
-  System.Generics.Collections, System.RegularExpressions, Vcl.Controls,
-  PPG.Types, PPG.Controls.Field;
+  System.Generics.Collections, System.RegularExpressions, Vcl.Controls, Vcl.Forms,
+  PPG.Types, PPG.Controls.Field, PPG.Feedback, PPG.Wizard;
 
 type
   TPPGValidationRuleKind = (vrRequired, vrLength, vrRange, vrPattern, vrCompare, vrCustom);
@@ -137,9 +137,12 @@ type
   /// Ergebnis fuer ein Control (Fehler oder Warnung).
   TPPGValidationResult = record
     Control: TControl;
+    /// nil bei einer Regel aus dem Datenfeld (AutoFieldRules).
     Rule: TPPGValidationRule;
     Message: string;
     Severity: TPPGValidationState;
+    /// Name des Felds wie in der Meldung.
+    Caption: string;
   end;
 
   /// Liest Werte einer Control-Klasse und markiert sie (offen erweiterbar).
@@ -164,6 +167,23 @@ type
   TPPGShowErrorEvent = procedure(Sender: TObject; Control: TControl;
     const Message: string; Severity: TPPGValidationState) of object;
 
+  /// Regeln, die ein Datenfeld selbst mitbringt (TField: Required, Size,
+  /// MinValue/MaxValue). Liefert das DB-Paket (PPG.DB.Validator).
+  TPPGFieldRuleInfo = record
+    /// Datenmenge in Bearbeitung (dsEdit/dsInsert); sonst wird nicht geprueft.
+    Editing: Boolean;
+    Required: Boolean;
+    /// Hoechstlaenge (0 = keine).
+    MaxLength: Integer;
+    HasMin: Boolean;
+    HasMax: Boolean;
+    MinValue: Double;
+    MaxValue: Double;
+    /// Name fuer Meldungen (DisplayLabel); '' = wie bei Regeln.
+    Caption: string;
+  end;
+  TPPGFieldRuleProvider = function(AControl: TControl; out Info: TPPGFieldRuleInfo): Boolean;
+
   TPPGValidator = class(TComponent)
   private
     FRules: TPPGValidationRules;
@@ -181,7 +201,36 @@ type
     FOnValidate: TPPGValidateRuleEvent;
     FOnValidated: TNotifyEvent;
     FOnShowError: TPPGShowErrorEvent;
+    FAutoFieldRules: Boolean;
+    FSummaryBar: TPPGCustomInfoBar;
+    FSummaryShown: Boolean;
+    FOldBarAction: TNotifyEvent;
+    FBarHooked: Boolean;
+    FCheckOnClose: Boolean;
+    FForm: TCustomForm;
+    FOldCloseQuery: TCloseQueryEvent;
+    FFormHooked: Boolean;
+    FSubmitControl: TControl;
+    FWizard: TPPGWizard;
+    FOldCanAdvance: TPPGWizardCanAdvanceEvent;
+    FWizardHooked: Boolean;
     procedure SetRules(const Value: TPPGValidationRules);
+    procedure SetSummaryBar(const Value: TPPGCustomInfoBar);
+    procedure SetSubmitControl(const Value: TControl);
+    procedure SetWizard(const Value: TPPGWizard);
+    procedure SetAutoFieldRules(const Value: Boolean);
+    procedure AttachHooks;
+    procedure DetachBar;
+    procedure DetachForm;
+    procedure DetachWizard;
+    procedure BarAction(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure WizardCanAdvance(Sender: TObject; Page: TPPGWizardPage; var Allow: Boolean);
+    procedure UpdateSummary;
+    procedure UpdateSubmit;
+    function FieldInfo(AControl: TControl; out Info: TPPGFieldRuleInfo): Boolean;
+    function CheckFieldRules(AControl: TControl; const Info: TPPGFieldRuleInfo;
+      RequiredOnly: Boolean; out Msg: string): Boolean;
     procedure SetActive(const Value: Boolean);
     procedure SetShowValid(const Value: Boolean);
     function GetResult(Index: Integer): TPPGValidationResult;
@@ -242,7 +291,23 @@ type
     property OnValidated: TNotifyEvent read FOnValidated write FOnValidated;
     /// Ergebnis eines Controls hat sich geaendert (Severity pvsNone = behoben).
     property OnShowError: TPPGShowErrorEvent read FOnShowError write FOnShowError;
+    /// DB-Controls ohne eigene Regel nach ihrem TField pruefen (Required,
+    /// Size, MinValue/MaxValue), solange die Datenmenge bearbeitet wird.
+    property AutoFieldRules: Boolean read FAutoFieldRules write SetAutoFieldRules default True;
+    /// Sammelanzeige nach dem ersten Validate: Zahl und Namen der Fehler,
+    /// Knopf "Zum Fehler"; ohne Ergebnis zugeklappt (IsOpen).
+    property SummaryBar: TPPGCustomInfoBar read FSummaryBar write SetSummaryBar;
+    /// Schliessen des Formulars mit mrOk/mrYes nur bei gueltigen Eingaben
+    /// (ein vorhandenes OnCloseQuery bleibt wirksam).
+    property CheckOnClose: Boolean read FCheckOnClose write FCheckOnClose default True;
+    /// Wird gesperrt, solange Pflichtfelder leer sind (z.B. der OK-Knopf).
+    property SubmitControl: TControl read FSubmitControl write SetSubmitControl;
+    /// "Weiter" im Assistenten erst, wenn die aktuelle Seite gueltig ist.
+    property Wizard: TPPGWizard read FWizard write SetWizard;
   end;
+
+/// Meldet die Quelle der Feldregeln an (nil = keine); PPG.DB.Validator.
+procedure PPGSetFieldRuleProvider(Provider: TPPGFieldRuleProvider);
 
 procedure PPGRegisterValidationAdapter(AClass: TPPGValidationAdapterClass);
 procedure PPGUnregisterValidationAdapter(AClass: TPPGValidationAdapterClass);
@@ -259,7 +324,7 @@ implementation
 
 uses
   System.Math, System.TypInfo, System.RegularExpressionsCore, Winapi.CommCtrl,
-  Vcl.StdCtrls, Vcl.ComCtrls, Vcl.Forms,
+  Vcl.StdCtrls, Vcl.ComCtrls,
   PPG.Exceptions, PPG.ErrorHandler, PPG.Lang, PPG.Consts, PPG.AppHooks, PPG.Accessibility,
   PPG.Controls.Check, PPG.RadioGroup, PPG.DatePicker, PPG.SpinEdit, PPG.PageControl,
   PPG.Expander, PPG.Panel;
@@ -284,6 +349,7 @@ type
 var
   GAdapters: TList<TPPGValidationAdapterClass>;
   GInvariant: TFormatSettings;
+  GFieldRuleProvider: TPPGFieldRuleProvider;
 
 { Hilfen }
 
@@ -457,6 +523,11 @@ begin
         Exit;
     end;
   end;
+end;
+
+procedure PPGSetFieldRuleProvider(Provider: TPPGFieldRuleProvider);
+begin
+  GFieldRuleProvider := Provider;
 end;
 
 { Adapter-Registry }
@@ -1037,12 +1108,20 @@ begin
   FPendingExit := TList<TControl>.Create;
   FPendingChange := TList<TControl>.Create;
   FRules := TPPGValidationRules.Create(Self);
+  FAutoFieldRules := True;
+  FCheckOnClose := True;
+  // Zur Laufzeit erzeugt (nicht aus der DFM): gleich einhaengen
+  if (AOwner <> nil) and not (csLoading in AOwner.ComponentState) and IsRuntime then
+    AttachHooks;
 end;
 
 destructor TPPGValidator.Destroy;
 var
   I: Integer;
 begin
+  DetachForm;
+  DetachBar;
+  DetachWizard;
   if FWatched <> nil then
     for I := 0 to FWatched.Count - 1 do
       if not (csDestroying in FWatched[I].ComponentState) then
@@ -1068,7 +1147,336 @@ end;
 procedure TPPGValidator.Loaded;
 begin
   inherited Loaded;
+  if not IsRuntime then
+    Exit;
+  AttachHooks;
   UpdateWatches;
+  // Absende-Knopf erst, wenn FormCreate die Werte gesetzt hat
+  if FSubmitControl <> nil then
+    Schedule(nil, False);
+end;
+
+{ Einhaengen in Formular, Sammelleiste und Assistent }
+
+function IsRelevant(C: TControl): Boolean; forward;
+
+type
+  TFormAccess = class(TCustomForm);
+  TInfoBarAccess = class(TPPGCustomInfoBar);
+
+function SameMethod(const A, B: TMethod): Boolean;
+begin
+  Result := (A.Code = B.Code) and (A.Data = B.Data);
+end;
+
+procedure TPPGValidator.AttachHooks;
+var
+  Q: TCloseQueryEvent;
+  N: TNotifyEvent;
+  W: TPPGWizardCanAdvanceEvent;
+begin
+  if not IsRuntime then
+    Exit;
+  if not FFormHooked and (Owner is TCustomForm) then
+  begin
+    FForm := TCustomForm(Owner);
+    FOldCloseQuery := TFormAccess(FForm).OnCloseQuery;
+    Q := FormCloseQuery;
+    TFormAccess(FForm).OnCloseQuery := Q;
+    FFormHooked := True;
+  end;
+  if not FBarHooked and (FSummaryBar <> nil) then
+  begin
+    FOldBarAction := TInfoBarAccess(FSummaryBar).OnActionClick;
+    N := BarAction;
+    TInfoBarAccess(FSummaryBar).OnActionClick := N;
+    FBarHooked := True;
+  end;
+  if not FWizardHooked and (FWizard <> nil) then
+  begin
+    FOldCanAdvance := FWizard.OnCanAdvance;
+    W := WizardCanAdvance;
+    FWizard.OnCanAdvance := W;
+    FWizardHooked := True;
+  end;
+end;
+
+procedure TPPGValidator.DetachForm;
+var
+  Q: TCloseQueryEvent;
+begin
+  if not FFormHooked then
+    Exit;
+  FFormHooked := False;
+  Q := FormCloseQuery;
+  // Nur zuruecksetzen, wenn niemand nach uns eingehaengt hat
+  if (FForm <> nil) and SameMethod(TMethod(TFormAccess(FForm).OnCloseQuery), TMethod(Q)) then
+    TFormAccess(FForm).OnCloseQuery := FOldCloseQuery;
+  FForm := nil;
+  FOldCloseQuery := nil;
+end;
+
+procedure TPPGValidator.DetachBar;
+var
+  N: TNotifyEvent;
+begin
+  if not FBarHooked then
+    Exit;
+  FBarHooked := False;
+  N := BarAction;
+  if (FSummaryBar <> nil) and not (csDestroying in FSummaryBar.ComponentState) and
+    SameMethod(TMethod(TInfoBarAccess(FSummaryBar).OnActionClick), TMethod(N)) then
+    TInfoBarAccess(FSummaryBar).OnActionClick := FOldBarAction;
+  FOldBarAction := nil;
+end;
+
+procedure TPPGValidator.DetachWizard;
+var
+  W: TPPGWizardCanAdvanceEvent;
+begin
+  if not FWizardHooked then
+    Exit;
+  FWizardHooked := False;
+  W := WizardCanAdvance;
+  if (FWizard <> nil) and not (csDestroying in FWizard.ComponentState) and
+    SameMethod(TMethod(FWizard.OnCanAdvance), TMethod(W)) then
+    FWizard.OnCanAdvance := FOldCanAdvance;
+  FOldCanAdvance := nil;
+end;
+
+procedure TPPGValidator.SetSummaryBar(const Value: TPPGCustomInfoBar);
+begin
+  if FSummaryBar = Value then
+    Exit;
+  DetachBar;
+  FSummaryBar := Value;
+  if Value <> nil then
+  begin
+    Value.FreeNotification(Self);
+    AttachHooks;
+    UpdateSummary;
+  end;
+end;
+
+procedure TPPGValidator.SetWizard(const Value: TPPGWizard);
+begin
+  if FWizard = Value then
+    Exit;
+  DetachWizard;
+  FWizard := Value;
+  if Value <> nil then
+  begin
+    Value.FreeNotification(Self);
+    AttachHooks;
+  end;
+end;
+
+procedure TPPGValidator.SetSubmitControl(const Value: TControl);
+begin
+  if FSubmitControl = Value then
+    Exit;
+  FSubmitControl := Value;
+  if Value <> nil then
+  begin
+    Value.FreeNotification(Self);
+    UpdateSubmit;
+  end;
+end;
+
+procedure TPPGValidator.SetAutoFieldRules(const Value: Boolean);
+begin
+  if FAutoFieldRules = Value then
+    Exit;
+  FAutoFieldRules := Value;
+  UpdateWatches;
+end;
+
+procedure TPPGValidator.BarAction(Sender: TObject);
+begin
+  FocusFirstError;
+  if Assigned(FOldBarAction) then
+    FOldBarAction(Sender);
+end;
+
+procedure TPPGValidator.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  if Assigned(FOldCloseQuery) then
+    FOldCloseQuery(Sender, CanClose);
+  if not CanClose or not FCheckOnClose or not FActive or (FForm = nil) then
+    Exit;
+  // Nur "OK"-Ergebnisse; Abbrechen und das Schliessfeld bleiben frei
+  if (FForm.ModalResult <> mrOk) and (FForm.ModalResult <> mrYes) then
+    Exit;
+  if not Validate then
+  begin
+    CanClose := False;
+    FocusFirstError;
+  end;
+end;
+
+procedure TPPGValidator.WizardCanAdvance(Sender: TObject; Page: TPPGWizardPage;
+  var Allow: Boolean);
+begin
+  if Assigned(FOldCanAdvance) then
+    FOldCanAdvance(Sender, Page, Allow);
+  if not Allow or not FActive or (Page = nil) then
+    Exit;
+  Allow := ValidateChildren(Page);
+  if not Allow then
+    FocusFirstError;
+end;
+
+procedure TPPGValidator.UpdateSummary;
+var
+  Errs, Warns, I, Shown: Integer;
+  Title, Names: string;
+  Bar: TInfoBarAccess;
+begin
+  if (FSummaryBar = nil) or not IsRuntime then
+    Exit;
+  Bar := TInfoBarAccess(FSummaryBar);
+  Errs := ErrorCount;
+  Warns := WarningCount;
+  if not FSummaryShown or (Errs + Warns = 0) then
+  begin
+    Bar.IsOpen := False;
+    Exit;
+  end;
+  Title := '';
+  if Errs = 1 then
+    Title := PPGStr(@SPPGValOneError)
+  else if Errs > 1 then
+    Title := Format(PPGStr(@SPPGValErrors), [Errs]);
+  if Warns > 0 then
+  begin
+    if Title <> '' then
+      Title := Title + ', ';
+    if Warns = 1 then
+      Title := Title + PPGStr(@SPPGValOneWarning)
+    else
+      Title := Title + Format(PPGStr(@SPPGValWarnings), [Warns]);
+  end;
+  Names := '';
+  Shown := 0;
+  for I := 0 to FResults.Count - 1 do
+  begin
+    if Shown = 5 then
+    begin
+      Names := Format(PPGStr(@SPPGValAndMore), [Names, FResults.Count - Shown]);
+      Break;
+    end;
+    if Names <> '' then
+      Names := Names + ', ';
+    Names := Names + FResults[I].Caption;
+    Inc(Shown);
+  end;
+  if Errs > 0 then
+  begin
+    Bar.Severity := psError;
+    Bar.ActionCaption := PPGStr(@SPPGValGoToError);
+  end
+  else
+  begin
+    Bar.Severity := psWarning;
+    Bar.ActionCaption := '';
+  end;
+  Bar.Title := Title;
+  Bar.Message := Names;
+  Bar.Visible := True;
+  Bar.IsOpen := True;
+end;
+
+function TPPGValidator.FieldInfo(AControl: TControl; out Info: TPPGFieldRuleInfo): Boolean;
+begin
+  Result := FAutoFieldRules and Assigned(GFieldRuleProvider) and GFieldRuleProvider(AControl, Info);
+end;
+
+function TPPGValidator.CheckFieldRules(AControl: TControl; const Info: TPPGFieldRuleInfo;
+  RequiredOnly: Boolean; out Msg: string): Boolean;
+var
+  A: TPPGValidationAdapterClass;
+  V: Variant;
+  Cap: string;
+  D: Double;
+begin
+  Msg := '';
+  Result := True;
+  if not Info.Editing then
+    Exit;
+  A := AdapterFor(AControl);
+  V := A.GetValue(AControl);
+  Cap := Info.Caption;
+  if Cap = '' then
+    Cap := ControlCaption(AControl);
+  if PPGValidationValueIsEmpty(V) then
+  begin
+    if Info.Required then
+    begin
+      Msg := Format(PPGStr(A.RequiredText), [Cap]);
+      Result := False;
+    end;
+    Exit;
+  end;
+  if RequiredOnly then
+    Exit;
+  if (Info.MaxLength > 0) and (Length(VarToStr(V)) > Info.MaxLength) then
+  begin
+    Msg := Format(PPGStr(@SPPGValTooLong), [Cap, Info.MaxLength]);
+    Exit(False);
+  end;
+  if (Info.HasMin or Info.HasMax) and TryValueToNumber(V, D) then
+  begin
+    if Info.HasMin and (CompareValue(D, Info.MinValue) < 0) then
+    begin
+      Msg := Format(PPGStr(@SPPGValBelowMin), [Cap, FloatToStr(Info.MinValue)]);
+      Exit(False);
+    end;
+    if Info.HasMax and (CompareValue(D, Info.MaxValue) > 0) then
+    begin
+      Msg := Format(PPGStr(@SPPGValAboveMax), [Cap, FloatToStr(Info.MaxValue)]);
+      Exit(False);
+    end;
+  end;
+end;
+
+procedure TPPGValidator.UpdateSubmit;
+var
+  List: TList<TControl>;
+  I, J: Integer;
+  Ok: Boolean;
+  Msg: string;
+  Info: TPPGFieldRuleInfo;
+  R: TPPGValidationRule;
+begin
+  if (FSubmitControl = nil) or not IsRuntime then
+    Exit;
+  Ok := True;
+  if FActive then
+  begin
+    List := TList<TControl>.Create;
+    try
+      CollectControls(List, nil, '', False);
+      for I := 0 to List.Count - 1 do
+      begin
+        if not Ok then
+          Break;
+        if not IsRelevant(List[I]) then
+          Continue;
+        if FieldInfo(List[I], Info) and not CheckFieldRules(List[I], Info, True, Msg) then
+          Ok := False;
+        for J := 0 to FRules.Count - 1 do
+        begin
+          R := FRules[J];
+          if Ok and R.Enabled and (R.Kind = vrRequired) and (R.Severity = pvsError) and
+            (R.Control = List[I]) and not CheckRule(R, Msg) then
+            Ok := False;
+        end;
+      end;
+    finally
+      List.Free;
+    end;
+  end;
+  FSubmitControl.Enabled := Ok;
 end;
 
 procedure TPPGValidator.RulesChanged;
@@ -1118,7 +1526,21 @@ var
   I: Integer;
 begin
   inherited Notification(AComponent, Operation);
-  if (Operation <> opRemove) or not (AComponent is TControl) then
+  if Operation <> opRemove then
+    Exit;
+  if AComponent = FSummaryBar then
+  begin
+    FBarHooked := False;
+    FSummaryBar := nil;
+  end;
+  if AComponent = FWizard then
+  begin
+    FWizardHooked := False;
+    FWizard := nil;
+  end;
+  if AComponent = FSubmitControl then
+    FSubmitControl := nil;
+  if not (AComponent is TControl) then
     Exit;
   if FRules <> nil then
     for I := 0 to FRules.Count - 1 do
@@ -1148,6 +1570,7 @@ procedure TPPGValidator.UpdateWatches;
 var
   Want: TList<TControl>;
   I: Integer;
+  Info: TPPGFieldRuleInfo;
   procedure AddWant(C: TControl);
   begin
     if (C <> nil) and not Want.Contains(C) then
@@ -1163,6 +1586,12 @@ begin
       AddWant(FRules[I].Control);
       AddWant(FRules[I].CompareControl);
     end;
+    // DB-Controls mit Regeln aus dem Datenfeld
+    if FAutoFieldRules and Assigned(GFieldRuleProvider) and (Owner <> nil) then
+      for I := 0 to Owner.ComponentCount - 1 do
+        if (Owner.Components[I] is TControl) and
+          FieldInfo(TControl(Owner.Components[I]), Info) then
+          AddWant(TControl(Owner.Components[I]));
     for I := FWatched.Count - 1 downto 0 do
       if not Want.Contains(FWatched[I]) then
       begin
@@ -1213,7 +1642,9 @@ end;
 
 procedure TPPGValidator.Schedule(AControl: TControl; Exiting: Boolean);
 begin
-  if Exiting then
+  // AControl = nil: nur den Absende-Knopf neu bewerten
+  if AControl = nil then
+  else if Exiting then
   begin
     if not FPendingExit.Contains(AControl) then
       FPendingExit.Add(AControl);
@@ -1295,7 +1726,9 @@ begin
       if not FWatched.Contains(List[I]) then
         List.Delete(I);
     if List.Count > 0 then
-      ValidateList(List, '', False);
+      ValidateList(List, '', False)
+    else
+      UpdateSubmit;
   finally
     List.Free;
   end;
@@ -1372,6 +1805,11 @@ begin
     else if P is TTabSheet then
     begin
       if not TTabSheet(P).TabVisible or not P.Enabled then
+        Exit;
+    end
+    else if P is TPPGWizardPage then
+    begin
+      if not TPPGWizardPage(P).PageVisible or not P.Enabled then
         Exit;
     end
     else if not P.Visible or not P.Enabled then
@@ -1522,14 +1960,26 @@ var
   I: Integer;
   R: TPPGValidationRule;
   Msg: string;
+  Info: TPPGFieldRuleInfo;
 begin
   Result := False;
   Res.Control := AControl;
   Res.Rule := nil;
   Res.Message := '';
   Res.Severity := pvsNone;
+  Res.Caption := '';
   if not IsRelevant(AControl) then
     Exit;
+  // Regeln aus dem Datenfeld zuerst (immer Fehler)
+  if FieldInfo(AControl, Info) and not CheckFieldRules(AControl, Info, False, Msg) then
+  begin
+    Res.Message := Msg;
+    Res.Severity := pvsError;
+    Res.Caption := Info.Caption;
+    if Res.Caption = '' then
+      Res.Caption := ControlCaption(AControl);
+    Exit(True);
+  end;
   for I := 0 to FRules.Count - 1 do
   begin
     R := FRules[I];
@@ -1544,6 +1994,7 @@ begin
         Res.Rule := R;
         Res.Message := Msg;
         Res.Severity := pvsError;
+        Res.Caption := R.FieldCaption;
         Exit(True);
       end;
       if not Result then
@@ -1551,6 +2002,7 @@ begin
         Res.Rule := R;
         Res.Message := Msg;
         Res.Severity := pvsWarning;
+        Res.Caption := R.FieldCaption;
         Result := True;
       end;
     end;
@@ -1706,6 +2158,7 @@ begin
       Result := False;
   end;
   SortResults;
+  UpdateSubmit;
   DoValidated;
 end;
 
@@ -1714,6 +2167,7 @@ procedure TPPGValidator.CollectControls(List: TList<TControl>; AContainer: TWinC
 var
   I: Integer;
   C: TControl;
+  Info: TPPGFieldRuleInfo;
 begin
   for I := 0 to FRules.Count - 1 do
   begin
@@ -1726,12 +2180,26 @@ begin
       Continue;
     List.Add(C);
   end;
+  // DB-Controls ohne eigene Regel (Regeln aus dem Datenfeld, keine Gruppe)
+  if FAutoFieldRules and Assigned(GFieldRuleProvider) and (Owner <> nil) then
+    for I := 0 to Owner.ComponentCount - 1 do
+    begin
+      if not (Owner.Components[I] is TControl) then
+        Continue;
+      C := TControl(Owner.Components[I]);
+      if List.Contains(C) or not FieldInfo(C, Info) then
+        Continue;
+      if (AContainer <> nil) and (C <> AContainer) and not AContainer.ContainsControl(C) then
+        Continue;
+      List.Add(C);
+    end;
 end;
 
 function TPPGValidator.Validate: Boolean;
 var
   List: TList<TControl>;
 begin
+  FSummaryShown := True;
   if not FActive then
     Exit(True);
   List := TList<TControl>.Create;
@@ -1747,6 +2215,7 @@ function TPPGValidator.ValidateGroup(const AGroup: string): Boolean;
 var
   List: TList<TControl>;
 begin
+  FSummaryShown := True;
   if not FActive then
     Exit(True);
   List := TList<TControl>.Create;
@@ -1762,6 +2231,7 @@ function TPPGValidator.ValidateChildren(AParent: TWinControl): Boolean;
 var
   List: TList<TControl>;
 begin
+  FSummaryShown := True;
   if not FActive or (AParent = nil) then
     Exit(True);
   List := TList<TControl>.Create;
@@ -1777,6 +2247,7 @@ function TPPGValidator.ValidateControl(AControl: TControl): Boolean;
 var
   List: TList<TControl>;
 begin
+  FSummaryShown := True;
   if not FActive or (AControl = nil) then
     Exit(True);
   List := TList<TControl>.Create;
@@ -1806,11 +2277,14 @@ begin
       FOnShowError(Self, Res.Control, '', pvsNone);
   end;
   FTouched.Clear;
+  FSummaryShown := False;
+  UpdateSubmit;
   DoValidated;
 end;
 
 procedure TPPGValidator.DoValidated;
 begin
+  UpdateSummary;
   if Assigned(FOnValidated) then
     FOnValidated(Self);
 end;
@@ -1838,6 +2312,8 @@ begin
         TPPGTabSheet(P).PageControl.ActivePage := TPPGTabSheet(P)
       else if (P is TTabSheet) and (TTabSheet(P).PageControl <> nil) then
         TTabSheet(P).PageControl.ActivePage := TTabSheet(P)
+      else if (P is TPPGWizardPage) and (TPPGWizardPage(P).Wizard <> nil) then
+        TPPGWizardPage(P).Wizard.ActivePage := TPPGWizardPage(P)
       else if P is TPPGCustomExpander then
         TExpanderAccess(P).Expanded := True;
     end;

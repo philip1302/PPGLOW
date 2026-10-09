@@ -271,6 +271,10 @@ function PPGDBReading: Boolean;
 
 implementation
 
+uses
+  // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
+  PPG.DB.Validator;
+
 var
   GReadDepth: Integer;
 

@@ -3,7 +3,9 @@ unit PPG.Tests.Phase19;
 { Tests fuer Phase 19: Formular-Produktivitaet.
   19a: TPPGValidator (Regelarten, Adapter, Markieren ohne fremde Zustaende
   zu zerstoeren, automatische Pruefung, Sprung zum ersten Fehler,
-  Streaming). }
+  Streaming).
+  19b: Regeln aus TField, Sammelleiste, Schliessen mit OK, Absende-Knopf,
+  Assistent. }
 
 interface
 
@@ -12,7 +14,8 @@ uses
   System.Variants, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ExtCtrls,
   PPG.Types, PPG.Controls.Field, PPG.Edit, PPG.NumberEdit, PPG.DatePicker, PPG.RadioGroup,
   PPG.CheckBox, PPG.Labels, PPG.Panel, PPG.PageControl, PPG.Expander, PPG.Validator,
-  PPG.Tests.Controls;
+  PPG.Feedback, PPG.Button, PPG.Wizard, Data.DB, Datasnap.DBClient, MidasLib, PPG.DB.Controls,
+  PPG.DB.Validator, PPG.Tests.Controls;
 
 type
   TValidatorTests = class(TControlTestCase)
@@ -61,6 +64,33 @@ type
     procedure FreeingControlClearsReferences;
     procedure InactiveValidatorAcceptsAll;
     procedure StreamsRules;
+  end;
+
+  TValidatorComfortTests = class(TControlTestCase)
+  private
+    FV: TPPGValidator;
+    FData: TClientDataSet;
+    FSource: TDataSource;
+    FLog: string;
+    procedure LogQuery(Sender: TObject; var CanClose: Boolean);
+    procedure LogAction(Sender: TObject);
+    procedure LogAdvance(Sender: TObject; Page: TPPGWizardPage; var Allow: Boolean);
+    function NewDBEdit(const AField: string; Y: Integer): TPPGDBEdit;
+    function NewEdit(const AName: string; Y: Integer; AParent: TWinControl = nil): TPPGEdit;
+  protected
+    procedure SetUp; override;
+  published
+    procedure FieldRulesWhileEditing;
+    procedure FieldRulesSkipReadOnlyAndBrowse;
+    procedure FieldRulesWithExplicitRules;
+    procedure VclDBControlIsDataAware;
+    procedure SummaryBarAfterFirstValidate;
+    procedure SummaryBarChainsActionAndRestores;
+    procedure CheckOnCloseBlocksOk;
+    procedure CheckOnCloseChainsAndRestores;
+    procedure SubmitControlFollowsRequired;
+    procedure WizardValidatesCurrentPage;
+    procedure WizardPagesCountLikeTabs;
   end;
 
 implementation
@@ -875,7 +905,337 @@ begin
   end;
 end;
 
+{ TValidatorComfortTests }
+
+procedure TValidatorComfortTests.SetUp;
+begin
+  inherited SetUp;
+  FLog := '';
+  FData := TClientDataSet.Create(FForm);
+  FData.FieldDefs.Add('ID', ftAutoInc);
+  FData.FieldDefs.Add('Name', ftString, 20);
+  FData.FieldDefs.Add('Age', ftInteger);
+  FData.FieldDefs.Add('Note', ftString, 40);
+  FData.CreateDataSet;
+  FData.FieldByName('Name').Required := True;
+  FData.FieldByName('Name').DisplayLabel := 'Kundenname';
+  TIntegerField(FData.FieldByName('Age')).MinValue := 0;
+  TIntegerField(FData.FieldByName('Age')).MaxValue := 120;
+  FData.AppendRecord([nil, 'Anna', 30, '']);
+  FData.First;
+  FSource := TDataSource.Create(FForm);
+  FSource.DataSet := FData;
+  FV := TPPGValidator.Create(FForm);
+  FV.Name := 'Val';
+end;
+
+procedure TValidatorComfortTests.LogQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  FLog := FLog + 'Q';
+end;
+
+procedure TValidatorComfortTests.LogAction(Sender: TObject);
+begin
+  FLog := FLog + 'A';
+end;
+
+procedure TValidatorComfortTests.LogAdvance(Sender: TObject; Page: TPPGWizardPage;
+  var Allow: Boolean);
+begin
+  FLog := FLog + 'W';
+end;
+
+function TValidatorComfortTests.NewDBEdit(const AField: string; Y: Integer): TPPGDBEdit;
+begin
+  Result := TPPGDBEdit.Create(FForm);
+  Result.Name := 'Db' + AField;
+  Result.Parent := FForm;
+  Result.SetBounds(120, Y, 150, 28);
+  Result.DataSource := FSource;
+  Result.DataField := AField;
+end;
+
+function TValidatorComfortTests.NewEdit(const AName: string; Y: Integer;
+  AParent: TWinControl): TPPGEdit;
+begin
+  Result := TPPGEdit.Create(FForm);
+  Result.Name := AName;
+  if AParent = nil then
+    AParent := FForm;
+  Result.Parent := AParent;
+  Result.SetBounds(120, Y, 150, 28);
+  Result.Text := '';
+end;
+
+procedure TValidatorComfortTests.FieldRulesWhileEditing;
+var
+  N, A: TPPGDBEdit;
+  Res: TPPGValidationResult;
+begin
+  N := NewDBEdit('Name', 10);
+  A := NewDBEdit('Age', 50);
+  NewDBEdit('Note', 90);
+  FData.Append;
+  CheckFalse(FV.Validate, 'Pflichtfeld leer');
+  CheckEquals(1, FV.ResultCount, 'nur Name (Note nicht Pflicht, ID AutoInc)');
+  CheckTrue(FV.ResultFor(N, Res));
+  CheckTrue(Res.Rule = nil, 'Regel aus dem Datenfeld');
+  CheckEquals(Format(PPGStr(@SPPGValRequired), ['Kundenname']), Res.Message, 'DisplayLabel');
+  CheckEquals('Kundenname', Res.Caption);
+  CheckTrue(N.ValidationState = pvsError);
+  N.Text := 'Bernd';
+  A.Text := '130';
+  CheckFalse(FV.Validate, 'Alter ueber MaxValue');
+  CheckTrue(FV.ResultFor(A, Res));
+  CheckTrue(Pos('120', Res.Message) > 0, Res.Message);
+  CheckTrue(N.ValidationState = pvsNone, 'Name behoben');
+  A.Text := '42';
+  CheckTrue(FV.Validate);
+  FData.Cancel;
+end;
+
+procedure TValidatorComfortTests.FieldRulesSkipReadOnlyAndBrowse;
+var
+  N: TPPGDBEdit;
+begin
+  N := NewDBEdit('Name', 10);
+  FData.Edit;
+  FData.FieldByName('Name').Clear;
+  N.Text := '';
+  CheckFalse(FV.Validate);
+  FData.Cancel;
+  // Sonst schaltet das Tippen die Datenmenge selbst in dsEdit
+  FSource.AutoEdit := False;
+  N.Text := '';
+  CheckTrue(FData.State = dsBrowse);
+  CheckTrue(FV.Validate, 'ohne Bearbeitung keine Feldregeln');
+  FSource.AutoEdit := True;
+  FData.Edit;
+  N.Text := '';
+  N.ReadOnly := True;
+  CheckTrue(FV.Validate, 'schreibgeschuetztes Control');
+  N.ReadOnly := False;
+  FData.FieldByName('Name').ReadOnly := True;
+  CheckTrue(FV.Validate, 'schreibgeschuetztes Feld');
+  FData.FieldByName('Name').ReadOnly := False;
+  FV.AutoFieldRules := False;
+  CheckTrue(FV.Validate, 'abgeschaltet');
+  FData.Cancel;
+end;
+
+procedure TValidatorComfortTests.FieldRulesWithExplicitRules;
+var
+  Note: TPPGDBEdit;
+  R: TPPGValidationRule;
+begin
+  Note := NewDBEdit('Note', 10);
+  R := FV.Rules.AddRule(Note, vrLength);
+  R.MinLength := 3;
+  FData.Append;
+  FData.FieldByName('Name').AsString := 'X';
+  Note.Text := 'ab';
+  CheckFalse(FV.Validate, 'eigene Regel am DB-Control');
+  Note.Text := 'abc';
+  CheckTrue(FV.Validate);
+  FData.Cancel;
+end;
+
+procedure TValidatorComfortTests.VclDBControlIsDataAware;
+var
+  E: TPPGEdit;
+  D: TPPGDBEdit;
+begin
+  E := NewEdit('Plain', 10);
+  D := NewDBEdit('Name', 50);
+  CheckFalse(PPGIsDataAwareControl(E));
+  CheckTrue(PPGIsDataAwareControl(D));
+  CheckTrue(PPGControlField(D) = FData.FieldByName('Name'));
+  D.DataField := '';
+  CheckTrue(PPGControlField(D) = nil, 'nicht verbunden');
+end;
+
+procedure TValidatorComfortTests.SummaryBarAfterFirstValidate;
+var
+  Bar: TPPGInfoBar;
+  E1, E2: TPPGEdit;
+begin
+  Bar := TPPGInfoBar.Create(FForm);
+  Bar.Parent := FForm;
+  Bar.Align := alTop;
+  FV.SummaryBar := Bar;
+  CheckFalse(Bar.IsOpen, 'ohne Ergebnis zu');
+  E1 := NewEdit('E1', 60);
+  E1.TextHint := 'Vorname';
+  E2 := NewEdit('E2', 100);
+  E2.TextHint := 'Nachname';
+  FV.Rules.AddRule(E1, vrRequired);
+  FV.Rules.AddRule(E2, vrRequired);
+  E1.Perform(CM_EXIT, 0, 0);
+  Application.ProcessMessages;
+  CheckEquals(1, FV.ErrorCount);
+  CheckFalse(Bar.IsOpen, 'automatische Pruefung oeffnet die Leiste nicht');
+  CheckFalse(FV.Validate);
+  CheckTrue(Bar.IsOpen);
+  CheckTrue(Bar.Severity = psError);
+  CheckEquals(Format(PPGStr(@SPPGValErrors), [2]), Bar.Title);
+  CheckEquals('Vorname, Nachname', Bar.Message);
+  CheckEquals(PPGStr(@SPPGValGoToError), Bar.ActionCaption);
+  E1.Text := 'Anna';
+  Application.ProcessMessages;
+  CheckEquals(PPGStr(@SPPGValOneError), Bar.Title, 'live aktualisiert');
+  E2.Text := 'Berg';
+  Application.ProcessMessages;
+  CheckFalse(Bar.IsOpen, 'alles gueltig: zu');
+end;
+
+procedure TValidatorComfortTests.SummaryBarChainsActionAndRestores;
+var
+  Bar: TPPGInfoBar;
+  E: TPPGEdit;
+begin
+  Bar := TPPGInfoBar.Create(FForm);
+  Bar.Parent := FForm;
+  Bar.Align := alTop;
+  Bar.OnActionClick := LogAction;
+  FV.SummaryBar := Bar;
+  E := NewEdit('E', 80);
+  FV.Rules.AddRule(E, vrRequired);
+  FForm.Show;
+  FV.Validate;
+  Bar.OnActionClick(Bar);
+  CheckEquals('A', FLog, 'eigener Handler laeuft weiter');
+  CheckTrue(E.Focused, 'springt zum Fehler');
+  FV.SummaryBar := nil;
+  CheckTrue(TMethod(Bar.OnActionClick).Code = @TValidatorComfortTests.LogAction,
+    'Handler zurueckgesetzt');
+end;
+
+procedure TValidatorComfortTests.CheckOnCloseBlocksOk;
+var
+  E: TPPGEdit;
+begin
+  E := NewEdit('E', 10);
+  FV.Rules.AddRule(E, vrRequired);
+  FForm.ModalResult := mrCancel;
+  CheckTrue(FForm.CloseQuery, 'Abbrechen schliesst immer');
+  FForm.ModalResult := mrOk;
+  CheckFalse(FForm.CloseQuery, 'OK bei Fehlern nicht');
+  CheckEquals(1, FV.ErrorCount);
+  E.Text := 'x';
+  CheckTrue(FForm.CloseQuery);
+  E.Text := '';
+  FV.CheckOnClose := False;
+  CheckTrue(FForm.CloseQuery, 'abgeschaltet');
+end;
+
+procedure TValidatorComfortTests.CheckOnCloseChainsAndRestores;
+var
+  F: TForm;
+  V: TPPGValidator;
+  E: TPPGEdit;
+begin
+  F := TForm.CreateNew(nil);
+  try
+    F.OnCloseQuery := LogQuery;
+    E := TPPGEdit.Create(F);
+    E.Parent := F;
+    V := TPPGValidator.Create(F);
+    V.Rules.AddRule(E, vrRequired);
+    F.ModalResult := mrOk;
+    CheckFalse(F.CloseQuery);
+    CheckEquals('Q', FLog, 'vorhandenes OnCloseQuery laeuft zuerst');
+    V.Free;
+    CheckTrue(TMethod(F.OnCloseQuery).Code = @TValidatorComfortTests.LogQuery,
+      'beim Freigeben zurueckgesetzt');
+    CheckTrue(F.CloseQuery);
+  finally
+    F.Free;
+  end;
+end;
+
+procedure TValidatorComfortTests.SubmitControlFollowsRequired;
+var
+  E: TPPGEdit;
+  Ok: TPPGButton;
+  R: TPPGValidationRule;
+begin
+  E := NewEdit('E', 10);
+  Ok := TPPGButton.Create(FForm);
+  Ok.Parent := FForm;
+  Ok.Top := 100;
+  FV.Rules.AddRule(E, vrRequired);
+  R := FV.Rules.AddRule(E, vrLength);
+  R.MinLength := 5;
+  FV.SubmitControl := Ok;
+  CheckFalse(Ok.Enabled, 'Pflichtfeld leer');
+  E.Text := 'ab';
+  Application.ProcessMessages;
+  CheckTrue(Ok.Enabled, 'nur Pflicht zaehlt, nicht die Laenge');
+  E.Text := '';
+  Application.ProcessMessages;
+  CheckFalse(Ok.Enabled);
+  FV.Active := False;
+  CheckTrue(Ok.Enabled, 'abgeschaltet');
+end;
+
+procedure TValidatorComfortTests.WizardValidatesCurrentPage;
+var
+  W: TPPGWizard;
+  P1, P2: TPPGWizardPage;
+  E1, E2: TPPGEdit;
+begin
+  W := TPPGWizard.Create(FForm);
+  W.Parent := FForm;
+  W.Align := alClient;
+  P1 := TPPGWizardPage.Create(FForm);
+  P1.Wizard := W;
+  P2 := TPPGWizardPage.Create(FForm);
+  P2.Wizard := W;
+  W.ActivePage := P1;
+  E1 := NewEdit('E1', 10, P1);
+  E2 := NewEdit('E2', 10, P2);
+  FV.Rules.AddRule(E1, vrRequired);
+  FV.Rules.AddRule(E2, vrRequired);
+  W.OnCanAdvance := LogAdvance;
+  FV.Wizard := W;
+  CheckFalse(W.Next, 'Seite 1 ungueltig');
+  CheckTrue(W.ActivePage = P1);
+  CheckEquals('W', FLog, 'vorhandener Handler laeuft');
+  CheckEquals(1, FV.ResultCount, 'nur die aktuelle Seite');
+  E1.Text := 'x';
+  CheckTrue(W.Next);
+  CheckTrue(W.ActivePage = P2);
+  FV.Wizard := nil;
+  CheckTrue(TMethod(W.OnCanAdvance).Code = @TValidatorComfortTests.LogAdvance);
+end;
+
+procedure TValidatorComfortTests.WizardPagesCountLikeTabs;
+var
+  W: TPPGWizard;
+  P1, P2: TPPGWizardPage;
+  E2: TPPGEdit;
+begin
+  W := TPPGWizard.Create(FForm);
+  W.Parent := FForm;
+  W.Align := alClient;
+  P1 := TPPGWizardPage.Create(FForm);
+  P1.Wizard := W;
+  P2 := TPPGWizardPage.Create(FForm);
+  P2.Wizard := W;
+  W.ActivePage := P1;
+  E2 := NewEdit('E2', 10, P2);
+  FV.Rules.AddRule(E2, vrRequired);
+  FForm.Show;
+  CheckFalse(FV.Validate, 'Feld auf inaktiver Seite zaehlt');
+  CheckTrue(FV.FocusFirstError);
+  CheckTrue(W.ActivePage = P2, 'Sprung wechselt die Seite');
+  P2.PageVisible := False;
+  CheckTrue(FV.Validate, 'ausgeblendete Seite nicht');
+end;
+
+
 initialization
   RegisterTest('Phase19', TValidatorTests.Suite);
+  RegisterTest('Phase19', TValidatorComfortTests.Suite);
 
 end.

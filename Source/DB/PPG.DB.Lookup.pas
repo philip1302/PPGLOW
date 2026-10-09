@@ -80,6 +80,10 @@ type
 
 implementation
 
+uses
+  // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
+  PPG.DB.Validator;
+
 { TPPGLookupListLink }
 
 constructor TPPGLookupListLink.Create(AOwner: TPPGDBLookupComboBox);

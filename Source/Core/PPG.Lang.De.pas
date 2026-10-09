@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 209;
+  PPGLangDeCount = 215;
 
 implementation
 
@@ -440,6 +440,18 @@ begin
     '%s ist ung'#$00FC'ltig.');
   PPGAddTranslation(PPGLangDeCode, @SPPGValUnsupported,
     'Der Validator kann den Wert von %s (%s) nicht lesen.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValOneError,
+    '1 Fehler');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValErrors,
+    '%d Fehler');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValOneWarning,
+    '1 Warnung');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValWarnings,
+    '%d Warnungen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValAndMore,
+    '%s und %d weitere');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValGoToError,
+    'Zum Fehler');
 end;
 
 initialization

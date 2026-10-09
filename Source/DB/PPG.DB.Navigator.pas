@@ -245,7 +245,7 @@ implementation
 uses
   System.Math, System.UITypes, System.StrUtils, Vcl.Forms, Vcl.Dialogs, Winapi.oleacc,
   PPG.Appearance, PPG.Exceptions, PPG.Lang, PPG.Consts, PPG.DpiUtils, PPG.Render.Gdi,
-  PPG.IconFont, PPG.Tokens, PPG.Controls.Field, PPG.Dialogs;
+  PPG.IconFont, PPG.Tokens, PPG.Controls.Field, PPG.Dialogs, PPG.DB.Validator;
 
 const
   BtnIcons: array[TNavigateBtn] of Word = ($E892, $E76B, $E76C, $E893, $E710, $E74D, $E70F,
