@@ -23,7 +23,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics,
-  PPG.Types, PPG.Animation, PPG.Tokens, PPG.Render.Intf, PPG.Markup, PPG.Controls.Base, PPG.ElementStyle;
+  PPG.Types, PPG.Animation, PPG.Tokens, PPG.Render.Intf, PPG.Markup, PPG.Markup.Parser, PPG.Controls.Base, PPG.ElementStyle;
 
 type
   TPPGSeverity = (psInformational, psSuccess, psWarning, psError);

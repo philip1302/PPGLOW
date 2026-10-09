@@ -1685,6 +1685,8 @@ begin
     try
       ProcessPending;
     except
+      // Grenze: gepostete Fensternachricht ruft Anwender-Code (Regeln,
+      // Ereignisse) - Exception melden, das Hilfsfenster nicht verlassen
       on E: Exception do
         TPPGErrorHandler.HandleCallbackError(Self, E, 'PPG.Validator');
     end;

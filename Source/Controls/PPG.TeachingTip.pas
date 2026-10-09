@@ -35,7 +35,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics, Vcl.Forms,
-  PPG.Types, PPG.Tokens, PPG.Render.Intf, PPG.StyleManager, PPG.Markup,
+  PPG.Types, PPG.Tokens, PPG.Render.Intf, PPG.StyleManager, PPG.Markup, PPG.Markup.Parser,
   PPG.Accessibility, PPG.Controls.Base, PPG.Popup, PPG.Popup.Placement;
 
 type

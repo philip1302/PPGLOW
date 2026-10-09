@@ -53,7 +53,7 @@ type
 implementation
 
 uses
-  PPG.Markup, PPG.Consts, PPG.Lang;
+  PPG.Markup.Parser, PPG.Consts, PPG.Lang;
 
 type
   TGridAccess = class(TPPGGrid);

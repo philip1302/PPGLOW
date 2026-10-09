@@ -43,7 +43,7 @@ implementation
 
 uses
   Winapi.Windows, Winapi.WinSpool, System.Variants, System.Math, Vcl.Graphics,
-  PPG.Types, PPG.Tokens, PPG.Markup, PPG.Grid.CellKinds, PPG.Grid.Look,
+  PPG.Types, PPG.Tokens, PPG.Markup.Parser, PPG.Grid.CellKinds, PPG.Grid.Look,
   PPG.Grid.Styles, PPG.Grid.Columns, PPG.Exceptions, PPG.Lang, PPG.Consts;
 
 type

@@ -89,7 +89,7 @@ implementation
 
 uses
   Winapi.Windows, System.Zip, System.IOUtils, System.Math, Vcl.Graphics, PPG.Types, PPG.Tokens,
-  PPG.Markup, PPG.Grid.Styles, PPG.Grid.CellKinds, PPG.Grid.Look, PPG.Exceptions, PPG.Lang,
+  PPG.Markup.Parser, PPG.Grid.Styles, PPG.Grid.CellKinds, PPG.Grid.Look, PPG.Exceptions, PPG.Lang,
   PPG.Consts;
 
 const

@@ -159,7 +159,7 @@ type
     function GetItem(Index: Integer): TPPGNavItem;
   protected
     procedure Update(Item: TCollectionItem); override;
-    procedure Notify(Item: TCollectionItem; Action: TCollectionNotification); override;
+    procedure Notify(Item: TCollectionItem; Action: System.Classes.TCollectionNotification); override;
   public
     constructor Create(AOwner: TPersistent);
     function Add: TPPGNavItem;
@@ -847,7 +847,7 @@ begin
     N.ItemsChanged;
 end;
 
-procedure TPPGNavItems.Notify(Item: TCollectionItem; Action: TCollectionNotification);
+procedure TPPGNavItems.Notify(Item: TCollectionItem; Action: System.Classes.TCollectionNotification);
 var
   N: TPPGNavigationView;
 begin
@@ -855,7 +855,7 @@ begin
   N := NavigationView;
   if N = nil then
     Exit;
-  if Action in [cnExtracting, cnDeleting] then
+  if Action in [System.Classes.cnExtracting, System.Classes.cnDeleting] then
   begin
     if N.FSelected = Item then
       N.FSelected := nil;

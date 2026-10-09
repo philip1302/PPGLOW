@@ -23,7 +23,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF} System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics, Vcl.ComCtrls, Vcl.Forms, Vcl.ActnList, Vcl.StdActns,
-  PPG.Types, PPG.Render.Intf, PPG.Markup, PPG.Accessibility, PPG.Controls.Base,
+  PPG.Types, PPG.Render.Intf, PPG.Markup, PPG.Markup.Parser, PPG.Accessibility, PPG.Controls.Base,
   PPG.ElementStyle;
 
 type

@@ -518,7 +518,7 @@ implementation
 uses
   PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc, PPG.UIA.Intf,
-  PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Markup,
+  PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Markup.Parser,
   PPG.Selection, PPG.Render.Registry, PPG.Render.Gdi, Vcl.Forms;
 
 type

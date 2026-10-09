@@ -1,0 +1,8 @@
+package PPGlowR;
+
+requires
+  rtl,
+  vcl,
+  vcldb;
+
+end.

@@ -1,0 +1,6 @@
+Kleines Projekt fuer die Regel PROJECT: PPG.Fehlt.pas fehlt in der XE2-Liste,
+und die XE2-Liste nennt eine Datei, die es nicht gibt.
+expect: PROJECT
+text: Unit fehlt: PPG.Fehlt.pas
+text: Eingetragene Datei existiert nicht
+text: PPG.Weg.pas

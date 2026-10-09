@@ -30,7 +30,7 @@ implementation
 
 uses
   System.DateUtils, System.Generics.Collections, PPG.Types, PPG.Exceptions, PPG.Lang,
-  PPG.Consts, PPG.Markup, PPG.TimeZones, PPG.Planner.Recurrence;
+  PPG.Consts, PPG.Markup.Parser, PPG.TimeZones, PPG.Planner.Recurrence;
 
 function Escape(const S: string): string;
 begin

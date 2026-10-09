@@ -26,7 +26,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $BuildProfile = 'PPGlowBuild'   # HKCU\Software\Embarcadero\PPGlowBuild - nur fuer Batch-Builds
 # -File uebergibt Arrays als einen String ("A,B") -> aufteilen
-$Projects = @($Projects | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
+$Projects = @($Projects | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $Root = Split-Path -Parent $PSScriptRoot
 
 # Studio-Version -> Ordnername unter Packages\
@@ -45,6 +45,15 @@ $ProjectFiles = @{
   'Bench'   = 'Tests\Bench\PPGlowBench.dproj'
 }
 
+# Unbekannte Projektnamen (Tippfehler) sofort abweisen - sonst liefe der Build
+# ohne Fehler durch und meldete nur "Projekte: 0".
+$unknown = @($Projects | Where-Object { -not $ProjectFiles.ContainsKey($_) })
+if ($unknown.Count -gt 0) {
+  Write-Host ("Unbekannte Projekte: {0}. Erlaubt: {1}" -f ($unknown -join ', '),
+    (($ProjectFiles.Keys | Sort-Object) -join ', ')) -ForegroundColor Red
+  exit 1
+}
+
 function Get-StudioDir([string]$Ver) {
   $key = "HKCU:\Software\Embarcadero\BDS\$Ver"
   if (-not (Test-Path $key)) { return $null }
@@ -52,7 +61,13 @@ function Get-StudioDir([string]$Ver) {
 }
 
 function Test-CommandLineCompiler([string]$StudioDir) {
-  $out = & (Join-Path $StudioDir 'bin\dcc32.exe') '--version' 2>&1 | Out-String
+  # Natives Programm mit 2>&1: unter 'Stop' bricht schon eine stderr-Zeile ab
+  # -> lokal 'Continue'
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $out = & (Join-Path $StudioDir 'bin\dcc32.exe') '--version' 2>&1 | Out-String
+  } finally { $ErrorActionPreference = $old }
   return ($out -notmatch 'does not support command line')
 }
 
@@ -114,6 +129,11 @@ public static class PPGBuildWin {
 "@
 }
 
+# Abschlusszeile der IDE in der .err-Datei. Nur eine ausdrueckliche Erfolgszeile
+# zaehlt als Erfolg; fehlt sie (Timeout, Absturz, abgebrochen), gilt der Build als fehlgeschlagen.
+$DoneMarker = '(?m)^\s*(Erfolg|Success|Misslungen|Failed)\s*$'
+$SuccessMarker = '(?m)^\s*(Erfolg|Success)\s*$'
+
 function Invoke-IdeBuildCore([string]$StudioDir, [string]$Project) {
   $bds = Join-Path $StudioDir 'bin\bds.exe'
   $err = [IO.Path]::ChangeExtension($Project, '.err')
@@ -136,7 +156,7 @@ function Invoke-IdeBuildCore([string]$StudioDir, [string]$Project) {
     [void][PPGBuildWin]::ClickNoticeOk($p.Id)
     if (Test-Path $err) {
       $text = Get-Content $err -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
-      if ($text -match '(Erfolg|Misslungen|Success|Failed)') { break }
+      if ($text -match $DoneMarker) { break }
     }
     Start-Sleep -Milliseconds 500
   }
@@ -150,19 +170,28 @@ function Invoke-IdeBuildCore([string]$StudioDir, [string]$Project) {
       $p | Stop-Process -Force
     }
   }
-  if (-not (Test-Path $err)) { throw "Keine Build-Ausgabe ($err) fuer $Project (Timeout?)" }
-  $text = Get-Content $err -Raw -Encoding UTF8
-  $problems = ($text -split "`r?`n") | Where-Object { $_ -match '\[dcc(32|64) (Fehler|Fataler Fehler|Error|Fatal|Warnung|Warning|Hinweis|Hint)\]' }
-  $failed = $text -match '(Misslungen|Failed|Fehler beim Erzeugen)'
+  if (-not (Test-Path $err -PathType Leaf)) { throw "Keine Build-Ausgabe ($err) fuer $Project (Timeout/abgebrochen)" }
+  $text = [string](Get-Content $err -Raw -Encoding UTF8)
+  $problems = @(($text -split "`r?`n") | Where-Object { $_ -match '\[dcc(32|64) (Fehler|Fataler Fehler|Error|Fatal|Warnung|Warning|Hinweis|Hint)\]' })
+  $failed = ($text -notmatch $SuccessMarker) -or ($text -match '(Misslungen|Failed|Fehler beim Erzeugen)')
+  if ($text -notmatch $DoneMarker) {
+    $problems += "Keine Abschlusszeile (Erfolg/Misslungen) in $err - Timeout/abgebrochen"
+  }
   return [pscustomobject]@{ Failed = $failed; Problems = $problems; Log = $text }
 }
 
 function Invoke-MsBuild([string]$StudioDir, [string]$Project, [string]$Platform) {
   $rsvars = Join-Path $StudioDir 'bin\rsvars.bat'
   $cmd = "call `"$rsvars`" && msbuild `"$Project`" /t:Build /p:Config=$Config /p:Platform=$Platform /nologo /v:minimal"
-  $text = cmd /c $cmd 2>&1 | Out-String
+  # 2>&1 auf ein natives Programm: lokal 'Continue' (siehe Test-CommandLineCompiler)
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $text = cmd /c $cmd 2>&1 | Out-String
+    $exitCode = $LASTEXITCODE
+  } finally { $ErrorActionPreference = $old }
   $problems = ($text -split "`r?`n") | Where-Object { $_ -match ': (error|warning|hint) ' }
-  return [pscustomobject]@{ Failed = ($LASTEXITCODE -ne 0); Problems = $problems; Log = $text }
+  return [pscustomobject]@{ Failed = ($exitCode -ne 0); Problems = $problems; Log = $text }
 }
 
 # Zuerst die Coding-Rules pruefen: ein Verstoss (z.B. Unit fehlt in einer
@@ -189,9 +218,9 @@ foreach ($ver in $Versions.Keys) {
     # Ohne .dproj (z.B. aeltere Delphi-Version): Quelle direkt, die IDE erzeugt das .dproj
     foreach ($ext in '.dpr', '.dpk') {
       $alt = [IO.Path]::ChangeExtension($proj, $ext)
-      if (-not (Test-Path $proj) -and (Test-Path $alt)) { $proj = $alt }
+      if (-not (Test-Path $proj -PathType Leaf) -and (Test-Path $alt -PathType Leaf)) { $proj = $alt }
     }
-    if (-not (Test-Path $proj)) { Write-Host "  $name : $proj fehlt - uebersprungen" -ForegroundColor DarkYellow; continue }
+    if (-not (Test-Path $proj -PathType Leaf)) { Write-Host "  $name : $proj fehlt - uebersprungen" -ForegroundColor DarkYellow; continue }
     $total++
     if ($cmdLine) { $r = Invoke-MsBuild $studio $proj $Platform } else { $r = Invoke-IdeBuild $studio $proj }
     if ($r.Failed) {

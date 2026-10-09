@@ -1,0 +1,3 @@
+# Beispiel fuer den Selbsttest des Regel-Pruefers
+SPPGA=Wert %s von %d
+SPPGX=Unbekannt

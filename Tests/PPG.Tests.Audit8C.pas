@@ -12,7 +12,7 @@ interface
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.StdCtrls, Vcl.ComCtrls,
-  PPG.Types, PPG.Items, PPG.Selection, PPG.Markup, PPG.ItemPainter, PPG.Render.Gdi,
+  PPG.Types, PPG.Items, PPG.Selection, PPG.Markup, PPG.Markup.Parser, PPG.ItemPainter, PPG.Render.Gdi,
   PPG.Controls.ItemList, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.ComboBox,
   PPG.Tests.Controls;
 

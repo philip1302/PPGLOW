@@ -8,7 +8,7 @@ interface
 uses
   TestFramework, Winapi.Windows, System.Classes, System.SysUtils, System.DateUtils,
   PPG.TimeZones, PPG.Planner.Recurrence, PPG.Planner.Layout, PPG.Planner.Model,
-  PPG.Planner.ICal, PPG.Markup;
+  PPG.Planner.ICal, PPG.Markup.Parser;
 
 type
   TTimeZoneTests = class(TTestCase)

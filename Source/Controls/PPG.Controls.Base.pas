@@ -2150,7 +2150,7 @@ begin
     ACanvas.TextRect(R, S, [tfCenter, tfVerticalCenter, tfSingleLine, tfEndEllipsis]);
   except
     on E: Exception do
-      // Letzte Linie: selbst der Notfall-Zustand scheitert (z.B. kein GDI-
+      // Grenze (Paint), letzte Linie: selbst der Notfall-Zustand scheitert (z.B. kein GDI-
       // Handle mehr frei). Nur protokollieren - Weiterwerfen wuerde die
       // Anwendung in eine Paint-Schleife treiben.
       TPPGErrorHandler.LogWarning(Self, 'PaintFallback: ' + E.Message);

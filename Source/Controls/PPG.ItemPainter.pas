@@ -15,7 +15,7 @@ interface
 
 uses
   Winapi.Windows, System.Classes, System.Types, Vcl.Graphics, Vcl.ImgList,
-  PPG.Types, PPG.Items, PPG.Render.Intf, PPG.Markup, PPG.ElementStyle;
+  PPG.Types, PPG.Items, PPG.Render.Intf, PPG.Markup, PPG.Markup.Parser, PPG.ElementStyle;
 
 type
   /// Bereiche einer Liste (ListBox, CheckListBox, TreeView, Combo-Liste).

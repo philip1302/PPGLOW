@@ -85,7 +85,7 @@ implementation
 
 uses
   System.Math, System.UITypes, System.Generics.Collections, PPG.Lang, PPG.Consts, PPG.Appearance,
-  PPG.Markup, PPG.Sparkline, PPG.Render.Shapes;
+  PPG.Markup, PPG.Markup.Parser, PPG.Sparkline, PPG.Render.Shapes;
 
 var
   GKinds: array[TPPGGridCellKind] of IPPGCellKind;

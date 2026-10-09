@@ -72,6 +72,7 @@ uses
   PPG.PageControl in '..\Source\Controls\PPG.PageControl.pas',
   PPG.Selection in '..\Source\Core\PPG.Selection.pas',
   PPG.Items in '..\Source\Core\PPG.Items.pas',
+  PPG.Markup.Parser in '..\Source\Core\PPG.Markup.Parser.pas',
   PPG.Markup in '..\Source\Render\PPG.Markup.pas',
   PPG.RowLayout in '..\Source\Controls\PPG.RowLayout.pas',
   PPG.Controls.Scroll in '..\Source\Controls\PPG.Controls.Scroll.pas',

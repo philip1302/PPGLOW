@@ -1,0 +1,8 @@
+Kleines Projekt fuer die Regel LANG (Build\make-lang.ps1 -Check): Platzhalter
+passen nicht, ein unbekannter Name, eine fehlende Uebersetzung und die
+erzeugte Unit PPG.Lang.De.pas fehlt.
+expect: LANG
+text: Platzhalter von SPPGA passen nicht
+text: unbekannter Name SPPGX
+text: Uebersetzung fehlt fuer SPPGB
+text: PPG.Lang.De.pas fehlt

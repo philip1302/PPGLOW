@@ -1,5 +1,5 @@
 <#
-  PPGlow Regel-Pruefer (Phase 9e)
+  PPGlow Regel-Pruefer (Phase 9e, erweitert in Audit 11d)
 
   Prueft die verbindlichen Coding-Rules (Docs\Coding-Rules.md) OHNE Compiler.
   Laeuft deshalb auch auf Rechnern ohne Delphi und vor jedem Build.
@@ -18,15 +18,40 @@
                 keine [weak]/[unsafe]-Attribute
   - COMMENT     kein "{" innerhalb eines { }-Kommentars (z. B. {$IF} im Text)
   - RAISE       nur PPGlow-Exceptions werfen (EPPG...), kein RaiseLastOSError
-  - EXCEPT      kein leeres "except end"
+  - EXCEPT      kein leeres "except end"; in Source ein "except" ohne "on"-Filter
+                (oder mit "on E: Exception") und ohne raise/Abort nur an einer
+                Grenze (Kommentar "Grenze" bis 6 Zeilen davor oder im Handler)
+                oder in Source\Access, PPG.ErrorHandler, PPG.Animation
+  - DB          Data.*, Datasnap.*, Vcl.DB*, MidasLib nur in Source\DB und
+                Source\DesignDB (geprueft wird Source)
+  - DESIGN      DesignIntf, DesignEditors, VCLEditors, ToolsAPI, ColnEdit ...
+                nur in Source\Design und Source\DesignDB
+  - UNITS       keine unqualifizierten RTL/VCL-Units in uses (Windows statt
+                Winapi.Windows ...) in Source, Tests, Demo
+  - IMAGEINDEX  TImageIndex nur in PPG.Types (sonst TPPGImageIndex)
+  - TIMER       TTimer/SetTimer/KillTimer in Source nur in PPG.Animation
+  - LAYER       Schichten in Source: eine Unit nutzt nur erlaubte Schichten
+                (Core -> Core; Render -> Core, Render; ...; siehe $LayerAllowed)
+  - TEXT        kein Caption/Hint/Text := 'Literal' (>= 2 Buchstaben) in Source
+                ausser Design, DesignDB, Editors (Texte ueber PPGStr)
+  - XE2         Verbotsliste: FMod; unqualifiziertes TCollectionNotification/
+                cnAdded... in Units mit System.Generics.Collections;
+                DocumentProperties(...) mit nil
   - PROJECT     jede Unit steht in allen Projektlisten ihrer Gruppe, und jede
                 eingetragene Datei existiert
+  - REQUIRES    die requires-Liste jedes Pakets ist in Packages\XE2 und
+                Packages\Delphi13 gleich
   - LANG        jede resourcestring ist in Lang\PPGlow.*.txt uebersetzt, die
                 Platzhalter passen, und die erzeugten PPG.Lang.*.pas sind aktuell
                 (Build\make-lang.ps1 -Check)
 
   -SelfTest prueft den Pruefer selbst an den Beispieldateien in
-  Build\check-rules-tests (jede Datei nennt die erwarteten Regeln).
+  Build\check-rules-tests: jede .pas-Datei nennt in Zeile 1 die erwarteten
+  Regeln ("// expect: REGEL ..."), optional in den Zeilen 2 und 3 den Pfad, als
+  laege sie im Projekt ("// path: Source\Core\X.pas"), und die Zahl der
+  Meldungen ("// count: 2"). Jeder Unterordner ist ein kleines
+  Projekt fuer die Regeln ueber mehrere Dateien (PROJECT, REQUIRES, LANG);
+  seine expect.txt nennt die Regeln und mit "text:" Teile der Meldungen.
 #>
 param(
   [string]$Root = '',
@@ -47,14 +72,66 @@ function Add-Finding([string]$File, [int]$Line, [string]$Rule, [string]$Text) {
 }
 
 # ---------------------------------------------------------------------------
+# Listen fuer die Regeln
+# ---------------------------------------------------------------------------
+
+# Unqualifizierte RTL/VCL-Unitnamen (Regel UNITS). Voll qualifiziert lauten sie
+# Winapi.Windows, System.SysUtils, Vcl.Controls ...
+$UnqualifiedUnits = @(
+  'Windows', 'Messages', 'SysUtils', 'Classes', 'Graphics', 'Controls', 'Forms', 'Math', 'Types',
+  'Variants', 'StdCtrls', 'ExtCtrls', 'ImgList', 'Dialogs', 'ComCtrls', 'Menus', 'Buttons', 'Grids',
+  'Mask', 'CheckLst', 'ActnList', 'ToolWin', 'Clipbrd', 'Printers', 'Themes', 'GraphUtil', 'CommCtrl',
+  'ShellAPI', 'ShlObj', 'ActiveX', 'ComObj', 'MultiMon', 'UxTheme', 'DwmApi', 'MMSystem', 'Imm',
+  'RichEdit', 'WinSpool', 'UITypes', 'StrUtils', 'DateUtils', 'IniFiles', 'Registry', 'SyncObjs',
+  'Character', 'Contnrs', 'TypInfo', 'Rtti', 'IOUtils', 'Masks', 'RTLConsts', 'Consts', 'ZLib',
+  'Generics.Collections', 'Generics.Defaults', 'DB', 'DBCtrls', 'DBGrids', 'DBClient', 'Jpeg',
+  'pngimage', 'GIFImg', 'AppEvnts', 'ExtDlgs', 'FileCtrl', 'Tabs', 'ValEdit', 'ImageList', 'UIConsts',
+  'Diagnostics', 'TimeSpan', 'StdActns', 'OleCtrls', 'Hash', 'NetEncoding', 'SqlTimSt', 'FMTBcd'
+)
+
+# Units der Entwicklungsumgebung (Regel DESIGN)
+$DesignUnits = @('DesignIntf', 'DesignEditors', 'VCLEditors', 'ToolsAPI', 'ColnEdit', 'DesignMenus',
+  'DesignWindows', 'PropInspAPI', 'TreeIntf')
+
+# Schichtmatrix (Regel LAYER): Schicht (Ordner unter Source) -> erlaubte Schichten
+# der PPGlow-Units in ihren uses-Klauseln
+$LayerAllowed = @{
+  'Core'     = @('Core')
+  'Render'   = @('Core', 'Render')
+  'Theme'    = @('Core', 'Render', 'Theme')
+  'Access'   = @('Core', 'Render', 'Theme', 'Access')
+  'Controls' = @('Core', 'Render', 'Theme', 'Access', 'Controls')
+  'DB'       = @('Core', 'Render', 'Theme', 'Access', 'Controls', 'DB')
+  'Editors'  = @('Core', 'Render', 'Theme', 'Access', 'Controls', 'Editors')
+  'Design'   = @('Core', 'Render', 'Theme', 'Access', 'Controls', 'DB', 'Editors', 'Design', 'DesignDB')
+  'DesignDB' = @('Core', 'Render', 'Theme', 'Access', 'Controls', 'DB', 'Editors', 'Design', 'DesignDB')
+}
+
+# Unit-Name -> Schicht, aus dem Dateisystem (Source\<Schicht>\<Unit>.pas)
+$script:UnitLayers = @{}
+function Update-UnitLayers {
+  $script:UnitLayers = @{}
+  $src = Join-Path $Root 'Source'
+  if (-not (Test-Path $src)) { return }
+  foreach ($d in Get-ChildItem -Path $src -Directory) {
+    foreach ($f in Get-ChildItem -Path $d.FullName -Filter '*.pas' -File) {
+      $script:UnitLayers[$f.BaseName] = $d.Name
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------
 # Quelltext in Code und Direktiven zerlegen (Strings und Kommentare entfernt)
 # ---------------------------------------------------------------------------
 
 # Liefert je Zeile den reinen Code (Strings durch '' ersetzt, Kommentare
-# entfernt) sowie die Liste der Direktiven mit Zeilennummer. Meldet dabei
-# Kommentare, die ein "{" enthalten (Regel COMMENT).
+# entfernt), den Code mit Strings (Literal), den Kommentartext sowie die Liste
+# der Direktiven mit Zeilennummer. Meldet dabei Kommentare, die ein "{"
+# enthalten (Regel COMMENT).
 function Split-Source([string]$File, [string[]]$Lines) {
   $code = New-Object string[] $Lines.Count
+  $literal = New-Object string[] $Lines.Count
+  $comments = New-Object string[] $Lines.Count
   $directives = New-Object System.Collections.Generic.List[object]
   $state = ''          # '' | 'brace' | 'paren' | 'directive'
   $dirText = ''
@@ -62,12 +139,17 @@ function Split-Source([string]$File, [string[]]$Lines) {
   for ($n = 0; $n -lt $Lines.Count; $n++) {
     $s = $Lines[$n]
     $sb = New-Object System.Text.StringBuilder
+    $sl = New-Object System.Text.StringBuilder
+    $cm = New-Object System.Text.StringBuilder
     $i = 0
     while ($i -lt $s.Length) {
       $c = $s[$i]
       if ($state -eq 'brace') {
         if ($c -eq '}') { $state = '' }
-        elseif ($c -eq '{') { Add-Finding $File ($n + 1) 'COMMENT' 'Kommentar { } enthaelt ein "{" (endet sonst zu frueh)' }
+        else {
+          [void]$cm.Append($c)
+          if ($c -eq '{') { Add-Finding $File ($n + 1) 'COMMENT' 'Kommentar { } enthaelt ein "{" (endet sonst zu frueh)' }
+        }
         $i++; continue
       }
       if ($state -eq 'directive') {
@@ -77,6 +159,7 @@ function Split-Source([string]$File, [string[]]$Lines) {
       }
       if ($state -eq 'paren') {
         if ($c -eq '*' -and $i + 1 -lt $s.Length -and $s[$i + 1] -eq ')') { $state = ''; $i += 2; continue }
+        [void]$cm.Append($c)
         $i++; continue
       }
       if ($c -eq "'") {
@@ -90,9 +173,10 @@ function Split-Source([string]$File, [string[]]$Lines) {
           $j++
         }
         [void]$sb.Append("''")
+        [void]$sl.Append($s.Substring($i, [Math]::Min($j, $s.Length - 1) - $i + 1))
         $i = $j + 1; continue
       }
-      if ($c -eq '/' -and $i + 1 -lt $s.Length -and $s[$i + 1] -eq '/') { break }
+      if ($c -eq '/' -and $i + 1 -lt $s.Length -and $s[$i + 1] -eq '/') { [void]$cm.Append($s.Substring($i + 2)); break }
       if ($c -eq '{') {
         if ($i + 1 -lt $s.Length -and $s[$i + 1] -eq '$') {
           $state = 'directive'; $dirText = ''; $dirLine = $n + 1; $i += 2; continue
@@ -101,18 +185,112 @@ function Split-Source([string]$File, [string[]]$Lines) {
       }
       if ($c -eq '(' -and $i + 1 -lt $s.Length -and $s[$i + 1] -eq '*') { $state = 'paren'; $i += 2; continue }
       [void]$sb.Append($c)
+      [void]$sl.Append($c)
       $i++
     }
     $code[$n] = $sb.ToString()
+    $literal[$n] = $sl.ToString()
+    $comments[$n] = $cm.ToString()
   }
-  return @{ Code = $code; Directives = $directives }
+  return @{ Code = $code; Literal = $literal; Comments = $comments; Directives = $directives }
+}
+
+# Units aller uses-Klauseln (Name, Zeile), aus dem reinen Code
+function Get-UsesClauses([string[]]$Code) {
+  $result = New-Object System.Collections.Generic.List[object]
+  $inUses = $false
+  $expectName = $false
+  for ($n = 0; $n -lt $Code.Count; $n++) {
+    foreach ($m in [regex]::Matches($Code[$n], "[A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)*|''|[;,]")) {
+      $t = $m.Value
+      if (-not $inUses) {
+        if ($t -ieq 'uses') { $inUses = $true; $expectName = $true }
+        continue
+      }
+      if ($t -eq ';') { $inUses = $false; continue }
+      if ($t -eq ',') { $expectName = $true; continue }
+      if ($expectName) {
+        $result.Add([pscustomobject]@{ Name = ($t -replace '\s', ''); Line = $n + 1 })
+        $expectName = $false
+      }
+    }
+  }
+  return $result
+}
+
+# Woerter des reinen Codes mit Zeilennummer (fuer Bloecke ueber mehrere Zeilen)
+function Get-Words([string[]]$Code) {
+  $result = New-Object System.Collections.Generic.List[object]
+  for ($n = 0; $n -lt $Code.Count; $n++) {
+    foreach ($m in [regex]::Matches($Code[$n], '[A-Za-z_]\w*')) {
+      $result.Add([pscustomobject]@{ Text = $m.Value; Line = $n + 1 })
+    }
+  }
+  return $result
+}
+
+# Prueft except-Bloecke ohne Klassenfilter (Regel EXCEPT, nur Source)
+function Test-CatchAll([string]$File, [string[]]$Code, [string[]]$Comments) {
+  $words = Get-Words $Code
+  for ($i = 0; $i -lt $words.Count; $i++) {
+    if ($words[$i].Text -ine 'except') { continue }
+    if ($i + 1 -ge $words.Count) { break }
+    $first = $words[$i + 1].Text
+    # "except end": schon als leer gemeldet
+    if ($first -ieq 'end') { continue }
+    # Ohne "on" faengt der Block alles; mit "on" nur, wenn ein Zweig
+    # "on Exception do" bzw. "on E: Exception do" lautet (ab dort zaehlt raise)
+    $catchAll = ($first -ine 'on')
+    $raiseFrom = $i
+    $depth = 0
+    $raiseAt = @()
+    $k = $i + 1
+    while ($k -lt $words.Count) {
+      $t = $words[$k].Text
+      if ($t -ieq 'begin' -or $t -ieq 'try' -or $t -ieq 'case' -or $t -ieq 'asm') { $depth++ }
+      elseif ($t -ieq 'end') {
+        if ($depth -eq 0) { break }
+        $depth--
+      }
+      elseif ($t -ieq 'raise' -or $t -ieq 'Abort') { $raiseAt += $k }
+      elseif ($t -ieq 'on' -and $depth -eq 0 -and -not $catchAll -and $k + 2 -lt $words.Count) {
+        $w1 = $words[$k + 1].Text; $w2 = $words[$k + 2].Text
+        $w3 = ''; if ($k + 3 -lt $words.Count) { $w3 = $words[$k + 3].Text }
+        if (($w1 -ieq 'Exception' -and $w2 -ieq 'do') -or ($w2 -ieq 'Exception' -and $w3 -ieq 'do')) {
+          $catchAll = $true; $raiseFrom = $k
+        }
+      }
+      $k++
+    }
+    if (-not $catchAll) { continue }
+    if (@($raiseAt | Where-Object { $_ -gt $raiseFrom }).Count -gt 0) { continue }
+    $from = [Math]::Max(0, $words[$i].Line - 7)
+    $to = $Code.Count - 1
+    if ($k -lt $words.Count) { $to = $words[$k].Line - 1 }
+    $marked = $false
+    for ($n = $from; $n -le $to; $n++) {
+      if ($Comments[$n] -match '(?i)Grenze') { $marked = $true; break }
+    }
+    if (-not $marked) {
+      Add-Finding $File $words[$i].Line 'EXCEPT' '"except" ohne Klassenfilter (bzw. "on Exception") und ohne raise nur an einer Grenze (Kommentar "Grenze: ...") - sonst gezielt filtern'
+    }
+  }
 }
 
 # ---------------------------------------------------------------------------
 # Regeln je Datei
 # ---------------------------------------------------------------------------
 
-function Test-SourceFile([string]$File, [bool]$IsSourceUnit) {
+# $Rel: Pfad relativ zur Wurzel (z. B. Source\Core\PPG.Types.pas); bestimmt,
+# welche Regeln gelten
+function Test-SourceFile([string]$File, [string]$Rel) {
+  $IsSourceUnit = $Rel -match '^Source[\\/].+\.pas$'
+  $isSrc = $Rel -match '^Source[\\/]'
+  $isCode = $Rel -match '^(Source|Tests|Demo)[\\/]'
+  $layer = ''
+  if ($Rel -match '^Source[\\/]([^\\/]+)[\\/]') { $layer = $Matches[1] }
+  $base = [IO.Path]::GetFileNameWithoutExtension($Rel)
+
   $bytes = [IO.File]::ReadAllBytes($File)
   # ASCII
   $line = 1
@@ -146,6 +324,7 @@ function Test-SourceFile([string]$File, [bool]$IsSourceUnit) {
   $lines = $text -split "`r?`n"
   $parts = Split-Source $File $lines
   $code = $parts.Code
+  $literal = $parts.Literal
   $dirs = $parts.Directives
 
   # IF / IFEND
@@ -182,6 +361,30 @@ function Test-SourceFile([string]$File, [bool]$IsSourceUnit) {
     elseif ($ifaceLine -gt 0 -and $inc.Line -gt $ifaceLine) { Add-Finding $File $inc.Line 'INCLUDE' '{$I ..\PPG.inc} muss vor "interface" stehen' }
   }
 
+  # uses-Klauseln: DB, DESIGN, UNITS, LAYER
+  $uses = Get-UsesClauses $code
+  # Ab dieser Zeile ist System.Generics.Collections sichtbar (0 = nie)
+  $genericsFrom = 0
+  foreach ($u in $uses) {
+    $name = $u.Name
+    if ($name -ieq 'System.Generics.Collections' -or $name -ieq 'Generics.Collections') { if ($genericsFrom -eq 0) { $genericsFrom = $u.Line } }
+    if ($isSrc -and $layer -ne 'DB' -and $layer -ne 'DesignDB' -and $name -match '^(?i)(Data\.|Datasnap\.|Vcl\.DB|MidasLib$)') {
+      Add-Finding $File $u.Line 'DB' "$name nur in Source\DB bzw. Source\DesignDB (das Grundpaket linkt keine DB-Units)"
+    }
+    if ($isCode -and $layer -ne 'Design' -and $layer -ne 'DesignDB' -and $DesignUnits -contains $name) {
+      Add-Finding $File $u.Line 'DESIGN' "$name nur in Source\Design bzw. Source\DesignDB (IDE-Unit)"
+    }
+    if ($isCode -and $UnqualifiedUnits -contains $name) {
+      Add-Finding $File $u.Line 'UNITS' "Unit voll qualifizieren: $name"
+    }
+    if ($isSrc -and $LayerAllowed.ContainsKey($layer) -and $script:UnitLayers.ContainsKey($name)) {
+      $target = $script:UnitLayers[$name]
+      if ($LayerAllowed[$layer] -notcontains $target) {
+        Add-Finding $File $u.Line 'LAYER' "$layer darf $target nicht verwenden ($name)"
+      }
+    }
+  }
+
   # Zeilenweise Muster auf dem reinen Code
   $depth = 0
   $prevEndsExcept = $false
@@ -214,11 +417,49 @@ function Test-SourceFile([string]$File, [bool]$IsSourceUnit) {
       $prevEndsExcept = $trim -match '(?i)\bexcept$'
       $prevExceptLine = $ln
     }
+    # TImageIndex nur in PPG.Types (Kompatibilitaet XE2: Vcl.ImgList/System.UITypes)
+    if ($isCode -and $base -ne 'PPG.Types' -and $c -match '\bTImageIndex\b') {
+      Add-Finding $File $ln 'IMAGEINDEX' 'TPPGImageIndex statt TImageIndex verwenden'
+    }
+    # Timer nur ueber den gemeinsamen Animator
+    if ($isSrc -and $base -ne 'PPG.Animation' -and $c -match '\b(TTimer|SetTimer|KillTimer)\b') {
+      Add-Finding $File $ln 'TIMER' "$($Matches[1]) nur in PPG.Animation (Timer laufen ueber den Animator)"
+    }
+    # Sichtbare Texte nur ueber PPGStr (Design-Units ausgenommen)
+    if ($isSrc -and $layer -ne 'Design' -and $layer -ne 'DesignDB' -and $layer -ne 'Editors' -and
+        $literal[$n] -match "(?i)(?<![\w])(Caption|Hint|Text)\s*:=\s*'((?:[^']|'')*)'") {
+      if (([regex]::Matches($Matches[2], '[A-Za-z]')).Count -ge 2) {
+        Add-Finding $File $ln 'TEXT' "$($Matches[1]) := '$($Matches[2])' - sichtbarer Text gehoert als resourcestring nach PPG.Consts (PPGStr)"
+      }
+    }
+    # XE2-Verbotsliste
+    if ($isCode) {
+      if ($c -match '\bFMod\b') { Add-Finding $File $ln 'XE2' 'FMod gibt es in XE2 nicht (eigene Modulo-Funktion)' }
+      if ($genericsFrom -gt 0 -and $ln -gt $genericsFrom -and $c -match '(?<![\w.])(TCollectionNotification|cnAdded|cnRemoved|cnExtracted|cnExtracting|cnDeleting)\b') {
+        Add-Finding $File $ln 'XE2' "$($Matches[1]) mit System.Classes. qualifizieren (System.Generics.Collections verdeckt es)"
+      }
+      if ($c -match '\bDocumentProperties\s*\(') {
+        # Argumente bis zur schliessenden Klammer (auch ueber Zeilen)
+        $argText = $c.Substring($c.IndexOf($Matches[0]) + $Matches[0].Length)
+        $m = $n
+        while (($argText.Split('(').Count -ge $argText.Split(')').Count) -and $m + 1 -lt $code.Count -and $m - $n -lt 5) {
+          $m++; $argText += ' ' + $code[$m]
+        }
+        if ($argText -match '(?i)\bnil\b') {
+          Add-Finding $File $ln 'XE2' 'DocumentProperties mit nil (XE2 erwartet var DevMode) - eigenen Import mit PDeviceMode verwenden'
+        }
+      }
+    }
     # Klammertiefe fuer die Erkennung von Parameterlisten ueber mehrere Zeilen
     foreach ($ch in $c.ToCharArray()) {
       if ($ch -eq '(') { $depth++ }
       elseif ($ch -eq ')' -and $depth -gt 0) { $depth-- }
     }
+  }
+
+  # except ohne Klassenfilter nur an Grenzen
+  if ($isSrc -and $layer -ne 'Access' -and $base -ne 'PPG.ErrorHandler' -and $base -ne 'PPG.Animation') {
+    Test-CatchAll $File $code $parts.Comments
   }
 }
 
@@ -300,6 +541,32 @@ function Test-ProjectLists {
   }
 }
 
+# requires-Liste eines Pakets (Kommentare entfernt, Namen in Kleinbuchstaben)
+function Get-Requires([string]$Dpk) {
+  $lines = [IO.File]::ReadAllText($Dpk) -split "`r?`n"
+  $code = (Split-Source $Dpk $lines).Code -join ' '
+  if ($code -notmatch '(?is)\brequires\b(.*?);') { return @() }
+  return @($Matches[1] -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
+}
+
+# Jedes Paket hat in XE2 und Delphi 13 dieselbe requires-Liste
+function Test-Requires {
+  $dirs = @('Packages\XE2', 'Packages\Delphi13') | ForEach-Object { Join-RootPath $_ }
+  if (-not ((Test-Path $dirs[0]) -and (Test-Path $dirs[1]))) { return }
+  $names = @($dirs | ForEach-Object { Get-ChildItem -Path $_ -Filter '*.dpk' -File } | ForEach-Object { $_.Name } | Sort-Object -Unique)
+  foreach ($name in $names) {
+    $a = Join-Path $dirs[0] $name
+    $b = Join-Path $dirs[1] $name
+    if (-not (Test-Path $a)) { Add-Finding $b 0 'REQUIRES' "Paket fehlt in Packages\XE2: $name"; continue }
+    if (-not (Test-Path $b)) { Add-Finding $a 0 'REQUIRES' "Paket fehlt in Packages\Delphi13: $name"; continue }
+    $ra = @(Get-Requires $a | Sort-Object)
+    $rb = @(Get-Requires $b | Sort-Object)
+    if (($ra -join ',') -ne ($rb -join ',')) {
+      Add-Finding $b 0 'REQUIRES' ("requires weicht von Packages\XE2\{0} ab: XE2 [{1}], Delphi13 [{2}]" -f $name, ($ra -join ', '), ($rb -join ', '))
+    }
+  }
+}
+
 # ---------------------------------------------------------------------------
 # Lauf
 # ---------------------------------------------------------------------------
@@ -313,38 +580,86 @@ function Test-Languages {
   }
 }
 
+function Get-RelPath([string]$File) {
+  if ($File.StartsWith($Root)) { return $File.Substring($Root.Length).TrimStart('\', '/') }
+  return $File
+}
+
 function Invoke-Check([string[]]$Files, [bool]$WithProjects) {
   $script:Findings.Clear()
+  Update-UnitLayers
   foreach ($f in $Files) {
-    $isSource = $f -match '[\\/]Source[\\/].+\.pas$'
-    Test-SourceFile $f $isSource
+    Test-SourceFile $f (Get-RelPath $f)
   }
   if ($WithProjects) {
     Test-ProjectLists
+    Test-Requires
     Test-Languages
   }
 }
 
 if ($SelfTest) {
-  # Jede Beispieldatei beginnt mit "// expect: REGEL1 REGEL2" (oder "// expect: none")
   $dir = Join-Path $PSScriptRoot 'check-rules-tests'
   $failed = 0
+  Update-UnitLayers
+  # Einzeldateien: Zeile 1 "// expect: REGEL1 REGEL2" (oder "none"), optional
+  # Zeile 2 "// path: Source\...\X.pas" (Lage im Projekt, bestimmt die Regeln);
+  # "source-unit" ohne path steht fuer eine Unit unter Source (ohne Schicht)
   foreach ($f in Get-ChildItem -Path $dir -Filter '*.pas' -File) {
-    $first = (Get-Content -Path $f.FullName -TotalCount 1)
+    $head = @(Get-Content -Path $f.FullName -TotalCount 3)
     $expected = @()
-    if ($first -match '^//\s*expect:\s*(.+)$') { $expected = @($Matches[1].Trim() -split '\s+' | Where-Object { $_ -ne 'none' }) }
-    $isSource = $first -match 'source-unit'
+    if ($head[0] -match '^//\s*expect:\s*(.+)$') { $expected = @($Matches[1].Trim() -split '\s+' | Where-Object { $_ -ne 'none' }) }
+    $rel = 'SelfTest\' + $f.Name
+    if ($head[0] -match 'source-unit') { $rel = 'Source\SelfTest\' + $f.Name }
+    $count = -1
+    foreach ($h in ($head | Select-Object -Skip 1)) {
+      if ($h -match '^//\s*path:\s*(\S+)\s*$') { $rel = $Matches[1] }
+      elseif ($h -match '^//\s*count:\s*(\d+)\s*$') { $count = [int]$Matches[1] }
+    }
     $script:Findings.Clear()
-    Test-SourceFile $f.FullName $isSource
+    Test-SourceFile $f.FullName $rel
     $got = @($script:Findings | ForEach-Object { $_.Rule } | Sort-Object -Unique)
     $want = @($expected | Where-Object { $_ -ne 'source-unit' } | Sort-Object -Unique)
-    if ((Compare-Object -ReferenceObject $want -DifferenceObject $got -SyncWindow 0) -ne $null -or $want.Count -ne $got.Count) {
-      Write-Output ("FEHLER {0}: erwartet [{1}], gefunden [{2}]" -f $f.Name, ($want -join ' '), ($got -join ' '))
+    if ((Compare-Object -ReferenceObject $want -DifferenceObject $got -SyncWindow 0) -ne $null -or $want.Count -ne $got.Count -or
+        ($count -ge 0 -and $script:Findings.Count -ne $count)) {
+      Write-Output ("FEHLER {0}: erwartet [{1}], gefunden [{2}]; Anzahl erwartet {3}, gefunden {4}" -f $f.Name,
+        ($want -join ' '), ($got -join ' '), $count, $script:Findings.Count)
       $script:Findings | ForEach-Object { Write-Output ("    {0}({1}) {2}: {3}" -f $_.File, $_.Line, $_.Rule, $_.Text) }
       $failed++
     }
     else {
       Write-Output ("ok     {0}: [{1}]" -f $f.Name, ($got -join ' '))
+    }
+  }
+  # Kleine Projekte (Unterordner): expect.txt mit "expect: REGEL ..." und
+  # beliebig vielen "text: ..."-Zeilen (Teil einer erwarteten Meldung).
+  # Es laufen nur die genannten Regeln ueber mehrere Dateien.
+  $realRoot = $Root
+  foreach ($d in Get-ChildItem -Path $dir -Directory) {
+    $exp = Join-Path $d.FullName 'expect.txt'
+    if (-not (Test-Path $exp)) { continue }
+    $want = @(); $texts = @()
+    foreach ($l in [IO.File]::ReadAllLines($exp)) {
+      if ($l -match '^\s*expect:\s*(.+)$') { $want = @($Matches[1].Trim() -split '\s+' | Sort-Object -Unique) }
+      elseif ($l -match '^\s*text:\s*(.+?)\s*$') { $texts += $Matches[1] }
+    }
+    $Root = $d.FullName
+    $script:Findings.Clear()
+    try {
+      if ($want -contains 'PROJECT') { Test-ProjectLists }
+      if ($want -contains 'REQUIRES') { Test-Requires }
+      if ($want -contains 'LANG') { Test-Languages }
+    } finally { $Root = $realRoot }
+    $got = @($script:Findings | ForEach-Object { $_.Rule } | Sort-Object -Unique)
+    $missing = @($texts | Where-Object { $t = $_; -not ($script:Findings | Where-Object { $_.Text -like "*$t*" }) })
+    if ((($want -join ' ') -ne ($got -join ' ')) -or $missing.Count -gt 0) {
+      Write-Output ("FEHLER {0}\: erwartet [{1}], gefunden [{2}]" -f $d.Name, ($want -join ' '), ($got -join ' '))
+      $missing | ForEach-Object { Write-Output "    Meldung fehlt: $_" }
+      $script:Findings | ForEach-Object { Write-Output ("    {0}({1}) {2}: {3}" -f $_.File, $_.Line, $_.Rule, $_.Text) }
+      $failed++
+    }
+    else {
+      Write-Output ("ok     {0}\: [{1}] ({2} Meldungen geprueft)" -f $d.Name, ($got -join ' '), $texts.Count)
     }
   }
   exit $failed

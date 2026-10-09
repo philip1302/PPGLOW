@@ -1403,7 +1403,9 @@ begin
   except
     on Exception do
     begin
-      // Wie die Felder: kein Dialog, Fokus bleibt, Fehler am Control
+      // Grenze Fokuswechsel (CM_EXIT): Fehler beim Zurueckschreiben (auch aus
+      // OnValidate des Anwenders) wie bei den Feldern: kein Dialog, Fokus
+      // bleibt, Fehler am Control
       ValidationState := pvsError;
       if CanFocus and IsWindowVisible(Handle) then
         SetFocus;

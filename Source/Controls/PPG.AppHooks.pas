@@ -306,6 +306,8 @@ begin
       try
         TPPGControlWatchEvent(List[I])(Ctl, Message);
       except
+        // Grenze: fremder Beobachter in der Fensterprozedur - seine Exception
+        // darf die Nachricht und die uebrigen Beobachter nicht abbrechen
         on E: Exception do
           if Frame.Gone then
             TPPGErrorHandler.HandleCallbackError(nil, E, 'PPG.AppHooks.PPGWatchControl')

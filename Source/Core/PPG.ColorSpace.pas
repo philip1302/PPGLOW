@@ -23,6 +23,13 @@ implementation
 uses
   System.SysUtils, System.Math, Winapi.Windows;
 
+// Rest einer Gleitkomma-Division wie System.Math.FMod (Vorzeichen des
+// Zaehlers); FMod gibt es in XE2 noch nicht.
+function FloatMod(const Numerator, Denominator: Double): Double;
+begin
+  Result := Numerator - Double(Trunc(Numerator / Denominator) * Denominator);
+end;
+
 function RGBOf(Color: TColor): Cardinal;
 begin
   if Color < 0 then
@@ -51,7 +58,7 @@ begin
   if D <= 0 then
     H := 0
   else if Mx = R then
-    H := 60 * FMod((G - B) / D, 6)
+    H := 60 * FloatMod((G - B) / D, 6)
   else if Mx = G then
     H := 60 * ((B - R) / D + 2)
   else
@@ -65,14 +72,14 @@ var
   C, X, M, R, G, B: Double;
   Sector: Integer;
 begin
-  H := FMod(H, 360);
+  H := FloatMod(H, 360);
   if H < 0 then
     H := H + 360;
   S := EnsureRange(S, 0, 1);
   V := EnsureRange(V, 0, 1);
   C := V * S;
   Sector := Trunc(H / 60) mod 6;
-  X := C * (1 - Abs(FMod(H / 60, 2) - 1));
+  X := C * (1 - Abs(FloatMod(H / 60, 2) - 1));
   M := V - C;
   case Sector of
     0: begin R := C; G := X; B := 0; end;

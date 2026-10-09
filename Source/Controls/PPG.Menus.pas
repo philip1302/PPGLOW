@@ -401,6 +401,8 @@ begin
     try
       Flush;
     except
+      // Grenze: gepostete Fensternachricht - eine Exception aus dem Menue-
+      // Befehl darf das Hilfsfenster nicht verlassen; die Anwendung meldet sie
       Application.HandleException(Self);
     end;
   end

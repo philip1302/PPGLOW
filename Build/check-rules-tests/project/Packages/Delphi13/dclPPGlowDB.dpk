@@ -1,0 +1,10 @@
+package dclPPGlowDB;
+
+requires
+  rtl;
+
+contains
+  PPG.Da in '..\..\Source\DesignDB\PPG.Da.pas',
+  PPG.Fehlt in '..\..\Source\DesignDB\PPG.Fehlt.pas';
+
+end.
