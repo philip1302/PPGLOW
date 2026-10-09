@@ -1482,22 +1482,30 @@ end;
 
 procedure TPPGCustomTileView.PaintViewport(const ACanvas: IPPGCanvas; const View: TRect);
 var
-  I, Lo, Hi, Mid, Top, Bottom: Integer;
-  R: TRect;
+  I, Lo, Hi, Mid, Top, Bottom, M: Integer;
+  R, Clip: TRect;
   S: string;
   C: TColor;
   Temp: TFont;
   F: TFont;
 begin
   EnsureLayout;
+  // Audit 8a #1: nur der neu zu zeichnende Bereich (Rand M fuer Rahmen)
+  Clip := ViewportClip;
+  M := PPGScale(4, ScalePPI);
   Top := ScrollY;
   Bottom := ScrollY + (View.Bottom - View.Top);
+  if Clip.Top - M > View.Top then
+    Top := ScrollY + (Clip.Top - M - View.Top);
+  if Clip.Bottom + M < View.Bottom then
+    Bottom := ScrollY + (Clip.Bottom + M - View.Top);
   for I := 0 to High(FHeads) do
     if (FHeads[I].R.Bottom > Top) and (FHeads[I].R.Top < Bottom) then
     begin
       R := FHeads[I].R;
       OffsetRect(R, View.Left - ScrollX, View.Top - ScrollY);
-      PaintHead(ACanvas, I, R);
+      if NeedsPaint(R, M) then
+        PaintHead(ACanvas, I, R);
     end;
   if Length(FViewRect) = 0 then
   begin
@@ -1537,7 +1545,16 @@ begin
       Break;
     R := FViewRect[I];
     OffsetRect(R, View.Left - ScrollX, View.Top - ScrollY);
-    PaintTile(ACanvas, I, R);
+    if NeedsPaint(R, M) then
+    begin
+      // Audit 8a #5: Texte und Bilder einer Kachel teilen sich einen DC
+      PPGBeginBatch(ACanvas);
+      try
+        PaintTile(ACanvas, I, R);
+      finally
+        PPGEndBatch(ACanvas);
+      end;
+    end;
   end;
   // Gummiband
   if FBanding then

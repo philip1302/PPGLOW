@@ -150,10 +150,15 @@ type
     procedure Loaded; override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
+    /// Kein Hover-Zustand der Leiste (Audit 8a #2).
+    function UsesHotAnimation: Boolean; override;
     function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function AutoSizeWidth: Boolean; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     procedure PanelsChanged; virtual;
+    /// Ein Abschnitt hat sich geaendert, ohne die Aufteilung zu aendern:
+    /// nur er wird neu gezeichnet (Breite und Assign gehen ueber PanelsChanged).
+    procedure PanelChanged(Panel: TPPGStatusPanel); virtual;
     procedure DoDrawPanel(const ACanvas: IPPGCanvas; Panel: TPPGStatusPanel; const R: TRect); virtual;
     function AccRole: Integer; override;
     function AccName: string; override;
@@ -303,7 +308,7 @@ begin
     FColor := S.FColor;
     FTextColor := S.FTextColor;
     FFontStyle := S.FFontStyle;
-    Changed(False);
+    Changed(True);
   end
   else if Source is TStatusPanel then
   begin
@@ -313,7 +318,7 @@ begin
     FAlignment := TStatusPanel(Source).Alignment;
     FBevel := TStatusPanel(Source).Bevel;
     FStyle := TStatusPanel(Source).Style;
-    Changed(False);
+    Changed(True);
   end
   else
     inherited Assign(Source);
@@ -341,7 +346,7 @@ begin
   if FWidth <> Value then
   begin
     FWidth := PPGCheckRange(Self, 'Width', Value, 0, MaxInt);
-    Changed(False);
+    Changed(True); // verschiebt die folgenden Abschnitte: ganze Leiste
   end;
 end;
 
@@ -456,7 +461,13 @@ procedure TPPGStatusPanels.Update(Item: TCollectionItem);
 begin
   inherited Update(Item);
   if Owner is TPPGStatusBar then
-    TPPGStatusBar(Owner).PanelsChanged;
+  begin
+    // 8b: Aenderung eines Abschnitts (Text, Fortschritt ...) zeichnet nur ihn
+    if Item is TPPGStatusPanel then
+      TPPGStatusBar(Owner).PanelChanged(TPPGStatusPanel(Item))
+    else
+      TPPGStatusBar(Owner).PanelsChanged;
+  end;
 end;
 
 { TPPGStatusBar }
@@ -589,6 +600,11 @@ begin
   Result := False;
 end;
 
+function TPPGStatusBar.UsesHotAnimation: Boolean;
+begin
+  Result := False;
+end;
+
 procedure TPPGStatusBar.SetPanels(const Value: TPPGStatusPanels);
 begin
   FPanels.Assign(Value);
@@ -639,6 +655,19 @@ begin
   if csDestroying in ComponentState then
     Exit;
   Invalidate;
+  NotifyAccessibility(EVENT_OBJECT_REORDER);
+end;
+
+procedure TPPGStatusBar.PanelChanged(Panel: TPPGStatusPanel);
+begin
+  if csDestroying in ComponentState then
+    Exit;
+  if FSimplePanel or (Panel.Collection <> FPanels) then
+  begin
+    PanelsChanged;
+    Exit;
+  end;
+  InvalidateArea(PanelRect(Panel.Index));
   NotifyAccessibility(EVENT_OBJECT_REORDER);
 end;
 
