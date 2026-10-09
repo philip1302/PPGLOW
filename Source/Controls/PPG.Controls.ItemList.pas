@@ -552,7 +552,12 @@ end;
 
 function TPPGCustomItemList.MeasureItem(Index: Integer; const Data: TPPGItemData): Integer;
 begin
-  Result := DefaultItemHeight;
+  // Audit 8d #2: EnsureLayout hat die Standardhoehe schon einmal berechnet
+  // (vorher je Eintrag eine Textmessung mit eigenem DC)
+  if FLayout.DefaultHeight > 0 then
+    Result := FLayout.DefaultHeight
+  else
+    Result := DefaultItemHeight;
 end;
 
 procedure TPPGCustomItemList.EnsureLayout;
@@ -574,6 +579,8 @@ begin
   FLayout.Count := N;
   FHeaderH := TPPGItemPainter.GroupHeaderHeight(Font, ScalePPI);
   Variable := (N <= MaxVariableRows) and UseVariableRows;
+  // Erst leeren: TBits behaelt bei gleicher Groesse alte Ueberschriften
+  FHeaders.Size := 0;
   if Variable then
     FHeaders.Size := N
   else

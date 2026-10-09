@@ -180,11 +180,46 @@ begin
     Result := 1;
 end;
 
+type
+  // Audit 8d #2: Zeilenhoehe je Schrift (LOGFONT enthaelt Name, Hoehe in px,
+  // Stil, Zeichensatz, Qualitaet); Gruppenlisten fragen sie sonst je Eintrag
+  // mit eigenem DC ab. Nur Hauptthread (wie das Zeichnen).
+  TLineHeightEntry = record
+    LF: TLogFont;
+    H: Integer;
+  end;
+
+const
+  LineHeightSlots = 8;
+
+var
+  GLineHeights: array[0..LineHeightSlots - 1] of TLineHeightEntry;
+  GLineHeightCount: Integer = 0;
+  GLineHeightNext: Integer = 0;
+
 class function TPPGItemPainter.TextLineHeight(Font: TFont): Integer;
+var
+  LF: TLogFont;
+  I: Integer;
+  Keyed: Boolean;
 begin
+  FillChar(LF, SizeOf(LF), 0);
+  Keyed := GetObject(Font.Handle, SizeOf(LF), @LF) <> 0;
+  if Keyed then
+    for I := 0 to GLineHeightCount - 1 do
+      if CompareMem(@GLineHeights[I].LF, @LF, SizeOf(LF)) then
+        Exit(GLineHeights[I].H);
   Result := PPGMeasureTextNoCanvas('Wg', Font, 0, False).cy;
   if Result < 1 then
     Result := 1;
+  if Keyed then
+  begin
+    GLineHeights[GLineHeightNext].LF := LF;
+    GLineHeights[GLineHeightNext].H := Result;
+    GLineHeightNext := (GLineHeightNext + 1) mod LineHeightSlots;
+    if GLineHeightCount < LineHeightSlots then
+      Inc(GLineHeightCount);
+  end;
 end;
 
 class function TPPGItemPainter.RowHeight(Font: TFont; Images: TCustomImageList;
