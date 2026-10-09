@@ -44,7 +44,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `DataSource` | `TDataSource` |  | Datenquelle mit der Datenmenge, aus der DataField kommt. |
 | `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. |
 | `Date` | `TDate` |  | Das gewählte Datum (ohne Uhrzeit). Setzen aus Code löst kein OnChange aus; Werte außerhalb MinDate/MaxDate werden begrenzt. Nutzung: `DatePicker1.Date := IncDay(Date, 7);` |
-| `Time` | `TTime` |  | Uhrzeitanteil des Werts (wie TDateTimePicker.Time); die Anzeige zeigt nur das Datum. |
+| `Time` | `TTime` |  | Uhrzeitanteil des Werts (wie TDateTimePicker.Time). Angezeigt und bearbeitet wird er mit Kind = dtkTime bzw. dtkDateTime; mit dtkDate zeigt das Feld nur das Datum, die Uhrzeit bleibt erhalten. |
 | `Checked` | `Boolean` | `True` | Nur mit ShowCheckbox: True = ein Datum ist gesetzt, False = „kein Datum". |
 | `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |

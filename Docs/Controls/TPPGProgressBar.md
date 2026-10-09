@@ -17,7 +17,7 @@ TPPGProgressBar - Fortschrittsbalken in der Optik des Presets.
 - State pbsError/pbsPaused faerbt die Fuellung rot bzw. gelb (wie Windows)
 - Style pbstMarquee: unbestimmter Fortschritt, laeuft ueber den gemeinsamen Animator (kein eigener Timer) und nur, solange das Control sichtbar ist. Mit abgeschalteten Animationen (Systemeinstellung, Remote-Desktop) steht das Segment still in der Mitte.
 - Positionswechsel werden weich animiert (Animation-Einstellungen).
-- Migration: Typen und Property-Namen von TProgressBar (Vcl.ComCtrls), eine DFM laesst sich per Suchen/Ersetzen umstellen. Smooth wird nur zur Kompatibilitaet gelesen: PPGlow zeichnet immer einen durchgehenden Balken.
+- Migration: Typen und Property-Namen von TProgressBar (Vcl.ComCtrls), eine DFM laesst sich per Suchen/Ersetzen umstellen. Smooth wirkt wie bei TProgressBar: True (Vorgabe) zeichnet einen durchgehenden Balken, False Bloecke mit kleinen Luecken (in jedem Preset, nicht bei Marquee).
 
 ## PPGlow-Eigenschaften
 

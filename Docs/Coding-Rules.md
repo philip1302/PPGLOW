@@ -25,13 +25,23 @@ Diese Regeln sind verbindlich für jede neue Unit und jedes neue Control. Sie si
 - DB-Units (`Data.DB`) gehören nur nach `Source\DB` und damit in `PPGlowDBR`. Das Grundpaket `PPGlowR` linkt kein `Data.DB`.
 
 ## Exceptions
-- Nur Klassen aus `PPG.Exceptions` werfen. Die Meldung kommt aus einem `resourcestring` (`CreateRes`/`CreateResFmt`).
+- Nur Klassen aus `PPG.Exceptions` werfen. Die Meldung kommt aus einem `resourcestring`. Zur Laufzeit wird sie über `PPGStr` gelesen (`Create(PPGStr(@SPPGxxx))`, `CreateFmt(PPGStr(@SPPGxxx), […])`), damit die Übersetzung greift. `CreateRes`/`CreateResFmt` gibt es nur in den Design-Units (`Source\Design`, `Source\DesignDB`, `Source\Editors`), deren Texte englisch bleiben.
 - **Erst validieren, dann zuweisen.** Zahlenwerte werden über `PPGCheckRange` geprüft. Das wirft zur Laufzeit und klemmt beim DFM-Laden.
-- **Kein** leeres `except end`. Ein `except` ohne Klassenfilter gibt es nur an den dokumentierten Grenzen: Paint, Timer/Animation, die COM-Methoden von `IAccessible` (Aufruf aus fremden Prozessen, Rückgabe `E_FAIL`) und den Fehler-Handler selbst. Das Hilfsfenster von `PPG.Theme` (`WM_SETTINGCHANGE`) fängt `Exception` und gibt sie an `Application.HandleException` weiter.
+- **Kein** leeres `except end`. Ein `except` ohne Klassenfilter (bzw. `on E: Exception` ohne `raise`) gibt es nur an den dokumentierten Grenzen. Jede solche Stelle trägt einen Kommentar, der mit `Grenze:` beginnt und sagt, warum hier nicht weitergeworfen wird. Die Grenzen:
+  - **Paint:** wirft nie (sonst `WM_PAINT`-Endlosschleife); einmal je Control melden, dann den Notfall-Zustand zeichnen.
+  - **Timer/Animation:** die betroffene Animation stoppt, die Meldung geht an `Application.HandleException`.
+  - **COM/IAccessible und UIA:** Aufrufe aus fremden Prozessen; protokollieren und einen Fehlercode (`E_FAIL`) zurückgeben, nie eine Delphi-Exception über die COM-Grenze.
+  - **Fehler-Handler selbst** (`PPG.ErrorHandler`): ein Fehler beim Melden geht nur noch an `OutputDebugString`.
+  - **Hilfsfenster von Theme** (`WM_SETTINGCHANGE` in `PPG.Theme`): `Exception` an `Application.HandleException`, das Fenster bleibt funktionsfähig.
+  - **Callback-Grenzen:** Schleifen, die viele Empfänger benachrichtigen (StyleManager-Clients, Theme-Wechsel, AppHooks-Beobachter, Validator), sichern jeden Empfänger einzeln ab und melden über `TPPGErrorHandler.HandleCallbackError`, damit ein fehlerhafter Empfänger die übrigen nicht abschneidet.
+  - **WndProc** eigener Hilfsfenster (`AllocateHWnd`): Exception an `Application.HandleException`, nie aus der Fensterprozedur heraus.
+  - **Thread-Grenze:** Eine Exception im Hintergrund-Thread wird gefangen (`AcquireExceptionObject`) und im Hauptthread erneut ausgelöst (z. B. `TPPGBusyOverlay.Run`).
+  - **IDE-Grenze** in den Design-Units: Editoren und Verben dürfen die IDE nicht mit einer Exception aus einem Callback abschießen; Meldung an den Anwender bzw. das IDE-Log.
 - Neue Controls melden sich nicht selbst beim Theme an; das erledigt `TPPGCustomControl`. Farben, die nicht in der Appearance stehen, kommen aus `Tokens` (im Dark Mode dunkel), nie direkt aus `clWindow`/`clBtnFace`, außer im Hochkontrast-Zweig.
 - Code, der von außen über COM oder Fensternachrichten angestoßen wird (z. B. `accDoDefaultAction`), führt keinen Anwender-Code direkt aus, sondern postet eine Nachricht.
 - Windows-API-Fehler werden über `PPGRaiseLastOSError('ApiName')` gemeldet, nicht über `RaiseLastOSError`.
 - Interne Zustände werden **vor** dem Aufruf von Anwender-Events gesetzt bzw. zurückgesetzt.
+- **Referenz nach Anwender-Ereignis prüfen:** Ein Handler darf das eigene Element löschen, die Liste umbauen oder das Control freigeben (`OnClose` ruft `Page.Free`, `OnClick` baut das Menü um, `OnItemClick` löscht das Item). Nach jedem Anwender-Ereignis werden Index und Objekt deshalb neu geprüft, bevor der Code weiterarbeitet: Index noch `< Count` und dasselbe Objekt an der Stelle (`(Index < Count) and (Items[Index] = It)`), Mitgliedschaft in der Collection (`IndexOf(P) >= 0`), bei möglicher Freigabe des Controls ein Destroy-Flag bzw. lokaler Zeiger. Accessibility-Aktionen posten die Identität des Elements, nicht nur einen Index. Gecachte Zeiger (`FDownIndex`, `FHotPart`, `FCacheNode`) werden vor dem Callback zurückgesetzt. Jede solche Stelle bekommt einen Test „Handler löscht das eigene Element“ (Muster: `Docs\Audit-Plan.md`, Paket 1c).
 - Destruktoren sind nil-sicher (sie laufen auch nach einer Exception im Konstruktor) und werfen nie.
 - `Assert` prüft nur interne Invarianten, nie Benutzereingaben.
 
@@ -49,7 +59,7 @@ Diese Regeln sind verbindlich für jede neue Unit und jedes neue Control. Sie si
 ## Lebenszyklus und Streaming
 - Referenzen auf Komponenten werden mit `FreeNotification` gehalten und in `Notification(opRemove)` auf `nil` gesetzt. Den Partner beim Zerstören **nicht** vorzeitig abmelden.
 - Setter von Sub-Objekten rufen `Assign` auf. Jede `TPersistent`-Klasse implementiert `Assign`, `GetOwner` und bei Bedarf `Equals`.
-- Default-Werte nach einem Release nie ändern. Umbenannte Properties bleiben per `DefineProperties` lesbar.
+- Default-Werte nach einem Release nie ändern. **Umbenennen ohne Aliase, bis die Suite in einem echten Projekt läuft** (die Installationen in der eigenen IDE zählen nicht); `migrate.ps1` und die Doku ziehen mit. Danach bleiben umbenannte Properties per `DefineProperties` lesbar.
 - Published-Reihenfolge ist Streaming-Reihenfolge. Abhängige Properties stehen deshalb hinter ihren Voraussetzungen.
 - In Settern `csLoading` beachten. Die Initialisierung gehört in `Loaded`.
 
