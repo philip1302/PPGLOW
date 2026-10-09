@@ -62,6 +62,9 @@ type
   TAudit8DCountTests = class(TControlTestCase)
   private
     function UpdateRectOf(C: TWinControl): TRect;
+    /// Liegt der Punkt im ausstehenden Neuzeichnen-Bereich? (Rollleisten der
+    /// Scroll-Controls duerfen dabei auftauchen.)
+    function UpdatePending(C: TWinControl; X, Y: Integer): Boolean;
   published
     procedure MenuBarMeasuresOncePerChange;
     procedure MenuBarHoverRepaintsItemsOnly;
@@ -1016,6 +1019,18 @@ begin
     Result := Rect(0, 0, 0, 0);
 end;
 
+function TAudit8DCountTests.UpdatePending(C: TWinControl; X, Y: Integer): Boolean;
+var
+  Rgn: HRGN;
+begin
+  Rgn := CreateRectRgn(0, 0, 0, 0);
+  try
+    Result := (GetUpdateRgn(C.Handle, Rgn, False) > NULLREGION) and PtInRegion(Rgn, X, Y);
+  finally
+    DeleteObject(Rgn);
+  end;
+end;
+
 procedure TAudit8DCountTests.MenuBarHoverRepaintsItemsOnly;
 var
   Bar: TPPGMenuBar;
@@ -1279,8 +1294,9 @@ begin
     P.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
     U := UpdateRectOf(P);
     CheckFalse(IsRectEmpty(U), 'Termin neu gezeichnet');
-    CheckTrue(U.Right - U.Left < P.Width div 2, 'nur der Termin (Breite)');
-    CheckTrue(U.Bottom - U.Top < P.Height div 2, 'nur der Termin (Hoehe)');
+    CheckTrue(UpdatePending(P, (R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2), 'Termin neu');
+    CheckFalse(UpdatePending(P, P.Width div 6, (R.Top + R.Bottom) div 2), 'anderer Tag bleibt');
+    CheckFalse(UpdatePending(P, (R.Left + R.Right) div 2, R.Bottom + 60), 'spaetere Zeit bleibt');
   finally
     FForm.Hide;
   end;
@@ -1393,8 +1409,11 @@ begin
     K.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
     U := UpdateRectOf(K);
     CheckFalse(IsRectEmpty(U), 'Karte neu');
-    CheckTrue(U.Bottom - U.Top < (R.Bottom - R.Top) * 2, 'nur die Karte');
-    CheckTrue(U.Right - U.Left < K.Width div 2, 'nur die Spalte');
+    CheckTrue(UpdatePending(K, (R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2), 'Karte neu');
+    R := K.CardRect(0, 0, 5);
+    CheckFalse(UpdatePending(K, (R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2), 'andere Karte bleibt');
+    R := K.ColumnRect(1);
+    CheckFalse(UpdatePending(K, (R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2), 'andere Spalte bleibt');
   finally
     FForm.Hide;
   end;

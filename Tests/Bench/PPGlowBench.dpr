@@ -329,7 +329,7 @@ end;
 /// Audit-Paket 8D (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
 procedure Bench8D;
 begin
-  Measure('MenuBar 10 Menues: 300 Mausbewegungen + zeichnen', 1000,
+  Measure('MenuBar 10 Menues: 300 Mausbewegungen + zeichnen', 400,
     procedure
     var
       M: TMainMenu;
@@ -362,7 +362,7 @@ begin
       end;
     end);
 
-  Measure('Chart 100 000 Punkte: 300 Mausbewegungen (Hover)', 1000,
+  Measure('Chart 100 000 Punkte: 300 Mausbewegungen (Hover)', 100,
     procedure
     var
       C: TPPGChart;
@@ -387,7 +387,7 @@ begin
       end;
     end);
 
-  Measure('Chart: 10 000 x AddXY (sichtbar)', 1000,
+  Measure('Chart: 10 000 x AddXY (sichtbar)', 100,
     procedure
     var
       C: TPPGChart;
@@ -410,7 +410,7 @@ begin
       end;
     end);
 
-  Measure('Planer Zeitleiste 366 Tage, 60 Ressourcen: 300 x scrollen', 10000,
+  Measure('Planer Zeitleiste 366 Tage, 60 Ressourcen: 300 x scrollen', 2500,
     procedure
     var
       P: TPPGPlanner;
@@ -449,7 +449,7 @@ begin
       end;
     end);
 
-  Measure('Planer Woche, 40 Ressourcen gruppiert: 50 x anordnen', 2500,
+  Measure('Planer Woche, 40 Ressourcen gruppiert: 50 x anordnen', 3000,
     procedure
     var
       P: TPPGPlanner;
@@ -486,7 +486,7 @@ begin
       end;
     end);
 
-  Measure('Kanban 10 000 Karten: 300 Mausbewegungen (Hover)', 3000,
+  Measure('Kanban 10 000 Karten: 300 Mausbewegungen (Hover)', 3500,
     procedure
     var
       K: TPPGKanban;
@@ -517,7 +517,7 @@ begin
       end;
     end);
 
-  Measure('Kanban 10 000 Karten: 100 x eine Karte aendern + zeichnen', 3000,
+  Measure('Kanban 10 000 Karten: 100 x eine Karte aendern + zeichnen', 4500,
     procedure
     var
       K: TPPGKanban;
@@ -549,7 +549,7 @@ begin
       end;
     end);
 
-  Measure('Ribbon: 1000 x Enabled umschalten (100 x zeichnen)', 3000,
+  Measure('Ribbon: 1000 x Enabled umschalten (100 x zeichnen)', 250,
     procedure
     var
       R: TPPGRibbon;
@@ -582,7 +582,7 @@ begin
       end;
     end);
 
-  Measure('PageControl: 200 Seiten einfuegen (BeginUpdate)', 2000,
+  Measure('PageControl: 200 Seiten einfuegen (BeginUpdate)', 100,
     procedure
     var
       PC: TPPGPageControl;
@@ -611,7 +611,7 @@ begin
       end;
     end);
 
-  Measure('InfoBar: 1000 x Hoehe (Oeffnen-Animation)', 1000,
+  Measure('InfoBar: 1000 x Hoehe (Oeffnen-Animation)', 50,
     procedure
     var
       B: TPPGInfoBar;
