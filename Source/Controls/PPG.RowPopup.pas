@@ -88,7 +88,7 @@ type
 implementation
 
 uses
-  System.Math, Winapi.oleacc, PPG.Appearance, PPG.Render.Registry;
+  System.Math, Winapi.oleacc, PPG.Appearance, PPG.Render.Registry, PPG.Controls.Base;
 
 function IfThenSingle(B: Boolean; T, F: Single): Single;
 begin
@@ -459,11 +459,16 @@ begin
 end;
 
 procedure TPPGRowPopup.DropWheel(Delta: Integer);
+var
+  Lines: Integer;
 begin
-  if Delta > 0 then
-    SetTop(FTop - 3)
-  else if Delta < 0 then
-    SetTop(FTop + 3);
+  // Audit 7b: Zeilen aus der Systemeinstellung, Teil-Deltas gesammelt
+  Lines := PPGWheelScrollLines;
+  if Lines < 0 then
+    Lines := VisibleRows - 1; // seitenweise
+  if Lines < 1 then
+    Lines := 1;
+  SetTop(FTop - WheelSteps(Delta, Lines));
 end;
 
 end.

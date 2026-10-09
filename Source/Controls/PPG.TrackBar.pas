@@ -756,7 +756,8 @@ end;
 function TPPGCustomTrackBar.DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean;
 begin
   Result := inherited DoMouseWheelDown(Shift, MousePos);
-  if not Result and Enabled then
+  // Audit 7b: nur mit Fokus (sonst scrollt die Seite); Rasten sammelt TControl
+  if not Result and Enabled and not WheelNeedsFocus then
   begin
     SetThumbValue(FActiveThumb, Int64(ThumbValue(FActiveThumb)) + FLineSize);
     Result := True;
@@ -766,7 +767,7 @@ end;
 function TPPGCustomTrackBar.DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
 begin
   Result := inherited DoMouseWheelUp(Shift, MousePos);
-  if not Result and Enabled then
+  if not Result and Enabled and not WheelNeedsFocus then
   begin
     SetThumbValue(FActiveThumb, Int64(ThumbValue(FActiveThumb)) - FLineSize);
     Result := True;

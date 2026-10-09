@@ -463,11 +463,7 @@ procedure TPPGCalendarPopup.DropWheel(Delta: Integer);
 var
   N: Integer;
 begin
-  N := 0;
-  if Delta > 0 then
-    N := 1
-  else if Delta < 0 then
-    N := -1;
+  N := WheelSteps(Delta); // eine Seite je Raste (Audit 7b)
   while N > 0 do
   begin
     FCalendar.PrevPage;

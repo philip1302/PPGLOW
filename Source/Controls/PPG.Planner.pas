@@ -4350,13 +4350,23 @@ end;
 
 function TPPGCustomPlanner.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
+var
+  N: Integer;
 begin
   if (FView = pvMonth) and not (ssShift in Shift) then
   begin
-    if WheelDelta > 0 then
-      PrevPage
-    else if WheelDelta < 0 then
+    // Audit 7b: ein Monat je Raste, Teil-Deltas gesammelt
+    N := WheelSteps(WheelDelta);
+    while N > 0 do
+    begin
+      PrevPage;
+      Dec(N);
+    end;
+    while N < 0 do
+    begin
       NextPage;
+      Inc(N);
+    end;
     Result := True;
     Exit;
   end;

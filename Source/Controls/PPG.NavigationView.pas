@@ -1727,7 +1727,7 @@ end;
 function TPPGNavigationView.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
 var
-  M: Integer;
+  M, Lines, Step: Integer;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
   if Result then
@@ -1735,7 +1735,13 @@ begin
   MaxScroll(M);
   if M = 0 then
     Exit;
-  FScrollY := EnsureRange(FScrollY - WheelDelta * PPGScale(RowH, ScalePPI) div 120, 0, M);
+  // Audit 7b: Zeilen aus der Systemeinstellung, Teil-Deltas gesammelt
+  Lines := PPGWheelScrollLines;
+  if Lines < 0 then
+    Step := ClientHeight // seitenweise
+  else
+    Step := Lines * PPGScale(RowH, ScalePPI);
+  FScrollY := EnsureRange(FScrollY - WheelSteps(WheelDelta, Step), 0, M);
   MoveIndicator(False);
   Invalidate;
   Result := True;

@@ -1125,13 +1125,16 @@ begin
 end;
 
 procedure TPPGPopupList.DropWheel(Delta: Integer);
-const
-  WheelLines = 3;
+var
+  Lines: Integer;
 begin
-  if Delta > 0 then
-    ScrollLines(-WheelLines)
-  else if Delta < 0 then
-    ScrollLines(WheelLines);
+  // Audit 7b: Zeilen aus der Systemeinstellung, Teil-Deltas gesammelt
+  Lines := PPGWheelScrollLines;
+  if Lines < 0 then
+    Lines := VisibleRows - 1; // seitenweise
+  if Lines < 1 then
+    Lines := 1;
+  ScrollLines(-WheelSteps(Delta, Lines));
 end;
 
 procedure TPPGPopupList.DropMouseLeave;

@@ -522,6 +522,8 @@ end;
 
 function TPPGCustomTimePicker.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
+var
+  Steps: Integer;
 begin
   if DroppedDown or ReadOnly or not FieldFocused then
     Exit(inherited DoMouseWheel(Shift, WheelDelta, MousePos));
@@ -531,10 +533,10 @@ begin
     OnMouseWheel(Self, Shift, WheelDelta, MousePos, Result);
   if Result then
     Exit;
-  if WheelDelta > 0 then
-    StepSegment(SegmentAtCaret, 1)
-  else if WheelDelta < 0 then
-    StepSegment(SegmentAtCaret, -1);
+  // Audit 7b: Teil-Deltas hochaufloesender Raeder sammeln
+  Steps := WheelSteps(WheelDelta);
+  if Steps <> 0 then
+    StepSegment(SegmentAtCaret, Steps);
   Result := True;
 end;
 

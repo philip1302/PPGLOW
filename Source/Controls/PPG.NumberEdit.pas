@@ -887,15 +887,17 @@ end;
 
 function TPPGCustomNumberEdit.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
+var
+  Steps: Integer;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
   // Mausrad nur mit Fokus: sonst aendert Scrollen durch ein Formular Werte
   if Result or not FieldFocused or ReadOnly or not Enabled or (WheelDelta = 0) then
     Exit;
-  if WheelDelta > 0 then
-    Spin(1)
-  else
-    Spin(-1);
+  // Audit 7b: Teil-Deltas hochaufloesender Raeder sammeln
+  Steps := WheelSteps(WheelDelta);
+  if Steps <> 0 then
+    Spin(Steps);
   Result := True;
 end;
 

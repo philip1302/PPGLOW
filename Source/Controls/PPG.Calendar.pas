@@ -1198,14 +1198,24 @@ end;
 
 function TPPGCustomCalendar.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
+var
+  N: Integer;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
-  if Result or not Enabled then
+  // Audit 7b: nur mit Fokus (sonst scrollt die Seite), eine Seite je Raste
+  if Result or not Enabled or WheelNeedsFocus then
     Exit;
-  if WheelDelta > 0 then
-    PrevPage
-  else if WheelDelta < 0 then
+  N := WheelSteps(WheelDelta);
+  while N > 0 do
+  begin
+    PrevPage;
+    Dec(N);
+  end;
+  while N < 0 do
+  begin
     NextPage;
+    Inc(N);
+  end;
   Result := True;
 end;
 

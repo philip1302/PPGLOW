@@ -72,6 +72,7 @@ type
   /// 7b: Mausrad.
   TWheelTests = class(TAudit7ATestCase)
   published
+    procedure HelperCollectsPartialDeltas;
     procedure SpinEditNeedsFocusAndCollects;
     procedure NumberEditCollectsPartialDeltas;
     procedure TimePickerCollectsPartialDeltas;
@@ -700,6 +701,24 @@ begin
 end;
 
 { TWheelTests }
+
+procedure TWheelTests.HelperCollectsPartialDeltas;
+var
+  Rest: Integer;
+begin
+  Rest := 0;
+  CheckEquals(0, PPGWheelSteps(Rest, 40, 1));
+  CheckEquals(0, PPGWheelSteps(Rest, 40, 1));
+  CheckEquals(1, PPGWheelSteps(Rest, 40, 1), '3 x 40 = eine Raste');
+  CheckEquals(0, Rest);
+  CheckEquals(0, PPGWheelSteps(Rest, 100, 1));
+  CheckEquals(0, PPGWheelSteps(Rest, -40, 1), 'Richtungswechsel verwirft den Rest');
+  CheckEquals(-40, Rest);
+  CheckEquals(-1, PPGWheelSteps(Rest, -80, 1));
+  CheckEquals(3, PPGWheelSteps(Rest, WHEEL_DELTA, 3), 'Lines je Raste');
+  CheckEquals(30, PPGWheelSteps(Rest, 60, 60), 'Pixel je Raste: 60 * 60 / 120');
+  CheckTrue(PPGWheelScrollLines >= -1, 'Systemeinstellung gelesen');
+end;
 
 procedure TWheelTests.SpinEditNeedsFocusAndCollects;
 var
