@@ -330,7 +330,7 @@ begin
     G.Columns.Add.Title := 'Text';
     G.Columns.Add.Title := 'Menge';
     G.Columns.Add.Title := 'Klasse';
-    Measure('8B Grid: 1 000 000 x 5 per Cells[] fuellen', 60000,
+    Measure('8B Grid: 1 000 000 x 5 per Cells[] fuellen', 27000,
       procedure
       var
         R: Integer;
@@ -345,7 +345,7 @@ begin
           G.Cells[4, R] := IntToStr(R mod 7);
         end;
       end);
-    Measure('8B Grid 1 Mio.: sortieren Zahl auf + ab, Text auf', 120000,
+    Measure('8B Grid 1 Mio.: sortieren Zahl auf + ab, Text auf', 3500,
       procedure
       begin
         G.SortBy(1, True);
@@ -354,7 +354,7 @@ begin
         if G.Cells[1, G.DataRow(1)] = '' then
           raise Exception.Create('Sortieren falsch');
       end);
-    Measure('8B Grid 1 Mio.: filtern + 3 x umsortieren mit Filter', 120000,
+    Measure('8B Grid 1 Mio.: filtern + 3 x umsortieren mit Filter', 700,
       procedure
       begin
         G.SortBy(-1);
@@ -367,7 +367,7 @@ begin
       end);
     G.ClearFilters;
     G.SortBy(-1);
-    Measure('8B Grid 1 Mio.: bedingte Formate (Oben-10 %, Farbskala)', 60000,
+    Measure('8B Grid 1 Mio.: bedingte Formate (Oben-10 %, Farbskala)', 600,
       procedure
       begin
         Rule := G.ConditionalFormats.Add;
@@ -383,7 +383,7 @@ begin
     G.ShowFooter := True;
     G.RowHeights[0] := 30;
     G.RecalcAggregates;
-    Measure('8B Grid 1 Mio.: Spaltenbreite 100 x (Summe, Farbskala, RowHeights)', 120000,
+    Measure('8B Grid 1 Mio.: Spaltenbreite 100 x (Summe, Farbskala, RowHeights)', 1500,
       procedure
       var
         I: Integer;
@@ -394,7 +394,7 @@ begin
           Application.ProcessMessages;
         end;
       end);
-    Measure('8B Grid 1 Mio.: 100 Einzelaenderungen mit Summe', 120000,
+    Measure('8B Grid 1 Mio.: 100 Einzelaenderungen mit Summe', 1400,
       procedure
       var
         I: Integer;
@@ -407,7 +407,7 @@ begin
         if G.FooterText(3) = '' then
           raise Exception.Create('Summe fehlt');
       end);
-    Measure('8B Grid 1 Mio.: Hover 300 x mit HotRow-Stil + zeichnen', 60000,
+    Measure('8B Grid 1 Mio.: Hover 300 x mit HotRow-Stil + zeichnen', 3000,
       procedure
       var
         I: Integer;
@@ -419,7 +419,7 @@ begin
           PaintToBitmap(G);
         end;
       end);
-    Measure('8B Grid 1 Mio.: 100 x zeichnen mit Zellarten (Fortschritt, Link)', 60000,
+    Measure('8B Grid 1 Mio.: 100 x zeichnen mit Zellarten (Fortschritt, Link)', 1200,
       procedure
       var
         I: Integer;
