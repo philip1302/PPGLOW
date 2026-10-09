@@ -202,11 +202,10 @@ type
 
   TPPGDBRadioGroup = class(TPPGRadioGroup)
   private
-    FDataLink: TPPGFieldDataLink;
+    FBinding: TPPGDBBinding;
     FValues: TStrings;
-    FSetting: Boolean;
-    procedure DataChange(Sender: TObject);
-    procedure UpdateData(Sender: TObject);
+    procedure ShowField(Sender: TObject);
+    procedure WriteField(Sender: TObject);
     function GetDataField: string;
     procedure SetDataField(const Value: string);
     function GetDataSource: TDataSource;
@@ -1232,16 +1231,15 @@ begin
   inherited Create(AOwner);
   FValues := TStringList.Create;
   TStringList(FValues).OnChange := ValuesChanged;
-  FDataLink := TPPGFieldDataLink.Create;
-  FDataLink.Control := Self;
-  FDataLink.OnDataChange := DataChange;
-  FDataLink.OnUpdateData := UpdateData;
-  FDataLink.OnActiveChange := DataChange;
+  // Kein Feld-Control: ActivateItem prueft die Aenderbarkeit selbst
+  FBinding := TPPGDBBinding.Create(Self, False);
+  FBinding.OnShow := ShowField;
+  FBinding.OnWrite := WriteField;
 end;
 
 destructor TPPGDBRadioGroup.Destroy;
 begin
-  FreeAndNil(FDataLink);
+  FreeAndNil(FBinding);
   inherited Destroy;
   FreeAndNil(FValues);
 end;
@@ -1249,49 +1247,49 @@ end;
 procedure TPPGDBRadioGroup.Loaded;
 begin
   inherited Loaded;
-  DataChange(Self);
+  FBinding.Reload;
 end;
 
 procedure TPPGDBRadioGroup.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
-  if (Operation = opRemove) and (FDataLink <> nil) and (AComponent = DataSource) then
-    DataSource := nil;
+  if FBinding <> nil then
+    FBinding.Notify(AComponent, Operation);
 end;
 
 function TPPGDBRadioGroup.GetDataField: string;
 begin
-  Result := FDataLink.FieldName;
+  Result := FBinding.DataField;
 end;
 
 procedure TPPGDBRadioGroup.SetDataField(const Value: string);
 begin
-  FDataLink.FieldName := Value;
+  FBinding.DataField := Value;
 end;
 
 function TPPGDBRadioGroup.GetDataSource: TDataSource;
 begin
-  Result := FDataLink.DataSource;
+  Result := FBinding.DataSource;
 end;
 
 procedure TPPGDBRadioGroup.SetDataSource(Value: TDataSource);
 begin
-  PPGDBSetDataSource(Self, FDataLink, Value);
+  FBinding.DataSource := Value;
 end;
 
 function TPPGDBRadioGroup.GetField: TField;
 begin
-  Result := FDataLink.Field;
+  Result := FBinding.Field;
 end;
 
 function TPPGDBRadioGroup.GetReadOnly: Boolean;
 begin
-  Result := FDataLink.ReadOnly;
+  Result := FBinding.ReadOnly;
 end;
 
 procedure TPPGDBRadioGroup.SetReadOnly(const Value: Boolean);
 begin
-  FDataLink.ReadOnly := Value;
+  FBinding.ReadOnly := Value;
 end;
 
 procedure TPPGDBRadioGroup.SetValues(const Value: TStrings);
@@ -1301,14 +1299,15 @@ end;
 
 procedure TPPGDBRadioGroup.ValuesChanged(Sender: TObject);
 begin
-  DataChange(Self);
+  if FBinding <> nil then
+    FBinding.Reload;
 end;
 
 procedure TPPGDBRadioGroup.ItemsChanged;
 begin
   inherited ItemsChanged;
-  if (FDataLink <> nil) and not FSetting then
-    DataChange(Self);
+  if (FBinding <> nil) and not FBinding.Setting then
+    FBinding.Reload;
 end;
 
 function TPPGDBRadioGroup.ItemDbValue(Index: Integer): string;
@@ -1322,15 +1321,15 @@ begin
     Result := Items[Index];
 end;
 
-procedure TPPGDBRadioGroup.DataChange(Sender: TObject);
+procedure TPPGDBRadioGroup.ShowField(Sender: TObject);
 var
   F: TField;
   S: string;
   I, Found: Integer;
 begin
-  if (FDataLink = nil) or FDataLink.Locked or (csLoading in ComponentState) then
+  if csLoading in ComponentState then
     Exit;
-  F := FDataLink.Field;
+  F := FBinding.Field;
   Found := -1;
   if (F <> nil) and not F.IsNull then
   begin
@@ -1342,25 +1341,15 @@ begin
         Break;
       end;
   end;
-  FSetting := True;
-  try
-    ItemIndex := Found;
-  finally
-    FSetting := False;
-  end;
+  ItemIndex := Found;
 end;
 
-procedure TPPGDBRadioGroup.UpdateData(Sender: TObject);
-var
-  F: TField;
+procedure TPPGDBRadioGroup.WriteField(Sender: TObject);
 begin
-  F := FDataLink.Field;
-  if F = nil then
-    Exit;
   if ItemIndex < 0 then
-    F.Clear
+    FBinding.Field.Clear
   else
-    F.Text := ItemDbValue(ItemIndex);
+    FBinding.Field.Text := ItemDbValue(ItemIndex);
 end;
 
 procedure TPPGDBRadioGroup.ActivateItem(Index: Integer);
@@ -1368,33 +1357,29 @@ begin
   // Erst Bearbeiten-Modus (ReadOnly, nicht aenderbare Menge: nichts tun)
   if (csDesigning in ComponentState) or (Index = ItemIndex) then
     Exit;
-  if not FDataLink.EditByUser then
+  if not FBinding.TryEdit then
     Exit;
   inherited ActivateItem(Index);
-  FDataLink.Modified;
+  FBinding.Link.Modified;
 end;
 
 procedure TPPGDBRadioGroup.KeyDown(var Key: Word; Shift: TShiftState);
 begin
-  if (Key = VK_ESCAPE) and FDataLink.Editing then
-  begin
-    FDataLink.Reset;
-    Key := 0;
+  if FBinding.HandleEscape(Key) then
     Exit;
-  end;
   inherited KeyDown(Key, Shift);
 end;
 
 procedure TPPGDBRadioGroup.CMGetDataLink(var Message: TMessage);
 begin
-  Message.Result := LRESULT(FDataLink);
+  Message.Result := LRESULT(FBinding.Link);
 end;
 
 procedure TPPGDBRadioGroup.CMExit(var Message: TCMExit);
 begin
-  if FDataLink.Editing and FDataLink.Active then
+  if FBinding.Link.Editing and FBinding.Link.Active then
   try
-    FDataLink.UpdateRecord;
+    FBinding.Link.UpdateRecord;
   except
     on Exception do
     begin
@@ -1410,12 +1395,12 @@ end;
 
 function TPPGDBRadioGroup.ExecuteAction(Action: TBasicAction): Boolean;
 begin
-  Result := inherited ExecuteAction(Action) or ((FDataLink <> nil) and FDataLink.ExecuteAction(Action));
+  Result := inherited ExecuteAction(Action) or ((FBinding <> nil) and FBinding.ExecuteAction(Action));
 end;
 
 function TPPGDBRadioGroup.UpdateAction(Action: TBasicAction): Boolean;
 begin
-  Result := inherited UpdateAction(Action) or ((FDataLink <> nil) and FDataLink.UpdateAction(Action));
+  Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
 end;
 
 initialization

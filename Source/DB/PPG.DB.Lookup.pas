@@ -55,8 +55,8 @@ type
   protected
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-    procedure DataChange(Sender: TObject); override;
-    procedure UpdateData(Sender: TObject); override;
+    procedure ShowField; override;
+    procedure WriteField; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -264,28 +264,23 @@ begin
   finally
     FBuilding := False;
   end;
-  DataChange(Self);
+  Reload;
 end;
 
-procedure TPPGDBLookupComboBox.DataChange(Sender: TObject);
+procedure TPPGDBLookupComboBox.ShowField;
 var
   F: TField;
 begin
-  if (DataLink = nil) or DataLink.Locked or FBuilding then
+  if FBuilding then
     Exit;
   F := DataLink.Field;
-  Setting := True;
-  try
-    if F = nil then
-      ItemIndex := -1
-    else
-      ItemIndex := IndexOfKey(F.Value);
-  finally
-    Setting := False;
-  end;
+  if F = nil then
+    ItemIndex := -1
+  else
+    ItemIndex := IndexOfKey(F.Value);
 end;
 
-procedure TPPGDBLookupComboBox.UpdateData(Sender: TObject);
+procedure TPPGDBLookupComboBox.WriteField;
 begin
   if (ItemIndex >= 0) and (ItemIndex < Length(FKeys)) then
     DataLink.Field.Value := FKeys[ItemIndex]

@@ -31,33 +31,19 @@ uses
 type
   TPPGDBValueMode = (dvmVariant, dvmText);
 
-  /// Verbindet ein Feld-Control mit IPPGFieldValue mit einem Datenbankfeld.
-  TPPGDBValueBinding = class
+  /// Verbindet ein Feld-Control mit IPPGFieldValue mit einem Datenbankfeld:
+  /// die gemeinsame Bindung (TPPGDBBinding), Anzeigen und Schreiben ueber
+  /// IPPGFieldValue.
+  TPPGDBValueBinding = class(TPPGDBBinding)
   private
-    FCtrl: TPPGCustomField;
-    FLink: TPPGFieldDataLink;
     FMode: TPPGDBValueMode;
-    FSetting: Boolean;
-    FOnBeforeUpdate: TNotifyEvent;
     FOnFieldChanged: TNotifyEvent;
-    procedure DataChange(Sender: TObject);
-    procedure EditingChange(Sender: TObject);
-    procedure UpdateData(Sender: TObject);
-    procedure ActiveChange(Sender: TObject);
     function Value: IPPGFieldValue;
+  protected
+    procedure ShowValue; override;
+    procedure WriteValue; override;
   public
     constructor Create(ACtrl: TPPGCustomField; AMode: TPPGDBValueMode);
-    destructor Destroy; override;
-    /// Aus Change des Controls: True = Aenderung darf weiterlaufen (OnChange).
-    function UserChange: Boolean;
-    /// Beim Verlassen: ins Feld schreiben (Fehler am Feld, stiller Abbruch).
-    procedure Commit;
-    procedure UpdateEditable;
-    procedure Reload;
-    property Link: TPPGFieldDataLink read FLink;
-    property Setting: Boolean read FSetting;
-    /// Vor dem Schreiben (laufende Eingabe uebernehmen).
-    property OnBeforeUpdate: TNotifyEvent read FOnBeforeUpdate write FOnBeforeUpdate;
     /// Nach dem Laden eines neuen Feldes (z.B. EditMask uebernehmen).
     property OnFieldChanged: TNotifyEvent read FOnFieldChanged write FOnFieldChanged;
   end;
@@ -211,128 +197,57 @@ uses
   // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
   PPG.DB.Validator;
 
-type
-  TFieldAccess = class(TPPGCustomField);
-
 { TPPGDBValueBinding }
 
 constructor TPPGDBValueBinding.Create(ACtrl: TPPGCustomField; AMode: TPPGDBValueMode);
 begin
-  inherited Create;
-  FCtrl := ACtrl;
+  inherited Create(ACtrl, True);
   FMode := AMode;
-  FLink := TPPGFieldDataLink.Create;
-  FLink.Control := ACtrl;
-  FLink.OnDataChange := DataChange;
-  FLink.OnEditingChange := EditingChange;
-  FLink.OnUpdateData := UpdateData;
-  FLink.OnActiveChange := ActiveChange;
-end;
-
-destructor TPPGDBValueBinding.Destroy;
-begin
-  FreeAndNil(FLink);
-  inherited Destroy;
 end;
 
 function TPPGDBValueBinding.Value: IPPGFieldValue;
 begin
-  if not Supports(FCtrl, IPPGFieldValue, Result) then
+  if not Supports(Control, IPPGFieldValue, Result) then
     Result := nil;
 end;
 
-procedure TPPGDBValueBinding.Reload;
-begin
-  DataChange(nil);
-end;
-
-procedure TPPGDBValueBinding.DataChange(Sender: TObject);
+procedure TPPGDBValueBinding.ShowValue;
 var
   F: TField;
   V: IPPGFieldValue;
 begin
-  if FLink.Locked then
-    Exit;
   V := Value;
   if V = nil then
     Exit;
-  F := FLink.Field;
-  FSetting := True;
-  try
-    if Assigned(FOnFieldChanged) then
-      FOnFieldChanged(Self);
-    if (F = nil) or F.IsNull then
-      V.FieldClear
-    else if FMode = dvmText then
-      V.SetFieldValue(F.Text)
-    else
-      V.SetFieldValue(F.Value);
-  finally
-    FSetting := False;
-  end;
-  if TFieldAccess(FCtrl).ValidationState = pvsError then
-  begin
-    TFieldAccess(FCtrl).ValidationState := pvsNone;
-    TFieldAccess(FCtrl).ValidationHint := '';
-  end;
-  UpdateEditable;
+  F := Field;
+  if Assigned(FOnFieldChanged) then
+    FOnFieldChanged(Self);
+  if (F = nil) or F.IsNull then
+    V.FieldClear
+  else if FMode = dvmText then
+    V.SetFieldValue(F.Text)
+  else
+    V.SetFieldValue(F.Value);
 end;
 
-procedure TPPGDBValueBinding.EditingChange(Sender: TObject);
-begin
-  UpdateEditable;
-end;
-
-procedure TPPGDBValueBinding.ActiveChange(Sender: TObject);
-begin
-  DataChange(Sender);
-end;
-
-procedure TPPGDBValueBinding.UpdateData(Sender: TObject);
+procedure TPPGDBValueBinding.WriteValue;
 var
   V: IPPGFieldValue;
   X: Variant;
 begin
-  if Assigned(FOnBeforeUpdate) then
-    FOnBeforeUpdate(Self);
   V := Value;
-  if (V = nil) or (FLink.Field = nil) then
+  if V = nil then
     Exit;
   if V.FieldIsNull then
-    FLink.Field.Clear
+    Field.Clear
   else
   begin
     X := V.GetFieldValue;
     if FMode = dvmText then
-      FLink.Field.Text := VarToStr(X)
+      Field.Text := VarToStr(X)
     else
-      FLink.Field.Value := X;
+      Field.Value := X;
   end;
-end;
-
-procedure TPPGDBValueBinding.UpdateEditable;
-begin
-  // Ohne aenderbares Feld schreibgeschuetzt (wie TDBEdit)
-  TFieldAccess(FCtrl).ReadOnly := not FLink.CanModify;
-end;
-
-function TPPGDBValueBinding.UserChange: Boolean;
-begin
-  Result := True;
-  if FSetting or (csDesigning in FCtrl.ComponentState) then
-    Exit;
-  if not FLink.Editing and not FLink.EditByUser then
-  begin
-    // Nicht aenderbar: Feldwert wieder anzeigen
-    DataChange(nil);
-    Exit(False);
-  end;
-  FLink.Modified;
-end;
-
-procedure TPPGDBValueBinding.Commit;
-begin
-  PPGDBCommitField(FCtrl, FLink);
 end;
 
 { TPPGDBMaskEdit }
