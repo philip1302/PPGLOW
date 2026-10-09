@@ -72,6 +72,9 @@ procedure PPGRegisterCellKind(Kind: TPPGGridCellKind; const Impl: IPPGCellKind);
 procedure PPGRegisterCellKindName(const Name: string; const Impl: IPPGCellKind);
 /// Zellart (nil = Text). Name nur fuer ckCustom.
 function PPGCellKind(Kind: TPPGGridCellKind; const Name: string = ''): IPPGCellKind;
+/// Eingebaute Zellart? Ihre Texte darf das Grid sammeln und in einem
+/// GDI-Block ausgeben (sie zeichnet nach dem Text nichts mehr darueber).
+function PPGCellKindIsBuiltIn(const Kind: IPPGCellKind): Boolean;
 /// Farbe aus Text: Name (clRed), #RRGGBB, $BBGGRR oder Zahl.
 function PPGCellColor(const S: string; out C: TColor): Boolean;
 /// Text zeichnen (GDI, einzeilig) - fuer Zellarten.
@@ -158,6 +161,16 @@ begin
     Exit;
   if AFont = nil then
     AFont := Ctx.Font;
+  // Audit 8c #9: im Grid gesammelt und in EINEM GDI-Block ausgegeben (nur
+  // mit der Schrift des Grids - fremde Schriften koennten vorher freigegeben
+  // werden)
+  if (Ctx.Painter <> nil) and Ctx.Painter.CollectTexts and (AFont = Ctx.Font) then
+  begin
+    if Ctx.RightToLeft then
+      Flags := Flags or DT_RTLREADING;
+    Ctx.Painter.AddTextFont(R, S, Color, Flags, 0);
+    Exit;
+  end;
   DC := Ctx.Canvas.BeginGdi;
   try
     SelectObject(DC, AFont.Handle);
@@ -182,6 +195,9 @@ begin
     Exit;
   if AFont = nil then
     AFont := Ctx.Font;
+  // Audit 8c #9: Messcache des Zeichenvorgangs (z.B. '100 %' je Zelle)
+  if Ctx.Painter <> nil then
+    Exit(Ctx.Painter.TextWidth(AFont, S));
   DC := GetDC(0);
   try
     Old := SelectObject(DC, AFont.Handle);
@@ -291,6 +307,7 @@ type
   TPPGLinkCellKind = class(TPPGCellKindBase)
   private
     FFont: TFont;
+    FBaseHandle: HFONT; // Schrift, aus der FFont zuletzt abgeleitet wurde
     function LinkFont(const Ctx: TPPGCellKindContext): TFont;
     function TextRect(const Ctx: TPPGCellKindContext; const R: TRect; const Text: string): TRect;
   public
@@ -339,6 +356,21 @@ type
       const Text: string): TCursor; override;
     function CellAccText(const Ctx: TPPGCellKindContext; const Text: string): string; override;
   end;
+
+function PPGCellKindIsBuiltIn(const Kind: IPPGCellKind): Boolean;
+var
+  O: TObject;
+begin
+  Result := False;
+  if Kind = nil then
+    Exit;
+  O := Kind as TObject;
+  Result := (O.ClassType = TPPGCheckCellKind) or (O.ClassType = TPPGProgressCellKind) or
+    (O.ClassType = TPPGSparklineCellKind) or (O.ClassType = TPPGRatingCellKind) or
+    (O.ClassType = TPPGImageCellKind) or (O.ClassType = TPPGLinkCellKind) or
+    (O.ClassType = TPPGButtonCellKind) or (O.ClassType = TPPGColorCellKind) or
+    (O.ClassType = TPPGMarkupCellKind);
+end;
 
 { TPPGCheckCellKind }
 
@@ -622,8 +654,18 @@ function TPPGLinkCellKind.LinkFont(const Ctx: TPPGCellKindContext): TFont;
 begin
   if FFont = nil then
     FFont := TFont.Create;
-  FFont.Assign(Ctx.Font);
-  FFont.Style := FFont.Style + [fsUnderline];
+  // Nur bei anderer Schrift neu ableiten (Audit 8c #9): sonst bekam jede
+  // Zelle ein neues Schrift-Handle
+  if (FBaseHandle = 0) or (FBaseHandle <> Ctx.Font.Handle) or (FFont.Name <> Ctx.Font.Name) or
+    (FFont.Height <> Ctx.Font.Height) or (FFont.Style <> Ctx.Font.Style + [fsUnderline]) or
+    (FFont.Charset <> Ctx.Font.Charset) or (FFont.PixelsPerInch <> Ctx.Font.PixelsPerInch) or
+    (FFont.Quality <> Ctx.Font.Quality) or (FFont.Pitch <> Ctx.Font.Pitch) or
+    (FFont.Orientation <> Ctx.Font.Orientation) then
+  begin
+    FFont.Assign(Ctx.Font);
+    FFont.Style := FFont.Style + [fsUnderline];
+    FBaseHandle := Ctx.Font.Handle;
+  end;
   Result := FFont;
 end;
 
@@ -646,6 +688,17 @@ var
 begin
   TR := R;
   InflateRect(TR, -CellPad(Ctx), 0);
+  // Gesammelt mit der Link-Schrift (gehoert der Zellart, lebt ueber den Block)
+  if (Ctx.Painter <> nil) and Ctx.Painter.CollectTexts and (Text <> '') and
+    not IsRectEmpty(TR) then
+  begin
+    if Ctx.RightToLeft then
+      Ctx.Painter.AddTextFont(TR, Text, Ctx.AccentColor, TextFlagsLeft or DT_RTLREADING,
+        LinkFont(Ctx).Handle)
+    else
+      Ctx.Painter.AddTextFont(TR, Text, Ctx.AccentColor, TextFlagsLeft, LinkFont(Ctx).Handle);
+    Exit;
+  end;
   PPGCellDrawText(Ctx, Text, TR, Ctx.AccentColor, TextFlagsLeft, LinkFont(Ctx));
 end;
 

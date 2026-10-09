@@ -194,7 +194,15 @@ type
     FMerges: array of TPPGGridMerge;
     FKindCtx: TPPGCellKindContext;  // je Zeichenvorgang gefuellt
     FStyles: TPPGGridStyles;
-    FFontCache: TPPGFontCache;  // Schriften eines Zeichenvorgangs
+    // Schriften der Element-Stile; bleiben ueber Zeichenvorgaenge (Audit 8c
+    // #10), geleert bei Schrift-, Stil-, Spalten-, DPI- und Theme-Aenderung
+    FFontCache: TPPGFontCache;
+    FFontCachePPI: Integer;
+    // Waehrend PaintViewport: Werte, die RawCellRect/ColLeft je Zelle brauchen
+    FPaintCached: Boolean;
+    FPaintGV: TRect;
+    FPaintMaxColScroll: Integer;
+    FPaintFirstRight: Integer;
     FHotV: Integer;              // Zeile unter der Maus (Styles.HotRow)
     FGridLineWidth: Integer;
     FDrawingStyle: TGridDrawingStyle;
@@ -553,6 +561,8 @@ type
     procedure PrepareStyleColors;
     /// Schrift (und Textfarbe) einer Datenzelle nach Spalte, Zeile und Zellstil.
     function CellFont(Col: TPPGGridColumn; const St: TPPGGridCellStyle; Extra: TFontStyles): TFont;
+    /// Schriften der Element-Stile verwerfen (Schrift, Stil, Spalten geaendert).
+    procedure FontsChanged;
     { Eingabe }
     procedure ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseMove(Shift: TShiftState; X, Y: Integer); override;
@@ -1057,6 +1067,8 @@ var
   I: Integer;
   Same: Boolean;
 begin
+  // Spaltenstile koennen eigene Schriften haben
+  FontsChanged;
   // Spalten bestimmen die Spaltenzahl
   if (FColumns.Count > 0) and (FColCount <> FColumns.Count) then
     ColCount := FColumns.Count
@@ -2269,6 +2281,14 @@ begin
   // ganz nach rechts gescrollt), die uebrigen scrollen
   if VCol < FFixedCols then
     Result := FColX[VCol]
+  else if FPaintCached then
+  begin
+    // Waehrend des Zeichnens einmal berechnet (Audit 8c #8)
+    if VCol >= FPaintFirstRight then
+      Result := FColX[VCol] - FPaintMaxColScroll
+    else
+      Result := FColX[VCol] - ScrollX;
+  end
   else if VCol >= FirstRightCol then
     Result := FColX[VCol] - MaxColScroll
   else
@@ -4241,6 +4261,7 @@ begin
   PPI := ScalePPI;
   if FColGeomValid and FRowGeomValid and (FGeomPPI = PPI) then
     Exit;
+  FPaintCached := False; // Geometrie aendert sich: keine Paint-Werte mehr
   if FGeomPPI <> PPI then
   begin
     FColGeomValid := False;
@@ -4455,7 +4476,14 @@ end;
 procedure TPPGCustomGrid.CMFontChanged(var Message: TMessage);
 begin
   inherited;
+  FontsChanged;
   InvalidateGeometry;
+end;
+
+procedure TPPGCustomGrid.FontsChanged;
+begin
+  if FFontCache <> nil then
+    FFontCache.Clear;
 end;
 
 { ---- Farben und Zeichnen ---- }
@@ -4469,6 +4497,7 @@ end;
 
 procedure TPPGCustomGrid.StylesObjChanged(Sender: TObject);
 begin
+  FontsChanged; // Schrift eines Element-Stils kann sich geaendert haben
   Invalidate;
 end;
 
@@ -4686,7 +4715,10 @@ var
   X, Y: Int64;
 begin
   // Wie CellRect, aber ohne Sichtbarkeitspruefung (fuer Auswahl-Rechtecke)
-  V := GridViewRect;
+  if FPaintCached then
+    V := FPaintGV
+  else
+    V := GridViewRect;
   X := ColLeft(ACol);
   Y := FLayout.RowTop(VRow);
   if VRow >= VFixedRows then
@@ -4815,10 +4847,98 @@ var
   Al: TAlignment;
   IsHead: Boolean;
   Cut: array of TPoint; // ausgesparte Abschnitte (Von, Bis) einer Linie
+  // Audit 8c #12: Text je Zelle nur einmal je Zeichnen lesen
+  CellTexts: array of string;
+  HaveText: array of Boolean;
+  // Zellart und ihr Kontext je Spalte (statt je Zelle)
+  KindArr: array of IPPGCellKind;
+  KindCtxArr: array of TPPGCellKindContext;
+  HaveCtx: array of Boolean;
+  K2: IPPGCellKind;
+  // Audit 8c #8: deckende Flaechen gesammelt, per GDI in einem Block
+  FillR: array of TRect;
+  FillC: array of TColor;
+  NF: Integer;
 
   function CellIndex(AC, AV: Integer): Integer;
   begin
     Result := (AV - RowFrom) * (ColTo - ColFrom + 1) + (AC - ColFrom);
+  end;
+
+  function CellText(AC, AV, AD, ADCol: Integer): string;
+  var
+    J: Integer;
+  begin
+    J := CellIndex(AC, AV);
+    if not HaveText[J] then
+    begin
+      CellTexts[J] := GetCellText(ADCol, AD);
+      HaveText[J] := True;
+    end;
+    Result := CellTexts[J];
+  end;
+
+  procedure AddFill(const AR: TRect; AColor: TColor);
+  var
+    L: Integer;
+  begin
+    if IsRectEmpty(AR) then
+      Exit;
+    // Nachbarzellen gleicher Farbe in derselben Zeile zu einer Spanne
+    L := NF - 1;
+    if (L >= 0) and (FillC[L] = AColor) and (FillR[L].Top = AR.Top) and
+      (FillR[L].Bottom = AR.Bottom) and ((FillR[L].Right = AR.Left) or (AR.Right = FillR[L].Left)) then
+    begin
+      if AR.Left < FillR[L].Left then
+        FillR[L].Left := AR.Left;
+      if AR.Right > FillR[L].Right then
+        FillR[L].Right := AR.Right;
+      Exit;
+    end;
+    if NF >= Length(FillR) then
+    begin
+      SetLength(FillR, NF * 2 + 16);
+      SetLength(FillC, NF * 2 + 16);
+    end;
+    FillR[NF] := AR;
+    FillC[NF] := AColor;
+    Inc(NF);
+  end;
+
+  procedure FlushFills;
+  var
+    J: Integer;
+    FDC: HDC;
+    B: HBRUSH;
+    BC: TColor;
+  begin
+    if NF = 0 then
+      Exit;
+    FDC := ACanvas.BeginGdi;
+    try
+      B := 0;
+      BC := clNone;
+      try
+        for J := 0 to NF - 1 do
+        begin
+          if (B = 0) or (FillC[J] <> BC) then
+          begin
+            if B <> 0 then
+              DeleteObject(B);
+            B := CreateSolidBrush(ColorToRGB(FillC[J]));
+            BC := FillC[J];
+          end;
+          if B <> 0 then
+            Winapi.Windows.FillRect(FDC, FillR[J], B);
+        end;
+      finally
+        if B <> 0 then
+          DeleteObject(B);
+      end;
+    finally
+      ACanvas.EndGdi(FDC);
+    end;
+    NF := 0;
   end;
 
   function InMerge(AC, AV: Integer): Boolean;
@@ -4908,9 +5028,10 @@ var
         CR := RawCellRect(AC, AV);
         IntersectRect(CR, CR, Clip);
         if not IsRectEmpty(CR) then
-          ACanvas.FillRoundRect(CR, 0, CF, 255);
+          AddFill(CR, CF);
       end;
     end;
+    FlushFills;
   end;
 
   procedure LineSegments(AFrom, ATo: Integer; Vertical: Boolean; Fixed: Integer);
@@ -4958,6 +5079,15 @@ begin
   PPI := ScalePPI;
   Pad := PPGScale(CellPadX, PPI);
   IconW := PPGScale(14, PPI);
+  I := (ColTo - ColFrom + 1) * (RowTo - RowFrom + 1);
+  SetLength(CellTexts, I);
+  SetLength(HaveText, I);
+  SetLength(KindArr, ColTo - ColFrom + 1);
+  SetLength(KindCtxArr, ColTo - ColFrom + 1);
+  SetLength(HaveCtx, ColTo - ColFrom + 1);
+  for C := ColFrom to ColTo do
+    KindArr[C - ColFrom] := KindOf(FVisCols[C]);
+  NF := 0;
   ACanvas.PushClipRoundRect(Clip, 0);
   try
     // 0. Verbundene Zellen in diesem Bereich (auch mit Ursprung ausserhalb)
@@ -5037,12 +5167,25 @@ begin
           if (D < FFixedRows) or (C < FFixedCols) or
             not (Assigned(FOnGetCellStyle) or FCondFormats.HasRulesFor(DCol)) then
             Continue;
-          St := CellStyle(DCol, D, GetCellText(DCol, D));
+          St := CellStyle(DCol, D, CellText(C, V, D, DCol));
           if St.IsDefault then
             Continue;
-          R := RawCellRect(C, V);
+          // Flaechen erst sammeln (ein GDI-Block), Balken und Symbole danach
           if St.Fill <> clNone then
-            ACanvas.FillRoundRect(R, 0, St.Fill, 255);
+            AddFill(RawCellRect(C, V), St.Fill);
+          StyleRec[Idx] := St;
+          StyleIcon[Idx] := St.Icon >= 0;
+        end;
+      end;
+      FlushFills;
+      for V := RowFrom to RowTo do
+        for C := ColFrom to ColTo do
+        begin
+          Idx := CellIndex(C, V);
+          St := StyleRec[Idx];
+          if (St.Bar < 0) and (St.Icon < 0) then
+            Continue;
+          R := RawCellRect(C, V);
           if St.Bar >= 0 then
           begin
             SR := R;
@@ -5085,11 +5228,8 @@ begin
               Pts[3] := Point(W - IconW div 4, K);
             end;
             PPGFillPolygon(ACanvas, Pts, St.IconColor, 255);
-            StyleIcon[Idx] := True;
           end;
-          StyleRec[Idx] := St;
         end;
-      end;
     end;
     // 2. Auswahl als ein halbtransparentes Rechteck (nur Datenzellen)
     if HasSel then
@@ -5178,10 +5318,10 @@ begin
           end;
         end
         else if D >= 0 then
-          S := GetCellText(DCol, D)
+          S := CellText(C, V, D, DCol)
         else
           S := '';
-        HasKind := (D >= FFixedRows) and (C >= FFixedCols) and (KindOf(DCol) <> nil);
+        HasKind := (D >= FFixedRows) and (C >= FFixedCols) and (KindArr[C - ColFrom] <> nil);
         if HasKind or ((D = 0) and (FFixedRows > 0) and (DCol = FSortCol)) then
         begin
           ExtraC[NX] := C;
@@ -5360,10 +5500,50 @@ begin
     finally
       ACanvas.EndGdi(DC); // stellt Schrift, Farbe und Modus wieder her
     end;
-    // 5. Zellarten und Sortierpfeil (Preset-Renderer)
-    for I := 0 to NX - 1 do
-      DrawCellExtras(ACanvas, FVisCols[ExtraC[I]], ExtraV[I],
-        RawCellRect(ExtraC[I], ExtraV[I]), ExtraS[I]);
+    // 5. Zellarten und Sortierpfeil (Preset-Renderer). Wie DrawCellExtras,
+    // aber Zellart und Kontext je Spalte; Texte eingebauter Zellarten in
+    // EINEM GDI-Block (Audit 8c #9)
+    if NX > 0 then
+    begin
+      try
+        for I := 0 to NX - 1 do
+        begin
+          C := ExtraC[I];
+          V := ExtraV[I];
+          DCol := FVisCols[C];
+          D := DataRow(V);
+          R := RawCellRect(C, V);
+          K2 := KindArr[C - ColFrom];
+          if (K2 <> nil) and (D >= FFixedRows) and (C >= FFixedCols) then
+          begin
+            Idx := C - ColFrom;
+            if not HaveCtx[Idx] then
+            begin
+              KindCtxArr[Idx] := KindContext(DCol);
+              KindCtxArr[Idx].Canvas := ACanvas;
+              HaveCtx[Idx] := True;
+            end;
+            FPainter.CollectTexts := PPGCellKindIsBuiltIn(K2);
+            K2.PaintCell(KindCtxArr[Idx], R, ExtraS[I]);
+            FPainter.CollectTexts := False;
+          end;
+          if (D = 0) and (FFixedRows > 0) and (DCol = FSortCol) then
+            FPainter.DrawSortArrow(ACanvas, R, FSortAscending, UseRightToLeftAlignment,
+              PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.3), PPI);
+        end;
+      finally
+        FPainter.CollectTexts := False;
+      end;
+      if FPainter.TextCount > 0 then
+      begin
+        DC := ACanvas.BeginGdi;
+        try
+          FPainter.FlushTexts(DC, Font.Handle);
+        finally
+          ACanvas.EndGdi(DC);
+        end;
+      end;
+    end;
     // 5b. Gruppenkopf-Zeilen ueber die ganze Breite (Text nur im scrollbaren
     // Bereich, dort bleibt er beim waagerechten Scrollen stehen)
     if HasGroups then
@@ -5426,11 +5606,23 @@ begin
     Exit;
   // Farben einmal pro Zeichnen (nicht je Zelle)
   GetGridColors(FPaint.Fill, FPaint.Text, FPaint.Header, FPaint.Line, FPaint.Accent);
-  FFontCache.Clear;
+  // Schriften bleiben ueber Zeichenvorgaenge (Audit 8c #10); neu bei anderer
+  // DPI bzw. wenn sich zu viele angesammelt haben
+  if (FFontCachePPI <> ScalePPI) or (FFontCache.Count > 64) then
+  begin
+    FFontCache.Clear;
+    FFontCachePPI := ScalePPI;
+  end;
   PrepareStyleColors;
   FPaint.Hint := PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.55);
   FPainter.Prepare(Renderer);
   PrepareKindContext(ACanvas);
+  // Werte fuer RawCellRect/ColLeft einmal je Zeichnen (Audit 8c #8)
+  FPaintGV := GridViewRect;
+  FPaintMaxColScroll := MaxColScroll;
+  FPaintFirstRight := FirstRightCol;
+  FPaintCached := True;
+  FPainter.Painting := True;
   try
     GV := View;
     PH := GroupPanelHeight;
@@ -5501,9 +5693,11 @@ begin
         X + PPGScale(1, ScalePPI), GV.Top + FH), 0, FPaint.Accent, 255);
     end;
   finally
+    FPaintCached := False;
+    FPainter.Painting := False;
+    FPainter.CollectTexts := False;
     FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
     FPaint.HeaderFont := nil;
-    FFontCache.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
   end;
 end;
 
@@ -6910,6 +7104,11 @@ begin
   end;
   if Message.Msg = CM_MOUSELEAVE then
     SetHotRow(-1);
+  // Theme bzw. Systemfarben: Schriften neu (Audit 8c #10)
+  if (Message.Msg = CM_STYLECHANGED) or (Message.Msg = CM_SYSCOLORCHANGE) or
+    (Message.Msg = WM_THEMECHANGED) or (Message.Msg = WM_SETTINGCHANGE) or
+    (Message.Msg = CM_PARENTFONTCHANGED) then
+    FontsChanged;
   if (GMsgRowAction <> 0) and (Message.Msg = GMsgRowAction) then
   begin
     if (Integer(Message.WParam) >= VFixedRows) and (Integer(Message.WParam) < VRowCount) then

@@ -42,7 +42,25 @@ type
     FFonts: array of HFONT;
     FCount: Integer;
     FCells: IPPGGridCellRenderer;
+    FCollect: Boolean;
+    FPainting: Boolean;
+    // Messcache eines Zeichenvorgangs (Audit 8c #9): Schrift + Text -> Breite
+    FMeasureFont: array of HFONT;
+    FMeasureText: array of string;
+    FMeasureW: array of Integer;
+    FMeasureCount: Integer;
+    procedure SetPainting(const Value: Boolean);
   public
+    /// Breite eines Texts in der Schrift; waehrend eines Zeichenvorgangs
+    /// (Painting) zwischengespeichert, sonst direkt gemessen.
+    function TextWidth(AFont: TFont; const S: string): Integer;
+    /// Zeichenvorgang laeuft: Messcache gilt (beim Ende geleert).
+    property Painting: Boolean read FPainting write SetPainting;
+    /// Zellarten-Texte (PPGCellDrawText) sammeln statt einzeln zu zeichnen;
+    /// der Aufrufer gibt sie mit FlushTexts in einem GDI-Block aus.
+    property CollectTexts: Boolean read FCollect write FCollect;
+    /// Anzahl gesammelter Texte.
+    property TextCount: Integer read FCount;
     /// Zellarten-Renderer fuer diesen Zeichenvorgang bestimmen (Preset-Renderer
     /// oder direkt ein IPPGGridCellRenderer).
     procedure Prepare(const Renderer: IInterface);
@@ -214,6 +232,59 @@ begin
     FTexts[I] := ''; // Strings nicht bis zum naechsten Paint festhalten
   end;
   FCount := 0;
+end;
+
+procedure TPPGCellPainter.SetPainting(const Value: Boolean);
+var
+  I: Integer;
+begin
+  FPainting := Value;
+  // Schrift-Handles gelten nur waehrend des Zeichnens
+  for I := 0 to FMeasureCount - 1 do
+    FMeasureText[I] := '';
+  FMeasureCount := 0;
+end;
+
+function TPPGCellPainter.TextWidth(AFont: TFont; const S: string): Integer;
+var
+  I, N: Integer;
+  DC: HDC;
+  Old: HGDIOBJ;
+  Sz: TSize;
+  F: HFONT;
+begin
+  Result := 0;
+  if (S = '') or (AFont = nil) then
+    Exit;
+  F := AFont.Handle;
+  if FPainting then
+    for I := 0 to FMeasureCount - 1 do
+      if (FMeasureFont[I] = F) and (FMeasureText[I] = S) then
+        Exit(FMeasureW[I]);
+  DC := GetDC(0);
+  try
+    Old := SelectObject(DC, F);
+    if GetTextExtentPoint32(DC, PChar(S), Length(S), Sz) then
+      Result := Sz.cx;
+    SelectObject(DC, Old);
+  finally
+    ReleaseDC(0, DC);
+  end;
+  // Wenige verschiedene Texte je Zeichenvorgang (z.B. '100 %'): kleine Liste
+  if FPainting and (FMeasureCount < 32) then
+  begin
+    N := FMeasureCount;
+    if N >= Length(FMeasureFont) then
+    begin
+      SetLength(FMeasureFont, N + 8);
+      SetLength(FMeasureText, N + 8);
+      SetLength(FMeasureW, N + 8);
+    end;
+    FMeasureFont[N] := F;
+    FMeasureText[N] := S;
+    FMeasureW[N] := Result;
+    Inc(FMeasureCount);
+  end;
 end;
 
 procedure TPPGCellPainter.DrawCheck(const ACanvas: IPPGCanvas; const CellR: TRect;

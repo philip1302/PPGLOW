@@ -73,6 +73,7 @@ type
     { #11 Zellspeicher }
     procedure CellStoreGrowsAndTruncates;
     { #8-#10, #12 Zeichnen }
+    procedure FontCacheFollowsChanges;
     procedure PaintUnchanged;
   end;
 
@@ -1336,6 +1337,81 @@ begin
   G.ColCount := 2;
   G.ColCount := 3;
   CheckEquals('', G.Cells[2, 98], 'Spalte gekuerzt');
+end;
+
+{ ---- Schrift-Cache ueber Zeichenvorgaenge (#10) ---- }
+
+procedure TAudit8BTests.FontCacheFollowsChanges;
+var
+  G: TPPGGrid;
+  R: Integer;
+  B1, B2: TBitmap;
+
+  function Same(A, B: TBitmap): Boolean;
+  begin
+    Result := PPGPixelDiff(A, B, 0) = 0;
+  end;
+
+  function Shot: TBitmap;
+  begin
+    Result := RenderToBitmap(G);
+  end;
+
+begin
+  G := NewGrid;
+  G.Columns.Add.Title := '#';
+  G.Columns.Add.Title := 'Name';
+  G.Columns.Add.Title := 'Wert';
+  G.RowCount := 6;
+  for R := 1 to 5 do
+  begin
+    G.Cells[1, R] := 'Zeile ' + IntToStr(R);
+    G.Cells[2, R] := IntToStr(R * 11);
+  end;
+  G.Styles.Header.Font.Size := 12;
+  G.Columns[2].Style.FontStyle := [fsBold];
+  B1 := Shot;
+  try
+    B2 := Shot;
+    try
+      CheckTrue(Same(B1, B2), 'zweimal gleich gezeichnet');
+    finally
+      B2.Free;
+    end;
+    // Element-Schrift geaendert: neue Schrift, kein veralteter Cache
+    G.Styles.Header.Font.Size := 16;
+    B2 := Shot;
+    try
+      CheckFalse(Same(B1, B2), 'groessere Kopfschrift');
+    finally
+      B2.Free;
+    end;
+    G.Styles.Header.Font.Size := 12;
+    B2 := Shot;
+    try
+      CheckTrue(Same(B1, B2), 'zurueck');
+    finally
+      B2.Free;
+    end;
+    // Spaltenstil und Grid-Schrift
+    G.Columns[2].Style.FontStyle := [];
+    B2 := Shot;
+    try
+      CheckFalse(Same(B1, B2), 'Spaltenstil ohne Fett');
+    finally
+      B2.Free;
+    end;
+    G.Columns[2].Style.FontStyle := [fsBold];
+    G.Font.Size := G.Font.Size + 3;
+    B2 := Shot;
+    try
+      CheckFalse(Same(B1, B2), 'Grid-Schrift');
+    finally
+      B2.Free;
+    end;
+  finally
+    B1.Free;
+  end;
 end;
 
 { ---- Zeichnen ---- }
