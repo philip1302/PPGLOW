@@ -181,8 +181,11 @@ end;
 procedure TTabsTestCase.TearDown;
 begin
   SetModifiers(False, False);
-  inherited;
-  FreeAndNil(FLog);
+  try
+    inherited; // kann fehlschlagen (unerwartete Fehler), FLog trotzdem frei
+  finally
+    FreeAndNil(FLog);
+  end;
 end;
 
 procedure TTabsTestCase.LogChange(Sender: TObject);

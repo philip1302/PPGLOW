@@ -194,9 +194,12 @@ end;
 
 procedure TPhase4TestCase.TearDown;
 begin
-  inherited;
-  if FComInit then
-    CoUninitialize;
+  try
+    inherited; // kann fehlschlagen (unerwartete Fehler), COM trotzdem freigeben
+  finally
+    if FComInit then
+      CoUninitialize;
+  end;
 end;
 
 procedure TPhase4TestCase.CountChange(Sender: TObject);

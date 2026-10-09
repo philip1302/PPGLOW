@@ -4,7 +4,10 @@ program PPGlowTests;
   Exit-Code = Anzahl Fehler + Failures (0 = alles gruen) -> CI-tauglich.
   Parameter /gui startet den grafischen DUnit-Runner.
   /suite Name[,Name] laeuft nur die genannten Gruppen bzw. Test-Klassen.
-  /hidden laeuft auf einem eigenen Windows-Desktop (keine Fenster auf dem Bildschirm). }
+  /hidden laeuft auf einem eigenen Windows-Desktop (keine Fenster auf dem Bildschirm).
+  /baseline legt fehlende Referenzbilder an (sonst ist ein fehlendes Bild ein Fehlschlag).
+  /allowskip laesst Skip(Grund) zu (sonst ist ein uebersprungener Test ein Fehlschlag);
+  am Ende stehen Anzahl und Liste der uebersprungenen Tests. }
 
 {$APPTYPE CONSOLE}
 
@@ -332,6 +335,21 @@ begin
   end;
 end;
 
+/// Anzahl und Liste der uebersprungenen Tests (PPGSkip) ausgeben.
+procedure ReportSkips;
+var
+  I: Integer;
+  L: TStrings;
+begin
+  L := PPGSkippedTests;
+  if PPGTestAllowSkip then
+    WriteLn(Format('%d uebersprungen', [L.Count]))
+  else
+    WriteLn(Format('%d uebersprungen (ohne /allowskip als Fehlschlag gewertet)', [L.Count]));
+  for I := 0 to L.Count - 1 do
+    WriteLn('  ' + L[I]);
+end;
+
 const
   /// Erlaubter Zuwachs zwischen erstem und zweitem Lauf (Caches des
   /// Speichermanagers, Fenster-Klassen, Windows-Interna): 256 KB.
@@ -347,6 +365,8 @@ begin
   // Leak-Meldung beim Beenden (FastMM): nur im GUI-Modus, sonst blockiert
   // die MessageBox einen automatischen Lauf.
   Application.Initialize;
+  PPGTestBaseline := FindCmdLineSwitch('baseline', ['/', '-'], True);
+  PPGTestAllowSkip := FindCmdLineSwitch('allowskip', ['/', '-'], True);
   if FindCmdLineSwitch('gui', ['/', '-'], True) then
   begin
     ReportMemoryLeaksOnShutdown := True;
@@ -356,6 +376,7 @@ begin
   if SuiteFilter <> '' then
   begin
     ExitCode := RunFiltered(SuiteFilter);
+    ReportSkips;
     Exit;
   end;
   if FindCmdLineSwitch('leaksuites', ['/', '-'], True) then
@@ -382,7 +403,9 @@ begin
       Inc(Errors);
     end;
     ExitCode := Errors;
+    ReportSkips;
     Exit;
   end;
   ExitCode := RunAll;
+  ReportSkips;
 end.

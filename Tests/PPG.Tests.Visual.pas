@@ -959,6 +959,14 @@ begin
           F := Dir + ControlNames[Index] + '_' + IntToStr(Ord(V)) + '.png';
           if not FileExists(F) then
           begin
+            // Referenzbilder stammen aus dem alten Code: anlegen nur mit
+            // /baseline, sonst ist ein fehlendes Bild ein Fehlschlag
+            if not PPGTestBaseline then
+            begin
+              Errors.Add(Format('%s %s: Referenzbild %s fehlt (anlegen nur mit /baseline)',
+                [ControlNames[Index], VariantNames[V], ExtractFileName(F)]));
+              Continue;
+            end;
             Png := TPngImage.Create;
             try
               Png.Assign(B);
