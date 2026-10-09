@@ -308,6 +308,26 @@ begin
   end;
 end;
 
+/// Audit-Paket 8A (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
+procedure Bench8A;
+begin
+end;
+
+/// Audit-Paket 8B (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
+procedure Bench8B;
+begin
+end;
+
+/// Audit-Paket 8C (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
+procedure Bench8C;
+begin
+end;
+
+/// Audit-Paket 8D (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
+procedure Bench8D;
+begin
+end;
+
 begin
   Application.Initialize;
   Form := TForm.CreateNew(nil);
@@ -1106,6 +1126,13 @@ begin
           P.Free;
         end;
       end);
+
+    Writeln;
+    Writeln('Audit-Paket 8');
+    Bench8A;
+    Bench8B;
+    Bench8C;
+    Bench8D;
 
     Writeln;
     if Exceeded = 0 then

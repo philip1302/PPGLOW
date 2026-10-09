@@ -204,12 +204,22 @@ end;
 { Beobachter }
 
 type
+  /// Merker je laufendem WatchProc-Aufruf (liegt auf dem Stack): Der
+  /// Destruktor setzt Gone, wenn das Control samt Beobachter waehrend der
+  /// Nachricht freigegeben wird - danach darf WatchProc Self nicht mehr anfassen.
+  PWatchFrame = ^TWatchFrame;
+  TWatchFrame = record
+    Gone: Boolean;
+    Prev: PWatchFrame;
+  end;
+
   TControlWatcher = class(TComponent)
   private
     FControl: TControl;
     FOldProc: TWndMethod;
     FEvents: TArray<TMethod>;
     FDepth: Integer;        // laufende WatchProc-Aufrufe
+    FFrame: PWatchFrame;    // innerster laufender Aufruf (verkettet)
     FFreePending: Boolean;  // abgemeldet waehrend WatchProc: danach freigeben
     procedure WatchProc(var Message: TMessage);
     function IsTopOfChain: Boolean;
@@ -237,7 +247,17 @@ begin
 end;
 
 destructor TControlWatcher.Destroy;
+var
+  F: PWatchFrame;
 begin
+  // Laufende WatchProc-Aufrufe duerfen danach nicht mehr auf Self zugreifen
+  F := FFrame;
+  while F <> nil do
+  begin
+    F^.Gone := True;
+    F := F^.Prev;
+  end;
+  FFrame := nil;
   if (FControl <> nil) and IsTopOfChain then
     FControl.WindowProc := FOldProc;
   FEvents := nil;
@@ -248,20 +268,40 @@ procedure TControlWatcher.WatchProc(var Message: TMessage);
 var
   Copy: TArray<TMethod>;
   I: Integer;
+  Frame: TWatchFrame;
+  Ctl: TControl;
 begin
+  Frame.Gone := False;
+  Frame.Prev := FFrame;
+  FFrame := @Frame;
   Inc(FDepth);
   try
     FOldProc(Message);
+    // Control (und damit dieser Beobachter) in der Nachricht freigegeben
+    if Frame.Gone then
+      Exit;
     Copy := System.Copy(FEvents);
+    Ctl := FControl;
     for I := High(Copy) downto 0 do
+    begin
       try
-        TPPGControlWatchEvent(Copy[I])(FControl, Message);
+        TPPGControlWatchEvent(Copy[I])(Ctl, Message);
       except
         on E: Exception do
-          TPPGErrorHandler.HandleCallbackError(Self, E, 'PPG.AppHooks.PPGWatchControl');
+          if Frame.Gone then
+            TPPGErrorHandler.HandleCallbackError(nil, E, 'PPG.AppHooks.PPGWatchControl')
+          else
+            TPPGErrorHandler.HandleCallbackError(Ctl, E, 'PPG.AppHooks.PPGWatchControl');
       end;
+      if Frame.Gone then
+        Exit;
+    end;
   finally
-    Dec(FDepth);
+    if not Frame.Gone then
+    begin
+      Dec(FDepth);
+      FFrame := Frame.Prev;
+    end;
   end;
   // Waehrend der Nachricht abgemeldet: jetzt aushaengen und freigeben
   if FFreePending and (FDepth = 0) then
