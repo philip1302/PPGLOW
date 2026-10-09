@@ -116,6 +116,7 @@ type
     FDataUpdateCount: Integer;
     FDataChangePending: Boolean;
     FSnapshotTaken: Boolean;
+    FCountChanged: Boolean;     // Snapshot ohne Kopie: Anzahl hat sich geaendert
     FHot: TPPGChartHit;
     FHotDataX: Double;
     FMousePos: TPoint;
@@ -124,6 +125,29 @@ type
     FMarkedIndex: Integer;
     FOnPointClick: TPPGChartPointEvent;
     FOnGetPoint: TPPGChartGetPointEvent;
+    // Audit 8D: Layout zwischen Zeichnen und Hit-Test (Schluessel: Groesse,
+    // PPI, RTL, Sprache, Serien; jedes Invalidate verwirft es)
+    FLayout: TPPGChartLayout;
+    FLayoutValid: Boolean;
+    FLayoutW: Integer;
+    FLayoutH: Integer;
+    FLayoutPPI: Integer;
+    FLayoutRTL: Boolean;
+    FLayoutLang: string;
+    FLayoutSeries: TArray<Int64>;
+    FPieSums: TArray<Double>;   // Kreis: Summe der Betraege vor jedem Punkt
+    FPieSumsValid: Boolean;
+    FTipW: Integer;             // Groesse des zuletzt gezeichneten Tooltips (0 = keiner)
+    FTipH: Integer;
+    FReorderPending: Boolean;
+    function ComputeLayout: TPPGChartLayout;
+    function LayoutKeyMatches: Boolean;
+    procedure StoreLayout(const L: TPPGChartLayout);
+    procedure InvalidateView;
+    procedure InvalidateTooltipMove(const OldPos, NewPos: TPoint);
+    function TooltipBox(const Anchor: TPoint; TW, TH: Integer; const ClientR: TRect): TRect;
+    procedure EnsurePieSums(const L: TPPGChartLayout);
+    procedure NotifyReorder;
     procedure SetChartStyles(const Value: TPPGChartStyles);
     procedure ChartStylesChanged(Sender: TObject);
     /// Titel-Schrift: eigene (Styles.Title) bzw. 1,25-fach fett; Temp freigeben.
@@ -145,7 +169,7 @@ type
     procedure AnimStep(Sender: TObject);
     procedure StartIntro;
     function TotalPoints: Integer;
-    procedure SetHot(const Hit: TPPGChartHit; DataX: Double);
+    function SetHot(const Hit: TPPGChartHit; DataX: Double): Boolean;
     procedure ClampFocus;
     function FirstDrawnSeries: Integer;
     /// Breiteste Kategorie-Beschriftung (Stichprobe aus etwa 60).
@@ -156,8 +180,11 @@ type
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
   protected
+    /// Anzahl Layout-Berechnungen (Tests).
+    FLayoutCount: Integer;
     { IPPGChartHost }
     procedure ChartBeforeDataChange;
+    procedure ChartCountChange;
     procedure ChartDataChanged;
     procedure ChartInvalidate;
     function ChartCanAnimate: Boolean;
@@ -187,6 +214,7 @@ type
     procedure DoEnter; override;
     procedure DoExit; override;
     procedure DoPointClick(SeriesIndex, PointIndex: Integer); virtual;
+    procedure WndProc(var Message: TMessage); override;
     /// Dauerhaft markierte Kategorie bzw. markierter Punkt (DB: aktueller
     /// Datensatz), -1 = keine. Zeichnet ein dezentes Band bzw. eine Linie.
     property MarkedIndex: Integer read FMarkedIndex write SetMarkedIndex;
@@ -217,10 +245,13 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    /// Verwirft auch das zwischengespeicherte Layout.
+    procedure Invalidate; override;
     /// Mehrere Datenaenderungen buendeln (ein Uebergang, ein Neuzeichnen).
     procedure BeginDataUpdate;
     procedure EndDataUpdate;
-    /// Layout fuer die aktuelle Groesse (fuer Tests und Hit-Tests).
+    /// Layout fuer die aktuelle Groesse (fuer Tests und Hit-Tests). Wird
+    /// zwischengespeichert, bis sich Daten, Groesse oder Darstellung aendern.
     function Layout: TPPGChartLayout;
     function HitTest(X, Y: Integer): TPPGChartHit;
     /// Pixel eines Datenpunkts (False, wenn nicht gezeichnet).
@@ -327,6 +358,10 @@ const
   AccMaxPerSeries = 500;
   HoverRadius = 4;       // logische px Markierung am Tooltip-Punkt
 
+var
+  // Gebuendelte Meldung "neue Anordnung" an den Screenreader (Audit 8D)
+  GMsgChartReorder: Cardinal = 0;
+
 type
   TSeriesFrame = record
     Index: Integer;
@@ -399,6 +434,8 @@ begin
   TabStop := True;
   Width := 400;
   Height := 260;
+  if GMsgChartReorder = 0 then
+    GMsgChartReorder := RegisterWindowMessage('PPGlow.ChartReorder');
 end;
 
 procedure TPPGCustomChart.SetChartStyles(const Value: TPPGChartStyles);
@@ -468,6 +505,7 @@ end;
 procedure TPPGCustomChart.CreateWnd;
 begin
   inherited CreateWnd;
+  FReorderPending := False;
   StartIntro;
 end;
 
@@ -511,7 +549,8 @@ end;
 
 procedure TPPGCustomChart.AnimStep(Sender: TObject);
 begin
-  Invalidate;
+  // Aufbau und Uebergang aendern nur die gezeichneten Werte, nicht das Layout
+  InvalidateView;
 end;
 
 procedure TPPGCustomChart.AxisChanged(Sender: TObject);
@@ -697,6 +736,24 @@ begin
   end;
 end;
 
+procedure TPPGCustomChart.ChartCountChange;
+begin
+  // Audit 8D: Die Anzahl der Punkte aendert sich (AddXY, Delete, Clear ...).
+  // Dann gibt es keinen weichen Uebergang (wie beim Vergleich der Anzahl in
+  // ChartDataChanged) - die Kopie aller angezeigten Werte je Aenderung
+  // (quadratisch bei AddXY in einer Schleife) entfaellt. In einer
+  // Update-Klammer kann sich die Anzahl wieder ausgleichen: dort wie bisher.
+  if FDataUpdateCount > 0 then
+  begin
+    ChartBeforeDataChange;
+    Exit;
+  end;
+  if FSnapshotTaken or not FIntroDone or not ChartCanAnimate then
+    Exit;
+  FSnapshotTaken := True;
+  FCountChanged := True;
+end;
+
 procedure TPPGCustomChart.ChartDataChanged;
 var
   I: Integer;
@@ -704,6 +761,9 @@ var
 begin
   if (FSeries = nil) or (csDestroying in ComponentState) then
     Exit;
+  // Auch waehrend einer Update-Klammer: Hit-Tests sehen die neuen Daten
+  FLayoutValid := False;
+  FPieSumsValid := False;
   if FDataUpdateCount > 0 then
   begin
     FDataChangePending := True;
@@ -713,7 +773,8 @@ begin
   if FSnapshotTaken then
   begin
     FSnapshotTaken := False;
-    Same := True;
+    Same := not FCountChanged;
+    FCountChanged := False;
     for I := 0 to FSeries.Count - 1 do
       if Length(FSeries[I].OldY) <> FSeries[I].Count then
         Same := False;
@@ -733,7 +794,7 @@ begin
     StartIntro;
   ClampFocus;
   Invalidate;
-  NotifyAccessibility(EVENT_OBJECT_REORDER);
+  NotifyReorder;
 end;
 
 procedure TPPGCustomChart.ChartInvalidate;
@@ -918,7 +979,7 @@ begin
   end;
 end;
 
-function TPPGCustomChart.Layout: TPPGChartLayout;
+function TPPGCustomChart.ComputeLayout: TPPGChartLayout;
 var
   LF: TFont;
   LegendFontH: Integer;
@@ -989,6 +1050,7 @@ var
   end;
 
 begin
+  Inc(FLayoutCount);
   // Result kann ein altes Legenden-Array halten: erst freigeben, dann nullen
   Finalize(Result);
   FillChar(Result, SizeOf(Result), 0);
@@ -1339,6 +1401,145 @@ begin
   end;
 end;
 
+function SeriesKey(S: TPPGChartSeries): Int64;
+begin
+  // Was das Layout aus der Serie liest, ohne die Werte selbst (die melden
+  // sich ueber ChartDataChanged): Anzahl, Art, Achse, Sichtbarkeit
+  Result := (Int64(S.Count) shl 8) or (Ord(S.Kind) shl 4) or (Ord(S.YAxis) shl 2) or
+    (Ord(S.IsDrawn) shl 1) or Ord(S.Visible);
+end;
+
+function TPPGCustomChart.LayoutKeyMatches: Boolean;
+var
+  I: Integer;
+begin
+  Result := FLayoutValid and (FLayoutW = ClientWidth) and (FLayoutH = ClientHeight) and
+    (FLayoutPPI = ScalePPI) and (FLayoutRTL = UseRightToLeftAlignment) and
+    not FSeries.IsUpdating and (Length(FLayoutSeries) = FSeries.Count) and
+    (FLayoutLang = PPGLanguage);
+  if not Result then
+    Exit;
+  for I := 0 to FSeries.Count - 1 do
+    if FLayoutSeries[I] <> SeriesKey(FSeries[I]) then
+      Exit(False);
+end;
+
+procedure TPPGCustomChart.StoreLayout(const L: TPPGChartLayout);
+var
+  I: Integer;
+begin
+  FLayout := L;
+  FLayoutW := ClientWidth;
+  FLayoutH := ClientHeight;
+  FLayoutPPI := ScalePPI;
+  FLayoutRTL := UseRightToLeftAlignment;
+  FLayoutLang := PPGLanguage;
+  SetLength(FLayoutSeries, FSeries.Count);
+  for I := 0 to FSeries.Count - 1 do
+    FLayoutSeries[I] := SeriesKey(FSeries[I]);
+  FLayoutValid := True;
+  FPieSumsValid := False;
+end;
+
+function TPPGCustomChart.Layout: TPPGChartLayout;
+begin
+  if not LayoutKeyMatches then
+    StoreLayout(ComputeLayout);
+  Result := FLayout;
+end;
+
+procedure TPPGCustomChart.EnsurePieSums(const L: TPPGChartLayout);
+var
+  I: Integer;
+  S: TPPGChartSeries;
+begin
+  // Barrierefreiheit fragt jeden Punkt einzeln ab: ohne Vorsummen waere das
+  // bei einem Kreis mit vielen Segmenten quadratisch
+  if FPieSumsValid or (L.PieSeries < 0) or (L.PieSeries >= FSeries.Count) then
+    Exit;
+  S := FSeries[L.PieSeries];
+  SetLength(FPieSums, S.Count + 1);
+  FPieSums[0] := 0;
+  for I := 0 to S.Count - 1 do
+    FPieSums[I + 1] := FPieSums[I] + Abs(S.YAt(I));
+  FPieSumsValid := True;
+end;
+
+procedure TPPGCustomChart.Invalidate;
+begin
+  FLayoutValid := False;
+  FPieSumsValid := False;
+  inherited Invalidate;
+end;
+
+procedure TPPGCustomChart.InvalidateView;
+begin
+  // Neu zeichnen, Layout bleibt gueltig (Hover, Fokus, Animation)
+  inherited Invalidate;
+end;
+
+function TPPGCustomChart.TooltipBox(const Anchor: TPoint; TW, TH: Integer;
+  const ClientR: TRect): TRect;
+var
+  PPI: Integer;
+begin
+  // Lage des Tooltips neben dem Anker (wie gezeichnet)
+  PPI := ScalePPI;
+  Result := Rect(Anchor.X + PPGScale(14, PPI), Anchor.Y - TH div 2, 0, 0);
+  if Result.Left + TW > ClientR.Right - PPGScale(2, PPI) then
+    Result.Left := Anchor.X - PPGScale(14, PPI) - TW;
+  if Result.Left < ClientR.Left + PPGScale(2, PPI) then
+    Result.Left := ClientR.Left + PPGScale(2, PPI);
+  if Result.Top + TH > ClientR.Bottom - PPGScale(2, PPI) then
+    Result.Top := ClientR.Bottom - PPGScale(2, PPI) - TH;
+  if Result.Top < ClientR.Top + PPGScale(2, PPI) then
+    Result.Top := ClientR.Top + PPGScale(2, PPI);
+  Result.Right := Result.Left + TW;
+  Result.Bottom := Result.Top + TH;
+end;
+
+procedure TPPGCustomChart.InvalidateTooltipMove(const OldPos, NewPos: TPoint);
+var
+  A, B: TRect;
+begin
+  // Audit 8D: Tooltip folgt der Maus - nur alte und neue Lage neu zeichnen
+  // (Markierungen haengen am Punkt, nicht an der Maus)
+  if not HandleAllocated or (FTipW <= 0) or ((OldPos.X = NewPos.X) and (OldPos.Y = NewPos.Y)) then
+    Exit;
+  A := TooltipBox(OldPos, FTipW, FTipH, ClientRect);
+  B := TooltipBox(NewPos, FTipW, FTipH, ClientRect);
+  UnionRect(A, A, B);
+  // Rand fuer Schatten und Rahmen
+  InflateRect(A, PPGScale(12, ScalePPI), PPGScale(12, ScalePPI));
+  InvalidateRect(Handle, @A, False);
+end;
+
+procedure TPPGCustomChart.NotifyReorder;
+begin
+  // Audit 8D: viele Datenaenderungen hintereinander (AddXY in einer
+  // Schleife) melden dem Screenreader nur einmal eine neue Anordnung
+  if not HandleAllocated then
+  begin
+    NotifyAccessibility(EVENT_OBJECT_REORDER);
+    Exit;
+  end;
+  if FReorderPending then
+    Exit;
+  FReorderPending := True;
+  PostMessage(Handle, GMsgChartReorder, 0, 0);
+end;
+
+procedure TPPGCustomChart.WndProc(var Message: TMessage);
+begin
+  if (GMsgChartReorder <> 0) and (Message.Msg = GMsgChartReorder) then
+  begin
+    FReorderPending := False;
+    NotifyAccessibility(EVENT_OBJECT_REORDER);
+    Exit;
+  end;
+  inherited WndProc(Message);
+end;
+
 { ---- Abbildung Daten -> Pixel ---- }
 
 function MapY(const L: TPPGChartLayout; const Sc: TPPGAxisScale; V: Double): Integer;
@@ -1568,17 +1769,10 @@ var
     end;
     TW := TW + 2 * Pd;
     TH := Length(Lines) * LH + 2 * Pd - PPGScale(2, PPI);
-    Box := Rect(Anchor.X + PPGScale(14, PPI), Anchor.Y - TH div 2, 0, 0);
-    if Box.Left + TW > ClientR.Right - PPGScale(2, PPI) then
-      Box.Left := Anchor.X - PPGScale(14, PPI) - TW;
-    if Box.Left < ClientR.Left + PPGScale(2, PPI) then
-      Box.Left := ClientR.Left + PPGScale(2, PPI);
-    if Box.Top + TH > ClientR.Bottom - PPGScale(2, PPI) then
-      Box.Top := ClientR.Bottom - PPGScale(2, PPI) - TH;
-    if Box.Top < ClientR.Top + PPGScale(2, PPI) then
-      Box.Top := ClientR.Top + PPGScale(2, PPI);
-    Box.Right := Box.Left + TW;
-    Box.Bottom := Box.Top + TH;
+    Box := TooltipBox(Anchor, TW, TH, ClientR);
+    // Groesse merken: folgt der Tooltip der Maus, wird nur er neu gezeichnet
+    FTipW := TW;
+    FTipH := TH;
     FillChar(St, SizeOf(St), 0);
     if HC then
     begin
@@ -1643,7 +1837,12 @@ begin
     if Enabled then
       SecCol := FChartStyles.Axis.TextFor(UseDarkMode, SecCol);
   end;
-  L := Layout;
+  // Audit 8D: Das Bild bestimmt das Layout; Hit-Tests bis zur naechsten
+  // Aenderung nutzen dasselbe (kein Neurechnen je Mausbewegung)
+  L := ComputeLayout;
+  StoreLayout(L);
+  FTipW := 0;
+  FTipH := 0;
 
   // Titel
   if FTitle <> '' then
@@ -2489,14 +2688,12 @@ begin
       begin
         if SeriesIndex <> L.PieSeries then
           Exit;
-        Total := 0;
-        Start := 0;
-        for I := 0 to S.Count - 1 do
-        begin
-          if I < PointIndex then
-            Start := Start + Abs(S.YAt(I));
-          Total := Total + Abs(S.YAt(I));
-        end;
+        // Vorsummen statt je Punkt alle Werte zu addieren (Audit 8D)
+        EnsurePieSums(L);
+        if Length(FPieSums) <> S.Count + 1 then
+          Exit;
+        Total := FPieSums[S.Count];
+        Start := FPieSums[PointIndex];
         if Total <= 0 then
           Exit;
         A := (360 * (Start + Abs(S.YAt(PointIndex)) / 2) / Total - 90) * Pi / 180;
@@ -2573,22 +2770,27 @@ begin
   end;
 end;
 
-procedure TPPGCustomChart.SetHot(const Hit: TPPGChartHit; DataX: Double);
+function TPPGCustomChart.SetHot(const Hit: TPPGChartHit; DataX: Double): Boolean;
 begin
+  Result := False;
   if (Hit.Kind = FHot.Kind) and (Hit.Series = FHot.Series) and (Hit.Index = FHot.Index) and
     (DataX = FHotDataX) then
     Exit;
   FHot := Hit;
   FHotDataX := DataX;
-  Invalidate;
+  // Markierungen und Tooltip an anderer Stelle; das Layout bleibt
+  InvalidateView;
+  Result := True;
 end;
 
 procedure TPPGCustomChart.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   H: TPPGChartHit;
   DX: Double;
+  OldPos: TPoint;
 begin
   inherited MouseMove(Shift, X, Y);
+  OldPos := FMousePos;
   FMousePos := Point(X, Y);
   H := HitTest(X, Y);
   DX := 0;
@@ -2599,9 +2801,9 @@ begin
     Cursor := crHandPoint
   else
     Cursor := crDefault;
-  SetHot(H, DX);
-  if (H.Kind = chkPlot) and FShowTooltips then
-    Invalidate; // Tooltip folgt der Maus
+  // Tooltip folgt der Maus: bei gleichem Treffer nur seine alte und neue Lage
+  if not SetHot(H, DX) and (H.Kind = chkPlot) and FShowTooltips then
+    InvalidateTooltipMove(OldPos, FMousePos);
 end;
 
 procedure TPPGCustomChart.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -2679,7 +2881,7 @@ begin
     FFocusIndex := PointIndex;
     ClampFocus;
   end;
-  Invalidate;
+  InvalidateView;
   if FFocusIndex >= 0 then
     NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, AccFocusedChild);
 end;
@@ -2739,7 +2941,7 @@ begin
           if FFocusIndex >= 0 then
           begin
             FFocusIndex := -1;
-            Invalidate;
+            InvalidateView;
             Key := 0;
           end;
       end;
@@ -2751,13 +2953,13 @@ end;
 procedure TPPGCustomChart.DoEnter;
 begin
   inherited DoEnter;
-  Invalidate;
+  InvalidateView;
 end;
 
 procedure TPPGCustomChart.DoExit;
 begin
   inherited DoExit;
-  Invalidate;
+  InvalidateView;
 end;
 
 { ---- Barrierefreiheit ---- }

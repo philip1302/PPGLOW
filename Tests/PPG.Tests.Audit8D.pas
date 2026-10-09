@@ -16,7 +16,7 @@ uses
   PPG.Types, PPG.Appearance, PPG.Render.Gdi, PPG.AppHooks, PPG.MenuBar, PPG.Chart.Series,
   PPG.Chart, PPG.Kanban.Items, PPG.Kanban, PPG.DB.Kanban, PPG.Planner.Model, PPG.Planner,
   PPG.Ribbon.Layout, PPG.Ribbon.Items, PPG.Ribbon, PPG.TabStrip, PPG.TabControl, PPG.PageControl, PPG.Feedback,
-  PPG.TeachingTip, PPG.TagEdit, PPG.Tests.Controls;
+  PPG.TeachingTip, PPG.TagEdit, PPG.Exceptions, PPG.Tests.Controls;
 
 type
   TAudit8DTests = class(TControlTestCase)
@@ -60,8 +60,18 @@ type
 
   /// Zaehltests: wie oft gerechnet bzw. gemessen wird (nach den Optimierungen).
   TAudit8DCountTests = class(TControlTestCase)
+  private
+    function UpdateRectOf(C: TWinControl): TRect;
   published
     procedure MenuBarMeasuresOncePerChange;
+    procedure MenuBarHoverRepaintsItemsOnly;
+    procedure ChartHoverComputesNoLayout;
+    procedure ChartTooltipMoveRepaintsTooltipOnly;
+    procedure ChartAddXYTakesNoSnapshot;
+    procedure ChartAddRangeEqualsAddXY;
+    procedure ChartPiePointPosUsesSums;
+    procedure PlannerHoverRepaintsItemOnly;
+    procedure PlannerDragRepaintsOnlyOnGhostChange;
   end;
 
   TAudit8DDBTests = class(TControlTestCase)
@@ -993,6 +1003,322 @@ begin
   CheckEquals(N + 1, TMenuBarAccess(Bar).FItemLayoutCount, 'Textaenderung misst einmal neu');
   Bar.Perform(WM_MOUSEMOVE, 0, MouseLParam(300, 5));
   CheckEquals(N + 1, TMenuBarAccess(Bar).FItemLayoutCount, 'danach wieder aus dem Speicher');
+end;
+
+function TAudit8DCountTests.UpdateRectOf(C: TWinControl): TRect;
+begin
+  if not GetUpdateRect(C.Handle, Result, False) then
+    Result := Rect(0, 0, 0, 0);
+end;
+
+procedure TAudit8DCountTests.MenuBarHoverRepaintsItemsOnly;
+var
+  Bar: TPPGMenuBar;
+  M: TMainMenu;
+  It: TMenuItem;
+  I: Integer;
+  R, U, E: TRect;
+begin
+  FForm.Width := 900;
+  FForm.Show;
+  try
+    M := TMainMenu.Create(FForm);
+    for I := 0 to 5 do
+    begin
+      It := TMenuItem.Create(M);
+      It.Caption := 'Menue ' + IntToStr(I);
+      It.Add(TMenuItem.Create(M));
+      M.Items.Add(It);
+    end;
+    Bar := TPPGMenuBar.Create(FForm);
+    Bar.Parent := FForm;
+    Bar.Menu := M;
+    // Erste Bewegung: die Basis zeichnet beim Eintritt der Maus alles neu
+    R := Bar.ItemRect(0);
+    Bar.Perform(WM_MOUSEMOVE, 0, MouseLParam(R.Left + 2, (R.Top + R.Bottom) div 2));
+    Bar.Update;
+    ValidateRect(Bar.Handle, nil);
+    R := Bar.ItemRect(2);
+    Bar.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+    CheckEquals(2, Bar.Hot);
+    U := UpdateRectOf(Bar);
+    CheckFalse(IsRectEmpty(U), 'Eintrag wird neu gezeichnet');
+    IntersectRect(E, U, Bar.ItemRect(4));
+    CheckTrue(IsRectEmpty(E), 'andere Eintraege bleiben');
+  finally
+    FForm.Hide;
+  end;
+end;
+
+type
+  TChartAccess = class(TPPGChart);
+
+procedure TAudit8DCountTests.ChartHoverComputesNoLayout;
+var
+  C: TPPGChart;
+  B: TBitmap;
+  I, N: Integer;
+begin
+  C := TPPGChart.Create(FForm);
+  C.Parent := FForm;
+  C.Animation.Enabled := False;
+  C.SetBounds(0, 0, 600, 320);
+  C.Series.Add.SetValues([3, 5, 2, 8, 6, 4, 7]);
+  // Erste Bewegung: die Basis zeichnet beim Eintritt der Maus alles neu
+  C.Perform(WM_MOUSEMOVE, 0, MouseLParam(30, 50));
+  B := RenderToBitmap(C);
+  B.Free;
+  N := TChartAccess(C).FLayoutCount;
+  for I := 0 to 29 do
+    C.Perform(WM_MOUSEMOVE, 0, MouseLParam(40 + I * 15, 60 + I * 5));
+  CheckEquals(N, TChartAccess(C).FLayoutCount, 'Mausbewegungen nutzen das Layout des Bildes');
+  C.Series[0].Add(9);
+  C.HitTest(100, 100);
+  C.HitTest(120, 100);
+  CheckEquals(N + 1, TChartAccess(C).FLayoutCount, 'Datenaenderung: einmal neu');
+  C.Width := C.Width - 10;
+  C.HitTest(100, 100);
+  CheckEquals(N + 2, TChartAccess(C).FLayoutCount, 'Groessenaenderung: einmal neu');
+end;
+
+procedure TAudit8DCountTests.ChartTooltipMoveRepaintsTooltipOnly;
+var
+  C: TPPGChart;
+  U, P: TRect;
+  H: TPPGChartHit;
+  X, Y: Integer;
+begin
+  FForm.SetBounds(0, 0, 700, 400);
+  FForm.Show;
+  try
+    C := TPPGChart.Create(FForm);
+    C.Parent := FForm;
+    C.Animation.Enabled := False;
+    C.SetBounds(0, 0, 600, 320);
+    C.Series.Add.SetValues([3, 5, 2, 8, 6, 4, 7]);
+    P := C.Layout.PlotR;
+    // Mitte der dritten Kategorie
+    X := P.Left + (P.Right - P.Left) * 5 div 14;
+    Y := (P.Top + P.Bottom) div 2;
+    C.Perform(WM_MOUSEMOVE, 0, MouseLParam(X, Y));
+    H := C.Hot;
+    CheckEquals(Ord(chkPlot), Ord(H.Kind));
+    C.Update; // zeichnet den Tooltip
+    ValidateRect(C.Handle, nil);
+    C.Perform(WM_MOUSEMOVE, 0, MouseLParam(X + 2, Y + 3));
+    CheckEquals(H.Index, C.Hot.Index, 'gleicher Treffer');
+    U := UpdateRectOf(C);
+    CheckFalse(IsRectEmpty(U), 'Tooltip neu');
+    CheckTrue((U.Right - U.Left) * (U.Bottom - U.Top) < C.Width * C.Height div 2,
+      'nur der Tooltip, nicht das ganze Diagramm');
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TAudit8DCountTests.ChartAddXYTakesNoSnapshot;
+var
+  C: TPPGChart;
+  S: TPPGChartSeries;
+  I: Integer;
+begin
+  FForm.Show;
+  try
+    C := TPPGChart.Create(FForm);
+    C.Parent := FForm;
+    C.SetBounds(0, 0, 600, 320);
+    C.Animation.Enabled := True;
+    if not C.Animation.EffectiveEnabled then
+    begin
+      Status('Systemanimationen aus');
+      Exit;
+    end;
+    S := C.Series.Add;
+    S.SetValues([1, 2, 3]);
+    C.HandleNeeded;
+    for I := 0 to 99 do
+      S.AddXY(I + 3, I);
+    CheckEquals(0, Length(S.OldY), 'keine Kopie der alten Werte');
+    CheckEquals(1, C.ChangeProgress, 1E-6, 'kein Uebergang bei neuer Anzahl');
+    // Gleiche Anzahl: weiterhin weicher Uebergang
+    S.Y[0] := 50;
+    CheckTrue(C.ChangeProgress < 1, 'Uebergang bei gleicher Anzahl');
+    // In einer Klammer gleicht sich die Anzahl aus: Uebergang wie bisher
+    C.Animation.Enabled := False;
+    C.Animation.Enabled := True;
+    C.BeginDataUpdate;
+    try
+      S.AddXY(500, 1);
+      S.Delete(S.Count - 1);
+    finally
+      C.EndDataUpdate;
+    end;
+    CheckTrue(C.ChangeProgress < 1, 'Uebergang nach ausgeglichener Klammer');
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TAudit8DCountTests.ChartAddRangeEqualsAddXY;
+var
+  C: TPPGChart;
+  A, B: TPPGChartSeries;
+  I: Integer;
+  Raised: Boolean;
+begin
+  C := TPPGChart.Create(FForm);
+  C.Parent := FForm;
+  A := C.Series.Add;
+  B := C.Series.Add;
+  A.AddRange([1.5, 2.5, -3]);
+  for I := 0 to 2 do
+    B.Add(A.YAt(I));
+  CheckEquals(3, A.Count);
+  for I := 0 to 2 do
+  begin
+    CheckEquals(B.XAt(I), A.XAt(I), 1E-12, 'X ' + IntToStr(I));
+    CheckEquals(B.YAt(I), A.YAt(I), 1E-12, 'Y ' + IntToStr(I));
+  end;
+  A.AddRange([10, 20], [7, 8]);
+  CheckEquals(5, A.Count);
+  CheckEquals(20, A.XAt(4), 1E-12);
+  CheckEquals(8, A.YAt(4), 1E-12);
+  Raised := False;
+  try
+    A.AddRange([1, 2], [3]);
+  except
+    on EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, 'ungleiche Laengen');
+  CheckEquals(5, A.Count, 'unveraendert');
+  Raised := False;
+  try
+    A.AddRange([1, NaN]);
+  except
+    on EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, 'NaN');
+  CheckEquals(5, A.Count, 'unveraendert nach NaN');
+end;
+
+procedure TAudit8DCountTests.ChartPiePointPosUsesSums;
+var
+  C: TPPGChart;
+  S: TPPGChartSeries;
+  L: TPPGChartLayout;
+  I, K: Integer;
+  Total, Start, A: Double;
+  P, E: TPoint;
+begin
+  C := TPPGChart.Create(FForm);
+  C.Parent := FForm;
+  C.Animation.Enabled := False;
+  C.SetBounds(0, 0, 500, 400);
+  S := C.Series.Add;
+  S.Kind := cskDonut;
+  for I := 0 to 199 do
+    S.Add(1 + (I * 7) mod 13);
+  L := C.Layout;
+  Total := 0;
+  for I := 0 to S.Count - 1 do
+    Total := Total + Abs(S.YAt(I));
+  Start := 0;
+  for I := 0 to S.Count - 1 do
+  begin
+    // Formel wie gezeichnet
+    A := (360 * (Start + Abs(S.YAt(I)) / 2) / Total - 90) * Pi / 180;
+    K := (L.PieRadius + L.PieInner) div 2;
+    E := Point(L.PieCenter.X + Round(K * Cos(A)), L.PieCenter.Y + Round(K * Sin(A)));
+    CheckTrue(C.PointPos(0, I, P), 'Punkt ' + IntToStr(I));
+    CheckEquals(E.X, P.X, 'X ' + IntToStr(I));
+    CheckEquals(E.Y, P.Y, 'Y ' + IntToStr(I));
+    Start := Start + Abs(S.YAt(I));
+  end;
+  // Nach einer Aenderung gelten die neuen Werte
+  S.Y[0] := 100;
+  CheckTrue(C.PointPos(0, 1, P));
+  A := (360 * (100 + Abs(S.YAt(1)) / 2) / (Total - 1 + 100) - 90) * Pi / 180;
+  K := (C.Layout.PieRadius + C.Layout.PieInner) div 2;
+  CheckEquals(C.Layout.PieCenter.X + Round(K * Cos(A)), P.X, 'nach Aenderung');
+end;
+
+procedure TAudit8DCountTests.PlannerHoverRepaintsItemOnly;
+var
+  P: TPPGPlanner;
+  A: TPPGAppointment;
+  R, U: TRect;
+begin
+  FForm.SetBounds(0, 0, 1000, 700);
+  FForm.Show;
+  try
+    P := TPPGPlanner.Create(FForm);
+    P.Parent := FForm;
+    P.SetBounds(0, 0, 900, 600);
+    P.ShowNowLine := False;
+    P.View := pvWeek;
+    P.Date := EncodeDate(2025, 3, 5);
+    A := P.Appointments.AddAppointment(EncodeDate(2025, 3, 5) + 9 / 24, EncodeDate(2025, 3, 5) + 11 / 24,
+      'Termin');
+    CheckTrue(A <> nil);
+    P.ScrollTo(0, 0);
+    P.EnsureLayout;
+    P.Update;
+    R := P.ItemRect(0);
+    CheckFalse(IsRectEmpty(R), 'Termin sichtbar');
+    // Erste Bewegung: die Basis zeichnet beim Eintritt der Maus alles neu
+    P.Perform(WM_MOUSEMOVE, 0, MouseLParam(P.Width - 30, P.Height - 30));
+    P.Update;
+    ValidateRect(P.Handle, nil);
+    P.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+    U := UpdateRectOf(P);
+    CheckFalse(IsRectEmpty(U), 'Termin neu gezeichnet');
+    CheckTrue(U.Right - U.Left < P.Width div 2, 'nur der Termin (Breite)');
+    CheckTrue(U.Bottom - U.Top < P.Height div 2, 'nur der Termin (Hoehe)');
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TAudit8DCountTests.PlannerDragRepaintsOnlyOnGhostChange;
+var
+  P: TPPGPlanner;
+  R, U: TRect;
+  X, Y: Integer;
+begin
+  FForm.SetBounds(0, 0, 1000, 700);
+  FForm.Show;
+  try
+    P := TPPGPlanner.Create(FForm);
+    P.Parent := FForm;
+    P.SetBounds(0, 0, 900, 600);
+    P.ShowNowLine := False;
+    P.View := pvWeek;
+    P.Date := EncodeDate(2025, 3, 5);
+    P.Appointments.AddAppointment(EncodeDate(2025, 3, 5) + 9 / 24, EncodeDate(2025, 3, 5) + 11 / 24, 'Termin');
+    P.ScrollTo(0, 0);
+    P.EnsureLayout;
+    R := P.ItemRect(0);
+    X := (R.Left + R.Right) div 2;
+    Y := R.Top + 20;
+    P.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MouseLParam(X, Y));
+    P.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(X, Y + 40));
+    P.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(X, Y + 41));
+    P.Update;
+    ValidateRect(P.Handle, nil);
+    // Gleiche Stelle: der Schatten bleibt, kein Neuzeichnen
+    P.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(X, Y + 41));
+    U := UpdateRectOf(P);
+    CheckTrue(IsRectEmpty(U), 'kein Neuzeichnen ohne Aenderung');
+    // Deutlich weiter: neu
+    P.Perform(WM_MOUSEMOVE, MK_LBUTTON, MouseLParam(X, Y + 120));
+    U := UpdateRectOf(P);
+    CheckFalse(IsRectEmpty(U), 'Neuzeichnen bei neuem Schatten');
+    P.Perform(WM_LBUTTONUP, 0, MouseLParam(X, Y + 120));
+  finally
+    FForm.Hide;
+  end;
 end;
 
 { TAudit8DDBTests }
