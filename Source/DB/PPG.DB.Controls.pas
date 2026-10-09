@@ -826,6 +826,13 @@ end;
 
 procedure TPPGDBEdit.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
   if not Modified then
@@ -1039,6 +1046,13 @@ end;
 
 procedure TPPGDBMemo.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
 end;
@@ -1239,6 +1253,13 @@ end;
 
 procedure TPPGDBCheckBox.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
 end;
@@ -1468,6 +1489,13 @@ end;
 
 procedure TPPGDBComboBox.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
 end;
@@ -1650,6 +1678,13 @@ end;
 
 procedure TPPGDBDatePicker.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   // Getippten Text zuerst uebernehmen (sonst erst beim Fokusverlust), dann
   // ins Feld schreiben
   if FieldFocused and FBinding.CanModify then

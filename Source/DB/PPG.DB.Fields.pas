@@ -427,6 +427,13 @@ end;
 
 procedure TPPGDBMaskEdit.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   // Ungueltige Maske: nicht schreiben, Fehler bleibt am Feld (wie TDBEdit)
   if IsMasked and not ValidateInput then
   begin
@@ -596,6 +603,13 @@ end;
 
 procedure TPPGDBNumberEdit.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
 end;
@@ -711,6 +725,13 @@ end;
 
 procedure TPPGDBColorPicker.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
 end;
@@ -826,6 +847,13 @@ end;
 
 procedure TPPGDBCheckComboBox.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
 end;
@@ -949,6 +977,13 @@ end;
 
 procedure TPPGDBTagEdit.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   FBinding.Commit;
   inherited;
 end;

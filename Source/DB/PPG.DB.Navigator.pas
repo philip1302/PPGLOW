@@ -1397,6 +1397,13 @@ end;
 
 procedure TPPGDBRadioGroup.CMExit(var Message: TCMExit);
 begin
+  // Im Destruktor ist FBinding schon frei; der Fokusverlust beim
+  // Zerstoeren des Fensters schickt trotzdem noch CM_EXIT
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
   if FBinding.Link.Editing and FBinding.Link.Active then
   try
     FBinding.Link.UpdateRecord;

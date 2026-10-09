@@ -175,6 +175,9 @@ end;
 
 destructor TPPGCustomSplitter.Destroy;
 begin
+  // Kein EndDrag mehr, wenn beim Zerstoeren die Maus-Capture verloren geht
+  FDragging := False;
+  FControl := nil;
   FreeAndNil(FPaintCanvas);
   HideLine;
   if FBrush <> 0 then
@@ -187,14 +190,17 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (AComponent = FControl) then
   begin
-    // Waehrend des Ziehens freigegeben: Linie und gesperrten DC freigeben
+    // Waehrend des Ziehens freigegeben: Linie und gesperrten DC freigeben.
+    // Zuerst den Zustand zuruecksetzen: MouseCapture := False loest
+    // WM_CAPTURECHANGED aus, das sonst EndDrag mit ApplySize auf das
+    // Control im Destruktor (ohne Parent) aufriefe.
+    FControl := nil;
     if FDragging then
     begin
+      FDragging := False;
       HideLine;
       MouseCapture := False;
     end;
-    FControl := nil;
-    FDragging := False;
   end;
 end;
 
