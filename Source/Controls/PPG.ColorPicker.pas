@@ -132,6 +132,8 @@ type
     FNoneColorColor: TColor;
     FDefaultColorColor: TColor;
     FShowHex: Boolean;
+    procedure SetDefaultColorColor(const Value: TColor);
+    procedure SetShowThemeColors(const Value: Boolean);
     procedure SetNoneColorColor(const Value: TColor);
     procedure SetSelected(const Value: TColor);
     procedure SetStyle(const Value: TColorBoxStyle);
@@ -167,7 +169,7 @@ type
     property Selected: TColor read FSelected write SetSelected default clBlack;
     property Style: TColorBoxStyle read FStyle write SetStyle
       default [cbStandardColors, cbExtendedColors, cbCustomColor, cbPrettyNames];
-    property ShowThemeColors: Boolean read FShowThemeColors write FShowThemeColors default True;
+    property ShowThemeColors: Boolean read FShowThemeColors write SetShowThemeColors default True;
     /// Zuletzt benutzte Farben als Hex ("#RRGGBB"), neueste zuerst.
     property RecentColors: TStrings read FRecent write SetRecent;
     property MaxRecent: Integer read FMaxRecent write SetMaxRecent default 8;
@@ -176,7 +178,7 @@ type
     /// Fuellung des Feldes fuer "Keine" (clNone), wie TColorBox.NoneColorColor. Die
     /// Vorgabe clBlack zeigt das Feld leer mit roter Diagonale (Preset-Optik).
     property NoneColorColor: TColor read FNoneColorColor write SetNoneColorColor default clBlack;
-    property DefaultColorColor: TColor read FDefaultColorColor write FDefaultColorColor
+    property DefaultColorColor: TColor read FDefaultColorColor write SetDefaultColorColor
       default clBlack;
     property Preset;
     property StyleManager;
@@ -1077,6 +1079,8 @@ end;
 
 procedure TPPGColorPicker.SetStyle(const Value: TColorBoxStyle);
 begin
+  if FStyle = Value then
+    Exit;
   FStyle := Value;
   Invalidate;
 end;
@@ -1098,8 +1102,26 @@ begin
     FRecent.Delete(FRecent.Count - 1);
 end;
 
+procedure TPPGColorPicker.SetShowThemeColors(const Value: Boolean);
+begin
+  if FShowThemeColors = Value then
+    Exit;
+  FShowThemeColors := Value;
+  Invalidate;
+end;
+
+procedure TPPGColorPicker.SetDefaultColorColor(const Value: TColor);
+begin
+  if FDefaultColorColor = Value then
+    Exit;
+  FDefaultColorColor := Value;
+  Invalidate;
+end;
+
 procedure TPPGColorPicker.SetShowHex(const Value: Boolean);
 begin
+  if FShowHex = Value then
+    Exit;
   FShowHex := Value;
   Invalidate;
 end;

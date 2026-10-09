@@ -543,8 +543,16 @@ begin
       CheckTrue(R.Spinning, 'sichtbar und unbestimmt: dreht');
     R.Indeterminate := False;
     CheckFalse(R.Spinning);
-    R.Value := 150;
-    CheckEquals(100, R.Value, 'begrenzt');
+    // Audit 5b: ausserhalb 0..100 wird abgelehnt statt still begrenzt
+    R.Value := 100;
+    try
+      R.Value := 150;
+      Fail('150 angenommen');
+    except
+      on EPPGPropertyError do
+        ;
+    end;
+    CheckEquals(100, R.Value, 'unveraendert');
     R.Value := 42;
     CheckEquals('42 %', TRingAccess(R).AccValue);
     CheckEquals(ROLE_SYSTEM_PROGRESSBAR, TRingAccess(R).AccRole);

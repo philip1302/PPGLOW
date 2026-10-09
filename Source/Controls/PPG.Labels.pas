@@ -103,6 +103,7 @@ type
     FDownLink: Integer;
     FAlignment: TAlignment;
     FOnLinkClick: TSysLinkEvent;
+    procedure WMSetCursor(var Message: TWMSetCursor); message WM_SETCURSOR;
     procedure SetAlignment(const Value: TAlignment);
     procedure SetFocusedLink(Value: Integer);
     procedure EnsureLayout;
@@ -204,7 +205,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, Winapi.oleacc, Vcl.Themes,
+  System.SysUtils, Winapi.oleacc, Vcl.Themes, Vcl.Forms,
   PPG.Consts, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles, PPG.Theme,
   PPG.Render.Registry;
 
@@ -579,10 +580,6 @@ begin
   if I <> FHotLink then
   begin
     FHotLink := I;
-    if I >= 0 then
-      Cursor := crHandPoint
-    else
-      Cursor := crDefault;
     Invalidate;
   end;
 end;
@@ -600,13 +597,25 @@ begin
     DoLinkClick(I);
 end;
 
+procedure TPPGCustomLinkLabel.WMSetCursor(var Message: TWMSetCursor);
+begin
+  // Audit 5b: Hand nur ueber einem Link, ohne die Property Cursor zu
+  // ueberschreiben (ein eigener Cursor des Anwenders bleibt erhalten)
+  if (FHotLink >= 0) and (Message.HitTest = HTCLIENT) and Enabled then
+  begin
+    Winapi.Windows.SetCursor(Screen.Cursors[crHandPoint]);
+    Message.Result := 1;
+    Exit;
+  end;
+  inherited;
+end;
+
 procedure TPPGCustomLinkLabel.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
   if FHotLink >= 0 then
   begin
     FHotLink := -1;
-    Cursor := crDefault;
     Invalidate;
   end;
 end;

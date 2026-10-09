@@ -293,6 +293,9 @@ type
     /// Nach erfolgreichem Verschieben (DB-Variante: Datensaetze schreiben).
     procedure CardMoved(const Move: TPPGKanbanMove); virtual;
     procedure SelectionChanged; virtual;
+    /// Die gewaehlte Karte hat gewechselt (Anwender oder Code, ohne Ereignis;
+    /// DB-Kanban: Datensatz abgleichen).
+    procedure SelectedCardChanged; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -750,11 +753,17 @@ procedure TPPGCustomKanban.SetSelectedCard(const Value: TPPGKanbanCard);
 var
   C, L, I: Integer;
 begin
+  // Audit 5b: wie eine Auswahl (sichtbar machen, Screenreader, DB-Abgleich),
+  // aber ohne OnSelectionChange (Code setzt still)
+  EnsureLayout;
   if (Value <> nil) and FindCard(Value, C, L, I) then
-    FFocus := KHit(kpCard, C, L, I)
+    FocusHit(KHit(kpCard, C, L, I), False)
   else
-    FFocus := NoHit;
-  Invalidate;
+    FocusHit(NoHit, False);
+end;
+
+procedure TPPGCustomKanban.SelectedCardChanged;
+begin
 end;
 
 { ---- Masse ---- }
@@ -3027,6 +3036,7 @@ begin
     NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, AccIdOf(H));
     if H.Part = kpCard then
       NotifyAccessibilityChild(EVENT_OBJECT_SELECTION, AccIdOf(H));
+    SelectedCardChanged;
     if Notify then
       SelectionChanged;
   end;

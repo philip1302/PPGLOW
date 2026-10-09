@@ -125,6 +125,7 @@ type
     FOnToastClick: TPPGToastEvent;
     FOnClose: TPPGToastCloseEvent;
     FOnShow: TPPGToastEvent;
+    procedure SetPosition(const Value: TPPGToastPosition);
     procedure SetPreset(const Value: string);
     procedure SetMaxVisible(const Value: Integer);
     procedure ReleaseLater(Toast: TPPGToast);
@@ -159,7 +160,7 @@ type
     function PendingCount: Integer;
     function Toast(Index: Integer): TPPGToast;
   published
-    property Position: TPPGToastPosition read FPosition write FPosition default npBottomRight;
+    property Position: TPPGToastPosition read FPosition write SetPosition default npBottomRight;
     /// Anzeigedauer in ms (0 = bis zum Schliessen).
     property Duration: Integer read FDuration write SetDuration default 5000;
     property MaxVisible: Integer read FMaxVisible write SetMaxVisible default 3;
@@ -902,6 +903,14 @@ procedure TPPGNotificationCenter.PollStep(Sender: TObject);
 begin
   if not FPoll.Running and (FPoll.Value >= 1) then
     ShowPending;
+end;
+
+procedure TPPGNotificationCenter.SetPosition(const Value: TPPGToastPosition);
+begin
+  if FPosition = Value then
+    Exit;
+  FPosition := Value;
+  // Sichtbare Meldungen sofort an die neue Ecke\n  Arrange(False);
 end;
 
 procedure TPPGNotificationCenter.Arrange(Animate: Boolean);

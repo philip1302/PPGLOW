@@ -60,6 +60,7 @@ type
     FTag: NativeInt;
     FItems: TPPGNavItems;
     FData: Pointer;
+    procedure SetPageIndex(const Value: Integer);
     procedure SetCaption(const Value: string);
     procedure SetKind(const Value: TPPGNavItemKind);
     procedure SetIconChar(const Value: Word);
@@ -102,7 +103,7 @@ type
     property Visible: Boolean read FVisible write SetVisible default True;
     property Footer: Boolean read FFooter write SetFooter default False;
     /// Seite im verbundenen PageControl (-1 = keine).
-    property PageIndex: Integer read FPageIndex write FPageIndex default -1;
+    property PageIndex: Integer read FPageIndex write SetPageIndex default -1;
     property Expanded: Boolean read FExpanded write SetExpanded default False;
     property Hint: string read FHint write FHint;
     property Tag: NativeInt read FTag write FTag default 0;
@@ -197,6 +198,7 @@ type
     FOnSelectionChange: TNotifyEvent;
     FOnItemInvoked: TPPGNavItemEvent;
     FOnPaneChange: TNotifyEvent;
+    procedure SetCompactModeThresholdWidth(const Value: Integer);
     procedure DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer; AEnabled: Boolean;
       Color: TColor);
     procedure SetImageTint(const Value: TPPGImageTint);
@@ -301,7 +303,7 @@ type
     /// Breiten in logischen px (96 DPI).
     property OpenPaneLength: Integer read FOpenPaneLength write SetOpenPaneLength default 280;
     property CompactPaneLength: Integer read FCompactPaneLength write SetCompactPaneLength default 48;
-    property CompactModeThresholdWidth: Integer read FCompactThreshold write FCompactThreshold default 640;
+    property CompactModeThresholdWidth: Integer read FCompactThreshold write SetCompactModeThresholdWidth default 640;
     property PaneTitle: string read FPaneTitle write SetPaneTitle;
     property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
     /// itTextColor: Symbole einfarbig in der Textfarbe (Hover, Dunkel, Deaktiviert).
@@ -573,6 +575,29 @@ begin
   Result := (FKind = nikItem) and FVisible and FEnabled and not HasChildren;
 end;
 
+procedure TPPGNavItem.SetPageIndex(const Value: Integer);
+var
+  P: TPersistent;
+begin
+  if FPageIndex = Value then
+    Exit;
+  FPageIndex := Value;
+  // Gewaehlter Eintrag: die neue Seite gleich zeigen (wie beim Waehlen)
+  P := Collection;
+  while (P is TCollection) and (TCollection(P).Owner <> nil) do
+  begin
+    P := TCollection(P).Owner;
+    if P is TPPGNavigationView then
+    begin
+      if TPPGNavigationView(P).Selected = Self then
+        TPPGNavigationView(P).ShowPage(Self);
+      Break;
+    end;
+    if P is TCollectionItem then
+      P := TCollectionItem(P).Collection;
+  end;
+end;
+
 procedure TPPGNavItem.SetCaption(const Value: string);
 begin
   if FCaption <> Value then
@@ -613,7 +638,7 @@ procedure TPPGNavItem.SetBadgeCount(const Value: Integer);
 begin
   if FBadgeCount <> Value then
   begin
-    FBadgeCount := Max(0, Value);
+    FBadgeCount := PPGCheckRange(Self, 'BadgeCount', Value, 0, MaxInt);
     Changed(False);
   end;
 end;
@@ -1389,6 +1414,14 @@ begin
   end;
   MoveIndicator(False);
   Invalidate;
+end;
+
+procedure TPPGNavigationView.SetCompactModeThresholdWidth(const Value: Integer);
+begin
+  if FCompactThreshold = Value then
+    Exit;
+  FCompactThreshold := PPGCheckRange(Self, 'CompactModeThresholdWidth', Value, 0, 100000);
+  CheckAutoMode;
 end;
 
 procedure TPPGNavigationView.CheckAutoMode;

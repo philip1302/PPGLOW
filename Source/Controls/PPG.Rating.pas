@@ -206,6 +206,8 @@ end;
 
 procedure TPPGCustomRating.SetMaxValue(const Value: Integer);
 begin
+  if FMaxValue = Value then
+    Exit;
   FMaxValue := PPGCheckRange(Self, 'MaxValue', Value, 1, 50);
   if (FValue > FMaxValue) and not (csLoading in ComponentState) then
     FValue := FMaxValue;
@@ -237,6 +239,8 @@ end;
 
 procedure TPPGCustomRating.SetStarSize(const Value: Integer);
 begin
+  if FStarSize = Value then
+    Exit;
   FStarSize := PPGCheckRange(Self, 'StarSize', Value, 8, 128);
   RequestAutoSize;
   Invalidate;
@@ -244,6 +248,8 @@ end;
 
 procedure TPPGCustomRating.SetStarSpacing(const Value: Integer);
 begin
+  if FStarSpacing = Value then
+    Exit;
   FStarSpacing := PPGCheckRange(Self, 'StarSpacing', Value, 0, 64);
   RequestAutoSize;
   Invalidate;

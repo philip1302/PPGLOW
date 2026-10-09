@@ -115,6 +115,9 @@ type
     FSearch: string;
     FSearchTick: Cardinal;
     FOnGetCellText: TPPGGetCellTextEvent;
+    procedure SetDisplayColumn(const Value: Integer);
+    procedure SetKeyColumn(const Value: Integer);
+    procedure SetColumnDelimiter(const Value: Char);
     procedure SetColumns(const Value: TPPGComboColumns);
     procedure SetItems(const Value: TStrings);
     procedure SetItemIndex(const Value: Integer);
@@ -147,16 +150,17 @@ type
     procedure SelectRow(Row: Integer);
     /// Text der Anzeigespalte der gewaehlten Zeile.
     function DisplayText: string;
-    property ItemIndex: Integer read FItemIndex write SetItemIndex;
     property KeyValue: string read GetKeyValue write SetKeyValue;
   published
     property Columns: TPPGComboColumns read FColumns write SetColumns;
     property Items: TStrings read FItems write SetItems;
-    property ColumnDelimiter: Char read FColumnDelimiter write FColumnDelimiter default '|';
+    /// Startauswahl (auch im Designer); -1 = keine.
+    property ItemIndex: Integer read FItemIndex write SetItemIndex default -1;
+    property ColumnDelimiter: Char read FColumnDelimiter write SetColumnDelimiter default '|';
     /// > 0: Zeilen kommen aus OnGetCellText (Items wird nicht benutzt).
     property VirtualRowCount: Integer read FVirtualRowCount write SetVirtualRowCount default 0;
-    property KeyColumn: Integer read FKeyColumn write FKeyColumn default 0;
-    property DisplayColumn: Integer read FDisplayColumn write FDisplayColumn default 0;
+    property KeyColumn: Integer read FKeyColumn write SetKeyColumn default 0;
+    property DisplayColumn: Integer read FDisplayColumn write SetDisplayColumn default 0;
     property DropDownCount: Integer read FDropDownCount write SetDropDownCount default 10;
     /// Breite des Popups in logischen px (0 = Summe der Spalten).
     property DropDownWidth: Integer read FDropDownWidth write FDropDownWidth default 0;
@@ -595,9 +599,35 @@ begin
   inherited Destroy;
 end;
 
+procedure TPPGColumnComboBox.SetColumnDelimiter(const Value: Char);
+begin
+  if FColumnDelimiter = Value then
+    Exit;
+  FColumnDelimiter := Value;
+  Invalidate;
+end;
+
+procedure TPPGColumnComboBox.SetKeyColumn(const Value: Integer);
+begin
+  if FKeyColumn = Value then
+    Exit;
+  FKeyColumn := PPGCheckRange(Self, 'KeyColumn', Value, 0, MaxInt);
+  Invalidate;
+end;
+
+procedure TPPGColumnComboBox.SetDisplayColumn(const Value: Integer);
+begin
+  if FDisplayColumn = Value then
+    Exit;
+  FDisplayColumn := PPGCheckRange(Self, 'DisplayColumn', Value, 0, MaxInt);
+  Invalidate;
+  NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
+end;
+
 procedure TPPGColumnComboBox.SetColumns(const Value: TPPGComboColumns);
 begin
   FColumns.Assign(Value);
+  Invalidate;
 end;
 
 procedure TPPGColumnComboBox.SetItems(const Value: TStrings);

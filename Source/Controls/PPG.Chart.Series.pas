@@ -744,6 +744,8 @@ end;
 
 procedure TPPGChartSeries.SetLineWidth(const Value: Integer);
 begin
+  if FLineWidth = Value then
+    Exit;
   FLineWidth := PPGCheckRange(Self, 'LineWidth', Value, 1, 20);
   Changed(False);
 end;

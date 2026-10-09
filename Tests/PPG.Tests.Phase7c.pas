@@ -943,12 +943,12 @@ begin
   S.Panels.Add.Text := '<b>Zeile</b> 12';
   P := S.Panels.Add;
   P.Kind := spkProgress;
-  P.Progress := 140;
+  P.Progress := 100; // Audit 5b: ueber 100 wird abgelehnt (Test in Audit45)
   P.Hint := 'Export';
   P := S.Panels.Add;
   P.Kind := spkBadge;
   P.BadgeCount := 5;
-  CheckEquals(100, S.Panels[1].Progress, 'begrenzt');
+  CheckEquals(100, S.Panels[1].Progress);
   CheckTrue(Supports(S, IPPGAccessibleChildren, A));
   CheckEquals(3, A.AccChildCount);
   CheckEquals('Zeile 12', A.AccChildName(1), 'ohne Markup');

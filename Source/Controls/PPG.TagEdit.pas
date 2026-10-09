@@ -77,6 +77,7 @@ type
     FOnTagAdding: TPPGTagAddingEvent;
     FOnTagRemoved: TPPGTagEvent;
     FOnTagClick: TPPGTagEvent;
+    procedure SetDelimiter(const Value: Char);
     procedure ReadDelimitersEmpty(Reader: TReader);
     procedure WriteDelimitersEmpty(Writer: TWriter);
     function IsDelimitersStored: Boolean;
@@ -158,7 +159,7 @@ type
     /// Zeichen, die ein Tag beenden.
     property Delimiters: string read FDelimiters write FDelimiters stored IsDelimitersStored;
     /// Trenner fuer TagsText (DB-Wert).
-    property Delimiter: Char read FDelimiter write FDelimiter default ';';
+    property Delimiter: Char read FDelimiter write SetDelimiter default ';';
     property AllowNew: Boolean read FAllowNew write FAllowNew default True;
     property AllowDuplicates: Boolean read FAllowDuplicates write FAllowDuplicates default False;
     property CaseSensitive: Boolean read FCaseSensitive write FCaseSensitive default False;
@@ -304,6 +305,18 @@ end;
 procedure TPPGTagEdit.WriteDelimitersEmpty(Writer: TWriter);
 begin
   Writer.WriteBoolean(True);
+end;
+
+procedure TPPGTagEdit.SetDelimiter(const Value: Char);
+begin
+  // Steuerzeichen (#0, Tab, Zeilenende) trennen keine Tags im Text
+  if Value < ' ' then
+  begin
+    if not PPGIsLoading(Self) then
+      raise EPPGPropertyError.CreateInvalid(Self, 'Delimiter', IntToStr(Ord(Value)));
+    Exit;
+  end;
+  FDelimiter := Value;
 end;
 
 function TPPGTagEdit.IsDelimitersStored: Boolean;

@@ -667,18 +667,24 @@ end;
 
 procedure TPPGCustomGauge.SetStartAngle(const Value: Integer);
 begin
+  if FStartAngle = Value then
+    Exit;
   FStartAngle := PPGCheckRange(Self, 'StartAngle', Value, -360, 360);
   Invalidate;
 end;
 
 procedure TPPGCustomGauge.SetSweepAngle(const Value: Integer);
 begin
+  if FSweepAngle = Value then
+    Exit;
   FSweepAngle := PPGCheckRange(Self, 'SweepAngle', Value, 10, 360);
   Invalidate;
 end;
 
 procedure TPPGCustomGauge.SetThickness(const Value: Integer);
 begin
+  if FThickness = Value then
+    Exit;
   FThickness := PPGCheckRange(Self, 'Thickness', Value, 0, 200);
   Invalidate;
 end;

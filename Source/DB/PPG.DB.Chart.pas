@@ -267,6 +267,8 @@ end;
 
 procedure TPPGCustomDBChart.SetMaxRecords(const Value: Integer);
 begin
+  if FMaxRecords = Value then
+    Exit;
   FMaxRecords := PPGCheckRange(Self, 'MaxRecords', Value, 1, MaxInt);
   ScheduleReload;
 end;

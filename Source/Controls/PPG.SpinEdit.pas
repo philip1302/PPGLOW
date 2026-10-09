@@ -384,6 +384,7 @@ begin
   begin
     FReadOnly := Value;
     UpdateInnerReadOnly;
+    UpdateColors; // ReadOnlyStyle wie bei den anderen Feldern
     Invalidate;
   end;
 end;

@@ -608,6 +608,8 @@ end;
 
 procedure TPPGCustomSparkline.SetMaxCount(const Value: Integer);
 begin
+  if FMaxCount = Value then
+    Exit;
   FMaxCount := PPGCheckRange(Self, 'MaxCount', Value, 0, MaxInt);
   if Length(FValues) > FMaxCount then
   begin
@@ -618,6 +620,8 @@ end;
 
 procedure TPPGCustomSparkline.SetLineWidth(const Value: Integer);
 begin
+  if FLineWidth = Value then
+    Exit;
   FLineWidth := PPGCheckRange(Self, 'LineWidth', Value, 1, 20);
   Invalidate;
 end;

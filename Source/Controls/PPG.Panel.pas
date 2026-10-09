@@ -166,9 +166,9 @@ type
     property Align;
     property Anchors;
     property BevelEdges;
-    property BevelInner;
+    property BevelInner default bvNone;
     property BevelKind;
-    property BevelOuter;
+    property BevelOuter default bvRaised;
     property BevelWidth;
     property BiDiMode;
     property BorderWidth;
@@ -247,9 +247,9 @@ type
     property Align;
     property Anchors;
     property BevelEdges;
-    property BevelInner;
+    property BevelInner default bvNone;
     property BevelKind;
-    property BevelOuter;
+    property BevelOuter default bvRaised;
     property BevelWidth;
     property BiDiMode;
     property BorderWidth;
@@ -404,6 +404,9 @@ end;
 constructor TPPGCustomPanel.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  // Wie TPanel (die VCL zeichnet sie nur mit BevelKind <> bkNone)
+  BevelInner := bvNone;
+  BevelOuter := bvRaised;
   Width := 185;
   Height := 41;
   FAlignment := taCenter;

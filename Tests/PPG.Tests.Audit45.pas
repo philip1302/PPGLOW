@@ -15,7 +15,9 @@ uses
   PPG.DB.Navigator, PPG.DB.Kanban, PPG.DB.Grid, PPG.DB.Chart, PPG.Exceptions, PPG.ErrorHandler,
   PPG.NumberFormat, PPG.Grid, Vcl.Menus, Vcl.ExtCtrls, PPG.CheckComboBox, PPG.TagEdit, PPG.Grid.Print,
   PPG.PasswordEdit, PPG.Expander, PPG.ComboBox, PPG.TrackBar, PPG.ProgressBar, PPG.Hints,
-  PPG.ToolBar, PPG.Ribbon, PPG.Notifications, PPG.Menus, PPG.Tests.Controls;
+  PPG.ToolBar, PPG.Ribbon, PPG.Notifications, PPG.Menus, PPG.StatusBar, PPG.NavigationView,
+  PPG.FileEdit, PPG.Feedback, PPG.Kanban, PPG.Kanban.Items, PPG.Labels, PPG.PageControl,
+  PPG.ColumnComboBox, PPG.Panel, PPG.Tests.Controls;
 
 type
   TDBBindSpec = record
@@ -123,6 +125,22 @@ type
     procedure GroupIndexReadBeforeDown;
     procedure RibbonBackstageHiddenAfterLoad;
     procedure PresetCheckedOnComponents;
+  end;
+
+  /// Audit 09.10.2026, Paket 5b: Setter und Zustand.
+  TSetterFixTests = class(TControlTestCase)
+  private
+    FSelChanges: Integer;
+    procedure SelChange(Sender: TObject);
+    procedure CheckRejects(const What: string; Proc: TProc);
+  published
+    procedure SilentClampsNowRejected;
+    procedure KanbanSelectedCardScrollsWithoutEvent;
+    procedure InfoBarVisibleIsOpen;
+    procedure LinkLabelKeepsOwnCursor;
+    procedure NavItemPageIndexShowsPage;
+    procedure DesignerStartSelection;
+    procedure PanelBevelDefaultsLikeTPanel;
   end;
 
 implementation
@@ -1311,11 +1329,169 @@ begin
   CheckTrue(Raised);
 end;
 
+{ TSetterFixTests }
+
+type
+  TLinkCrack = class(TPPGLinkLabel);
+
+procedure TSetterFixTests.SelChange(Sender: TObject);
+begin
+  Inc(FSelChanges);
+end;
+
+procedure TSetterFixTests.CheckRejects(const What: string; Proc: TProc);
+var
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    Proc();
+  except
+    on EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, What + ': abgelehnt statt still begrenzt');
+end;
+
+procedure TSetterFixTests.SilentClampsNowRejected;
+var
+  S: TPPGStatusBar;
+  N: TPPGNavigationView;
+  E: TPPGFileEdit;
+  C: TPPGCheckComboBox;
+  T: TPPGTagEdit;
+  R: TPPGProgressRing;
+begin
+  S := TPPGStatusBar.Create(FForm);
+  S.Panels.Add;
+  CheckRejects('StatusPanel.Progress', procedure begin S.Panels[0].Progress := 140 end);
+  CheckRejects('StatusPanel.Width', procedure begin S.Panels[0].Width := -1 end);
+  CheckRejects('StatusPanel.BadgeCount', procedure begin S.Panels[0].BadgeCount := -1 end);
+  N := TPPGNavigationView.Create(FForm);
+  N.Items.AddItem('A');
+  CheckRejects('NavItem.BadgeCount', procedure begin N.Items[0].BadgeCount := -2 end);
+  CheckRejects('CompactModeThresholdWidth', procedure begin N.CompactModeThresholdWidth := -1 end);
+  E := TPPGFileEdit.Create(FForm);
+  CheckRejects('FilterIndex', procedure begin E.FilterIndex := -1 end);
+  C := TPPGCheckComboBox.Create(FForm);
+  CheckRejects('FilterThreshold', procedure begin C.FilterThreshold := -5 end);
+  T := TPPGTagEdit.Create(FForm);
+  CheckRejects('TagEdit.Delimiter', procedure begin T.Delimiter := #0 end);
+  CheckEquals(';', string(T.Delimiter), 'unveraendert');
+  R := TPPGProgressRing.Create(FForm);
+  CheckRejects('ProgressRing.Value', procedure begin R.Value := -1 end);
+end;
+
+procedure TSetterFixTests.KanbanSelectedCardScrollsWithoutEvent;
+var
+  K: TPPGKanban;
+  Col: TPPGKanbanColumn;
+  I: Integer;
+  Last: TPPGKanbanCard;
+begin
+  K := TPPGKanban.Create(FForm);
+  K.Parent := FForm;
+  K.SetBounds(0, 0, 400, 200);
+  K.Animation.Enabled := False;
+  Col := K.Columns.AddColumn('Viele');
+  for I := 1 to 40 do
+    Last := K.Cards.AddCard(Col.Id, 'Karte ' + IntToStr(I), '');
+  K.OnSelectionChange := SelChange;
+  FSelChanges := 0;
+  K.SelectedCard := Last;
+  CheckTrue(K.SelectedCard = Last);
+  CheckEquals(0, FSelChanges, 'Code setzt ohne Ereignis');
+  CheckTrue(K.ColumnScroll(0) > 0, 'zur Karte gescrollt');
+end;
+
+procedure TSetterFixTests.InfoBarVisibleIsOpen;
+var
+  B: TPPGInfoBar;
+begin
+  B := TPPGInfoBar.Create(FForm);
+  B.Parent := FForm;
+  B.Animation.Enabled := False;
+  CheckTrue(B.IsOpen);
+  B.Visible := False;
+  CheckFalse(B.IsOpen, 'Visible = False schliesst');
+  B.Visible := True;
+  CheckTrue(B.IsOpen, 'Visible = True oeffnet');
+  B.IsOpen := False;
+  CheckFalse(B.Visible);
+end;
+
+procedure TSetterFixTests.LinkLabelKeepsOwnCursor;
+var
+  L: TPPGLinkLabel;
+  R: TRect;
+begin
+  L := TPPGLinkLabel.Create(FForm);
+  L.Parent := FForm;
+  L.SetBounds(10, 10, 300, 24);
+  L.Caption := '<a href="x">Link</a> und Text';
+  L.Cursor := crHelp;
+  FForm.Show;
+  R := TLinkCrack(L).LinkRect(0);
+  TLinkCrack(L).MouseMove([], (R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+  CheckEquals(0, L.HotLink, 'ueber dem Link');
+  CheckEquals(Ord(crHelp), Ord(L.Cursor), 'eigener Cursor bleibt');
+  TLinkCrack(L).MouseMove([], R.Right + 150, (R.Top + R.Bottom) div 2);
+  CheckEquals(Ord(crHelp), Ord(L.Cursor));
+end;
+
+procedure TSetterFixTests.NavItemPageIndexShowsPage;
+var
+  N: TPPGNavigationView;
+  P: TPPGPageControl;
+  I: Integer;
+begin
+  P := TPPGPageControl.Create(FForm);
+  P.Parent := FForm;
+  for I := 0 to 2 do
+    TPPGTabSheet.Create(FForm).PageControl := P;
+  N := TPPGNavigationView.Create(FForm);
+  N.Parent := FForm;
+  N.PageControl := P;
+  N.Items.AddItem('A', 0, 0);
+  N.Selected := N.Items[0];
+  CheckEquals(0, P.ActivePageIndex);
+  N.Items[0].PageIndex := 2;
+  CheckEquals(2, P.ActivePageIndex, 'gewaehlter Eintrag zeigt die neue Seite');
+end;
+
+procedure TSetterFixTests.DesignerStartSelection;
+begin
+  CheckTrue(IsPublishedProp(TPPGColumnComboBox, 'ItemIndex'), 'Startauswahl im Designer');
+end;
+
+procedure TSetterFixTests.PanelBevelDefaultsLikeTPanel;
+var
+  P: TPPGPanel;
+  M: TMemoryStream;
+  S: TStringStream;
+begin
+  P := TPPGPanel.Create(FForm);
+  CheckTrue(P.BevelOuter = bvRaised, 'wie TPanel');
+  CheckTrue(P.BevelInner = bvNone);
+  M := TMemoryStream.Create;
+  S := TStringStream.Create('');
+  try
+    M.WriteComponent(P);
+    M.Position := 0;
+    ObjectBinaryToText(M, S);
+    CheckEquals(0, Pos('Bevel', S.DataString), 'Vorgaben nicht in der DFM');
+  finally
+    S.Free;
+    M.Free;
+  end;
+end;
+
 initialization
   RegisterTest('Audit45', TDBBindingHoldTests.Suite);
   RegisterTest('Audit45', TDBFixTests.Suite);
   RegisterTest('Audit45', TDBFix2Tests.Suite);
   RegisterTest('Audit45', TStreamingFixTests.Suite);
+  RegisterTest('Audit45', TSetterFixTests.Suite);
   RegisterClasses([TPPGHintManager, TPanel, TPPGRibbon, TPPGTestRoot]);
 
 end.

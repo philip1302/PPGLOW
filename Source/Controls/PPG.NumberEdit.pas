@@ -576,12 +576,16 @@ end;
 
 procedure TPPGCustomNumberEdit.SetThousandSeparator(const Value: Boolean);
 begin
+  if FThousandSeparator = Value then
+    Exit;
   FThousandSeparator := Value;
   StoreValue(GetValue, CurrValue, FIsNull, False);
 end;
 
 procedure TPPGCustomNumberEdit.SetCurrencyString(const Value: string);
 begin
+  if FCurrencyString = Value then
+    Exit;
   FCurrencyString := Value;
   StoreValue(GetValue, CurrValue, FIsNull, False);
 end;

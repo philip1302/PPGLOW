@@ -164,6 +164,7 @@ type
     FOnActionClick: TNotifyEvent;
     FOnClosing: TPPGInfoBarClosingEvent;
     FOnClose: TNotifyEvent;
+    procedure CMVisibleChanged(var Message: TMessage); message CM_VISIBLECHANGED;
     procedure SetBarStyle(const Value: TPPGElementStyle);
     procedure BarStyleChanged(Sender: TObject);
     procedure SetSeverity(const Value: TPPGSeverity);
@@ -426,6 +427,8 @@ end;
 
 procedure TPPGCustomBadge.SetMaxValue(const Value: Integer);
 begin
+  if FMaxValue = Value then
+    Exit;
   FMaxValue := PPGCheckRange(Self, 'MaxValue', Value, 0, MaxInt);
   RequestAutoSize;
   Invalidate;
@@ -567,11 +570,7 @@ procedure TPPGCustomProgressRing.SetValue(const Value: Integer);
 var
   V: Integer;
 begin
-  V := Value;
-  if V < 0 then
-    V := 0;
-  if V > 100 then
-    V := 100;
+  V := PPGCheckRange(Self, 'Value', Value, 0, 100);
   if FValue <> V then
   begin
     FValue := V;
@@ -582,6 +581,8 @@ end;
 
 procedure TPPGCustomProgressRing.SetThickness(const Value: Integer);
 begin
+  if FThickness = Value then
+    Exit;
   FThickness := PPGCheckRange(Self, 'Thickness', Value, 0, 100);
   Invalidate;
 end;
@@ -1221,6 +1222,26 @@ begin
   // Screenreader liest die Meldung beim Oeffnen vor
   if Value and HandleAllocated then
     NotifyAccessibility(EVENT_SYSTEM_ALERT);
+end;
+
+procedure TPPGCustomInfoBar.CMVisibleChanged(var Message: TMessage);
+begin
+  inherited;
+  // Audit 5b: Visible von aussen (Code, Designer) ist auch der Offen-Zustand.
+  // Waehrend des Zuklappens bleibt Visible bis zum Ende True.
+  if (csDesigning in ComponentState) or (csLoading in ComponentState) then
+    Exit;
+  if Visible and not FIsOpen then
+  begin
+    FIsOpen := True;
+    FOpenAnim.Jump(1);
+    RequestAutoSize;
+  end
+  else if not Visible and FIsOpen then
+  begin
+    FIsOpen := False;
+    FOpenAnim.Jump(0);
+  end;
 end;
 
 procedure TPPGCustomInfoBar.OpenStep(Sender: TObject);

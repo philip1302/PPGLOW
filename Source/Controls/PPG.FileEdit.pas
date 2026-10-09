@@ -46,6 +46,7 @@ type
     FOwnError: Boolean;
     FOnBeforeDialog: TPPGFileBeforeDialogEvent;
     FOnAfterDialog: TPPGFileAfterDialogEvent;
+    procedure SetFilterIndex(const Value: Integer);
     procedure SetKind(const Value: TPPGFileEditKind);
     procedure SetAcceptDrop(const Value: Boolean);
     procedure SetMustExist(const Value: Boolean);
@@ -77,7 +78,7 @@ type
 
     property Kind: TPPGFileEditKind read FKind write SetKind default fkOpenFile;
     property Filter: string read FFilter write FFilter;
-    property FilterIndex: Integer read FFilterIndex write FFilterIndex default 1;
+    property FilterIndex: Integer read FFilterIndex write SetFilterIndex default 1;
     property InitialDir: string read FInitialDir write FInitialDir;
     property DefaultExt: string read FDefaultExt write FDefaultExt;
     property DialogTitle: string read FDialogTitle write FDialogTitle;
@@ -219,6 +220,12 @@ begin
 end;
 
 { TPPGCustomFileEdit }
+
+procedure TPPGCustomFileEdit.SetFilterIndex(const Value: Integer);
+begin
+  // 1-basiert wie TOpenDialog; 0 = eigener Filter
+  FFilterIndex := PPGCheckRange(Self, 'FilterIndex', Value, 0, MaxInt);
+end;
 
 constructor TPPGCustomFileEdit.Create(AOwner: TComponent);
 begin

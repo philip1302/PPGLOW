@@ -81,6 +81,7 @@ type
     FDropDownCount: Integer;
     FPendingText: string;
     FOnItemCheck: TPPGCheckItemEvent;
+    procedure SetFilterThreshold(const Value: Integer);
     procedure ReadDisplayDelimiterEmpty(Reader: TReader);
     procedure WriteDisplayDelimiterEmpty(Writer: TWriter);
     function IsDisplayDelimiterStored: Boolean;
@@ -136,7 +137,7 @@ type
     property MaxDisplayItems: Integer read FMaxDisplayItems write SetMaxDisplayItems default 2;
     property ShowSelectAll: Boolean read FShowSelectAll write FShowSelectAll default False;
     /// Filterzeile ab so vielen Eintraegen (0 = nie).
-    property FilterThreshold: Integer read FFilterThreshold write FFilterThreshold default 12;
+    property FilterThreshold: Integer read FFilterThreshold write SetFilterThreshold default 12;
     property DropDownCount: Integer read FDropDownCount write SetDropDownCount default 8;
     property OnItemCheck: TPPGCheckItemEvent read FOnItemCheck write FOnItemCheck;
     property Preset;
@@ -669,14 +670,23 @@ begin
   Invalidate;
 end;
 
+procedure TPPGCheckComboBox.SetFilterThreshold(const Value: Integer);
+begin
+  FFilterThreshold := PPGCheckRange(Self, 'FilterThreshold', Value, 0, MaxInt);
+end;
+
 procedure TPPGCheckComboBox.SetDisplayMode(const Value: TPPGCheckComboDisplay);
 begin
+  if FDisplayMode = Value then
+    Exit;
   FDisplayMode := Value;
   Invalidate;
 end;
 
 procedure TPPGCheckComboBox.SetMaxDisplayItems(const Value: Integer);
 begin
+  if FMaxDisplayItems = Value then
+    Exit;
   FMaxDisplayItems := PPGCheckRange(Self, 'MaxDisplayItems', Value, 1, 100);
   Invalidate;
 end;

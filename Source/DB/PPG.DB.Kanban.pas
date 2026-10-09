@@ -66,7 +66,7 @@ type
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function DoMoveCard(const Move: TPPGKanbanMove): Boolean; override;
     procedure CardMoved(const Move: TPPGKanbanMove); override;
-    procedure SelectionChanged; override;
+    procedure SelectedCardChanged; override;
     procedure ScheduleReload;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property KeyField: string index 0 read GetField write SetField;
@@ -587,11 +587,11 @@ begin
     SelectionChanged;
 end;
 
-procedure TPPGCustomDBKanban.SelectionChanged;
+procedure TPPGCustomDBKanban.SelectedCardChanged;
 var
   Card: TPPGKanbanCard;
 begin
-  inherited SelectionChanged;
+  inherited SelectedCardChanged;
   Card := SelectedCard;
   if not FSyncRecord or (Card = nil) or not FDataLink.Active or (Fld(0) = nil) then
     Exit;

@@ -230,6 +230,7 @@ type
     FOnGetCellStyle: TPPGGridCellStyleEvent;
     FOnLinkClick: TPPGGridLinkEvent;
     FOnCellButtonClick: TPPGGridCellEvent;
+    procedure SetDefaultDrawing(const Value: Boolean);
     procedure SetColCount(const Value: Integer);
     procedure SetRowCount(const Value: Integer);
     procedure SetFixedCols(const Value: Integer);
@@ -551,7 +552,7 @@ type
     property FixedRows: Integer read FFixedRows write SetFixedRows default 1;
     property DefaultColWidth: Integer read FDefaultColWidth write SetDefaultColWidth default 64;
     property DefaultRowHeight: Integer read FDefaultRowHeight write SetDefaultRowHeight default 24;
-    property DefaultDrawing: Boolean read FDefaultDrawing write FDefaultDrawing default True;
+    property DefaultDrawing: Boolean read FDefaultDrawing write SetDefaultDrawing default True;
     property Options: TGridOptions read FOptions write SetOptions
       default [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect];
     property Columns: TPPGGridColumns read FColumns write SetColumns;
@@ -4175,6 +4176,14 @@ begin
     Exit(TCtrlAccess(Parent).Color);
   GetGridColors(Fill, Text, Header, Line, Accent);
   Result := Fill;
+end;
+
+procedure TPPGCustomGrid.SetDefaultDrawing(const Value: Boolean);
+begin
+  if FDefaultDrawing = Value then
+    Exit;
+  FDefaultDrawing := Value;
+  Invalidate;
 end;
 
 function TPPGCustomGrid.CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind;

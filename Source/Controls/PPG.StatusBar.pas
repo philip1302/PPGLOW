@@ -291,7 +291,7 @@ procedure TPPGStatusPanel.SetWidth(const Value: Integer);
 begin
   if FWidth <> Value then
   begin
-    FWidth := Max(0, Value);
+    FWidth := PPGCheckRange(Self, 'Width', Value, 0, MaxInt);
     Changed(False);
   end;
 end;
@@ -334,9 +334,9 @@ end;
 
 procedure TPPGStatusPanel.SetProgress(const Value: Integer);
 begin
-  if FProgress <> EnsureRange(Value, 0, 100) then
+  if FProgress <> Value then
   begin
-    FProgress := EnsureRange(Value, 0, 100);
+    FProgress := PPGCheckRange(Self, 'Progress', Value, 0, 100);
     Changed(False);
   end;
 end;
@@ -345,7 +345,7 @@ procedure TPPGStatusPanel.SetBadgeCount(const Value: Integer);
 begin
   if FBadgeCount <> Value then
   begin
-    FBadgeCount := Max(0, Value);
+    FBadgeCount := PPGCheckRange(Self, 'BadgeCount', Value, 0, MaxInt);
     Changed(False);
   end;
 end;
