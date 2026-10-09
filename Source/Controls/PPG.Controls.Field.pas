@@ -160,6 +160,8 @@ type
     procedure FocusAnimStep(Sender: TObject);
     procedure PaintTextHint(DC: HDC);
     procedure UpdateInnerHint;
+    /// Validierungstext als Screenreader-Beschreibung am inneren Edit (Audit 7d).
+    procedure UpdateInnerAccDescription;
     function GetText: string;
     procedure SetText(const Value: string);
     function GetTabStop: Boolean;
@@ -654,7 +656,10 @@ begin
       end;
     WM_SETFOCUS:
       // Name VOR der Fokusmeldung setzen, damit der Screenreader ihn vorliest
-      PPGAccSetWindowName(Ed(FInner).Handle, AccName);
+      begin
+        PPGAccSetWindowName(Ed(FInner).Handle, AccName);
+        UpdateInnerAccDescription;
+      end;
     WM_CONTEXTMENU:
       if (PopupMenu <> nil) and PopupMenu.AutoPopup then
       begin
@@ -677,12 +682,18 @@ begin
         Exit;
       end;
     WM_DESTROY:
-      PPGAccSetWindowName(Ed(FInner).Handle, '');
+      begin
+        PPGAccSetWindowName(Ed(FInner).Handle, '');
+        PPGAccSetWindowDescription(Ed(FInner).Handle, '');
+      end;
   end;
 
   FInnerOldProc(Message);
 
   case Message.Msg of
+    WM_CREATE:
+      // Neues Fensterhandle (RecreateWnd): Beschreibung wieder anbringen
+      UpdateInnerAccDescription;
     WM_SETFOCUS, WM_KILLFOCUS:
       FocusChanged;
     WM_PAINT:
@@ -1850,6 +1861,13 @@ begin
     UpdateInnerHint;
     Invalidate;
     NotifyAccessibility(EVENT_OBJECT_DESCRIPTIONCHANGE);
+    // Der Fokus steht im inneren Edit: dort melden, ein Fehler als Alarm
+    if (FInner <> nil) and Ed(FInner).HandleAllocated then
+    begin
+      PPGAccNotify(Ed(FInner).Handle, EVENT_OBJECT_DESCRIPTIONCHANGE);
+      if Value = pvsError then
+        PPGAccNotify(Ed(FInner).Handle, EVENT_SYSTEM_ALERT);
+    end;
   end;
 end;
 
@@ -1860,6 +1878,8 @@ begin
     FValidationHint := Value;
     UpdateInnerHint;
     NotifyAccessibility(EVENT_OBJECT_DESCRIPTIONCHANGE);
+    if (FInner <> nil) and Ed(FInner).HandleAllocated then
+      PPGAccNotify(Ed(FInner).Handle, EVENT_OBJECT_DESCRIPTIONCHANGE);
   end;
 end;
 
@@ -1877,6 +1897,19 @@ begin
     Ed(FInner).Hint := '';
     Ed(FInner).ParentShowHint := True;
   end;
+  UpdateInnerAccDescription;
+end;
+
+procedure TPPGCustomField.UpdateInnerAccDescription;
+begin
+  // Audit 7d: die Beschreibung des Felds (AccDescription) erreicht der
+  // Screenreader nicht, denn er steht im inneren Edit. Leer = Annotation weg.
+  if (FInner = nil) or not Ed(FInner).HandleAllocated then
+    Exit;
+  if (FValidationState <> pvsNone) and (FValidationHint <> '') then
+    PPGAccSetWindowDescription(Ed(FInner).Handle, FValidationHint)
+  else
+    PPGAccSetWindowDescription(Ed(FInner).Handle, '');
 end;
 
 procedure TPPGCustomField.SetShowClearButton(const Value: Boolean);

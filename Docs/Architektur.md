@@ -182,7 +182,7 @@ Alle drei erben von `TPPGCustomField` (`Source\Controls\PPG.Controls.Field.pas`)
   - Gedrückt halten wiederholt nach 400 ms alle 50 ms. Der Takt kommt vom gemeinsamen Animator, es gibt keinen eigenen Timer.
 - **Memo:** Die Scrollbalken bleiben nativ (mit VCL-Style färbt sie der Style-Hook). Kein `AutoSize`.
 - **Streaming:** Das innere Edit wird nie gespeichert (`GetChildren`), auch nicht, wenn das Feld selbst Root ist (Kopieren im Designer). `Lines` des Memos braucht beim Laden wie bei `TMemo` ein Fenster, also einen Parent.
-- **Barrierefreiheit:** Das native Edit bleibt das fokussierte Element (Rolle Text, Wert über den Standard-Proxy, Kennwörter verdeckt). Den Namen setzt das Feld per `IAccPropServices` am inneren Edit: zuerst ein Label mit `FocusControl` auf das Feld, sonst `TextHint`, sonst `Hint`. Das braucht COM; das ist in praktisch jeder VCL-Anwendung (`ComObj`) initialisiert, ohne COM bleibt der Name leer. Das Feld selbst hat die Rolle Gruppierung (SpinEdit: Drehfeld mit Wert).
+- **Barrierefreiheit:** Das native Edit bleibt das fokussierte Element (Rolle Text, Wert über den Standard-Proxy, Kennwörter verdeckt). Den Namen setzt das Feld per `IAccPropServices` am inneren Edit: zuerst ein Label mit `FocusControl` auf das Feld, sonst `TextHint`, sonst `Hint`. Das braucht COM; das ist in praktisch jeder VCL-Anwendung (`ComObj`) initialisiert, ohne COM bleibt der Name leer. Ebenso setzt es den Validierungstext (`ValidationHint`, solange `ValidationState` nicht `pvsNone` ist) als Beschreibung am inneren Edit, meldet dort `EVENT_OBJECT_DESCRIPTIONCHANGE` und beim Wechsel auf `pvsError` `EVENT_SYSTEM_ALERT`; nach neuem Fensterhandle wird sie wieder angebracht (Audit 7d). Das gilt auch für Markierungen des `TPPGValidator`. Das Feld selbst hat die Rolle Gruppierung (SpinEdit: Drehfeld mit Wert).
 
 ## Auswahlliste (ComboBox) und Popup
 
@@ -391,7 +391,7 @@ Jedes PPGlow-Control beantwortet `WM_GETOBJECT(OBJID_CLIENT)` mit einem `TPPGAcc
 | Name | `Caption` ohne `&` (Eingabefelder: Label mit `FocusControl`, sonst `TextHint`, sonst `Hint`) |
 | Rolle | Button, Menü-Button, Split-Button, CheckBox, RadioButton, Fortschrittsanzeige, Schieberegler, Gruppierung, Bereich (Panel), Drehfeld (SpinEdit), Kombinationsfeld mit Liste und Listeneinträgen, Reiterliste mit Reitern, Eigenschaftsseite (TabSheet); das native Edit im Feld hat die Rolle Text |
 | Zustand | deaktiviert, fokussiert, gedrückt, an, gemischt, hat Popup, schreibgeschützt (ProgressBar), beschäftigt (Marquee) |
-| Beschreibung | kurzer Teil von `Hint` |
+| Beschreibung | kurzer Teil von `Hint`; Felder: Validierungstext (am inneren Edit) |
 | Tastenkürzel | `Alt+X` aus dem `&` der Caption |
 | Standardaktion | „Press“, „Check“/„Uncheck“, „Select“ |
 | Wert | ToggleSwitch: „On“/„Off“, ProgressBar: Prozent, TrackBar: Position |
