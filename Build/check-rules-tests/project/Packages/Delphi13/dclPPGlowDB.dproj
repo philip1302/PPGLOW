@@ -1,0 +1,9 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <ItemGroup>
+        <DelphiCompile Include="dclPPGlowDB.dpk">
+            <MainSource>MainSource</MainSource>
+        </DelphiCompile>
+        <DCCReference Include="..\..\Source\DesignDB\PPG.Da.pas"/>
+        <DCCReference Include="..\..\Source\DesignDB\PPG.Fehlt.pas"/>
+    </ItemGroup>
+</Project>

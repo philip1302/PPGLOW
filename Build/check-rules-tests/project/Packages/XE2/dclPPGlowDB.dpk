@@ -1,0 +1,10 @@
+package dclPPGlowDB;
+
+requires
+  rtl;
+
+contains
+  PPG.Da in '..\..\Source\DesignDB\PPG.Da.pas',
+  PPG.Weg in '..\..\Source\DesignDB\PPG.Weg.pas';
+
+end.

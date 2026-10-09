@@ -1,0 +1,6 @@
+Kleines Projekt fuer die Regel REQUIRES: PPGlowR braucht in Delphi13 ein
+Paket mehr als in XE2, dclPPGlow gibt es nur in Delphi13. PPGlowDBR ist
+gleich (Reihenfolge, Gross-/Kleinschreibung und Kommentare zaehlen nicht).
+expect: REQUIRES
+text: requires weicht von Packages\XE2\PPGlowR.dpk ab
+text: Paket fehlt in Packages\XE2: dclPPGlow.dpk

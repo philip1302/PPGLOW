@@ -1,0 +1,8 @@
+package PPGlowDBR;
+
+requires
+  DBRTL, { Datenbank }
+  rtl,
+  vcl;
+
+end.

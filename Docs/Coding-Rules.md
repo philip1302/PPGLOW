@@ -19,9 +19,19 @@ Diese Regeln sind verbindlich für jede neue Unit und jedes neue Control. Sie si
 - Jeder neue Text bekommt eine Zeile in `Lang\PPGlow.de.txt`, danach `Build\make-lang.ps1` ausführen. Der Regel-Prüfer (Regel LANG) meldet fehlende oder veraltete Einträge.
 
 ## Prüfung ohne Compiler
-- `Build\check-rules.ps1` prüft vor jedem Build: ASCII, CRLF, `{$I ..\PPG.inc}`, `{$IFEND}`, Inline-Variablen und `NameOf`, Syntaxreste, `}` in Kommentaren, `raise` nur mit `PPG.Exceptions` (in `Source`), keine leeren `except`, jede Unit in allen Projektlisten und vollständige Übersetzungen.
+- `Build\check-rules.ps1` prüft vor jedem Build: ASCII, CRLF, `{$I ..\PPG.inc}`, `{$IFEND}`, Inline-Variablen und `NameOf`, Syntaxreste, `}` in Kommentaren, `raise` nur mit `PPG.Exceptions` (in `Source`), keine leeren `except`, jede Unit in allen Projektlisten und vollständige Übersetzungen. Dazu kommen (Audit 11d):
+  - **EXCEPT**: Ein `except` ohne `on`-Filter (oder mit `on E: Exception`) und ohne `raise`/`Abort` steht in `Source` nur an einer Grenze. Die Grenze trägt einen Kommentar mit „Grenze: <warum>“ (bis sechs Zeilen davor oder im Handler). Ausgenommen sind `Source\Access`, `PPG.ErrorHandler` und `PPG.Animation`.
+  - **DB**: `Data.*`, `Datasnap.*`, `Vcl.DB*` und `MidasLib` stehen in `Source` nur in `Source\DB` und `Source\DesignDB`.
+  - **DESIGN**: `DesignIntf`, `DesignEditors`, `VCLEditors`, `ToolsAPI`, `ColnEdit` und andere IDE-Units stehen nur in `Source\Design` und `Source\DesignDB`.
+  - **UNITS**: keine unqualifizierten RTL/VCL-Units in `uses` (`Windows`, `SysUtils`, `Classes`, `Controls` …), geprüft in Source, Tests und Demo.
+  - **IMAGEINDEX**: `TImageIndex` nur in `PPG.Types`.
+  - **TIMER**: `TTimer`/`SetTimer`/`KillTimer` in `Source` nur in `PPG.Animation`.
+  - **LAYER**: Die Schichten in `Source` (Ordner = Schicht) bilden eine Matrix. Core nutzt nur Core. Render nutzt Core und Render. Theme nutzt Core, Render und Theme. Access nutzt Core, Render, Theme und Access. Controls nutzt alles außer DB, Editors und Design. DB nutzt zusätzlich DB, Editors zusätzlich Editors. Design und DesignDB nutzen alles. Rein textuelle Hilfen gehören deshalb nach Core (Beispiel: der Markup-Parser `PPG.Markup.Parser`).
+  - **TEXT** (eng): kein `Caption`/`Hint`/`Text := '…'` mit mindestens zwei Buchstaben in `Source`; ausgenommen sind Design, DesignDB und Editors.
+  - **XE2** (Verbotsliste): kein `FMod`; kein unqualifiziertes `TCollectionNotification`/`cnAdded`/`cnExtracting`/… nach `System.Generics.Collections` (stattdessen `System.Classes.` voranstellen); kein `DocumentProperties(…)` mit `nil` (stattdessen eigener Import mit `PDeviceMode`).
+  - **REQUIRES**: Die `requires`-Liste jedes Pakets ist in `Packages\XE2` und `Packages\Delphi13` gleich.
 - Ein Verstoß bricht `build.ps1` ab. `-NoRuleCheck` gibt es nur für Notfälle.
-- Neue Regeln bekommen ein Negativbeispiel in `Build\check-rules-tests` (`check-rules.ps1 -SelfTest`).
+- Neue Regeln bekommen ein Negativbeispiel in `Build\check-rules-tests` (`check-rules.ps1 -SelfTest`). Zeile 1 nennt die erwarteten Regeln (`// expect:`). Optional folgen die Lage im Projekt (`// path: Source\Core\X.pas`) und die Zahl der Meldungen (`// count:`). Regeln über mehrere Dateien (PROJECT, REQUIRES, LANG) prüft je ein kleines Projekt in einem Unterordner mit `expect.txt`.
 - DB-Units (`Data.DB`) gehören nur nach `Source\DB` und damit in `PPGlowDBR`. Das Grundpaket `PPGlowR` linkt kein `Data.DB`.
 
 ## Exceptions

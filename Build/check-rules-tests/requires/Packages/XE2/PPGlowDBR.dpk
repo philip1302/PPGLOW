@@ -1,0 +1,8 @@
+package PPGlowDBR;
+
+requires
+  rtl,
+  vcl,
+  dbrtl;
+
+end.

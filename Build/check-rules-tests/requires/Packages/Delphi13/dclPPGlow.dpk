@@ -1,0 +1,7 @@
+package dclPPGlow;
+
+requires
+  rtl,
+  designide;
+
+end.
