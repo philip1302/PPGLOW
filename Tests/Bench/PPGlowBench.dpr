@@ -312,9 +312,201 @@ begin
   end;
 end;
 
+/// Audit 8A: Timer-Wakeups je Sekunde im Leerlauf (WM_TIMER aus einer eigenen
+/// Nachrichtenschleife gezaehlt, nicht ueber die Zeit).
+function Bench8AWakeups(Ms: Cardinal): Integer;
+var
+  Msg: TMsg;
+  T0: Cardinal;
+  Dummy: THandle;
+  N: Integer;
+begin
+  N := 0;
+  Dummy := 0;
+  T0 := GetTickCount;
+  while GetTickCount - T0 < Ms do
+  begin
+    MsgWaitForMultipleObjects(0, Dummy, False, 20, QS_ALLINPUT);
+    while PeekMessage(Msg, 0, 0, 0, PM_REMOVE) do
+    begin
+      if Msg.message = WM_TIMER then
+        Inc(N);
+      TranslateMessage(Msg);
+      DispatchMessage(Msg);
+    end;
+  end;
+  Result := N * 1000 div Integer(Ms);
+end;
+
+/// Audit 8A: Zaehlwert mit Vorgabe ausgeben (wie Measure, Einheit /s).
+procedure Bench8ACount(const Name: string; Value, Budget: Integer);
+var
+  Verdict: string;
+begin
+  if Value > Budget then
+  begin
+    Inc(Exceeded);
+    Verdict := 'ZU VIELE';
+  end
+  else
+    Verdict := 'ok';
+  Writeln(Format('%-52s %6d /s  (Vorgabe %5d /s)  %s', [Name, Value, Budget, Verdict]));
+end;
+
 /// Audit-Paket 8A (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
 procedure Bench8A;
+var
+  Planner: TPPGPlanner;
+  Scroller: TBenchScroller;
 begin
+  Measure('8A ListBox 10 000: 300 Mausbewegungen + Neuzeichnen', 1300,
+    procedure
+    var
+      L: TPPGListBox;
+      D: TBenchData;
+      I: Integer;
+    begin
+      D := TBenchData.Create;
+      L := TPPGListBox.Create(Form);
+      try
+        L.Parent := Form;
+        L.SetBounds(0, 0, 400, 600);
+        L.Style := lbVirtual;
+        L.OnData := D.ListData;
+        L.Count := 10000;
+        L.Update;
+        for I := 0 to 299 do
+        begin
+          L.Perform(WM_MOUSEMOVE, 0, MakeLParam(100, 5 + (I * 37) mod 590));
+          L.Update;
+        end;
+      finally
+        L.Free;
+        D.Free;
+      end;
+    end);
+
+  Measure('8A ListBox 1 000 000: 300 x eine Zeile neu zeichnen', 800,
+    procedure
+    var
+      L: TPPGListBox;
+      D: TBenchData;
+      I: Integer;
+      R: TRect;
+    begin
+      D := TBenchData.Create;
+      L := TPPGListBox.Create(Form);
+      try
+        L.Parent := Form;
+        L.SetBounds(0, 0, 400, 600);
+        L.Style := lbVirtual;
+        L.OnData := D.ListData;
+        L.Count := 1000000;
+        L.Update;
+        for I := 0 to 299 do
+        begin
+          R := Rect(0, (I mod 29) * 20, 400, (I mod 29) * 20 + 20);
+          InvalidateRect(L.Handle, @R, False);
+          L.Update;
+        end;
+      finally
+        L.Free;
+        D.Free;
+      end;
+    end);
+
+  Measure('8A NavigationView 1000: 300 Mausbewegungen + Neuzeichnen', 1100,
+    procedure
+    var
+      N: TPPGNavigationView;
+      I: Integer;
+    begin
+      N := TPPGNavigationView.Create(Form);
+      try
+        N.Parent := Form;
+        N.Animation.Enabled := False;
+        N.Height := 800;
+        N.BeginItemsUpdate;
+        try
+          for I := 0 to 999 do
+            N.Items.AddItem('Eintrag ' + IntToStr(I), PPGNavIconDocument, I);
+        finally
+          N.EndItemsUpdate;
+        end;
+        N.Update;
+        for I := 0 to 299 do
+        begin
+          N.Perform(WM_MOUSEMOVE, 0, MakeLParam(40, 60 + (I * 37) mod 700));
+          N.Update;
+        end;
+      finally
+        N.Free;
+      end;
+    end);
+
+  Measure('8A ToolBar 40 Buttons: 300 Mausbewegungen + Neuzeichnen', 900,
+    procedure
+    var
+      T: TPPGToolBar;
+      I: Integer;
+    begin
+      T := TPPGToolBar.Create(Form);
+      try
+        T.Parent := Form;
+        T.Width := 1150;
+        for I := 0 to 39 do
+          T.Items.AddButton('B' + IntToStr(I));
+        T.Update;
+        for I := 0 to 299 do
+        begin
+          T.Perform(WM_MOUSEMOVE, 0, MakeLParam(5 + (I * 37) mod 1100, T.Height div 2));
+          T.Update;
+        end;
+      finally
+        T.Free;
+      end;
+    end);
+
+  Measure('8A PPGMeasureTextNoCanvas 100 000 x', 200,
+    procedure
+    var
+      I: Integer;
+    begin
+      for I := 0 to 99999 do
+        PPGMeasureTextNoCanvas('Eintrag ' + IntToStr(I mod 100), Form.Font, 0, False);
+    end);
+
+  // Leerlauf: Wakeups/s (gezaehlt) ohne Animation, mit Jetzt-Linie, mit Maus
+  // ueber einem Scroll-Control (Leisten sichtbar halten)
+  Bench8ACount('8A Leerlauf ohne Animation: Wakeups', Bench8AWakeups(2000), 5);
+  Planner := TPPGPlanner.Create(Form);
+  try
+    Planner.Parent := Form;
+    Planner.SetBounds(0, 0, 800, 600);
+    Planner.View := pvWeek;
+    Planner.Date := Date;
+    Planner.ShowNowLine := True;
+    Planner.Update;
+    Bench8AWakeups(1800); // Aufbau und Ausblenden der Leisten abwarten
+    Bench8ACount('8A Leerlauf Planer mit Jetzt-Linie: Wakeups', Bench8AWakeups(2000), 5);
+  finally
+    Planner.Free;
+  end;
+  Scroller := TBenchScroller.Create(Form);
+  try
+    Scroller.Parent := Form;
+    Scroller.SetBounds(0, 0, 400, 600);
+    Scroller.SetContentSize(400, 100000 * 20);
+    Scroller.Update;
+    Scroller.Perform(CM_MOUSEENTER, 0, 0);
+    Scroller.Perform(WM_MOUSEMOVE, 0, MakeLParam(100, 100));
+    Bench8AWakeups(200); // Leisten einblenden
+    // Die echte Maus steht nicht ueber dem Control: nach 1,2 s blendet es aus,
+    // gemessen wird die Sekunde davor
+    Bench8ACount('8A Leerlauf Maus ueber Scroll-Control: Wakeups', Bench8AWakeups(1000), 15);
+  finally
+    Scroller.Free;
+  end;
 end;
 
 /// Audit-Paket 8B (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.

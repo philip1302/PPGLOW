@@ -90,6 +90,8 @@ type
     procedure DestroyWnd; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function IsHot: Boolean; override;
+    /// Hover je Element; IsHot bleibt False (Audit 8a #2).
+    function UsesHotAnimation: Boolean; override;
     function IsDown: Boolean; override;
     function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function AutoSizeWidth: Boolean; override;
@@ -336,6 +338,11 @@ begin
 end;
 
 function TPPGCustomMenuBar.IsDown: Boolean;
+begin
+  Result := False;
+end;
+
+function TPPGCustomMenuBar.UsesHotAnimation: Boolean;
 begin
   Result := False;
 end;

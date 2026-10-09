@@ -61,6 +61,9 @@ type
   private
     FMarkup: TPPGMarkupLayout;
     FFonts: TPPGFontCache;
+    procedure PaintItemContentCore(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
+      const R: TRect; const Data: TPPGItemData; const Info: TPPGItemPaintInfo; Index: Integer;
+      Selected: Boolean; Hot: Single);
   public
     constructor Create;
     destructor Destroy; override;
@@ -384,6 +387,19 @@ begin
 end;
 
 procedure TPPGItemPainter.PaintItemContent(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
+  const R: TRect; const Data: TPPGItemData; const Info: TPPGItemPaintInfo; Index: Integer;
+  Selected: Boolean; Hot: Single);
+begin
+  // Audit 8a #5: Bild, Text und Detail eines Eintrags teilen sich einen DC
+  PPGBeginBatch(Canvas);
+  try
+    PaintItemContentCore(Canvas, IR, R, Data, Info, Index, Selected, Hot);
+  finally
+    PPGEndBatch(Canvas);
+  end;
+end;
+
+procedure TPPGItemPainter.PaintItemContentCore(const Canvas: IPPGCanvas; const IR: IPPGItemRenderer;
   const R: TRect; const Data: TPPGItemData; const Info: TPPGItemPaintInfo; Index: Integer;
   Selected: Boolean; Hot: Single);
 var

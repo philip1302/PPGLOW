@@ -426,6 +426,8 @@ type
     function ReferencesComponent(AComponent: TComponent): Boolean; override;
     procedure DoContextPopup(MousePos: TPoint; var Handled: Boolean); override;
     function IsHot: Boolean; override;
+    /// Hover je Element; IsHot bleibt False (Audit 8a #2).
+    function UsesHotAnimation: Boolean; override;
     function IsDown: Boolean; override;
     function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function AutoSizeWidth: Boolean; override;
@@ -3577,6 +3579,11 @@ begin
 end;
 
 function TPPGCustomRibbon.IsDown: Boolean;
+begin
+  Result := False;
+end;
+
+function TPPGCustomRibbon.UsesHotAnimation: Boolean;
 begin
   Result := False;
 end;

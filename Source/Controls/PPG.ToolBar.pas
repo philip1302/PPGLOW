@@ -178,6 +178,8 @@ type
     function ButtonHeight: Integer;
     procedure MenuItemClick(Sender: TObject);
     function NextFocusable(From, Dir: Integer): Integer;
+    /// Nur einen Knopf (-2 = Ueberlauf) neu zeichnen (8b).
+    procedure InvalidatePart(Part: Integer);
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
@@ -190,6 +192,8 @@ type
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
+    /// Hover je Knopf; IsHot bleibt False (Barrierefreiheit unveraendert).
+    function UsesHotAnimation: Boolean; override;
     function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function AutoSizeWidth: Boolean; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
@@ -874,6 +878,25 @@ begin
   Result := False;
 end;
 
+function TPPGToolBar.UsesHotAnimation: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TPPGToolBar.InvalidatePart(Part: Integer);
+var
+  R: TRect;
+begin
+  if Part = -2 then
+    R := FOverflowRect
+  else if (Part >= 0) and (Part < Length(FRects)) then
+    R := FRects[Part]
+  else
+    Exit;
+  InflateRect(R, PPGScale(2, ScalePPI), PPGScale(2, ScalePPI));
+  InvalidateArea(R);
+end;
+
 function TPPGToolBar.ButtonHeight: Integer;
 begin
   Result := Max(PPGScale(32, ScalePPI), PPGMeasureTextNoCanvas('Wg', Font, 0, False).cy +
@@ -1167,7 +1190,7 @@ begin
   begin
     It := FItems[I];
     R := FRects[I];
-    if IsRectEmpty(R) then
+    if IsRectEmpty(R) or not NeedsPaint(R, PPGScale(2, PPI)) then
       Continue;
     if It.Style = tisSeparator then
     begin
@@ -1293,8 +1316,10 @@ begin
   P := PartAt(X, Y);
   if P <> FHotPart then
   begin
+    // 8b: nur alten und neuen Knopf neu zeichnen
+    InvalidatePart(FHotPart);
     FHotPart := P;
-    Invalidate;
+    InvalidatePart(FHotPart);
     Application.CancelHint;
   end;
 end;
@@ -1305,7 +1330,9 @@ var
 begin
   D := FDownPart;
   FDownPart := -1;
-  Invalidate;
+  // 8b: nur bei Aenderung, nur der gedrueckte Knopf
+  if D <> -1 then
+    InvalidatePart(D);
   inherited MouseUp(Button, Shift, X, Y);
   if (Button <> mbLeft) or not Enabled then
     Exit;
@@ -1323,8 +1350,8 @@ begin
   inherited;
   if FHotPart <> -1 then
   begin
+    InvalidatePart(FHotPart);
     FHotPart := -1;
-    Invalidate;
   end;
 end;
 

@@ -72,6 +72,8 @@ type
     FOnCustomDrawItem: TPPGCustomDrawItemEvent;
     FDrawCanvas: TCanvas;
     procedure ReleaseDownIndex;
+    /// Hover-Zeile wechseln; neu gezeichnet werden nur alte und neue Zeile (8b).
+    procedure SetHotIndex(Value: Integer);
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure SetListStyles(const Value: TPPGListStyles);
     procedure ListStylesChanged(Sender: TObject);
@@ -1175,14 +1177,18 @@ var
   IR: IPPGItemRenderer;
   I, N, RPC, CW, X, RL, RR: Integer;
   Top: Int64;
-  R, HR, DR: TRect;
+  R, HR, DR, Clip: TRect;
   Data: TPPGItemData;
-  Y, LineH: Integer;
+  Y, LineH, M: Integer;
 begin
   EnsureLayout;
   N := FLayout.Count;
   if N = 0 then
     Exit;
+  // Audit 8a #1: nur Zeilen im neu zu zeichnenden Bereich (Rand M fuer
+  // Fokusrahmen und Glow, die ueber die Zeile hinausreichen koennen)
+  Clip := ViewportClip;
+  M := PPGScale(4, ScalePPI);
   Info := GetPaintInfo;
   IR := PPGItemRendererOf(Renderer);
   try
@@ -1197,8 +1203,11 @@ begin
           Break;
         Y := View.Top + (I mod RPC) * FLayout.DefaultHeight;
         R := Rect(X, Y, X + CW, Y + FLayout.DefaultHeight);
-        GetItemData(I, Data);
-        PaintItem(ACanvas, I, R, Data, Info);
+        if NeedsPaint(R, M) then
+        begin
+          GetItemData(I, Data);
+          PaintItem(ACanvas, I, R, Data, Info);
+        end;
         Inc(I);
       end;
       Exit;
@@ -1211,13 +1220,21 @@ begin
       RL := View.Left - ScrollX;
       RR := RL + ContentWidth;
     end;
-    I := FLayout.RowAt(ScrollY);
+    Y := ScrollY;
+    if Clip.Top - M > View.Top then
+      Y := ScrollY + (Clip.Top - M - View.Top);
+    I := FLayout.RowAt(Y);
     while (I >= 0) and (I < N) do
     begin
       Top := FLayout.RowTop(I) - ScrollY + View.Top;
-      if Top >= View.Bottom then
+      if (Top >= View.Bottom) or (Top >= Clip.Bottom + M) then
         Break;
       R := Rect(RL, Integer(Top), RR, Integer(Top) + FLayout.RowHeight(I));
+      if not NeedsPaint(R, M) then
+      begin
+        Inc(I);
+        Continue;
+      end;
       GetItemData(I, Data);
       if ItemStartsGroup(I) then
       begin
@@ -1320,10 +1337,7 @@ begin
   if (I >= 0) and not CanSelectItem(I) then
     I := -1;
   if I <> FHotIndex then
-  begin
-    FHotIndex := I;
-    Invalidate;
-  end;
+    SetHotIndex(I);
   if not (ssLeft in Shift) or (FDownIndex < 0) then
     Exit;
   if FAllowReorder and (ListColumns = 0) then
@@ -1536,9 +1550,28 @@ procedure TPPGCustomItemList.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
   if FHotIndex >= 0 then
+    SetHotIndex(-1);
+end;
+
+procedure TPPGCustomItemList.SetHotIndex(Value: Integer);
+var
+  R: TRect;
+  M: Integer;
+begin
+  // Nur die Zeilen neu zeichnen (etwas Rand fuer Fokusrahmen und Glow)
+  M := PPGScale(4, ScalePPI);
+  R := ItemRect(FHotIndex);
+  if not IsRectEmpty(R) then
   begin
-    FHotIndex := -1;
-    Invalidate;
+    InflateRect(R, M, M);
+    InvalidateArea(R);
+  end;
+  FHotIndex := Value;
+  R := ItemRect(FHotIndex);
+  if not IsRectEmpty(R) then
+  begin
+    InflateRect(R, M, M);
+    InvalidateArea(R);
   end;
 end;
 

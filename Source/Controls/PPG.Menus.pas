@@ -101,8 +101,11 @@ type
       const L, H: TPPGSurfaceStyle; MR: IPPGMenuRenderer);
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure ApplyMenuStyles(var L, H: TPPGSurfaceStyle);
+    procedure InvalidateItem(Index: Integer);
   protected
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
+    /// Hervorhebung je Eintrag (FHot), kein Hover-Zustand des Fensters (8a #2).
+    function UsesHotAnimation: Boolean; override;
     function PopupRounding: Integer; override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -673,8 +676,10 @@ begin
     Index := -1;
   if FHot = Index then
     Exit;
+  // 8b: nur alten und neuen Eintrag neu zeichnen
+  InvalidateItem(FHot);
   FHot := Index;
-  Invalidate;
+  InvalidateItem(FHot);
   if FHot >= 0 then
   begin
     Application.Hint := GetLongHint(FItems[FHot].Hint);
@@ -682,6 +687,22 @@ begin
   end
   else
     Application.Hint := '';
+end;
+
+procedure TPPGMenuWindow.InvalidateItem(Index: Integer);
+var
+  R: TRect;
+begin
+  if (Index < 0) or (Index > High(FItems)) then
+    Exit;
+  R := ItemRect(Index);
+  InflateRect(R, PPGScale(2, ScalePPI), PPGScale(2, ScalePPI));
+  InvalidateArea(R);
+end;
+
+function TPPGMenuWindow.UsesHotAnimation: Boolean;
+begin
+  Result := False;
 end;
 
 procedure TPPGMenuWindow.MoveHot(Delta: Integer);
@@ -717,24 +738,38 @@ end;
 
 procedure TPPGMenuWindow.HotFirst;
 begin
+  InvalidateItem(FHot); // 8b: die alte Hervorhebung verschwindet
   FHot := -1;
   MoveHot(1);
 end;
 
 procedure TPPGMenuWindow.HotLast;
 begin
+  InvalidateItem(FHot); // 8b: die alte Hervorhebung verschwindet
   FHot := -1;
   MoveHot(-1);
 end;
 
 procedure TPPGMenuWindow.ScrollBy(Delta: Integer);
 var
-  MaxY: Integer;
+  MaxY, Y: Integer;
 begin
   if not FScrollable then
     Exit;
   MaxY := Max(0, FContentHeight - (ClientHeight - 2 * ArrowH));
-  FScrollY := EnsureRange(FScrollY + Delta, 0, MaxY);
+  Y := EnsureRange(FScrollY + Delta, 0, MaxY);
+  // 8b: nur bei Aenderung; am Rand haelt die Blaetter-Schleife an (die
+  // naechste Mausbewegung auf dem Pfeil startet sie wieder)
+  if Y = FScrollY then
+  begin
+    if FScrollAnim.Running then
+    begin
+      FScrollAnim.Stop;
+      FScrollDir := 0;
+    end;
+    Exit;
+  end;
+  FScrollY := Y;
   Invalidate;
 end;
 
@@ -750,7 +785,9 @@ begin
   if Top < FScrollY then
     FScrollY := Top
   else if Bottom > FScrollY + View then
-    FScrollY := Bottom - View;
+    FScrollY := Bottom - View
+  else
+    Exit; // schon sichtbar: nichts neu zeichnen
   Invalidate;
 end;
 
@@ -1022,9 +1059,15 @@ begin
     for I := 0 to High(FItems) do
     begin
       R := ItemRect(I);
-      if (R.Bottom < Clip.Top) or (R.Top > Clip.Bottom) then
+      if (R.Bottom < Clip.Top) or (R.Top > Clip.Bottom) or not NeedsPaint(R, PPGScale(2, PPI)) then
         Continue;
-      PaintItem(ACanvas, I, R, L, H, MR);
+      // Audit 8a #5: Symbol, Text, Kuerzel eines Eintrags in einem Block
+      PPGBeginBatch(ACanvas);
+      try
+        PaintItem(ACanvas, I, R, L, H, MR);
+      finally
+        PPGEndBatch(ACanvas);
+      end;
     end;
     // Trennlinie zwischen Spalten bei mbBarBreak
     for I := 1 to High(FItems) do

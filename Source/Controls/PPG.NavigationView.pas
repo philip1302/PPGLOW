@@ -244,6 +244,8 @@ type
     function RowCountAll: Integer;
     function RowItem(Row: Integer): TPPGNavItem;
     function IndicatorItem: TPPGNavItem;
+    /// Nur eine Zeile (-2 = Menue-Knopf) neu zeichnen (8b).
+    procedure InvalidateRow(Row: Integer);
     function IndicatorY(Item: TPPGNavItem): Integer;
     procedure MoveIndicator(Animate: Boolean);
     procedure EnsureVisible(Item: TPPGNavItem);
@@ -266,6 +268,8 @@ type
     procedure SetParent(AParent: TWinControl); override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
+    /// Hover je Zeile; IsHot bleibt False (Barrierefreiheit unveraendert).
+    function UsesHotAnimation: Boolean; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
@@ -1036,6 +1040,19 @@ begin
   Result := False;
 end;
 
+function TPPGNavigationView.UsesHotAnimation: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TPPGNavigationView.InvalidateRow(Row: Integer);
+begin
+  if Row = -2 then
+    InvalidateArea(MenuRect)
+  else if Row >= 0 then
+    InvalidateArea(RowRect(Row));
+end;
+
 procedure TPPGNavigationView.BeginItemsUpdate;
 begin
   Inc(FUpdating);
@@ -1681,8 +1698,10 @@ begin
   R := RowAt(X, Y);
   if R <> FHotRow then
   begin
+    // 8b: nur alte und neue Zeile neu zeichnen
+    InvalidateRow(FHotRow);
     FHotRow := R;
-    Invalidate;
+    InvalidateRow(FHotRow);
     Application.CancelHint; // Tooltip zum neuen Eintrag
   end;
 end;
@@ -1693,7 +1712,9 @@ var
 begin
   Down := FDownRow;
   FDownRow := -1;
-  Invalidate;
+  // 8b: nur bei Aenderung, nur die gedrueckte Zeile
+  if Down <> -1 then
+    InvalidateRow(Down);
   inherited MouseUp(Button, Shift, X, Y);
   if (Button <> mbLeft) or not Enabled then
     Exit;
@@ -1711,8 +1732,8 @@ begin
   inherited;
   if FHotRow <> -1 then
   begin
+    InvalidateRow(FHotRow);
     FHotRow := -1;
-    Invalidate;
   end;
 end;
 
@@ -1975,6 +1996,9 @@ begin
     begin
       It := RowItem(I);
       R := RowRect(I);
+      // Audit 8a #1: Zeilen ausserhalb des neu zu zeichnenden Bereichs
+      if not NeedsPaint(R) then
+        Continue;
       if I < FRows.Count then
       begin
         if (R.Bottom <= MainTop) or (R.Top >= FooterT) then

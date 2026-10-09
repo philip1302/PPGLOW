@@ -51,6 +51,8 @@ type
     procedure WndProc(var Message: TMessage); override;
     procedure Resize; override;
     function IsHot: Boolean; override;
+    /// Hover je Abschnitt; IsHot bleibt False (Audit 8a #2).
+    function UsesHotAnimation: Boolean; override;
     function IsDown: Boolean; override;
     function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function AutoSizeWidth: Boolean; override;
@@ -233,6 +235,11 @@ begin
 end;
 
 function TPPGCustomBreadcrumb.IsDown: Boolean;
+begin
+  Result := False;
+end;
+
+function TPPGCustomBreadcrumb.UsesHotAnimation: Boolean;
 begin
   Result := False;
 end;
@@ -470,7 +477,8 @@ var
 begin
   D := FDownPart;
   FDownPart := -1;
-  Invalidate;
+  if D <> -1 then
+    Invalidate; // 8b: nur wenn ein Abschnitt gedrueckt war
   inherited MouseUp(Button, Shift, X, Y);
   if (Button <> mbLeft) or not Enabled then
     Exit;

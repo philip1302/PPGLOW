@@ -59,6 +59,9 @@ type
     FSmoothScrolling: Boolean;
     FKeyboardScrolling: Boolean;
     FOnScroll: TNotifyEvent;
+    FViewClip: TRect;      // waehrend PaintViewport: View geschnitten mit PaintClip
+    FHasViewClip: Boolean;
+    function GetViewportClip: TRect;
     procedure ScrollAnimStep(Sender: TObject);
     procedure BarAnimStep(Sender: TObject);
     procedure HoldStep(Sender: TObject);
@@ -94,6 +97,8 @@ type
     function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
       MousePos: TPoint): Boolean; override;
     function IsDown: Boolean; override;
+    /// Daten-Controls zeigen Hover je Eintrag (Audit 8a #2).
+    function UsesHotAnimation: Boolean; override;
     function AccRole: Integer; override;
 
     { Erweiterungspunkte }
@@ -101,6 +106,11 @@ type
     /// als Clip gesetzt). Inhaltskoordinate (cx, cy) liegt bei
     /// (View.Left + cx - ScrollX, View.Top + cy - ScrollY).
     procedure PaintViewport(const ACanvas: IPPGCanvas; const View: TRect); virtual;
+    /// Waehrend PaintViewport: neu zu zeichnender Teil von View (gleiche
+    /// Koordinaten wie View, also Client; Audit 8a #1). Zeilen, Kacheln und
+    /// Karten ausserhalb koennen uebersprungen werden. Sonst (Drucken,
+    /// Aufrufe von aussen) unbegrenzt.
+    property ViewportClip: TRect read GetViewportClip;
     /// Maus im Inhalt (nicht auf einer Leiste). Koordinaten = Client.
     procedure ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); virtual;
     procedure ContentMouseMove(Shift: TShiftState; X, Y: Integer); virtual;
@@ -226,6 +236,8 @@ begin
   FFadeAnim.OnStep := BarAnimStep;
   FHoldAnim := TPPGAnimation.Create(Self);
   FHoldAnim.OnStep := HoldStep;
+  // Audit 8a #3: Ruhezeit nur alle 200 ms pruefen (nicht jeden Frame)
+  FHoldAnim.StepInterval := 200;
   FAutoAnim := TPPGAnimation.Create(Self);
   FAutoAnim.OnStep := AutoStep;
   for A := Low(TPPGScrollAxis) to High(TPPGScrollAxis) do
@@ -277,6 +289,19 @@ end;
 function TPPGCustomScrollControl.IsDown: Boolean;
 begin
   Result := False; // eine Flaeche wird nicht "gedrueckt"
+end;
+
+function TPPGCustomScrollControl.UsesHotAnimation: Boolean;
+begin
+  Result := False;
+end;
+
+function TPPGCustomScrollControl.GetViewportClip: TRect;
+begin
+  if FHasViewClip then
+    Result := FViewClip
+  else
+    Result := Rect(-MaxInt div 4, -MaxInt div 4, MaxInt div 4, MaxInt div 4);
 end;
 
 function TPPGCustomScrollControl.AccRole: Integer;
@@ -762,19 +787,24 @@ end;
 
 procedure TPPGCustomScrollControl.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
-  View, Track, Thumb: TRect;
+  View, Track, Thumb, Clip: TRect;
   SR: IPPGScrollRenderer;
   Style: TPPGSurfaceStyle;
   Op: Single;
   A: TPPGScrollAxis;
 begin
   View := ViewRect;
-  if not IsRectEmpty(View) then
+  // Audit 8a #1: nur zeichnen, wenn die Ansicht den neu zu zeichnenden
+  // Bereich beruehrt; PaintViewport bekommt den Schnitt als ViewportClip
+  if not IsRectEmpty(View) and IntersectRect(Clip, View, PaintClip) then
   begin
     ACanvas.PushClipRoundRect(View, 0);
+    FViewClip := Clip;
+    FHasViewClip := True;
     try
       PaintViewport(ACanvas, View);
     finally
+      FHasViewClip := False;
       ACanvas.PopClip;
     end;
   end;
@@ -790,7 +820,7 @@ begin
   for A := Low(TPPGScrollAxis) to High(TPPGScrollAxis) do
   begin
     Track := ScrollBarRect(A);
-    if IsRectEmpty(Track) then
+    if IsRectEmpty(Track) or not NeedsPaint(Track) then
       Continue;
     Thumb := ThumbRect(A);
     SR.DrawScrollBar(ACanvas, Track, Thumb, Style, A = saVert, ScrollBarExpand(A),

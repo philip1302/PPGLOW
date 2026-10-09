@@ -280,6 +280,18 @@ type
     procedure SetSquareCorners(Corners: TPPGCorners);
   end;
 
+  /// Optionale Erweiterung (Audit 8a #5): Block fuer Text und Bilder. Bis
+  /// EndBatch teilen sich aufeinanderfolgende GDI-Ausgaben (DrawText,
+  /// DrawImage, MeasureText, DrawFocusRect, BeginGdi) einen ausgeliehenen DC;
+  /// Flaechen, Clips und andere GDI+-Aufrufe im Block geben ihn vorher
+  /// zurueck. Verschachtelbar; immer paarweise (try/finally). Ueber
+  /// PPGBeginBatch/PPGEndBatch aufrufen (Canvas ohne Interface: nichts).
+  IPPGBatchCanvas = interface
+    ['{7C1E5A92-4B36-4F8D-A2E0-9D61B3C84F17}']
+    procedure BeginBatch;
+    procedure EndBatch;
+  end;
+
   IPPGShapeCanvas = interface
     ['{5B8E2D14-9C67-4A3F-B1D0-6E4F2A9C7D53}']
     /// Gefuelltes Polygon (geschlossen, Fuellregel "alternate").
@@ -309,11 +321,30 @@ type
 
 /// Eckige Ecken setzen; liefert den alten Wert (Canvas ohne IPPGCornerCanvas: []).
 function PPGSetSquareCorners(const Canvas: IPPGCanvas; Corners: TPPGCorners): TPPGCorners;
+/// Block fuer Text und Bilder beginnen bzw. beenden (IPPGBatchCanvas).
+procedure PPGBeginBatch(const Canvas: IPPGCanvas);
+procedure PPGEndBatch(const Canvas: IPPGCanvas);
 
 implementation
 
 uses
   System.SysUtils;
+
+procedure PPGBeginBatch(const Canvas: IPPGCanvas);
+var
+  B: IPPGBatchCanvas;
+begin
+  if Supports(Canvas, IPPGBatchCanvas, B) then
+    B.BeginBatch;
+end;
+
+procedure PPGEndBatch(const Canvas: IPPGCanvas);
+var
+  B: IPPGBatchCanvas;
+begin
+  if Supports(Canvas, IPPGBatchCanvas, B) then
+    B.EndBatch;
+end;
 
 function PPGSetSquareCorners(const Canvas: IPPGCanvas; Corners: TPPGCorners): TPPGCorners;
 var

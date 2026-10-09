@@ -20,8 +20,12 @@ unit PPG.Controls.Base;
     selbst): Die VCL ruft nach jeder Nachricht FreeMemoryContexts auf und
     gibt dabei den DC einer Ziel-TBitmap frei -> PaintTo/Drucken/Screenshots
     scheitern mit "ungueltiges Handle". UI-Zustand wird deshalb gecacht.
-  - Offscreen-Puffer wird pro Paint angelegt und sofort freigegeben:
-    keine dauerhaften GDI-Handles pro Control (wichtig bei 1000+ Controls). }
+  - Neu gezeichnet wird nur die Clip-Box des Paints (PaintClip, Audit 8a #1):
+    Update-Region bzw. Clip von PaintTo. Der Offscreen-Puffer fuer das
+    Fenster wird je Control zwischengespeichert (ein Bitmap, neu nur bei
+    Groessen- oder Farbtiefenwechsel, frei bei DestroyWnd, Unsichtbarkeit
+    und Destroy); fuer fremde DCs (PaintTo, Drucken) gibt es weiter einen
+    Puffer je Paint. }
 
 {$I ..\PPG.inc}
 
@@ -72,6 +76,11 @@ type
     FUiaRootRef: IInterface;
     FStyledAppearance: TPPGAppearance; // Cache: Appearance mit Farben des VCL-Styles bzw. Dark Mode
     FStyledKind: Byte; // Inhalt des Caches: 0 = leer, 1 = VCL-Style, 2 = Dark Mode, 3 = Hochkontrast
+    FPaintClip: TRect;        // neu zu zeichnender Bereich (nur waehrend Paint)
+    FHasPaintClip: Boolean;
+    FPaintDC: HDC;            // Ziel-DC waehrend Paint (Update-Region fuer NeedsPaint)
+    FBuffer: HBITMAP;         // Rueckpuffer fuer den Fenster-DC (Audit 8a #1)
+    FBufferW, FBufferH, FBufferBits: Integer;
     {$IFDEF PPG_HAS_IMAGENAME}
     FImageName: TImageName;
     FHotImageName: TImageName;
@@ -115,6 +124,9 @@ type
     procedure ApplyStyleManager;
     function CheckImageIndex(const PropName: string; Value: TPPGImageIndex): TPPGImageIndex;
     procedure PaintFallback(ACanvas: TCanvas);
+    function AcquirePaintBuffer(DC: HDC; W, H: Integer): HBITMAP;
+    procedure ReleasePaintBuffer;
+    function GetPaintClip: TRect;
     procedure FillBackground(DC: HDC; const R: TRect);
     procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
@@ -133,6 +145,7 @@ type
     procedure WMUpdateUIState(var Message: TMessage); message WM_UPDATEUISTATE;
     procedure CMDialogChar(var Message: TCMDialogChar); message CM_DIALOGCHAR;
     procedure WMGetObject(var Message: TMessage); message WM_GETOBJECT;
+    procedure CMShowingChanged(var Message: TMessage); message CM_SHOWINGCHANGED;
   public
     /// Streaming: Optik wird nur ohne StyleManager lokal gespeichert.
     /// (Vor den Properties deklariert - Delphi verlangt das fuer "stored".)
@@ -201,12 +214,29 @@ type
     procedure UiaNotify(const Id: TPPGUiaId; EventId: Integer);
     procedure UiaNotifyProperty(const Id: TPPGUiaId; PropertyId: Integer; const NewValue: OleVariant);
     procedure Paint; override;
+    /// Neu zu zeichnender Bereich (Client-Koordinaten), Audit 8a #1: waehrend
+    /// Paint die Clip-Box (Update-Region bzw. Clip von PaintTo, geschnitten
+    /// mit der Client-Flaeche; ohne Clip die ganze Flaeche). Ausserhalb von
+    /// Paint (Drucken, Aufrufe von aussen) unbegrenzt. Wer Teile ausserhalb
+    /// ueberspringt, rechnet Glow, Fokusrahmen und Schatten mit ein (Margin).
+    property PaintClip: TRect read GetPaintClip;
+    /// True, wenn R (Client-Koordinaten, um Margin vergroessert) den
+    /// neu zu zeichnenden Bereich beruehrt.
+    function NeedsPaint(const R: TRect; Margin: Integer = 0): Boolean;
+    /// Nur R neu zeichnen (Client-Koordinaten; InvalidateRect ohne Loeschen).
+    /// Waehrend BeginUpdate wie Invalidate vorgemerkt.
+    procedure InvalidateArea(const R: TRect);
 
     { Zustand }
     function IsDown: Boolean; virtual;
     function IsHot: Boolean; virtual;
     function GetVisualState: TPPGVisualState; virtual;
     function FocusVisible: Boolean; virtual;
+    /// False (Audit 8a #2): Hover zeigt sich nicht ueber den Zustand des
+    /// ganzen Controls (Daten-Controls mit eigener Hervorhebung je Eintrag).
+    /// Dann gibt es keine Hot-Animation und Betreten/Verlassen zeichnet nicht
+    /// neu; IsHot und MouseInside bleiben unveraendert.
+    function UsesHotAnimation: Boolean; virtual;
     procedure SetKeyPressed(Value: Boolean);
     procedure UpdateVisualState(Animate: Boolean = True); virtual;
     procedure ResetInteractionState;
@@ -372,7 +402,7 @@ uses
   PPG.Lang,
   System.SysUtils, System.Math, Vcl.Forms, Vcl.Themes,
   PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.DpiUtils,
-  PPG.Render.Registry, PPG.Render.Gdi, PPG.Presets, PPG.VclStyles, PPG.Theme,
+  PPG.Render.Registry, PPG.Render.Gdi, PPG.Render.GdiPlus, PPG.Presets, PPG.VclStyles, PPG.Theme,
   PPG.UIA.Intf, Winapi.oleacc;
 
 var
@@ -444,6 +474,7 @@ begin
   FreeAndNil(FAnimation);
   FreeAndNil(FAppearance);
   FRenderer := nil;
+  ReleasePaintBuffer;
   inherited Destroy;
 end;
 
@@ -728,6 +759,7 @@ begin
   if AComponent = FImages then
   begin
     FImages := nil;
+    PPGClearTintCache;
     ImagesChanged;
     Invalidate;
   end;
@@ -1071,6 +1103,7 @@ begin
       FImages.RemoveFreeNotification(Self);
   end;
   FImages := Value;
+  PPGClearTintCache; // eingefaerbte Bilder: Liste neu bzw. anders belegt
   if FImages <> nil then
   begin
     FImages.RegisterChanges(FImageChangeLink);
@@ -1085,6 +1118,7 @@ end;
 procedure TPPGCustomControl.ImageListChange(Sender: TObject);
 begin
   // Bilder koennen umsortiert worden sein -> Index ueber den Namen neu bestimmen
+  PPGClearTintCache;
   ResolveImageName;
   ImagesChanged;
   RequestAutoSize;
@@ -1256,6 +1290,11 @@ begin
     Result := vsNormal;
 end;
 
+function TPPGCustomControl.UsesHotAnimation: Boolean;
+begin
+  Result := True;
+end;
+
 function TPPGCustomControl.FocusVisible: Boolean;
 begin
   Result := FShowFocusRect and Focused and PPGFocusCuesVisible(FUIState);
@@ -1288,7 +1327,7 @@ begin
   DownTarget := 0;
   if Enabled then
   begin
-    if IsHot then
+    if IsHot and UsesHotAnimation then
       HotTarget := 1;
     if IsDown then
       DownTarget := 1;
@@ -1310,14 +1349,16 @@ begin
   // Zustand zuerst setzen: eine Exception im OnMouseEnter des Anwenders
   // darf den internen Zustand nicht inkonsistent lassen.
   FMouseInside := True;
-  UpdateVisualState;
+  if UsesHotAnimation then
+    UpdateVisualState;
   inherited;
 end;
 
 procedure TPPGCustomControl.CMMouseLeave(var Message: TMessage);
 begin
   FMouseInside := False;
-  UpdateVisualState;
+  if UsesHotAnimation then
+    UpdateVisualState;
   inherited;
 end;
 
@@ -1562,6 +1603,7 @@ procedure TPPGCustomControl.DestroyWnd;
 begin
   // Das Accessible-Objekt gehoert zum Fenster-Handle: bei RecreateWnd neu anlegen
   ReleaseAccessible;
+  ReleasePaintBuffer;
   inherited DestroyWnd;
 end;
 
@@ -1716,7 +1758,8 @@ begin
   if Inside <> FMouseInside then
   begin
     FMouseInside := Inside;
-    UpdateVisualState;
+    if UsesHotAnimation then
+      UpdateVisualState;
   end;
   inherited MouseMove(Shift, X, Y);
 end;
@@ -1909,12 +1952,90 @@ begin
     StyleServices.DrawParentBackground(Handle, DC, nil, False);
 end;
 
+function TPPGCustomControl.GetPaintClip: TRect;
+begin
+  if FHasPaintClip then
+    Result := FPaintClip
+  else
+    Result := Rect(-MaxInt div 4, -MaxInt div 4, MaxInt div 4, MaxInt div 4);
+end;
+
+function TPPGCustomControl.NeedsPaint(const R: TRect; Margin: Integer): Boolean;
+var
+  C: TRect;
+begin
+  if not FHasPaintClip then
+    Exit(True);
+  C := FPaintClip;
+  Result := (R.Right + Margin > C.Left) and (R.Left - Margin < C.Right) and
+    (R.Bottom + Margin > C.Top) and (R.Top - Margin < C.Bottom);
+  // Die Update-Region kann aus getrennten Teilen bestehen (z.B. alte und
+  // neue Hover-Zeile): was dazwischen liegt, ist nicht sichtbar
+  if Result and (FPaintDC <> 0) then
+  begin
+    C := R;
+    InflateRect(C, Margin, Margin);
+    Result := RectVisible(FPaintDC, C);
+  end;
+end;
+
+procedure TPPGCustomControl.InvalidateArea(const R: TRect);
+begin
+  Assert(GetCurrentThreadId = MainThreadID,
+    Format(PPGStr(@SPPGNotMainThread), [ClassName]));
+  if FUpdateCount > 0 then
+  begin
+    FInvalidatePending := True;
+    Exit;
+  end;
+  if HandleAllocated and not IsRectEmpty(R) then
+    InvalidateRect(Handle, @R, False);
+end;
+
+function TPPGCustomControl.AcquirePaintBuffer(DC: HDC; W, H: Integer): HBITMAP;
+var
+  Bits: Integer;
+begin
+  // Ein Bitmap je Control, solange Groesse und Farbtiefe gleich bleiben
+  Bits := GetDeviceCaps(DC, BITSPIXEL) * GetDeviceCaps(DC, PLANES);
+  if (FBuffer <> 0) and ((FBufferW <> W) or (FBufferH <> H) or (FBufferBits <> Bits)) then
+    ReleasePaintBuffer;
+  if FBuffer = 0 then
+  begin
+    FBuffer := CreateCompatibleBitmap(DC, W, H);
+    if FBuffer = 0 then
+      PPGRaiseLastOSError('CreateCompatibleBitmap');
+    FBufferW := W;
+    FBufferH := H;
+    FBufferBits := Bits;
+  end;
+  Result := FBuffer;
+end;
+
+procedure TPPGCustomControl.ReleasePaintBuffer;
+begin
+  if FBuffer <> 0 then
+  begin
+    DeleteObject(FBuffer);
+    FBuffer := 0;
+  end;
+end;
+
+procedure TPPGCustomControl.CMShowingChanged(var Message: TMessage);
+begin
+  inherited;
+  // Unsichtbar: Rueckpuffer freigeben (wird beim naechsten Paint neu angelegt)
+  if not Showing then
+    ReleasePaintBuffer;
+end;
+
 procedure TPPGCustomControl.Paint;
 var
-  R: TRect;
-  W, H: Integer;
-  MemDC: HDC;
+  R, Clip, OldClip: TRect;
+  W, H, Kind: Integer;
+  DC, MemDC, OldDC: HDC;
   Bmp, OldBmp: HBITMAP;
+  Cached, OldHas, Complex: Boolean;
   PPGCanvas: IPPGCanvas;
 begin
   R := ClientRect;
@@ -1922,31 +2043,75 @@ begin
   H := R.Bottom - R.Top;
   if (W <= 0) or (H <= 0) then
     Exit;
+  DC := Canvas.Handle;
+  // Audit 8a #1: nur die Clip-Box neu zeichnen (Update-Region bzw. Clip von
+  // PaintTo); ohne Clip bzw. bei einem Fehler die ganze Flaeche
+  Kind := GetClipBox(DC, Clip);
+  Complex := Kind = COMPLEXREGION;
+  case Kind of
+    SIMPLEREGION, COMPLEXREGION:
+      begin
+        // Nur eine zusammengesetzte Region braucht RectVisible in NeedsPaint
+        if not IntersectRect(Clip, Clip, R) then
+          Exit;
+      end;
+  else
+    Clip := R;
+  end;
+  OldHas := FHasPaintClip;
+  OldClip := FPaintClip;
+  OldDC := FPaintDC;
   try
-    MemDC := CreateCompatibleDC(Canvas.Handle);
+    // Fenster-DC (BeginPaint): zwischengespeicherter Puffer. Fremde DCs
+    // (PaintTo, PrintWindow, Drucken): Puffer passend zum Ziel je Paint.
+    Cached := WindowFromDC(DC) = Handle;
+    MemDC := CreateCompatibleDC(DC);
     if MemDC = 0 then
       PPGRaiseLastOSError('CreateCompatibleDC');
     try
-      Bmp := CreateCompatibleBitmap(Canvas.Handle, W, H);
-      if Bmp = 0 then
-        PPGRaiseLastOSError('CreateCompatibleBitmap');
+      if Cached then
+        Bmp := AcquirePaintBuffer(DC, W, H)
+      else
+      begin
+        Bmp := CreateCompatibleBitmap(DC, W, H);
+        if Bmp = 0 then
+          PPGRaiseLastOSError('CreateCompatibleBitmap');
+      end;
       try
         OldBmp := SelectObject(MemDC, Bmp);
         try
-          FillBackground(MemDC, R);
-          PPGCanvas := TPPGRendererRegistry.CreateCanvas(MemDC);
+          // Was ausserhalb liegt, wird nicht kopiert: dort darf der Puffer
+          // alten Inhalt behalten
+          if not EqualRect(Clip, R) then
+            IntersectClipRect(MemDC, Clip.Left, Clip.Top, Clip.Right, Clip.Bottom);
+          FPaintClip := Clip;
+          FHasPaintClip := True;
+          if Complex then
+            FPaintDC := DC
+          else
+            FPaintDC := 0;
           try
-            DoPaint(PPGCanvas, R);
+            FillBackground(MemDC, R);
+            PPGCanvas := TPPGRendererRegistry.CreateCanvas(MemDC);
+            try
+              DoPaint(PPGCanvas, R);
+            finally
+              PPGCanvas := nil; // GDI+ flushen, bevor kopiert wird
+            end;
           finally
-            PPGCanvas := nil; // GDI+ flushen, bevor kopiert wird
+            FHasPaintClip := OldHas;
+            FPaintClip := OldClip;
+            FPaintDC := OldDC;
           end;
-          if not BitBlt(Canvas.Handle, 0, 0, W, H, MemDC, 0, 0, SRCCOPY) then
+          if not BitBlt(DC, Clip.Left, Clip.Top, Clip.Right - Clip.Left, Clip.Bottom - Clip.Top,
+            MemDC, Clip.Left, Clip.Top, SRCCOPY) then
             PPGRaiseLastOSError('BitBlt');
         finally
           SelectObject(MemDC, OldBmp);
         end;
       finally
-        DeleteObject(Bmp);
+        if not Cached then
+          DeleteObject(Bmp);
       end;
     finally
       DeleteDC(MemDC);
@@ -2059,6 +2224,9 @@ begin
   C := PPGColorToRGB(FShadow.Color);
   // Gestapelte Flaechen: an der Kante volle Deckkraft, nach aussen linear weniger
   A := Max(1, FShadow.Opacity div E);
+  // Audit 8a #7: aus der zwischengespeicherten Neun-Teile-Vorlage
+  if PPGDrawCachedShadow(ACanvas, R, Radius, E, C, A) then
+    Exit;
   for I := E downto 1 do
   begin
     SR := R;

@@ -206,6 +206,8 @@ type
     procedure CreateWnd; override;
     procedure UpdateVisualState(Animate: Boolean = True); override;
     function IsHot: Boolean; override;
+    /// Hover je Element; IsHot bleibt False (Audit 8a #2).
+    function UsesHotAnimation: Boolean; override;
     function IsDown: Boolean; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
@@ -533,6 +535,11 @@ begin
 end;
 
 function TPPGCustomChart.IsDown: Boolean;
+begin
+  Result := False;
+end;
+
+function TPPGCustomChart.UsesHotAnimation: Boolean;
 begin
   Result := False;
 end;

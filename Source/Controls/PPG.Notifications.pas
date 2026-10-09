@@ -223,6 +223,8 @@ begin
   FDownPart := -1;
   FLife := TPPGAnimation.Create(Self);
   FLife.OnStep := LifeStep;
+  // Audit 8a #3: nur das Ende zaehlt - der Animator weckt erst dann
+  FLife.StepInterval := 60000;
   FAppear := TPPGAnimation.Create(Self);
   FAppear.OnStep := AppearStep;
   FMove := TPPGAnimation.Create(Self);
@@ -664,6 +666,7 @@ begin
   FRespectQuietHours := True;
   FPoll := TPPGAnimation.Create(Self);
   FPoll.OnStep := PollStep;
+  FPoll.StepInterval := 60000; // Audit 8a #3: nur das Ende der Wartezeit
 end;
 
 procedure TPPGNotificationCenter.SetAnimation(const Value: TPPGAnimationSettings);
