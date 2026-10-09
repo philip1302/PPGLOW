@@ -2,12 +2,14 @@ program PPGlowTests;
 
 { Konsolen-Testlauf (DUnit, von XE2 bis Delphi 13 identisch verfuegbar).
   Exit-Code = Anzahl Fehler + Failures (0 = alles gruen) -> CI-tauglich.
-  Parameter /gui startet den grafischen DUnit-Runner. }
+  Parameter /gui startet den grafischen DUnit-Runner.
+  /suite Name[,Name] laeuft nur die genannten Gruppen bzw. Test-Klassen. }
 
 {$APPTYPE CONSOLE}
 
 uses
   System.SysUtils,
+  System.Classes,
   Vcl.Forms,
   TestFramework,
   TextTestRunner,
@@ -205,6 +207,10 @@ uses
   PPG.Tests.Phase20 in 'PPG.Tests.Phase20.pas',
   PPG.Tests.Audit45 in 'PPG.Tests.Audit45.pas',
   PPG.Tests.Audit5d in 'PPG.Tests.Audit5d.pas',
+  PPG.Tests.Audit7A in 'PPG.Tests.Audit7A.pas',
+  PPG.Tests.Audit7B in 'PPG.Tests.Audit7B.pas',
+  PPG.Tests.Audit7C in 'PPG.Tests.Audit7C.pas',
+  PPG.Tests.Audit7D in 'PPG.Tests.Audit7D.pas',
   PPG.Tests.Phase13g in 'PPG.Tests.Phase13g.pas',
   PPG.Tests.Phase14a in 'PPG.Tests.Phase14a.pas',
   PPG.Tests.Phase14aPlanner in 'PPG.Tests.Phase14aPlanner.pas',
@@ -273,6 +279,53 @@ begin
   end;
 end;
 
+/// Wert hinter /suite (z. B. "/suite Audit7A,TGridTests"), sonst ''.
+function SuiteFilter: string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 1 to ParamCount - 1 do
+    if SameText(ParamStr(I), '/suite') or SameText(ParamStr(I), '-suite') then
+      Result := ParamStr(I + 1);
+end;
+
+/// Nur die Gruppen bzw. Test-Klassen, deren Name in der Liste steht
+/// (Komma-getrennt); Ergebnis = Fehler + Failures.
+function RunFiltered(const Filter: string): Integer;
+var
+  Root, Grp, S: ITest;
+  I, J: Integer;
+  Names: TStringList;
+  R: TTestResult;
+begin
+  Result := 0;
+  Names := TStringList.Create;
+  try
+    Names.CommaText := Filter;
+    Names.CaseSensitive := False;
+    Root := RegisteredTests;
+    for I := 0 to Root.Tests.Count - 1 do
+    begin
+      Grp := Root.Tests[I] as ITest;
+      for J := 0 to Grp.Tests.Count - 1 do
+      begin
+        S := Grp.Tests[J] as ITest;
+        if (Names.IndexOf(Grp.Name) < 0) and (Names.IndexOf(S.Name) < 0) then
+          Continue;
+        R := TextTestRunner.RunTest(S, rxbContinue);
+        try
+          Inc(Result, R.ErrorCount + R.FailureCount);
+        finally
+          R.Free;
+        end;
+      end;
+    end;
+  finally
+    Names.Free;
+  end;
+end;
+
 const
   /// Erlaubter Zuwachs zwischen erstem und zweitem Lauf (Caches des
   /// Speichermanagers, Fenster-Klassen, Windows-Interna): 256 KB.
@@ -289,6 +342,11 @@ begin
   begin
     ReportMemoryLeaksOnShutdown := True;
     GUITestRunner.RunRegisteredTests;
+    Exit;
+  end;
+  if SuiteFilter <> '' then
+  begin
+    ExitCode := RunFiltered(SuiteFilter);
     Exit;
   end;
   if FindCmdLineSwitch('leaksuites', ['/', '-'], True) then
