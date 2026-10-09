@@ -17,7 +17,9 @@ unit PPG.AppHooks;
   das dem Control gehoert und mit ihm stirbt) und meldet jede Nachricht nach
   der Verarbeitung an alle Empfaenger. Hat sich danach jemand anderes
   eingehaengt, bleibt das Hilfsobjekt als Durchreiche stehen (sonst wuerde
-  dessen Kette brechen). }
+  dessen Kette brechen).
+  Abmelden waehrend einer gemeldeten Nachricht (z.B. Popup schliesst beim
+  Ausblenden des Formulars) gibt das Hilfsobjekt erst nach deren Ende frei. }
 
 {$I ..\PPG.inc}
 
@@ -207,6 +209,8 @@ type
     FControl: TControl;
     FOldProc: TWndMethod;
     FEvents: TArray<TMethod>;
+    FDepth: Integer;        // laufende WatchProc-Aufrufe
+    FFreePending: Boolean;  // abgemeldet waehrend WatchProc: danach freigeben
     procedure WatchProc(var Message: TMessage);
     function IsTopOfChain: Boolean;
   public
@@ -245,17 +249,23 @@ var
   Copy: TArray<TMethod>;
   I: Integer;
 begin
-  FOldProc(Message);
-  if Length(FEvents) = 0 then
-    Exit;
-  Copy := System.Copy(FEvents);
-  for I := High(Copy) downto 0 do
-    try
-      TPPGControlWatchEvent(Copy[I])(FControl, Message);
-    except
-      on E: Exception do
-        TPPGErrorHandler.HandleCallbackError(Self, E, 'PPG.AppHooks.PPGWatchControl');
-    end;
+  Inc(FDepth);
+  try
+    FOldProc(Message);
+    Copy := System.Copy(FEvents);
+    for I := High(Copy) downto 0 do
+      try
+        TPPGControlWatchEvent(Copy[I])(FControl, Message);
+      except
+        on E: Exception do
+          TPPGErrorHandler.HandleCallbackError(Self, E, 'PPG.AppHooks.PPGWatchControl');
+      end;
+  finally
+    Dec(FDepth);
+  end;
+  // Waehrend der Nachricht abgemeldet: jetzt aushaengen und freigeben
+  if FFreePending and (FDepth = 0) then
+    Free;
 end;
 
 function FindWatcher(Control: TControl): TControlWatcher;
@@ -283,6 +293,7 @@ begin
   L := W.FEvents;
   AddMethod(L, TMethod(Event));
   W.FEvents := L;
+  W.FFreePending := False;
 end;
 
 procedure PPGUnwatchControl(Control: TControl; const Event: TPPGControlWatchEvent);
@@ -299,7 +310,12 @@ begin
   // Nur aushaengen, wenn niemand nach uns eingehaengt hat
   if (Length(L) = 0) and W.IsTopOfChain and
     not (csDestroying in Control.ComponentState) then
-    W.Free;
+  begin
+    if W.FDepth > 0 then
+      W.FFreePending := True // laeuft noch (WatchProc gibt frei)
+    else
+      W.Free;
+  end;
 end;
 
 function PPGControlWatchCount(Control: TControl): Integer;

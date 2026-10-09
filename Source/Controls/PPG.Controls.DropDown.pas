@@ -15,6 +15,8 @@ unit PPG.Controls.DropDown;
     gehen Pfeile, Bild auf/ab, Pos1/Ende, Enter, Leertaste und Zeichen an das
     Popup (DropKeyDown/DropKeyPress). Enter/Esc gehoeren dann dem Feld, nicht
     Default-/Cancel-Button.
+  - Das offene Popup folgt dem Feld, wenn das Formular verschoben wird, und
+    schliesst, wenn Feld oder Formular verschwinden (Audit 7a #4).
   - Barrierefreiheit: Rolle ComboBox, Zustand auf-/zugeklappt, Standardaktion
     Oeffnen/Schliessen (gepostet, nie im COM-Aufruf). }
 
@@ -40,6 +42,8 @@ type
     procedure HandleDroppedMouse(var Message: TMessage);
     procedure Act(Action: TPPGDropAction);
     procedure PlacePopup(Duration: Cardinal);
+    procedure PopupFollow(Sender: TObject);
+    procedure PopupSourceHidden(Sender: TObject);
     procedure WMCaptureChanged(var Message: TMessage); message WM_CAPTURECHANGED;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
@@ -181,6 +185,18 @@ begin
     PlacePopup(0);
 end;
 
+procedure TPPGCustomDropDownField.PopupFollow(Sender: TObject);
+begin
+  // Formular oder Feld verschoben: neu platzieren (ggf. auf die andere Seite)
+  RepositionPopup;
+end;
+
+procedure TPPGCustomDropDownField.PopupSourceHidden(Sender: TObject);
+begin
+  // Formular versteckt bzw. minimiert: ohne Uebernahme schliessen
+  CloseUp(False);
+end;
+
 procedure TPPGCustomDropDownField.DropDown;
 var
   Duration: Cardinal;
@@ -192,7 +208,11 @@ begin
   if FDroppedDown or not HandleAllocated then
     Exit;
   if FPopup = nil then
+  begin
     FPopup := CreatePopup;
+    FPopup.OnFollow := PopupFollow;
+    FPopup.OnSourceHidden := PopupSourceHidden;
+  end;
   FPopup.SyncFrom(Self);
   PreparePopup(FPopup);
   if Animation.EffectiveEnabled then

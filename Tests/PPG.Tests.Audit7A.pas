@@ -15,7 +15,7 @@ uses
   PPG.Types, PPG.Controls.Base, PPG.Controls.Field, PPG.Controls.DropDown, PPG.Popup,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NumberEdit, PPG.SpinEdit,
   PPG.ComboBox, PPG.TrackBar, PPG.Kanban, PPG.Planner, PPG.TileView, PPG.Panel,
-  PPG.Edit, PPG.DB.Controls, PPG.Tests.Controls;
+  PPG.Edit, PPG.DB.Controls, PPG.Popup.Placement, PPG.Tests.Controls;
 
 type
   TAudit7ATestCase = class(TControlTestCase)
@@ -63,6 +63,7 @@ type
     procedure DatePickerUsesDropDownBase;
     procedure ClickOutsideCloses;
     procedure PopupFollowsForm;
+    procedure RibbonStylePopupFollows;
     procedure HidingFormCloses;
     procedure RegionNotPerFrame;
     procedure ItemHeightFollowsFont;
@@ -599,6 +600,34 @@ begin
   CheckEquals(R0.Left - 25, R1.Left, 'Listen-Popup folgt');
   CheckEquals(R0.Top, R1.Top);
   C.CloseUp(False);
+end;
+
+procedure TDropDownFieldTests.RibbonStylePopupFollows;
+var
+  B: TPPGEdit;
+  P: TPPGPopupWindow;
+  R0, R1: TRect;
+  O: TPoint;
+begin
+  // Ribbon-Popups (TPPGPopupWindow mit FollowSource) gehen um denselben Versatz mit
+  FForm.Show;
+  B := TPPGEdit.Create(FForm);
+  B.Parent := FForm;
+  B.SetBounds(10, 10, 100, 24);
+  P := TPPGPopupWindow.Create(FForm);
+  P.SyncFrom(B);
+  P.FollowSource := True;
+  O := B.ClientToScreen(Point(0, B.Height));
+  P.PopupAt(Rect(O.X, O.Y, O.X + 120, O.Y + 80), ppsBelow, 0);
+  GetWindowRect(P.Handle, R0);
+  FForm.Left := FForm.Left + 33;
+  GetWindowRect(P.Handle, R1);
+  CheckEquals(R0.Left + 33, R1.Left, 'folgt');
+  CheckEquals(R0.Top, R1.Top);
+  P.ClosePopup;
+  FForm.Left := FForm.Left + 10;
+  GetWindowRect(P.Handle, R0);
+  CheckEquals(R1.Left, R0.Left, 'geschlossen: abgemeldet');
 end;
 
 procedure TDropDownFieldTests.HidingFormCloses;
