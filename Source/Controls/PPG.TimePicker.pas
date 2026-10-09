@@ -50,6 +50,7 @@ type
     procedure WndProc(var Message: TMessage); override;
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
     function WantSpecialKey(Key: Word): Boolean; override;
+    function InputPending: Boolean; override;
     procedure FocusChanged; override;
     procedure DoSelect; override;
     procedure Change; override;
@@ -495,6 +496,8 @@ begin
           Exit;
         end;
       VK_RETURN:
+        // Nur getippten Text uebernehmen; sonst bleibt Enter frei (Audit 7a #2)
+        if InputPending then
         begin
           CommitText(True);
           SelectAll;
@@ -507,7 +510,14 @@ end;
 
 function TPPGCustomTimePicker.WantSpecialKey(Key: Word): Boolean;
 begin
-  Result := inherited WantSpecialKey(Key) or (Key = VK_RETURN);
+  // Enter nur mit offener Liste oder getipptem Text (Basis), sonst gehoert er
+  // dem Default-Button (Audit 7a #2)
+  Result := inherited WantSpecialKey(Key);
+end;
+
+function TPPGCustomTimePicker.InputPending: Boolean;
+begin
+  Result := Trim(Text) <> FormatTime(FTime);
 end;
 
 function TPPGCustomTimePicker.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;

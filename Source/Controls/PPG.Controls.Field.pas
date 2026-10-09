@@ -262,7 +262,12 @@ type
     function InnerVisible: Boolean;
     /// True = Taste (Enter, Esc, ...) gehoert dem Feld, nicht dem Formular
     /// (Default-/Cancel-Button). Gilt fuer Feld und inneres Edit.
+    /// Vorgabe: Enter nur, solange InputPending (Audit 7a #2).
     function WantSpecialKey(Key: Word): Boolean; virtual;
+    /// True, wenn getippter Text noch nicht uebernommen ist (weicht vom
+    /// formatierten Wert ab). Nur dann gehoert Enter dem Feld, sonst dem
+    /// Default-Button des Formulars. Vorgabe: False.
+    function InputPending: Boolean; virtual;
     /// Text aus Code ohne OnChange (z.B. Wechsel zwischen Anzeige- und
     /// Bearbeitungsformat, Value aus Code).
     procedure SetTextSilent(const Value: string);
@@ -1712,6 +1717,11 @@ begin
 end;
 
 function TPPGCustomField.WantSpecialKey(Key: Word): Boolean;
+begin
+  Result := (Key = VK_RETURN) and InputPending;
+end;
+
+function TPPGCustomField.InputPending: Boolean;
 begin
   Result := False;
 end;

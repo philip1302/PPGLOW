@@ -109,6 +109,7 @@ type
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
     procedure FieldKeyPress(var Key: Char); override;
     function WantSpecialKey(Key: Word): Boolean; override;
+    function InputPending: Boolean; override;
     procedure FocusChanged; override;
     procedure Change; override;
     procedure GetFieldColors(out Fill, Text: TColor); override;
@@ -887,10 +888,14 @@ begin
         SelectAll;
       end;
     VK_RETURN:
+      // Nur getippten Text uebernehmen; sonst bleibt Enter frei (Audit 7a #2)
+      if InputPending then
       begin
         CommitText(True);
         SelectAll;
-      end;
+      end
+      else
+        Exit;
   else
     Exit;
   end;
@@ -918,7 +923,20 @@ end;
 
 function TPPGCustomDatePicker.WantSpecialKey(Key: Word): Boolean;
 begin
-  Result := (Key = VK_RETURN) or (FDroppedDown and (Key = VK_ESCAPE));
+  // Enter nur mit offenem Kalender oder getipptem Text (Basis), sonst gehoert
+  // er dem Default-Button (Audit 7a #2)
+  Result := (FDroppedDown and ((Key = VK_RETURN) or (Key = VK_ESCAPE))) or
+    inherited WantSpecialKey(Key);
+end;
+
+function TPPGCustomDatePicker.InputPending: Boolean;
+begin
+  if FDateTime = 0 then
+    Result := Trim(Text) <> ''
+  else if FEditing then
+    Result := Trim(Text) <> Trim(EditFormatted(FDateTime))
+  else
+    Result := Trim(Text) <> Trim(FormatValue(FDateTime));
 end;
 
 procedure TPPGCustomDatePicker.FocusChanged;
