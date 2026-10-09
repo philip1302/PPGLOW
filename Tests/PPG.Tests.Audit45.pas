@@ -13,7 +13,9 @@ uses
   Vcl.DBActns, Vcl.DBCtrls, Data.DB, Data.DBConsts, Datasnap.DBClient, MidasLib,
   PPG.Types, PPG.Controls.Field, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Fields,
   PPG.DB.Navigator, PPG.DB.Kanban, PPG.DB.Grid, PPG.DB.Chart, PPG.Exceptions, PPG.ErrorHandler,
-  PPG.NumberFormat, PPG.Grid, Vcl.Menus, PPG.Tests.Controls;
+  PPG.NumberFormat, PPG.Grid, Vcl.Menus, Vcl.ExtCtrls, PPG.CheckComboBox, PPG.TagEdit, PPG.Grid.Print,
+  PPG.PasswordEdit, PPG.Expander, PPG.ComboBox, PPG.TrackBar, PPG.ProgressBar, PPG.Hints,
+  PPG.ToolBar, PPG.Ribbon, PPG.Notifications, PPG.Menus, PPG.Tests.Controls;
 
 type
   TDBBindSpec = record
@@ -104,6 +106,23 @@ type
     procedure ChartSkipsNullAndJumpsByBookmark;
     procedure ChartDoesNotStoreBoundData;
     procedure ShowRequiredMarksFieldAndTitle;
+  end;
+
+  /// Audit 09.10.2026, Paket 5a: Streaming.
+  TStreamingFixTests = class(TControlTestCase)
+  private
+    function DfmOf(C: TComponent): string;
+  published
+    procedure EmptyDelimitersAreStored;
+    procedure PrintFooterDefaultNotStored;
+    procedure PasswordTextNotStored;
+    procedure ExpandedHeightOnlyWhenNeeded;
+    procedure ComboItemsNotTwiceWithItemsEx;
+    procedure MinZeroNotStored;
+    procedure HintManagerWaitsForLoaded;
+    procedure GroupIndexReadBeforeDown;
+    procedure RibbonBackstageHiddenAfterLoad;
+    procedure PresetCheckedOnComponents;
   end;
 
 implementation
@@ -1042,9 +1061,261 @@ begin
   CheckEquals('Name *', TGridCrack(G).GetCellText(C, 0), 'Spaltentitel');
 end;
 
+{ TStreamingFixTests }
+
+type
+  /// Wurzel fuer Text-DFMs im Test (TForm ohne Ressource).
+  TPPGTestRoot = class(TForm);
+
+procedure ReadRoot(Root: TComponent; const Dfm: string);
+var
+  Src: TStringStream;
+  Bin: TMemoryStream;
+begin
+  Src := TStringStream.Create(Dfm);
+  Bin := TMemoryStream.Create;
+  try
+    ObjectTextToBinary(Src, Bin);
+    Bin.Position := 0;
+    Bin.ReadComponent(Root);
+  finally
+    Bin.Free;
+    Src.Free;
+  end;
+end;
+
+function TStreamingFixTests.DfmOf(C: TComponent): string;
+var
+  M: TMemoryStream;
+  S: TStringStream;
+begin
+  M := TMemoryStream.Create;
+  S := TStringStream.Create('');
+  try
+    M.WriteComponent(C);
+    M.Position := 0;
+    ObjectBinaryToText(M, S);
+    Result := S.DataString;
+  finally
+    S.Free;
+    M.Free;
+  end;
+end;
+
+procedure TStreamingFixTests.EmptyDelimitersAreStored;
+var
+  C, C2: TPPGCheckComboBox;
+  T, T2: TPPGTagEdit;
+  M: TMemoryStream;
+begin
+  C := TPPGCheckComboBox.Create(FForm);
+  C.DisplayDelimiter := '';
+  T := TPPGTagEdit.Create(FForm);
+  T.Delimiters := '';
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(C);
+    M.Position := 0;
+    C2 := TPPGCheckComboBox.Create(nil);
+    try
+      M.ReadComponent(C2);
+      CheckEquals('', C2.DisplayDelimiter, 'leer bleibt leer');
+    finally
+      C2.Free;
+    end;
+    M.Clear;
+    M.WriteComponent(T);
+    M.Position := 0;
+    T2 := TPPGTagEdit.Create(nil);
+    try
+      M.ReadComponent(T2);
+      CheckEquals('', T2.Delimiters);
+    finally
+      T2.Free;
+    end;
+  finally
+    M.Free;
+  end;
+  CheckEquals(0, Pos('DisplayDelimiter', DfmOf(TPPGCheckComboBox.Create(FForm))), 'Vorgabe nicht gespeichert');
+end;
+
+procedure TStreamingFixTests.PrintFooterDefaultNotStored;
+var
+  P: TPPGGridPrinter;
+begin
+  P := TPPGGridPrinter.Create(FForm);
+  CheckEquals(0, Pos('FooterText', DfmOf(P)), 'uebersetzte Vorgabe nicht in der DFM');
+  P.FooterText := '';
+  CheckTrue(Pos('FooterText', DfmOf(P)) > 0, 'bewusst leer wird gespeichert');
+end;
+
+procedure TStreamingFixTests.PasswordTextNotStored;
+var
+  P: TPPGPasswordEdit;
+begin
+  P := TPPGPasswordEdit.Create(FForm);
+  P.Text := 'Geheim123';
+  CheckEquals(0, Pos('Geheim123', DfmOf(P)), 'kein Klartext in der DFM');
+end;
+
+procedure TStreamingFixTests.ExpandedHeightOnlyWhenNeeded;
+var
+  E: TPPGExpander;
+begin
+  E := TPPGExpander.Create(FForm);
+  E.Parent := FForm;
+  E.Height := 200;
+  CheckEquals(0, Pos('ExpandedHeight', DfmOf(E)), 'aufgeklappt: steht in Height');
+  E.Expanded := False;
+  CheckTrue(Pos('ExpandedHeight', DfmOf(E)) > 0, 'zugeklappt: wird gebraucht');
+end;
+
+procedure TStreamingFixTests.ComboItemsNotTwiceWithItemsEx;
+var
+  C: TPPGComboBox;
+begin
+  C := TPPGComboBox.Create(FForm);
+  C.ItemsEx.Add('Eins');
+  C.ItemsEx.Add('Zwei');
+  CheckEquals(0, Pos('Items.Strings', DfmOf(C)), 'Texte nur in ItemsEx');
+  C.ItemsEx.Clear;
+  C.Items.Add('Drei');
+  CheckTrue(Pos('Items.Strings', DfmOf(C)) > 0);
+end;
+
+procedure TStreamingFixTests.MinZeroNotStored;
+begin
+  CheckEquals(0, Pos(#13#10'  Min = ', DfmOf(TPPGTrackBar.Create(FForm))), 'TrackBar');
+  CheckEquals(0, Pos(#13#10'  Min = ', DfmOf(TPPGProgressBar.Create(FForm))), 'ProgressBar');
+end;
+
+procedure TStreamingFixTests.HintManagerWaitsForLoaded;
+const
+  Dfm =
+    'object Root: TPPGTestRoot'#13#10 +
+    '  object H: TPPGHintManager'#13#10 +
+    '    Active = False'#13#10 +
+    '  end'#13#10 +
+    'end';
+var
+  Root: TPPGTestRoot;
+  Before: THintWindowClass;
+begin
+  Before := HintWindowClass;
+  Root := TPPGTestRoot.CreateNew(nil);
+  try
+    // Der Besitzer laedt gerade: der Konstruktor wendet nicht an, erst
+    // Loaded (mit dem gelesenen Active = False: gar nicht)
+    ReadRoot(Root, Dfm);
+    CheckFalse(TPPGHintManager(Root.FindComponent('H')).Active);
+    CheckTrue(HintWindowClass = Before, 'Hint-Klasse unveraendert');
+  finally
+    Root.Free;
+  end;
+end;
+
+procedure TStreamingFixTests.GroupIndexReadBeforeDown;
+const
+  Dfm =
+    'object Bar: TPPGToolBar'#13#10 +
+    '  Items = <'#13#10 +
+    '    item'#13#10 +
+    '      Style = tisCheck'#13#10 +
+    '      GroupIndex = 1'#13#10 +
+    '      Down = True'#13#10 +
+    '    end'#13#10 +
+    '    item'#13#10 +
+    '      Style = tisCheck'#13#10 +
+    '      GroupIndex = 1'#13#10 +
+    '      Down = True'#13#10 +
+    '    end>'#13#10 +
+    'end';
+var
+  Src: TStringStream;
+  Bin: TMemoryStream;
+  B: TPPGToolBar;
+  I, N: Integer;
+begin
+  B := TPPGToolBar.Create(FForm);
+  B.Items.Add.Style := tisCheck;
+  B.Items[0].GroupIndex := 1;
+  B.Items[0].Down := True;
+  CheckTrue(Pos('GroupIndex = ', DfmOf(B)) < Pos(' Down = ', DfmOf(B)), 'GroupIndex steht vor Down');
+  Src := TStringStream.Create(Dfm);
+  Bin := TMemoryStream.Create;
+  try
+    ObjectTextToBinary(Src, Bin);
+    Bin.Position := 0;
+    B := TPPGToolBar.Create(FForm);
+    Bin.ReadComponent(B);
+    N := 0;
+    for I := 0 to B.Items.Count - 1 do
+      if B.Items[I].Down then
+        Inc(N);
+    CheckEquals(1, N, 'nur ein gedruecktes Item je Gruppe');
+  finally
+    Bin.Free;
+    Src.Free;
+  end;
+end;
+
+procedure TStreamingFixTests.RibbonBackstageHiddenAfterLoad;
+const
+  Dfm =
+    'object Root: TPPGTestRoot'#13#10 +
+    '  object P: TPanel'#13#10 +
+    '  end'#13#10 +
+    '  object R: TPPGRibbon'#13#10 +
+    '    Backstage = P'#13#10 +
+    '  end'#13#10 +
+    'end';
+var
+  Root: TPPGTestRoot;
+begin
+  Root := TPPGTestRoot.CreateNew(nil);
+  try
+    ReadRoot(Root, Dfm);
+    CheckFalse(TPanel(Root.FindComponent('P')).Visible, 'Backstage aus der DFM zur Laufzeit verborgen');
+  finally
+    Root.Free;
+  end;
+end;
+
+procedure TStreamingFixTests.PresetCheckedOnComponents;
+var
+  N: TPPGNotificationCenter;
+  M: TPPGPopupMenu;
+  Raised: Boolean;
+begin
+  N := TPPGNotificationCenter.Create(FForm);
+  N.Preset := 'Fluent11';
+  CheckEquals('Fluent11', N.Preset);
+  N.Preset := '';
+  Raised := False;
+  try
+    N.Preset := 'GibtsNicht';
+  except
+    on EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, 'unbekanntes Preset abgelehnt');
+  CheckEquals('', N.Preset, 'unveraendert');
+  M := TPPGPopupMenu.Create(FForm);
+  Raised := False;
+  try
+    M.Preset := 'GibtsNicht';
+  except
+    on EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised);
+end;
+
 initialization
   RegisterTest('Audit45', TDBBindingHoldTests.Suite);
   RegisterTest('Audit45', TDBFixTests.Suite);
   RegisterTest('Audit45', TDBFix2Tests.Suite);
+  RegisterTest('Audit45', TStreamingFixTests.Suite);
+  RegisterClasses([TPPGHintManager, TPanel, TPPGRibbon, TPPGTestRoot]);
 
 end.

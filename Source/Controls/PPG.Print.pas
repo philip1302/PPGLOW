@@ -69,12 +69,16 @@ type
     FOrientation: TPrinterOrientation;
     FMargins: TPPGPrintMargins;
     FPrinterName: string;
+    procedure ReadFooterTextEmpty(Reader: TReader);
+    procedure WriteFooterTextEmpty(Writer: TWriter);
+    function IsFooterTextStored: Boolean;
     procedure SetMargins(const Value: TPPGPrintMargins);
     procedure MarginsChanged(Sender: TObject);
     procedure DoPrint(const APrinterName, AOutput: string);
   protected
     /// Fester Wert fuer [Datum] (Tests); 0 = heute.
     FDate: TDateTime;
+    procedure DefineProperties(Filer: TFiler); override;
     /// Bereich innerhalb der Raender (Geraetepunkte, Ursprung = bedruckbarer Bereich).
     function MarginRect(const Device: TPPGPrintDevice): TRect;
     /// Kopf-/Fusszeile zeichnen; liefert den Bereich dazwischen.
@@ -111,7 +115,7 @@ type
     property Title: string read FTitle write FTitle;
     property HeaderText: string read FHeaderText write FHeaderText;
     /// '' = keine Fusszeile; Vorgabe "Seite [Seite] von [Seiten]" (Sprache).
-    property FooterText: string read FFooterText write FFooterText;
+    property FooterText: string read FFooterText write FFooterText stored IsFooterTextStored;
     property Orientation: TPrinterOrientation read FOrientation write FOrientation default poPortrait;
     property Margins: TPPGPrintMargins read FMargins write SetMargins;
     /// '' = Standarddrucker.
@@ -359,6 +363,30 @@ begin
 end;
 
 { TPPGCustomPrinter }
+
+procedure TPPGCustomPrinter.DefineProperties(Filer: TFiler);
+begin
+  inherited DefineProperties(Filer);
+  // Leer mit nicht leerer Vorgabe: der Writer schreibt '' nie - eigene Marke
+  Filer.DefineProperty('FooterTextEmpty', ReadFooterTextEmpty, WriteFooterTextEmpty, FFooterText = '');
+end;
+
+procedure TPPGCustomPrinter.ReadFooterTextEmpty(Reader: TReader);
+begin
+  if Reader.ReadBoolean then
+    FFooterText := '';
+end;
+
+procedure TPPGCustomPrinter.WriteFooterTextEmpty(Writer: TWriter);
+begin
+  Writer.WriteBoolean(True);
+end;
+
+function TPPGCustomPrinter.IsFooterTextStored: Boolean;
+begin
+  // Uebersetzte Vorgabe nicht in die DFM (sonst gilt immer die Sprache der IDE)
+  Result := FFooterText <> PPGStr(@SPPGPrintFooterDefault);
+end;
 
 constructor TPPGCustomPrinter.Create(AOwner: TComponent);
 begin

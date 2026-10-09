@@ -70,6 +70,7 @@ type
     FSorted: Boolean;
     FSortingEx: Boolean;
     FOnSelect: TNotifyEvent;
+    function IsItemsStored: Boolean;
     procedure SetListStyles(const Value: TPPGListStyles);
     { IPPGListStylesSource }
     function GetListStyles: TPPGListStyles;
@@ -142,7 +143,8 @@ type
     property DropDownWidth: Integer read FDropDownWidth write SetDropDownWidth default 0;
     property ItemHeight: Integer read FItemHeight write SetItemHeight default 0;
     property ItemIndex: Integer read FItemIndex write SetItemIndex default -1;
-    property Items: TStrings read GetItems write SetItems;
+    /// Bei ItemsEx kommen die Texte aus ItemsEx (nicht doppelt in der DFM).
+    property Items: TStrings read GetItems write SetItems stored IsItemsStored;
     property Sorted: Boolean read GetSorted write SetSorted default False;
     property Style: TComboBoxStyle read FStyle write SetStyle default csDropDown;
     /// Reiche Eintraege (Bild aus Images, Detailzeile, Plakette, Markup). Sind
@@ -402,6 +404,11 @@ begin
 end;
 
 { ---- Properties ---- }
+
+function TPPGCustomComboBox.IsItemsStored: Boolean;
+begin
+  Result := not UseItemsEx and (FItems.Count > 0);
+end;
 
 function TPPGCustomComboBox.GetItems: TStrings;
 begin

@@ -163,6 +163,11 @@ type
 /// Begrenzt die Rundung auf die halbe kurze Seite (Pillenform als Maximum).
 function PPGCapRounding(const R: TRect; Rounding: Integer): Integer;
 
+/// Prueft einen Preset-Namen fuer Komponenten, die kein TPPGCustomControl sind
+/// ('' = Vorgabe bzw. StyleManager). Unbekannt: zur Laufzeit EPPGPropertyError,
+/// beim DFM-Laden Warnung und ''.
+function PPGCheckPreset(Sender: TPersistent; const Value: string): string;
+
 implementation
 
 uses
@@ -1369,6 +1374,18 @@ begin
   end;
   if Result = nil then
     Result := TPPGGdiCanvas.Create(DC);
+end;
+
+function PPGCheckPreset(Sender: TPersistent; const Value: string): string;
+begin
+  Result := Value;
+  if (Value = '') or (TPPGRendererRegistry.Find(Value) <> nil) then
+    Exit;
+  if not PPGIsLoading(Sender) then
+    raise EPPGPropertyError.CreateInvalid(Sender, 'Preset', Value);
+  TPPGErrorHandler.LogWarning(Sender, Format(PPGStr(@SPPGUnknownPresetFallback),
+    [Value, PPGDisplayName(Sender), TPPGRendererRegistry.DefaultName]));
+  Result := '';
 end;
 
 initialization

@@ -98,7 +98,7 @@ type
     property StyleManager;
     property Appearance;
     property Animation;
-    property Min;
+    property Min default 0;
     property Max default 100;
     property Position default 0;
     property Step;

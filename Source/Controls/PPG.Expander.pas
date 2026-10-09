@@ -38,6 +38,7 @@ type
     FOnExpanding: TPPGExpandingEvent;
     FOnExpanded: TNotifyEvent;
     FOnCollapsed: TNotifyEvent;
+    function IsExpandedHeightStored: Boolean;
     procedure SetHeaderStyle(const Value: TPPGElementStyle);
     procedure HeaderStyleChanged(Sender: TObject);
     procedure SetExpanded(const Value: Boolean);
@@ -74,7 +75,8 @@ type
     property Expanded: Boolean read FExpanded write SetExpanded default True;
     property Detail: string read FDetail write SetDetail;
     /// Hoehe im aufgeklappten Zustand (0 = aktuelle Hoehe).
-    property ExpandedHeight: Integer read GetExpandedHeight write SetExpandedHeight default 0;
+    property ExpandedHeight: Integer read GetExpandedHeight write SetExpandedHeight
+      stored IsExpandedHeightStored;
     property OnExpanding: TPPGExpandingEvent read FOnExpanding write FOnExpanding;
     property OnExpanded: TNotifyEvent read FOnExpanded write FOnExpanded;
     property OnCollapsed: TNotifyEvent read FOnCollapsed write FOnCollapsed;
@@ -349,6 +351,12 @@ begin
     Exit;
   if FExpanded and not FExpandAnim.Running and (FExpandedHeight > 0) then
     ApplyExpansion;
+end;
+
+function TPPGCustomExpander.IsExpandedHeightStored: Boolean;
+begin
+  // Aufgeklappt ist es die Hoehe selbst (steht schon in Height)
+  Result := not FExpanded or ((FExpandedHeight > 0) and (FExpandedHeight <> Height));
 end;
 
 function TPPGCustomExpander.GetExpandedHeight: Integer;

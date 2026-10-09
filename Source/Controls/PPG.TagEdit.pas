@@ -77,6 +77,9 @@ type
     FOnTagAdding: TPPGTagAddingEvent;
     FOnTagRemoved: TPPGTagEvent;
     FOnTagClick: TPPGTagEvent;
+    procedure ReadDelimitersEmpty(Reader: TReader);
+    procedure WriteDelimitersEmpty(Writer: TWriter);
+    function IsDelimitersStored: Boolean;
     procedure SetTags(const Value: TStrings);
     procedure SetSuggestions(const Value: TStrings);
     procedure TagsChanged(Sender: TObject);
@@ -95,6 +98,7 @@ type
     function IsDelimiter(C: Char): Boolean;
     procedure WMRemoveTag(var Message: TMessage); message WM_USER + $540;
   protected
+    procedure DefineProperties(Filer: TFiler); override;
     function CreatePopup: TPPGDropPopup; override;
     procedure PreparePopup(APopup: TPPGDropPopup); override;
     procedure AcceptPopup(APopup: TPPGDropPopup); override;
@@ -152,7 +156,7 @@ type
     property Tags: TStrings read FTags write SetTags;
     property Suggestions: TStrings read FSuggestions write SetSuggestions;
     /// Zeichen, die ein Tag beenden.
-    property Delimiters: string read FDelimiters write FDelimiters;
+    property Delimiters: string read FDelimiters write FDelimiters stored IsDelimitersStored;
     /// Trenner fuer TagsText (DB-Wert).
     property Delimiter: Char read FDelimiter write FDelimiter default ';';
     property AllowNew: Boolean read FAllowNew write FAllowNew default True;
@@ -212,6 +216,7 @@ uses
   PPG.Consts, PPG.Exceptions, PPG.Render.Gdi, PPG.Render.Registry;
 
 const
+  DefDelimiters = ';,';
   WM_REMOVETAG = WM_USER + $540;
   MinInnerWidth = 60; // logische px fuer die Eingabe hinter dem letzten Chip
 
@@ -283,13 +288,37 @@ end;
 
 { TPPGTagEdit }
 
+procedure TPPGTagEdit.DefineProperties(Filer: TFiler);
+begin
+  inherited DefineProperties(Filer);
+  // Leer mit nicht leerer Vorgabe: der Writer schreibt '' nie - eigene Marke
+  Filer.DefineProperty('DelimitersEmpty', ReadDelimitersEmpty, WriteDelimitersEmpty, FDelimiters = '');
+end;
+
+procedure TPPGTagEdit.ReadDelimitersEmpty(Reader: TReader);
+begin
+  if Reader.ReadBoolean then
+    FDelimiters := '';
+end;
+
+procedure TPPGTagEdit.WriteDelimitersEmpty(Writer: TWriter);
+begin
+  Writer.WriteBoolean(True);
+end;
+
+function TPPGTagEdit.IsDelimitersStored: Boolean;
+begin
+  // Auch leer speichern (Vorgabe ';,')
+  Result := FDelimiters <> DefDelimiters;
+end;
+
 constructor TPPGTagEdit.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FTags := TStringList.Create;
   TStringList(FTags).OnChange := TagsChanged;
   FSuggestions := TStringList.Create;
-  FDelimiters := ';,';
+  FDelimiters := DefDelimiters;
   FDelimiter := ';';
   FAllowNew := True;
   FAddOnExit := True;

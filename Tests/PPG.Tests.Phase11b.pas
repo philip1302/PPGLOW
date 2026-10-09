@@ -312,8 +312,15 @@ begin
           Format('%s dunkel=%s Kontrast %.2f', [Names[P], System.SysUtils.BoolToStr(Dark, True),
           PPGContrastRatio(Fill, Text)]));
       end;
-    // Unbekanntes Preset: Standard
-    M.Preset := 'GibtEsNicht';
+    // Audit 5a: Unbekanntes Preset wird abgelehnt (wie bei den Controls)
+    M.Preset := '';
+    try
+      M.Preset := 'GibtEsNicht';
+      Fail('unbekanntes Preset angenommen');
+    except
+      on EPPGPropertyError do
+        ;
+    end;
     CheckEquals(TPPGRendererRegistry.DefaultName, M.EffectivePreset);
   finally
     Names.Free;

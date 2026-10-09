@@ -184,6 +184,7 @@ type
     FOnFormShow: TPPGDialogShowEvent;
     FValidate: TNotifyEvent;
     FPosX, FPosY: Integer;
+    procedure SetPreset(const Value: string);
     procedure SetStyleManager(const Value: TPPGStyleManager);
     procedure SetContentControl(const Value: TControl);
     procedure NoOp(Sender: TObject);
@@ -234,7 +235,7 @@ type
     property OnTimer;
     property OnVerificationClicked;
     { PPGlow }
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write SetPreset;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// Text, Titel-Zusatz und Fusszeile mit Markup (<b>, <i>, <color=...>).
     property AllowMarkup: Boolean read FAllowMarkup write FAllowMarkup default False;
@@ -1342,6 +1343,12 @@ begin
 end;
 
 { TPPGTaskDialog }
+
+procedure TPPGTaskDialog.SetPreset(const Value: string);
+begin
+  // Audit 5a: wie TPPGCustomControl.SetPreset pruefen
+  FPreset := PPGCheckPreset(Self, Value);
+end;
 
 constructor TPPGTaskDialog.Create(AOwner: TComponent);
 begin

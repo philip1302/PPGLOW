@@ -125,6 +125,7 @@ type
     FOnToastClick: TPPGToastEvent;
     FOnClose: TPPGToastCloseEvent;
     FOnShow: TPPGToastEvent;
+    procedure SetPreset(const Value: string);
     procedure SetMaxVisible(const Value: Integer);
     procedure ReleaseLater(Toast: TPPGToast);
     procedure SetToastWidth(const Value: Integer);
@@ -164,7 +165,7 @@ type
     property MaxVisible: Integer read FMaxVisible write SetMaxVisible default 3;
     /// Breite in logischen px.
     property ToastWidth: Integer read FToastWidth write SetToastWidth default 360;
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write SetPreset;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     property Animations: Boolean read FAnimations write FAnimations default True;
     /// Bei Vollbild/Praesentation warten (SHQueryUserNotificationState).
@@ -178,6 +179,7 @@ type
 implementation
 
 uses
+  PPG.Render.Registry,
   PPG.Lang,
   System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont,
@@ -658,6 +660,12 @@ begin
 end;
 
 { TPPGNotificationCenter }
+
+procedure TPPGNotificationCenter.SetPreset(const Value: string);
+begin
+  // Audit 5a: wie TPPGCustomControl.SetPreset pruefen
+  FPreset := PPGCheckPreset(Self, Value);
+end;
 
 constructor TPPGNotificationCenter.Create(AOwner: TComponent);
 begin

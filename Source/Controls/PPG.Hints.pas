@@ -111,6 +111,7 @@ type
     FEvents: TApplicationEvents;
     FPrevClass: THintWindowClass;
     FApplied: Boolean;
+    procedure SetPreset(const Value: string);
     procedure SetActive(const Value: Boolean);
     procedure SetStyleManager(const Value: TPPGStyleManager);
     procedure SetMaxWidth(const Value: Integer);
@@ -133,7 +134,7 @@ type
   published
     property Active: Boolean read FActive write SetActive default True;
     /// Preset der Hints ('' = Standard bzw. StyleManager).
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write SetPreset;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// "Titel|Text": Titel fett, Text darunter (sonst nur der kurze Teil).
     property ShowTitle: Boolean read FShowTitle write FShowTitle default True;
@@ -151,6 +152,7 @@ type
     FStyleManager: TPPGStyleManager;
     FAllowMarkup: Boolean;
     FMaxWidth: Integer;
+    procedure SetPreset(const Value: string);
     procedure SetStyleManager(const Value: TPPGStyleManager);
     procedure SetMaxWidth(const Value: Integer);
     function PrepareFor(HintWindow: TCustomHintWindow; APPI: Integer): TSize;
@@ -163,7 +165,7 @@ type
     procedure SetHintSize(HintWindow: TCustomHintWindow); override;
     function EffectivePreset: string;
   published
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write SetPreset;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     property AllowMarkup: Boolean read FAllowMarkup write FAllowMarkup default False;
     property MaxWidth: Integer read FMaxWidth write SetMaxWidth default 360;
@@ -538,6 +540,12 @@ end;
 
 { TPPGHintManager }
 
+procedure TPPGHintManager.SetPreset(const Value: string);
+begin
+  // Audit 5a: wie TPPGCustomControl.SetPreset pruefen
+  FPreset := PPGCheckPreset(Self, Value);
+end;
+
 constructor TPPGHintManager.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -549,7 +557,10 @@ begin
     FEvents := TApplicationEvents.Create(Self);
     FEvents.OnShowHint := DoShowHint;
   end;
-  if not (csLoading in ComponentState) then
+  // Aus der DFM: erst in Loaded (Active ist dann gelesen); csLoading setzt die
+  // VCL erst nach dem Konstruktor, deshalb den Besitzer fragen
+  if not (csLoading in ComponentState) and
+    not ((AOwner <> nil) and (csLoading in AOwner.ComponentState)) then
     Apply;
 end;
 
@@ -670,6 +681,12 @@ begin
 end;
 
 { TPPGCustomHint }
+
+procedure TPPGCustomHint.SetPreset(const Value: string);
+begin
+  // Audit 5a: wie TPPGCustomControl.SetPreset pruefen
+  FPreset := PPGCheckPreset(Self, Value);
+end;
 
 constructor TPPGCustomHint.Create(AOwner: TComponent);
 begin

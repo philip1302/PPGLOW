@@ -122,7 +122,8 @@ type
     {$ENDIF}
     property TabOrder;
     property TabStop;
-    property Text;
+    /// Nie in der DFM (Klartext).
+    property Text stored False;
     property Visible;
     property Touch;
     property OnGesture;

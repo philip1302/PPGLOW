@@ -180,6 +180,7 @@ type
     FMenuStyles: TPPGMenuStyles;
     FOnCustomDrawItem: TPPGMenuCustomDrawEvent;
     FDrawSender: TObject;
+    procedure SetPreset(const Value: string);
     procedure Hook(var Msg: TMsg; var Handled: Boolean);
     procedure AppDeactivate(Sender: TObject);
     procedure DelayStep(Sender: TObject);
@@ -220,7 +221,7 @@ type
     property Selected: TMenuItem read FSelected;
     property StyleSource: TPPGCustomControl read FStyleSource write FStyleSource;
     property StyleManager: TPPGStyleManager read FStyleManager write FStyleManager;
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write SetPreset;
     property BiDiMode: TBiDiMode read FBiDiMode write FBiDiMode;
     /// Unterstrichene Mnemonics zeigen (Oeffnen per Tastatur).
     property ShowAccelerators: Boolean read FShowAccelerators write FShowAccelerators;
@@ -244,6 +245,7 @@ type
     // Zeigt waehrend PopupAtRect auf eine lokale Variable: Destroy meldet
     // dort, dass das Menue in der modalen Schleife freigegeben wurde
     FDestroyedFlag: PBoolean;
+    procedure SetPreset(const Value: string);
     procedure SetStyleManager(const Value: TPPGStyleManager);
     procedure SetMenuStyles(const Value: TPPGMenuStyles);
     function StyleSourceControl: TPPGCustomControl;
@@ -262,7 +264,7 @@ type
     /// Optik wie die Controls (Preset, Appearance); sonst die des Ausloesers.
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// Preset ohne StyleManager ('' = des Ausloesers bzw. Standard).
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write SetPreset;
     /// Bereiche des Menues (Flaeche, Hover, Trennlinien, Kuerzel).
     property MenuStyles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
     /// Vor dem Zeichnen jedes Eintrags: Style anpassen oder selbst zeichnen.
@@ -1262,6 +1264,12 @@ end;
 
 { TPPGMenuLoop }
 
+procedure TPPGMenuLoop.SetPreset(const Value: string);
+begin
+  // Audit 5a: wie TPPGCustomControl.SetPreset pruefen (interne Schleife, keine DFM)
+  FPreset := PPGCheckPreset(nil, Value);
+end;
+
 constructor TPPGMenuLoop.Create;
 begin
   inherited Create;
@@ -1769,6 +1777,12 @@ begin
 end;
 
 { TPPGPopupMenu }
+
+procedure TPPGPopupMenu.SetPreset(const Value: string);
+begin
+  // Audit 5a: wie TPPGCustomControl.SetPreset pruefen
+  FPreset := PPGCheckPreset(Self, Value);
+end;
 
 destructor TPPGPopupMenu.Destroy;
 begin

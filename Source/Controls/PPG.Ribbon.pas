@@ -1420,6 +1420,10 @@ end;
 procedure TPPGCustomRibbon.Loaded;
 begin
   inherited Loaded;
+  // Audit 5a: Backstage aus der DFM ist zur Laufzeit zunaechst verborgen
+  // (SetBackstage tut das waehrend des Ladens nicht)
+  if (FBackstage <> nil) and not (csDesigning in ComponentState) and not FBackstageVisible then
+    FBackstage.Visible := False;
   if (FTabIndex >= FTabs.Count) then
     FTabIndex := FTabs.Count - 1;
   LayoutChanged;

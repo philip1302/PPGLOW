@@ -81,6 +81,9 @@ type
     FDropDownCount: Integer;
     FPendingText: string;
     FOnItemCheck: TPPGCheckItemEvent;
+    procedure ReadDisplayDelimiterEmpty(Reader: TReader);
+    procedure WriteDisplayDelimiterEmpty(Writer: TWriter);
+    function IsDisplayDelimiterStored: Boolean;
     procedure SetItems(const Value: TStrings);
     procedure ItemsChanging(Sender: TObject);
     procedure ItemsChanged(Sender: TObject);
@@ -94,6 +97,7 @@ type
     procedure SetDisplayDelimiter(const Value: string);
     procedure SetDelimiter(const Value: Char);
   protected
+    procedure DefineProperties(Filer: TFiler); override;
     procedure Loaded; override;
     function CreatePopup: TPPGDropPopup; override;
     procedure PreparePopup(APopup: TPPGDropPopup); override;
@@ -125,7 +129,8 @@ type
     /// Gewaehlte Eintraege, getrennt durch Delimiter (nach Items gespeichert).
     property CheckedText: string read GetCheckedText write SetCheckedText;
     property Delimiter: Char read FDelimiter write SetDelimiter default ';';
-    property DisplayDelimiter: string read FDisplayDelimiter write SetDisplayDelimiter;
+    property DisplayDelimiter: string read FDisplayDelimiter write SetDisplayDelimiter
+      stored IsDisplayDelimiterStored;
     property DisplayMode: TPPGCheckComboDisplay read FDisplayMode write SetDisplayMode
       default cdmCompact;
     property MaxDisplayItems: Integer read FMaxDisplayItems write SetMaxDisplayItems default 2;
@@ -182,6 +187,9 @@ implementation
 uses
   System.Math, Winapi.oleacc, PPG.Appearance, PPG.DpiUtils, PPG.Lang, PPG.Consts,
   PPG.Render.Registry, PPG.Exceptions;
+
+const
+  DefDisplayDelimiter = ', ';
 
 { TPPGCheckListPopup }
 
@@ -432,7 +440,7 @@ begin
   TStringList(FItems).OnChanging := ItemsChanging;
   TStringList(FItems).OnChange := ItemsChanged;
   FDelimiter := ';';
-  FDisplayDelimiter := ', ';
+  FDisplayDelimiter := DefDisplayDelimiter;
   FDisplayMode := cdmCompact;
   FMaxDisplayItems := 2;
   FFilterThreshold := 12;
@@ -629,6 +637,30 @@ begin
   if Value = #0 then
     raise EPPGPropertyError.CreateInvalid(Self, 'Delimiter', '#0');
   FDelimiter := Value;
+end;
+
+procedure TPPGCheckComboBox.DefineProperties(Filer: TFiler);
+begin
+  inherited DefineProperties(Filer);
+  // Leer mit nicht leerer Vorgabe: der Writer schreibt '' nie - eigene Marke
+  Filer.DefineProperty('DisplayDelimiterEmpty', ReadDisplayDelimiterEmpty, WriteDisplayDelimiterEmpty, FDisplayDelimiter = '');
+end;
+
+procedure TPPGCheckComboBox.ReadDisplayDelimiterEmpty(Reader: TReader);
+begin
+  if Reader.ReadBoolean then
+    FDisplayDelimiter := '';
+end;
+
+procedure TPPGCheckComboBox.WriteDisplayDelimiterEmpty(Writer: TWriter);
+begin
+  Writer.WriteBoolean(True);
+end;
+
+function TPPGCheckComboBox.IsDisplayDelimiterStored: Boolean;
+begin
+  // Auch leer speichern (Vorgabe ', ')
+  Result := FDisplayDelimiter <> DefDisplayDelimiter;
 end;
 
 procedure TPPGCheckComboBox.SetDisplayDelimiter(const Value: string);

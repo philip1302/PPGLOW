@@ -149,6 +149,7 @@ type
     FOnLinkClick: TPPGTipLinkEvent;
     FOnClosing: TPPGTipClosingEvent;
     FOnClose: TPPGTipCloseEvent;
+    procedure SetPreset(const Value: string);
     procedure SetTarget(const Value: TControl);
     procedure SetStyleManager(const Value: TPPGStyleManager);
     procedure SetMaxWidth(const Value: Integer);
@@ -202,7 +203,7 @@ type
     property Placement: TPPGTipPlacementMode read FPlacement write SetPlacement default tpAuto;
     /// Breite der Flaeche in logischen px.
     property MaxWidth: Integer read FMaxWidth write SetMaxWidth default 320;
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write SetPreset;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     property OnActionClick: TNotifyEvent read FOnActionClick write FOnActionClick;
     property OnLinkClick: TPPGTipLinkEvent read FOnLinkClick write FOnLinkClick;
@@ -912,6 +913,12 @@ begin
 end;
 
 { TPPGTeachingTip }
+
+procedure TPPGTeachingTip.SetPreset(const Value: string);
+begin
+  // Audit 5a: wie TPPGCustomControl.SetPreset pruefen
+  FPreset := PPGCheckPreset(Self, Value);
+end;
 
 constructor TPPGTeachingTip.Create(AOwner: TComponent);
 begin

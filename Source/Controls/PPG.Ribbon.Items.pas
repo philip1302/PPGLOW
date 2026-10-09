@@ -89,6 +89,7 @@ type
     FGalleryTopRow: Integer;
     FActionLink: TPPGRibbonItemActionLink;
     FOnClick: TNotifyEvent;
+    procedure SetGroupIndex(const Value: Integer);
     procedure SetCaption(const Value: string);
     procedure SetHint(const Value: string);
     procedure SetKind(const Value: TPPGRibbonItemKind);
@@ -157,10 +158,11 @@ type
     property LargeImageIndex: TPPGImageIndex read FLargeImageIndex write SetLargeImageIndex default -1;
     /// Zeichen der Symbolschrift (0 = keins), z.B. $E8C8 fuer "Kopieren".
     property IconChar: Word read FIconChar write SetIconChar default 0;
+    /// Umschalt-Buttons mit gleichem GroupIndex <> 0 schliessen sich aus (je
+    /// Ribbon). Steht vor Down, damit die DFM die Gruppe vor dem Zustand liest.
+    property GroupIndex: Integer read FGroupIndex write SetGroupIndex default 0;
     /// Eingerastet (rikCheck).
     property Down: Boolean read FDown write SetDown stored IsDownStored default False;
-    /// Umschalt-Buttons mit gleichem GroupIndex <> 0 schliessen sich aus (je Ribbon).
-    property GroupIndex: Integer read FGroupIndex write FGroupIndex default 0;
     property Enabled: Boolean read FEnabled write SetEnabled stored IsEnabledStored default True;
     property Visible: Boolean read FVisible write SetVisible stored IsVisibleStored default True;
     property Tag: NativeInt read FTag write FTag default 0;
@@ -645,6 +647,19 @@ begin
   begin
     FIconChar := Value;
     Changed(False);
+  end;
+end;
+
+procedure TPPGRibbonItem.SetGroupIndex(const Value: Integer);
+begin
+  if FGroupIndex = Value then
+    Exit;
+  FGroupIndex := Value;
+  // Neue Gruppe: ein gedruecktes Item laesst die anderen der Gruppe ausrasten
+  if FDown and (Value <> 0) then
+  begin
+    FDown := False;
+    SetDown(True);
   end;
 end;
 
