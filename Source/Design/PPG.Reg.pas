@@ -18,9 +18,31 @@ unit PPG.Reg;
 interface
 
 uses
-  System.Classes, DesignIntf, DesignEditors, PPG.PageControl, PPG.Wizard;
+  System.Classes, System.Types, Vcl.Graphics, DesignIntf, DesignEditors, VCLEditors,
+  PPG.PageControl, PPG.Wizard;
 
 type
+  /// ImageIndex von Eintraegen (ToolBar, NavigationView, Ribbon, StatusBar,
+  /// Seiten): Auswahl mit Vorschau aus den Images des Besitzers.
+  TPPGItemImageIndexProperty = class(TIntegerProperty, ICustomPropertyListDrawing)
+  public
+    function GetAttributes: TPropertyAttributes; override;
+    procedure GetValues(Proc: TGetStrProc); override;
+    procedure ListMeasureWidth(const Value: string; ACanvas: TCanvas; var AWidth: Integer);
+    procedure ListMeasureHeight(const Value: string; ACanvas: TCanvas; var AHeight: Integer);
+    procedure ListDrawValue(const Value: string; ACanvas: TCanvas; const ARect: TRect;
+      ASelected: Boolean);
+  end;
+
+  {$IFDEF PPG_HAS_IMAGENAME}
+  /// ImageName von Eintraegen: Namen aus den Images des Besitzers.
+  TPPGItemImageNameProperty = class(TStringProperty)
+  public
+    function GetAttributes: TPropertyAttributes; override;
+    procedure GetValues(Proc: TGetStrProc); override;
+  end;
+  {$ENDIF}
+
   /// Auswahlliste der registrierten Presets im Object Inspector.
   TPPGPresetProperty = class(TStringProperty)
   public
@@ -185,7 +207,11 @@ uses
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
   PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator, PPG.Controls.Field, PPG.BusyOverlay,
   PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
-  PPG.Editors.Logic, PPG.Editors.Forms;
+  PPG.Editors.Logic, PPG.Editors.Forms, Vcl.ImgList, System.Math, PPG.Types;
+
+const
+  /// Kategorie im Objektinspektor fuer die Optik der Suite.
+  PPGCategoryName = 'PPGlow';
 
 resourcestring
   SVerbResetPreset = 'Reset to preset defaults';
@@ -1055,6 +1081,90 @@ begin
     Proc('PPG.Kanban.Items');
 end;
 
+{ TPPGItemImageIndexProperty }
+
+function ItemImages(P: TPersistent): TCustomImageList;
+begin
+  Result := PPGImagesOf(P);
+end;
+
+function TPPGItemImageIndexProperty.GetAttributes: TPropertyAttributes;
+begin
+  Result := [paValueList, paRevertable];
+end;
+
+procedure TPPGItemImageIndexProperty.GetValues(Proc: TGetStrProc);
+var
+  Imgs: TCustomImageList;
+  I: Integer;
+begin
+  Proc('-1');
+  Imgs := ItemImages(GetComponent(0));
+  if Imgs <> nil then
+    for I := 0 to Imgs.Count - 1 do
+      Proc(IntToStr(I));
+end;
+
+procedure TPPGItemImageIndexProperty.ListMeasureWidth(const Value: string; ACanvas: TCanvas;
+  var AWidth: Integer);
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := ItemImages(GetComponent(0));
+  if Imgs <> nil then
+    AWidth := AWidth + Imgs.Width + 6;
+end;
+
+procedure TPPGItemImageIndexProperty.ListMeasureHeight(const Value: string; ACanvas: TCanvas;
+  var AHeight: Integer);
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := ItemImages(GetComponent(0));
+  if Imgs <> nil then
+    AHeight := Max(AHeight, Imgs.Height + 2);
+end;
+
+procedure TPPGItemImageIndexProperty.ListDrawValue(const Value: string; ACanvas: TCanvas;
+  const ARect: TRect; ASelected: Boolean);
+var
+  Imgs: TCustomImageList;
+  X, Idx: Integer;
+begin
+  Imgs := ItemImages(GetComponent(0));
+  ACanvas.FillRect(ARect);
+  X := ARect.Left + 2;
+  Idx := StrToIntDef(Value, -1);
+  if Imgs <> nil then
+  begin
+    if (Idx >= 0) and (Idx < Imgs.Count) then
+      Imgs.Draw(ACanvas, X, ARect.Top + (ARect.Bottom - ARect.Top - Imgs.Height) div 2, Idx);
+    Inc(X, Imgs.Width + 4);
+  end;
+  ACanvas.TextOut(X, ARect.Top + (ARect.Bottom - ARect.Top - ACanvas.TextHeight(Value)) div 2, Value);
+end;
+
+{$IFDEF PPG_HAS_IMAGENAME}
+{ TPPGItemImageNameProperty }
+
+function TPPGItemImageNameProperty.GetAttributes: TPropertyAttributes;
+begin
+  Result := [paValueList, paSortList, paRevertable];
+end;
+
+procedure TPPGItemImageNameProperty.GetValues(Proc: TGetStrProc);
+var
+  Imgs: TCustomImageList;
+  I: Integer;
+begin
+  Imgs := ItemImages(GetComponent(0));
+  if (Imgs <> nil) and Imgs.IsImageNameAvailable then
+    for I := 0 to Imgs.Count - 1 do
+      Proc(Imgs.GetNameByIndex(I));
+end;
+{$ENDIF}
+
+
 procedure Register;
 begin
   RegisterComponents(PPGPaletteName, [TPPGButton, TPPGCheckBox, TPPGRadioButton,
@@ -1077,6 +1187,25 @@ begin
   RegisterClass(TPPGWizardPage);
   RegisterNoIcon([TPPGWizardPage]);
   RegisterPropertyEditor(TypeInfo(string), TPPGCustomControl, 'Preset', TPPGPresetProperty);
+  // Audit 5b: Optik der Suite in einer eigenen Kategorie
+  RegisterPropertiesInCategory(PPGCategoryName, TPPGCustomControl, ['Preset', 'StyleManager',
+    'Appearance', 'Animation', 'RoundedCorners', 'Shadow', 'HighContrastSupport', 'ReadOnlyStyle',
+    'Styles', 'Style', 'ListStyles', 'CalendarStyles', 'ChartStyles', 'KanbanStyles', 'PlannerStyles',
+    'NavStyles', 'TabStyles', 'MenuStyles', 'BarStyle']);
+  RegisterPropertiesInCategory(PPGCategoryName, TComponent, ['Preset', 'StyleManager']);
+  // Bildindex/-name an Eintraegen und Seiten (Images des Besitzers)
+  RegisterPropertyEditor(TypeInfo(TPPGImageIndex), TPPGToolItem, 'ImageIndex', TPPGItemImageIndexProperty);
+  RegisterPropertyEditor(TypeInfo(TPPGImageIndex), TPPGNavItem, 'ImageIndex', TPPGItemImageIndexProperty);
+  RegisterPropertyEditor(TypeInfo(TPPGImageIndex), TPPGRibbonItem, 'ImageIndex', TPPGItemImageIndexProperty);
+  RegisterPropertyEditor(TypeInfo(TPPGImageIndex), TPPGStatusPanel, 'ImageIndex', TPPGItemImageIndexProperty);
+  RegisterPropertyEditor(TypeInfo(TPPGImageIndex), TPPGTabSheet, 'ImageIndex', TPPGItemImageIndexProperty);
+  {$IFDEF PPG_HAS_IMAGENAME}
+  RegisterPropertyEditor(TypeInfo(TImageName), TPPGToolItem, 'ImageName', TPPGItemImageNameProperty);
+  RegisterPropertyEditor(TypeInfo(TImageName), TPPGNavItem, 'ImageName', TPPGItemImageNameProperty);
+  RegisterPropertyEditor(TypeInfo(TImageName), TPPGRibbonItem, 'ImageName', TPPGItemImageNameProperty);
+  RegisterPropertyEditor(TypeInfo(TImageName), TPPGStatusPanel, 'ImageName', TPPGItemImageNameProperty);
+  RegisterPropertyEditor(TypeInfo(TImageName), TPPGTabSheet, 'ImageName', TPPGItemImageNameProperty);
+  {$ENDIF}
   RegisterPropertyEditor(TypeInfo(string), TPPGStyleManager, 'Preset', TPPGPresetProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGNotificationCenter, 'Preset', TPPGPresetProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGPopupMenu, 'Preset', TPPGPresetProperty);

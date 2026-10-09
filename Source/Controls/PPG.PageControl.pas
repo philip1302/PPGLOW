@@ -22,7 +22,7 @@ unit PPG.PageControl;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
+  Winapi.Windows, Winapi.Messages, System.Classes, {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF} System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.ImgList, Vcl.ComCtrls, Vcl.Forms,
   PPG.Types, PPG.Render.Intf, PPG.Controls.Container, PPG.TabStrip, PPG.TabControl;
 
@@ -38,6 +38,9 @@ type
     FTabFontStyle: TFontStyles;
     FOnShow: TNotifyEvent;
     FOnHide: TNotifyEvent;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    FImageName: TImageName;
+    {$ENDIF}
     function GetPageControl: TPPGPageControl;
     procedure SetPageControl(const Value: TPPGPageControl);
     function GetPageIndex: Integer;
@@ -50,6 +53,9 @@ type
     procedure SetTabFontStyle(const Value: TFontStyles);
     procedure CMTextChanged(var Message: TMessage); message CM_TEXTCHANGED;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    procedure SetImageName(const Value: TImageName);
+    {$ENDIF}
   protected
     function GetBackgroundColor: TColor; override;
     function GetChildBackground(Child: TControl; out ColorTop, ColorBottom: TColor): Boolean; override;
@@ -58,6 +64,11 @@ type
     procedure DoShow; virtual;
     procedure DoHide; virtual;
   public
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bildindex aus ImageName neu bestimmen (ruft der Besitzer, wenn sich
+    /// seine Images aendern).
+    procedure ResolveImageName;
+    {$ENDIF}
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     property PageControl: TPPGPageControl read GetPageControl write SetPageControl;
@@ -72,6 +83,10 @@ type
     property Font;
     property Height stored False;
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bild per Namen (TVirtualImageList, ab 10.4); robust gegen Umsortieren.
+    property ImageName: TImageName read FImageName write SetImageName;
+    {$ENDIF}
     property Left stored False;
     property Padding;
     property PageIndex: Integer read GetPageIndex write SetPageIndex stored False;
@@ -125,6 +140,8 @@ type
     function NeighbourOf(Page: TPPGTabSheet): TPPGTabSheet;
     procedure CMControlChange(var Message: TCMControlChange); message CM_CONTROLCHANGE;
   protected
+    /// Bildnamen der Eintraege neu aufloesen (ImageName).
+    procedure ImagesChanged; override;
     procedure Loaded; override;
     procedure SetChildOrder(Child: TComponent; Order: Integer); override;
     procedure ShowControl(AControl: TControl); override;
@@ -217,9 +234,31 @@ type
 implementation
 
 uses
+  PPG.Controls.Base,
   System.SysUtils, Winapi.oleacc;
 
 { TPPGTabSheet }
+
+{$IFDEF PPG_HAS_IMAGENAME}
+procedure TPPGTabSheet.ResolveImageName;
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := PPGImagesOf(Self);
+  // Unbekannter Name: -1 (die Liste kann zur Laufzeit befuellt werden)
+  if (FImageName <> '') and (Imgs <> nil) and Imgs.IsImageNameAvailable then
+    ImageIndex := Imgs.GetIndexByName(FImageName);
+end;
+
+procedure TPPGTabSheet.SetImageName(const Value: TImageName);
+begin
+  if FImageName = Value then
+    Exit;
+  FImageName := Value;
+  ResolveImageName;
+end;
+{$ENDIF}
+
 
 constructor TPPGTabSheet.Create(AOwner: TComponent);
 begin
@@ -383,6 +422,20 @@ begin
 end;
 
 { TPPGPageControl }
+
+procedure TPPGPageControl.ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+var
+  I: Integer;
+{$ENDIF}
+begin
+  inherited ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+  for I := 0 to PageCount - 1 do
+    Pages[I].ResolveImageName;
+{$ENDIF}
+end;
+
 
 constructor TPPGPageControl.Create(AOwner: TComponent);
 begin

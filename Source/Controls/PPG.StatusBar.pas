@@ -21,7 +21,7 @@ unit PPG.StatusBar;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
+  Winapi.Windows, Winapi.Messages, System.Classes, {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF} System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics, Vcl.ComCtrls, Vcl.Forms, Vcl.ActnList, Vcl.StdActns,
   PPG.Types, PPG.Render.Intf, PPG.Markup, PPG.Accessibility, PPG.Controls.Base,
   PPG.ElementStyle;
@@ -46,6 +46,9 @@ type
     FColor: TColor;
     FTextColor: TColor;
     FFontStyle: TFontStyles;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    FImageName: TImageName;
+    {$ENDIF}
     procedure SetText(const Value: string);
     procedure SetColor(const Value: TColor);
     procedure SetTextColor(const Value: TColor);
@@ -58,9 +61,17 @@ type
     procedure SetProgress(const Value: Integer);
     procedure SetBadgeCount(const Value: Integer);
     procedure SetImageIndex(const Value: TPPGImageIndex);
+    {$IFDEF PPG_HAS_IMAGENAME}
+    procedure SetImageName(const Value: TImageName);
+    {$ENDIF}
   protected
     function GetDisplayName: string; override;
   public
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bildindex aus ImageName neu bestimmen (ruft der Besitzer, wenn sich
+    /// seine Images aendern).
+    procedure ResolveImageName;
+    {$ENDIF}
     constructor Create(Collection: TCollection); override;
     procedure Assign(Source: TPersistent); override;
   published
@@ -73,6 +84,10 @@ type
     property Progress: Integer read FProgress write SetProgress default 0;
     property BadgeCount: Integer read FBadgeCount write SetBadgeCount default 0;
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bild per Namen (TVirtualImageList, ab 10.4); robust gegen Umsortieren.
+    property ImageName: TImageName read FImageName write SetImageName;
+    {$ENDIF}
     property Hint: string read FHint write FHint;
     /// Flaeche, Text und zusaetzliche Schriftstile des Felds (clDefault = Leiste).
     property Color: TColor read FColor write SetColor default clDefault;
@@ -130,6 +145,8 @@ type
     procedure CMSysFontChanged(var Message: TMessage); message CM_SYSFONTCHANGED;
     procedure CMParentFontChanged(var Message: TCMParentFontChanged); message CM_PARENTFONTCHANGED;
   protected
+    /// Bildnamen der Eintraege neu aufloesen (ImageName).
+    procedure ImagesChanged; override;
     procedure Loaded; override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
@@ -208,6 +225,7 @@ type
 implementation
 
 uses
+  Vcl.ImgList,
   System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.ItemPainter, PPG.Render.Gdi;
 
@@ -224,6 +242,27 @@ begin
 end;
 
 { TPPGStatusPanel }
+
+{$IFDEF PPG_HAS_IMAGENAME}
+procedure TPPGStatusPanel.ResolveImageName;
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := PPGImagesOf(Self);
+  // Unbekannter Name: -1 (die Liste kann zur Laufzeit befuellt werden)
+  if (FImageName <> '') and (Imgs <> nil) and Imgs.IsImageNameAvailable then
+    ImageIndex := Imgs.GetIndexByName(FImageName);
+end;
+
+procedure TPPGStatusPanel.SetImageName(const Value: TImageName);
+begin
+  if FImageName = Value then
+    Exit;
+  FImageName := Value;
+  ResolveImageName;
+end;
+{$ENDIF}
+
 
 constructor TPPGStatusPanel.Create(Collection: TCollection);
 begin
@@ -412,6 +451,20 @@ begin
 end;
 
 { TPPGStatusBar }
+
+procedure TPPGStatusBar.ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+var
+  I: Integer;
+{$ENDIF}
+begin
+  inherited ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+  for I := 0 to FPanels.Count - 1 do
+    FPanels[I].ResolveImageName;
+{$ENDIF}
+end;
+
 
 constructor TPPGStatusBar.Create(AOwner: TComponent);
 begin

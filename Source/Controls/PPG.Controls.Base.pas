@@ -328,9 +328,14 @@ type
     property VisualState: TPPGVisualState read GetVisualState;
   end;
 
+/// Bilderliste (published "Images") des naechsten Besitzers: Collection-Owner
+/// bzw. Parent (fuer ImageName an Eintraegen und Seiten).
+function PPGImagesOf(Start: TPersistent): TCustomImageList;
+
 implementation
 
 uses
+  System.TypInfo,
   PPG.Lang,
   System.SysUtils, System.Math, Vcl.Forms, Vcl.Themes,
   PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.DpiUtils,
@@ -2047,6 +2052,35 @@ procedure TPPGCustomControl.DoPaintOverlay(const ACanvas: IPPGCanvas; const Body
 begin
   if Style.Focused then
     FRenderer.DrawFocus(ACanvas, Body, Style);
+end;
+
+function PPGImagesOf(Start: TPersistent): TCustomImageList;
+var
+  P: TPersistent;
+  O: TObject;
+  Depth: Integer;
+begin
+  Result := nil;
+  P := Start;
+  for Depth := 1 to 16 do
+  begin
+    if P = nil then
+      Exit;
+    if (P is TComponent) and IsPublishedProp(P, 'Images') then
+    begin
+      O := GetObjectProp(P, 'Images');
+      if O is TCustomImageList then
+        Exit(TCustomImageList(O));
+    end;
+    if P is TCollectionItem then
+      P := TCollectionItem(P).Collection
+    else if P is TCollection then
+      P := TCollection(P).Owner
+    else if P is TControl then
+      P := TControl(P).Parent
+    else
+      Exit;
+  end;
 end;
 
 initialization

@@ -410,6 +410,8 @@ type
     procedure CMDesignHitTest(var Message: TCMDesignHitTest); message CM_DESIGNHITTEST;
     procedure CMBiDiModeChanged(var Message: TMessage); message CM_BIDIMODECHANGED;
   protected
+    /// Bildnamen der Eintraege neu aufloesen (ImageName).
+    procedure ImagesChanged; override;
     procedure WndProc(var Message: TMessage); override;
     procedure CreateWnd; override;
     procedure DestroyWnd; override;
@@ -1338,6 +1340,24 @@ begin
 end;
 
 { TPPGCustomRibbon }
+
+procedure TPPGCustomRibbon.ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+var
+  T, G, I: Integer;
+{$ENDIF}
+begin
+  inherited ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+  for T := 0 to FTabs.Count - 1 do
+    for G := 0 to FTabs[T].Groups.Count - 1 do
+      for I := 0 to FTabs[T].Groups[G].Items.Count - 1 do
+        FTabs[T].Groups[G].Items[I].ResolveImageName;
+  for I := 0 to FQuickAccess.Count - 1 do
+    FQuickAccess[I].ResolveImageName;
+{$ENDIF}
+end;
+
 
 constructor TPPGCustomRibbon.Create(AOwner: TComponent);
 begin

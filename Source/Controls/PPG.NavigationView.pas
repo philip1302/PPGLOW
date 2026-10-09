@@ -28,7 +28,7 @@ unit PPG.NavigationView;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
+  Winapi.Windows, Winapi.Messages, System.Classes, {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF} System.Types, System.SysUtils,
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.ImgList, Vcl.Forms,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base,
   PPG.PageControl, PPG.ElementStyle, PPG.CustomDraw;
@@ -60,6 +60,9 @@ type
     FTag: NativeInt;
     FItems: TPPGNavItems;
     FData: Pointer;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    FImageName: TImageName;
+    {$ENDIF}
     procedure SetPageIndex(const Value: Integer);
     procedure SetCaption(const Value: string);
     procedure SetKind(const Value: TPPGNavItemKind);
@@ -77,9 +80,17 @@ type
     procedure SetFontStyle(const Value: TFontStyles);
     function GetLevel: Integer;
     function GetParentItem: TPPGNavItem;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    procedure SetImageName(const Value: TImageName);
+    {$ENDIF}
   protected
     function GetDisplayName: string; override;
   public
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bildindex aus ImageName neu bestimmen (ruft der Besitzer, wenn sich
+    /// seine Images aendern).
+    procedure ResolveImageName;
+    {$ENDIF}
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
@@ -96,6 +107,10 @@ type
     /// Zeichen der Symbolschrift (Segoe Fluent Icons/MDL2), 0 = keins.
     property IconChar: Word read FIconChar write SetIconChar default 0;
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bild per Namen (TVirtualImageList, ab 10.4); robust gegen Umsortieren.
+    property ImageName: TImageName read FImageName write SetImageName;
+    {$ENDIF}
     /// Zahl auf der Plakette (0 = keine).
     property BadgeCount: Integer read FBadgeCount write SetBadgeCount default 0;
     property BadgeDot: Boolean read FBadgeDot write SetBadgeDot default False;
@@ -242,6 +257,8 @@ type
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
   protected
+    /// Bildnamen der Eintraege neu aufloesen (ImageName).
+    procedure ImagesChanged; override;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure WndProc(var Message: TMessage); override;
@@ -445,6 +462,27 @@ begin
 end;
 
 { TPPGNavItem }
+
+{$IFDEF PPG_HAS_IMAGENAME}
+procedure TPPGNavItem.ResolveImageName;
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := PPGImagesOf(Self);
+  // Unbekannter Name: -1 (die Liste kann zur Laufzeit befuellt werden)
+  if (FImageName <> '') and (Imgs <> nil) and Imgs.IsImageNameAvailable then
+    ImageIndex := Imgs.GetIndexByName(FImageName);
+end;
+
+procedure TPPGNavItem.SetImageName(const Value: TImageName);
+begin
+  if FImageName = Value then
+    Exit;
+  FImageName := Value;
+  ResolveImageName;
+end;
+{$ENDIF}
+
 
 constructor TPPGNavItem.Create(Collection: TCollection);
 begin
@@ -818,6 +856,27 @@ begin
 end;
 
 { TPPGNavigationView }
+
+procedure TPPGNavigationView.ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+  procedure Walk(Items: TPPGNavItems);
+  var
+    I: Integer;
+  begin
+    for I := 0 to Items.Count - 1 do
+    begin
+      Items[I].ResolveImageName;
+      Walk(Items[I].Items);
+    end;
+  end;
+{$ENDIF}
+begin
+  inherited ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+  Walk(FItems);
+{$ENDIF}
+end;
+
 
 procedure TPPGNavigationView.DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer;
   AEnabled: Boolean; Color: TColor);

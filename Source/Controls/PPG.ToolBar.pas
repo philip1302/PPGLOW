@@ -23,7 +23,7 @@ unit PPG.ToolBar;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
+  Winapi.Windows, Winapi.Messages, System.Classes, {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF} System.Types, System.SysUtils,
   {$IFDEF PPG_HAS_SYSTEM_ACTIONS}System.Actions,{$ENDIF} Vcl.ActnList, Vcl.Controls, Vcl.Graphics, Vcl.Menus, Vcl.ImgList,
   PPG.Types, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base;
 
@@ -69,6 +69,9 @@ type
     FFontStyle: TFontStyles;
     FActionLink: TPPGToolItemActionLink;
     FOnClick: TNotifyEvent;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    FImageName: TImageName;
+    {$ENDIF}
     procedure SetGroupIndex(const Value: Integer);
     procedure SetCaption(const Value: string);
     procedure SetStyle(const Value: TPPGToolItemStyle);
@@ -91,9 +94,17 @@ type
     function IsOnClickStored: Boolean;
     procedure ActionChange(Sender: TObject; CheckDefaults: Boolean);
     procedure DoActionChange(Sender: TObject);
+    {$IFDEF PPG_HAS_IMAGENAME}
+    procedure SetImageName(const Value: TImageName);
+    {$ENDIF}
   protected
     function GetDisplayName: string; override;
   public
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bildindex aus ImageName neu bestimmen (ruft der Besitzer, wenn sich
+    /// seine Images aendern).
+    procedure ResolveImageName;
+    {$ENDIF}
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
@@ -106,6 +117,10 @@ type
     property Style: TPPGToolItemStyle read FStyle write SetStyle default tisButton;
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex
       stored IsImageIndexStored default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bild per Namen (TVirtualImageList, ab 10.4); robust gegen Umsortieren.
+    property ImageName: TImageName read FImageName write SetImageName;
+    {$ENDIF}
     /// Zeichen der Symbolschrift (0 = keins).
     property IconChar: Word read FIconChar write SetIconChar default 0;
     /// Umschalt-Buttons mit gleichem GroupIndex <> 0 schliessen sich aus. Steht
@@ -168,6 +183,8 @@ type
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
   protected
+    /// Bildnamen der Eintraege neu aufloesen (ImageName).
+    procedure ImagesChanged; override;
     procedure WndProc(var Message: TMessage); override;
     procedure Resize; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -352,6 +369,27 @@ begin
 end;
 
 { TPPGToolItem }
+
+{$IFDEF PPG_HAS_IMAGENAME}
+procedure TPPGToolItem.ResolveImageName;
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := PPGImagesOf(Self);
+  // Unbekannter Name: -1 (die Liste kann zur Laufzeit befuellt werden)
+  if (FImageName <> '') and (Imgs <> nil) and Imgs.IsImageNameAvailable then
+    ImageIndex := Imgs.GetIndexByName(FImageName);
+end;
+
+procedure TPPGToolItem.SetImageName(const Value: TImageName);
+begin
+  if FImageName = Value then
+    Exit;
+  FImageName := Value;
+  ResolveImageName;
+end;
+{$ENDIF}
+
 
 constructor TPPGToolItem.Create(Collection: TCollection);
 begin
@@ -688,6 +726,20 @@ begin
 end;
 
 { TPPGToolBar }
+
+procedure TPPGToolBar.ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+var
+  I: Integer;
+{$ENDIF}
+begin
+  inherited ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+  for I := 0 to FItems.Count - 1 do
+    FItems[I].ResolveImageName;
+{$ENDIF}
+end;
+
 
 procedure TPPGToolBar.DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer;
   AEnabled: Boolean; Color: TColor);

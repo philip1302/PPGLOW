@@ -17,7 +17,7 @@ unit PPG.Ribbon.Items;
 interface
 
 uses
-  Winapi.Windows, System.Classes, System.SysUtils,
+  Winapi.Windows, System.Classes, {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF} System.SysUtils,
   {$IFDEF PPG_HAS_SYSTEM_ACTIONS}System.Actions,{$ENDIF} Vcl.ActnList, Vcl.Controls,
   Vcl.Graphics, Vcl.Menus, Vcl.ImgList,
   PPG.Types, PPG.Ribbon.Layout;
@@ -89,6 +89,9 @@ type
     FGalleryTopRow: Integer;
     FActionLink: TPPGRibbonItemActionLink;
     FOnClick: TNotifyEvent;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    FImageName: TImageName;
+    {$ENDIF}
     procedure SetGroupIndex(const Value: Integer);
     procedure SetCaption(const Value: string);
     procedure SetHint(const Value: string);
@@ -125,9 +128,17 @@ type
     function IsOnClickStored: Boolean;
     procedure ActionChange(Sender: TObject; CheckDefaults: Boolean);
     procedure DoActionChange(Sender: TObject);
+    {$IFDEF PPG_HAS_IMAGENAME}
+    procedure SetImageName(const Value: TImageName);
+    {$ENDIF}
   protected
     function GetDisplayName: string; override;
   public
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bildindex aus ImageName neu bestimmen (ruft der Besitzer, wenn sich
+    /// seine Images aendern).
+    procedure ResolveImageName;
+    {$ENDIF}
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
@@ -154,6 +165,10 @@ type
     /// Bild aus Ribbon.Images (klein, 16 px).
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex
       stored IsImageIndexStored default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bild per Namen (TVirtualImageList, ab 10.4); robust gegen Umsortieren.
+    property ImageName: TImageName read FImageName write SetImageName;
+    {$ENDIF}
     /// Bild aus Ribbon.LargeImages (gross, 32 px); -1 = ImageIndex.
     property LargeImageIndex: TPPGImageIndex read FLargeImageIndex write SetLargeImageIndex default -1;
     /// Zeichen der Symbolschrift (0 = keins), z.B. $E8C8 fuer "Kopieren".
@@ -319,6 +334,7 @@ function PPGRibbonHostOf(P: TPersistent; out Host: IPPGRibbonHost): Boolean;
 implementation
 
 uses
+  PPG.Controls.Base,
   PPG.Exceptions;
 
 function PPGRibbonHostOf(P: TPersistent; out Host: IPPGRibbonHost): Boolean;
@@ -449,6 +465,27 @@ begin
 end;
 
 { TPPGRibbonItem }
+
+{$IFDEF PPG_HAS_IMAGENAME}
+procedure TPPGRibbonItem.ResolveImageName;
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := PPGImagesOf(Self);
+  // Unbekannter Name: -1 (die Liste kann zur Laufzeit befuellt werden)
+  if (FImageName <> '') and (Imgs <> nil) and Imgs.IsImageNameAvailable then
+    ImageIndex := Imgs.GetIndexByName(FImageName);
+end;
+
+procedure TPPGRibbonItem.SetImageName(const Value: TImageName);
+begin
+  if FImageName = Value then
+    Exit;
+  FImageName := Value;
+  ResolveImageName;
+end;
+{$ENDIF}
+
 
 constructor TPPGRibbonItem.Create(Collection: TCollection);
 begin

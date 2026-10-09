@@ -18,6 +18,8 @@ uses
   PPG.ToolBar, PPG.Ribbon, PPG.Notifications, PPG.Menus, PPG.StatusBar, PPG.NavigationView,
   PPG.FileEdit, PPG.Feedback, PPG.Kanban, PPG.Kanban.Items, PPG.Labels, PPG.PageControl,
   PPG.ColumnComboBox, PPG.Panel, PPG.Chart, PPG.Chart.Series, PPG.Dialogs, PPG.Wizard, PPG.Gauge,
+  Vcl.Imaging.pngimage
+  {$IF CompilerVersion >= 34.0}, Vcl.ImageCollection, Vcl.VirtualImageList{$IFEND},
   PPG.Tests.Controls;
 
 type
@@ -158,6 +160,7 @@ type
     procedure NavigationSelectedIndexStreams;
     procedure PrinterSettingsInvalidateLayout;
     procedure CollectionItemNames;
+    procedure ItemImageNameResolvesAndFollows;
   end;
 
 implementation
@@ -1666,6 +1669,76 @@ begin
     CheckEquals('Ziel', DisplayName);
   end;
 end;
+
+{$IF CompilerVersion >= 34.0}
+function MakeNamedImages(Owner: TComponent): TVirtualImageList;
+const
+  Names: array[0..2] of string = ('save', 'open', 'print');
+var
+  I: Integer;
+  Bmp: TBitmap;
+  Png: TPngImage;
+  S: TMemoryStream;
+  IC: TImageCollection;
+begin
+  IC := TImageCollection.Create(Owner);
+  for I := 0 to High(Names) do
+  begin
+    Bmp := TBitmap.Create;
+    Png := TPngImage.Create;
+    S := TMemoryStream.Create;
+    try
+      Bmp.SetSize(16, 16);
+      Bmp.Canvas.Brush.Color := RGB(I * 80, 100, 200);
+      Bmp.Canvas.FillRect(Rect(0, 0, 16, 16));
+      Png.Assign(Bmp);
+      Png.SaveToStream(S);
+      S.Position := 0;
+      IC.Add(Names[I], S);
+    finally
+      S.Free;
+      Png.Free;
+      Bmp.Free;
+    end;
+  end;
+  Result := TVirtualImageList.Create(Owner);
+  Result.ImageCollection := IC;
+  for I := 0 to High(Names) do
+    Result.Add(Names[I], Names[I]);
+end;
+{$IFEND}
+
+procedure TEffectFixTests.ItemImageNameResolvesAndFollows;
+{$IF CompilerVersion >= 34.0}
+var
+  B: TPPGToolBar;
+  S: TPPGStatusBar;
+  N: TPPGNavigationView;
+  VIL: TVirtualImageList;
+begin
+  VIL := MakeNamedImages(FForm);
+  B := TPPGToolBar.Create(FForm);
+  B.Images := VIL;
+  B.Items.Add.ImageName := 'open';
+  CheckEquals(1, B.Items[0].ImageIndex, 'ToolItem: Name -> Index');
+  S := TPPGStatusBar.Create(FForm);
+  S.Images := VIL;
+  S.Panels.Add.ImageName := 'print';
+  CheckEquals(2, S.Panels[0].ImageIndex, 'StatusPanel');
+  N := TPPGNavigationView.Create(FForm);
+  N.Images := VIL;
+  N.Items.AddItem('A').ImageName := 'save';
+  CheckEquals(0, N.Items[0].ImageIndex, 'NavItem');
+  VIL.Delete(0); // umsortiert: "open" ist jetzt 0, "print" 1
+  CheckEquals(0, B.Items[0].ImageIndex, 'Besitzer loest neu auf');
+  CheckEquals(1, S.Panels[0].ImageIndex);
+  CheckEquals(-1, N.Items[0].ImageIndex, 'Name entfernt: kein Bild');
+end;
+{$ELSE}
+begin
+  Status('ImageName erst ab Delphi 10.4');
+end;
+{$IFEND}
 
 initialization
   RegisterTest('Audit45', TDBBindingHoldTests.Suite);
