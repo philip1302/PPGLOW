@@ -13,8 +13,30 @@ uses
   PPG.Render.Intf, PPG.Render.Registry, PPG.StyleManager, PPG.Controls.Base,
   PPG.Button, PPG.Animation;
 
+var
+  /// Runner-Schalter /baseline: fehlende Referenzbilder werden angelegt.
+  /// Ohne ihn ist ein fehlendes Referenzbild ein Fehlschlag.
+  PPGTestBaseline: Boolean = False;
+  /// Runner-Schalter /allowskip: PPGSkip/Skip zaehlt nicht als Fehlschlag.
+  PPGTestAllowSkip: Boolean = False;
+
+/// Test ueberspringen (Coding-Rules, Testintegritaet): zaehlt und protokolliert
+/// "Klasse.Methode: Grund". Ohne /allowskip ein Fehlschlag (ETestFailure).
+/// Mit /allowskip kehrt es zurueck - der Aufrufer beendet den Test mit Exit:
+///   if Bedingung then begin PPGSkip(Self, 'Grund'); Exit; end;
+procedure PPGSkip(Test: TTestCase; const Reason: string);
+/// Alle uebersprungenen Tests ("Klasse.Methode: Grund"), nie nil.
+function PPGSkippedTests: TStrings;
+
 type
+  /// Basis der Tests mit echten Fenstern. TearDown prueft zentral, dass die
+  /// Fehlergrenze (TPPGErrorHandler) keine Zeichen-/Callback-Fehler und
+  /// Application keine Exceptions gesammelt hat, die der Test nicht mit
+  /// ExpectErrors quittiert hat, und setzt globalen Zustand zurueck.
   TControlTestCase = class(TTestCase)
+  private
+    FSavedFormat: TFormatSettings;
+    FAppExceptionTexts: TStringList;
   protected
     FForm: TForm;
     FErrors: TStringList;
@@ -23,6 +45,12 @@ type
     procedure TearDown; override;
     procedure RecordError(Sender: TObject; E: Exception; const Context: string);
     procedure RecordAppException(Sender: TObject; E: Exception);
+    /// Quittiert die bisher gesammelten Fehler (FErrors, FAppExceptions) als
+    /// erwartet - nur in Tests, die Fehler absichtlich provozieren, und erst
+    /// nachdem sie geprueft wurden.
+    procedure ExpectErrors;
+    /// Test ueberspringen, siehe PPGSkip.
+    procedure Skip(const Reason: string);
     function NewButton(const ACaption: string = ''): TPPGButton;
     function RenderToBitmap(C: TWinControl): TBitmap;
   end;
@@ -94,6 +122,10 @@ type
 
 implementation
 
+uses
+  PPG.Theme, PPG.Lang, PPG.DpiUtils, PPG.Render.Gdi, PPG.Render.GdiPlus,
+  PPG.Planner.Dialog;
+
 {$WARN SYMBOL_PLATFORM OFF}
 
 type
@@ -149,12 +181,44 @@ begin
     Abs(GetBValue(CA) - GetBValue(CB));
 end;
 
+{ Ueberspringen }
+
+var
+  GSkipped: TStringList = nil;
+  // Globaler Zustand beim Programmstart; TControlTestCase.TearDown setzt
+  // dorthin zurueck.
+  GDefaultThemeMode: TPPGThemeMode;
+  GDefaultStyleForms: Boolean;
+  GDefaultLanguage: string;
+
+function PPGSkippedTests: TStrings;
+begin
+  if GSkipped = nil then
+  begin
+    GSkipped := TStringList.Create;
+    // /leaks laeuft alle Tests zweimal: jeden Test nur einmal fuehren
+    GSkipped.Sorted := True;
+    GSkipped.Duplicates := dupIgnore;
+  end;
+  Result := GSkipped;
+end;
+
+procedure PPGSkip(Test: TTestCase; const Reason: string);
+begin
+  PPGSkippedTests.Add(Test.ClassName + '.' + Test.GetName + ': ' + Reason);
+  if not PPGTestAllowSkip then
+    Test.Fail('Uebersprungen: ' + Reason + ' (erlaubt nur mit /allowskip)');
+  Test.Status('Uebersprungen: ' + Reason);
+end;
+
 { TControlTestCase }
 
 procedure TControlTestCase.SetUp;
 begin
   inherited;
+  FSavedFormat := FormatSettings;
   FErrors := TStringList.Create;
+  FAppExceptionTexts := TStringList.Create;
   FAppExceptions := 0;
   TPPGErrorHandler.OnError := RecordError;
   Application.OnException := RecordAppException;
@@ -164,13 +228,42 @@ begin
 end;
 
 procedure TControlTestCase.TearDown;
+var
+  Msg: string;
 begin
   FreeAndNil(FForm);
+  // Nach dem Freigeben: auch Fehler beim Zerstoeren zaehlen mit
+  Msg := '';
+  if FErrors.Count > 0 then
+    Msg := Format('%d unerwartete Fehler an der Fehlergrenze: %s',
+      [FErrors.Count, Trim(FErrors.Text)]);
+  if FAppExceptions > 0 then
+    Msg := Msg + Format(' %d unerwartete Anwendungs-Exceptions: %s',
+      [FAppExceptions, Trim(FAppExceptionTexts.Text)]);
   TPPGErrorHandler.OnError := nil;
   Application.OnException := nil;
+  // Globalen Zustand zentral zuruecksetzen (nur bei Abweichung: die Setter
+  // zeichnen alle Fenster neu)
   TPPGRendererRegistry.ForceGdiFallback := False;
+  if TPPGTheme.Mode <> GDefaultThemeMode then
+    TPPGTheme.Mode := GDefaultThemeMode;
+  if TPPGTheme.StyleForms <> GDefaultStyleForms then
+    TPPGTheme.StyleForms := GDefaultStyleForms;
+  if Assigned(TPPGTheme.SystemDarkReader) then
+    TPPGTheme.SystemDarkReader := nil;
+  if PPGLanguage <> GDefaultLanguage then
+    PPGSetLanguage(GDefaultLanguage);
+  PPGSetHighContrastReader(nil);
+  PPGShadowCacheEnabled := True;
+  PPGAppointmentDialogHook := nil;
+  PPGClearMeasureCache;
+  FormatSettings := FSavedFormat;
+  FreeAndNil(FAppExceptionTexts);
   FreeAndNil(FErrors);
   inherited;
+  // Fehlschlag erst nach dem Aufraeumen (DUnit zaehlt ihn als Fehler)
+  if Msg <> '' then
+    Fail(Trim(Msg));
 end;
 
 procedure TControlTestCase.RecordError(Sender: TObject; E: Exception; const Context: string);
@@ -181,6 +274,19 @@ end;
 procedure TControlTestCase.RecordAppException(Sender: TObject; E: Exception);
 begin
   Inc(FAppExceptions);
+  FAppExceptionTexts.Add(E.ClassName + ': ' + E.Message);
+end;
+
+procedure TControlTestCase.ExpectErrors;
+begin
+  FErrors.Clear;
+  FAppExceptionTexts.Clear;
+  FAppExceptions := 0;
+end;
+
+procedure TControlTestCase.Skip(const Reason: string);
+begin
+  PPGSkip(Self, Reason);
 end;
 
 function TControlTestCase.NewButton(const ACaption: string): TPPGButton;
@@ -558,6 +664,8 @@ begin
     RenderToBitmap(B).Free;
     RenderToBitmap(B).Free;
     CheckEquals(1, FErrors.Count, 'Fehler muss genau einmal gemeldet werden');
+    CheckEquals(0, FAppExceptions, 'Zeichenfehler nicht als Anwendungs-Exception');
+    ExpectErrors; // absichtlich provoziert und oben geprueft
     B.Free;
   finally
     TPPGRendererRegistry.UnregisterRenderer('Raising');
@@ -859,11 +967,17 @@ begin
 end;
 
 initialization
+  GDefaultThemeMode := TPPGTheme.Mode;
+  GDefaultStyleForms := TPPGTheme.StyleForms;
+  GDefaultLanguage := PPGLanguage;
   RegisterTest('Controls', TLifecycleTests.Suite);
   RegisterTest('Controls', TStyleTests.Suite);
   RegisterTest('Controls', TStreamingTests.Suite);
   RegisterTest('Controls', TPaintTests.Suite);
   RegisterTest('Controls', TBehaviourTests.Suite);
   RegisterTest('Controls', TResourceTests.Suite);
+
+finalization
+  FreeAndNil(GSkipped);
 
 end.

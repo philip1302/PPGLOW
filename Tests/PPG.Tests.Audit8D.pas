@@ -593,6 +593,10 @@ begin
   end;
   // Referenz: alter Code (vor Audit 8D, Commit 3594b0b), 96 PPI. Win32 (x87) und
   // Win64 (SSE) runden die Zeitpositionen unterschiedlich, daher je Plattform.
+  // Nachweis Win64 (09.10.2026, Audit 11a #3): temporaerer Worktree auf 3594b0b,
+  // Tests fuer Win64 gebaut, "/suite TAudit8DTests /hidden" -> der alte Code
+  // meldete als Ist-Werte genau die beiden Win64-Werte hier und in
+  // PlannerTimelineLayoutIsUnchanged (sein Test enthielt nur die Win32-Werte).
   {$IFDEF CPUX64}
   CheckEquals('121/388305911|81/113361506|135/66903710|11/471133041', S, 'Anordnung Woche/Arbeitswoche/ohne Gruppen/Monat');
   {$ELSE}
@@ -615,7 +619,9 @@ begin
     Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
     Exit;
   end;
-  {$IFDEF CPUX64} // Referenz je Plattform, siehe PlannerGroupedLayoutIsUnchanged
+  // Referenz je Plattform aus dem alten Code (3594b0b), Win64-Nachweis siehe
+  // PlannerGroupedLayoutIsUnchanged
+  {$IFDEF CPUX64}
   CheckEquals('174/841465863', S, 'Anordnung Zeitleiste');
   {$ELSE}
   CheckEquals('174/691175223', S, 'Anordnung Zeitleiste');

@@ -1672,6 +1672,14 @@ begin
         F := Dir + 'Grid8B_' + IntToStr(I) + '.png';
         if not FileExists(F) then
         begin
+          // Referenzbilder aus dem Code vor dem Grid-Umbau (72f9e8a, Audit 11a #3);
+          // anlegen nur mit /baseline, sonst ist ein fehlendes Bild ein Fehlschlag
+          if not PPGTestBaseline then
+          begin
+            Errors.Add(Format('Bild %d: Referenzbild %s fehlt (anlegen nur mit /baseline)',
+              [I, ExtractFileName(F)]));
+            Continue;
+          end;
           Png := TPngImage.Create;
           try
             Png.Assign(B);

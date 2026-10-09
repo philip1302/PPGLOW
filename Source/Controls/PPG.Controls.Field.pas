@@ -676,7 +676,10 @@ begin
       else if not FUseSystemContextMenu and not (csDesigning in ComponentState) then
       begin
         // Bearbeiten-Menue im Stil der Suite statt des nativen Edit-Menues
-        ShowEditMenu(SmallInt(LoWord(Message.LParam)), SmallInt(HiWord(Message.LParam)));
+        // Maskieren statt LoWord/HiWord: Tastatur liefert LParam = -1, die
+        // Umwandlung nach DWORD loest mit Bereichspruefung ERangeError aus
+        ShowEditMenu(SmallInt(Message.LParam and $FFFF),
+          SmallInt((Message.LParam shr 16) and $FFFF));
         Message.Result := 1;
         Exit;
       end;

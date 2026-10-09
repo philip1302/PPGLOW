@@ -172,8 +172,11 @@ end;
 
 procedure TComboTestCase.TearDown;
 begin
-  inherited;
-  FreeAndNil(FLog);
+  try
+    inherited; // kann fehlschlagen (unerwartete Fehler), FLog trotzdem frei
+  finally
+    FreeAndNil(FLog);
+  end;
 end;
 
 procedure TComboTestCase.LogClick(Sender: TObject);
