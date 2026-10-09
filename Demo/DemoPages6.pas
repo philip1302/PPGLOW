@@ -25,6 +25,8 @@ type
     FTipButton: TPPGButton;
     FTipTarget: array[0..1] of TPPGButton;
     FTip: TPPGTeachingTip;
+    FHelpButton: TPPGButton;
+    FCustomHint: TPPGCustomHint;
     FTipStep: Integer;
     FLightDismiss: TPPGCheckBox;
     FTipResult: TPPGLabel;
@@ -174,13 +176,12 @@ begin
   FBar := TPPGMenuBar.Create(Own);
   FBar.Parent := Card;
   FBar.Align := alNone;
-  FBar.Preset := DemoPreset;
   FBar.Menu := FMainMenu;
   FBar.SetBounds(CardPad, Card.Tag, HalfW - 2 * CardPad, CtlH);
   Host.RegisterSpecial('menubar', FBar);
 
   FPopup := TPPGPopupMenu.Create(Own);
-  FPopup.Preset := DemoPreset;
+  FPopup.StyleManager := DemoStyles;
   Item(FPopup.Items, '&Kopieren', ShortCut(Ord('C'), [ssCtrl]));
   Item(FPopup.Items, '&Einf{ue}gen', ShortCut(Ord('V'), [ssCtrl]));
   Item(FPopup.Items, '-');
@@ -203,7 +204,6 @@ begin
 
   FArea := TPPGPanel.Create(Own);
   FArea.Parent := Card;
-  FArea.Preset := DemoPreset;
   FArea.ShowCaption := False;
   FArea.Caption := '';
   FArea.SetBounds(CardPad, Card.Tag + CtlH + 16, HalfW - 2 * CardPad, 96);
@@ -240,7 +240,6 @@ begin
   FTipTarget[1] := B;
   FHintBox := TPPGCheckBox.Create(Own);
   FHintBox.Parent := Card;
-  FHintBox.Preset := DemoPreset;
   FHintBox.SetBounds(X, Card.Tag + CtlH + 12, HalfW - 2 * CardPad, 24);
   FHintBox.Caption := 'Hints im Suite-Stil (TPPGHintManager.Active)';
   FHintBox.Checked := (DemoHints <> nil) and DemoHints.Active;
@@ -249,17 +248,27 @@ begin
   FTipButton := NewButton(Own, Card, X, Card.Tag + CtlH + 52, 180, 'Tour starten', TipClick, True);
   FLightDismiss := TPPGCheckBox.Create(Own);
   FLightDismiss.Parent := Card;
-  FLightDismiss.Preset := DemoPreset;
   FLightDismiss.SetBounds(X + 196, Card.Tag + CtlH + 56, 240, 24);
   FLightDismiss.Caption := 'Light-Dismiss';
   FLightDismiss.Hint := L('Light-Dismiss|Ein Klick neben den Tipp schlie{ss}t ihn.');
   FLightDismiss.ShowHint := True;
 
   FTip := TPPGTeachingTip.Create(Own);
-  FTip.Preset := DemoPreset;
+  FTip.StyleManager := DemoStyles;
   FTip.Icon := tiInfo;
   FTip.OnActionClick := TipAction;
   FTip.OnClose := TipClose;
+
+  // TPPGCustomHint: Hint im Suite-Stil nur fuer ein Control (Property CustomHint)
+  FCustomHint := TPPGCustomHint.Create(Own);
+  FCustomHint.StyleManager := DemoStyles;
+  FHelpButton := NewButton(Own, Card, X, Card.Tag + CtlH + 96, 128, 'Hilfe', nil);
+  FHelpButton.Hint := L('Eigener Hint|Nur dieser Button nutzt TPPGCustomHint ') +
+    L('(Property CustomHint wie bei TBalloonHint) {-} auch ohne HintManager.');
+  FHelpButton.CustomHint := FCustomHint;
+  FHelpButton.ShowHint := True;
+  NewLabel(Own, Card, X + 140, Card.Tag + CtlH + 102, HalfW - 2 * CardPad - 140,
+    'CustomHint nur an diesem Button', tkSecondary);
   FTipResult := NewResult(Own, Card, 'TeachingTip');
 end;
 
@@ -363,7 +372,7 @@ var
 begin
   D := TPPGTaskDialog.Create(nil);
   try
-    D.Preset := DemoPreset;
+    D.StyleManager := DemoStyles;
     D.Caption := 'PPGlow';
     D.Title := L('{Ae}nderungen an "Bericht.docx" speichern?');
     D.Text := L('Wenn Sie nicht speichern, gehen Ihre {Ae}nderungen verloren.');
@@ -404,7 +413,7 @@ var
 begin
   D := TPPGTaskDialog.Create(nil);
   try
-    D.Preset := DemoPreset;
+    D.StyleManager := DemoStyles;
     D.Caption := 'PPGlow';
     D.Title := 'Dateien werden kopiert';
     D.Text := '0 von 20 Dateien';
@@ -478,7 +487,6 @@ var
 begin
   FWizard := TPPGWizard.Create(Own);
   FWizard.Parent := Card;
-  FWizard.Preset := DemoPreset;
   FWizard.SetBounds(CardPad, Card.Tag, FullW - 2 * CardPad, WizardH - Card.Tag - 44);
   FWizard.OnCanAdvance := WizardCanAdvance;
   FWizard.OnChange := WizardChanged;
@@ -489,20 +497,17 @@ begin
   NewLabel(Own, P, 24, 16, 400, L('Wie soll das Konto hei{ss}en?'), tkBody);
   FName := TPPGEdit.Create(Own);
   FName.Parent := P;
-  FName.Preset := DemoPreset;
   FName.SetBounds(24, 44, 320, CtlH);
   FName.TextHint := 'z. B. Vertrieb';
 
   P := NewPage('Optionen', 'Einstellungen des Kontos');
   CB := TPPGCheckBox.Create(Own);
   CB.Parent := P;
-  CB.Preset := DemoPreset;
   CB.SetBounds(24, 16, 400, 24);
   CB.Caption := 'Benachrichtigungen per E-Mail';
   CB.Checked := True;
   FAdvanced := TPPGCheckBox.Create(Own);
   FAdvanced.Parent := P;
-  FAdvanced.Preset := DemoPreset;
   FAdvanced.SetBounds(24, 48, 400, 24);
   FAdvanced.Caption := L('Erweiterte Einstellungen anzeigen (blendet Schritt 3 ein)');
   FAdvanced.OnClick := AdvancedClick;
@@ -562,15 +567,10 @@ end;
 procedure TDemoMenusPage.AppearanceChanged;
 begin
   inherited AppearanceChanged;
-  // Nicht sichtbare Komponenten folgen dem Preset nicht von selbst
-  if FPopup <> nil then
-    FPopup.Preset := DemoPreset;
-  if FTip <> nil then
-  begin
-    FTip.Preset := DemoPreset;
-    if FTip.IsOpen then
-      FTip.UpdatePosition;
-  end;
+  // Menue, Tipp und Hint haengen am StyleManager der Demo; ein offener Tipp
+  // misst sich nach dem Wechsel neu
+  if (FTip <> nil) and FTip.IsOpen then
+    FTip.UpdatePosition;
 end;
 
 procedure TDemoMenusPage.AutoCloseDialog(Form: TPPGDialogForm);
@@ -586,6 +586,10 @@ begin
   Check(L('Men{ue}s: Leiste hat drei Men{ue}s'), FBar.Menu.Items.Count = 3);
   Check(L('Men{ue}s: Kontextmen{ue} am Bereich'), FArea.PopupMenu = FPopup);
   Check('Hints: Manager aktiv', PPGActiveHintManager <> nil);
+  Check('Hints: CustomHint am Hilfe-Button im Preset der Demo',
+    (FHelpButton.CustomHint = FCustomHint) and SameText(FCustomHint.EffectivePreset, DemoPreset));
+  Check(L('Men{ue}s: Kontextmen{ue} und Tipp am StyleManager'),
+    (FPopup.StyleManager = DemoStyles) and SameText(FTip.EffectivePreset, DemoPreset));
   // TeachingTip: Tour
   FTipButton.Click;
   Check('TeachingTip: offen am Ziel', FTip.IsOpen and (FTip.Target = FTipTarget[0]));

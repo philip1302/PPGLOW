@@ -51,6 +51,7 @@ type
     procedure ToastClosed(Sender: TObject; Toast: TPPGToast; Reason: TPPGToastCloseReason);
     procedure HandlePPGError(Sender: TObject; E: Exception; const Context: string);
     procedure AppearanceChanged;
+    procedure UseDemoStyles;
     procedure UpdateStatusPanels;
     function PageObject(Index: Integer): TDemoPage;
     function SpecialControl(const Key: string): TControl;
@@ -127,9 +128,11 @@ uses
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
   PPG.Chart, PPG.IconFont, PPG.Grid.Data, PPG.Grid.Export, PPG.Grid.Print, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
   DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, DemoPages11, PPG.Hints, PPG.Validator, PPG.BusyOverlay, PPG.Panel,
-  PPG.TestDesktop;
+  PPG.TestDesktop, PPG.StyleManager, PPG.Lang;
 
 type
+  TControlAccess = class(TPPGCustomControl);
+
   TPageDef = record
     Caption: string;
     Icon: Word;
@@ -174,7 +177,7 @@ type
 
 const
   // Katalog fuer die Suche oben: Control, Stichworte, Seite
-  Catalog: array[0..66] of TCatalogEntry = (
+  Catalog: array[0..86] of TCatalogEntry = (
     (Name: 'TPPGButton'; Keywords: 'Schaltfl{ae}che, Befehl, Split, Akzent'; Page: PgButtons),
     (Name: 'TPPGToolBar'; Keywords: 'Werkzeugleiste, Symbolleiste'; Page: PgButtons),
     (Name: 'TPPGCheckBox'; Keywords: 'Kontrollk{ae}stchen, Haken'; Page: PgChoice),
@@ -241,7 +244,121 @@ const
     (Name: 'TPPGBusyOverlay'; Keywords: 'Warten, Fortschritt, Abbrechen, Thread, Sanduhr'; Page: PgForm),
     (Name: 'TPPGCheckGroup'; Keywords: 'Kontrollk{ae}stchen-Gruppe, Mehrfachauswahl'; Page: PgChoice),
     (Name: 'TPPGDBKanban'; Keywords: 'Datenbank, Board aus Datenmenge'; Page: PgKanban),
-    (Name: 'TPPGElementStyle'; Keywords: 'Anpassung, Markenfarbe, Akzent, Zebra, Kopf, Custom-Draw, Schatten, Ecken'; Page: PgCustom));
+    (Name: 'TPPGElementStyle'; Keywords: 'Anpassung, Markenfarbe, Akzent, Zebra, Kopf, Custom-Draw, Schatten, Ecken'; Page: PgCustom),
+    // Audit 11e: die restlichen Paletten-Controls
+    (Name: 'TPPGScrollBox'; Keywords: 'Scrollbereich, TScrollBox, Seite scrollt'; Page: PgLayout),
+    (Name: 'TPPGGroupBox'; Keywords: 'Gruppe, Rahmen, TGroupBox, Plakette'; Page: PgLayout),
+    (Name: 'TPPGCustomHint'; Keywords: 'Hint, TCustomHint, Sprechblase, BalloonHint'; Page: PgMenus),
+    (Name: 'TPPGNumberEdit'; Keywords: 'Zahl, Betrag, W{ae}hrung, Prozent, rechnet'; Page: PgForm),
+    (Name: 'TPPGMaskEdit'; Keywords: 'Maske, PLZ, TMaskEdit, Eingabeformat'; Page: PgForm),
+    (Name: 'TPPGPasswordEdit'; Keywords: 'Kennwort, Passwort, Auge, aufdecken'; Page: PgForm),
+    (Name: 'TPPGFileEdit'; Keywords: 'Datei, Anhang, {Oe}ffnen-Dialog, ziehen'; Page: PgForm),
+    (Name: 'TPPGColorPicker'; Keywords: 'Farbe, Farbauswahl, TColorBox, Hex'; Page: PgForm),
+    (Name: 'TPPGCheckComboBox'; Keywords: 'Mehrfachauswahl, Haken, Kategorien, Dropdown'; Page: PgForm),
+    (Name: 'TPPGColumnComboBox'; Keywords: 'mehrspaltig, Spaltenliste, Kunde w{ae}hlen'; Page: PgForm),
+    (Name: 'TPPGTagEdit'; Keywords: 'Stichw{oe}rter, Tags, Schlagw{oe}rter, Chips'; Page: PgForm),
+    (Name: 'TPPGGridPrinter'; Keywords: 'Drucken, Vorschau, Tabelle drucken, Seiten'; Page: PgGrid),
+    (Name: 'TPPGKanbanPrinter'; Keywords: 'Drucken, Board drucken, Vorschau, Spalten'; Page: PgKanban),
+    (Name: 'TPPGDBNumberEdit'; Keywords: 'Datenbank, Betrag, Zahlenfeld'; Page: PgDatabase),
+    (Name: 'TPPGDBTagEdit'; Keywords: 'Datenbank, Schlagw{oe}rter, Tags'; Page: PgDatabase),
+    (Name: 'TPPGDBNavigator'; Keywords: 'Datenbank, TDBNavigator, Bl{ae}ttern, Suche, Filter'; Page: PgDatabase),
+    (Name: 'TPPGDBMaskEdit'; Keywords: 'Datenbank, Maske, PLZ, EditMask'; Page: PgDatabase),
+    (Name: 'TPPGDBColorPicker'; Keywords: 'Datenbank, Farbe, Farbfeld'; Page: PgDatabase),
+    (Name: 'TPPGDBCheckComboBox'; Keywords: 'Datenbank, Mehrfachauswahl, Interessen'; Page: PgDatabase),
+    (Name: 'TPPGDBRadioGroup'; Keywords: 'Datenbank, Optionsgruppe, TDBRadioGroup, Priorit{ae}t'; Page: PgDatabase));
+
+  // Alle Paletten-Controls (RegisterComponents in Source\Design\PPG.Reg.pas und
+  // Source\DesignDB\PPG.DB.Reg.pas). Der Selbsttest prueft, dass jedes davon im
+  // Katalog steht; der Regel-Pruefer gleicht die Liste gegen RegisterComponents
+  // ab. Fuer Skripte: ein Name je Zeile in Hochkommas, zwischen den beiden
+  // Marken-Kommentaren direkt ueber und unter der Liste.
+  // PALETTE-BEGIN
+  PaletteControls: array[0..83] of string = (
+    'TPPGButton',
+    'TPPGCheckBox',
+    'TPPGRadioButton',
+    'TPPGToggleSwitch',
+    'TPPGProgressBar',
+    'TPPGTrackBar',
+    'TPPGPanel',
+    'TPPGScrollBox',
+    'TPPGGroupBox',
+    'TPPGRadioGroup',
+    'TPPGCheckGroup',
+    'TPPGEdit',
+    'TPPGMemo',
+    'TPPGSpinEdit',
+    'TPPGComboBox',
+    'TPPGTabControl',
+    'TPPGPageControl',
+    'TPPGListBox',
+    'TPPGCheckListBox',
+    'TPPGTreeView',
+    'TPPGGrid',
+    'TPPGTileView',
+    'TPPGLabel',
+    'TPPGLinkLabel',
+    'TPPGBadge',
+    'TPPGProgressRing',
+    'TPPGInfoBar',
+    'TPPGExpander',
+    'TPPGSplitter',
+    'TPPGRating',
+    'TPPGSearchEdit',
+    'TPPGCalendar',
+    'TPPGDatePicker',
+    'TPPGTimePicker',
+    'TPPGNavigationView',
+    'TPPGBreadcrumb',
+    'TPPGToolBar',
+    'TPPGStatusBar',
+    'TPPGNotificationCenter',
+    'TPPGSparkline',
+    'TPPGGauge',
+    'TPPGKpiTile',
+    'TPPGChart',
+    'TPPGPlanner',
+    'TPPGRibbon',
+    'TPPGKanban',
+    'TPPGPopupMenu',
+    'TPPGMenuBar',
+    'TPPGHintManager',
+    'TPPGCustomHint',
+    'TPPGTeachingTip',
+    'TPPGTaskDialog',
+    'TPPGWizard',
+    'TPPGValidator',
+    'TPPGBusyOverlay',
+    'TPPGNumberEdit',
+    'TPPGMaskEdit',
+    'TPPGPasswordEdit',
+    'TPPGFileEdit',
+    'TPPGColorPicker',
+    'TPPGCheckComboBox',
+    'TPPGColumnComboBox',
+    'TPPGTagEdit',
+    'TPPGGridPrinter',
+    'TPPGPlannerPrinter',
+    'TPPGKanbanPrinter',
+    'TPPGStyleManager',
+    'TPPGDBEdit',
+    'TPPGDBMemo',
+    'TPPGDBCheckBox',
+    'TPPGDBComboBox',
+    'TPPGDBLookupComboBox',
+    'TPPGDBDatePicker',
+    'TPPGDBGrid',
+    'TPPGDBChart',
+    'TPPGDBPlanner',
+    'TPPGDBKanban',
+    'TPPGDBMaskEdit',
+    'TPPGDBNumberEdit',
+    'TPPGDBColorPicker',
+    'TPPGDBCheckComboBox',
+    'TPPGDBTagEdit',
+    'TPPGDBNavigator',
+    'TPPGDBRadioGroup');
+  // PALETTE-END
 
 function CatalogText(Index: Integer): string;
 begin
@@ -278,6 +395,9 @@ end;
 constructor TDemoForm.Create(AOwner: TComponent);
 begin
   inherited CreateNew(AOwner);
+  // Eingebaute Texte der Suite (Hinweise, Dialoge, Screenreader) auf Deutsch;
+  // Englisch bleibt auf der Seite Darstellung umschaltbar
+  PPGSetLanguage('de');
   Caption := L('PPGlow {-} Showcase');
   Position := poScreenCenter;
   ClientWidth := 1320;
@@ -289,6 +409,10 @@ begin
   FPageObjects := TList<TDemoPage>.Create;
   FSpecial := TDictionary<string, TControl>.Create;
   DemoPreset := PPGPresetFluent11;
+  // Ein StyleManager fuer die ganze Demo: ein Preset-Wechsel ist eine
+  // Zuweisung an DemoStyles.Preset (Audit 11e)
+  DemoStyles := TPPGStyleManager.Create(Self);
+  DemoStyles.Preset := DemoPreset;
   DemoStyler := TDemoStyler.Create(Self);
   TPPGErrorHandler.OnError := HandlePPGError;
   // Formular und Titelleiste folgen dem Dark Mode
@@ -296,10 +420,10 @@ begin
   TPPGTheme.OnChange := ThemeChanged;
   // Hints der Demo im Suite-Stil ("Titel|Text")
   DemoHints := TPPGHintManager.Create(Self);
-  DemoHints.Preset := DemoPreset;
+  DemoHints.StyleManager := DemoStyles;
   ShowHint := True;
   FNotify := TPPGNotificationCenter.Create(Self);
-  FNotify.Preset := DemoPreset;
+  FNotify.StyleManager := DemoStyles;
   FNotify.OnShow := ToastShown;
   FNotify.OnAction := ToastAction;
   FNotify.OnClose := ToastClosed;
@@ -308,13 +432,28 @@ begin
   BuildSearch;
   BuildPages;
   BuildNavigation;
-  ApplyPreset(DemoPreset);
+  UseDemoStyles;
+  AppearanceChanged;
   Log('Start', 'Demo gestartet {-} viel Spa{ss} beim Ausprobieren!');
+end;
+
+procedure TDemoForm.UseDemoStyles;
+var
+  I: Integer;
+begin
+  // Einmal beim Aufbau: alle Controls der Seiten an den StyleManager haengen
+  // (wie im Objektinspektor). Controls mit eigenem Manager (Vorschau-Kacheln
+  // der Seite Darstellung) behalten ihn.
+  for I := 0 to ComponentCount - 1 do
+    if (Components[I] is TPPGCustomControl) and
+      (TControlAccess(Components[I]).StyleManager = nil) then
+      TControlAccess(Components[I]).StyleManager := DemoStyles;
 end;
 
 destructor TDemoForm.Destroy;
 begin
   DemoHints := nil;
+  DemoStyles := nil;
   TPPGTheme.OnChange := nil;
   TPPGErrorHandler.OnError := nil;
   FreeAndNil(FSpecial);
@@ -602,24 +741,14 @@ begin
   Result := DemoPreset;
 end;
 
-type
-  TControlAccess = class(TPPGCustomControl);
-
 procedure TDemoForm.ApplyPreset(const AName: string);
-var
-  I: Integer;
 begin
-  if TPPGRendererRegistry.Get(AName) = nil then
+  if TPPGRendererRegistry.Find(AName) = nil then
     Exit;
   DemoPreset := AName;
-  FNotify.Preset := AName;
-  if DemoHints <> nil then
-    DemoHints.Preset := AName;
-  // Controls mit eigenem StyleManager (Vorschau-Kacheln) behalten ihr Preset
-  for I := 0 to ComponentCount - 1 do
-    if (Components[I] is TPPGCustomControl) and
-      (TControlAccess(Components[I]).StyleManager = nil) then
-      TControlAccess(Components[I]).Preset := AName;
+  // Der Manager gibt das Preset an alle Controls, Hints, Toasts, Menues und
+  // Dialoge weiter; Controls mit eigenem Manager (Vorschau-Kacheln) behalten ihres
+  DemoStyles.Preset := AName;
   AppearanceChanged;
 end;
 
@@ -1226,7 +1355,8 @@ end;
 
 function TDemoForm.RunSelfTest(const FileName: string): Integer;
 var
-  I: Integer;
+  I, J, Page: Integer;
+  Missing: string;
 begin
   // Jede Seite loest ihre Szenarien ueber Mausnachrichten an die Controls aus
   // und prueft die sichtbaren Ergebnisse (Ergebniszeilen, Zustaende, Listen)
@@ -1254,6 +1384,23 @@ begin
     SelfCheck('Suche: kein Treffer', FindCatalogPage('xyzzy') = -1);
     SearchSubmit(FSearch, 'TPPGTreeView');
     SelfCheck('Suche: springt zur Seite', FPages.ActivePageIndex = PgExplorer);
+    // Audit 11e: jedes Paletten-Control steht im Katalog, und die Suche nach
+    // seinem Namen fuehrt zu der Seite, die es zeigt
+    Missing := '';
+    for I := 0 to High(PaletteControls) do
+    begin
+      Page := -1;
+      for J := 0 to High(Catalog) do
+        if SameText(Catalog[J].Name, PaletteControls[I]) then
+          Page := Catalog[J].Page;
+      if (Page < 0) or (Page >= FPages.PageCount) or
+        (FindCatalogPage(PaletteControls[I]) <> Page) then
+        Missing := Missing + ' ' + PaletteControls[I];
+    end;
+    SelfCheck(Format('Katalog: alle %d Paletten-Controls auffindbar%s',
+      [Length(PaletteControls), Missing]), Missing = '');
+    // Die Suite-Texte sind beim Start deutsch (Audit 11e)
+    SelfCheck('Sprache: Demo laeuft auf Deutsch', PPGLanguage = 'de');
     FReport.Add(Format('%d Pruefungen, %d Fehler', [FReport.Count, FFailures]));
     FReport.SaveToFile(FileName, TEncoding.UTF8);
   finally

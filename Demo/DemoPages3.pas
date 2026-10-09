@@ -13,7 +13,7 @@ uses
   PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar, PPG.Controls.Field, PPG.Edit,
   PPG.Memo, PPG.ComboBox, PPG.ListBox, PPG.TabControl, PPG.PageControl,
   PPG.Expander, PPG.Splitter, PPG.NavigationView, PPG.Feedback, PPG.Notifications,
-  PPG.ToolBar, PPG.DpiUtils, PPG.Lang,
+  PPG.ToolBar, PPG.DpiUtils, PPG.Lang, PPG.GroupBox,
   DemoKit;
 
 type
@@ -30,6 +30,9 @@ type
     FNavContent: TPPGLabel;
     FNavResult: TPPGLabel;
     FNewTabBtn: TPPGButton;
+    FGroup: TPPGGroupBox;
+    FGroupSwitch: TPPGToggleSwitch;
+    FGroupResult: TPPGLabel;
     procedure TabChange(Sender: TObject);
     procedure TabClose(Sender: TObject; Index: Integer; var Action: TCloseAction);
     procedure NewTabClick(Sender: TObject);
@@ -37,6 +40,7 @@ type
     procedure ExpChange(Sender: TObject);
     procedure SplitMoved(Sender: TObject);
     procedure NavChange(Sender: TObject);
+    procedure GroupSwitchChange(Sender: TObject);
   protected
     procedure Build; override;
   public
@@ -313,6 +317,45 @@ begin
   FNavResult := NewResult(Own, Card, 'Gew{ae}hlt');
   NV.Selected := NV.Items[0];
   NavChange(NV);
+
+  // GroupBox (Audit 11e): Beschriftung als Plakette, leuchtet mit Fokus im Inneren
+  Y := PageContentTop + 290 + 320 + 2 * CardGap;
+  Card := NewCard(Own, Sheet, PageX, Y, FullW, 270, 'Gruppe (GroupBox)',
+    'Die Beschriftung sitzt als Plakette auf dem Rahmen und leuchtet, solange ein Feld der ' +
+    'Gruppe den Fokus hat. Alt+L springt wie bei TGroupBox ins erste Feld.');
+  FGroup := TPPGGroupBox.Create(Own);
+  FGroup.Parent := Card;
+  FGroup.SetBounds(CardPad, Card.Tag, ColW - CardPad, 270 - Card.Tag - 46);
+  FGroup.Caption := '&Lieferadresse';
+  Ed := TPPGEdit.Create(Own);
+  Ed.Parent := FGroup;
+  Ed.SetBounds(16, 30, ColW - CardPad - 32, CtlH);
+  Ed.TextHint := L('Stra{ss}e und Hausnummer');
+  Ed := TPPGEdit.Create(Own);
+  Ed.Parent := FGroup;
+  Ed.SetBounds(16, 30 + CtlH + 10, ColW - CardPad - 32, CtlH);
+  Ed.TextHint := 'PLZ und Ort';
+  FGroupSwitch := TPPGToggleSwitch.Create(Own);
+  FGroupSwitch.Parent := Card;
+  FGroupSwitch.SetBounds(ColW + CardGap, Card.Tag, ColW - 2 * CardPad, CtlH);
+  FGroupSwitch.Caption := 'Abweichende Lieferadresse';
+  FGroupSwitch.Checked := True;
+  FGroupSwitch.OnChange := GroupSwitchChange;
+  NewLabel(Own, Card, ColW + CardGap, Card.Tag + CtlH + 8, ColW - 2 * CardPad,
+    'Aus: Die Gruppe wird mit allen Feldern deaktiviert (Enabled wie bei TGroupBox).',
+    tkSecondary);
+  FGroupResult := NewResult(Own, Card, 'Gruppe');
+  GroupSwitchChange(nil);
+end;
+
+procedure TDemoLayoutPage.GroupSwitchChange(Sender: TObject);
+const
+  States: array[Boolean] of string = ('deaktiviert', 'aktiv');
+begin
+  FGroup.Enabled := FGroupSwitch.Checked;
+  SetResult(FGroupResult, StripHotkey(FGroup.Caption) + ' ' + States[FGroup.Enabled]);
+  if Sender <> nil then
+    Host.Log('GroupBox', StripHotkey(FGroup.Caption) + ' ' + States[FGroup.Enabled]);
 end;
 
 procedure TDemoLayoutPage.TabChange(Sender: TObject);
@@ -838,7 +881,11 @@ begin
   FLang.Items.Add('Texte: Englisch (Original)');
   FLang.Items.Add('Texte: Deutsch');
   FLang.Items.Add('Texte: wie Windows');
-  FLang.ItemIndex := 0;
+  // Die Demo startet auf Deutsch (TDemoForm.Create), Englisch bleibt waehlbar
+  if PPGLanguage = 'de' then
+    FLang.ItemIndex := 1
+  else
+    FLang.ItemIndex := 0;
   FLang.OnChange := LangChange;
 
   // Robustheit
@@ -940,13 +987,9 @@ begin
 end;
 
 procedure TDemoAppearancePage.GdiChange(Sender: TObject);
-var
-  F: TCustomForm;
 begin
+  // Der Setter zeichnet alle Fenster neu (Haken aus PPG.Theme)
   TPPGRendererRegistry.ForceGdiFallback := FGdi.Checked;
-  F := GetParentForm(Sheet);
-  if F <> nil then
-    RedrawWindow(F.Handle, nil, 0, RDW_INVALIDATE or RDW_ALLCHILDREN or RDW_UPDATENOW);
   UpdateInfo;
   Host.Log('Darstellung', 'GDI-Fallback: ' + BoolToStr(FGdi.Checked, True));
 end;
@@ -1053,6 +1096,13 @@ begin
     (FTabs.TabIndex = N) and (Pos(FTabs.Tabs[N], FTabContent.Caption) > 0));
   TTabAccess(FTabs).CloseTab(N);
   Check('Layout: Reiter schliessen', FTabs.Tabs.Count = N);
+  // GroupBox: der Schalter deaktiviert die Gruppe, die Ergebniszeile folgt
+  DemoClick(FGroupSwitch);
+  Check('Layout: Gruppe deaktiviert', not FGroup.Enabled and
+    (Pos('deaktiviert', FGroupResult.Caption) > 0));
+  DemoClick(FGroupSwitch);
+  Check('Layout: Gruppe wieder aktiv', FGroup.Enabled and
+    (Pos('deaktiviert', FGroupResult.Caption) = 0) and (Pos('aktiv', FGroupResult.Caption) > 0));
 end;
 
 procedure TDemoFeedbackPage.SelfTest(Check: TDemoCheck);
@@ -1082,21 +1132,41 @@ end;
 procedure TDemoAppearancePage.SelfTest(Check: TDemoCheck);
 var
   Old: string;
+  F: TCustomForm;
 begin
   Old := Host.CurrentPreset;
   DemoClick(FPresetRadios[0]);
   Check('Darstellung: Preset Classic', Host.CurrentPreset = PPGPresetClassic);
+  // Das Preset laeuft ueber den StyleManager bis zu den Controls (Audit 11e)
+  Check('Darstellung: StyleManager traegt Classic', (DemoStyles.Preset = PPGPresetClassic) and
+    SameText(FModeRadios[0].Preset, PPGPresetClassic) and
+    SameText(DemoHints.EffectivePreset, PPGPresetClassic) and
+    SameText(Host.Notifier.StyleManager.Preset, PPGPresetClassic));
   DemoClick(FModeRadios[1]);
   Check('Darstellung: Dunkel', TPPGTheme.IsDark);
   DemoClick(FModeRadios[0]);
   Check('Darstellung: Hell', not TPPGTheme.IsDark);
+  // GDI-Rueckfall: der Setter allein zeichnet das Fenster neu (kein Workaround)
+  F := GetParentForm(Sheet);
+  F.Update;
+  DemoClick(FGdi);
+  Check('Darstellung: GDI-Rueckfall an, Fenster wird neu gezeichnet',
+    TPPGRendererRegistry.ForceGdiFallback and GetUpdateRect(F.Handle, nil, False));
+  F.Update;
+  DemoClick(FGdi);
+  Check('Darstellung: GDI-Rueckfall aus, Fenster wird neu gezeichnet',
+    not TPPGRendererRegistry.ForceGdiFallback and GetUpdateRect(F.Handle, nil, False));
+  // Start auf Deutsch (Audit 11e): die Auswahl zeigt das, Englisch ist
+  // umschaltbar, danach wieder Deutsch wie beim Start
+  Check('Darstellung: Start auf Deutsch', (FLang.ItemIndex = 1) and (PPGLanguage = 'de'));
+  FLang.ItemIndex := 0;
+  LangChange(FLang);
+  Check('Darstellung: Sprache Original', (PPGLanguage = '') and
+    (PPGStr(@SPPGAccPress) = LoadResString(@SPPGAccPress)));
   FLang.ItemIndex := 1;
   LangChange(FLang);
   Check('Darstellung: Sprache Deutsch', (PPGLanguage = 'de') and
     (PPGStr(@SPPGAccPress) <> LoadResString(@SPPGAccPress)));
-  FLang.ItemIndex := 0;
-  LangChange(FLang);
-  Check('Darstellung: Sprache Original', PPGLanguage = '');
   Host.ApplyPreset(Old);
   Check('Darstellung: Preset zurueck', FPresetRadios[2].Checked = SameText(Old, PPGPresetFluent11));
 end;

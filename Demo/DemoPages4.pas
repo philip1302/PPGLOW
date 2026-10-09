@@ -11,6 +11,7 @@ uses
   PPG.Types, PPG.Controls.Base, PPG.Feedback, PPG.Panel, PPG.Labels, PPG.ToolBar, PPG.Grid,
   PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.Chart.Series, PPG.DB.Chart,
   PPG.NumberFormat, PPG.DB.Fields, PPG.DB.Navigator, PPG.Validator, PPG.Controls.Field, Vcl.DBCtrls,
+  PPG.RadioGroup, Vcl.ExtCtrls, Vcl.Graphics,
   Vcl.Dialogs, PPG.Grid.Data, PPG.Grid.Export,
   DemoKit;
 
@@ -35,7 +36,12 @@ type
     FChart: TPPGDBChart;
     FDetail: TPPGPanel;
     FValidator: TPPGValidator;
+    FZip: TPPGDBMaskEdit;
+    FColor: TPPGDBColorPicker;
+    FInterests: TPPGDBCheckComboBox;
+    FPriority: TPPGDBRadioGroup;
     procedure BuildData;
+    procedure BuildMoreFields(Y: Integer);
     procedure NavBeforeAction(Sender: TObject; Button: TNavigateBtn);
     procedure CustomersNewRecord(DataSet: TDataSet);
     procedure ToolClick(Sender: TObject; Item: TPPGToolItem);
@@ -60,6 +66,7 @@ const
   GridH = 290;
   DetailH = 334;
   ChartH = 300;
+  MoreH = 232;
 
   IcoPrior = $E76B;
   IcoNext = $E76C;
@@ -89,6 +96,14 @@ const
     'Berlin', 'Hamburg');
   CatOf: array[0..7] of Integer = (1, 2, 3, 1, 2, 2, 3, 4);
   Sales: array[0..7] of Double = (48200, 12950.5, 210000, 87400, 23100, 9800, 0, 1250);
+  Zips: array[0..7] of string = ('10115', '20095', '89073', '80331', '50667', '89077', '10117',
+    '22767');
+  Colors: array[0..7] of Integer = ($00D47800, $0032A852, $002B2BC4, $00B05A8E, $0000A5FF,
+    $00406A9A, $00707070, $00B07800);
+  Interests: array[0..7] of string = ('Hardware;Service', 'Software', 'Service;Schulung',
+    'Hardware;Software;Service', '', 'Schulung', 'Software;Schulung', 'Hardware');
+  Priorities: array[0..7] of string = ('high', 'normal', 'high', 'normal', 'low', 'low',
+    'normal', 'low');
 var
   Agg: TAggregateField;
   I: Integer;
@@ -112,6 +127,11 @@ begin
   FCustomers.FieldDefs.Add('Sales', ftFloat);
   FCustomers.FieldDefs.Add('Notes', ftWideMemo);
   FCustomers.FieldDefs.Add('Tags', ftWideString, 120);
+  // Audit 11e: Felder fuer Maske, Farbe, Mehrfachauswahl und Optionsgruppe
+  FCustomers.FieldDefs.Add('Zip', ftWideString, 5);
+  FCustomers.FieldDefs.Add('Color', ftInteger);
+  FCustomers.FieldDefs.Add('Interests', ftWideString, 120);
+  FCustomers.FieldDefs.Add('Priority', ftWideString, 10);
   FCustomers.CreateDataSet;
   // Summe fuer die Summenzeile des DB-Grids: TAggregateField der Datenmenge
   FCustomers.Close;
@@ -131,9 +151,12 @@ begin
   FCustomers.FieldByName('Sales').OnValidate := SalesValidate;
   // Pflicht und Laenge kommen aus dem TField: der Validator liest sie selbst
   FCustomers.FieldByName('Name').Required := True;
+  // Die Maske steht am Feld: TPPGDBMaskEdit uebernimmt sie selbst
+  FCustomers.FieldByName('Zip').EditMask := '00000;0;_';
   for I := 0 to High(Names) do
     FCustomers.AppendRecord([I + 1, L(Names[I]), L(Cities[I]), EncodeDate(2015 + I, 1 + I, 3 + I),
-      CatOf[I], I mod 3 <> 2, Sales[I], '', TagsOf(I)]);
+      CatOf[I], I mod 3 <> 2, Sales[I], '', TagsOf(I), Zips[I], Colors[I], Interests[I],
+      Priorities[I]]);
   FCustomers.First;
   FCustomers.OnNewRecord := CustomersNewRecord;
   FSource := TDataSource.Create(Own);
@@ -293,7 +316,55 @@ begin
   FChart.Series[0].ValueFormat := L('#,##0 {EUR}');
   FChart.DataSource := FSource;
   Host.RegisterSpecial('dbchart', FChart);
+  BuildMoreFields(PageContentTop + GridH + DetailH + ChartH + 3 * CardGap);
   UpdateResult;
+end;
+
+procedure TDemoDatabasePage.BuildMoreFields(Y: Integer);
+var
+  Card: TPPGPanel;
+  X2, X3, Top: Integer;
+begin
+  // Weitere DB-Felder (Audit 11e) am selben Datensatz wie Tabelle und Formular
+  Card := NewCard(Own, Sheet, PageX, Y, FullW, MoreH, 'Weitere Felder',
+    'TPPGDBMaskEdit nimmt die Maske aus TField.EditMask, TPPGDBColorPicker speichert die ' +
+    'Farbe als Zahl, TPPGDBCheckComboBox die Auswahl als Text mit Semikolon, TPPGDBRadioGroup ' +
+    'schreibt den Wert aus Values.');
+  X2 := CardPad + Col3W + CardGap;
+  X3 := X2 + Col3W + CardGap;
+  Top := Card.Tag;
+  NewLabel(Own, Card, CardPad, Top, Col3W, 'PLZ (Maske aus dem Feld)', tkCaption);
+  FZip := TPPGDBMaskEdit.Create(Own);
+  FZip.Parent := Card;
+  FZip.SetBounds(CardPad, Top + 20, Col3W, CtlH);
+  FZip.DataSource := FSource;
+  FZip.DataField := 'Zip';
+  NewLabel(Own, Card, X2, Top, Col3W, 'Kennfarbe', tkCaption);
+  FColor := TPPGDBColorPicker.Create(Own);
+  FColor.Parent := Card;
+  FColor.SetBounds(X2, Top + 20, Col3W, CtlH);
+  FColor.Style := FColor.Style + [cbIncludeNone];
+  FColor.DataSource := FSource;
+  FColor.DataField := 'Color';
+  NewLabel(Own, Card, X3, Top, Col3W, 'Interessen', tkCaption);
+  FInterests := TPPGDBCheckComboBox.Create(Own);
+  FInterests.Parent := Card;
+  FInterests.SetBounds(X3, Top + 20, Col3W, CtlH);
+  FInterests.Items.CommaText := 'Hardware,Software,Service,Schulung';
+  FInterests.TextHint := L('ausw{ae}hlen{...}');
+  FInterests.DataSource := FSource;
+  FInterests.DataField := 'Interests';
+  NewLabel(Own, Card, CardPad, Top + 64, FullW - 2 * CardPad,
+    L('Priorit{ae}t (gespeichert wird low, normal oder high)'), tkCaption);
+  FPriority := TPPGDBRadioGroup.Create(Own);
+  FPriority.Parent := Card;
+  FPriority.ChoiceStyle := csSegmented;
+  FPriority.ShowFrame := False;
+  FPriority.SetBounds(CardPad, Top + 84, 2 * Col3W + CardGap, 36);
+  FPriority.Items.CommaText := 'Niedrig,Normal,Hoch';
+  FPriority.Values.CommaText := 'low,normal,high';
+  FPriority.DataSource := FSource;
+  FPriority.DataField := 'Priority';
 end;
 
 procedure TDemoDatabasePage.NavBeforeAction(Sender: TObject; Button: TNavigateBtn);
@@ -420,6 +491,9 @@ begin
   end;
 end;
 
+type
+  TDBRadioAccess = class(TPPGDBRadioGroup);
+
 procedure TDemoDatabasePage.SelfTest(Check: TDemoCheck);
 var
   N: Integer;
@@ -464,6 +538,9 @@ begin
     (FGrid as IPPGTableSource).TableRowCount = FCustomers.RecordCount);
   FCustomers.First;
   Check('Datenbank: Navigator zaehlt', Pos(IntToStr(FCustomers.RecordCount), FNav.CounterText) > 0);
+  // Sichtbarer Suite-Text auf Deutsch (Demo startet mit PPGSetLanguage('de'))
+  Check('Datenbank: Zaehler auf Deutsch',
+    FNav.CounterText = Format('Datensatz 1 von %d', [FCustomers.RecordCount]));
   Check('Datenbank: Navigator sucht', FNav.FindText(Copy(FCustomers.FieldByName('Name').AsString, 2, 3), False) or
     (FCustomers.RecNo = 1));
   FNav.SetQuickFilter(True);
@@ -477,6 +554,27 @@ begin
   FCustomers.Cancel;
   FValidator.ClearResults;
   Check('Validator: ohne Bearbeitung keine Feldregeln', FValidator.ValidateChildren(FDetail));
+  // Weitere Felder (Audit 11e): folgen dem Datensatz, die Optionsgruppe schreibt
+  FCustomers.First;
+  Check('Datenbank: Maske aus dem Feld', (FZip.EditMask = '00000;0;_') and
+    (FZip.Text = FCustomers.FieldByName('Zip').AsString));
+  Check('Datenbank: Farbe folgt dem Feld',
+    FColor.Selected = TColor(FCustomers.FieldByName('Color').AsInteger));
+  Check('Datenbank: Mehrfachauswahl folgt dem Feld',
+    FInterests.CheckedText = FCustomers.FieldByName('Interests').AsString);
+  Check('Datenbank: Optionsgruppe zeigt den Wert', FPriority.ItemIndex = 2);
+  FCustomers.Next;
+  Check('Datenbank: weitere Felder folgen dem Datensatz', (FPriority.ItemIndex = 1) and
+    (FZip.Text = '20095') and (FInterests.CheckedText = 'Software'));
+  TDBRadioAccess(FPriority).ActivateItem(0);
+  Check('Datenbank: Auswahl beginnt die Bearbeitung', FCustomers.State = dsEdit);
+  FCustomers.Post;
+  Check('Datenbank: Optionsgruppe schreibt den Wert aus Values',
+    FCustomers.FieldByName('Priority').AsString = 'low');
+  FCustomers.Edit;
+  FCustomers.FieldByName('Priority').AsString := 'normal';
+  FCustomers.Post;
+  FCustomers.First;
 end;
 
 end.
