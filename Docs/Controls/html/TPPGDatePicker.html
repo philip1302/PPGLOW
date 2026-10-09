@@ -3,12 +3,14 @@
 <p><a href="index.html">PPGlow-Hilfe</a></p>
 <h1>TPPGDatePicker</h1>
 <p>Palette <strong>PPGlow</strong> - Unit <code>PPG.DatePicker</code> - Basis <code>TPPGCustomDatePicker</code></p>
-<p><strong>Vorbild:</strong> TDateTimePicker (Kind = dtkDate)</p>
+<p><strong>Vorbild:</strong> TDateTimePicker</p>
 <h2>Unterschiede und Hinweise</h2>
 <ul>
-<li>Eingabe nur Ziffern und Datumstrenner (Kurzformat); Pr&#252;fung beim Verlassen/Enter, Fehler als <code>ValidationState</code>.</li>
-<li><code>Kind</code>, <code>DateMode</code>, <code>ParseInput</code> werden nur gelesen/gespeichert. Leeres Datum nur mit <code>ShowCheckbox</code>.</li>
-<li>F&#252;r <code>Kind = dtkTime</code> gibt es <code>TPPGTimePicker</code>.</li>
+<li>Eingabe beim kurzen Datum (<code>Kind = dtkDate</code>, <code>DateFormat = dfShort</code>, kein eigenes <code>Format</code>, ohne <code>ParseInput</code>) nur Ziffern und Datumstrenner; bei Uhrzeit, eigenem Format oder <code>ParseInput</code> ist die Eingabe frei. Pr&#252;fung beim Verlassen/Enter, Fehler als <code>ValidationState</code>, der Text bleibt zum Korrigieren stehen.</li>
+<li><code>Kind</code> wirkt wie bei <code>TDateTimePicker</code>: <code>dtkDate</code> Datum mit Kalender, <code>dtkTime</code> Uhrzeit mit Auf/Ab-Kn&#246;pfen, <code>dtkDateTime</code> (ab Delphi 10.4) Datum und Uhrzeit. Oben/Unten, Auf/Ab und das Rad &#228;ndern in der Uhrzeit den Teil unter der Einf&#252;gemarke (Stunde, Minute, Sekunde, AM/PM), im Datum den Tag (Strg: Monat).</li>
+<li><code>DateMode = dmUpDown</code> zeigt Auf/Ab-Kn&#246;pfe statt des Kalenders. <code>ParseInput</code> mit <code>OnUserInput</code> erlaubt eigene Auswertungen (z. B. „morgen“ oder „+3“).</li>
+<li>Leeres Datum nur mit <code>ShowCheckbox</code>.</li>
+<li>Eine reine Uhrzeit mit Liste der Zeiten bietet <code>TPPGTimePicker</code>.</li>
 </ul>
 <h2>Anpassung</h2>
 <ul>
@@ -54,7 +56,7 @@
 <tr><td><code>ShowCheckbox</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Links im Feld erscheint ein Kontrollk&#228;stchen; ohne Haken (Checked = False) gilt „kein Datum&quot;.</td></tr>
 <tr><td><code>Styles</code></td><td><a href="types/TPPGCalendarStyles.html">TPPGCalendarStyles</a></td><td></td><td>Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern). Nutzung: <code>DatePicker1.Styles.Weekend.TextColor := clRed;</code></td></tr>
 <tr><td><code>TabStop</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Das Feld ist mit Tab erreichbar.</td></tr>
-<tr><td><code>Time</code></td><td><code>TTime</code></td><td></td><td>Uhrzeitanteil des Werts (wie TDateTimePicker.Time); die Anzeige zeigt nur das Datum.</td></tr>
+<tr><td><code>Time</code></td><td><code>TTime</code></td><td></td><td>Uhrzeitanteil des Werts (wie TDateTimePicker.Time). Angezeigt und bearbeitet wird er mit Kind = dtkTime bzw. dtkDateTime; mit dtkDate zeigt das Feld nur das Datum, die Uhrzeit bleibt erhalten.</td></tr>
 <tr><td><code>TextHintVisibleOnFocus</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus.</td></tr>
 </table>
 <h2>Eigenschaften wie in der VCL</h2>

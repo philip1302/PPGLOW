@@ -1,6 +1,6 @@
 # Roadmap 3 – die wichtigsten weiteren Features
 
-*Stand 08.10.2026. **Vom User am 08.10.2026 freigegeben („passt so, nimm überall die Empfehlungen“):** Reihenfolge wie unten, Phase 18 komplett mit ListView, Phase 21 erst nach einer Inventur, jede Phase mit Detailplan, Bericht und OK. Detailplan Phase 17: `Docs\Phase17-Plan.md`.*
+*Stand 09.10.2026. **Vom User am 08.10.2026 freigegeben („passt so, nimm überall die Empfehlungen“):** Reihenfolge wie unten, Phase 21 erst nach einer Inventur, jede Phase mit Detailplan, Bericht und OK. Phase 18 wurde danach neu gefasst („Mehrwert statt Klone“): die ListView und die übrigen reinen Nachbauten sind zurückgestellt, bis eine Inventur sie verlangt. **Fertig: Phasen 17, 18, 19 und 20.** Offen: Phase 21 (erst nach einer Inventur, `Build\inventory.ps1` ist noch zu bauen) und Phase 16.*
 
 *Grundlage: Abgleich der Palette mit typischen VCL-, TMS- und DevExpress-Anwendungen, die offenen Punkte der Phasen 11–14 und der Umstellungsplan für Kundenprojekte. Leitlinie: kein Aufblähen, nur Bausteine mit echtem Mehrwert für die Vorführung beim Arbeitgeber und für Umstellungen.*
 
@@ -18,6 +18,7 @@
 Nicht geplant (bewusst): Gantt, Pivot-Grid, Docking, RichEdit/HTML-Editor, Code-Editor, PDF-Viewer, Barcode/QR, Shape/Bevel/Image, weitere Diagrammtypen.
 
 ## Phase 17 – Ausgabe wie am Bildschirm
+Detailplan: `Docs\Phase17-Plan.md`. **Fertig (08.10.2026):** Druck/PDF und HTML mit der Grid-Optik (`PPG.Grid.Look`, `TPPGGridPrinter.UseGridLook`), Gruppenzeilen und verbundene Zellen im Druck; Umsetzung und Abweichungen im Abschnitt Umsetzung des Detailplans.
 - **Druck/PDF** (`TPPGGridPrinter`): Kopf-, Band-, Summen- und Gruppenfarben, Linienfarbe, Spalten- und Zebra-Stile über `IPPGTableLook`. Bisher sind die Kopffarbe (`$F0F0F0`) und die Linienfarbe fest eingestellt, Bänder, Gruppenzeilen und Summenzeile fehlen im Druck.
   - Schalter `UseGridLook` (Vorgabe True); `PrintColors = False` druckt weiter schwarz-weiß.
   - Offen aus Phase 13: Gruppenzeilen und verbundene Zellen im Druck.
@@ -42,7 +43,7 @@ Detailplan: `Docs\Phase20-Plan.md`. **Fertig (09.10.2026).**
 - TrackBar: Auswahlbereich (`SelStart`/`SelEnd`) und Bereichsregler mit zwei Griffen. `TPPGFloatSpinEdit` entfällt (`TPPGNumberEdit` deckt es ab).
 
 ## Phase 21 – nach Inventur (nur bei Bedarf)
-Voraussetzung: `Build\inventory.ps1` aus dem Umstellungsplan läuft an einem echten Projekt und zeigt, welche Fremdklassen am häufigsten übrig bleiben.
+Voraussetzung: `Build\inventory.ps1` aus dem Umstellungsplan (`Docs\Umstellung-Kundenprojekt-Plan.md`; **noch zu bauen**, das Skript gibt es noch nicht) läuft an einem echten Projekt und zeigt, welche Fremdklassen am häufigsten übrig bleiben.
 - `TPPGLayoutControl` (wie `dxLayoutControl`): Gruppen, Beschriftung und Feld automatisch ausgerichtet, DPI und Fenstergröße.
 - `TPPGInspector` (wie `TValueListEditor`/`dxVerticalGrid`): Kategorien, Editoren aus Phase 12.
 - `TPPGFilterBuilder` (wie `cxFilterControl`): Bedingungen mit Und/Oder, für Grid-Filter und Dataset-Filter.
@@ -51,8 +52,8 @@ Voraussetzung: `Build\inventory.ps1` aus dem Umstellungsplan läuft an einem ech
 - XE2- und 10.x-Lauf nach `Docs\Kompatibilitaet.md`. Das ist das größte Risiko für den Einsatz beim Arbeitgeber, weil PPGlow bisher nur mit Delphi 13 kompiliert wurde.
 - Der Excel-Export ist in echtem Excel noch nicht angesehen worden, vor allem Datenbalken und Fortschritt (OpenOffice zeigt sie nicht).
 
-## Entscheidungen (vor dem Start)
-1. Reihenfolge wie oben, oder andere Schwerpunkte?
-2. Phase 18: alle Controls, oder zuerst nur RadioGroup, ScrollBox, DB-Navigator, DBText (ohne ListView)?
-3. Phase 21 erst nach einer Inventur, oder LayoutControl schon vorher?
-4. Wie bisher: jede Phase mit eigenem Detailplan, Bericht und OK?
+## Entscheidungen (vom User am 08.10.2026 beantwortet: überall die Empfehlung)
+1. Reihenfolge wie oben, oder andere Schwerpunkte? **Wie oben.**
+2. Phase 18: alle Controls, oder zuerst nur RadioGroup, ScrollBox, DB-Navigator, DBText (ohne ListView)? **Zuerst „alle Controls“; nach der Kritik des Users („klonen wir hier nur VCL-Komponenten?“) neu gefasst als „Mehrwert statt Klone“ (`Docs\Phase18-Plan.md`), ListView und DBText zurückgestellt.**
+3. Phase 21 erst nach einer Inventur, oder LayoutControl schon vorher? **Erst nach einer Inventur.**
+4. Wie bisher: jede Phase mit eigenem Detailplan, Bericht und OK? **Ja.**

@@ -10,8 +10,9 @@ unit PPG.ProgressBar;
     das Segment still in der Mitte.
   - Positionswechsel werden weich animiert (Animation-Einstellungen).
   - Migration: Typen und Property-Namen von TProgressBar (Vcl.ComCtrls), eine
-    DFM laesst sich per Suchen/Ersetzen umstellen. Smooth wird nur zur
-    Kompatibilitaet gelesen: PPGlow zeichnet immer einen durchgehenden Balken. }
+    DFM laesst sich per Suchen/Ersetzen umstellen. Smooth wirkt wie bei
+    TProgressBar: True (Vorgabe) zeichnet einen durchgehenden Balken, False
+    Bloecke mit kleinen Luecken (in jedem Preset, nicht bei Marquee). }
 
 {$I ..\PPG.inc}
 

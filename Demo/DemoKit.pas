@@ -19,7 +19,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Generics.Collections,
   Vcl.Graphics, Vcl.Controls, Vcl.ImgList, Vcl.StdCtrls,
   PPG.Types, PPG.Tokens, PPG.Appearance, PPG.Theme, PPG.Controls.Base, PPG.Button, PPG.Panel,
-  PPG.Labels, PPG.PageControl, PPG.Notifications, PPG.Hints;
+  PPG.Labels, PPG.PageControl, PPG.Notifications, PPG.Hints, PPG.StyleManager;
 
 type
   TDemoTextKind = (tkBody, tkStrong, tkSecondary, tkCaption, tkCardTitle,
@@ -105,6 +105,9 @@ var
   DemoStyler: TDemoStyler;
   /// Hints der ganzen Demo (vom Hauptformular angelegt).
   DemoHints: TPPGHintManager;
+  /// StyleManager der ganzen Demo (vom Hauptformular angelegt): Preset fuer
+  /// Controls, Hints, Toasts, Menues, Tipps und Dialoge.
+  DemoStyles: TPPGStyleManager;
   /// Name des aktiven Presets (fuer die Akzentfarbe).
   DemoPreset: string;
 
@@ -429,7 +432,7 @@ end;
 
 function TDemoPage.Own: TComponent;
 begin
-  // Controls gehoeren dem Formular (Preset-Wechsel laeuft ueber Components)
+  // Controls gehoeren dem Formular (es haengt sie nach dem Aufbau an DemoStyles)
   Result := Owner;
 end;
 

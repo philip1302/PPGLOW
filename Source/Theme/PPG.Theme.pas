@@ -13,6 +13,9 @@ unit PPG.Theme;
   - StyleForms = True faerbt die Formulare (Color, Font.Color) in den Farben
     des Modus und schaltet die Titelleiste dunkel
     (DWMWA_USE_IMMERSIVE_DARK_MODE). Formulare im Designer bleiben unberuehrt.
+  - Die Unit setzt beim Laden TPPGRendererRegistry.OnFallbackChanged: nach
+    einem Wechsel von ForceGdiFallback zeichnen sich alle Fenster neu
+    (Render kennt Theme nicht, deshalb der Haken).
 
   Rangfolge der Farben in den Controls: Hochkontrast > VCL-Style >
   Dark Mode > Appearance. Die gespeicherte Appearance aendert sich nie.
@@ -90,7 +93,7 @@ var
 implementation
 
 uses
-  System.SysUtils, Vcl.Graphics, PPG.ErrorHandler, PPG.Render.Fluent11;
+  System.SysUtils, Vcl.Graphics, PPG.ErrorHandler, PPG.Render.Registry, PPG.Render.Fluent11;
 
 const
   PersonalizeKey = 'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize';
@@ -297,6 +300,24 @@ begin
   FDarkState.Clear;
   FOrigColor.Clear;
   FOrigFont.Clear;
+end;
+
+{ Neuzeichnen nach einem Wechsel des GDI-Rueckfalls (Audit 11e) }
+
+function RedrawThreadWindow(Wnd: HWND; Param: LPARAM): BOOL; stdcall;
+begin
+  RedrawWindow(Wnd, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_FRAME or RDW_ALLCHILDREN);
+  Result := True;
+end;
+
+/// Haken fuer TPPGRendererRegistry.OnFallbackChanged: alle Fenster des
+/// Hauptthreads (Formulare, Popups, Hints, Toasts) samt Kindfenstern neu
+/// zeichnen. Nur ungueltig machen; gezeichnet wird mit dem naechsten WM_PAINT.
+procedure PPGRedrawAllWindows;
+begin
+  if GetCurrentThreadId <> MainThreadID then
+    Exit;
+  EnumThreadWindows(GetCurrentThreadId, @RedrawThreadWindow, 0);
 end;
 
 { TPPGTheme }
@@ -518,8 +539,12 @@ end;
 
 initialization
   PPGThemeChangedMessage := RegisterWindowMessage('PPGlow.ThemeChanged');
+  // Render kennt Theme nicht: das Neuzeichnen nach ForceGdiFallback kommt von hier
+  TPPGRendererRegistry.OnFallbackChanged := PPGRedrawAllWindows;
 
 finalization
+  // Die Registry lebt laenger (Unit wird spaeter finalisiert): Haken abmelden
+  TPPGRendererRegistry.OnFallbackChanged := nil;
   GFinalized := True;
   FreeAndNil(GWatcher);
   FreeAndNil(GClients);

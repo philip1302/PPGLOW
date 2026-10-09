@@ -1,16 +1,22 @@
 # Prüfplan XE2 und 10.x
 
-*Stand 04.10.2026 (Phase 9e). Hier steht nur Delphi 13 zur Verfügung; alles unten ist für den ersten Lauf auf einem Rechner mit den älteren Versionen gedacht.*
+*Stand 09.10.2026 (Phasen bis 20, Audit-Pakete 1–8). Hier steht nur Delphi 13 Community zur Verfügung. **PPGlow wurde noch nie mit XE2 oder einer 10.x-Version kompiliert.** Alles unten ist ein Prüfplan für den ersten Lauf auf einem Rechner mit den älteren Versionen, keine Zusage. Die XE2-Regeln (`Docs\Coding-Rules.md`, Abschnitt Kompatibilität) prüft bisher nur der Regel-Prüfer ohne Compiler.*
+
+## Ehrlicher Stand
+
+- **Geprüft:** nur Delphi 13 (Win32 und Win64), Bauweg `bds -b` (IDE-Batch), weil die Community Edition keinen Kommandozeilen-Compiler hat.
+- **Ungetestet:** der Weg über `msbuild` (Editionen ab Professional) und jeder Lauf mit XE2 oder 10.x. `build.ps1` ruft `msbuild` auf, sobald `dcc32` auf der Kommandozeile arbeitet; das ist hier nie gelaufen.
+- **XE2 hat keine `.dproj`:** `Packages\XE2` enthält nur `.dpk`-Dateien. Ohne `.dproj` reicht `build.ps1` die `.dpk` direkt weiter. Mit `bds -b` legt die IDE die `.dproj` beim ersten Öffnen an; `msbuild` kann eine `.dpk` dagegen nicht bauen. Der XE2-Bauweg muss deshalb beim ersten Lauf erst hergestellt werden (Pakete einmal in der XE2-IDE öffnen und speichern oder `.dproj` für XE2 anlegen; offen als B8 im Audit, Paket 10).
+- **Tests und Demo nur Delphi 13:** `Tests\PPGlowTests.dproj`, `Tests\Bench\PPGlowBench.dproj` und `Demo\PPGlowDemo.dproj` sind Delphi-13-Projekte (`ProjectVersion` 20.3). XE2 bzw. 10.x brauchen eigene Projektdateien aus den `.dpr`. Die Demo nutzt außerdem den Styles-Ordner von Delphi 13.
+- **Schalter:** Alles Versionsabhängige läuft über die `PPG_HAS_*`-Schalter in `Source\PPG.inc` (Tabelle unten). Ob jeder Zweig ohne Schalter kompiliert, ist ungeprüft.
 
 ## Ablauf
 
 1. `powershell -ExecutionPolicy Bypass -File Build\check-rules.ps1`. Das läuft ohne Delphi und prüft unter anderem, ob jede Unit in den XE2-Paketen steht.
-2. `Build\build.ps1 -Only XE2`. `build.ps1` kennt bisher XE2 (`9.0`) und Delphi 13 (`37.0`). Für eine 10.x-Version kommt eine Zeile in `$Versions` dazu, zum Beispiel `'21.0' = 'XE2'`; die XE2-Pakete passen dort ebenfalls, nur `LIBSUFFIX` muss angepasst werden.
+2. Bauweg herstellen (siehe oben), dann `Build\build.ps1 -Only XE2`. `build.ps1` kennt bisher XE2 (`9.0`) und Delphi 13 (`37.0`). Für eine 10.x-Version kommt eine Zeile in `$Versions` dazu, zum Beispiel `'21.0' = 'XE2'`; die XE2-Pakete passen dort ebenfalls, nur `LIBSUFFIX` muss angepasst werden.
 3. Für jede Zeile unten: Läuft der Compiler durch und verhält sich die Funktion wie beschrieben? Dann abhaken.
-4. `Tests\PPGlowTests.exe` (Konsole) bauen und laufen lassen, danach mit `/leaks` noch einmal.
+4. Für Tests und Demo eigene Projektdateien der Version aus `Tests\PPGlowTests.dpr` bzw. `Demo\PPGlowDemo.dpr` anlegen, `Tests\PPGlowTests.exe /hidden` bauen und laufen lassen, danach mit `/leaks /hidden` noch einmal.
 5. Pakete in die IDE laden und die Komponenten-Editoren öffnen. Die IDE vorher schließen: `install.ps1` registriert die Pakete.
-
-`Packages\XE2` enthält nur `.dpk`-Dateien. Ohne `.dproj` gibt `build.ps1` die Quelle (`.dpk`/`.dpr`) direkt weiter; beim ersten Öffnen legt die IDE die `.dproj` an.
 
 ## Compiler-Schalter (`Source\PPG.inc`)
 
@@ -18,7 +24,9 @@
 |---|---|---|---|---|
 | `PPG_HAS_STYLEELEMENTS` | XE3 (24.0) | 32 Stellen, je eine pro Control (published `StyleElements`), dazu 2× in `PPG.Controls.Base`, 3× in `PPG.Labels` sowie `PPG.Popup`, `PPG.DB.Grid` und `PPG.Editors.Forms` | Die Property fehlt, und die Controls folgen dem VCL-Style immer ganz | Unter XE2 kompiliert; DFMs aus neueren Versionen mit `StyleElements` melden beim Laden „Property existiert nicht“ (erwartet) |
 | `PPG_HAS_SYSTEM_ACTIONS` | XE3 | `PPG.ToolBar` (uses) | Die Actions kommen aus `Vcl.ActnList` | ToolBar mit Action unter XE2 |
+| `PPG_HAS_DATASETCOMMANDS` | XE3 | `PPG.DB.Navigator` (5 Stellen) | XE2 kennt `nbApplyUpdates`/`nbCancelUpdates` und `IDataSetCommandSupport` nicht; der DB-Navigator hat diese Knöpfe dann nicht | DB-Navigator unter XE2 kompilieren; eine DFM aus einer neueren Version mit diesen Knöpfen in `VisibleButtons` laden |
 | `PPG_HAS_PPI` | 10.3 (33.0) | `PPG.DpiUtils` | Skalierung über `Screen.PixelsPerInch` (system-DPI) | Verhalten auf 150 % unter 10.2: Controls skalieren einmal beim Start |
+| `PPG_HAS_IMAGECOLLECTION` | 10.3 (33.0) | wird derzeit an keiner Stelle abgefragt (vorbereitet für `TImageCollection`) | – | Nichts zu prüfen, solange keine Stelle ihn nutzt |
 | `PPG_HAS_UITYPES_IMAGEINDEX` | 10.4 (34.0) | `PPG.Types` (2×) | `TImageIndex` aus `Vcl.ImgList` | Kompiliert ohne Deprecated-Warnung |
 | `PPG_HAS_IMAGENAME` | 10.4 | `PPG.Controls.Base` (8×), `PPG.Button` | Kein `ImageName`, nur `ImageIndex` | Button mit `TVirtualImageList` ab 10.4; unter 10.3 fehlt die Property |
 | `PPG_HINTINFO_IN_CONTROLS` | 13 (37.0) | `PPG.Hints` (Alias `TPPGHintInfo`) | `THintInfo` kommt aus `Vcl.Forms` (dort ab 13 veraltet) | `TPPGHintManager.DoShowHint` kompiliert ohne Deprecated-Warnung |
@@ -96,6 +104,6 @@ In den Tests prüft `PPG.Tests.Gaps` drei Stellen direkt mit `CompilerVersion >=
 
 ## Bekannte Grenzen (kein Fehler)
 
-- Die Demo (`Demo\PPGlowDemo`) verwendet den Styles-Ordner von Delphi 13 und ist nur dafür gedacht.
+- Die Demo (`Demo\PPGlowDemo`) verwendet den Styles-Ordner von Delphi 13 und ist nur dafür gedacht. Für Phase 14b bis 20 und die Audit-Pakete gibt es noch keine eigenen Tabellen mit Versionsrisiken; sie folgen beim ersten echten XE2-Lauf.
 - Unter XE2 gibt es keine Per-Monitor-DPI. Die DPI-Galerie in den Sichttests meldet dort „Test entfällt“.
 - Bis 10.2 gibt es kein `CurrentPPI`; die Controls skalieren über `PPG.DpiUtils` mit der System-DPI.

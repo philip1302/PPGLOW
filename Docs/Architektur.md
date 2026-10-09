@@ -30,7 +30,7 @@ VCL-Komponentensuite im Glow-Stil (vergleichbar mit TMS GlowButtons). Alle Contr
 | `Lang` | Übersetzungen (`PPGlow.de.txt`), daraus erzeugt `Build\make-lang.ps1` die Unit `PPG.Lang.De` |
 | `Packages\<Version>` | `PPGlowR`/`PPGlowDBR` (runtime) und `dclPPGlow`/`dclPPGlowDB` (designtime) je Delphi-Version |
 | `Tests` | DUnit-Suite (Konsole, Exit-Code = Anzahl Fehler) |
-| `Demo` | Showcase mit NavigationView, Suchfeld (Katalog: Control oder Stichwort → Seite) und 13 Seiten (`/page 0..12`, 12 = Datenbank); `/selftest datei.txt` prüft die Szenarien aller Seiten. `/screenshot datei.png [/page n] [/dropdownimages] [/preset Name] [/theme dark|light|system] [/hover] [/focus] [/fieldfocus] [/dropdown] [/gdi] [/style Name]`, außerdem `/mica [/screencapture datei.png]` (Prototyp) für automatische Sichtprüfung |
+| `Demo` | Showcase mit NavigationView, Suchfeld (Katalog: Control oder Stichwort → Seite) und 20 Seiten (`/page 0..19`: 0 Start, 1 Buttons, 2 Auswahl, 3 Formular, 4 Listen, 5 Explorer, 6 Tabelle, 7 Termine, 8 Layout, 9 Rückmeldung, 10 Darstellung, 11 Ereignisse, 12 Datenbank, 13 Diagramme, 14 Menüs & Dialoge, 15 Planer, 16 Ribbon, 17 Kanban, 18 Anpassung, 19 Kacheln). Startet auf Deutsch (`PPGSetLanguage('de')`, Englisch auf der Seite Darstellung umschaltbar); das Preset läuft über einen `TPPGStyleManager` (`DemoStyles`). Die Liste aller Paletten-Controls steht in `Demo\DemoMain.pas` als `PaletteControls` zwischen den Kommentaren `// PALETTE-BEGIN` und `// PALETTE-END` (ein Name je Zeile, für den Regel-Prüfer); `/selftest datei.txt` prüft die Szenarien aller Seiten und dass jedes Paletten-Control im Katalog steht. `/screenshot datei.png [/page n] [/scroll y] [/dropdownimages] [/preset Name] [/theme dark|light|system] [/hover] [/focus] [/fieldfocus] [/dropdown] [/gdi] [/style Name]`, Aufnahmen `/datepopup`, `/toastcapture`, `/ribboncapture`, `/busycapture`, Export `/chartpng`, `/export`, außerdem `/mica [/screencapture datei.png]` (Prototyp); `/hidden` läuft auf einem eigenen Desktop |
 | `Build\build.ps1` | Baut alles für alle installierten Delphi-Versionen |
 
 ## SOLID
@@ -56,7 +56,8 @@ Alle Exceptions erben von `EPPGError`: `EPPGPropertyError` (mit `PropertyName`),
 | Exception in Timer/Animation | Die betroffene Animation stoppt, die Meldung geht an `Application.HandleException` (wie bei der VCL). |
 | Exception beim Theme-Wechsel aus `WM_SETTINGCHANGE` (Hilfsfenster von `PPG.Theme`) | Geht an `Application.HandleException`, das Hilfsfenster bleibt funktionsfähig. |
 | Exception im Anwender-Event (`OnClick` …) | Propagiert normal. Der interne Zustand (Pressed, Capture) ist vorher schon zurückgesetzt. |
-| Fehler im Fehler-Handler selbst | Wird abgefangen und per `OutputDebugString` ausgegeben. Das ist die einzige bewusst verworfene Exception. |
+| Fehler im Fehler-Handler selbst | Wird abgefangen und per `OutputDebugString` ausgegeben, damit die Meldung eines Fehlers nie einen zweiten auslöst. |
+| Exception an einer anderen Grenze (Callback des StyleManagers oder Theme-Wechsels, WndProc eines Hilfsfensters, Thread, COM/IAccessible, IDE) | Wird an der Grenze abgefangen und gemeldet (`HandleCallbackError`, `Application.HandleException` bzw. als COM-Fehlercode), nie still verworfen. Welche Stellen das sind und wie sie markiert werden: `Docs\Coding-Rules.md`, Liste der catch-all-Grenzen. |
 
 Anwendungen hängen ihr Logging an zwei Stellen ein: `TPPGErrorHandler.Logger` (`IPPGLogger`) und `TPPGErrorHandler.OnError`. Windows-API-Fehler werden mit dem Namen des Aufrufs gemeldet, zum Beispiel `Windows API call BitBlt failed (error 6: …)`.
 
@@ -138,7 +139,7 @@ Beide erben von `TPPGCustomRangeControl` (`Source\Controls\PPG.Controls.Range.pa
 | Laden aus der DFM | Werte roh übernehmen, in `Loaded` prüfen (`Min > Max` → `Max := Min` plus Warnung) | – |
 | `OnChange` | bei jeder Änderung von `Position`, nicht beim Laden | ebenso |
 
-**Migration:** Die Typen kommen aus `Vcl.ComCtrls` (`TProgressBarStyle`, `TProgressBarState`, `TTrackBarOrientation`, `TTickMark`, `TTickStyle`). Eine DFM lässt sich deshalb per Suchen/Ersetzen umstellen. `TProgressBar.Smooth` wird nur gelesen (PPGlow zeichnet immer durchgehend). Der Auswahlbereich (`SelStart`/`SelEnd`/`ShowSelRange`) kommt seit Phase 20d mit. Nicht unterstützt sind beim TrackBar `PositionToolTip` und manuelle Ticks per `SetTick`.
+**Migration:** Die Typen kommen aus `Vcl.ComCtrls` (`TProgressBarStyle`, `TProgressBarState`, `TTrackBarOrientation`, `TTickMark`, `TTickStyle`). Eine DFM lässt sich deshalb per Suchen/Ersetzen umstellen. `Smooth` wirkt wie bei `TProgressBar`: `True` (Vorgabe) zeichnet einen durchgehenden Balken, `False` Blöcke mit kleinen Lücken (in jedem Preset, nicht bei Marquee). Der Auswahlbereich (`SelStart`/`SelEnd`/`ShowSelRange`) kommt seit Phase 20d mit. Nicht unterstützt sind beim TrackBar `PositionToolTip` und manuelle Ticks per `SetTick`.
 
 **ProgressBar:**
 - Spur = `Appearance.Normal`, Füllung = `Appearance.Checked`. `State = pbsError`/`pbsPaused` färbt die Füllung rot bzw. gelb, Glanz-Presets behalten dabei ihren Verlauf.
@@ -290,7 +291,7 @@ Gemeinsame Bausteine für ListBox, TreeView und Grid (Phase 6). Jedes Grundprobl
 
 **Schneller Eltern-Hintergrund:** Kinder mit `ParentBackground` auf einem PPGlow-Container füllen ihren Hintergrund selbst, aus der Flächenfarbe bzw. dem Verlauf des Containers (`GetChildBackground`/`ChildSurface`). Sonst würde `DrawParentBackground` für **jedes** Kind den ganzen Container zeichnen. Liegt ein Kind über Rahmen, Rundung oder Panel-Beschriftung, gilt weiter der exakte Weg.
 
-**Leistung** (`Tests\Bench\PPGlowBench.exe`, Release, gemessen am 03.10.2026):
+**Leistung** (`Tests\Bench\PPGlowBench.exe`, Release, gemessen am 03.10.2026; aktuelle Werte, Vorgaben und Messablauf: Abschnitt „Leistung“ weiter unten):
 
 | Messung | Zeit |
 |---|---|
@@ -349,7 +350,7 @@ Der Benchmark beendet sich mit Exit-Code = Anzahl überschrittener Vorgaben. Vor
 - Zeichnen pro Bereich (Daten, Kopfzeilen, Kopfspalten, Ecke): Hintergrund, Gitterlinien und alle Texte in deckenden GDI-Blöcken; nur die halbtransparente Auswahl läuft über GDI+. Das war 5× schneller als Zelle für Zelle (Benchmark 11,6 s → 2,3 s für 300 Bilder mit 800 × 600).
 - DFM-kompatibel zu `TStringGrid` (`ColWidths`/`RowHeights` per `DefineProperties`, `Options` = `TGridOptions`). Breiten und Höhen logisch in 96 DPI.
 
-**Leistung** (Benchmark, Release, 04.10.2026):
+**Leistung** (Benchmark, Release, 04.10.2026; aktuelle Werte: Abschnitt „Leistung“ weiter unten):
 
 | Messung | Zeit |
 |---|---|
@@ -467,6 +468,7 @@ Jedes Preset beschreibt seine Farben, Maße und Bewegungsdauern als **Design-Tok
 - **Felder:** Fläche und Text kommen aus den Tokens (Surface/TextPrimary, deaktiviert SurfaceDisabled/TextDisabled), denn `clWindow` bleibt weiß. Die Textfarbe des inneren Edits setzt das Feld über `TPPGFieldEdit.TextColor` bzw. `TPPGFieldMemo.TextColor` (Antwort auf `CN_CTLCOLOREDIT`/`CN_CTLCOLORSTATIC`). Die Schrift des Felds bleibt unangetastet. Das Memo bekommt dunkle native Scrollleisten (`SetWindowTheme("DarkMode_Explorer")`). Eine offene Combo-Liste wird mit umgefärbt.
 - **Kontrast:** Leere Kästchen und Kreise bekommen auf dunklen Flächen mindestens 3:1 Randkontrast (WCAG 1.4.11), indem der Rand Richtung Textfarbe gemischt wird. Helle Flächen bleiben unverändert.
 - **Formulare (`StyleForms`):** Formularfarbe = Background, Schriftfarbe = TextPrimary (neutrale Windows-11-Tokens), Titelleiste über `DWMWA_USE_IMMERSIVE_DARK_MODE` (20, auf Windows 10 1809–1909 die 19; ältere Systeme ignorieren das). Gefärbt werden alle `Screen.Forms` beim Wechsel und neue Formulare, sobald ein PPGlow-Control dort sein Fenster erzeugt (`FormNeeded`, auch nach neuem Fensterhandle). Formulare ohne PPGlow-Controls färbt `TPPGTheme.ApplyToForm(Self)`. Formulare im Designer werden nie gefärbt. Beim Ausschalten bekommen die Formulare ihre ursprüngliche Farbe und Schriftfarbe zurück.
+- **GDI-Rückfall:** `TPPGRendererRegistry.ForceGdiFallback` hat einen Setter. Eine Änderung ruft `TPPGRendererRegistry.OnFallbackChanged`; `PPG.Theme` setzt dort beim Laden das Neuzeichnen aller Fenster des Hauptthreads ein (`EnumThreadWindows` + `RedrawWindow` mit Kindfenstern), denn Render darf Theme nicht kennen. Anwendungen müssen danach nichts von Hand neu zeichnen (Audit 11e, Tests `TAudit11DRenderModeTests`).
 - **StyleManager:** `ThemeMode` setzt `TPPGTheme.Mode`, auch im Designer, damit man den Dark Mode dort prüfen kann. Bei mehreren Managern gilt der zuletzt gesetzte. `StyleForms` wirkt nur zur Laufzeit, denn im Designer enthält `Screen.Forms` die Fenster der IDE.
 - **Grenzen:** Standard-VCL-Controls (`TEdit`, `TMemo`, `TCheckBox` …) bleiben hell; Labels mit eigener Schrift (`ParentFont = False`) behalten ihre Schriftfarbe. Beides färbt die Anwendung in `TPPGTheme.OnChange` (siehe Demo).
 
@@ -715,7 +717,7 @@ Plan, Umsetzung und Abweichungen: `Docs\Phase20-Plan.md`.
 
 ## Namensregeln (Audit 5c)
 
-Seit dem Audit-Paket 5 (`Docs\Audit-Paket4-5-Plan.md`) gelten für alle Controls dieselben Namen. Neue Controls halten sich daran. Umbenannt wurde ohne Alias, solange die Suite noch nirgends installiert war; danach wird nicht mehr umbenannt.
+Seit dem Audit-Paket 5 (`Docs\Audit-Paket4-5-Plan.md`) gelten für alle Controls dieselben Namen. Neue Controls halten sich daran. **Umbenannt wird ohne Aliase, bis die Suite in einem echten Projekt läuft** (Entscheidung des Users; die Installationen in der eigenen IDE zählen nicht). Danach bleibt ein alter Name per `DefineProperties` lesbar (siehe `Docs\Coding-Rules.md`).
 
 - **Element-Stile:** Die Sammlung der Bereiche heißt immer `Styles` (Typ je Control, z. B. `TPPGCalendarStyles`), ein einzelner Stil `Style`.
 - **Wertebereich:** `Min`, `Max`, `Value` (ProgressBar, TrackBar, SpinEdit, NumberEdit, ProgressRing; Rating nur `Max`). Grid-Spalten und Validator-Regeln behalten `MinValue`/`MaxValue`, weil dort `Min`/`Max` keine eigene Bedeutung hätten. In Klassen mit `Min`/`Max` ruft der Code die Funktionen als `System.Math.Min/Max` auf.
@@ -780,15 +782,72 @@ finalization
 
 **Neues Control:** Ein neues Control wird von `TPPGCustomControl` abgeleitet. Zustandslogik steht in `IsDown`/`IsHot`, das Zeichnen in `DoPaintContent`. Danach folgen die gemeinsamen Properties im `published`-Abschnitt (Reihenfolge wie bei `TPPGButton`) und Tests nach dem Muster in `Tests\PPG.Tests.Controls.pas`.
 
+## Leistung
+
+Gemessen wird mit dem Benchmark `Tests\Bench\PPGlowBench.dpr` (Release). Jede Messung hat eine Vorgabe; der Exit-Code ist die Anzahl überschrittener Vorgaben. Messungen, die vor allem Windows misst (Ausrichten vieler Kinder), sind relativ zu einer VCL-Referenz formuliert, reine Referenzzeilen haben keine Vorgabe. Neue Vorgaben liegen bei etwa dem Doppelten des gemessenen Werts nach der Optimierung, damit Last auf dem Rechner nicht zu Fehlalarmen führt, ein Rückfall auf den alten Stand aber auffällt.
+
+**Messablauf:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Bench -Config Release
+Tests\Bench\PPGlowBench.exe /hidden      # eigener Desktop, Ausgabe auf der Konsole, Exit-Code = überschrittene Vorgaben
+```
+
+Endmessungen laufen im ruhigen Zustand (keine parallelen Builds oder Testläufe). Die Ergebnisse werden als Textdatei eingecheckt, zuletzt `Tests\Bench\Messung-vor-Paket8.txt` und `Tests\Bench\Messung-nach-Paket8.txt` (09.10.2026, alle 72 Vorgaben eingehalten).
+
+**Messwerte Audit-Paket 8** (ms, vorher → nachher; vorher teils unter Last paralleler Agenten gemessen; Quelle `Docs\Audit-Paket8-Plan.md`, Abschnitt Umsetzung):
+
+| Bereich | Messung | vorher | nachher |
+|---|---|---|---|
+| Grid 1 Mio. | Sortieren (Zahl auf/ab, Text) | 12 922 | 1 672 |
+| | Spaltenbreite 100× (Summe, Farbskala, RowHeights) | 70 406 | 453 |
+| | 100 Einzeländerungen mit Summe | 66 922 | 422 |
+| | Filtern + 3× umsortieren | 2 359 | 328 |
+| | Hover 300× im Fenster | 969 | 281 |
+| Listen/Baum | TreeView 10 000: AlphaSort | 7 015 | 0 |
+| | ListBox 100 000 mit Gruppen, 5× Layout | 5 500 | 31 |
+| | CheckAll 10 000 mit ItemsEx | 704 | 0 |
+| | ComboBox 10 000× ItemsEx.Add | 1 938 | 16 |
+| Planer | Zeitleiste 366 Tage × 60 Ressourcen, 300× scrollen | 69 625 | 1 063 |
+| Kanban | 100× eine Karte ändern | 90 610 | 2 015 |
+| | 20× filtern + zeichnen | 1 891 | 344 |
+| | Hover 300× im Fenster | 1 875 | 234 |
+| Rest | Chart-Hover 300× | 921 | 47 |
+| | MenuBar-Hover 300× | 485 | 172 |
+| | ListBox: eine Zeile neu zeichnen 300× | 688 | 141 |
+| | `PPGMeasureTextNoCanvas` 100 000× | 1 250 | 78 |
+| Leerlauf | Wakeups/s mit Planer-Jetzt-Linie | 64 | 1 |
+| | Wakeups/s Maus über Scroll-Control | 48 | 5 |
+
+Weitere Werte nach Paket 8 (ms): 1000 Buttons erzeugen, zeichnen, freigeben 1 953; Scroll-Control 100 000 Zeilen 300× scrollen 344; ListBox virtuell 1 Mio. 300× scrollen 1 078; TreeView 100 000 Knoten 109; Grid 1 Mio. × 20 virtuell 300× scrollen 2 266; xlsx-Export 1 Mio. × 5 3 218; Chart 100 000 Punkte 20× zeichnen 265; Planer 50 000 Termine, 20 Wochen 1 796; TileView virtuell 100 000, 300× scrollen 1 312. Die vollständige Liste mit Vorgaben steht in `Tests\Bench\Messung-nach-Paket8.txt`.
+
+**Bausteine:**
+- **Clip-Box und Rückpuffer:** Controls zeichnen nur den ungültigen Bereich. `PaintClip` liefert die Clip-Box als Dirty-Rect, `NeedsPaint` prüft Teile dagegen, `InvalidateArea` macht nur einen Bereich ungültig, `ViewportClip` begrenzt Scroll-Controls. Jedes Control hat einen eigenen Rückpuffer (eine der zwei erlaubten Ausnahmen von „keine dauerhaften GDI-Handles“, siehe `Docs\Coding-Rules.md`).
+- **`UsesHotAnimation`:** Daten-Controls (Listen, Grid, Kanban, Planer) animieren den Hover nicht, sondern zeichnen nur die alte und die neue Zeile neu.
+- **Fälligkeitsmodus im Animator:** `StepInterval` und `StartLoop(Periode, Schritt)`; ohne laufende Animation weckt der Animator nicht mehr 67-mal je Sekunde (Leerlauf 0–5 Wakeups/s).
+- **Mess-DC:** `PPGMeasureTextNoCanvas` misst im Hauptthread über einen gemeinsamen DC mit Cache je Schrift, Breite, Umbruch und Text (`PPGClearMeasureCache`).
+- **GDI+-Blöcke:** verschachtelbare Blöcke (`IPPGBatchCanvas`, `PPGBeginBatch`/`PPGEndBatch`) teilen sich einen GDI-Zustand statt ihn je Aufruf zu holen; Rechtecke ohne Rundung ohne Pfad.
+- **Caches:** getönte Icons (`PPGClearTintCache`), Schatten (`PPGShadowCacheEnabled`), Markup-Schriften, Layout-Caches in MenuBar, Chart, Kanban, Ribbon, Reitern und InfoBar.
+- **Grid:** Sortierschlüssel statt Vergleich über Zelltexte, dünne `RowHeights`, inkrementelle Summen, Filter-Cache, Font-Cache (die zweite Ausnahme bei dauerhaften GDI-Handles), Texte gesammelt bei eingebauten Zellarten.
+- **Listen und Baum:** Geschwisterindex und Merge-Sort im TreeView, Zeilen erst bei Bedarf aufbauen, `TPPGSelection` mit Einzelauswahl ohne Bitfeld, Gruppenlisten ohne quadratische Pfade.
+- **Kanban und Planer:** Teil-Neuzeichnen von Karte bzw. Termin, Zeitleiste zeichnet nur den sichtbaren Bereich, Layout-Caches; AppHooks verteilt Nachrichten copy-on-write.
+
+Abweichungen und Grenzen (keine Vorab-Mischung der Grid-Auswahl, kein Clip bei verbundenen Zellen usw.) stehen in `Docs\Audit-Paket8-Plan.md`, Abschnitt Umsetzung.
+
 ## Bauen und Testen
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File Build\build.ps1              # alles, alle Versionen
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Tests
-Tests\PPGlowTests.exe            # Konsole, Exit-Code 0 = grün
+Tests\PPGlowTests.exe /hidden    # Konsole, Exit-Code 0 = grün; /hidden = eigener Windows-Desktop
 Tests\PPGlowTests.exe /gui       # DUnit-GUI inkl. Leak-Report beim Beenden
-Tests\PPGlowTests.exe /leaks     # zwei Läufe, Exit-Code <> 0 bei Speicherlecks
+Tests\PPGlowTests.exe /leaks /hidden          # zwei Läufe, Exit-Code <> 0 bei Speicherlecks
+Tests\PPGlowTests.exe /suite Audit8A,TGridTests /hidden   # nur diese Gruppen bzw. Testklassen
+Tests\PPGlowTests.exe /leaksuites /hidden     # Leck-Suche je Testklasse ("LEAKSUITE Klasse Bytes", ab 1 KB)
+Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt /hidden   # Szenarien aller Demo-Seiten, Exit-Code = Fehler
 ```
+
+**`/hidden`** (Tests, Benchmark, Demo): Das Programm startet sich auf einem eigenen Windows-Desktop „PPGlowTest“ neu (`Tests\PPG.TestDesktop.pas`). Es erscheinen keine Fenster auf dem Bildschirm, die Maus des Users stört nicht, Ausgabe und Exit-Code kommen an. Automatische Läufe nutzen immer `/hidden`. Die Schalter `/baseline` (Referenzbilder bewusst neu anlegen) und `/allowskip` (übersprungene Tests nicht als Fehler werten) regelt `Docs\Coding-Rules.md`, Abschnitt Testintegrität.
 
 Die DB-Pakete heißen in `build.ps1` `DBRuntime` und `DBDesign`; beide sind im Standard enthalten.
 
@@ -810,6 +869,6 @@ powershell -ExecutionPolicy Bypass -File Build\install.ps1          # -Uninstall
 5. Es kopiert BPL/DCP nach `BDSCOMMONDIR\Bpl` bzw. `Bpl\Win64` (beide im `PATH`).
 6. Es registriert die Design-Pakete unter *Known Packages*; unter *Known Packages x64* nur, wenn die 64-Bit-IDE installiert ist.
 7. Es trägt `Lib\37.0\<Plattform>\Release` in den Bibliothekspfad ein.
-8. Zum Schluss lädt es jede BPL testweise in einem Prozess der passenden Bitness und meldet Fehler mit Grund (Code 126: Paket fehlt, 127: alter Stand).
+8. Zum Schluss prüft es die Abhängigkeiten der Design-Pakete nur lesend (Import-Tabellen gegen den Suchpfad der IDE). Nur mit `-LoadTest` lädt es jede BPL zusätzlich testweise in einem Prozess der passenden Bitness und meldet Fehler mit Grund (Code 126: Paket fehlt, 127: alter Stand). **Achtung:** Norton 360 hält diesen Ladetest für Schadcode, löscht `install.ps1` und die BPLs und sperrt die Pfade; `-LoadTest` deshalb nur nach Rücksprache.
 
 Das Skript ist idempotent. Die Komponenten erscheinen auf den Palettenseiten **PPGlow** und **PPGlow DB**, aber nur, solange ein VCL-Formular im Designer offen ist.

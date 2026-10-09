@@ -16,7 +16,7 @@
 <li>State pbsError/pbsPaused faerbt die Fuellung rot bzw. gelb (wie Windows)</li>
 <li>Style pbstMarquee: unbestimmter Fortschritt, laeuft ueber den gemeinsamen Animator (kein eigener Timer) und nur, solange das Control sichtbar ist. Mit abgeschalteten Animationen (Systemeinstellung, Remote-Desktop) steht das Segment still in der Mitte.</li>
 <li>Positionswechsel werden weich animiert (Animation-Einstellungen).</li>
-<li>Migration: Typen und Property-Namen von TProgressBar (Vcl.ComCtrls), eine DFM laesst sich per Suchen/Ersetzen umstellen. Smooth wird nur zur Kompatibilitaet gelesen: PPGlow zeichnet immer einen durchgehenden Balken.</li>
+<li>Migration: Typen und Property-Namen von TProgressBar (Vcl.ComCtrls), eine DFM laesst sich per Suchen/Ersetzen umstellen. Smooth wirkt wie bei TProgressBar: True (Vorgabe) zeichnet einen durchgehenden Balken, False Bloecke mit kleinen Luecken (in jedem Preset, nicht bei Marquee).</li>
 </ul>
 <h2>PPGlow-Eigenschaften</h2>
 <p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>

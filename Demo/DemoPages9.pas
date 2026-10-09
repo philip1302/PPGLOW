@@ -10,9 +10,9 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Types, System.DateUtils, Vcl.Controls, Vcl.Graphics,
-  Vcl.StdCtrls, PPG.Types, PPG.Panel, PPG.Labels, PPG.Button, PPG.ToggleSwitch,
+  Vcl.StdCtrls, Vcl.Printers, PPG.Types, PPG.Panel, PPG.Labels, PPG.Button, PPG.ToggleSwitch,
   PPG.ComboBox, PPG.SearchEdit,
-  PPG.Kanban.Layout, PPG.Kanban.Items, PPG.Kanban,
+  PPG.Kanban.Layout, PPG.Kanban.Items, PPG.Kanban, PPG.Print, PPG.Kanban.Print,
   DemoKit;
 
 type
@@ -25,10 +25,13 @@ type
     FPerson: TPPGComboBox;
     FResult: TPPGLabel;
     FNewCount: Integer;
+    FPrinter: TPPGKanbanPrinter;
+    FPrintButton: TPPGButton;
     procedure FillBoard;
     procedure LanesChange(Sender: TObject);
     procedure BlockChange(Sender: TObject);
     procedure NewCardClick(Sender: TObject);
+    procedure PrintClick(Sender: TObject);
     procedure Moving(Sender: TObject; const Move: TPPGKanbanMove; var Allow: Boolean);
     procedure Moved(Sender: TObject; const Move: TPPGKanbanMove);
     procedure CardOpen(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer; Card: TPPGKanbanCard);
@@ -107,6 +110,19 @@ begin
   FBoard.OnColumnMoved := ColumnMoved;
   FillBoard;
   FResult := NewResult(Own, Card, 'Letzte Aktion');
+  FResult.Width := FullW - 2 * CardPad - 170;
+  // Druck (TPPGKanbanPrinter, Audit 11e): Vorschau mit Seite einrichten, PDF und Drucker
+  FPrinter := TPPGKanbanPrinter.Create(Own);
+  FPrinter.Kanban := FBoard;
+  FPrinter.Title := 'Aufgaben';
+  FPrinter.HeaderText := '[Titel] - [Datum]';
+  FPrinter.Orientation := poLandscape;
+  FPrintButton := NewButton(Own, Card, FullW - CardPad - 160, CardH - 44, 160, 'Drucken{...}',
+    PrintClick);
+  FPrintButton.Anchors := [akRight, akBottom];
+  FPrintButton.Hint := L('Vorschau|Seitenansicht mit Seite einrichten, PDF und Drucker ') +
+    '(TPPGKanbanPrinter).';
+  FPrintButton.ShowHint := True;
   Host.RegisterSpecial('kanban', FBoard);
 end;
 
@@ -206,6 +222,15 @@ begin
   SetResult(FResult, 'Karte angelegt (Backlog)');
 end;
 
+procedure TDemoKanbanPage.PrintClick(Sender: TObject);
+begin
+  FPrinter.Invalidate;
+  if FPrinter.Preview then
+    SetResult(FResult, 'Board gedruckt')
+  else
+    SetResult(FResult, 'Vorschau geschlossen');
+end;
+
 procedure TDemoKanbanPage.Moving(Sender: TObject; const Move: TPPGKanbanMove; var Allow: Boolean);
 begin
   if not Allow then
@@ -265,8 +290,10 @@ end;
 
 procedure TDemoKanbanPage.SelfTest(Check: TDemoCheck);
 var
-  N: Integer;
+  N, X, Y, Ink: Integer;
   Col: TPPGKanbanColumn;
+  Dev: TPPGPrintDevice;
+  Bmp: TBitmap;
 begin
   FBoard.EnsureLayout;
   Check('Kanban: vier Spalten', FBoard.ColumnCount = 4);
@@ -310,6 +337,31 @@ begin
   Check('Kanban: Spalte verschoben', FBoard.MoveColumn(3, 0) and (FBoard.Columns[0] = Col));
   FBoard.MoveColumn(0, 4); // 4 = hinter die letzte Spalte (Einfuegen davor)
   Check('Kanban: Spalte zurueck', FBoard.Columns[3] = Col);
+  // Druck: die erste Seite der Vorschau zeigt das Board (nicht nur Weiss)
+  FPrinter.Invalidate;
+  Dev := TPPGPrintDevice.A4(96, True);
+  Check('Kanban: Druck hat Seiten', FPrinter.PageCount(Dev) >= 1);
+  Bmp := TBitmap.Create;
+  try
+    Bmp.PixelFormat := pf24bit;
+    Bmp.SetSize(Dev.PageWidth, Dev.PageHeight);
+    Bmp.Canvas.Brush.Color := clWhite;
+    Bmp.Canvas.FillRect(Rect(0, 0, Bmp.Width, Bmp.Height));
+    Bmp.Canvas.Lock;
+    try
+      FPrinter.RenderPage(0, Bmp.Canvas.Handle, Dev);
+    finally
+      Bmp.Canvas.Unlock;
+    end;
+    Ink := 0;
+    for Y := 0 to Bmp.Height div 8 - 1 do
+      for X := 0 to Bmp.Width div 8 - 1 do
+        if ColorToRGB(Bmp.Canvas.Pixels[X * 8, Y * 8]) <> clWhite then
+          Inc(Ink);
+    Check('Kanban: Druckseite zeigt das Board', Ink > 200);
+  finally
+    Bmp.Free;
+  end;
 end;
 
 end.

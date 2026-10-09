@@ -90,7 +90,7 @@ TPPGCustomDatePicker.OnDropDown = Der Kalender klappt gleich auf.
 TPPGCustomDatePicker.ParseInput = True: Beim Übernehmen der Eingabe wird zuerst OnUserInput gefragt (eigene Auswertung, z. B. „morgen“ oder „+3“). DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert; AllowChange := False lehnt ab (ValidationState = pvsError). Ohne Ereignis gilt die normale Prüfung.
 > `DatePicker1.ParseInput := True; DatePicker1.OnUserInput := Eingabe;`
 TPPGCustomDatePicker.ShowCheckbox = True: Links im Feld erscheint ein Kontrollkästchen; ohne Haken (Checked = False) gilt „kein Datum".
-TPPGCustomDatePicker.Time = Uhrzeitanteil des Werts (wie TDateTimePicker.Time); die Anzeige zeigt nur das Datum.
+TPPGCustomDatePicker.Time = Uhrzeitanteil des Werts (wie TDateTimePicker.Time). Angezeigt und bearbeitet wird er mit Kind = dtkTime bzw. dtkDateTime; mit dtkDate zeigt das Feld nur das Datum, die Uhrzeit bleibt erhalten.
 
 # --- TPPGCustomEdit ---
 TPPGCustomEdit.AutoSelect = True: Beim Fokus per Tab wird der ganze Text markiert.
