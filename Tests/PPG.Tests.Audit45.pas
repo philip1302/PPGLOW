@@ -1894,6 +1894,7 @@ procedure TNamingTests.CheckListBoxOnItemCheck;
 var
   L: TPPGCheckListBox;
 begin
+  FItemChecks := 0; // /leaks fuehrt die Tests zweimal mit derselben Instanz aus
   L := TPPGCheckListBox.Create(FForm);
   L.Parent := FForm;
   L.Items.CommaText := 'A,B,C';
