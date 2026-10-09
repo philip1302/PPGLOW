@@ -48,17 +48,25 @@ type
   private
     FHost: IDemoHost;
     FSheet: TPPGTabSheet;
+    FScroller: TPPGScrollBox;
   protected
     procedure Build; virtual; abstract;
+    /// Abstand unter der letzten Karte (Inhalt endet nicht buendig am Fensterrand).
+    procedure AddBottomSpace;
     function Own: TComponent;
     property Host: IDemoHost read FHost;
-    property Sheet: TPPGTabSheet read FSheet;
+    /// Flaeche der Seite: scrollt, wenn der Inhalt hoeher als das Fenster ist
+    /// (TPPGScrollBox ohne Rahmen im Reiter, Phase 18d).
+    property Sheet: TPPGScrollBox read FScroller;
+    property TabSheet: TPPGTabSheet read FSheet;
   public
     constructor CreatePage(AOwner: TComponent; const AHost: IDemoHost; ASheet: TPPGTabSheet);
     /// Wird nach jedem Preset-, Theme- oder Style-Wechsel aufgerufen.
     procedure AppearanceChanged; virtual;
     /// Seite wurde sichtbar.
     procedure Activated; virtual;
+    /// Inhalt der Seite senkrecht scrollen.
+    procedure ScrollContent(Y: Integer);
     /// Selbsttest (/selftest): Szenarien der Seite ausloesen und pruefen.
     procedure SelfTest(Check: TDemoCheck); virtual;
   end;
@@ -131,7 +139,8 @@ function Euro(Value: Double): string;
 implementation
 
 uses
-  Winapi.Messages, System.Types, PPG.Render.Intf, PPG.Render.Registry, PPG.IconFont, Vcl.Forms;
+  Winapi.Messages, System.Types, System.Math, Vcl.ExtCtrls, PPG.Render.Intf, PPG.Render.Registry,
+  PPG.IconFont, Vcl.Forms;
 
 function L(const S: string): string;
 begin
@@ -390,7 +399,32 @@ begin
   inherited Create(AOwner);
   FHost := AHost;
   FSheet := ASheet;
+  FScroller := TPPGScrollBox.Create(AOwner);
+  FScroller.Parent := ASheet;
+  FScroller.Align := alClient;
+  FScroller.BorderStyle := bsNone;
+  FScroller.Preset := DemoPreset;
   Build;
+  AddBottomSpace;
+end;
+
+procedure TDemoPage.AddBottomSpace;
+var
+  I, Bottom: Integer;
+  Spacer: TPaintBox;
+begin
+  Bottom := 0;
+  for I := 0 to FScroller.ControlCount - 1 do
+    if FScroller.Controls[I].Align = alNone then
+      Bottom := Max(Bottom, FScroller.Controls[I].BoundsRect.Bottom);
+  Spacer := TPaintBox.Create(Owner);
+  Spacer.Parent := FScroller;
+  Spacer.SetBounds(0, Bottom, 1, PageTop);
+end;
+
+procedure TDemoPage.ScrollContent(Y: Integer);
+begin
+  FScroller.ScrollTo(0, Y);
 end;
 
 function TDemoPage.Own: TComponent;

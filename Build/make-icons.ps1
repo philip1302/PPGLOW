@@ -58,6 +58,7 @@ $Icons = [ordered]@{
   'TPPGProgressBar' = @('rect 2 12 28 8 4 H', 'rect 2 12 18 8 4 A')
   'TPPGTrackBar'    = @('rect 3 14.5 26 3 1.5 H', 'rect 3 14.5 13 3 1.5 A', 'circle 16 16 6 W S 1.5', 'circle 16 16 3 A')
   'TPPGPanel'       = @('rect 3 5 26 22 4 H S 1.5')
+  'TPPGScrollBox'   = @('rect 3 5 26 22 4 H S 1.5', 'rect 24 8 3 9 1.5 A', 'line 7 11 19 11 2 G', 'line 7 16 17 16 2 G', 'line 7 21 19 21 2 G')
   'TPPGGroupBox'    = @('rect 3 8 26 20 3 - S 1.5', 'rect 6 4 14 8 4 A')
   'TPPGRadioGroup'  = @('rect 3 4 26 24 3 - S 1.5', 'circle 9 11 3.5 W S 1.2', 'circle 9 11 1.8 A', 'line 15 11 25 11 2 G', 'circle 9 21 3.5 W S 1.2', 'line 15 21 23 21 2 G')
   'TPPGCheckGroup'  = @('rect 3 4 26 24 3 - S 1.5', 'rect 6 8 6 6 1.5 A', 'path 1.5 W 7.5 11 9 12.5 11 9.5', 'line 15 11 25 11 2 G', 'rect 6 18 6 6 1.5 W S 1', 'line 15 21 23 21 2 G')

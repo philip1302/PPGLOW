@@ -74,6 +74,8 @@ type
     procedure ShowHoverDemo;
     procedure ShowFocusDemo;
     procedure ShowPage(Index: Integer);
+    /// Aktive Seite senkrecht scrollen (/scroll y, Screenshots weiter unten).
+    procedure ScrollActivePage(Y: Integer);
     procedure ApplyTheme(const AName: string);
     function EnableMica: Boolean;
     procedure SaveScreenCapture(const FileName: string);
@@ -752,6 +754,15 @@ begin
   end;
   if PageObject(Idx) <> nil then
     PageObject(Idx).Activated;
+end;
+
+procedure TDemoForm.ScrollActivePage(Y: Integer);
+var
+  I: Integer;
+begin
+  I := FPages.ActivePageIndex;
+  if (I >= 0) and (I < FPageObjects.Count) then
+    FPageObjects[I].ScrollContent(Y);
 end;
 
 procedure TDemoForm.ShowPage(Index: Integer);

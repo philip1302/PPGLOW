@@ -25,4 +25,4 @@ dcc32 Befehlszeile für "PPGlowTests.dpr"
   PPGlowTests.dpr   
 [dcc32 Warnung] PPGlowTests.dpr(217): W1002 Symbol 'GetMemoryManagerState' ist plattformspezifisch
 Erfolg
-Verstrichene Zeit: 00:00:02.4
+Verstrichene Zeit: 00:00:02.3

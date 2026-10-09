@@ -11,7 +11,7 @@ uses
   System.Types, Vcl.Graphics, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
   PPG.Types, PPG.Controls.Field, PPG.RadioGroup, PPG.Items, PPG.Controls.Scroll, PPG.TileView,
   PPG.Grid.Data, PPG.Grid.Export, Data.DB, Datasnap.DBClient, MidasLib, Vcl.DBCtrls,
-  PPG.DB.Navigator, PPG.Tests.Controls;
+  PPG.DB.Navigator, PPG.Panel, PPG.Edit, PPG.Tests.Controls;
 
 type
   TChoiceGroupTests = class(TControlTestCase)
@@ -112,6 +112,24 @@ type
     procedure RadioGroupReadsAndWritesField;
   end;
 
+  TPanelScrollTests = class(TControlTestCase)
+  private
+    function NewPanel(AutoScroll: Boolean): TPPGPanel;
+    function AddChild(P: TWinControl; X, Y: Integer): TPPGEdit;
+  published
+    procedure NoScrollingByDefault;
+    procedure AutoScrollShowsBarForChildBelow;
+    procedure ScrollToMovesChildrenAndClamps;
+    procedure ScrollInViewAndFocus;
+    procedure WheelScrolls;
+    procedure FixedRangeWithoutAutoScroll;
+    procedure AlignedChildScrollsAlong;
+    procedure DragThumbScrolls;
+    procedure ScrollBoxLoadsTScrollBoxDfm;
+    procedure InvalidValuesRaise;
+    procedure PaintsWithBars;
+  end;
+
 implementation
 
 uses
@@ -120,6 +138,7 @@ uses
 type
   TGroupAccess = class(TPPGCustomChoiceGroup);
   TNavAccess = class(TPPGCustomDBNavigator);
+  TPanelAccess = class(TPPGCustomPanel);
 
 /// Bild zur Sichtpruefung nach Tests\Visual\Gallery (wie die Sichttests).
 procedure SaveGalleryPng(B: TBitmap; const FileName: string);
@@ -1424,9 +1443,243 @@ begin
   FData.Cancel;
 end;
 
+{ TPanelScrollTests }
+
+function TPanelScrollTests.NewPanel(AutoScroll: Boolean): TPPGPanel;
+begin
+  Result := TPPGPanel.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 220, 160);
+  Result.Caption := '';
+  Result.Animation.Enabled := False;
+  Result.AutoScroll := AutoScroll;
+  Result.VertScrollBar.Smooth := False;
+  Result.HorzScrollBar.Smooth := False;
+end;
+
+function TPanelScrollTests.AddChild(P: TWinControl; X, Y: Integer): TPPGEdit;
+begin
+  Result := TPPGEdit.Create(FForm);
+  Result.Parent := P;
+  Result.SetBounds(X, Y, 120, 28);
+end;
+
+procedure TPanelScrollTests.NoScrollingByDefault;
+var
+  P: TPPGPanel;
+  E: TPPGEdit;
+begin
+  P := NewPanel(False);
+  E := AddChild(P, 10, 400);
+  CheckFalse(P.VertScrollBar.IsScrollBarVisible, 'ohne AutoScroll keine Leiste');
+  CheckEquals(0, P.ContentSize.cy);
+  P.ScrollTo(0, 100);
+  CheckEquals(400, E.Top, 'nichts verschoben');
+end;
+
+procedure TPanelScrollTests.AutoScrollShowsBarForChildBelow;
+var
+  P: TPPGPanel;
+begin
+  P := NewPanel(True);
+  AddChild(P, 10, 400);
+  CheckTrue(P.VertScrollBar.IsScrollBarVisible, 'Kind unterhalb: senkrechte Leiste');
+  CheckFalse(P.HorzScrollBar.IsScrollBarVisible, 'passt in die Breite');
+  CheckTrue(P.ContentSize.cy >= 420, 'Inhalt bis zur Unterkante des Kinds (abzueglich Rand)');
+end;
+
+procedure TPanelScrollTests.ScrollToMovesChildrenAndClamps;
+var
+  P: TPPGPanel;
+  E: TPPGEdit;
+  Top0: Integer;
+begin
+  P := NewPanel(True);
+  E := AddChild(P, 10, 400);
+  Top0 := E.Top;
+  P.ScrollTo(0, 100);
+  CheckEquals(100, P.ScrollPos.Y);
+  CheckEquals(Top0 - 100, E.Top, 'Kind wandert mit');
+  P.ScrollTo(0, 100000);
+  CheckTrue(P.ScrollPos.Y < 1000, 'begrenzt');
+  CheckTrue(E.Top + E.Height <= P.ClientHeight, 'am Ende ist das Kind sichtbar');
+  P.VertScrollBar.Position := 0;
+  CheckEquals(Top0, E.Top, 'Position wie TControlScrollBar');
+end;
+
+procedure TPanelScrollTests.ScrollInViewAndFocus;
+var
+  P: TPPGPanel;
+  E1, E2: TPPGEdit;
+begin
+  P := NewPanel(True);
+  E1 := AddChild(P, 10, 10);
+  E2 := AddChild(P, 10, 500);
+  P.ScrollInView(E2);
+  CheckTrue((E2.Top >= 0) and (E2.Top + E2.Height <= P.ClientHeight), 'ScrollInView');
+  P.ScrollTo(0, 0);
+  FForm.Show;
+  E1.SetFocus;
+  E2.SetFocus;
+  CheckTrue((E2.Top >= 0) and (E2.Top + E2.Height <= P.ClientHeight), 'Fokus holt das ganze Feld ins Bild (nicht nur das innere Edit)');
+end;
+
+procedure TPanelScrollTests.WheelScrolls;
+var
+  P: TPPGPanel;
+begin
+  P := NewPanel(True);
+  AddChild(P, 10, 600);
+  P.Perform(WM_MOUSEWHEEL, MakeWParam(0, Word(-120)), MakeLParam(5, 5));
+  CheckTrue(P.ScrollPos.Y > 0, 'Rad nach unten');
+  P.Perform(WM_MOUSEWHEEL, MakeWParam(0, 120), MakeLParam(5, 5));
+  CheckEquals(0, P.ScrollPos.Y);
+end;
+
+procedure TPanelScrollTests.FixedRangeWithoutAutoScroll;
+var
+  P: TPPGPanel;
+begin
+  P := NewPanel(False);
+  P.VertScrollBar.Range := 1000;
+  CheckTrue(P.VertScrollBar.IsScrollBarVisible, 'feste Range wie die VCL');
+  P.ScrollTo(0, 300);
+  CheckEquals(300, P.ScrollPos.Y);
+  P.VertScrollBar.Visible := False;
+  CheckFalse(P.VertScrollBar.IsScrollBarVisible);
+end;
+
+procedure TPanelScrollTests.AlignedChildScrollsAlong;
+var
+  P: TPPGPanel;
+  Head: TPPGPanel;
+  E: TPPGEdit;
+  Top0: Integer;
+begin
+  P := NewPanel(True);
+  Head := TPPGPanel.Create(FForm);
+  Head.Parent := P;
+  Head.Align := alTop;
+  Head.Height := 40;
+  E := AddChild(P, 10, 500);
+  // Ausgerichtete Kinder ordnet die VCL erst mit Fensterhandle an
+  FForm.Show;
+  P.ScrollTo(0, 0); // Show fokussiert das Edit unten und scrollt dorthin
+  Top0 := Head.Top;
+  P.ScrollTo(0, 80);
+  CheckEquals(Top0 - 80, Head.Top, 'ausgerichtetes Kind scrollt mit (wie TScrollBox)');
+  CheckTrue(E.Top < 500);
+end;
+
+procedure TPanelScrollTests.DragThumbScrolls;
+var
+  P: TPPGPanel;
+  R: TRect;
+begin
+  P := NewPanel(True);
+  AddChild(P, 10, 900);
+  R := TPanelAccess(P).BarThumb(True);
+  CheckFalse(IsRectEmpty(R), 'Daumen');
+  P.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam((R.Left + R.Right) div 2, R.Top + 2));
+  P.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam((R.Left + R.Right) div 2, R.Top + 60));
+  P.Perform(WM_LBUTTONUP, 0, MakeLParam((R.Left + R.Right) div 2, R.Top + 60));
+  CheckTrue(P.ScrollPos.Y > 0, 'Ziehen scrollt');
+end;
+
+procedure TPanelScrollTests.ScrollBoxLoadsTScrollBoxDfm;
+const
+  Dfm =
+    'object Box: TPPGScrollBox'#13#10 +
+    '  Left = 0'#13#10 +
+    '  Top = 0'#13#10 +
+    '  Width = 200'#13#10 +
+    '  Height = 120'#13#10 +
+    '  BorderStyle = bsNone'#13#10 +
+    '  HorzScrollBar.Visible = False'#13#10 +
+    '  VertScrollBar.Increment = 20'#13#10 +
+    '  VertScrollBar.Tracking = True'#13#10 +
+    '  TabOrder = 0'#13#10 +
+    'end';
+var
+  Src: TStringStream;
+  Bin: TMemoryStream;
+  B: TPPGScrollBox;
+  Bmp: TBitmap;
+begin
+  Src := TStringStream.Create(Dfm);
+  Bin := TMemoryStream.Create;
+  try
+    ObjectTextToBinary(Src, Bin);
+    Bin.Position := 0;
+    B := TPPGScrollBox.Create(FForm);
+    Bin.ReadComponent(B);
+    B.Parent := FForm;
+    CheckTrue(B.AutoScroll, 'Vorgabe wie TScrollBox');
+    CheckTrue(B.BorderStyle = bsNone);
+    CheckFalse(B.HorzScrollBar.Visible);
+    CheckEquals(20, B.VertScrollBar.Increment);
+    CheckTrue(B.VertScrollBar.Tracking);
+    AddChild(B, 0, 300);
+    CheckTrue(B.VertScrollBar.IsScrollBarVisible);
+    Bmp := RenderToBitmap(B);
+    Bmp.Free;
+  finally
+    Bin.Free;
+    Src.Free;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TPanelScrollTests.InvalidValuesRaise;
+var
+  P: TPPGPanel;
+begin
+  P := NewPanel(True);
+  try
+    P.VertScrollBar.Increment := 0;
+    Fail('Increment 0 muss werfen');
+  except
+    on EPPGError do
+  end;
+  CheckEquals(8, P.VertScrollBar.Increment, 'unveraendert');
+  try
+    P.VertScrollBar.Range := -1;
+    Fail('Range negativ muss werfen');
+  except
+    on EPPGError do
+  end;
+end;
+
+procedure TPanelScrollTests.PaintsWithBars;
+var
+  P: TPPGPanel;
+  B: TBitmap;
+  Gdi: Boolean;
+begin
+  P := NewPanel(True);
+  AddChild(P, 400, 400);
+  CheckTrue(P.HorzScrollBar.IsScrollBarVisible and P.VertScrollBar.IsScrollBarVisible);
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      B := RenderToBitmap(P);
+      B.Free;
+      P.BiDiMode := bdRightToLeft;
+      B := RenderToBitmap(P);
+      B.Free;
+      P.BiDiMode := bdLeftToRight;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
 initialization
   RegisterTest('Phase18', TChoiceGroupTests.Suite);
   RegisterTest('Phase18', TTileViewTests.Suite);
   RegisterTest('Phase18', TDBNavigatorTests.Suite);
+  RegisterTest('Phase18', TPanelScrollTests.Suite);
 
 end.

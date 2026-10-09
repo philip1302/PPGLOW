@@ -214,6 +214,9 @@ begin
       Form.ApplyTheme(ParamStr(I + 1));
     if SameText(ParamStr(I), '/page') then
       Form.ShowPage(StrToIntDef(ParamStr(I + 1), 0));
+    // /scroll y  -> aktive Seite scrollen (nach /page)
+    if SameText(ParamStr(I), '/scroll') then
+      Form.ScrollActivePage(StrToIntDef(ParamStr(I + 1), 0));
     // /height n  -> Fensterhoehe (Screenshots von Karten weiter unten)
     if SameText(ParamStr(I), '/height') then
       Form.ClientHeight := StrToIntDef(ParamStr(I + 1), Form.ClientHeight);

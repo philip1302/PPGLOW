@@ -978,7 +978,7 @@ end;
 procedure Register;
 begin
   RegisterComponents(PPGPaletteName, [TPPGButton, TPPGCheckBox, TPPGRadioButton,
-    TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGGroupBox, TPPGRadioGroup,
+    TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGScrollBox, TPPGGroupBox, TPPGRadioGroup,
     TPPGCheckGroup,
     TPPGEdit, TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl,
     TPPGListBox, TPPGCheckListBox, TPPGTreeView, TPPGGrid, TPPGTileView,

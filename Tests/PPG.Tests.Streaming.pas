@@ -30,7 +30,7 @@ type
 implementation
 
 const
-  ControlClasses: array[0..41] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
+  ControlClasses: array[0..42] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
     TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGGroupBox, TPPGEdit,
     TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl, TPPGListBox,
     TPPGCheckListBox, TPPGTreeView, TPPGGrid, TPPGLabel, TPPGLinkLabel, TPPGBadge,
@@ -38,7 +38,7 @@ const
     TPPGCalendar, TPPGDatePicker, TPPGTimePicker, TPPGNavigationView, TPPGBreadcrumb,
     TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
     TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart, TPPGRadioGroup, TPPGCheckGroup,
-    TPPGTileView);
+    TPPGTileView, TPPGScrollBox);
 
   // Layout-, Eltern- und Verweis-Properties gehoeren nicht zum Einzeltest
   SkipProps: array[0..24] of string = ('Name', 'Left', 'Top', 'Width', 'Height', 'Align',
