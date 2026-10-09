@@ -389,11 +389,11 @@ Jedes PPGlow-Control beantwortet `WM_GETOBJECT(OBJID_CLIENT)` mit einem `TPPGAcc
 | Angabe | Quelle |
 |---|---|
 | Name | `Caption` ohne `&` (Eingabefelder: Label mit `FocusControl`, sonst `TextHint`, sonst `Hint`) |
-| Rolle | Button, Menü-Button, Split-Button, CheckBox, RadioButton, Fortschrittsanzeige, Schieberegler, Gruppierung, Bereich (Panel), Drehfeld (SpinEdit), Kombinationsfeld mit Liste und Listeneinträgen, Reiterliste mit Reitern, Eigenschaftsseite (TabSheet); das native Edit im Feld hat die Rolle Text |
+| Rolle | je Control eigene Rolle (Basis neutral: Client); Button nur bei Buttons sowie anklickbarer KpiTile und Badge, sonst z. B. Menü-Button, Split-Button, CheckBox, RadioButton, Fortschrittsanzeige, Schieberegler, Gruppierung, Bereich (Panel), Drehfeld (SpinEdit), Kombinationsfeld mit Liste und Listeneinträgen, Reiterliste mit Reitern, Eigenschaftsseite (TabSheet); das native Edit im Feld hat die Rolle Text |
 | Zustand | deaktiviert, fokussiert, gedrückt, an, gemischt, hat Popup, schreibgeschützt (ProgressBar), beschäftigt (Marquee) |
 | Beschreibung | kurzer Teil von `Hint`; Felder: Validierungstext (am inneren Edit) |
 | Tastenkürzel | `Alt+X` aus dem `&` der Caption |
-| Standardaktion | „Press“, „Check“/„Uncheck“, „Select“ |
+| Standardaktion | „Press“ nur bei Buttons (auch anklickbare KpiTile/Badge), „Jump“ beim LinkLabel mit genau einem Link, „Check“/„Uncheck“, „Select“, „Expand“/„Collapse“, „Open“/„Close“; die Basis `TPPGCustomControl` hat **keine** Standardaktion (Audit 7d), `accDoDefaultAction` löst dort nichts aus |
 | Wert | ToggleSwitch: „On“/„Off“, ProgressBar: Prozent, TrackBar: Position |
 
 **Virtuelle Kind-Elemente** ohne eigenes Fenster (Listeneinträge, Reiter) liefert ein Control über das optionale Interface `IPPGAccessibleChildren`. Unterstützt es das Interface, beantwortet `TPPGAccessible` Kind-IDs 1..n über dieses Interface: Name, Rolle, Zustand, Lage, Hit-Test, Navigation, Fokus, Auswahl und Standardaktion. Die Aufzählung (`IEnumVARIANT`) liefert zuerst die Kind-Fenster des Standard-Proxys, dann die virtuellen IDs. Ohne das Interface bleibt alles wie zuvor. Hervorhebung und Wechsel werden per `NotifyAccessibilityChild` (`EVENT_OBJECT_FOCUS`/`SELECTION` mit Kind-ID) gemeldet; Narrator liest so den Listeneintrag bzw. Reiter vor.

@@ -93,6 +93,7 @@ type
     function GetCaptionAlignment: TPPGHorzAlign; override;
     function AccRole: Integer; override;
     function AccState: Integer; override;
+    function AccDefaultAction: string; override;
 
     property ModalResult: TModalResult read FModalResult write FModalResult default 0;
     property Default: Boolean read FDefault write SetDefault default False;
@@ -214,7 +215,8 @@ type
 implementation
 
 uses
-  System.SysUtils, Vcl.StdCtrls, Winapi.oleacc, PPG.Exceptions, PPG.Appearance;
+  System.SysUtils, Vcl.StdCtrls, Winapi.oleacc, PPG.Exceptions, PPG.Appearance,
+  PPG.Consts, PPG.Lang;
 
 var
   GMsgButtonPressed: Cardinal = 0;
@@ -327,6 +329,12 @@ begin
     Result := ROLE_SYSTEM_BUTTONMENU
   else
     Result := ROLE_SYSTEM_PUSHBUTTON;
+end;
+
+function TPPGCustomButton.AccDefaultAction: string;
+begin
+  // Audit 7d: "Druecken" nur bei Buttons (die Basis hat keine Standardaktion)
+  Result := PPGStr(@SPPGAccPress);
 end;
 
 function TPPGCustomButton.AccState: Integer;

@@ -33,6 +33,10 @@ type
     procedure FieldValidationDescriptionOnInnerEdit;
     procedure FieldValidationRaisesEvents;
     procedure ValidatorMarksInnerEdit;
+    procedure PaletteRolesAndDefaultActions;
+    procedure ButtonKeepsPress;
+    procedure ClickableTilesAndBadgesArePressable;
+    procedure LinkLabelSingleLinkJumps;
   end;
 
 implementation
@@ -209,6 +213,140 @@ begin
   CheckFalse(V.Validate, 'leeres Pflichtfeld');
   CheckEquals('Bitte ausfuellen', AccDescr(TWinControl(E.Controls[0]).Handle),
     'Validator meldet den Fehler am inneren Edit');
+end;
+
+{ ---- 7d #2 ---- }
+
+procedure TAudit7DTests.PaletteRolesAndDefaultActions;
+var
+  CC: TControlClass;
+  C: TControl;
+  Acc: IAccessible;
+  Role: Integer;
+  Act, Bad: string;
+  Press: string;
+begin
+  FForm.SetBounds(0, 0, 900, 700);
+  FForm.Show;
+  Press := PPGStr(@SPPGAccPress);
+  Bad := '';
+  for CC in VisualClasses do
+  begin
+    if not CC.InheritsFrom(TPPGCustomControl) then
+      Continue;
+    C := CC.Create(FForm);
+    try
+      C.Parent := FForm;
+      C.SetBounds(10, 10, 300, 200);
+      TWinControl(C).HandleNeeded;
+      Acc := AccOf(TWinControl(C).Handle);
+      Role := AccRoleOf(Acc);
+      Act := AccAction(Acc);
+      // OnClick erst danach: KpiTile und Badge werden damit zum Button
+      TCtrlAccess(C).OnClick := CountClick;
+      FClicks := 0;
+      if C is TPPGCustomButton then
+      begin
+        if Role <> ROLE_SYSTEM_PUSHBUTTON then
+          Bad := Bad + #13#10 + CC.ClassName + ': Rolle ' + IntToStr(Role);
+        if Act <> Press then
+          Bad := Bad + #13#10 + CC.ClassName + ': Aktion ' + Act;
+      end
+      else
+      begin
+        if (Role = ROLE_SYSTEM_PUSHBUTTON) or (Role = ROLE_SYSTEM_CLIENT) then
+          Bad := Bad + #13#10 + CC.ClassName + ': Rolle ' + IntToStr(Role);
+        if Act = Press then
+          Bad := Bad + #13#10 + CC.ClassName + ': Aktion ' + Act;
+        if AccAction(Acc) = '' then
+        begin
+          // Ohne Standardaktion darf der Screenreader nichts ausloesen
+          Acc.accDoDefaultAction(CHILDID_SELF);
+          Application.ProcessMessages;
+          if FClicks <> 0 then
+            Bad := Bad + #13#10 + CC.ClassName + ': OnClick ohne Standardaktion';
+        end;
+      end;
+      Acc := nil;
+    finally
+      C.Free;
+    end;
+    Application.ProcessMessages;
+  end;
+  CheckEquals('', Bad, 'Rolle/Standardaktion');
+end;
+
+procedure TAudit7DTests.ButtonKeepsPress;
+var
+  B: TPPGButton;
+  Acc: IAccessible;
+begin
+  B := NewButton('Los');
+  B.OnClick := CountClick;
+  Acc := AccOf(B.Handle);
+  CheckEquals(ROLE_SYSTEM_PUSHBUTTON, AccRoleOf(Acc));
+  CheckEquals(PPGStr(@SPPGAccPress), AccAction(Acc));
+  CheckEquals(S_OK, Acc.accDoDefaultAction(CHILDID_SELF));
+  CheckEquals(0, FClicks, 'nicht im COM-Aufruf');
+  Application.ProcessMessages;
+  CheckEquals(1, FClicks, 'Druecken loest OnClick aus');
+end;
+
+procedure TAudit7DTests.ClickableTilesAndBadgesArePressable;
+var
+  K: TPPGKpiTile;
+  B: TPPGBadge;
+  Acc: IAccessible;
+begin
+  K := TPPGKpiTile.Create(FForm);
+  K.Parent := FForm;
+  Acc := AccOf(K.Handle);
+  CheckEquals(ROLE_SYSTEM_STATICTEXT, AccRoleOf(Acc), 'Kachel ohne OnClick');
+  CheckEquals('', AccAction(Acc), 'Kachel ohne OnClick: keine Aktion');
+  K.OnClick := CountClick;
+  CheckEquals(ROLE_SYSTEM_PUSHBUTTON, AccRoleOf(Acc), 'Kachel mit OnClick');
+  CheckEquals(PPGStr(@SPPGAccPress), AccAction(Acc), 'Kachel mit OnClick');
+  Acc.accDoDefaultAction(CHILDID_SELF);
+  Application.ProcessMessages;
+  CheckEquals(1, FClicks, 'Kachel gedrueckt');
+
+  FClicks := 0;
+  B := TPPGBadge.Create(FForm);
+  B.Parent := FForm;
+  B.Top := 100;
+  Acc := AccOf(B.Handle);
+  CheckEquals(ROLE_SYSTEM_STATICTEXT, AccRoleOf(Acc), 'Badge ohne OnClick');
+  CheckEquals('', AccAction(Acc), 'Badge ohne OnClick: keine Aktion');
+  B.OnClick := CountClick;
+  CheckEquals(ROLE_SYSTEM_PUSHBUTTON, AccRoleOf(Acc), 'Badge mit OnClick');
+  CheckEquals(PPGStr(@SPPGAccPress), AccAction(Acc), 'Badge mit OnClick');
+  Acc.accDoDefaultAction(CHILDID_SELF);
+  Application.ProcessMessages;
+  CheckEquals(1, FClicks, 'Badge gedrueckt');
+end;
+
+procedure TAudit7DTests.LinkLabelSingleLinkJumps;
+var
+  L: TPPGLinkLabel;
+  Acc: IAccessible;
+begin
+  L := TPPGLinkLabel.Create(FForm);
+  L.Parent := FForm;
+  L.Caption := 'Siehe <a href="x">Hilfe</a>';
+  L.OnClick := CountClick;
+  L.OnLinkClick := CountLink;
+  Acc := AccOf(L.Handle);
+  CheckEquals(ROLE_SYSTEM_LINK, AccRoleOf(Acc));
+  CheckEquals(PPGStr(@SPPGAccJump), AccAction(Acc), 'wie die Link-Kinder');
+  Acc.accDoDefaultAction(CHILDID_SELF);
+  CheckEquals(0, FLinkClicks, 'nicht im COM-Aufruf');
+  Application.ProcessMessages;
+  CheckEquals(1, FLinkClicks, 'Link ausgeloest');
+  CheckEquals(0, FClicks, 'kein OnClick');
+  // Mehrere Links: der Text selbst hat keine Aktion, die Links sind Kinder
+  L.Caption := '<a href="a">A</a> und <a href="b">B</a>';
+  CheckEquals(ROLE_SYSTEM_STATICTEXT, AccRoleOf(Acc));
+  CheckEquals('', AccAction(Acc));
 end;
 
 initialization

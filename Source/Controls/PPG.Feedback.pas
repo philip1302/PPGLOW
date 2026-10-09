@@ -47,6 +47,7 @@ type
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     function AccRole: Integer; override;
     function AccName: string; override;
+    function AccDefaultAction: string; override;
     property Kind: TPPGBadgeKind read FKind write SetKind default bkNumber;
     property Value: Integer read FValue write SetValue default 0;
     /// Groessere Zahlen erscheinen als "99+" (0 = ohne Grenze).
@@ -535,7 +536,19 @@ end;
 
 function TPPGCustomBadge.AccRole: Integer;
 begin
-  Result := ROLE_SYSTEM_STATICTEXT;
+  // Audit 7d: mit OnClick (auch ueber eine Action) ein Button, sonst Text
+  if Assigned(OnClick) then
+    Result := ROLE_SYSTEM_PUSHBUTTON
+  else
+    Result := ROLE_SYSTEM_STATICTEXT;
+end;
+
+function TPPGCustomBadge.AccDefaultAction: string;
+begin
+  if Assigned(OnClick) then
+    Result := PPGStr(@SPPGAccPress)
+  else
+    Result := '';
 end;
 
 function TPPGCustomBadge.AccName: string;
