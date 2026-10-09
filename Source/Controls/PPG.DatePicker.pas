@@ -17,8 +17,12 @@ unit PPG.DatePicker;
     uebernehmen.
   - DFM-nah zu TDateTimePicker: Date, Time, MinDate, MaxDate, ShowCheckbox,
     Checked, DateFormat, Format, CalAlignment, Kind, DateMode, ParseInput.
-  - Kind: dtkDate (Datum mit Kalender), dtkTime (Uhrzeit, Auf/Ab-Knoepfe,
-    Oben/Unten = Minute, Strg = Stunde), dtkDateTime (Datum und Uhrzeit).
+  - Kind: dtkDate (Datum mit Kalender), dtkTime (Uhrzeit, Auf/Ab-Knoepfe),
+    dtkDateTime (Datum und Uhrzeit). Oben/Unten, Auf/Ab und das Rad aendern
+    in der Uhrzeit den Teil unter der Einfuegemarke (Stunde, Minute, Sekunde,
+    AM/PM; Strg = Stunde, wie der TimePicker), im Datum den Tag (Strg: Monat).
+    Ohne Fokus (Text im Anzeigeformat) bleibt es bei Minute bzw. Tag.
+  - Das Rad aendert den Wert nur mit Fokus (Audit 7b).
   - DateMode = dmUpDown: Auf/Ab-Knoepfe statt Kalender (Tag, Strg = Monat).
   - ParseInput + OnUserInput: eigene Auswertung der Eingabe (wie
     TDateTimePicker.OnUserInput), z. B. "morgen" oder "+3".
@@ -118,6 +122,11 @@ type
     function EditFormatted(const DT: TDateTime): string;
     /// Oben/Unten bzw. Auf/Ab: Tag/Monat oder Minute/Stunde weiterzaehlen.
     procedure StepValue(Delta: Integer; Coarse: Boolean);
+    /// Teil der Uhrzeit unter der Einfuegemarke (nur beim Bearbeiten im Feld;
+    /// False = Datumsteil bzw. kein Bearbeitungstext).
+    function TimeSegmentAtCaret(out Segment: Integer): Boolean;
+    /// Oben/Unten, Auf/Ab und Rad: Teil unter der Marke bzw. Tag/Monat.
+    procedure StepAtCaret(Delta: Integer; Coarse: Boolean);
     function GetDroppedDown: Boolean;
     procedure SetDroppedDown(const Value: Boolean);
     function GetCalendarPopup: TPPGCalendarPopup;
@@ -140,6 +149,8 @@ type
     procedure PopupClosed; override;
     procedure FocusChanged; override;
     procedure Change; override;
+    function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
+      MousePos: TPoint): Boolean; override;
     procedure GetFieldColors(out Fill, Text: TColor); override;
     procedure DoPaintField(const ACanvas: IPPGCanvas; const Style: TPPGSurfaceStyle); override;
     function AccValue: string; override;
@@ -285,7 +296,7 @@ implementation
 uses
   PPG.Lang,
   System.Math, System.DateUtils, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont;
+  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.TimePicker;
 
 type
   TCalendarAccess = class(TPPGCalendar);
@@ -681,6 +692,74 @@ begin
   end;
 end;
 
+function TPPGCustomDatePicker.TimeSegmentAtCaret(out Segment: Integer): Boolean;
+var
+  S: string;
+  Caret, TimeStart: Integer;
+begin
+  // Audit 7c #6: Segmente wie im TimePicker. Nur im Bearbeitungsformat
+  // (EditFormatted) ist die Lage der Teile bekannt.
+  Result := False;
+  Segment := 1;
+  if not FEditing or (FDateTime = 0) then
+    Exit;
+  S := Text;
+  Caret := SelStart;
+  if TimeMode then
+  begin
+    Segment := PPGTimeSegmentAt(S, Caret, True);
+    Result := True;
+  end
+  else if DateTimeMode then
+  begin
+    // "Datum Uhrzeit": die Uhrzeit beginnt hinter dem Leerzeichen nach dem Datum
+    TimeStart := Length(FormatDateTime(FormatSettings.ShortDateFormat, FDateTime)) + 1;
+    if (Caret >= TimeStart) and (Length(S) > TimeStart) and (S[TimeStart] = ' ') then
+    begin
+      Segment := PPGTimeSegmentAt(Copy(S, TimeStart + 1, MaxInt), Caret - TimeStart, False);
+      Result := True;
+    end;
+  end;
+end;
+
+procedure TPPGCustomDatePicker.StepAtCaret(Delta: Integer; Coarse: Boolean);
+var
+  Seg, Caret: Integer;
+  DT: TDateTime;
+begin
+  if not TimeSegmentAtCaret(Seg) then
+  begin
+    StepValue(Delta, Coarse);
+    if FEditing then
+      SelectAll;
+    Exit;
+  end;
+  if Coarse then
+    Seg := 0; // Strg: Stunde
+  if not ParseValue(Text, DT) then
+    DT := FDateTime;
+  Caret := SelStart;
+  UserSetDateTime(Trunc(DT) + PPGStepTimeSegment(DT, Seg, Delta));
+  SelStart := Caret; // Einfuegemarke im selben Teil lassen
+end;
+
+function TPPGCustomDatePicker.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
+  MousePos: TPoint): Boolean;
+var
+  N: Integer;
+begin
+  // Offen: die Basis blaettert den Kalender; OnMouseWheel kommt zuerst
+  Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
+  // Audit 7b/7c #6: nur mit Fokus, Teil unter der Einfuegemarke
+  if Result or DroppedDown or ReadOnly or not Enabled or not FieldFocused or
+    (WheelDelta = 0) then
+    Exit;
+  N := WheelSteps(WheelDelta);
+  if N <> 0 then
+    StepAtCaret(N, ssCtrl in Shift);
+  Result := True;
+end;
+
 function TPPGCustomDatePicker.FormatDate(D: TDate): string;
 begin
   if D = 0 then
@@ -976,9 +1055,8 @@ begin
         Exit
       else
       begin
-        // Oben/Unten: Tag/Monat bzw. Minute/Stunde
-        StepValue(1 - 2 * Ord(Key = VK_DOWN), ssCtrl in Shift);
-        SelectAll;
+        // Oben/Unten: Teil der Uhrzeit unter der Marke bzw. Tag/Monat
+        StepAtCaret(1 - 2 * Ord(Key = VK_DOWN), ssCtrl in Shift);
       end;
     VK_RETURN:
       // Nur getippten Text uebernehmen; sonst bleibt Enter frei (Audit 7a #2)
@@ -1104,7 +1182,7 @@ begin
   if (Id = PPGDateButtonUp) or (Id = PPGDateButtonDown) then
   begin
     if not ReadOnly then
-      StepValue(1 - 2 * Ord(Id = PPGDateButtonDown), GetKeyState(VK_CONTROL) < 0);
+      StepAtCaret(1 - 2 * Ord(Id = PPGDateButtonDown), GetKeyState(VK_CONTROL) < 0);
     Exit;
   end;
   if Id = PPGDateButtonCheck then
@@ -1239,7 +1317,7 @@ begin
     if FChecked then
     begin
       ACanvas.FillRoundRect(B, PPGScale(3, PPI), PPGColorToRGB(EffectiveAppearance.FocusColor), 255);
-      PPGDrawIcon(ACanvas, B, igCheckMark, clWhite, PPGScale(10, PPI));
+      PPGDrawIcon(ACanvas, B, igCheckMark, Tokens.OnAccent, PPGScale(10, PPI));
     end
     else
       ACanvas.FrameRoundRect(B, PPGScale(3, PPI), Max(1, PPGScale(1, PPI)), Col, 255);

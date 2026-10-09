@@ -88,6 +88,7 @@ type
   /// 7c #6: Segmente im DatePicker.
   TDateSegmentTests = class(TAudit7ATestCase)
   published
+    procedure SharedSegmentHelper;
     procedure TimeKindStepsSegmentAtCaret;
     procedure DateTimeKindStepsDateOrTime;
     procedure WheelStepsSegment;
@@ -959,6 +960,22 @@ begin
 end;
 
 { TDateSegmentTests }
+
+procedure TDateSegmentTests.SharedSegmentHelper;
+begin
+  CheckEquals(0, PPGTimeSegmentAt('14:30:05', 0, True));
+  CheckEquals(0, PPGTimeSegmentAt('14:30:05', 2, True), 'hinter der Stunde');
+  CheckEquals(1, PPGTimeSegmentAt('14:30:05', 3, True));
+  CheckEquals(2, PPGTimeSegmentAt('14:30:05', 8, True));
+  CheckEquals(1, PPGTimeSegmentAt('14:30:05', 8, False), 'ohne Sekunden');
+  CheckEquals(3, PPGTimeSegmentAt('2:30 PM', 6, False), 'AM/PM');
+  CheckEquals(EncodeTime(0, 15, 0, 0), PPGStepTimeSegment(EncodeTime(23, 15, 0, 0), 0, 1), 1E-8,
+    'Stunde laeuft im Tag um');
+  CheckEquals(EncodeTime(23, 59, 0, 0), PPGStepTimeSegment(EncodeTime(0, 0, 0, 0), 1, -1), 1E-8);
+  CheckEquals(EncodeTime(14, 30, 0, 0), PPGStepTimeSegment(EncodeTime(2, 30, 0, 0), 3, 1), 1E-8);
+  CheckEquals(EncodeTime(2, 30, 0, 0), PPGStepTimeSegment(EncodeTime(2, 30, 0, 0), 3, 2), 1E-8,
+    'zweimal AM/PM = unveraendert');
+end;
 
 procedure TDateSegmentTests.TimeKindStepsSegmentAtCaret;
 var
