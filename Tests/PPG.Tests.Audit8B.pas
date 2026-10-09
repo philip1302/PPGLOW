@@ -37,6 +37,8 @@ type
     function AggTexts(G: TPPGGrid): string;
     procedure CheckAggConsistent(G: TPPGGrid; const What: string);
     function RenderConfig(Index: Integer): TBitmap;
+    procedure DrawCellNop(Sender: TObject; ACol, ARow: Integer; Rect: TRect;
+      State: TGridDrawState);
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -73,6 +75,8 @@ type
     { #11 Zellspeicher }
     procedure CellStoreGrowsAndTruncates;
     { #8-#10, #12 Zeichnen }
+    { 8b gezielt neu zeichnen }
+    procedure HoverAndFocusInvalidateOnlyRows;
     procedure FontCacheFollowsChanges;
     procedure PaintUnchanged;
   end;
@@ -1337,6 +1341,81 @@ begin
   G.ColCount := 2;
   G.ColCount := 3;
   CheckEquals('', G.Cells[2, 98], 'Spalte gekuerzt');
+end;
+
+{ ---- 8b: gezielt neu zeichnen ---- }
+
+procedure TAudit8BTests.DrawCellNop(Sender: TObject; ACol, ARow: Integer; Rect: TRect;
+  State: TGridDrawState);
+begin
+end;
+
+procedure TAudit8BTests.HoverAndFocusInvalidateOnlyRows;
+var
+  G: TPPGGrid;
+  R: Integer;
+  Rgn: HRGN;
+
+  function RowY(V: Integer): Integer;
+  var
+    CR: TRect;
+  begin
+    CR := G.CellRect(1, V);
+    Result := (CR.Top + CR.Bottom) div 2;
+  end;
+
+  function Dirty(V: Integer): Boolean;
+  begin
+    if GetUpdateRgn(G.Handle, Rgn, False) = NULLREGION then
+      Exit(False);
+    Result := PtInRegion(Rgn, 8, RowY(V));
+  end;
+
+  procedure Clean;
+  begin
+    G.Update;
+    ValidateRect(G.Handle, nil);
+  end;
+
+begin
+  FForm.Show;
+  G := NewGrid(420, 280);
+  G.ColCount := 4;
+  G.RowCount := 30;
+  for R := 1 to 29 do
+    G.Cells[1, R] := IntToStr(R);
+  G.Styles.HotRow.Color := $00C0FFFF;
+  Rgn := CreateRectRgn(0, 0, 0, 0);
+  try
+    G.Perform(WM_MOUSEMOVE, 0, MakeLParam(100, RowY(2)));
+    Clean;
+    // Hover von Zeile 2 nach 5: nur diese beiden Zeilen
+    G.Perform(WM_MOUSEMOVE, 0, MakeLParam(100, RowY(5)));
+    CheckTrue(Dirty(2), 'alte Hover-Zeile');
+    CheckTrue(Dirty(5), 'neue Hover-Zeile');
+    CheckFalse(Dirty(3), 'Zeile dazwischen bleibt');
+    CheckFalse(Dirty(0), 'Kopf bleibt');
+    Clean;
+    // Fokus per Code: alte und neue Zeile
+    G.Row := 3;
+    Clean;
+    G.Row := 6;
+    CheckTrue(Dirty(3), 'alte Fokuszeile');
+    CheckTrue(Dirty(6), 'neue Fokuszeile');
+    CheckFalse(Dirty(4), 'Zeile dazwischen');
+    Clean;
+    // Owner-Draw kann von der Fokuszeile abhaengen: alles
+    G.OnDrawCell := DrawCellNop;
+    G.Row := 2;
+    CheckTrue(Dirty(8), 'mit OnDrawCell alles');
+    Clean;
+    G.OnDrawCell := nil;
+    // Bereich ueber mehrere Zeilen: alles
+    TGridAccess(G).MoveFocus(1, 4, True, False);
+    CheckTrue(Dirty(8), 'Bereichsauswahl alles');
+  finally
+    DeleteObject(Rgn);
+  end;
 end;
 
 { ---- Schrift-Cache ueber Zeichenvorgaenge (#10) ---- }

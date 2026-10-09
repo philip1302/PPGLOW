@@ -294,6 +294,8 @@ type
     function GetFixedColor: TColor;
     procedure SetFixedColor(const Value: TColor);
     procedure SetHotRow(VRow: Integer);
+    /// Nur eine sichtbare Zeile neu zeichnen (ganze Breite), Audit 8b.
+    procedure InvalidateViewRow(VRow: Integer);
     function GetCells(ACol, ARow: Integer): string;
     procedure SetCells(ACol, ARow: Integer; const Value: string);
     function GetColWidths(Index: Integer): Integer;
@@ -4558,14 +4560,48 @@ begin
 end;
 
 procedure TPPGCustomGrid.SetHotRow(VRow: Integer);
+var
+  Old: Integer;
 begin
   if FHotV = VRow then
     Exit;
+  Old := FHotV;
   FHotV := VRow;
-  // Nur neu zeichnen, wenn die Zeile ueberhaupt hervorgehoben wird
+  // Nur neu zeichnen, wenn die Zeile ueberhaupt hervorgehoben wird - und
+  // nur die alte und die neue Zeile (Audit 8b)
   if FStyles.HotRow.HasFill(UseDarkMode) or FStyles.HotRow.HasText(UseDarkMode) or
     (FStyles.HotRow.FontStyle <> []) then
-    Invalidate;
+  begin
+    if Assigned(FOnDrawCell) or Assigned(FOnGetCellStyle) or MergesActive then
+      Invalidate
+    else
+    begin
+      InvalidateViewRow(Old);
+      InvalidateViewRow(VRow);
+    end;
+  end;
+end;
+
+procedure TPPGCustomGrid.InvalidateViewRow(VRow: Integer);
+var
+  R, GV: TRect;
+begin
+  // Ganze Breite der Zeile (feste und rechts fixierte Spalten eingeschlossen)
+  if (VRow < 0) or not HandleAllocated then
+    Exit;
+  EnsureGeometry;
+  if VRow >= FLayout.Count then
+    Exit;
+  GV := GridViewRect;
+  R := RawCellRect(0, VRow);
+  R.Left := GV.Left;
+  R.Right := GV.Right;
+  // Feste Zeilen bleiben oben stehen, scrollende nicht darueber
+  if (VRow >= VFixedRows) and (R.Top < GV.Top + FixedHeight) then
+    R.Top := GV.Top + FixedHeight;
+  IntersectRect(R, R, GV);
+  if not IsRectEmpty(R) then
+    InvalidateRect(Handle, @R, False);
 end;
 
 procedure TPPGCustomGrid.PrepareStyleColors;
@@ -5927,8 +5963,9 @@ end;
 
 function TPPGCustomGrid.MoveFocus(ACol, VRow: Integer; Extend, ByUser: Boolean): Boolean;
 var
-  D, M0, N0, M1, N1: Integer;
+  D, M0, N0, M1, N1, OldV, SX, SY: Integer;
   ColChanged: Boolean;
+  OldSel, NewSel: TGridRect;
 begin
   Result := False;
   ACol := EnsureRangeInt(ACol, FFixedCols, VColCount - 1);
@@ -5948,6 +5985,10 @@ begin
   ColChanged := ACol <> FFocusC;
   if ColChanged then
     ColExit;
+  OldSel := GetSelection;
+  OldV := FFocusV;
+  SX := ScrollX;
+  SY := ScrollY;
   FFocusC := ACol;
   FFocusV := VRow;
   if not Extend or not (goRangeSelect in FOptions) then
@@ -5956,7 +5997,18 @@ begin
     FAnchorV := VRow;
   end;
   MakeCellVisible(ACol, VRow);
-  Invalidate;
+  // Audit 8b: ohne Scrollen und ohne Bereich ueber mehrere Zeilen nur die
+  // alte und die neue Zeile neu zeichnen (Fokusrahmen, Auswahl, Fokuszelle)
+  NewSel := GetSelection;
+  if (SX = ScrollX) and (SY = ScrollY) and (OldSel.Top = OldSel.Bottom) and
+    (NewSel.Top = NewSel.Bottom) and not Assigned(FOnDrawCell) and
+    not Assigned(FOnGetCellStyle) and not MergesActive then
+  begin
+    InvalidateViewRow(OldV);
+    InvalidateViewRow(VRow);
+  end
+  else
+    Invalidate;
   if HandleAllocated and Focused and (VRow <> FLastFocusRow) then
     NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, VRow + 1);
   FLastFocusRow := VRow;
