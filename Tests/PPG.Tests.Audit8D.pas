@@ -58,6 +58,12 @@ type
     procedure AppHooksChangesDuringDispatch;
   end;
 
+  /// Zaehltests: wie oft gerechnet bzw. gemessen wird (nach den Optimierungen).
+  TAudit8DCountTests = class(TControlTestCase)
+  published
+    procedure MenuBarMeasuresOncePerChange;
+  end;
+
   TAudit8DDBTests = class(TControlTestCase)
   private
     FData: TClientDataSet;
@@ -953,6 +959,42 @@ begin
   Ctl.Free;
 end;
 
+{ TAudit8DCountTests }
+
+type
+  TMenuBarAccess = class(TPPGMenuBar);
+
+procedure TAudit8DCountTests.MenuBarMeasuresOncePerChange;
+var
+  Bar: TPPGMenuBar;
+  M: TMainMenu;
+  It: TMenuItem;
+  I, N: Integer;
+begin
+  FForm.Width := 900;
+  M := TMainMenu.Create(FForm);
+  for I := 0 to 9 do
+  begin
+    It := TMenuItem.Create(M);
+    It.Caption := 'Menue ' + IntToStr(I);
+    M.Items.Add(It);
+  end;
+  Bar := TPPGMenuBar.Create(FForm);
+  Bar.Parent := FForm;
+  Bar.Menu := M;
+  Bar.HandleNeeded;
+  Bar.ItemAtPos(0, 0);
+  N := TMenuBarAccess(Bar).FItemLayoutCount;
+  for I := 0 to 49 do
+    Bar.Perform(WM_MOUSEMOVE, 0, MouseLParam(I * 15, Bar.Height div 2));
+  CheckEquals(N, TMenuBarAccess(Bar).FItemLayoutCount, 'Mausbewegungen messen nicht neu');
+  M.Items[3].Caption := 'Anders';
+  Bar.ItemAtPos(0, 0);
+  CheckEquals(N + 1, TMenuBarAccess(Bar).FItemLayoutCount, 'Textaenderung misst einmal neu');
+  Bar.Perform(WM_MOUSEMOVE, 0, MouseLParam(300, 5));
+  CheckEquals(N + 1, TMenuBarAccess(Bar).FItemLayoutCount, 'danach wieder aus dem Speicher');
+end;
+
 { TAudit8DDBTests }
 
 procedure TAudit8DDBTests.SetUp;
@@ -1043,6 +1085,7 @@ end;
 
 initialization
   RegisterTest('Audit8D', TAudit8DTests.Suite);
+  RegisterTest('Audit8D', TAudit8DCountTests.Suite);
   RegisterTest('Audit8D', TAudit8DDBTests.Suite);
 
 end.
