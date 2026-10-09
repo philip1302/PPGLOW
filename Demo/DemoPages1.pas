@@ -13,6 +13,7 @@ uses
   PPG.TrackBar, PPG.Panel, PPG.RadioGroup, PPG.Labels, PPG.Controls.Field, PPG.Edit, PPG.Memo,
   PPG.NumberFormat, PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit,
   PPG.ColorPicker, PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit,
+  PPG.Validator, PPG.BusyOverlay, PPG.PageControl,
   PPG.SpinEdit, PPG.ComboBox, PPG.Feedback, PPG.Rating, PPG.ToolBar,
   PPG.DatePicker, PPG.TimePicker, PPG.ListBox, PPG.Items, PPG.Notifications,
   DemoKit;
@@ -132,18 +133,33 @@ type
     FCustomer: TPPGColumnComboBox;
     FTags: TPPGTagEdit;
     FSpecialResult: TPPGLabel;
+    // Phase 19: Pruefung per Validator statt Handarbeit
+    FValidator: TPPGValidator;
+    // Bestellung: zwei Reiter, Sammelleiste, Arbeit im Hintergrund
+    FOrderPages: TPPGPageControl;
+    FOrderShip: TPPGTabSheet;
+    FOrderPay: TPPGTabSheet;
+    FZip: TPPGEdit;
+    FShipFrom: TPPGDatePicker;
+    FShipTo: TPPGDatePicker;
+    FIban: TPPGEdit;
+    FOrderAmount: TPPGNumberEdit;
+    FOrderBtn: TPPGButton;
+    FOrderBar: TPPGInfoBar;
+    FOrderResult: TPPGLabel;
+    FOrderValidator: TPPGValidator;
+    FOrderBusy: TPPGBusyOverlay;
+    FOrderStepMs: Integer;
     procedure BuildSpecialFields;
+    procedure BuildOrder;
+    procedure OrderClick(Sender: TObject);
     procedure SpecialChange(Sender: TObject);
     function Field(AParent: TWinControl; Col, Row: Integer; const ACaption: string): TPoint;
-    procedure MailChange(Sender: TObject);
-    procedure PhoneChange(Sender: TObject);
-    procedure RequiredChange(Sender: TObject);
     procedure PasswordChange(Sender: TObject);
     procedure SaveClick(Sender: TObject);
     procedure ResetClick(Sender: TObject);
     procedure ListClick(Sender: TObject);
     procedure AddContact(const C: TDemoContact);
-    function MailValid(const S: string): Boolean;
   protected
     procedure Build; override;
   public
@@ -907,6 +923,7 @@ var
   B: TPPGButton;
   C: TDemoContact;
   FormW: Integer;
+  R: TPPGValidationRule;
 
   function NewEdit(APos: TPoint; W: Integer; const AHint: string): TPPGEdit;
   begin
@@ -917,8 +934,9 @@ var
   end;
 
 begin
-  NewPageHeader(Own, Sheet, 'Formular', 'Ein echtes Eingabeformular: Pflichtfelder, Pr{ue}fung ' +
-    'beim Tippen, Auswahllisten, Datum und Uhrzeit {-} Speichern legt den Kontakt rechts ab.');
+  NewPageHeader(Own, Sheet, 'Formular', 'Ein echtes Eingabeformular: Pflichtfelder und Formate ' +
+    'pr{ue}ft ein TPPGValidator (Regeln statt Pr{ue}fcode), Auswahllisten, Datum und Uhrzeit ' +
+    '{-} Speichern legt den Kontakt rechts ab.');
 
   FormW := 600;
   Card := NewCard(Own, Sheet, PageX, PageContentTop, FormW, 640, 'Neuer Kontakt',
@@ -926,19 +944,15 @@ begin
 
   P := Field(Card, 0, 0, 'Vorname *');
   FFirst := NewEdit(P, 270, 'z. B. Anna');
-  FFirst.OnChange := RequiredChange;
   Host.RegisterSpecial('fieldfocus', FFirst);
   P := Field(Card, 1, 0, 'Nachname *');
   FLast := NewEdit(P, 270, 'z. B. Schmidt');
-  FLast.OnChange := RequiredChange;
 
   P := Field(Card, 0, 1, 'E-Mail *');
   FMail := NewEdit(P, 270, 'name@firma.de');
   FMail.ShowClearButton := True;
-  FMail.OnChange := MailChange;
   P := Field(Card, 1, 1, 'Telefon');
   FPhone := NewEdit(P, 270, '+49 30 1234567');
-  FPhone.OnChange := PhoneChange;
 
   P := Field(Card, 0, 2, 'Anrede');
   FSalutation := TPPGComboBox.Create(Own);
@@ -1020,6 +1034,31 @@ begin
   FList.OnClick := ListClick;
   FListResult := NewResult(Own, Card, 'Anzahl');
   BuildSpecialFields;
+  BuildOrder;
+
+  // Regeln statt Pruefcode: Pflicht beim Verlassen, nach einem Fehler live,
+  // Sammelanzeige in der Leiste unter den Knoepfen, gruen = geprueft und gut
+  FValidator := TPPGValidator.Create(Own);
+  FValidator.CheckOnClose := False;
+  FValidator.AutoFieldRules := False; // die DB-Controls der Datenbankseite gehoeren demselben Formular
+  FValidator.ShowValid := True;
+  FValidator.SummaryBar := FInfo;
+  FValidator.Rules.AddRule(FFirst, vrRequired).Caption := 'Vorname';
+  FValidator.Rules.AddRule(FLast, vrRequired).Caption := 'Nachname';
+  FValidator.Rules.AddRule(FMail, vrRequired).Caption := 'E-Mail';
+  R := FValidator.Rules.AddRule(FMail, vrPattern);
+  R.Caption := 'E-Mail';
+  R.PatternKind := vpEmail;
+  R.Message := L('Bitte eine g{ue}ltige E-Mail-Adresse eingeben, z. B. name@firma.de');
+  R := FValidator.Rules.AddRule(FPhone, vrPattern);
+  R.Caption := 'Telefon';
+  R.PatternKind := vpPhone;
+  R.Severity := pvsWarning;
+  R := FValidator.Rules.AddRule(FPassword, vrLength);
+  R.Caption := 'Kennwort';
+  R.MinLength := 8;
+  R.Severity := pvsWarning;
+  FValidator.Rules.AddRule(FTerms, vrRequired).Caption := 'Nutzungsbedingungen';
 
   C.FirstName := 'Anna';
   C.LastName := 'Schmidt';
@@ -1046,53 +1085,6 @@ begin
   C.Licenses := 25;
   AddContact(C);
   PasswordChange(nil);
-end;
-
-function TDemoFormPage.MailValid(const S: string): Boolean;
-var
-  At: Integer;
-begin
-  At := Pos('@', S);
-  Result := (At > 1) and (Pos('.', Copy(S, At + 2, MaxInt)) > 0) and (Pos(' ', S) = 0) and
-    (S[Length(S)] <> '.');
-end;
-
-procedure TDemoFormPage.RequiredChange(Sender: TObject);
-begin
-  // Fehler verschwindet, sobald etwas eingetragen ist
-  if (TPPGEdit(Sender).ValidationState = pvsError) and (Trim(TPPGEdit(Sender).Text) <> '') then
-    TPPGEdit(Sender).ValidationState := pvsNone;
-end;
-
-procedure TDemoFormPage.MailChange(Sender: TObject);
-begin
-  if FMail.Text = '' then
-    FMail.ValidationState := pvsNone
-  else if MailValid(FMail.Text) then
-    FMail.ValidationState := pvsValid
-  else
-  begin
-    FMail.ValidationState := pvsError;
-    FMail.ValidationHint := L('Bitte eine g{ue}ltige E-Mail-Adresse eingeben, z. B. name@firma.de');
-  end;
-end;
-
-procedure TDemoFormPage.PhoneChange(Sender: TObject);
-var
-  I: Integer;
-  Ok: Boolean;
-begin
-  Ok := True;
-  for I := 1 to Length(FPhone.Text) do
-    if not CharInSet(FPhone.Text[I], ['0'..'9', ' ', '+', '-', '/', '(', ')']) then
-      Ok := False;
-  if Ok then
-    FPhone.ValidationState := pvsNone
-  else
-  begin
-    FPhone.ValidationState := pvsWarning;
-    FPhone.ValidationHint := L('Nur Ziffern, Leerzeichen und + - / ( ) sind {ue}blich');
-  end;
 end;
 
 procedure TDemoFormPage.PasswordChange(Sender: TObject);
@@ -1142,43 +1134,14 @@ end;
 
 procedure TDemoFormPage.SaveClick(Sender: TObject);
 var
-  Missing: TStringList;
   C: TDemoContact;
 begin
-  Missing := TStringList.Create;
-  try
-    if Trim(FFirst.Text) = '' then
-    begin
-      FFirst.ValidationState := pvsError;
-      FFirst.ValidationHint := 'Pflichtfeld';
-      Missing.Add('Vorname');
-    end;
-    if Trim(FLast.Text) = '' then
-    begin
-      FLast.ValidationState := pvsError;
-      FLast.ValidationHint := 'Pflichtfeld';
-      Missing.Add('Nachname');
-    end;
-    if not MailValid(FMail.Text) then
-    begin
-      FMail.ValidationState := pvsError;
-      FMail.ValidationHint := L('Bitte eine g{ue}ltige E-Mail-Adresse eingeben');
-      Missing.Add('E-Mail');
-    end;
-    if not FTerms.Checked then
-      Missing.Add('Nutzungsbedingungen');
-    if Missing.Count > 0 then
-    begin
-      FInfo.Severity := psError;
-      FInfo.Title := L('Bitte pr{ue}fen');
-      FInfo.Message := Missing.CommaText;
-      FInfo.Message := StringReplace(Missing.CommaText, ',', ', ', [rfReplaceAll]);
-      FInfo.IsOpen := True;
-      Host.Log('Formular', L('Speichern abgelehnt: ') + FInfo.Message);
-      Exit;
-    end;
-  finally
-    Missing.Free;
+  // Alles, was frueher hier von Hand stand, sind jetzt Regeln (Build)
+  if not FValidator.Validate then
+  begin
+    FValidator.FocusFirstError;
+    Host.Log('Formular', L('Speichern abgelehnt: ') + FInfo.Message);
+    Exit;
   end;
   C.FirstName := Trim(FFirst.Text);
   C.LastName := Trim(FLast.Text);
@@ -1213,10 +1176,7 @@ begin
   FLicenses.Value := 5;
   FNotes.Lines.Clear;
   FTerms.Checked := False;
-  FFirst.ValidationState := pvsNone;
-  FLast.ValidationState := pvsNone;
-  FMail.ValidationState := pvsNone;
-  FPhone.ValidationState := pvsNone;
+  FValidator.ClearResults;
   FInfo.IsOpen := False;
   Host.Log('Formular', L('Zur{ue}ckgesetzt'));
 end;
@@ -1405,6 +1365,140 @@ begin
   Host.RegisterSpecial('tagedit', FTags);
 end;
 
+procedure TDemoFormPage.BuildOrder;
+const
+  TabW = 600;
+var
+  Card: TPPGPanel;
+  Lbl: TPPGLabel;
+  R: TPPGValidationRule;
+  X: Integer;
+begin
+  Card := NewCard(Own, Sheet, PageX, PageContentTop + 640 + CardGap + 340 + CardGap, FullW, 300,
+    'Bestellung (Validator und Warte-Overlay)', 'Ein Fehler auf dem verdeckten Reiter holt ' +
+    '"Bestellen" nach vorn. Danach l{ae}uft die {Ue}bertragung im Hintergrund-Thread: Ring, ' +
+    'Fortschritt, Abbrechen (auch mit Esc), die Karte ist so lange gesperrt.');
+  Host.RegisterSpecial('ordercard', Card);
+  FOrderPages := TPPGPageControl.Create(Own);
+  FOrderPages.Parent := Card;
+  FOrderPages.SetBounds(CardPad, Card.Tag, TabW, 200);
+  FOrderShip := TPPGTabSheet.Create(Own);
+  FOrderShip.PageControl := FOrderPages;
+  FOrderShip.Caption := 'Lieferung';
+  FOrderPay := TPPGTabSheet.Create(Own);
+  FOrderPay.PageControl := FOrderPages;
+  FOrderPay.Caption := 'Zahlung';
+  FOrderPages.ActivePage := FOrderShip;
+
+  // Lieferung: Beschriftungen per FocusControl - der Validator nimmt sie als Feldnamen
+  Lbl := NewLabel(Own, FOrderShip, 16, 16, 0, 'PLZ *', tkBody);
+  FZip := TPPGEdit.Create(Own);
+  FZip.Parent := FOrderShip;
+  FZip.SetBounds(16, 40, 140, CtlH);
+  FZip.TextHint := '10115';
+  Lbl.FocusControl := FZip;
+  Lbl := NewLabel(Own, FOrderShip, 186, 16, 0, 'Lieferung ab', tkBody);
+  FShipFrom := TPPGDatePicker.Create(Own);
+  FShipFrom.Parent := FOrderShip;
+  FShipFrom.SetBounds(186, 40, 170, CtlH);
+  FShipFrom.Date := Date + 1;
+  Lbl.FocusControl := FShipFrom;
+  Lbl := NewLabel(Own, FOrderShip, 386, 16, 0, 'Lieferung bis', tkBody);
+  FShipTo := TPPGDatePicker.Create(Own);
+  FShipTo.Parent := FOrderShip;
+  FShipTo.SetBounds(386, 40, 170, CtlH);
+  FShipTo.Date := Date + 7;
+  Lbl.FocusControl := FShipTo;
+
+  // Zahlung
+  Lbl := NewLabel(Own, FOrderPay, 16, 16, 0, 'IBAN *', tkBody);
+  FIban := TPPGEdit.Create(Own);
+  FIban.Parent := FOrderPay;
+  FIban.SetBounds(16, 40, 320, CtlH);
+  FIban.TextHint := 'DE89 3704 0044 0532 0130 00';
+  Lbl.FocusControl := FIban;
+  Lbl := NewLabel(Own, FOrderPay, 366, 16, 0, L('Betrag ({EUR})'), tkBody);
+  FOrderAmount := TPPGNumberEdit.Create(Own);
+  FOrderAmount.Parent := FOrderPay;
+  FOrderAmount.SetBounds(366, 40, 160, CtlH);
+  FOrderAmount.Value := 249;
+  Lbl.FocusControl := FOrderAmount;
+
+  X := CardPad + TabW + 24;
+  FOrderBar := TPPGInfoBar.Create(Own);
+  FOrderBar.Parent := Card;
+  FOrderBar.SetBounds(X, Card.Tag, FullW - X - CardPad, 64);
+  FOrderBar.IsOpen := False;
+  FOrderBtn := NewButton(Own, Card, X, Card.Tag + 150, 150, 'Bestellen', OrderClick, True);
+  FOrderResult := NewResult(Own, Card, 'Bestellung');
+
+  FOrderValidator := TPPGValidator.Create(Own);
+  FOrderValidator.Name := 'OrderValidator';
+  FOrderValidator.CheckOnClose := False;
+  FOrderValidator.AutoFieldRules := False;
+  FOrderValidator.SummaryBar := FOrderBar;
+  FOrderValidator.Rules.AddRule(FZip, vrRequired);
+  R := FOrderValidator.Rules.AddRule(FZip, vrPattern);
+  R.PatternKind := vpPostalCodeDE;
+  R := FOrderValidator.Rules.AddRule(FShipTo, vrCompare);
+  R.CompareControl := FShipFrom;
+  R.CompareOperator := coGreaterOrEqual;
+  FOrderValidator.Rules.AddRule(FIban, vrRequired);
+  R := FOrderValidator.Rules.AddRule(FIban, vrPattern);
+  R.PatternKind := vpIBAN;
+  R := FOrderValidator.Rules.AddRule(FOrderAmount, vrRange);
+  R.MinValue := '1';
+  R.MaxValue := '10000';
+
+  FOrderBusy := TPPGBusyOverlay.Create(Own);
+  FOrderBusy.Name := 'OrderBusy';
+  FOrderBusy.Target := Card;
+  FOrderBusy.ShowCancel := True;
+  FOrderBusy.Text := L('Bestellung wird {ue}bertragen');
+  FOrderStepMs := 120;
+end;
+
+procedure TDemoFormPage.OrderClick(Sender: TObject);
+var
+  StepMs: Integer;
+begin
+  if not FOrderValidator.Validate then
+  begin
+    FOrderValidator.FocusFirstError;
+    Host.Log('Validator', L('Bestellung unvollst{ae}ndig: ') + FOrderBar.Message);
+    Exit;
+  end;
+  StepMs := FOrderStepMs;
+  FOrderBusy.Progress := 0;
+  FOrderBusy.Description := '';
+  // Die Arbeit laeuft im Thread und fasst keine VCL-Controls an
+  FOrderBusy.Run(
+    procedure(const C: IPPGBusyContext)
+    var
+      I: Integer;
+    begin
+      for I := 1 to 20 do
+      begin
+        if C.Cancelled then
+          Exit;
+        Sleep(StepMs);
+        C.Report(I * 5);
+        C.SetDescription(Format('Schritt %d von 20', [I]));
+      end;
+    end);
+  if FOrderBusy.Cancelled then
+  begin
+    SetResult(FOrderResult, 'abgebrochen');
+    Host.Log('BusyOverlay', 'Bestellung abgebrochen');
+  end
+  else
+  begin
+    SetResult(FOrderResult, L('{ue}bertragen'));
+    Host.Notifier.Show('Bestellung', L('Die Bestellung wurde {ue}bertragen.'), psSuccess);
+    Host.Log('BusyOverlay', L('Bestellung {ue}bertragen'));
+  end;
+end;
+
 procedure TDemoFormPage.SpecialChange(Sender: TObject);
 var
   S: string;
@@ -1452,12 +1546,17 @@ begin
   DemoClick(FSaveBtn);
   Check('Formular: leeres Speichern wird abgelehnt', FInfo.IsOpen and (FInfo.Severity = psError) and
     (FFirst.ValidationState = pvsError) and (Length(FContacts) = N));
+  Check('Validator: Sammelleiste nennt die Felder', Pos('Vorname', FInfo.Message) > 0);
+  // Nach einem Fehler prueft der Validator live (gepostet, daher Nachrichten abholen)
   FMail.Text := 'kaputt@';
+  Application.ProcessMessages;
   Check('Formular: E-Mail falsch -> Fehler', FMail.ValidationState = pvsError);
   FMail.Text := 'max@firma.de';
+  Application.ProcessMessages;
   Check('Formular: E-Mail richtig -> gueltig', FMail.ValidationState = pvsValid);
   FFirst.Text := 'Max';
-  Check('Formular: Pflichtfeld-Fehler verschwindet', FFirst.ValidationState = pvsNone);
+  Application.ProcessMessages;
+  Check('Formular: Pflichtfeld-Fehler verschwindet', FFirst.ValidationState <> pvsError);
   FLast.Text := 'Muster';
   FPassword.Text := 'abc';
   Check('Formular: schwaches Kennwort', (FStrength.Position <= 50) and (FStrength.State = pbsError));
@@ -1470,6 +1569,26 @@ begin
   FList.ItemIndex := 0;
   ListClick(FList);
   Check('Formular: Klick laedt Kontakt', FFirst.Text = FContacts[FList.ItemsEx[0].Tag].FirstName);
+
+  // Bestellung: Validator ueber zwei Reiter, danach Arbeit im Hintergrund
+  FOrderStepMs := 1;
+  FOrderPages.ActivePage := FOrderShip;
+  FZip.Text := '10115';
+  FIban.Text := 'DE00 1234';
+  DemoClick(FOrderBtn);
+  Check('Validator: Sprung auf den Reiter mit dem Fehler', FOrderPages.ActivePage = FOrderPay);
+  Check('Validator: Sammelleiste der Bestellung', FOrderBar.IsOpen and (FOrderBar.Severity = psError));
+  FIban.Text := 'DE89 3704 0044 0532 0130 00';
+  FShipTo.Date := FShipFrom.Date - 1;
+  DemoClick(FOrderBtn);
+  Check('Validator: Lieferung bis vor ab', (FOrderPages.ActivePage = FOrderShip) and
+    (FShipTo.ValidationState = pvsError));
+  FShipTo.Date := FShipFrom.Date + 3;
+  DemoClick(FOrderBtn);
+  Check(L('Warte-Overlay: Bestellung l{ae}uft im Hintergrund durch'), not FOrderBusy.Active and
+    (FOrderBusy.Progress = 100) and not FOrderBusy.Cancelled);
+  Check('Validator: Sammelleiste zu, wenn alles stimmt', not FOrderBar.IsOpen);
+  FOrderStepMs := 120;
 end;
 
 end.

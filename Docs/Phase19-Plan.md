@@ -78,3 +78,27 @@ Regel aus Phase 18 gilt weiter: mindestens zwei Dinge, die VCL und TMS nicht kö
 - `Tests\PPGlowTests.exe` (0 = grün) und `/leaks`, Win32 und Win64
 - `Demo\PPGlowDemo.exe /selftest datei.txt`, Screenshots der neuen Karten (Fehlerzustände, Overlay hell/dunkel) vergrößert ansehen
 - Benchmark: Validator mit 500 Regeln, `Validate` < 50 ms
+
+## Umsetzung (09.10.2026)
+Umgesetzt in der Reihenfolge 19a → 19d, je Teil ein Commit.
+
+- **19a** (`PPG.Validator`): Regeln `vrRequired`, `vrLength`, `vrRange`, `vrPattern` (`vpEmail`, `vpPhone`, `vpPostalCodeDE`, `vpIBAN` mit Prüfsumme, eigener Ausdruck), `vrCompare`, `vrCustom`; `Validate`, `ValidateGroup`, `ValidateChildren`, `ValidateControl`, `ClearResults`, `FocusFirstError`, `Results`/`ResultFor`, `ShowValid`, `OnShowError`. Adapter-Registry (`PPGRegisterValidationAdapter`) für PPGlow-Felder, Auswahlgruppen, Kästchen und VCL-Edit/ComboBox/CheckBox/DateTimePicker. Neue Nachricht `CM_PPGVALUECHANGED` (`PPG.Types`), die Felder, Kästchen und Auswahlgruppen bei jeder Wertänderung an sich selbst schicken.
+- **19b:** `PPG.DB.Validator` (Feldregeln aus `TField` per RTTI für jedes Control mit Property `Field`, auch VCL), `SummaryBar`, `CheckOnClose`, `SubmitControl`, `Wizard`; Komponenteneditor mit „Edit rules…“ und „Add required rules for all fields“.
+- **19c:** `PPG.Overlay` (`TPPGDimWindow`, `PPGOverlayRect`, `PPGWindowInTarget`) und `PPG.BusyOverlay` (`Show`/`ShowNow`/`Hide`, `Run`, `RunAsync`, `IPPGBusyContext`, Karte `TPPGBusyCard`).
+- **19d:**
+  - Demo: Die Formularseite prüft jetzt per Validator statt mit Handcode (vier Prüfroutinen entfallen). Neue Karte „Bestellung“ mit zwei Reitern, Sammelleiste und Übertragung über `Run`. Die Datenbankseite prüft vor dem Speichern die Pflichtfelder aus `TField`. Neu ist der Schalter `/busycapture busy|errors datei.png`, zwei Katalogeinträge.
+  - Tests: `Tests\PPG.Tests.Phase19.pas` mit 60 Tests (Validator, Komfort, Overlay). Benchmark: `Validate` mit 500 Feldern und 1000 Regeln dauert 15 ms (500 Fehler) bzw. 32 ms (alles gültig), Vorgabe 50 ms.
+  - Doku: Hilfe-Notizen, `Docs\Controls\props\80-formular.txt`, Architektur. `docs-parser.ps1` überspringt jetzt `class of` (vorher wurde die nächste Klasse verschluckt).
+- **Prüfung:** 1420 Tests Win32 und Win64, Leak-Lauf Win32/Win64 grün (kein Zuwachs), Demo-Selbsttest 171/171, Benchmark eingehalten, Regel-Prüfer ohne Verstöße. Sichtprüfung der Aufnahmen `/busycapture busy` und `/busycapture errors`.
+
+**Abweichungen:**
+- Overlay: zwei Fenster statt eines mit Alphakanal je Pixel. Unten liegt eine Abdunklung mit gleichmäßiger Deckkraft (fängt die Maus ab), darüber eine undurchsichtige Karte, die mit dem Renderer der Suite gezeichnet wird. Das ist einfacher, geht ohne DWM und per Remote-Desktop und nutzt die vorhandene Zeichnung.
+- Reiter mit `TabVisible = False` gelten als verdeckt, nicht als ausgeblendet. Die Demo blendet die Reiterköpfe aus, weil die NavigationView navigiert; per Code umgeschaltete Seiten sind ein gängiges Muster. Nur gesperrte Reiter zählen nicht. Assistent-Seiten mit `PageVisible = False` zählen dagegen nicht (ausgelassener Schritt).
+- `AutoFieldRules` gilt für alle DB-Controls desselben Besitzers. In der Demo prüft die Datenbankseite deshalb nur ihr Detailformular (`ValidateChildren`), die Validatoren der Formularseite schalten es ab.
+- Die Warte-Demo überträgt keinen echten xlsx-Export, sondern simuliert die Arbeit, weil Grid und Writer VCL-Objekte sind und nicht im Thread laufen dürfen.
+- Ungültige `MinValue`/`MaxValue`/`Pattern`/`Severity` werfen zur Laufzeit. Beim DFM-Laden werden sie gemeldet und verworfen (Regel der Suite: Formulare öffnen sich immer).
+
+**Offen:**
+- Der Validator markiert fremde Controls nicht (Entscheidung 2).
+- Englische Standardtexte in der Demo, weil sie die Sprache nicht umschaltet (wie bisher).
+- Kein XE2-Lauf.

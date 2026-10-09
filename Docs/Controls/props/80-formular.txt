@@ -1,0 +1,56 @@
+# Phase 19: Formular-Produktivität (Validator, Warte-Overlay).
+
+# --- TPPGValidator ---
+TPPGValidator.Active = False: Der Validator prüft nichts mehr, Validate liefert immer True, und vorhandene Markierungen werden zurückgenommen.
+TPPGValidator.AutoFieldRules = DB-Controls (alles mit einer Property Field: TField, auch TDBEdit der VCL) prüft der Validator ohne eigene Regel nach ihrem Datenfeld: Required, Size bei Text, MinValue/MaxValue bei Zahlen – solange die Datenmenge bearbeitet wird. Gilt für alle DB-Controls desselben Besitzers; bei mehreren Formularteilen ValidateChildren nehmen oder abschalten.
+> `if not Validator.ValidateChildren(DetailPanel) then Abort;`
+TPPGValidator.CheckOnClose = Schließt das Formular mit ModalResult mrOk oder mrYes (z. B. OK-Knopf), prüft der Validator vorher und bricht das Schließen bei Fehlern ab. Abbrechen und das Schließfeld bleiben frei; ein vorhandenes OnCloseQuery läuft zuerst.
+TPPGValidator.OnShowError = Das Ergebnis eines Controls hat sich geändert: neue oder geänderte Meldung bzw. behoben (Severity = pvsNone). Für eigene Anzeigen, z. B. bei Controls ohne ValidationState.
+> `if Severity = pvsNone then MyLabel.Caption := '' else MyLabel.Caption := Message;`
+TPPGValidator.OnValidate = Für Regeln der Art vrCustom: Value ist der Wert des Controls; Valid := False und eine Meldung setzen, wenn er nicht passt.
+> `Valid := not KundennummerVergeben(VarToStr(Value)); Message := 'Kundennummer ist schon vergeben';`
+TPPGValidator.OnValidated = Nach jeder Prüfung, auch der automatischen beim Verlassen eines Felds; Results und ErrorCount sind dann aktuell.
+TPPGValidator.Rules = Die Regeln: je Regel ein Control, eine Art und ihre Einstellungen. Im Designer per Doppelklick; das Verb „Add required rules for all fields“ legt für jedes Eingabefeld ohne Regel eine Pflicht-Regel an.
+> `Validator.Rules.AddRule(EditName, vrRequired);`
+TPPGValidator.ShowValid = Geprüfte Felder ohne Fehler bekommen den Zustand pvsValid (grüner Rand) – erst nach der ersten Prüfung, nicht beim Öffnen des Formulars.
+TPPGValidator.SubmitControl = Control (meist der OK- oder Speichern-Knopf), das gesperrt ist, solange ein Pflichtfeld leer ist. Andere Regeln zählen hier nicht, damit der Knopf nicht bei jedem Tastendruck flackert.
+TPPGValidator.SummaryBar = InfoBar für die Sammelanzeige: „2 Fehler“ mit den Feldnamen und dem Knopf „Zum Fehler“. Erscheint erst nach dem ersten Validate (bzw. Schließen mit OK, Weiter im Assistenten) und klappt zu, sobald alles stimmt.
+TPPGValidator.ValidateOn = Wann automatisch geprüft wird: voSubmit nur auf Aufruf, voExit beim Verlassen eines Felds (Vorgabe), voChange bei jeder Änderung. Ein Feld mit Fehler prüft in jedem Fall beim Tippen sofort neu.
+TPPGValidator.Wizard = Assistent, dessen „Weiter“ erst geht, wenn die Felder der aktuellen Seite gültig sind; der Validator hängt sich in OnCanAdvance ein (ein vorhandener Handler läuft zuerst).
+
+# --- TPPGValidationRule ---
+TPPGValidationRule.Caption = Name des Felds in Meldungen. Leer: die Beschriftung (Label mit FocusControl), sonst der Platzhaltertext, sonst der Name des Controls.
+TPPGValidationRule.CompareControl = Nur vrCompare: das Control, mit dessen Wert verglichen wird (z. B. „Kennwort wiederholen“ mit „Kennwort“, „Bis“ mit „Von“). Ist es leer, gilt die Regel als erfüllt.
+TPPGValidationRule.CompareOperator = Nur vrCompare: Wert dieses Controls im Verhältnis zum Vergleichswert – coEqual, coNotEqual, coLess, coLessOrEqual, coGreater, coGreaterOrEqual. Zahlen und Daten werden als Zahl verglichen, Text genau (mit Groß-/Kleinschreibung).
+> `R.CompareControl := DateFrom; R.CompareOperator := coGreaterOrEqual;`
+TPPGValidationRule.Control = Das geprüfte Control. Lesen kann der Validator PPGlow-Felder, Auswahlgruppen, Kästchen und die VCL-Pendants; weitere über PPGRegisterValidationAdapter.
+TPPGValidationRule.Enabled = False: Regel vorübergehend aus, z. B. wenn ein Feld nur bei einer bestimmten Auswahl Pflicht ist.
+TPPGValidationRule.Group = Name einer Gruppe: ValidateGroup('Lieferung') prüft nur Regeln ohne Gruppe und dieser Gruppe. Leer = immer dabei.
+TPPGValidationRule.Kind = Art der Regel: vrRequired (Pflicht), vrLength (Länge), vrRange (Zahl/Datum im Bereich), vrPattern (Format), vrCompare (Vergleich mit einem anderen Feld), vrCustom (eigene Regel in OnValidate). Nur vrRequired und vrCustom prüfen leere Werte.
+TPPGValidationRule.MaxLength = Nur vrLength: höchste Zahl der Zeichen (0 = keine Grenze); Leerzeichen am Rand zählen nicht.
+TPPGValidationRule.MaxValue = Nur vrRange: obere Grenze als Zahl mit Punkt („99.5“) oder Datum („2026-12-31“, auch mit Uhrzeit „2026-12-31 18:30“); leer = keine.
+TPPGValidationRule.Message = Eigene Meldung statt des Standardtexts; {caption} wird durch den Feldnamen ersetzt.
+> `R.Message := 'Bitte {caption} angeben';`
+TPPGValidationRule.MinLength = Nur vrLength: geringste Zahl der Zeichen (0 = keine Grenze).
+TPPGValidationRule.MinValue = Nur vrRange: untere Grenze als Zahl mit Punkt („1“, „-3.5“) oder Datum („2026-01-01“); leer = keine. Ungültige Angaben werfen schon beim Setzen.
+TPPGValidationRule.Pattern = Nur vrPattern mit vpCustom: regulärer Ausdruck, der auf den ganzen Wert passen muss (er wird mit ^…$ umschlossen). Ein ungültiger Ausdruck wirft schon beim Setzen.
+> `R.Pattern := '[A-Z]{2}-[0-9]{4}';`
+TPPGValidationRule.PatternKind = Nur vrPattern: fertige Formate – vpEmail, vpPhone, vpPostalCodeDE (fünf Ziffern), vpIBAN (mit Prüfsumme) – oder vpCustom für Pattern.
+TPPGValidationRule.Severity = pvsError (Vorgabe) blockiert Validate und das Schließen; pvsWarning markiert gelb, hält aber nicht auf.
+
+# --- TPPGBusyOverlay ---
+TPPGBusyOverlay.CancelCaption = Beschriftung des Abbrechen-Knopfs; leer = „Abbrechen“. Nach dem Klick zeigt er „Wird abgebrochen …“.
+TPPGBusyOverlay.Delay = Millisekunden bis zur Anzeige (0 … 60 000). Eingaben ins Ziel sind schon ab Show gesperrt; kurze Arbeiten blitzen so nicht auf.
+TPPGBusyOverlay.Description = Zweite Zeile unter dem Text, z. B. „Datei 3 von 6“; aus Run über Context.SetDescription.
+TPPGBusyOverlay.DimOpacity = Deckkraft der Abdunklung (0 … 255, Vorgabe 96). 0 = keine sichtbare Abdunklung; Maus und Tastatur bleiben trotzdem gesperrt.
+TPPGBusyOverlay.MinDisplayTime = Ist die Karte einmal erschienen, bleibt sie mindestens so viele Millisekunden stehen (0 … 60 000), damit sie nicht nur aufflackert.
+TPPGBusyOverlay.OnCancel = Der Benutzer hat abgebrochen (Knopf, Esc oder Screenreader); Cancelled ist dann True, in Run auch Context.Cancelled.
+TPPGBusyOverlay.OnHide = Die Karte ist verschwunden.
+TPPGBusyOverlay.OnShow = Die Karte ist erschienen (nach Delay).
+TPPGBusyOverlay.Preset = Preset der Karte ('' = wie der StyleManager bzw. die Vorgabe).
+TPPGBusyOverlay.Progress = -1 = unbestimmt (drehender Ring), 0 … 100 = Prozent im Ring. Aus Run über Context.Report.
+> `Overlay.Run(procedure(const C: IPPGBusyContext) begin C.Report(50); end);`
+TPPGBusyOverlay.ShowCancel = Knopf „Abbrechen“ auf der Karte; Esc im gesperrten Bereich bricht dann ebenfalls ab.
+TPPGBusyOverlay.StyleManager = StyleManager für Preset und Farben der Karte.
+TPPGBusyOverlay.Target = Abgedeckter Bereich: ein Control (nur sein sichtbarer Teil) oder leer = das ganze Formular ohne Titelleiste. Andere Teile des Formulars bleiben bedienbar.
+TPPGBusyOverlay.Text = Haupttext der Karte (fett); leer = „Bitte warten …“. Screenreader lesen ihn beim Erscheinen vor.

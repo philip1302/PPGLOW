@@ -29,6 +29,7 @@ Nicht geplant (bewusst): Gantt, Pivot-Grid, Docking, RichEdit/HTML-Editor, Code-
 Detailplan: `Docs\Phase18-Plan.md`. **Fertig (09.10.2026):** `TPPGRadioGroup`/`TPPGCheckGroup` (Segmente, Kacheln), `TPPGTileView`, `TPPGDBNavigator` mit Zähler/Suche/Filter, `TPPGDBRadioGroup`, `TPPGPanel.AutoScroll` und `TPPGScrollBox`, Migration dazu. Zurückgestellt bis zu einer Inventur: `TPPGDBText`, `TPPGDBListBox`, `TPPGDBLookupListBox`, `TPPGDBSpinEdit`, `TPPGDBToggleSwitch` und eine 1:1-`TPPGListView` (reine Nachbauten ohne Mehrwert).
 
 ## Phase 19 – Formular-Produktivität
+Detailplan: `Docs\Phase19-Plan.md`. **Fertig (09.10.2026):** `TPPGValidator` (dazu Regeln aus `TField`, Sammelleiste, OK-Absicherung, Assistent) und `TPPGBusyOverlay` mit `Run` im Hintergrund-Thread.
 - **`TPPGValidator`** (nicht sichtbar): Regeln je Control (Pflicht, Bereich, Länge, Muster, eigene per Ereignis), nutzt den vorhandenen `ValidationState` der Felder, Fehlertext am Feld, Sammelliste, `Validate: Boolean`, springt zum ersten Fehler, optional OK-Button sperren, Prüfung beim Verlassen oder erst beim Speichern.
 - **`TPPGBusyOverlay`**: legt sich über ein Control oder Formular, ProgressRing plus Text, optional Abbrechen-Knopf und Fortschritt; Eingaben darunter gesperrt; Screenreader-Ansage.
 

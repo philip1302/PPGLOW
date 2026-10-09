@@ -18,6 +18,7 @@ program PPGlowDemo;
     /datepopup <datei.png>   DatePicker aufklappen, Bildschirmpixel speichern
     /toastcapture <datei.png> drei Toasts zeigen, Bildschirmecke speichern
     /ribboncapture <modus> <datei.png>  Ribbon: keytips, keytips2, minimized, group, gallery
+    /busycapture <modus> <datei.png>    Bestellung: busy (Warte-Overlay) oder errors (Validator)
     /mica [/screencapture <datei.png>]  Prototyp Mica-Hintergrund
     /selftest <datei.txt>    Szenarien aller Seiten pruefen, Exit-Code = Fehlerzahl }
 
@@ -285,6 +286,15 @@ begin
       Application.ProcessMessages;
       if not Form.SaveTableExport(ParamStr(I + 2), ParamStr(I + 3)) then
         ExitCode := 1;
+      Exit;
+    end;
+
+  // /busycapture modus datei.png: Warte-Overlay bzw. Validator-Fehler, Bildschirmpixel
+  for I := 1 to ParamCount - 2 do
+    if SameText(ParamStr(I), '/busycapture') then
+    begin
+      Form.Show;
+      Form.SaveBusyCapture(ParamStr(I + 1), ParamStr(I + 2));
       Exit;
     end;
 

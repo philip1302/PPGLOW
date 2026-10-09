@@ -965,6 +965,57 @@ begin
         end;
       end);
 
+    { Phase 19: Validator }
+    Measure('Validator: 500 Felder + 1000 Regeln aufbauen', High(Cardinal),
+      procedure
+      var
+        V: TPPGValidator;
+        E: TPPGEdit;
+        P: TPPGPanel;
+        I: Integer;
+        R: TPPGValidationRule;
+      begin
+        P := TPPGPanel.Create(Form);
+        V := TPPGValidator.Create(Form);
+        try
+          P.Parent := Form;
+          P.SetBounds(0, 0, 800, 600);
+          V.CheckOnClose := False;
+          V.Rules.BeginUpdate;
+          try
+            for I := 0 to 499 do
+            begin
+              E := TPPGEdit.Create(P);
+              E.Parent := P;
+              E.SetBounds((I mod 5) * 150, (I div 5) * 6, 140, 24);
+              V.Rules.AddRule(E, vrRequired);
+              R := V.Rules.AddRule(E, vrPattern);
+              R.PatternKind := vpEmail;
+            end;
+          finally
+            V.Rules.EndUpdate;
+          end;
+          // Nur Validate messen, nicht den Aufbau
+          Measure('Validator: Validate mit 500 Fehlern (sortiert, markiert)', 50,
+            procedure
+            begin
+              V.Validate;
+            end);
+          Measure('Validator: Validate, alles gueltig', 50,
+            procedure
+            var
+              J: Integer;
+            begin
+              for J := 0 to P.ControlCount - 1 do
+                TPPGEdit(P.Controls[J]).Text := 'a@b.de';
+              V.Validate;
+            end);
+        finally
+          V.Free;
+          P.Free;
+        end;
+      end);
+
     Writeln;
     if Exceeded = 0 then
       Writeln('Alle Vorgaben eingehalten.')

@@ -64,6 +64,7 @@ type
     procedure FreeingControlClearsReferences;
     procedure InactiveValidatorAcceptsAll;
     procedure StreamsRules;
+    procedure LoadingInvalidValuesDoesNotRaise;
   end;
 
   TValidatorComfortTests = class(TControlTestCase)
@@ -115,6 +116,7 @@ type
     procedure KeyboardBlockedInTargetOnly;
     procedure FormStaysOpenWhileActive;
     procedure FollowsTargetAndHidesWithIt;
+    procedure ClipsToVisiblePart;
     procedure RunWorksInThreadAndReports;
     procedure RunReraisesWorkerException;
     procedure RunCancelledByEsc;
@@ -620,7 +622,9 @@ begin
   FV.Rules.AddRule(E, vrRequired);
   CheckFalse(FV.Validate, 'Feld auf inaktivem Reiter wird geprueft');
   S2.TabVisible := False;
-  CheckTrue(FV.Validate, 'ausgeblendeter Reiter nicht');
+  CheckFalse(FV.Validate, 'Reiter ohne Kopf zaehlt auch (Seiten per Code umgeschaltet)');
+  S2.Enabled := False;
+  CheckTrue(FV.Validate, 'gesperrter Reiter nicht');
 end;
 
 procedure TValidatorTests.GroupsAndChildren;
@@ -875,6 +879,43 @@ begin
   CheckTrue(E.ValidationState = pvsNone, 'Abschalten nimmt Markierungen zurueck');
   CheckTrue(FV.Validate);
   CheckEquals(0, FV.ResultCount);
+end;
+
+procedure TValidatorTests.LoadingInvalidValuesDoesNotRaise;
+const
+  Dfm =
+    'object Val2: TPPGValidator'#13#10 +
+    '  Rules = <'#13#10 +
+    '    item'#13#10 +
+    '      Kind = vrRange'#13#10 +
+    '      Severity = pvsValid'#13#10 +
+    '      MinValue = ''kaputt'''#13#10 +
+    '      MaxValue = ''2026-12-31'''#13#10 +
+    '      Pattern = ''('''#13#10 +
+    '    end>'#13#10 +
+    'end';
+var
+  Src: TStringStream;
+  Bin: TMemoryStream;
+  V2: TPPGValidator;
+begin
+  Src := TStringStream.Create(Dfm);
+  Bin := TMemoryStream.Create;
+  V2 := TPPGValidator.Create(FForm);
+  try
+    ObjectTextToBinary(Src, Bin);
+    Bin.Position := 0;
+    Bin.ReadComponent(V2);
+    CheckEquals(1, V2.Rules.Count, 'Formular oeffnet sich');
+    CheckTrue(V2.Rules[0].Severity = pvsError, 'ungueltige Schwere verworfen');
+    CheckEquals('', V2.Rules[0].MinValue, 'ungueltige Grenze verworfen');
+    CheckEquals('2026-12-31', V2.Rules[0].MaxValue, 'gueltige bleibt');
+    CheckEquals('', V2.Rules[0].Pattern, 'ungueltiges Muster verworfen');
+  finally
+    V2.Free;
+    Bin.Free;
+    Src.Free;
+  end;
 end;
 
 procedure TValidatorTests.StreamsRules;
@@ -1479,6 +1520,25 @@ begin
   FPanel.Visible := True;
   PumpFor(80);
   CheckTrue(FO.DimWindow.IsShown, 'wieder da');
+  FO.Hide;
+end;
+
+procedure TBusyOverlayTests.ClipsToVisiblePart;
+var
+  R, C: TRect;
+  P: TPoint;
+begin
+  // Halb aus dem Formular geschoben: nur der sichtbare Teil wird abgedunkelt
+  FPanel.SetBounds(-60, -40, 300, 220);
+  FO.Show;
+  R := DimRect;
+  Winapi.Windows.GetClientRect(FForm.Handle, C);
+  P := FForm.ClientToScreen(Point(0, 0));
+  OffsetRect(C, P.X, P.Y);
+  CheckEquals(C.Left, R.Left, 'links abgeschnitten');
+  CheckEquals(C.Top, R.Top, 'oben abgeschnitten');
+  CheckEquals(240, R.Right - R.Left);
+  CheckEquals(180, R.Bottom - R.Top);
   FO.Hide;
 end;
 

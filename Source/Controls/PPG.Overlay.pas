@@ -15,7 +15,9 @@ unit PPG.Overlay;
     Fenster neu an.
 
   PPGOverlayRect: Bildschirmrechteck eines Ziels; beim Formular der
-  Client-Bereich (Titelleiste bleibt frei, das Fenster laesst sich ziehen). }
+  Client-Bereich (Titelleiste bleibt frei, das Fenster laesst sich ziehen),
+  sonst nur der sichtbare Teil (auf die Client-Bereiche der Eltern
+  beschnitten, z.B. halb aus einer ScrollBox gescrollt). }
 
 {$I ..\PPG.inc}
 
@@ -73,6 +75,8 @@ implementation
 function PPGOverlayRect(Target: TWinControl): TRect;
 var
   P: TPoint;
+  Parent: TWinControl;
+  Clip: TRect;
 begin
   Result := Rect(0, 0, 0, 0);
   if (Target = nil) or not Target.HandleAllocated or not Target.Showing then
@@ -86,7 +90,24 @@ begin
     OffsetRect(Result, P.X, P.Y);
   end
   else
+  begin
     GetWindowRect(Target.Handle, Result);
+    // Nur der sichtbare Teil: z.B. halb aus einer ScrollBox gescrollt
+    P := Point(0, 0);
+    Parent := Target.Parent;
+    while (Parent <> nil) and Parent.HandleAllocated do
+    begin
+      Winapi.Windows.GetClientRect(Parent.Handle, Clip);
+      P := Parent.ClientToScreen(Point(0, 0));
+      OffsetRect(Clip, P.X, P.Y);
+      if not IntersectRect(Result, Result, Clip) then
+      begin
+        Result := Rect(0, 0, 0, 0);
+        Exit;
+      end;
+      Parent := Parent.Parent;
+    end;
+  end;
 end;
 
 function PPGWindowInTarget(Target: TWinControl; Wnd: HWND): Boolean;

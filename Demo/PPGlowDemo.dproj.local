@@ -183,6 +183,9 @@
     <File Path="..\Source\Controls\PPG.Grid.Look.pas"/>
     <File Path="..\Source\Controls\PPG.RadioGroup.pas"/>
     <File Path="..\Source\Controls\PPG.TileView.pas"/>
+    <File Path="..\Source\Controls\PPG.BusyOverlay.pas"/>
+    <File Path="..\Source\Controls\PPG.Overlay.pas"/>
+    <File Path="..\Source\Controls\PPG.Validator.pas"/>
     <File Path="..\Source\Core"/>
     <File Path="..\Source\Core\PPG.Animation.pas"/>
     <File Path="..\Source\Core\PPG.Appearance.pas"/>
@@ -220,6 +223,7 @@
     <File Path="..\Source\DB\PPG.DB.Planner.pas"/>
     <File Path="..\Source\DB\PPG.DB.Kanban.pas"/>
     <File Path="..\Source\DB\PPG.DB.Navigator.pas"/>
+    <File Path="..\Source\DB\PPG.DB.Validator.pas"/>
     <File Path="..\Source\Render"/>
     <File Path="..\Source\Render\PPG.IconFont.pas"/>
     <File Path="..\Source\Render\PPG.Markup.pas"/>

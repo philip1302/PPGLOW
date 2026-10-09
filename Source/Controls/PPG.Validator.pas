@@ -28,7 +28,8 @@ unit PPG.Validator;
     Benachrichtigungen (CN_COMMAND, CN_NOTIFY). Die Pruefung laeuft danach
     ueber eine gepostete Nachricht, nie mitten in OnChange.
   - Ausgeblendete und gesperrte Controls zaehlen nicht; Controls auf nicht
-    aktiven Reitern schon (sie sind nur verdeckt).
+    aktiven Reitern schon (sie sind nur verdeckt, auch bei TabVisible = False),
+    ebenso auf nicht aktiven Seiten des Assistenten (ausser PageVisible = False).
   - FocusFirstError: erster Fehler in Tab-Reihenfolge; aktiviert unterwegs
     Reiter, klappt Expander auf und scrollt ihn ins Bild. }
 
@@ -82,7 +83,9 @@ type
     procedure SetMaxValue(const Value: string);
     procedure SetPatternKind(const Value: TPPGValidationPattern);
     procedure SetPattern(const Value: string);
-    procedure CheckBound(const PropName, Value: string);
+    function CheckBound(const PropName, Value: string): Boolean;
+    /// Beim DFM-Laden: melden statt werfen (Formular oeffnet sich trotzdem).
+    function RejectValue(const PropName, Value: string): Boolean;
   protected
     function GetDisplayName: string; override;
   public
@@ -961,8 +964,10 @@ end;
 procedure TPPGValidationRule.SetSeverity(const Value: TPPGValidationState);
 begin
   if not (Value in [pvsWarning, pvsError]) then
-    raise EPPGPropertyError.CreateInvalid(Self, 'Severity',
-      GetEnumName(TypeInfo(TPPGValidationState), Ord(Value)));
+  begin
+    RejectValue('Severity', GetEnumName(TypeInfo(TPPGValidationState), Ord(Value)));
+    Exit;
+  end;
   FSeverity := Value;
 end;
 
@@ -976,25 +981,35 @@ begin
   FMaxLength := PPGCheckRange(Self, 'MaxLength', Value, 0, MaxInt);
 end;
 
-procedure TPPGValidationRule.CheckBound(const PropName, Value: string);
+function TPPGValidationRule.RejectValue(const PropName, Value: string): Boolean;
+begin
+  Result := True;
+  if not PPGIsLoading(Self) then
+    raise EPPGPropertyError.CreateInvalid(Self, PropName, Value);
+  TPPGErrorHandler.LogWarning(Self, Format(PPGStr(@SPPGInvalidPropertyValue),
+    [Value, PPGDisplayName(Self), PropName]));
+end;
+
+function TPPGValidationRule.CheckBound(const PropName, Value: string): Boolean;
 var
   D: Double;
   IsDate: Boolean;
 begin
-  if (Trim(Value) <> '') and not TryParseBound(Value, D, IsDate) then
-    raise EPPGPropertyError.CreateInvalid(Self, PropName, Value);
+  Result := (Trim(Value) = '') or TryParseBound(Value, D, IsDate);
+  if not Result then
+    RejectValue(PropName, Value);
 end;
 
 procedure TPPGValidationRule.SetMinValue(const Value: string);
 begin
-  CheckBound('MinValue', Value);
-  FMinValue := Value;
+  if CheckBound('MinValue', Value) then
+    FMinValue := Value;
 end;
 
 procedure TPPGValidationRule.SetMaxValue(const Value: string);
 begin
-  CheckBound('MaxValue', Value);
-  FMaxValue := Value;
+  if CheckBound('MaxValue', Value) then
+    FMaxValue := Value;
 end;
 
 procedure TPPGValidationRule.SetPatternKind(const Value: TPPGValidationPattern);
@@ -1014,7 +1029,11 @@ begin
       TRegEx.Create('^(?:' + Value + ')$').IsMatch('');
     except
       on ERegularExpressionError do
-        raise EPPGPropertyError.CreateInvalid(Self, 'Pattern', Value);
+      begin
+        // Laden: Muster verwerfen (sonst wirft spaeter jede Pruefung)
+        RejectValue('Pattern', Value);
+        Exit;
+      end;
     end;
   FPattern := Value;
   FRegexReady := False;
@@ -1797,14 +1816,11 @@ begin
   P := C.Parent;
   while (P <> nil) and not (P is TCustomForm) do
   begin
-    if P is TPPGTabSheet then
+    // Reiter sind nur verdeckt, auch ohne sichtbaren Kopf (TabVisible = False:
+    // Seiten, die das Programm selbst umschaltet)
+    if (P is TPPGTabSheet) or (P is TTabSheet) then
     begin
-      if not TPPGTabSheet(P).TabVisible or not P.Enabled then
-        Exit;
-    end
-    else if P is TTabSheet then
-    begin
-      if not TTabSheet(P).TabVisible or not P.Enabled then
+      if not P.Enabled then
         Exit;
     end
     else if P is TPPGWizardPage then

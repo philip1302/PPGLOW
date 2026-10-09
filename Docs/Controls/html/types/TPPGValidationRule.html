@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGValidationRule</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGValidationRule</h1>
+<p>Typ in Unit <code>PPG.Validator</code> - Basis <code>TCollectionItem</code></p>
+<p>Eine Regel fuer ein Control.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Control</code></td><td><code>TControl</code></td><td></td><td>Das gepr&#252;fte Control. Lesen kann der Validator PPGlow-Felder, Auswahlgruppen, K&#228;stchen und die VCL-Pendants; weitere &#252;ber PPGRegisterValidationAdapter.</td></tr>
+<tr><td><code>Kind</code></td><td><code>TPPGValidationRuleKind</code></td><td><code>vrRequired</code></td><td>Art der Regel: vrRequired (Pflicht), vrLength (L&#228;nge), vrRange (Zahl/Datum im Bereich), vrPattern (Format), vrCompare (Vergleich mit einem anderen Feld), vrCustom (eigene Regel in OnValidate). Nur vrRequired und vrCustom pr&#252;fen leere Werte. Werte: <code>vrRequired</code>, <code>vrLength</code>, <code>vrRange</code>, <code>vrPattern</code>, <code>vrCompare</code>, <code>vrCustom</code>.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Regel vor&#252;bergehend aus, z. B. wenn ein Feld nur bei einer bestimmten Auswahl Pflicht ist.</td></tr>
+<tr><td><code>Severity</code></td><td><code>TPPGValidationState</code></td><td><code>pvsError</code></td><td>pvsError (Vorgabe) blockiert Validate und das Schlie&#223;en; pvsWarning markiert gelb, h&#228;lt aber nicht auf. Werte: <code>pvsNone</code>, <code>pvsValid</code>, <code>pvsWarning</code>, <code>pvsError</code>.</td></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Name des Felds in Meldungen. Leer: die Beschriftung (Label mit FocusControl), sonst der Platzhaltertext, sonst der Name des Controls.</td></tr>
+<tr><td><code>Message</code></td><td><code>string</code></td><td></td><td>Eigene Meldung statt des Standardtexts; {caption} wird durch den Feldnamen ersetzt. Nutzung: <code>R.Message := &#39;Bitte {caption} angeben&#39;;</code></td></tr>
+<tr><td><code>Group</code></td><td><code>string</code></td><td></td><td>Name einer Gruppe: ValidateGroup(&#39;Lieferung&#39;) pr&#252;ft nur Regeln ohne Gruppe und dieser Gruppe. Leer = immer dabei.</td></tr>
+<tr><td><code>MinLength</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Nur vrLength: geringste Zahl der Zeichen (0 = keine Grenze).</td></tr>
+<tr><td><code>MaxLength</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Nur vrLength: h&#246;chste Zahl der Zeichen (0 = keine Grenze); Leerzeichen am Rand z&#228;hlen nicht.</td></tr>
+<tr><td><code>MinValue</code></td><td><code>string</code></td><td></td><td>Nur vrRange: untere Grenze als Zahl mit Punkt („1“, „-3.5“) oder Datum („2026-01-01“); leer = keine. Ung&#252;ltige Angaben werfen schon beim Setzen.</td></tr>
+<tr><td><code>MaxValue</code></td><td><code>string</code></td><td></td><td>Nur vrRange: obere Grenze als Zahl mit Punkt („99.5“) oder Datum („2026-12-31“, auch mit Uhrzeit „2026-12-31 18:30“); leer = keine.</td></tr>
+<tr><td><code>PatternKind</code></td><td><code>TPPGValidationPattern</code></td><td><code>vpCustom</code></td><td>Nur vrPattern: fertige Formate – vpEmail, vpPhone, vpPostalCodeDE (f&#252;nf Ziffern), vpIBAN (mit Pr&#252;fsumme) – oder vpCustom f&#252;r Pattern. Werte: <code>vpCustom</code>, <code>vpEmail</code>, <code>vpPhone</code>, <code>vpPostalCodeDE</code>, <code>vpIBAN</code>.</td></tr>
+<tr><td><code>Pattern</code></td><td><code>string</code></td><td></td><td>Nur vrPattern mit vpCustom: regul&#228;rer Ausdruck, der auf den ganzen Wert passen muss (er wird mit ^…$ umschlossen). Ein ung&#252;ltiger Ausdruck wirft schon beim Setzen. Nutzung: <code>R.Pattern := &#39;[A-Z]{2}-[0-9]{4}&#39;;</code></td></tr>
+<tr><td><code>CompareControl</code></td><td><code>TControl</code></td><td></td><td>Nur vrCompare: das Control, mit dessen Wert verglichen wird (z. B. „Kennwort wiederholen“ mit „Kennwort“, „Bis“ mit „Von“). Ist es leer, gilt die Regel als erf&#252;llt.</td></tr>
+<tr><td><code>CompareOperator</code></td><td><code>TPPGCompareOperator</code></td><td><code>coEqual</code></td><td>Nur vrCompare: Wert dieses Controls im Verh&#228;ltnis zum Vergleichswert – coEqual, coNotEqual, coLess, coLessOrEqual, coGreater, coGreaterOrEqual. Zahlen und Daten werden als Zahl verglichen, Text genau (mit Gro&#223;-/Kleinschreibung). Werte: <code>coEqual</code>, <code>coNotEqual</code>, <code>coLess</code>, <code>coLessOrEqual</code>, <code>coGreater</code>, <code>coGreaterOrEqual</code>. Nutzung: <code>R.CompareControl := DateFrom; R.CompareOperator := coGreaterOrEqual;</code></td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGValidationRules.html">TPPGValidationRules</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

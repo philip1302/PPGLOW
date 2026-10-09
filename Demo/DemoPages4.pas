@@ -10,7 +10,7 @@ uses
   Data.DB, Datasnap.DBClient,
   PPG.Types, PPG.Controls.Base, PPG.Feedback, PPG.Panel, PPG.Labels, PPG.ToolBar, PPG.Grid,
   PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.Chart.Series, PPG.DB.Chart,
-  PPG.NumberFormat, PPG.DB.Fields, PPG.DB.Navigator,
+  PPG.NumberFormat, PPG.DB.Fields, PPG.DB.Navigator, PPG.Validator, PPG.Controls.Field, Vcl.DBCtrls,
   Vcl.Dialogs, PPG.Grid.Data, PPG.Grid.Export,
   DemoKit;
 
@@ -33,7 +33,10 @@ type
     FTags: TPPGDBTagEdit;
     FResult: TPPGLabel;
     FChart: TPPGDBChart;
+    FDetail: TPPGPanel;
+    FValidator: TPPGValidator;
     procedure BuildData;
+    procedure NavBeforeAction(Sender: TObject; Button: TNavigateBtn);
     procedure CustomersNewRecord(DataSet: TDataSet);
     procedure ToolClick(Sender: TObject; Item: TPPGToolItem);
     procedure SourceChange(Sender: TObject; Field: TField);
@@ -126,6 +129,8 @@ begin
   FCustomers.FieldByName('Sales').DisplayLabel := L('Umsatz ({EUR})');
   TFloatField(FCustomers.FieldByName('Sales')).DisplayFormat := '#,##0.00';
   FCustomers.FieldByName('Sales').OnValidate := SalesValidate;
+  // Pflicht und Laenge kommen aus dem TField: der Validator liest sie selbst
+  FCustomers.FieldByName('Name').Required := True;
   for I := 0 to High(Names) do
     FCustomers.AppendRecord([I + 1, L(Names[I]), L(Cities[I]), EncodeDate(2015 + I, 1 + I, 3 + I),
       CatOf[I], I mod 3 <> 2, Sales[I], '', TagsOf(I)]);
@@ -195,7 +200,9 @@ begin
   // Formular zum aktuellen Datensatz
   Card := NewCard(Own, Sheet, PageX, PageContentTop + GridH + CardGap, FullW, DetailH,
     'Aktueller Datensatz', 'Tippen startet die Bearbeitung, Speichern oder ein Datensatzwechsel ' +
-    'schreibt zur{ue}ck.');
+    'schreibt zur{ue}ck. Kunde ist Pflicht (TField.Required): der Validator pr{ue}ft ' +
+    'das ohne eigene Regel, bevor der Navigator speichert.');
+  FDetail := Card;
   X2 := CardPad + Col3W + CardGap;
   X3 := X2 + Col3W + CardGap;
   Y := Card.Tag;
@@ -206,6 +213,9 @@ begin
   FName.DataSource := FSource;
   FName.DataField := 'Name';
   Host.RegisterSpecial('dbedit', FName);
+  FValidator := TPPGValidator.Create(Own);
+  FValidator.CheckOnClose := False;
+  FNav.BeforeAction := NavBeforeAction;
   Host.RegisterSpecial('dbgrid', FGrid);
   AddCaption(X2, Y, 'Ort');
   FCity := TPPGDBComboBox.Create(Own);
@@ -284,6 +294,17 @@ begin
   FChart.DataSource := FSource;
   Host.RegisterSpecial('dbchart', FChart);
   UpdateResult;
+end;
+
+procedure TDemoDatabasePage.NavBeforeAction(Sender: TObject; Button: TNavigateBtn);
+begin
+  // Vor dem Speichern: Regeln aus den Datenfeldern (nur das Formular dieser Seite)
+  if (Button = nbPost) and not FValidator.ValidateChildren(FDetail) then
+  begin
+    FValidator.FocusFirstError;
+    Host.Log('Validator', L('Speichern abgelehnt: Pflichtfeld leer'));
+    Abort;
+  end;
 end;
 
 procedure TDemoDatabasePage.SalesValidate(Sender: TField);
@@ -448,6 +469,14 @@ begin
   FNav.SetQuickFilter(True);
   FNav.SetQuickFilter(False);
   Check('Datenbank: Filter aus stellt alle her', not FCustomers.Filtered);
+  // Validator mit Regeln aus TField (Required) vor dem Speichern
+  FCustomers.Edit;
+  FName.Text := '';
+  Check('Validator: Pflichtfeld aus TField', not FValidator.ValidateChildren(FDetail) and
+    (FName.ValidationState = pvsError));
+  FCustomers.Cancel;
+  FValidator.ClearResults;
+  Check('Validator: ohne Bearbeitung keine Feldregeln', FValidator.ValidateChildren(FDetail));
 end;
 
 end.

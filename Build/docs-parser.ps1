@@ -99,6 +99,8 @@ function Read-PPGSources([string]$Dir) {
       if ($t -match '^\{\$' -or $t -eq '') { continue }
       if ($null -eq $cur) {
         if ($t -match '^(T\w+)\s*=\s*class\s*;') { $doc.Clear(); continue }
+        # Metaklasse "TFooClass = class of TFoo;" ist keine Klasse mit Rumpf
+        if ($t -match '^(T\w+)\s*=\s*class\s+of\b') { $doc.Clear(); continue }
         if ($t -match '^(T\w+)\s*=\s*class(\s+(sealed|abstract))?\s*(\(\s*([\w.]+))?') {
           $name = $Matches[1]
           $parent = 'TObject'

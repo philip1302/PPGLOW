@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGValidator</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGValidator</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.Validator</code> - Basis <code>TComponent</code></p>
+<p><strong>Vorbild:</strong> keins; ersetzt den Pr&#252;fcode in Formularen (<code>if Edit1.Text = &#39;&#39; then ShowMessage(...)</code>)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Regeln im Designer: Pflicht, L&#228;nge, Bereich (Zahl oder Datum), Format (E-Mail, Telefon, PLZ, IBAN mit Pr&#252;fsumme, eigener regul&#228;rer Ausdruck), Vergleich mit einem anderen Feld, eigene Regel per <code>OnValidate</code>.</li>
+<li>Fehler stehen direkt am Feld (<code>ValidationState</code>/<code>ValidationHint</code>, auch f&#252;r Screenreader). Der Validator nimmt nur zur&#252;ck, was er selbst gesetzt hat; Fehler eines DB-Felds bleiben stehen.</li>
+<li>Gepr&#252;ft wird beim Verlassen eines Felds (<code>ValidateOn</code>); nach einem Fehler pr&#252;ft das Feld beim Tippen sofort neu. <code>Validate</code> pr&#252;ft alles, <code>ValidateGroup</code>/<code>ValidateChildren</code> nur einen Teil.</li>
+<li><code>FocusFirstError</code> springt zum ersten Fehler in Tab-Reihenfolge und aktiviert daf&#252;r Reiter und Assistent-Seiten, klappt Expander auf und scrollt.</li>
+<li><code>SummaryBar</code> (InfoBar) zeigt „2 Fehler: Name, E-Mail“ mit „Zum Fehler“; <code>CheckOnClose</code> h&#228;lt ein Formular mit OK offen, solange etwas fehlt; <code>SubmitControl</code> sperrt den OK-Knopf bis alle Pflichtfelder gef&#252;llt sind; <code>Wizard</code> l&#228;sst „Weiter“ erst bei g&#252;ltiger Seite zu.</li>
+<li><code>AutoFieldRules</code>: DB-Controls ohne eigene Regel werden nach ihrem <code>TField</code> gepr&#252;ft (Required, Size, MinValue/MaxValue), solange die Datenmenge bearbeitet wird. Das gilt f&#252;r alle DB-Controls desselben Besitzers.</li>
+<li>Fremde Controls ohne <code>ValidationState</code> (VCL, TMS) werden gepr&#252;ft, aber nicht markiert: Sie erscheinen in <code>Results</code>, der Sammelleiste und <code>OnShowError</code>.</li>
+<li>Ausgeblendete und gesperrte Controls z&#228;hlen nicht; Controls auf nicht aktiven Reitern schon.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGValidator1.Rules.AddRule(EditName, vrRequired);
+R := PPGValidator1.Rules.AddRule(EditMail, vrPattern);
+R.PatternKind := vpEmail;
+if not PPGValidator1.Validate then
+  PPGValidator1.FocusFirstError;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>Formularweite Eingabepruefung (Phase 19a).</p>
+<p>TPPGValidator (nicht sichtbar): Regeln je Control im Designer statt Pruefcode im Formular.</p>
+<ul>
+<li>Regelarten: Pflicht, Laenge, Bereich (Zahl oder Datum), Muster (eigener regulaerer Ausdruck oder E-Mail, Telefon, PLZ, IBAN mit Pruefsumme), Vergleich mit einem anderen Control, eigene Regel per OnValidate.</li>
+<li>Leere Werte prueft nur die Pflicht-Regel (und OnValidate); die uebrigen greifen erst, wenn etwas eingegeben ist.</li>
+<li>Je Control gilt das erste Ergebnis: der erste Fehler, sonst die erste Warnung (Reihenfolge der Regeln).</li>
+<li>Werte liest ein Adapter je Control-Klasse (PPGRegisterValidationAdapter, der zuletzt registrierte passende gewinnt). Eingebaut: PPGlow-Felder (IPPGFieldValue, DatePicker, SpinEdit, sonst Text), Auswahlgruppen, Kaestchen/Schalter und die VCL-Pendants (Edit, ComboBox, CheckBox, DateTimePicker).</li>
+<li>Markiert wird ueber ValidationState/ValidationHint (Tooltip und Screenreader). Der Validator setzt nur zurueck, was er selbst gesetzt hat: hat jemand anderes (z.B. ein DB-Feld) den Zustand inzwischen geaendert, bleibt er stehen. Controls ohne ValidationState erscheinen nur in Results und OnShowError.</li>
+<li>Automatisch pruefen (ValidateOn): beim Verlassen (CM_EXIT) bzw. bei jeder Aenderung. Ein Control mit Ergebnis prueft bei jeder Aenderung sofort neu, damit der Fehler verschwindet, sobald er behoben ist. Aenderungen melden die PPGlow-Controls per CM_PPGVALUECHANGED, VCL-Controls ueber ihre Benachrichtigungen (CN_COMMAND, CN_NOTIFY). Die Pruefung laeuft danach ueber eine gepostete Nachricht, nie mitten in OnChange.</li>
+<li>Ausgeblendete und gesperrte Controls zaehlen nicht; Controls auf nicht aktiven Reitern schon (sie sind nur verdeckt, auch bei TabVisible = False), ebenso auf nicht aktiven Seiten des Assistenten (ausser PageVisible = False).</li>
+<li>FocusFirstError: erster Fehler in Tab-Reihenfolge; aktiviert unterwegs Reiter, klappt Expander auf und scrollt ihn ins Bild.</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Active</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Der Validator pr&#252;ft nichts mehr, Validate liefert immer True, und vorhandene Markierungen werden zur&#252;ckgenommen.</td></tr>
+<tr><td><code>ValidateOn</code></td><td><code>TPPGValidateOn</code></td><td><code>voExit</code></td><td>Wann automatisch gepr&#252;ft wird: voSubmit nur auf Aufruf, voExit beim Verlassen eines Felds (Vorgabe), voChange bei jeder &#196;nderung. Ein Feld mit Fehler pr&#252;ft in jedem Fall beim Tippen sofort neu. Werte: <code>voSubmit</code>, <code>voExit</code>, <code>voChange</code>.</td></tr>
+<tr><td><code>ShowValid</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Gepr&#252;fte Felder ohne Fehler bekommen den Zustand pvsValid (gr&#252;ner Rand) – erst nach der ersten Pr&#252;fung, nicht beim &#214;ffnen des Formulars.</td></tr>
+<tr><td><code>Rules</code></td><td><a href="types/TPPGValidationRules.html">TPPGValidationRules</a></td><td></td><td>Die Regeln: je Regel ein Control, eine Art und ihre Einstellungen. Im Designer per Doppelklick; das Verb „Add required rules for all fields“ legt f&#252;r jedes Eingabefeld ohne Regel eine Pflicht-Regel an. Nutzung: <code>Validator.Rules.AddRule(EditName, vrRequired);</code></td></tr>
+<tr><td><code>AutoFieldRules</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>DB-Controls (alles mit einer Property Field: TField, auch TDBEdit der VCL) pr&#252;ft der Validator ohne eigene Regel nach ihrem Datenfeld: Required, Size bei Text, MinValue/MaxValue bei Zahlen – solange die Datenmenge bearbeitet wird. Gilt f&#252;r alle DB-Controls desselben Besitzers; bei mehreren Formularteilen ValidateChildren nehmen oder abschalten. Nutzung: <code>if not Validator.ValidateChildren(DetailPanel) then Abort;</code></td></tr>
+<tr><td><code>SummaryBar</code></td><td><code>TPPGCustomInfoBar</code></td><td></td><td>InfoBar f&#252;r die Sammelanzeige: „2 Fehler“ mit den Feldnamen und dem Knopf „Zum Fehler“. Erscheint erst nach dem ersten Validate (bzw. Schlie&#223;en mit OK, Weiter im Assistenten) und klappt zu, sobald alles stimmt.</td></tr>
+<tr><td><code>CheckOnClose</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>Schlie&#223;t das Formular mit ModalResult mrOk oder mrYes (z. B. OK-Knopf), pr&#252;ft der Validator vorher und bricht das Schlie&#223;en bei Fehlern ab. Abbrechen und das Schlie&#223;feld bleiben frei; ein vorhandenes OnCloseQuery l&#228;uft zuerst.</td></tr>
+<tr><td><code>SubmitControl</code></td><td><code>TControl</code></td><td></td><td>Control (meist der OK- oder Speichern-Knopf), das gesperrt ist, solange ein Pflichtfeld leer ist. Andere Regeln z&#228;hlen hier nicht, damit der Knopf nicht bei jedem Tastendruck flackert.</td></tr>
+<tr><td><code>Wizard</code></td><td><code>TPPGWizard</code></td><td></td><td>Assistent, dessen „Weiter“ erst geht, wenn die Felder der aktuellen Seite g&#252;ltig sind; der Validator h&#228;ngt sich in OnCanAdvance ein (ein vorhandener Handler l&#228;uft zuerst).</td></tr>
+</table>
+<h2>Ereignisse</h2>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnValidate</code></td><td><code>TPPGValidateRuleEvent</code> <code>(Sender: TObject; Rule: TPPGValidationRule; const Value: Variant; var Valid: Boolean; var Message: string)</code></td><td>F&#252;r Regeln der Art vrCustom: Value ist der Wert des Controls; Valid := False und eine Meldung setzen, wenn er nicht passt. Nutzung: <code>Valid := not KundennummerVergeben(VarToStr(Value)); Message := &#39;Kundennummer ist schon vergeben&#39;;</code></td></tr>
+<tr><td><code>OnValidated</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Nach jeder Pr&#252;fung, auch der automatischen beim Verlassen eines Felds; Results und ErrorCount sind dann aktuell.</td></tr>
+<tr><td><code>OnShowError</code></td><td><code>TPPGShowErrorEvent</code> <code>(Sender: TObject; Control: TControl; const Message: string; Severity: TPPGValidationState)</code></td><td>Das Ergebnis eines Controls hat sich ge&#228;ndert: neue oder ge&#228;nderte Meldung bzw. behoben (Severity = pvsNone). F&#252;r eigene Anzeigen, z. B. bei Controls ohne ValidationState. Nutzung: <code>if Severity = pvsNone then MyLabel.Caption := &#39;&#39; else MyLabel.Caption := Message;</code></td></tr>
+</table>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGValidator.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

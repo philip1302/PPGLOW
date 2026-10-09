@@ -83,6 +83,7 @@ type
     /// Ribbon in einem Zustand zeigen (keytips, keytips2, minimized, group, gallery)
     /// und die Bildschirmpixel des Fensters speichern.
     procedure SaveRibbonCapture(const Mode, FileName: string);
+    procedure SaveBusyCapture(const Mode, FileName: string);
     procedure SaveDatePopupCapture(const FileName: string);
     /// Registriertes Diagramm (Key) ueber SaveToPng speichern. False = unbekannt.
     function SaveChartPng(const Key, FileName: string): Boolean;
@@ -125,7 +126,7 @@ uses
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
   PPG.Chart, PPG.IconFont, PPG.Grid.Data, PPG.Grid.Export, PPG.Grid.Print, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
-  DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, DemoPages11, PPG.Hints;
+  DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, DemoPages11, PPG.Hints, PPG.Validator, PPG.BusyOverlay, PPG.Panel;
 
 type
   TPageDef = record
@@ -172,7 +173,7 @@ type
 
 const
   // Katalog fuer die Suche oben: Control, Stichworte, Seite
-  Catalog: array[0..64] of TCatalogEntry = (
+  Catalog: array[0..66] of TCatalogEntry = (
     (Name: 'TPPGButton'; Keywords: 'Schaltfl{ae}che, Befehl, Split, Akzent'; Page: PgButtons),
     (Name: 'TPPGToolBar'; Keywords: 'Werkzeugleiste, Symbolleiste'; Page: PgButtons),
     (Name: 'TPPGCheckBox'; Keywords: 'Kontrollk{ae}stchen, Haken'; Page: PgChoice),
@@ -235,6 +236,8 @@ const
     (Name: 'TPPGKanban'; Keywords: 'Kanban, Board, Trello, Aufgaben, WIP, Swimlanes'; Page: PgKanban),
     (Name: 'TPPGTileView'; Keywords: 'Kacheln, Karten, Galerie, Symbole, ListView, Explorer'; Page: PgTiles),
     (Name: 'TPPGRadioGroup'; Keywords: 'Optionsgruppe, Segment, Umschalter, Auswahlkacheln'; Page: PgChoice),
+    (Name: 'TPPGValidator'; Keywords: 'Pruefung, Pflichtfeld, Validierung, Fehler, Formular'; Page: PgForm),
+    (Name: 'TPPGBusyOverlay'; Keywords: 'Warten, Fortschritt, Abbrechen, Thread, Sanduhr'; Page: PgForm),
     (Name: 'TPPGCheckGroup'; Keywords: 'Kontrollk{ae}stchen-Gruppe, Mehrfachauswahl'; Page: PgChoice),
     (Name: 'TPPGDBKanban'; Keywords: 'Datenbank, Board aus Datenmenge'; Page: PgKanban),
     (Name: 'TPPGElementStyle'; Keywords: 'Anpassung, Markenfarbe, Akzent, Zebra, Kopf, Custom-Draw, Schatten, Ecken'; Page: PgCustom));
@@ -1003,6 +1006,50 @@ begin
   WaitMs(1200);
   WA := Screen.MonitorFromWindow(Handle).WorkareaRect;
   SaveScreenRect(Rect(WA.Right - 440, WA.Bottom - 520, WA.Right, WA.Bottom), FileName);
+end;
+
+procedure TDemoForm.SaveBusyCapture(const Mode, FileName: string);
+var
+  C: TControl;
+  P: TWinControl;
+  V: TComponent;
+  B: TComponent;
+begin
+  // Bestellkarte der Formularseite: Fehlerzustand bzw. laufendes Warte-Overlay
+  ShowPage(PgForm);
+  SetForegroundWindow(Handle);
+  C := SpecialControl('ordercard');
+  if C <> nil then
+  begin
+    P := C.Parent;
+    while (P <> nil) and not (P is TPPGScrollBox) do
+      P := P.Parent;
+    if P <> nil then
+      TPPGScrollBox(P).ScrollInView(C);
+  end;
+  WaitMs(300);
+  if SameText(Mode, 'errors') then
+  begin
+    V := FindComponent('OrderValidator');
+    if V is TPPGValidator then
+    begin
+      TPPGValidator(V).Validate;
+      TPPGValidator(V).FocusFirstError;
+    end;
+    WaitMs(400);
+    SaveScreenCapture(FileName);
+    Exit;
+  end;
+  B := FindComponent('OrderBusy');
+  if B is TPPGBusyOverlay then
+  begin
+    TPPGBusyOverlay(B).Progress := 40;
+    TPPGBusyOverlay(B).Description := 'Schritt 8 von 20';
+    TPPGBusyOverlay(B).ShowNow;
+    WaitMs(500);
+    SaveScreenCapture(FileName);
+    TPPGBusyOverlay(B).Hide;
+  end;
 end;
 
 procedure TDemoForm.SaveRibbonCapture(const Mode, FileName: string);
