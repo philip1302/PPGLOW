@@ -1,9 +1,10 @@
 unit PPG.Controls.DropDown;
 
-{ Gemeinsame Basis fuer Felder mit Aufklapp-Fenster (Phase 12d/e):
-  ColorPicker, CheckComboBox, ColumnComboBox.
+{ Gemeinsame Basis fuer Felder mit Aufklapp-Fenster (Phase 12d/e, 20e):
+  ComboBox (mit SearchEdit, TimePicker), ColorPicker, CheckComboBox,
+  ColumnComboBox, TagEdit. Das Popup (TPPGDropPopup) liegt in PPG.Popup.
 
-  Verhalten wie die ComboBox der Suite (dort noch eigene Umsetzung):
+  Verhalten:
   - Das Popup wird nie aktiviert. Das Feld behaelt Fokus und Tastatur und
     haelt die Maus per SetCapture; Mausnachrichten werden in Popup-
     Koordinaten an das Popup weitergereicht.
@@ -28,23 +29,6 @@ uses
   PPG.Popup.Placement;
 
 type
-  /// Antwort des Popups auf Maus oder Taste.
-  TPPGDropAction = (pdaNone, pdaKeepOpen, pdaAccept, pdaCancel);
-
-  TPPGDropPopup = class(TPPGPopupWindow)
-  public
-    /// Groesse fuer ein Feld der Breite FieldWidth (physische px).
-    function PreferredSize(FieldWidth: Integer): TSize; virtual;
-    procedure DropMouseMove(X, Y: Integer; Shift: TShiftState); virtual;
-    function DropMouseDown(X, Y: Integer): TPPGDropAction; virtual;
-    function DropMouseUp(X, Y: Integer): TPPGDropAction; virtual;
-    function DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction; virtual;
-    function DropKeyPress(var Key: Char): TPPGDropAction; virtual;
-    procedure DropWheel(Delta: Integer); virtual;
-    /// Maus hat das Popup verlassen (Hervorhebung zuruecksetzen).
-    procedure DropMouseLeave; virtual;
-  end;
-
   TPPGCustomDropDownField = class(TPPGCustomField)
   private
     FPopup: TPPGDropPopup;
@@ -54,6 +38,7 @@ type
     FOnCloseUp: TNotifyEvent;
     procedure HandleDroppedMouse(var Message: TMessage);
     procedure Act(Action: TPPGDropAction);
+    procedure PlacePopup(Duration: Cardinal);
     procedure WMCaptureChanged(var Message: TMessage); message WM_CAPTURECHANGED;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
@@ -68,6 +53,17 @@ type
     procedure AcceptPopup(APopup: TPPGDropPopup); virtual; abstract;
     procedure DoDropDown; virtual;
     procedure DoCloseUp; virtual;
+    /// Darf aufgeklappt werden? Vorgabe: nicht bei ReadOnly.
+    function CanDropDown: Boolean; virtual;
+    /// Nach dem Zeigen (Popup offen, Maus gefangen).
+    procedure PopupOpened; virtual;
+    /// Nach dem Schliessen, vor AcceptPopup und OnCloseUp.
+    procedure PopupClosed; virtual;
+    /// Offenes Popup neu platzieren (z.B. nach dem Filtern), ohne Animation.
+    procedure RepositionPopup;
+    /// Schliessen ohne Ereignisse und Popup freigeben (fuer Destruktoren, die
+    /// vor dem Freigeben Daten des Popups abbauen).
+    procedure FreePopup;
     procedure GetButtons(var Buttons: TPPGFieldButtons); override;
     procedure ButtonDown(Id: Integer); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -108,46 +104,6 @@ uses
 var
   GMsgToggle: Cardinal = 0;
 
-{ TPPGDropPopup }
-
-function TPPGDropPopup.PreferredSize(FieldWidth: Integer): TSize;
-begin
-  Result.cx := FieldWidth;
-  Result.cy := 200;
-end;
-
-procedure TPPGDropPopup.DropMouseMove(X, Y: Integer; Shift: TShiftState);
-begin
-end;
-
-function TPPGDropPopup.DropMouseDown(X, Y: Integer): TPPGDropAction;
-begin
-  Result := pdaNone;
-end;
-
-function TPPGDropPopup.DropMouseUp(X, Y: Integer): TPPGDropAction;
-begin
-  Result := pdaNone;
-end;
-
-function TPPGDropPopup.DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction;
-begin
-  Result := pdaNone;
-end;
-
-function TPPGDropPopup.DropKeyPress(var Key: Char): TPPGDropAction;
-begin
-  Result := pdaNone;
-end;
-
-procedure TPPGDropPopup.DropWheel(Delta: Integer);
-begin
-end;
-
-procedure TPPGDropPopup.DropMouseLeave;
-begin
-end;
-
 { TPPGCustomDropDownField }
 
 destructor TPPGCustomDropDownField.Destroy;
@@ -175,40 +131,80 @@ begin
     FOnCloseUp(Self);
 end;
 
-procedure TPPGCustomDropDownField.DropDown;
+function TPPGCustomDropDownField.CanDropDown: Boolean;
+begin
+  Result := not ReadOnly;
+end;
+
+procedure TPPGCustomDropDownField.PopupOpened;
+begin
+end;
+
+procedure TPPGCustomDropDownField.PopupClosed;
+begin
+end;
+
+procedure TPPGCustomDropDownField.PlacePopup(Duration: Cardinal);
 var
   Anchor, WA: TRect;
   P: TPoint;
   Sz: TSize;
   Pl: TPPGPlacement;
+begin
+  P := ClientToScreen(Point(0, 0));
+  Anchor := Rect(P.X, P.Y, P.X + Width, P.Y + Height);
+  WA := FPopup.MonitorWorkArea(Anchor);
+  Sz := FPopup.PreferredSize(Width);
+  Pl := PPGPlacePopup(Anchor, Sz.cx, Sz.cy, ppsBelow, WA, UseRightToLeftAlignment, True);
+  FPopup.PopupAt(Pl.Bounds, Pl.Side, Duration);
+end;
+
+procedure TPPGCustomDropDownField.RepositionPopup;
+begin
+  if FDroppedDown and (FPopup <> nil) and HandleAllocated then
+    PlacePopup(0);
+end;
+
+procedure TPPGCustomDropDownField.DropDown;
+var
   Duration: Cardinal;
 begin
-  if FDroppedDown or not Enabled or ReadOnly or (csDesigning in ComponentState) or
+  if FDroppedDown or not Enabled or not CanDropDown or (csDesigning in ComponentState) or
     not HandleAllocated or not IsWindowVisible(Handle) then
     Exit;
-  DoDropDown;
+  DoDropDown; // darf die Eintraege noch aendern
   if FDroppedDown or not HandleAllocated then
     Exit;
   if FPopup = nil then
     FPopup := CreatePopup;
   FPopup.SyncFrom(Self);
   PreparePopup(FPopup);
-  P := ClientToScreen(Point(0, 0));
-  Anchor := Rect(P.X, P.Y, P.X + Width, P.Y + Height);
-  WA := FPopup.MonitorWorkArea(Anchor);
-  Sz := FPopup.PreferredSize(Width);
-  Pl := PPGPlacePopup(Anchor, Sz.cx, Sz.cy, ppsBelow, WA, UseRightToLeftAlignment, True);
   if Animation.EffectiveEnabled then
     Duration := Animation.Duration
   else
     Duration := 0;
   FDroppedDown := True;
   FMouseInPopup := False;
-  FPopup.PopupAt(Pl.Bounds, Pl.Side, Duration);
+  PlacePopup(Duration);
   // Maus fuer Klicks ausserhalb; Tastatur bleibt beim Feld
   SetCapture(Handle);
+  PopupOpened;
   Invalidate;
   NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
+end;
+
+procedure TPPGCustomDropDownField.FreePopup;
+begin
+  if FDroppedDown then
+  begin
+    FDroppedDown := False;
+    if FPopup <> nil then
+      FPopup.ClosePopup;
+    if HandleAllocated and (GetCapture = Handle) then
+      ReleaseCapture;
+  end;
+  FPopup.Free;
+  FPopup := nil;
 end;
 
 procedure TPPGCustomDropDownField.CloseUp(Accept: Boolean);
@@ -221,6 +217,7 @@ begin
   if HandleAllocated and (GetCapture = Handle) then
     ReleaseCapture;
   CancelButtonPress;
+  PopupClosed;
   Invalidate;
   NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
   // Zuerst uebernehmen (OnChange), dann OnCloseUp

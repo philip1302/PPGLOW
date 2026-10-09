@@ -2,13 +2,17 @@ unit PPG.ComboBox;
 
 { TPPGComboBox - Auswahlfeld mit eigener Aufklappliste in der Optik des Presets.
 
-  - Basis TPPGCustomField: csDropDown nutzt das native Edit (frei editierbar,
+  - Basis TPPGCustomDropDownField (seit Phase 20e, wie ColorPicker und
+    CheckComboBox): csDropDown nutzt das native Edit (frei editierbar,
     AutoComplete), csDropDownList blendet es aus - dann ist das Feld selbst
     Tabstopp und zeichnet den Eintrag.
-  - Die Liste ist ein eigenes Popup (PPG.Popup): ohne Aktivierung, die Combo
-    behaelt Fokus und Tastatur und haelt die Maus per SetCapture. Klick
-    ausserhalb, Fokusverlust, Capture-Verlust und Esc schliessen ohne
-    Uebernahme; Klick auf einen Eintrag und Enter uebernehmen.
+  - Die Liste ist ein TPPGPopupList (PPG.Popup): ohne Aktivierung, die Combo
+    behaelt Fokus und Tastatur und haelt die Maus per SetCapture (alles in
+    der Basis). Klick ausserhalb, Fokusverlust, Capture-Verlust und Esc
+    schliessen ohne Uebernahme; Klick auf einen Eintrag und Enter uebernehmen.
+  - Anders als die Basis: Zeichen gehen auch bei offener Liste ins Edit
+    (FieldKeyPress), Pos1/Ende im editierbaren Stil bewegen den Cursor, und
+    ReadOnly verhindert das Aufklappen nicht (TComboBox kennt kein ReadOnly).
   - Ereignisse wie TComboBox: Auswahl durch den Anwender loest OnClick und
     danach OnSelect aus - ist OnSelect nicht zugewiesen, stattdessen OnChange.
     Tippen im Edit loest OnChange aus. ItemIndex/Text im Code setzen loest
@@ -29,14 +33,15 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls,
-  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Field, PPG.Popup, PPG.Items,
+  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Field, PPG.Controls.DropDown,
+  PPG.Popup, PPG.Items,
   PPG.ItemPainter, PPG.CustomDraw;
 
 type
   /// Filtern beim Tippen (csDropDown): keiner, Anfang, irgendwo im Text.
   TPPGFilterMode = (fmNone, fmPrefix, fmContains);
 
-  TPPGCustomComboBox = class(TPPGCustomField, IPPGListStylesSource)
+  TPPGCustomComboBox = class(TPPGCustomDropDownField, IPPGListStylesSource)
   private
     FListStyles: TPPGListStyles;
     FOnCustomDrawItem: TPPGCustomDrawItemEvent;
@@ -50,8 +55,6 @@ type
     FAutoComplete: Boolean;
     FAutoDropDown: Boolean;
     FAutoCloseUp: Boolean;
-    FPopup: TPPGPopupList;
-    FDroppedDown: Boolean;
     FArrowAnim: TPPGAnimation;
     FQuiet: Integer;
     FTyping: Boolean;
@@ -67,8 +70,6 @@ type
     FSorted: Boolean;
     FSortingEx: Boolean;
     FOnSelect: TNotifyEvent;
-    FOnDropDown: TNotifyEvent;
-    FOnCloseUp: TNotifyEvent;
     procedure SetListStyles(const Value: TPPGListStyles);
     { IPPGListStylesSource }
     function GetListStyles: TPPGListStyles;
@@ -83,13 +84,14 @@ type
     function GetSorted: Boolean;
     procedure SetSorted(const Value: Boolean);
     procedure SetDroppedDown(const Value: Boolean);
+    function GetDroppedDown: Boolean;
+    function GetPopupList: TPPGPopupList;
     function GetComboText: string;
     procedure SetComboText(const Value: string);
     procedure SetTextQuiet(const Value: string);
     procedure ItemsChanged(Sender: TObject);
     procedure ArrowAnimStep(Sender: TObject);
     procedure PopupItemClick(Sender: TObject; Index: Integer);
-    procedure HandleDroppedMouse(var Message: TMessage);
     procedure TypeAhead(Key: Char);
     procedure StepSelection(Delta: Integer);
     procedure SyncPopupToText;
@@ -98,37 +100,28 @@ type
     procedure SyncItemsFromEx;
     procedure SortItemsEx;
     procedure ApplySorted;
-    procedure PlacePopup(Duration: Cardinal);
     function UseItemsEx: Boolean;
     function ItemsExHasDetail: Boolean;
-    procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
-    procedure CMVisibleChanged(var Message: TMessage); message CM_VISIBLECHANGED;
-    procedure WMCaptureChanged(var Message: TMessage); message WM_CAPTURECHANGED;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
   protected
     procedure Loaded; override;
-    procedure WndProc(var Message: TMessage); override;
     /// Offene Liste nach Theme-/Appearance-Wechsel neu einfaerben.
     procedure AppearanceUpdated; override;
     procedure GetButtons(var Buttons: TPPGFieldButtons); override;
-    procedure ButtonDown(Id: Integer); override;
     procedure ButtonClick(Id: Integer); override;
-    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
-    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
-    procedure KeyPress(var Key: Char); override;
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
     procedure FieldKeyPress(var Key: Char); override;
-    function WantSpecialKey(Key: Word): Boolean; override;
-    procedure FocusChanged; override;
+    procedure ClosedKeyDown(var Key: Word; Shift: TShiftState); override;
     procedure Change; override;
-    function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
-      MousePos: TPoint): Boolean; override;
     procedure DoPaintField(const ACanvas: IPPGCanvas; const Style: TPPGSurfaceStyle); override;
-    function AccRole: Integer; override;
-    function AccState: Integer; override;
     function AccValue: string; override;
-    function AccDefaultAction: string; override;
-    procedure AccDoDefaultAction; override;
+    { Aufklapp-Basis }
+    function CreatePopup: TPPGDropPopup; override;
+    procedure PreparePopup(APopup: TPPGDropPopup); override;
+    procedure AcceptPopup(APopup: TPPGDropPopup); override;
+    function CanDropDown: Boolean; override;
+    procedure PopupOpened; override;
+    procedure PopupClosed; override;
     /// True bei csDropDown/csSimple (Text frei editierbar).
     function EditableStyle: Boolean;
     /// Eintrag mit genau diesem Text (ohne Gross-/Kleinschreibung), -1 = keiner.
@@ -137,8 +130,6 @@ type
     /// OnSelect (bzw. OnChange) aus - nur, wenn sich etwas aendert.
     procedure SelectIndex(Index: Integer);
     procedure DoSelect; virtual;
-    procedure DoDropDown; virtual;
-    procedure DoCloseUp; virtual;
     /// Liste nach dem getippten Text filtern (FilterMode) und ggf. aufklappen.
     procedure ApplyFilter;
     /// True, solange der Text im Code gesetzt wird (keine Ereignisse).
@@ -159,8 +150,6 @@ type
     property ItemsEx: TPPGItems read FItemsEx write SetItemsEx;
     /// Filtern beim Tippen (nur csDropDown): die Liste zeigt nur Treffer.
     property FilterMode: TPPGFilterMode read FFilterMode write FFilterMode default fmNone;
-    property OnCloseUp: TNotifyEvent read FOnCloseUp write FOnCloseUp;
-    property OnDropDown: TNotifyEvent read FOnDropDown write FOnDropDown;
     property OnSelect: TNotifyEvent read FOnSelect write FOnSelect;
   public
     constructor Create(AOwner: TComponent); override;
@@ -168,14 +157,12 @@ type
     /// Wie TComboBox.Clear: leert Eintraege und Text.
     procedure Clear; override;
     procedure AddItem(const Item: string; AObject: TObject);
-    /// Klappt die Liste auf (OnDropDown) bzw. zu (Accept: Hervorhebung uebernehmen).
-    procedure DropDown;
-    procedure CloseUp(Accept: Boolean);
     /// Fortschritt der Pfeildrehung (0 = zu, 1 = offen).
     function ArrowProgress: Single;
-    property DroppedDown: Boolean read FDroppedDown write SetDroppedDown;
+    /// Wie TComboBox.DroppedDown (auch schreibbar).
+    property DroppedDown: Boolean read GetDroppedDown write SetDroppedDown;
     /// Die Aufklappliste (nil, solange sie nie geoeffnet wurde).
-    property PopupList: TPPGPopupList read FPopup;
+    property PopupList: TPPGPopupList read GetPopupList;
     /// Bereiche der Aufklappliste (Auswahl = aktueller Wert, Zebra, Hover ...).
     property ListStyles: TPPGListStyles read FListStyles write SetListStyles;
     /// Vor dem Zeichnen jedes Eintrags der Aufklappliste.
@@ -268,8 +255,8 @@ type
   end;
 
 const
-  /// Button-Id des Aufklapp-Pfeils.
-  PPGComboButtonDrop = 20;
+  /// Button-Id des Aufklapp-Pfeils (die der Aufklapp-Basis).
+  PPGComboButtonDrop = PPGDropButton;
 
 implementation
 
@@ -314,12 +301,8 @@ begin
   Data.FontStyle := It.FontStyle;
 end;
 
-var
-  GMsgToggle: Cardinal = 0;
-
 const
   SearchResetMs = 1000; // Tippsuche: Pause, nach der ein neuer Suchtext beginnt
-  WheelLines = 3;
 
 { TPPGCustomComboBox }
 
@@ -356,20 +339,13 @@ begin
   FArrowAnim := TPPGAnimation.Create(Self);
   FArrowAnim.OnStep := ArrowAnimStep;
   Width := 145;
-  if GMsgToggle = 0 then
-    GMsgToggle := RegisterWindowMessage('PPGlow.ComboToggle');
 end;
 
 destructor TPPGCustomComboBox.Destroy;
 begin
-  // Zuerst das Popup schliessen und freigeben (ohne Ereignisse)
-  if FDroppedDown then
-  begin
-    FDroppedDown := False;
-    if HandleAllocated and (GetCapture = Handle) then
-      ReleaseCapture;
-  end;
-  FreeAndNil(FPopup);
+  // Zuerst das Popup schliessen und freigeben (ohne Ereignisse): es greift
+  // beim Zeichnen auf ListStyles und Items zu
+  FreePopup;
   FreeAndNil(FListStyles);
   if FArrowAnim <> nil then
     FArrowAnim.OnStep := nil;
@@ -455,8 +431,8 @@ begin
     SetTextQuiet(FItems[V])
   else
     SetTextQuiet('');
-  if FPopup <> nil then
-    FPopup.ItemIndex := V;
+  if PopupList <> nil then
+    PopupList.ItemIndex := V;
   Invalidate;
   NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
 end;
@@ -491,8 +467,8 @@ begin
   begin
     SetTextQuiet(Value);
     FItemIndex := I;
-    if FPopup <> nil then
-      FPopup.ItemIndex := I;
+    if PopupList <> nil then
+      PopupList.ItemIndex := I;
     NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
   end
   else if I >= 0 then
@@ -624,22 +600,22 @@ begin
       SetTextQuiet('');
     NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
   end;
-  if FPopup <> nil then
+  if PopupList <> nil then
   begin
     // Audit 08.10.2026: Die Filter-Zuordnung (Zeile -> Eintrag) zeigt nach
     // einer Aenderung der Eintraege auf falsche oder fehlende Indizes
-    if FPopup.Filtered then
+    if PopupList.Filtered then
     begin
-      if FDroppedDown then
+      if DroppedDown then
         ApplyFilter
       else
-        FPopup.ClearFilter;
+        PopupList.ClearFilter;
     end;
-    FPopup.ItemIndex := FItemIndex;
-    if FPopup.Highlight >= FItems.Count then
-      FPopup.SetHighlight(-1);
-    FPopup.TopIndex := FPopup.TopIndex; // auf gueltigen Bereich begrenzen
-    FPopup.Invalidate;
+    PopupList.ItemIndex := FItemIndex;
+    if PopupList.Highlight >= FItems.Count then
+      PopupList.SetHighlight(-1);
+    PopupList.TopIndex := PopupList.TopIndex; // auf gueltigen Bereich begrenzen
+    PopupList.Invalidate;
   end;
   Invalidate;
 end;
@@ -700,28 +676,9 @@ begin
     FItems[Index] := PPGStripMarkup(FItemsEx[Index].Text)
   else
     SyncItemsFromEx;
-  if FPopup <> nil then
-    FPopup.Invalidate;
+  if PopupList <> nil then
+    PopupList.Invalidate;
   Invalidate;
-end;
-
-procedure TPPGCustomComboBox.PlacePopup(Duration: Cardinal);
-var
-  P: TPoint;
-  Anchor: TRect;
-  Rows, W: Integer;
-begin
-  Rows := FPopup.RowCount;
-  if Rows > FDropDownCount then
-    Rows := FDropDownCount;
-  if Rows < 1 then
-    Rows := 1;
-  W := Width;
-  if FDropDownWidth > W then
-    W := FDropDownWidth;
-  P := ClientToScreen(Point(0, 0));
-  Anchor := Rect(P.X, P.Y, P.X + Width, P.Y + Height);
-  FPopup.Popup(Anchor, W, FPopup.HeightForRows(Rows), UseRightToLeftAlignment, Duration);
 end;
 
 procedure TPPGCustomComboBox.ApplyFilter;
@@ -735,10 +692,10 @@ begin
   if S = '' then
   begin
     // Leerer Text: wieder alle Eintraege
-    if FDroppedDown and (FPopup <> nil) and FPopup.Filtered then
+    if DroppedDown and (PopupList <> nil) and PopupList.Filtered then
     begin
-      FPopup.ClearFilter;
-      PlacePopup(0);
+      PopupList.ClearFilter;
+      RepositionPopup;
     end;
     Exit;
   end;
@@ -762,13 +719,13 @@ begin
     CloseUp(False); // keine Treffer: Liste zu, Text bleibt
     Exit;
   end;
-  if not FDroppedDown then
+  if not DroppedDown then
     DropDown;
-  if not FDroppedDown or (FPopup = nil) then
+  if not DroppedDown or (PopupList = nil) then
     Exit;
-  FPopup.SetFilter(Map);
-  PlacePopup(0);
-  FPopup.SetHighlight(Map[0]);
+  PopupList.SetFilter(Map);
+  RepositionPopup;
+  PopupList.SetHighlight(Map[0]);
 end;
 
 function TPPGCustomComboBox.IsQuiet: Boolean;
@@ -865,13 +822,13 @@ begin
       end;
   FDisplayText := S;
   FItemIndex := IndexOfText(S);
-  if FPopup <> nil then
-    FPopup.ItemIndex := FItemIndex;
+  if PopupList <> nil then
+    PopupList.ItemIndex := FItemIndex;
   if WasTyping and (FFilterMode <> fmNone) and EditableStyle then
     ApplyFilter
   else
   begin
-    if WasTyping and FAutoDropDown and not FDroppedDown then
+    if WasTyping and FAutoDropDown and not DroppedDown then
       DropDown;
     SyncPopupToText;
   end;
@@ -882,16 +839,16 @@ procedure TPPGCustomComboBox.SyncPopupToText;
 var
   I: Integer;
 begin
-  if not FDroppedDown or (FPopup = nil) then
+  if not DroppedDown or (PopupList = nil) then
     Exit;
   // Offene Liste folgt dem getippten Text
   if FItemIndex >= 0 then
-    FPopup.SetHighlight(FItemIndex)
+    PopupList.SetHighlight(FItemIndex)
   else if FDisplayText <> '' then
     for I := 0 to FItems.Count - 1 do
       if AnsiStartsText(FDisplayText, FItems[I]) then
       begin
-        FPopup.SetHighlight(I);
+        PopupList.SetHighlight(I);
         Break;
       end;
 end;
@@ -911,8 +868,8 @@ begin
     FSearchText := '';
   FSearchTick := Now;
   FSearchText := FSearchText + Key;
-  if FDroppedDown then
-    Cur := FPopup.Highlight
+  if DroppedDown then
+    Cur := PopupList.Highlight
   else
     Cur := FItemIndex;
   // Derselbe Buchstabe wiederholt: durch die Eintraege mit diesem Anfang
@@ -938,9 +895,9 @@ begin
     J := (Start + I) mod N;
     if AnsiStartsText(S, FItems[J]) then
     begin
-      if FDroppedDown then
+      if DroppedDown then
       begin
-        FPopup.SetHighlight(J);
+        PopupList.SetHighlight(J);
         if FAutoCloseUp then
           CloseUp(True);
       end
@@ -952,6 +909,86 @@ begin
 end;
 
 { ---- Aufklappen ---- }
+
+function TPPGCustomComboBox.GetDroppedDown: Boolean;
+begin
+  Result := inherited DroppedDown;
+end;
+
+function TPPGCustomComboBox.GetPopupList: TPPGPopupList;
+begin
+  Result := TPPGPopupList(Popup);
+end;
+
+function TPPGCustomComboBox.CreatePopup: TPPGDropPopup;
+var
+  L: TPPGPopupList;
+begin
+  L := TPPGPopupList.Create(Self);
+  L.Items := FItems;
+  L.OnItemClick := PopupItemClick;
+  Result := L;
+end;
+
+procedure TPPGCustomComboBox.PreparePopup(APopup: TPPGDropPopup);
+var
+  L: TPPGPopupList;
+  Fill, TextColor: TColor;
+begin
+  inherited PreparePopup(APopup);
+  L := TPPGPopupList(APopup);
+  GetFieldColors(Fill, TextColor);
+  L.ListColor := Fill;
+  L.TextColor := TextColor;
+  L.MinItemHeight := FItemHeight;
+  L.ListName := AccName;
+  L.ItemIndex := FItemIndex;
+  L.ClearFilter;
+  // Reiche Eintraege: Bild, Detailzeile, Plakette ueber die Quelle
+  if UseItemsEx then
+    L.Source := FItemsExSource
+  else
+    L.Source := nil;
+  L.TwoLineItems := ItemsExHasDetail;
+  L.DropDownCount := FDropDownCount;
+  L.DropDownWidth := FDropDownWidth;
+  L.SetHighlight(-1);
+end;
+
+function TPPGCustomComboBox.CanDropDown: Boolean;
+begin
+  Result := True; // wie bisher: ReadOnly sperrt nur das Edit
+end;
+
+procedure TPPGCustomComboBox.PopupOpened;
+begin
+  inherited PopupOpened;
+  // Erst jetzt hat die Liste ihre Groesse (MakeVisible)
+  PopupList.TopIndex := 0;
+  PopupList.SetHighlight(FItemIndex);
+  if Animation.EffectiveEnabled then
+    FArrowAnim.AnimateTo(1, Animation.Duration)
+  else
+    FArrowAnim.Jump(1);
+end;
+
+procedure TPPGCustomComboBox.PopupClosed;
+begin
+  inherited PopupClosed;
+  // Die Hervorhebung ist ein Eintrag (keine Zeile): bleibt fuer AcceptPopup
+  PopupList.ClearFilter;
+  if Animation.EffectiveEnabled and HandleAllocated and IsWindowVisible(Handle) then
+    FArrowAnim.AnimateTo(0, Animation.Duration)
+  else
+    FArrowAnim.Jump(0);
+end;
+
+procedure TPPGCustomComboBox.AcceptPopup(APopup: TPPGDropPopup);
+begin
+  // Vor OnCloseUp: dort ist ItemIndex schon aktuell
+  if TPPGPopupList(APopup).Highlight >= 0 then
+    SelectIndex(TPPGPopupList(APopup).Highlight);
+end;
 
 procedure TPPGCustomComboBox.SetDroppedDown(const Value: Boolean);
 begin
@@ -966,114 +1003,21 @@ var
   Fill, TextColor: TColor;
 begin
   inherited AppearanceUpdated;
-  if FPopup <> nil then
+  if PopupList <> nil then
   begin
     GetFieldColors(Fill, TextColor);
-    FPopup.ListColor := Fill;
-    FPopup.TextColor := TextColor;
-    FPopup.Invalidate;
+    PopupList.ListColor := Fill;
+    PopupList.TextColor := TextColor;
+    PopupList.Invalidate;
   end;
-end;
-
-procedure TPPGCustomComboBox.DropDown;
-var
-  Fill, TextColor: TColor;
-  Duration: Cardinal;
-begin
-  if FDroppedDown or not Enabled or (csDesigning in ComponentState) or
-    not HandleAllocated or not IsWindowVisible(Handle) then
-    Exit;
-  DoDropDown; // darf die Eintraege noch aendern
-  if FDroppedDown or not HandleAllocated then
-    Exit;
-  if FPopup = nil then
-  begin
-    FPopup := TPPGPopupList.Create(Self);
-    FPopup.Items := FItems;
-    FPopup.OnItemClick := PopupItemClick;
-  end;
-  FPopup.SyncFrom(Self);
-  GetFieldColors(Fill, TextColor);
-  FPopup.ListColor := Fill;
-  FPopup.TextColor := TextColor;
-  FPopup.MinItemHeight := FItemHeight;
-  FPopup.ListName := AccName;
-  FPopup.ItemIndex := FItemIndex;
-  FPopup.ClearFilter;
-  // Reiche Eintraege: Bild, Detailzeile, Plakette ueber die Quelle
-  if UseItemsEx then
-    FPopup.Source := FItemsExSource
-  else
-    FPopup.Source := nil;
-  FPopup.TwoLineItems := ItemsExHasDetail;
-  FPopup.SetHighlight(-1);
-  if Animation.EffectiveEnabled then
-    Duration := Animation.Duration
-  else
-    Duration := 0;
-
-  FDroppedDown := True;
-  PlacePopup(Duration);
-  FPopup.TopIndex := 0;
-  FPopup.SetHighlight(FItemIndex);
-  // Maus fuer Klicks ausserhalb; Tastatur bleibt beim Feld bzw. Edit
-  SetCapture(Handle);
-  if Duration > 0 then
-    FArrowAnim.AnimateTo(1, Duration)
-  else
-    FArrowAnim.Jump(1);
-  Invalidate;
-  NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
-end;
-
-procedure TPPGCustomComboBox.CloseUp(Accept: Boolean);
-var
-  Idx: Integer;
-begin
-  if not FDroppedDown then
-    Exit;
-  FDroppedDown := False;
-  Idx := -1;
-  if FPopup <> nil then
-  begin
-    Idx := FPopup.Highlight;
-    FPopup.ClosePopup;
-    FPopup.ClearFilter;
-  end;
-  if HandleAllocated and (GetCapture = Handle) then
-    ReleaseCapture;
-  CancelButtonPress;
-  if Animation.EffectiveEnabled and HandleAllocated and IsWindowVisible(Handle) then
-    FArrowAnim.AnimateTo(0, Animation.Duration)
-  else
-    FArrowAnim.Jump(0);
-  Invalidate;
-  NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
-  // Zuerst die Auswahl (OnClick/OnSelect), dann OnCloseUp - dort ist
-  // ItemIndex schon aktuell
-  if Accept and (Idx >= 0) then
-    SelectIndex(Idx);
-  DoCloseUp;
-end;
-
-procedure TPPGCustomComboBox.DoDropDown;
-begin
-  if Assigned(FOnDropDown) then
-    FOnDropDown(Self);
-end;
-
-procedure TPPGCustomComboBox.DoCloseUp;
-begin
-  if Assigned(FOnCloseUp) then
-    FOnCloseUp(Self);
 end;
 
 procedure TPPGCustomComboBox.PopupItemClick(Sender: TObject; Index: Integer);
 begin
   // Standardaktion eines Eintrags (Screenreader)
-  if FDroppedDown then
+  if DroppedDown then
   begin
-    FPopup.SetHighlight(Index);
+    PopupList.SetHighlight(Index);
     CloseUp(True);
   end
   else
@@ -1095,141 +1039,16 @@ end;
 
 { ---- Maus ---- }
 
-procedure TPPGCustomComboBox.WndProc(var Message: TMessage);
-begin
-  if FDroppedDown then
-    case Message.Msg of
-      WM_MOUSEMOVE, WM_LBUTTONDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONUP,
-      WM_RBUTTONDOWN, WM_RBUTTONDBLCLK, WM_RBUTTONUP,
-      WM_MBUTTONDOWN, WM_MBUTTONDBLCLK, WM_MBUTTONUP:
-        begin
-          HandleDroppedMouse(Message);
-          Exit;
-        end;
-    end;
-  if (GMsgToggle <> 0) and (Message.Msg = GMsgToggle) then
-  begin
-    // Aus AccDoDefaultAction gepostet (ausserhalb des COM-Aufrufs)
-    if FDroppedDown then
-      CloseUp(False)
-    else
-      DropDown;
-    Exit;
-  end;
-  inherited WndProc(Message);
-end;
-
-procedure TPPGCustomComboBox.HandleDroppedMouse(var Message: TMessage);
-var
-  P, PP: TPoint;
-  InPopup: Boolean;
-  Idx: Integer;
-begin
-  Message.Result := 0;
-  if FPopup = nil then
-    Exit;
-  // Maus gehoert der Combo (SetCapture): Koordinaten ins Popup umrechnen
-  // XPos/YPos sind SmallInt: ausserhalb links/oben negativ (kein LoWord!)
-  P := Point(TWMMouse(Message).XPos, TWMMouse(Message).YPos);
-  PP := FPopup.ScreenToClient(ClientToScreen(P));
-  InPopup := FPopup.HandleAllocated and
-    PtInRect(Rect(0, 0, FPopup.Width, FPopup.Height), PP);
-  case Message.Msg of
-    WM_MOUSEMOVE:
-      FPopup.MouseMoveAt(PP.X, PP.Y);
-    WM_LBUTTONDOWN, WM_LBUTTONDBLCLK:
-      if InPopup then
-        FPopup.MouseDownAt(PP.X, PP.Y)
-      else
-        CloseUp(False); // Klick auf das Feld oder ausserhalb: schliessen
-    WM_LBUTTONUP:
-      begin
-        // Der oeffnende Klick hat ggf. den Pfeil-Button gedrueckt
-        CancelButtonPress;
-        ControlState := ControlState - [csClicked];
-        Idx := FPopup.MouseUpAt(PP.X, PP.Y);
-        if InPopup and (Idx >= 0) then
-        begin
-          FPopup.SetHighlight(Idx);
-          CloseUp(True);
-        end;
-      end;
-    WM_RBUTTONDOWN, WM_RBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONDBLCLK:
-      if not InPopup then
-        CloseUp(False);
-  end;
-end;
-
-procedure TPPGCustomComboBox.MouseDown(Button: TMouseButton; Shift: TShiftState;
-  X, Y: Integer);
-begin
-  inherited MouseDown(Button, Shift, X, Y);
-  // csDropDownList: das ganze Feld klappt auf (wie Windows)
-  if (Button = mbLeft) and Enabled and not EditableStyle and not FDroppedDown and
-    (ButtonAt(X, Y) < 0) then
-    DropDown;
-end;
-
-procedure TPPGCustomComboBox.WMCaptureChanged(var Message: TMessage);
-begin
-  inherited;
-  // Maus verloren (Dialog, Alt+Tab, anderes Fenster): ohne Uebernahme schliessen
-  if FDroppedDown and (HWND(Message.LParam) <> Handle) then
-    CloseUp(False);
-end;
-
-procedure TPPGCustomComboBox.CMEnabledChanged(var Message: TMessage);
-begin
-  if not Enabled then
-    CloseUp(False);
-  inherited;
-end;
-
-procedure TPPGCustomComboBox.CMVisibleChanged(var Message: TMessage);
-begin
-  if not Visible then
-    CloseUp(False);
-  inherited;
-end;
-
-function TPPGCustomComboBox.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
-  MousePos: TPoint): Boolean;
-begin
-  if FDroppedDown and (FPopup <> nil) then
-  begin
-    if WheelDelta > 0 then
-      FPopup.ScrollLines(-WheelLines)
-    else if WheelDelta < 0 then
-      FPopup.ScrollLines(WheelLines);
-    Result := True;
-    Exit;
-  end;
-  // Geschlossen aendert das Rad die Auswahl bewusst nicht (versehentliches
-  // Umstellen beim Scrollen des Formulars)
-  Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
-end;
-
 { ---- Buttons ---- }
 
 procedure TPPGCustomComboBox.GetButtons(var Buttons: TPPGFieldButtons);
 var
-  N: Integer;
+  I: Integer;
 begin
   inherited GetButtons(Buttons);
-  N := Length(Buttons);
-  SetLength(Buttons, N + 1);
-  Buttons[N].Id := PPGComboButtonDrop;
-  Buttons[N].Glyph := fgNone; // Pfeil zeichnet DoPaintField (mit Drehung)
-  Buttons[N].ImageIndex := -1;
-  Buttons[N].LeftSide := False;
-end;
-
-procedure TPPGCustomComboBox.ButtonDown(Id: Integer);
-begin
-  if Id = PPGComboButtonDrop then
-    DropDown // Schliessen per Klick erledigt HandleDroppedMouse
-  else
-    inherited ButtonDown(Id);
+  for I := 0 to High(Buttons) do
+    if Buttons[I].Id = PPGComboButtonDrop then
+      Buttons[I].Glyph := fgNone; // Pfeil zeichnet DoPaintField (mit Drehung)
 end;
 
 procedure TPPGCustomComboBox.ButtonClick(Id: Integer);
@@ -1250,12 +1069,6 @@ end;
 
 { ---- Tastatur ---- }
 
-function TPPGCustomComboBox.WantSpecialKey(Key: Word): Boolean;
-begin
-  // Offene Liste: Enter/Esc gehoeren ihr, nicht Default-/Cancel-Button
-  Result := FDroppedDown and ((Key = VK_RETURN) or (Key = VK_ESCAPE));
-end;
-
 procedure TPPGCustomComboBox.WMGetDlgCode(var Message: TWMGetDlgCode);
 begin
   inherited;
@@ -1263,101 +1076,36 @@ begin
   Message.Result := Message.Result or DLGC_WANTARROWS or DLGC_WANTCHARS;
 end;
 
-procedure TPPGCustomComboBox.KeyDown(var Key: Word; Shift: TShiftState);
-begin
-  inherited KeyDown(Key, Shift); // OnKeyDown
-  if (Key <> 0) and not InnerVisible then
-    FieldKeyDown(Key, Shift);
-end;
-
-procedure TPPGCustomComboBox.KeyPress(var Key: Char);
-begin
-  inherited KeyPress(Key); // OnKeyPress
-  if (Key <> #0) and not InnerVisible then
-    FieldKeyPress(Key);
-end;
-
 procedure TPPGCustomComboBox.FieldKeyDown(var Key: Word; Shift: TShiftState);
+begin
+  // Pos1/Ende bewegen im editierbaren Stil den Cursor im Edit (auch offen)
+  if EditableStyle and ((Key = VK_HOME) or (Key = VK_END)) then
+    Exit;
+  inherited FieldKeyDown(Key, Shift);
+end;
+
+procedure TPPGCustomComboBox.ClosedKeyDown(var Key: Word; Shift: TShiftState);
 var
   Page: Integer;
 begin
-  if FDroppedDown and (FPopup <> nil) then
-    Page := FPopup.VisibleRows - 1
-  else
-    Page := FDropDownCount - 1;
+  // Geschlossen waehlen Pfeile und Bild auf/ab direkt (wie TComboBox)
+  Page := FDropDownCount - 1;
   if Page < 1 then
     Page := 1;
   case Key of
-    VK_UP, VK_DOWN:
-      if ssAlt in Shift then
-      begin
-        if FDroppedDown then
-          CloseUp(True)
-        else
-          DropDown;
-      end
-      else if FDroppedDown then
-      begin
-        if Key = VK_UP then
-          FPopup.MoveHighlight(-1)
-        else
-          FPopup.MoveHighlight(1);
-      end
-      else if Key = VK_UP then
-        StepSelection(-1)
-      else
-        StepSelection(1);
-    VK_F4:
-      if Shift = [] then
-      begin
-        if FDroppedDown then
-          CloseUp(True)
-        else
-          DropDown;
-      end
-      else
-        Exit;
-    VK_PRIOR, VK_NEXT:
-      if FDroppedDown then
-      begin
-        if Key = VK_PRIOR then
-          FPopup.MoveHighlight(-Page)
-        else
-          FPopup.MoveHighlight(Page);
-      end
-      else if Key = VK_PRIOR then
-        StepSelection(-Page)
-      else
-        StepSelection(Page);
+    VK_UP: StepSelection(-1);
+    VK_DOWN: StepSelection(1);
+    VK_PRIOR: StepSelection(-Page);
+    VK_NEXT: StepSelection(Page);
     VK_HOME, VK_END:
       begin
-        if EditableStyle then
-          Exit; // Pos1/Ende bewegen den Cursor im Edit
         if FItems.Count = 0 then
           Exit;
-        if FDroppedDown then
-        begin
-          // Zeilen der (ggf. gefilterten) Liste
-          if Key = VK_HOME then
-            FPopup.SetHighlight(FPopup.ItemOfRow(0))
-          else
-            FPopup.SetHighlight(FPopup.ItemOfRow(FPopup.RowCount - 1));
-        end
-        else if Key = VK_HOME then
+        if Key = VK_HOME then
           SelectIndex(0)
         else
           SelectIndex(FItems.Count - 1);
       end;
-    VK_RETURN:
-      if FDroppedDown then
-        CloseUp(True)
-      else
-        Exit;
-    VK_ESCAPE:
-      if FDroppedDown then
-        CloseUp(False)
-      else
-        Exit;
   else
     Exit;
   end;
@@ -1366,6 +1114,8 @@ end;
 
 procedure TPPGCustomComboBox.FieldKeyPress(var Key: Char);
 begin
+  // Ersetzt die Basis ganz: Zeichen gehen auch bei offener Liste ins Edit
+  // (csDropDown) bzw. in die Tippsuche (csDropDownList)
   if (Key = #13) or (Key = #27) then
   begin
     Key := #0; // kein Signalton des einzeiligen Edits
@@ -1378,14 +1128,6 @@ begin
     TypeAhead(Key);
     Key := #0;
   end;
-end;
-
-procedure TPPGCustomComboBox.FocusChanged;
-begin
-  inherited FocusChanged;
-  // Fokus woanders hin (Tab, Klick in ein anderes Fenster): ohne Uebernahme zu
-  if FDroppedDown and not FieldFocused and not (csDestroying in ComponentState) then
-    CloseUp(False);
 end;
 
 { ---- Zeichnen ---- }
@@ -1445,37 +1187,9 @@ end;
 
 { ---- Barrierefreiheit ---- }
 
-function TPPGCustomComboBox.AccRole: Integer;
-begin
-  Result := ROLE_SYSTEM_COMBOBOX;
-end;
-
-function TPPGCustomComboBox.AccState: Integer;
-begin
-  Result := inherited AccState or STATE_SYSTEM_HASPOPUP;
-  if FDroppedDown then
-    Result := Result or STATE_SYSTEM_EXPANDED
-  else
-    Result := Result or STATE_SYSTEM_COLLAPSED;
-end;
-
 function TPPGCustomComboBox.AccValue: string;
 begin
   Result := FDisplayText;
-end;
-
-function TPPGCustomComboBox.AccDefaultAction: string;
-begin
-  if FDroppedDown then
-    Result := PPGStr(@SPPGAccClose)
-  else
-    Result := PPGStr(@SPPGAccOpen);
-end;
-
-procedure TPPGCustomComboBox.AccDoDefaultAction;
-begin
-  if HandleAllocated then
-    PostMessage(Handle, GMsgToggle, 0, 0);
 end;
 
 end.

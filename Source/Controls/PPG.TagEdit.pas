@@ -27,7 +27,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   System.Variants, Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls,
   PPG.Types, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base, PPG.Controls.Field,
-  PPG.Controls.DropDown, PPG.RowPopup;
+  PPG.Controls.DropDown, PPG.Popup, PPG.RowPopup;
 
 type
   TPPGTagAddingEvent = procedure(Sender: TObject; var Tag: string; var Allow: Boolean) of object;

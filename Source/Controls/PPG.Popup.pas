@@ -89,7 +89,26 @@ type
     property PopupPPI: Integer read FPPI write FPPI;
   end;
 
-  TPPGPopupList = class(TPPGPopupWindow, IPPGAccessibleChildren)
+  /// Antwort des Popups auf Maus oder Taste.
+  TPPGDropAction = (pdaNone, pdaKeepOpen, pdaAccept, pdaCancel);
+
+  /// Popup eines Felds mit Aufklapp-Fenster (TPPGCustomDropDownField):
+  /// das Feld reicht Maus und Tastatur in Popup-Koordinaten weiter.
+  TPPGDropPopup = class(TPPGPopupWindow)
+  public
+    /// Groesse fuer ein Feld der Breite FieldWidth (physische px).
+    function PreferredSize(FieldWidth: Integer): TSize; virtual;
+    procedure DropMouseMove(X, Y: Integer; Shift: TShiftState); virtual;
+    function DropMouseDown(X, Y: Integer): TPPGDropAction; virtual;
+    function DropMouseUp(X, Y: Integer): TPPGDropAction; virtual;
+    function DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction; virtual;
+    function DropKeyPress(var Key: Char): TPPGDropAction; virtual;
+    procedure DropWheel(Delta: Integer); virtual;
+    /// Maus hat das Popup verlassen (Hervorhebung zuruecksetzen).
+    procedure DropMouseLeave; virtual;
+  end;
+
+  TPPGPopupList = class(TPPGDropPopup, IPPGAccessibleChildren)
   private
     FItems: TStrings;
     FSource: IPPGItemSource;
@@ -98,6 +117,8 @@ type
     FTwoLineItems: Boolean;
     FPainter: TPPGItemPainter;
     FItemIndex: Integer;
+    FDropDownCount: Integer;
+    FDropDownWidth: Integer;
     FHighlight: Integer;
     FTopIndex: Integer;
     FMinItemHeight: Integer;
@@ -151,6 +172,16 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure SyncFrom(Source: TPPGCustomControl); override;
+    /// Hoechstens DropDownCount Zeilen, mindestens DropDownWidth breit.
+    function PreferredSize(FieldWidth: Integer): TSize; override;
+    procedure DropMouseMove(X, Y: Integer; Shift: TShiftState); override;
+    function DropMouseDown(X, Y: Integer): TPPGDropAction; override;
+    /// Loslassen ueber einem Eintrag: hervorheben und uebernehmen.
+    function DropMouseUp(X, Y: Integer): TPPGDropAction; override;
+    /// Pfeile, Bild auf/ab, Pos1/Ende bewegen die Hervorhebung, Enter uebernimmt.
+    function DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction; override;
+    procedure DropWheel(Delta: Integer); override;
+    procedure DropMouseLeave; override;
     /// Hoehe einer Zeile in Pixeln (Schrift + Abstand, mindestens MinItemHeight).
     function ItemHeight: Integer;
     /// Benoetigte Fensterhoehe fuer Rows Zeilen.
@@ -198,6 +229,10 @@ type
     property ThumbDragging: Boolean read FThumbDrag;
     /// Standardaktion eines Eintrags (Screenreader), asynchron ausgeloest.
     property OnItemClick: TPPGPopupItemEvent read FOnItemClick write FOnItemClick;
+    /// Zeilen fuer PreferredSize (wie TComboBox.DropDownCount).
+    property DropDownCount: Integer read FDropDownCount write FDropDownCount;
+    /// Mindestbreite fuer PreferredSize (0 = Feldbreite).
+    property DropDownWidth: Integer read FDropDownWidth write FDropDownWidth;
   end;
 
 implementation
@@ -447,6 +482,7 @@ end;
 constructor TPPGPopupList.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FDropDownCount := 8;
   FItemIndex := -1;
   FHighlight := -1;
   FPressedItem := -1;
@@ -792,6 +828,131 @@ begin
   if R > N - 1 then
     R := N - 1;
   SetHighlight(ItemOfRow(R));
+end;
+
+{ TPPGDropPopup }
+
+function TPPGDropPopup.PreferredSize(FieldWidth: Integer): TSize;
+begin
+  Result.cx := FieldWidth;
+  Result.cy := 200;
+end;
+
+procedure TPPGDropPopup.DropMouseMove(X, Y: Integer; Shift: TShiftState);
+begin
+end;
+
+function TPPGDropPopup.DropMouseDown(X, Y: Integer): TPPGDropAction;
+begin
+  Result := pdaNone;
+end;
+
+function TPPGDropPopup.DropMouseUp(X, Y: Integer): TPPGDropAction;
+begin
+  Result := pdaNone;
+end;
+
+function TPPGDropPopup.DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction;
+begin
+  Result := pdaNone;
+end;
+
+function TPPGDropPopup.DropKeyPress(var Key: Char): TPPGDropAction;
+begin
+  Result := pdaNone;
+end;
+
+procedure TPPGDropPopup.DropWheel(Delta: Integer);
+begin
+end;
+
+procedure TPPGDropPopup.DropMouseLeave;
+begin
+end;
+
+{ TPPGPopupList: Bedienung als Popup eines Aufklapp-Felds }
+
+function TPPGPopupList.PreferredSize(FieldWidth: Integer): TSize;
+var
+  Rows: Integer;
+begin
+  Rows := RowCount;
+  if Rows > FDropDownCount then
+    Rows := FDropDownCount;
+  if Rows < 1 then
+    Rows := 1;
+  Result.cx := FieldWidth;
+  if FDropDownWidth > Result.cx then
+    Result.cx := FDropDownWidth;
+  Result.cy := HeightForRows(Rows);
+end;
+
+procedure TPPGPopupList.DropMouseMove(X, Y: Integer; Shift: TShiftState);
+begin
+  MouseMoveAt(X, Y);
+end;
+
+function TPPGPopupList.DropMouseDown(X, Y: Integer): TPPGDropAction;
+begin
+  MouseDownAt(X, Y);
+  Result := pdaKeepOpen;
+end;
+
+function TPPGPopupList.DropMouseUp(X, Y: Integer): TPPGDropAction;
+var
+  Idx: Integer;
+begin
+  Result := pdaNone;
+  Idx := MouseUpAt(X, Y);
+  if (Idx >= 0) and PtInRect(Rect(0, 0, Width, Height), Point(X, Y)) then
+  begin
+    SetHighlight(Idx);
+    Result := pdaAccept;
+  end;
+end;
+
+function TPPGPopupList.DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction;
+var
+  Page: Integer;
+begin
+  Result := pdaKeepOpen;
+  Page := VisibleRows - 1;
+  if Page < 1 then
+    Page := 1;
+  case Key of
+    VK_UP: MoveHighlight(-1);
+    VK_DOWN: MoveHighlight(1);
+    VK_PRIOR: MoveHighlight(-Page);
+    VK_NEXT: MoveHighlight(Page);
+    // Zeilen der (ggf. gefilterten) Liste
+    VK_HOME:
+      if RowCount > 0 then
+        SetHighlight(ItemOfRow(0));
+    VK_END:
+      if RowCount > 0 then
+        SetHighlight(ItemOfRow(RowCount - 1));
+    VK_RETURN: Result := pdaAccept;
+  else
+    Exit(pdaNone); // z.B. Pfeil links im Edit: Taste bleibt erhalten
+  end;
+  Key := 0;
+end;
+
+procedure TPPGPopupList.DropWheel(Delta: Integer);
+const
+  WheelLines = 3;
+begin
+  if Delta > 0 then
+    ScrollLines(-WheelLines)
+  else if Delta < 0 then
+    ScrollLines(WheelLines);
+end;
+
+procedure TPPGPopupList.DropMouseLeave;
+begin
+  // Hervorhebung bleibt (wie Windows); nur die Scrollleiste ist nicht mehr heiss
+  if not FThumbDrag then
+    MouseMoveAt(-1, -1);
 end;
 
 procedure TPPGPopupList.ScrollLines(Delta: Integer);

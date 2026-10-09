@@ -20,7 +20,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics,
-  PPG.Types, PPG.Tokens, PPG.Render.Intf, PPG.Controls.DropDown;
+  PPG.Types, PPG.Tokens, PPG.Render.Intf, PPG.Popup;
 
 type
   TPPGRowPopup = class(TPPGDropPopup)
@@ -88,7 +88,7 @@ type
 implementation
 
 uses
-  System.Math, Winapi.oleacc, PPG.Appearance, PPG.Render.Registry, PPG.Popup;
+  System.Math, Winapi.oleacc, PPG.Appearance, PPG.Render.Registry;
 
 function IfThenSingle(B: Boolean; T, F: Single): Single;
 begin

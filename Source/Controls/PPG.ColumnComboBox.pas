@@ -24,7 +24,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   System.Variants, Vcl.Controls, Vcl.Graphics,
   PPG.Types, PPG.Tokens, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base,
-  PPG.Controls.Field, PPG.Controls.DropDown, PPG.RowPopup;
+  PPG.Controls.Field, PPG.Controls.DropDown, PPG.Popup, PPG.RowPopup;
 
 type
   TPPGColumnComboBox = class;

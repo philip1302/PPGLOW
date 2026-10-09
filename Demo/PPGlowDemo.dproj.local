@@ -186,6 +186,7 @@
     <File Path="..\Source\Controls\PPG.BusyOverlay.pas"/>
     <File Path="..\Source\Controls\PPG.Overlay.pas"/>
     <File Path="..\Source\Controls\PPG.Validator.pas"/>
+    <File Path="..\Source\Controls\PPG.Planner.Dialog.pas"/>
     <File Path="..\Source\Core"/>
     <File Path="..\Source\Core\PPG.Animation.pas"/>
     <File Path="..\Source\Core\PPG.Appearance.pas"/>
