@@ -8,7 +8,7 @@ interface
 
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
-  System.Types, System.TypInfo, Vcl.Controls, Vcl.Forms, Vcl.Graphics,
+  System.Types, System.TypInfo, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.ActnList,
   PPG.Feedback, PPG.Breadcrumb, PPG.Button, PPG.Calendar, PPG.Chart, PPG.CheckBox,
   PPG.CheckComboBox, PPG.RadioGroup, PPG.CheckListBox, PPG.ColorPicker, PPG.ColumnComboBox,
   PPG.ComboBox, PPG.DatePicker, PPG.Edit, PPG.Expander, PPG.FileEdit, PPG.Gauge, PPG.Grid,
@@ -41,6 +41,7 @@ type
     procedure EvKeyPress(Sender: TObject; var Key: Char);
     procedure EvEnter(Sender: TObject);
     procedure EvExit(Sender: TObject);
+    procedure EvExecute(Sender: TObject);
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -48,6 +49,8 @@ type
     procedure Stage1Published;
     procedure Stage1EventsFire;
     procedure PickersClickOnUserSelection;
+    procedure Stage2Published;
+    procedure Stage2ActionExecutesOnClick;
   end;
 
 const
@@ -200,6 +203,11 @@ end;
 procedure TVclPropsTests.EvExit(Sender: TObject);
 begin
   Note('OnExit');
+end;
+
+procedure TVclPropsTests.EvExecute(Sender: TObject);
+begin
+  Note('Execute');
 end;
 
 procedure TVclPropsTests.Stage1Published;
@@ -368,6 +376,73 @@ begin
   CC.OnClick := EvClick;
   CC.ToggleItem(0);
   CheckTrue(FFired.IndexOf('OnClick') >= 0, 'CheckComboBox');
+end;
+
+const
+  /// Anklickbare Controls mit Beschriftung, die eine Action annehmen (Stufe 2).
+  ActionClasses: array[0..4] of TControlClass = (TPPGLabel, TPPGLinkLabel, TPPGBadge,
+    TPPGPanel, TPPGGroupBox);
+
+procedure TVclPropsTests.Stage2Published;
+var
+  C: TControlClass;
+  Missing, Line: string;
+begin
+  Missing := '';
+  for C in VisualClasses do
+  begin
+    Line := '';
+    if C.InheritsFrom(TWinControl) then
+    begin
+      if GetPropInfo(C, 'DoubleBuffered') = nil then
+        Line := Line + ' DoubleBuffered';
+      if GetPropInfo(C, 'ParentDoubleBuffered') = nil then
+        Line := Line + ' ParentDoubleBuffered';
+    end;
+    if Line <> '' then
+      Missing := Missing + #13#10 + C.ClassName + ':' + Line;
+  end;
+  for C in ActionClasses do
+    if GetPropInfo(C, 'Action') = nil then
+      Missing := Missing + #13#10 + C.ClassName + ': Action';
+  CheckEquals('', Missing, 'nicht veroeffentlicht');
+end;
+
+procedure TVclPropsTests.Stage2ActionExecutesOnClick;
+var
+  CC: TControlClass;
+  C: TControl;
+  A: TAction;
+  Missing: string;
+  LP: LPARAM;
+begin
+  FForm.Show;
+  Missing := '';
+  for CC in ActionClasses do
+  begin
+    FFired.Clear;
+    A := TAction.Create(FForm);
+    C := CC.Create(FForm);
+    try
+      A.Caption := 'Aktion';
+      A.OnExecute := EvExecute;
+      C.Parent := FForm;
+      C.SetBounds(10, 10, 200, 60);
+      TCtrlAccess(C).Action := A;
+      CheckEquals('Aktion', TCtrlAccess(C).Caption, CC.ClassName + ': Caption aus der Action');
+      LP := MakeLParam(Word(C.Width - 4), Word(C.Height - 4));
+      C.Perform(WM_LBUTTONDOWN, MK_LBUTTON, LP);
+      C.Perform(WM_LBUTTONUP, 0, LP);
+      if GetCapture <> 0 then
+        ReleaseCapture;
+      if FFired.IndexOf('Execute') < 0 then
+        Missing := Missing + ' ' + CC.ClassName;
+    finally
+      C.Free;
+      A.Free;
+    end;
+  end;
+  CheckEquals('', Missing, 'Action nicht ausgefuehrt');
 end;
 
 initialization

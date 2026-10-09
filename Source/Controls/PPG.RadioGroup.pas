@@ -295,6 +295,9 @@ type
     property OnKeyDown;
     property OnKeyPress;
     property OnKeyUp;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
   TPPGCheckGroup = class(TPPGCustomChoiceGroup)
@@ -369,6 +372,9 @@ type
     property OnKeyDown;
     property OnKeyPress;
     property OnKeyUp;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 implementation

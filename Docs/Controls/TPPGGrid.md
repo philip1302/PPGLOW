@@ -115,19 +115,21 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `TabStop` | `Boolean` | `True` | True: Das Control ist mit Tab erreichbar. |
 | `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
 | `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
+| `DoubleBuffered` | `Boolean` |  | Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht. |
+| `ParentDoubleBuffered` | `Boolean` |  | True: DoubleBuffered wird vom Parent übernommen. |
 
 ## Ereignisse
 
 | Ereignis | Typ und Parameter | Wann und wozu |
 |---|---|---|
 | `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
-| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. |
 | `OnCompareCells` | `TPPGCompareCellsEvent` `(Sender: TObject; ACol, ARow1, ARow2: Integer; var Compare: Integer)` | Eigener Vergleich beim Sortieren: Compare < 0, = 0 oder > 0 setzen (Zeile ARow1 vor, gleich oder nach ARow2). Ohne Ereignis vergleicht das Grid Zahlen numerisch, sonst als Text. Nutzung: `Compare := CompareDate(StrToDate(Cells[ACol, ARow1]), StrToDate(Cells[ACol, ARow2]));` |
 | `OnCellButtonClick` | `TPPGGridCellEvent` `(Sender: TObject; ACol, ARow: Integer)` | Eine Schaltfläche in einer Zelle mit CellKind = ckButton wurde geklickt (ACol, ARow = Datenspalte und -zeile). Nutzung: `if ACol = 4 then LoescheZeile(ARow);` |
 | `OnColumnMoved` | `TMovedEvent` `(Sender: TObject; FromIndex, ToIndex: Longint)` | Der Anwender hat eine Spalte verschoben; FromIndex und ToIndex sind Anzeige-Positionen. |
 | `OnCustomAggregate` | `TPPGGridCustomAggregateEvent` `(Sender: TObject; ACol, Group: Integer; var Value: string)` | Wert für Spalten mit Aggregate = agCustom: Value für Spalte ACol in Gruppe Group setzen (Group = -1 = Summenzeile). Die Zeilen der Gruppe liefert GroupDataRows(Group). |
 | `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
-| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. |
+| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln zählen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht. |
 | `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. |
 | `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. |
 | `OnDrawCell` | `TDrawCellEvent` `(Sender: TObject; ACol, ARow: Longint; Rect: TRect; State: TGridDrawState)` | Nach dem Standardzeichnen einer Zelle zusätzlich auf Canvas zeichnen (Rect, State mit gdSelected, gdFocused, gdFixed). Mit DefaultDrawing = False zeichnet man so den ganzen Zellinhalt selbst. ACol und ARow sind Datenspalte und -zeile. |

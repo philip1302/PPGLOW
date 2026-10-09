@@ -102,6 +102,10 @@ type
     property OnEndDrag;
     property Color;
     property ParentColor;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
+    property Action;
   end;
 
   TPPGCustomProgressRing = class(TPPGCustomControl)
@@ -189,6 +193,9 @@ type
     property OnEndDrag;
     property Color;
     property ParentColor;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
   TPPGInfoBarPart = (ipNone, ipAction, ipClose);
@@ -334,6 +341,9 @@ type
     property OnKeyUp;
     property Color;
     property ParentColor;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 /// Signalfarbe einer Schwere aus den Tokens.

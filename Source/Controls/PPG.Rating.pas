@@ -137,6 +137,9 @@ type
     property OnKeyUp;
     property Color;
     property ParentColor;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 implementation

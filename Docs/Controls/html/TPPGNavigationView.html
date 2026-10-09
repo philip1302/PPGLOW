@@ -72,6 +72,8 @@
 <tr><td><code>StyleElements</code></td><td><code>TStyleElements</code></td><td></td><td>Welche Teile ein aktiver VCL-Style f&#228;rbt (seFont, seClient, seBorder). Ohne seClient beh&#228;lt ein PPGlow-Control seine eigenen Farben aus Appearance.</td></tr>
 <tr><td><code>DragMode</code></td><td><code>TDragMode</code></td><td></td><td>dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag.</td></tr>
 <tr><td><code>DragCursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger w&#228;hrend das Control gezogen wird (Drag &amp; Drop).</td></tr>
+<tr><td><code>DoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>Zeichnen &#252;ber einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder &#252;bernimmt sie nicht.</td></tr>
+<tr><td><code>ParentDoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>True: DoubleBuffered wird vom Parent &#252;bernommen.</td></tr>
 </table>
 <h2>Ereignisse</h2>
 <table>
@@ -83,7 +85,7 @@
 <tr><td><code>OnItemClick</code></td><td><code>TPPGNavItemEvent</code> <code>(Sender: TObject; Item: TPPGNavItem)</code></td><td>Der Anwender hat einen Eintrag ausgel&#246;st (Klick, Enter, Screenreader), auch wenn er schon gew&#228;hlt war; Item ist der Eintrag. Nutzung: Befehle ohne eigene Seite ausf&#252;hren, z. B. &#252;ber Item.Tag.</td></tr>
 <tr><td><code>OnPaneChange</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Leiste wurde &#252;ber den Men&#252;-Knopf auf- oder zugeklappt.</td></tr>
 <tr><td><code>OnChange</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Auswahl hat sich durch den Anwender ge&#228;ndert (nicht beim Setzen von Selected im Code).</td></tr>
-<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste.</td></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender.</td></tr>
 <tr><td><code>OnMouseDown</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control gedr&#252;ckt.</td></tr>
 <tr><td><code>OnMouseMove</code></td><td><code>TMouseMoveEvent</code> <code>(Sender: TObject; Shift: TShiftState; X, Y: Integer)</code></td><td>Maus &#252;ber dem Control bewegt.</td></tr>
 <tr><td><code>OnMouseUp</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control losgelassen.</td></tr>

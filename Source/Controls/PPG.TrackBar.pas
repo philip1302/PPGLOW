@@ -220,6 +220,9 @@ type
     property OnClick;
     property OnMouseWheel;
     property OnMouseActivate;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 implementation

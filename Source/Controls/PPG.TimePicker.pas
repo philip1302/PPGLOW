@@ -136,6 +136,9 @@ type
     property OnDragOver;
     property OnStartDrag;
     property OnEndDrag;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 /// True, wenn das Gebietsschema 24 Stunden verwendet.

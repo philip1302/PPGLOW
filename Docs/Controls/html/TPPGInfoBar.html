@@ -57,6 +57,8 @@
 <tr><td><code>DragCursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger w&#228;hrend das Control gezogen wird (Drag &amp; Drop).</td></tr>
 <tr><td><code>Color</code></td><td><code>TColor</code></td><td></td><td>Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Fl&#228;chenfarben der Zust&#228;nde stehen in Appearance. Nutzung: <code>clWindow</code>, <code>clBtnFace</code> oder eine RGB-Farbe wie <code>$00F0F0F0</code>.</td></tr>
 <tr><td><code>ParentColor</code></td><td><code>Boolean</code></td><td></td><td>True: Color wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>DoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>Zeichnen &#252;ber einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder &#252;bernimmt sie nicht.</td></tr>
+<tr><td><code>ParentDoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>True: DoubleBuffered wird vom Parent &#252;bernommen.</td></tr>
 </table>
 <h2>Ereignisse</h2>
 <table>
@@ -67,8 +69,8 @@
 <tr><td><code>OnClosing</code></td><td><code>TPPGInfoBarClosingEvent</code> <code>(Sender: TObject; var AllowClose: Boolean)</code></td><td>Vor dem Schlie&#223;en durch den Anwender; AllowClose := False h&#228;lt die Leiste offen.</td></tr>
 <tr><td><code>OnEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus erhalten.</td></tr>
 <tr><td><code>OnExit</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus verloren; guter Ort f&#252;r Pr&#252;fungen der Eingabe.</td></tr>
-<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste.</td></tr>
-<tr><td><code>OnDblClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Doppelklick mit der linken Maustaste.</td></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender.</td></tr>
+<tr><td><code>OnDblClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln z&#228;hlen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht.</td></tr>
 <tr><td><code>OnMouseDown</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control gedr&#252;ckt.</td></tr>
 <tr><td><code>OnMouseMove</code></td><td><code>TMouseMoveEvent</code> <code>(Sender: TObject; Shift: TShiftState; X, Y: Integer)</code></td><td>Maus &#252;ber dem Control bewegt.</td></tr>
 <tr><td><code>OnMouseUp</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control losgelassen.</td></tr>

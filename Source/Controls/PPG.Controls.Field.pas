@@ -522,6 +522,9 @@ begin
   E.ParentColor := False;
   E.ParentFont := True;
   E.ParentShowHint := True;
+  // Audit 5d: DoubleBuffered des Felds nicht an das TEdit weitergeben
+  // (doppelt gepuffertes TEdit zeichnet unter Themes fehlerhaft)
+  E.ParentDoubleBuffered := False;
   E.TabStop := True;
   FInnerOldProc := E.WindowProc;
   E.WindowProc := InnerWndProc;

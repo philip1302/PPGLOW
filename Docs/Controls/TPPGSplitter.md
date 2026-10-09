@@ -56,6 +56,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. |
 | `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. |
 | `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). |
+| `DoubleBuffered` | `Boolean` |  | Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht. |
+| `ParentDoubleBuffered` | `Boolean` |  | True: DoubleBuffered wird vom Parent übernommen. |
 
 ## Ereignisse
 
@@ -65,7 +67,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnCanResize` | `TCanResizeEvent` `(Sender: TObject; var NewWidth, NewHeight: Integer; var Resize: Boolean)` | Vor jeder Größenänderung beim Ziehen bzw. per Tastatur; NewSize kann angepasst werden, Accept := False verhindert die Änderung. Nutzung: `if NewSize > 400 then NewSize := 400;` |
 | `OnMoved` | `TNotifyEvent` `(Sender: TObject)` | Das Ziehen (oder ein Tastendruck) ist abgeschlossen und die neue Größe gesetzt. Nutzung: Z. B. die Breite für den nächsten Start speichern. |
 | `OnPaint` | `TNotifyEvent` `(Sender: TObject)` | Wie TSplitter: wird nach dem eigenen Zeichnen aufgerufen; über Canvas kann zusätzlich gezeichnet werden (nur innerhalb des Ereignisses gültig). |
-| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. |
 | `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. |
 | `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
 | `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |

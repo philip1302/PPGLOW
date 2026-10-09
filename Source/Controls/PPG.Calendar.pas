@@ -288,6 +288,9 @@ type
     property OnKeyUp;
     property Color;
     property ParentColor;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 /// ISO-Wochentag (1 = Montag .. 7 = Sonntag).

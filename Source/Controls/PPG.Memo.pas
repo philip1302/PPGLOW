@@ -118,6 +118,9 @@ type
     property OnStartDrag;
     // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
     property OnMouseActivate;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 implementation

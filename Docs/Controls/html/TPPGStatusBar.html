@@ -63,14 +63,16 @@
 <tr><td><code>StyleElements</code></td><td><code>TStyleElements</code></td><td></td><td>Welche Teile ein aktiver VCL-Style f&#228;rbt (seFont, seClient, seBorder). Ohne seClient beh&#228;lt ein PPGlow-Control seine eigenen Farben aus Appearance.</td></tr>
 <tr><td><code>DragMode</code></td><td><code>TDragMode</code></td><td></td><td>dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag.</td></tr>
 <tr><td><code>DragCursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger w&#228;hrend das Control gezogen wird (Drag &amp; Drop).</td></tr>
+<tr><td><code>DoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>Zeichnen &#252;ber einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder &#252;bernimmt sie nicht.</td></tr>
+<tr><td><code>ParentDoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>True: DoubleBuffered wird vom Parent &#252;bernommen.</td></tr>
 </table>
 <h2>Ereignisse</h2>
 <table>
 <tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
 <tr><td><code>OnGesture</code></td><td><code>TGestureEvent</code> <code>(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)</code></td><td>Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: <code>if EventInfo.GestureID = sgiLeft then NaechsteSeite;</code></td></tr>
-<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste.</td></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender.</td></tr>
 <tr><td><code>OnContextPopup</code></td><td><code>TContextPopupEvent</code> <code>(Sender: TObject; MousePos: TPoint; var Handled: Boolean)</code></td><td>Vor dem Kontextmen&#252;; Handled := True unterdr&#252;ckt das Standardmen&#252;.</td></tr>
-<tr><td><code>OnDblClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Doppelklick mit der linken Maustaste.</td></tr>
+<tr><td><code>OnDblClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln z&#228;hlen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht.</td></tr>
 <tr><td><code>OnDrawPanel</code></td><td><code>TPPGDrawPanelEvent</code> <code>(StatusBar: TPPGStatusBar; Panel: TPPGStatusPanel; const Rect: TRect)</code></td><td>Eigenes Zeichnen eines Panels mit Style = psOwnerDraw: Panel und Rect werden &#252;bergeben, gezeichnet wird auf StatusBar.Canvas.</td></tr>
 <tr><td><code>OnHint</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Mit AutoHint: Ein neuer Hinweis der Anwendung liegt vor (Application.Hint); die Anwendung zeigt ihn selbst an.</td></tr>
 <tr><td><code>OnMouseDown</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control gedr&#252;ckt.</td></tr>

@@ -94,6 +94,8 @@ type
     property OnStartDrag;
     // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
     property OnMouseWheel;
+    // Audit 5d: Action wie TLabel
+    property Action;
   end;
 
   TPPGCustomLinkLabel = class(TPPGCustomControl, IPPGAccessibleChildren)
@@ -213,6 +215,10 @@ type
     property OnEndDrag;
     property Color;
     property ParentColor;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
+    property Action;
   end;
 
 implementation

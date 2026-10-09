@@ -224,6 +224,9 @@ type
     property OnDragOver;
     property OnStartDrag;
     property OnEndDrag;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 implementation

@@ -63,6 +63,8 @@
 <tr><td><code>Touch</code></td><td><code>TTouchManager</code></td><td></td><td>Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten.</td></tr>
 <tr><td><code>DragMode</code></td><td><code>TDragMode</code></td><td></td><td>dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag.</td></tr>
 <tr><td><code>DragCursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger w&#228;hrend das Control gezogen wird (Drag &amp; Drop).</td></tr>
+<tr><td><code>DoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>Zeichnen &#252;ber einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder &#252;bernimmt sie nicht.</td></tr>
+<tr><td><code>ParentDoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>True: DoubleBuffered wird vom Parent &#252;bernommen.</td></tr>
 </table>
 <h2>Ereignisse</h2>
 <table>
@@ -79,8 +81,8 @@
 <tr><td><code>OnKeyUp</code></td><td><code>TKeyEvent</code> <code>(Sender: TObject; var Key: Word; Shift: TShiftState)</code></td><td>Taste losgelassen.</td></tr>
 <tr><td><code>OnMouseEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus ist in das Control hineinbewegt worden.</td></tr>
 <tr><td><code>OnMouseLeave</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus hat das Control verlassen.</td></tr>
-<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste.</td></tr>
-<tr><td><code>OnDblClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Doppelklick mit der linken Maustaste.</td></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender.</td></tr>
+<tr><td><code>OnDblClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln z&#228;hlen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht.</td></tr>
 <tr><td><code>OnMouseDown</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control gedr&#252;ckt.</td></tr>
 <tr><td><code>OnMouseMove</code></td><td><code>TMouseMoveEvent</code> <code>(Sender: TObject; Shift: TShiftState; X, Y: Integer)</code></td><td>Maus &#252;ber dem Control bewegt.</td></tr>
 <tr><td><code>OnMouseUp</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control losgelassen.</td></tr>

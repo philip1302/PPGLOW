@@ -29,7 +29,7 @@ VCL.Cursor = Mauszeiger über dem Control.
 > `crHandPoint` für klickbare Flächen.
 VCL.CustomHint = Eigenes Hint-Objekt (z. B. TBalloonHint) statt des Standard-Tooltips.
 VCL.DockSite = True: Andere Controls können per Drag & Drop hier angedockt werden.
-VCL.DoubleBuffered = Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern selbst; meist nicht nötig.
+VCL.DoubleBuffered = Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht.
 VCL.DragCursor = Mauszeiger während das Control gezogen wird (Drag & Drop).
 VCL.DragKind = dkDrag = Drag & Drop, dkDock = Andocken beim Ziehen.
 VCL.DragMode = dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag.
@@ -84,10 +84,10 @@ VCL.OnAlignInsertBefore = Bei Align = alCustom: entscheidet die Reihenfolge zwei
 VCL.OnAlignPosition = Bei Align = alCustom: liefert die Position eines Kind-Controls.
 VCL.OnCanResize = Vor einer Größenänderung; Resize := False verhindert sie.
 VCL.OnChange = Nach einer Änderung des Wertes.
-VCL.OnClick = Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste.
+VCL.OnClick = Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender.
 VCL.OnConstrainedResize = Beim Vergrößern: Mindest- und Höchstmaße dynamisch festlegen.
 VCL.OnContextPopup = Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü.
-VCL.OnDblClick = Doppelklick mit der linken Maustaste.
+VCL.OnDblClick = Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln zählen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht.
 VCL.OnDockDrop = Ein Control wurde hier angedockt.
 VCL.OnDockOver = Ein Control wird über diesem Dock-Ziel gezogen; Accept steuert, ob es andocken darf.
 VCL.OnDragDrop = Ein gezogenes Objekt wurde über dem Control losgelassen.

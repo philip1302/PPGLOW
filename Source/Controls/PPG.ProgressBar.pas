@@ -156,6 +156,9 @@ type
     property OnMouseActivate;
     property OnEnter;
     property OnExit;
+    // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
   end;
 
 implementation
