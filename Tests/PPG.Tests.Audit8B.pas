@@ -56,6 +56,7 @@ type
     { #6 Summen }
     procedure AggregatesAfterSingleChanges;
     procedure AggregatesWithFilterAndCustom;
+    procedure AggregatesIncrementalCount;
     procedure AggregatesManyAddsAreExact;
     { #4 bedingte Formate }
     procedure CondFormatsTopBottomScale;
@@ -751,6 +752,44 @@ begin
   G.SortBy(3, False);
   CheckEquals('n=8 s=1082', TGridAccess(G).CachedFooterText(4));
   CheckAggConsistent(G, 'nach Sortieren');
+end;
+
+procedure TAudit8BTests.AggregatesIncrementalCount;
+var
+  G: TPPGGrid;
+  N, I: Integer;
+begin
+  G := AggGrid;
+  G.GroupFooter := True;
+  G.GroupBy([1, 4]);
+  Application.ProcessMessages;
+  N := TGridAccess(G).AggRecalcCount;
+  for I := 1 to 20 do
+  begin
+    G.Cells[3, 1 + I mod 8] := IntToStr(I * 3);
+    G.Cells[7, 1 + (I * 3) mod 8] := IntToStr(I);
+    G.Cells[2, 1 + I mod 5] := 'Name' + IntToStr(I);
+    Application.ProcessMessages;
+  end;
+  CheckEquals(N, TGridAccess(G).AggRecalcCount, 'Einzelaenderungen ohne volle Rechnung');
+  CheckAggConsistent(G, 'nach 60 Einzelaenderungen');
+  // Minimum entfernt: einmal voll
+  N := TGridAccess(G).AggRecalcCount;
+  G.Cells[5, 4] := '100';
+  Application.ProcessMessages;
+  CheckEquals(N + 1, TGridAccess(G).AggRecalcCount, 'Minimum entfernt: voll');
+  CheckAggConsistent(G, 'Minimum');
+  // Neues Maximum: inkrementell
+  N := TGridAccess(G).AggRecalcCount;
+  G.Cells[6, 2] := '9999';
+  Application.ProcessMessages;
+  CheckEquals(N, TGridAccess(G).AggRecalcCount, 'neues Maximum: inkrementell');
+  CheckEquals('9.999', TGridAccess(G).CachedFooterText(6));
+  // Gruppenspalte: voll
+  G.Cells[4, 3] := 'rot';
+  Application.ProcessMessages;
+  CheckEquals(N + 1, TGridAccess(G).AggRecalcCount, 'Gruppenspalte: voll');
+  CheckAggConsistent(G, 'Gruppenspalte');
 end;
 
 procedure TAudit8BTests.AggregatesManyAddsAreExact;

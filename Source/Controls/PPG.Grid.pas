@@ -115,6 +115,12 @@ type
 
   TPPGCustomGrid = class;
 
+  /// Eine Zellaenderung fuer die inkrementelle Summe (intern, Audit 8c #6).
+  TPPGGridAggChange = record
+    Col, Row: Integer;
+    OldText, NewText: string;
+  end;
+
   // Editoren stehen seit Phase 13a in PPG.Grid.Edit (Registry).
   TPPGGridEdit = PPG.Grid.Edit.TPPGGridEdit;
   TPPGGridCombo = PPG.Grid.Edit.TPPGGridCombo;
@@ -172,6 +178,13 @@ type
     FGroupCustom: array of array of string;
     FAggDirty: Boolean;
     FAggPosted: Boolean;
+    // Audit 8c #6: Einzelaenderungen fuer die inkrementelle Summe (verzoegert
+    // bis zur geposteten Nachricht bzw. FooterText)
+    FAggPend: array of TPPGGridAggChange;
+    FAggPendCount: Integer;
+    FAggHasCustom: Boolean;      // agCustom in der letzten Rechnung
+    FAggRowLeaf: TArray<Integer>; // Datenzeile -> unterste Gruppe (bei Bedarf)
+    FDataVersion: Integer;       // zaehlt Datenaenderungen (Cells, Zeilenzahl)
     FDropToGroup: Boolean;
     FGroupMarkup: TPPGMarkupLayout;
     FCondFormats: TPPGGridConditionalFormats;
@@ -416,6 +429,24 @@ type
     /// Summen oder Statistiken fuer bedingte Formate muessen nach einer
     /// Zellaenderung neu gerechnet werden.
     function StatsNeeded: Boolean;
+    { Inkrementelle Summen (Audit 8c #6) }
+    /// Eine Datenzelle hat sich geaendert (Cells, SetCellByUser).
+    procedure CellDataChanged(ACol, ARow: Integer; const OldText, NewText: string;
+      HaveOld: Boolean);
+    /// Laesst sich eine Aenderung dieser Spalte inkrementell verrechnen?
+    function AggIncrementalOk(ACol: Integer): Boolean;
+    /// Vorgemerkte Einzelaenderungen verrechnen (sonst voll neu rechnen).
+    procedure ApplyPendingAggregates;
+    function ApplyAggChange(const Ch: TPPGGridAggChange): Boolean;
+    procedure ClearPendingAggregates;
+    procedure PostAggregateMessage;
+    /// Unterste Gruppe einer Datenzeile (-1 = nicht in der Ansicht).
+    function LeafGroupOf(ARow: Integer): Integer;
+    /// Datenzeile in der (ungruppierten) Ansicht?
+    function RowInView(ARow: Integer): Boolean;
+    /// Text kommt direkt aus Cells (kein OnGetCellText, GetCellText nicht
+    /// ueberschrieben)?
+    function PlainCellText: Boolean;
     { Zeilen-Abbildung (Sortieren/Filtern) }
     procedure RebuildMap;
     function CompareDataRows(ACol, R1, R2: Integer): Integer; virtual;
@@ -982,7 +1013,7 @@ begin
   // Summen/Statistiken, die vor dem Fenster geaendert wurden, jetzt nachholen
   // (eine fuer ein frueheres Fenster gepostete Nachricht ging verloren)
   FAggPosted := False;
-  if FAggDirty and (GMsgAggregate <> 0) then
+  if (FAggDirty or (FAggPendCount > 0)) and (GMsgAggregate <> 0) then
   begin
     FAggPosted := True;
     PostMessage(Handle, GMsgAggregate, 0, 0);
@@ -1166,6 +1197,7 @@ begin
     Exit;
   HideEditor(False);
   FColCount := V;
+  Inc(FDataVersion);
   SetLength(FColWidths, V);
   SetLength(FFilters, V);
   FStore.SetColCount(V);
@@ -1186,6 +1218,7 @@ begin
     Exit;
   HideEditor(False);
   FRowCount := V;
+  Inc(FDataVersion);
   FStore.TruncateRows(V);
   FRowHeightStore.Count := V; // Hoehen dahinter verfallen
   if FFixedRows >= V then
@@ -1379,13 +1412,19 @@ begin
 end;
 
 procedure TPPGCustomGrid.SetCells(ACol, ARow: Integer; const Value: string);
+var
+  Old: string;
+  HaveOld: Boolean;
 begin
   CheckCell(ACol, ARow);
+  // Alten Text nur, wenn er fuer eine inkrementelle Summe gebraucht wird
+  HaveOld := not FAggDirty and StatsNeeded;
+  if HaveOld then
+    Old := FStore.Get(ACol, ARow);
   if FStore.Put(ACol, ARow, Value) then
   begin
     Invalidate;
-    if StatsNeeded then
-      AggregatesChanged;
+    CellDataChanged(ACol, ARow, Old, Value, HaveOld);
   end;
 end;
 
@@ -1421,13 +1460,19 @@ begin
 end;
 
 procedure TPPGCustomGrid.SetCellByUser(ACol, ARow: Integer; const Value: string);
+var
+  Old: string;
+  HaveOld: Boolean;
 begin
+  HaveOld := not FAggDirty and StatsNeeded;
+  if HaveOld then
+    Old := FStore.Get(ACol, ARow);
   FStore.Put(ACol, ARow, Value);
+  // Summen vormerken, bevor das Ereignis weitere Zellen aendern kann
+  CellDataChanged(ACol, ARow, Old, Value, HaveOld);
   if Assigned(FOnSetEditText) then
     FOnSetEditText(Self, ACol, ARow, Value);
   Invalidate;
-  if StatsNeeded then
-    AggregatesChanged;
 end;
 
 function TPPGCustomGrid.GetFilter(ACol: Integer): string;
@@ -3063,12 +3108,203 @@ begin
   // Verzoegert neu rechnen: viele Aenderungen hintereinander (Cells in einer
   // Schleife) loesen nur EINE Berechnung aus
   FAggDirty := True;
+  ClearPendingAggregates; // die volle Rechnung deckt sie ab
+  PostAggregateMessage;
+  Invalidate;
+end;
+
+procedure TPPGCustomGrid.PostAggregateMessage;
+begin
   if HandleAllocated and not FAggPosted and (GMsgAggregate <> 0) then
   begin
     FAggPosted := True;
     PostMessage(Handle, GMsgAggregate, 0, 0);
   end;
-  Invalidate;
+end;
+
+procedure TPPGCustomGrid.ClearPendingAggregates;
+var
+  I: Integer;
+begin
+  for I := 0 to FAggPendCount - 1 do
+  begin
+    FAggPend[I].OldText := '';
+    FAggPend[I].NewText := '';
+  end;
+  FAggPendCount := 0;
+end;
+
+function TPPGCustomGrid.PlainCellText: Boolean;
+var
+  M: function(ACol, ARow: Integer): string of object;
+begin
+  M := GetCellText;
+  Result := not Assigned(FOnGetCellText) and
+    (TMethod(M).Code = @TPPGCustomGrid.GetCellText);
+end;
+
+function TPPGCustomGrid.AggIncrementalOk(ACol: Integer): Boolean;
+const
+  MaxPending = 4096; // danach ist eine volle Rechnung billiger
+var
+  I: Integer;
+begin
+  // Voll rechnen: Custom (Ereignis sieht alle Zeilen), virtuelle bzw.
+  // umgeleitete Texte, Gruppenspalte, Statistik der bedingten Formate
+  Result := CanGroup and not FAggHasCustom and (FAggPendCount < MaxPending) and PlainCellText;
+  if not Result then
+    Exit;
+  for I := 0 to High(FGroupCols) do
+    if FGroupCols[I] = ACol then
+      Exit(False);
+  for I := 0 to FCondFormats.Count - 1 do
+    if FCondFormats[I].NeedsStats and (FCondFormats[I].Column = ACol) then
+      Exit(False);
+end;
+
+procedure TPPGCustomGrid.CellDataChanged(ACol, ARow: Integer; const OldText, NewText: string;
+  HaveOld: Boolean);
+var
+  N: Integer;
+begin
+  Inc(FDataVersion);
+  if not StatsNeeded or ([csLoading, csDestroying] * ComponentState <> []) then
+    Exit;
+  if not HaveOld or FAggDirty or not AggIncrementalOk(ACol) then
+  begin
+    AggregatesChanged;
+    Exit;
+  end;
+  // Spalte ohne Summe (und ohne Statistik): an den Summen aendert sich nichts
+  if AggIndex(ACol) < 0 then
+    Exit;
+  // Vormerken: die Nachricht (bzw. FooterText) verrechnet alle zusammen
+  if FAggPendCount >= Length(FAggPend) then
+  begin
+    N := Length(FAggPend) * 2;
+    if N < 16 then
+      N := 16;
+    SetLength(FAggPend, N);
+  end;
+  FAggPend[FAggPendCount].Col := ACol;
+  FAggPend[FAggPendCount].Row := ARow;
+  FAggPend[FAggPendCount].OldText := OldText;
+  FAggPend[FAggPendCount].NewText := NewText;
+  Inc(FAggPendCount);
+  PostAggregateMessage;
+end;
+
+function TPPGCustomGrid.RowInView(ARow: Integer): Boolean;
+begin
+  if (ARow < FFixedRows) or (ARow >= FRowCount) then
+    Result := False
+  else if not FView.Mapped then
+    Result := True
+  else
+    Result := FView.ViewIndexOf(ARow) >= 0;
+end;
+
+function TPPGCustomGrid.LeafGroupOf(ARow: Integer): Integer;
+var
+  G, R: Integer;
+  Gr: TPPGGridGroup;
+  Rows: TArray<Integer>;
+begin
+  // Datenzeile -> unterste Gruppe, einmal je Rechnung aufgebaut
+  if FAggRowLeaf = nil then
+  begin
+    SetLength(FAggRowLeaf, FRowCount);
+    for R := 0 to High(FAggRowLeaf) do
+      FAggRowLeaf[R] := -1;
+    Rows := FView.Group.Grouped;
+    for G := 0 to GroupCount - 1 do
+    begin
+      Gr := FView.Group.Groups[G];
+      if Gr.FirstChild < 0 then
+        for R := Gr.First to Gr.First + Gr.Count - 1 do
+          if (Rows[R] >= 0) and (Rows[R] < Length(FAggRowLeaf)) then
+            FAggRowLeaf[Rows[R]] := G;
+    end;
+  end;
+  if (ARow >= 0) and (ARow < Length(FAggRowLeaf)) then
+    Result := FAggRowLeaf[ARow]
+  else
+    Result := -1;
+end;
+
+function TPPGCustomGrid.ApplyAggChange(const Ch: TPPGGridAggChange): Boolean;
+var
+  K, G, P: Integer;
+  C: TPPGGridColumn;
+  Kind: TPPGGridAggregate;
+begin
+  Result := True;
+  K := AggIndex(Ch.Col);
+  if (K < 0) or (K >= Length(FFooterAcc)) then
+    Exit;
+  C := ColumnOf(Ch.Col);
+  if (C = nil) or (C.Aggregate = agCustom) then
+    Exit(False);
+  Kind := C.Aggregate;
+  // Gehoert die Zeile zur Ansicht (und zu welcher Gruppe)?
+  if FView.Grouped then
+  begin
+    G := LeafGroupOf(Ch.Row);
+    if G < 0 then
+      Exit;
+  end
+  else
+  begin
+    if not RowInView(Ch.Row) then
+      Exit;
+    G := -1;
+  end;
+  // Min/Max nur aufbauend, sonst voll rechnen
+  if not FFooterAcc[K].CanReplace(Kind, Ch.OldText, Ch.NewText) then
+    Exit(False);
+  P := G;
+  while P >= 0 do
+  begin
+    if (P >= Length(FGroupAcc)) or (K >= Length(FGroupAcc[P])) then
+      Exit(False);
+    if not FGroupAcc[P][K].CanReplace(Kind, Ch.OldText, Ch.NewText) then
+      Exit(False);
+    P := FView.Group.Groups[P].Parent;
+  end;
+  // Gruppe, ihre Eltern und die Summenzeile
+  FFooterAcc[K].Remove(Ch.OldText);
+  FFooterAcc[K].Add(Ch.NewText);
+  P := G;
+  while P >= 0 do
+  begin
+    FGroupAcc[P][K].Remove(Ch.OldText);
+    FGroupAcc[P][K].Add(Ch.NewText);
+    P := FView.Group.Groups[P].Parent;
+  end;
+end;
+
+procedure TPPGCustomGrid.ApplyPendingAggregates;
+var
+  I: Integer;
+  Ok: Boolean;
+begin
+  if FAggPendCount = 0 then
+    Exit;
+  if FAggDirty then
+  begin
+    RecalcAggregates;
+    Exit;
+  end;
+  Ok := True;
+  for I := 0 to FAggPendCount - 1 do
+    if not ApplyAggChange(FAggPend[I]) then
+    begin
+      Ok := False;
+      Break;
+    end;
+  ClearPendingAggregates;
+  if not Ok then
+    RecalcAggregates;
 end;
 
 procedure TPPGCustomGrid.RecalcAggregates;
@@ -3083,6 +3319,9 @@ begin
   FAggDirty := False;
   Inc(FAggRecalcCount);
   FAggSig := AggSignature;
+  ClearPendingAggregates;
+  FAggRowLeaf := nil;
+  FAggHasCustom := False;
   // Spalten mit Zusammenfassung
   SetLength(FAggCols, FColCount);
   NAgg := 0;
@@ -3101,6 +3340,7 @@ begin
   SetLength(FAggCols, NAgg);
   SetLength(FFooterAcc, NAgg);
   SetLength(FFooterCustom, NAgg);
+  FAggHasCustom := HasCustom;
   for K := 0 to NAgg - 1 do
   begin
     FFooterAcc[K].Reset;
@@ -3234,14 +3474,18 @@ end;
 function TPPGCustomGrid.FooterText(ACol: Integer): string;
 begin
   if FAggDirty then
-    RecalcAggregates;
+    RecalcAggregates
+  else
+    ApplyPendingAggregates;
   Result := CachedFooterText(ACol);
 end;
 
 function TPPGCustomGrid.GroupFooterText(Group, ACol: Integer): string;
 begin
   if FAggDirty then
-    RecalcAggregates;
+    RecalcAggregates
+  else
+    ApplyPendingAggregates;
   Result := CachedGroupFooterText(Group, ACol);
 end;
 
@@ -6604,6 +6848,12 @@ begin
     if FAggDirty then
     begin
       RecalcAggregates;
+      Invalidate;
+    end
+    else if FAggPendCount > 0 then
+    begin
+      // Einzelaenderungen inkrementell (Audit 8c #6)
+      ApplyPendingAggregates;
       Invalidate;
     end;
     Exit;
