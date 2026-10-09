@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 255;
+  PPGLangDeCount = 258;
 
 implementation
 
@@ -532,6 +532,12 @@ begin
     '%d (+%d)');
   PPGAddTranslation(PPGLangDeCode, @SPPGKanbanColumnMoved,
     'Spalte %s an Position %d von %d verschoben');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTrackRangeValue,
+    '%d bis %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTrackRangeFrom,
+    'Von %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGTrackRangeTo,
+    'Bis %d');
 end;
 
 initialization

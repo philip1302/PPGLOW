@@ -4,7 +4,8 @@ unit PPG.Tests.Phase20;
   20a: Planer - Serienabfrage (nur Vorkommen / ganze Serie), Ort direkt
   bearbeiten, Termin-Dialog (Laden, Speichern, Pruefen, Haken).
   20b: Kanban - Filter (Text, Labels, Person, Ereignis), Spalten ziehen.
-  20c: Ribbon - Tastatur in Gruppen- und Band-Popups, Galerie-Kategorien. }
+  20c: Ribbon - Tastatur in Gruppen- und Band-Popups, Galerie-Kategorien.
+  20d: TrackBar - SelStart/SelEnd, Bereichsregler mit zwei Griffen. }
 
 interface
 
@@ -13,7 +14,7 @@ uses
   System.Types, System.DateUtils, Vcl.Forms, Vcl.Controls,
   PPG.Calendar, PPG.Planner.Model, PPG.Planner.Recurrence, PPG.Planner, PPG.Planner.Dialog,
   Vcl.Graphics, PPG.Kanban.Items, PPG.Kanban.Layout, PPG.Kanban, PPG.Items, PPG.Ribbon.Items, PPG.Ribbon.Layout, PPG.Ribbon,
-  PPG.Tests.Controls;
+  Vcl.ComCtrls, PPG.Controls.Range, PPG.TrackBar, PPG.Tests.Controls;
 
 type
   TPlannerSeriesTests = class(TControlTestCase)
@@ -97,6 +98,25 @@ type
     procedure GalleryCategoriesRowsAndKeys;
     procedure GalleryCategoriesFromEvent;
     procedure PaintsPopupsWithFocusAndCategories;
+  end;
+
+
+  TTrackRangeTests = class(TControlTestCase)
+  private
+    FChanges: Integer;
+    function NewTrack: TPPGTrackBar;
+    procedure Key(T: TPPGTrackBar; AKey: Word; Shift: TShiftState = []);
+    procedure Changed(Sender: TObject);
+  protected
+    procedure SetUp; override;
+  published
+    procedure SelRangeLoadsLikeTTrackBar;
+    procedure RangeModeKeepsOrder;
+    procedure MouseMovesNearerThumb;
+    procedure KeyboardTabSwitchesThumb;
+    procedure AccessibleThumbs;
+    procedure PaintsSelectionAndRange;
+    procedure StreamsRangeProperties;
   end;
 
 
@@ -1223,9 +1243,243 @@ begin
 end;
 
 
+{ TTrackRangeTests }
+
+type
+  TTrackAccess = class(TPPGCustomTrackBar);
+
+procedure TTrackRangeTests.SetUp;
+begin
+  inherited SetUp;
+  FChanges := 0;
+end;
+
+procedure TTrackRangeTests.Changed(Sender: TObject);
+begin
+  Inc(FChanges);
+end;
+
+function TTrackRangeTests.NewTrack: TPPGTrackBar;
+begin
+  Result := TPPGTrackBar.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(10, 10, 320, 44);
+  Result.Animation.Enabled := False;
+  Result.SetRange(0, 100);
+  Result.OnChange := Changed;
+end;
+
+procedure TTrackRangeTests.Key(T: TPPGTrackBar; AKey: Word; Shift: TShiftState);
+var
+  K: Word;
+begin
+  K := AKey;
+  TTrackAccess(T).KeyDown(K, Shift);
+end;
+
+procedure TTrackRangeTests.SelRangeLoadsLikeTTrackBar;
+const
+  Dfm =
+    'object Track: TPPGTrackBar'#13#10 +
+    '  Left = 0'#13#10 +
+    '  Top = 0'#13#10 +
+    '  Width = 200'#13#10 +
+    '  Height = 40'#13#10 +
+    '  Max = 20'#13#10 +
+    '  Position = 5'#13#10 +
+    '  SelEnd = 12'#13#10 +
+    '  SelStart = 4'#13#10 +
+    '  ShowSelRange = False'#13#10 +
+    'end';
+var
+  Src: TStringStream;
+  Bin: TMemoryStream;
+  T: TPPGTrackBar;
+begin
+  Src := TStringStream.Create(Dfm);
+  Bin := TMemoryStream.Create;
+  try
+    ObjectTextToBinary(Src, Bin);
+    Bin.Position := 0;
+    T := TPPGTrackBar.Create(FForm);
+    Bin.ReadComponent(T);
+    T.Parent := FForm;
+    CheckEquals(4, T.SelStart);
+    CheckEquals(12, T.SelEnd);
+    CheckFalse(T.ShowSelRange);
+    CheckEquals(5, T.Position, 'Position unberuehrt');
+  finally
+    Bin.Free;
+    Src.Free;
+  end;
+end;
+
+procedure TTrackRangeTests.RangeModeKeepsOrder;
+var
+  T: TPPGTrackBar;
+begin
+  T := NewTrack;
+  T.Position := 20;
+  T.RangeMode := True;
+  CheckEquals(100, T.PositionEnd, 'Ende vor dem Anfang: ans Maximum');
+  T.PositionEnd := 60;
+  CheckEquals(60, T.PositionEnd);
+  T.PositionEnd := 10;
+  CheckEquals(20, T.PositionEnd, 'Ende ueberholt den Anfang nicht');
+  T.PositionEnd := 500;
+  CheckEquals(100, T.PositionEnd, 'begrenzt auf Max');
+  T.Position := 80;
+  T.PositionEnd := 90;
+  T.Position := 95;
+  CheckEquals(95, T.PositionEnd, 'Code schiebt das Ende mit');
+  CheckTrue(FChanges >= 5, 'OnChange fuer beide Werte');
+end;
+
+procedure TTrackRangeTests.MouseMovesNearerThumb;
+var
+  T: TPPGTrackBar;
+  R: TRect;
+  Y: Integer;
+begin
+  T := NewTrack;
+  T.RangeMode := True;
+  T.Position := 20;
+  T.PositionEnd := 60;
+  R := T.ClientRect;
+  Y := (R.Top + R.Bottom) div 2;
+  // Klick weit rechts: das Ende (naeher)
+  T.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(R.Right - 20, Y));
+  T.Perform(WM_LBUTTONUP, 0, MakeLParam(R.Right - 20, Y));
+  CheckEquals(1, T.ActiveThumb);
+  CheckTrue(T.PositionEnd > 80, 'Ende springt hin');
+  CheckEquals(20, T.Position, 'Anfang bleibt');
+  // Klick links: der Anfang
+  T.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(R.Left + 20, Y));
+  CheckEquals(0, T.ActiveThumb);
+  // Ziehen ueber das Ende hinaus: bleibt am Ende stehen
+  T.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(R.Right - 2, Y));
+  T.Perform(WM_LBUTTONUP, 0, MakeLParam(R.Right - 2, Y));
+  CheckEquals(T.PositionEnd, T.Position, 'Anfang ueberholt das Ende nicht');
+end;
+
+procedure TTrackRangeTests.KeyboardTabSwitchesThumb;
+var
+  T: TPPGTrackBar;
+begin
+  T := NewTrack;
+  T.RangeMode := True;
+  T.Position := 30;
+  T.PositionEnd := 40;
+  Key(T, VK_RIGHT);
+  CheckEquals(31, T.Position, 'Pfeil bewegt den Anfang');
+  Key(T, VK_TAB);
+  CheckEquals(1, T.ActiveThumb, 'Tab: zum Ende');
+  Key(T, VK_RIGHT);
+  CheckEquals(41, T.PositionEnd);
+  Key(T, VK_END);
+  CheckEquals(100, T.PositionEnd);
+  Key(T, VK_TAB, [ssShift]);
+  CheckEquals(0, T.ActiveThumb, 'Umschalt+Tab zurueck');
+  Key(T, VK_HOME);
+  CheckEquals(0, T.Position);
+  // ohne RangeMode bleibt Tab beim Formular
+  T.RangeMode := False;
+  Key(T, VK_TAB);
+  CheckEquals(0, T.ActiveThumb);
+end;
+
+procedure TTrackRangeTests.AccessibleThumbs;
+var
+  T: TPPGTrackBar;
+  A: TTrackAccess;
+begin
+  T := NewTrack;
+  A := TTrackAccess(T);
+  CheckEquals(0, A.AccChildCount, 'ohne Bereich keine Kinder');
+  T.RangeMode := True;
+  T.Position := 10;
+  T.PositionEnd := 70;
+  CheckEquals(2, A.AccChildCount);
+  CheckEquals(Format(PPGStr(@SPPGTrackRangeFrom), [10]), A.AccChildName(1));
+  CheckEquals(Format(PPGStr(@SPPGTrackRangeTo), [70]), A.AccChildName(2));
+  CheckEquals(Format(PPGStr(@SPPGTrackRangeValue), [10, 70]), A.AccValue);
+  CheckFalse(IsRectEmpty(A.AccChildRect(2)));
+  CheckEquals(2, A.AccChildAt((A.AccChildRect(2).Left + A.AccChildRect(2).Right) div 2,
+    (A.AccChildRect(2).Top + A.AccChildRect(2).Bottom) div 2));
+end;
+
+procedure TTrackRangeTests.PaintsSelectionAndRange;
+var
+  T: TPPGTrackBar;
+  B: TBitmap;
+  Gdi: Boolean;
+begin
+  T := NewTrack;
+  T.SelStart := 20;
+  T.SelEnd := 70;
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      B := RenderToBitmap(T);
+      B.Free;
+      T.RangeMode := True;
+      T.Position := 30;
+      T.PositionEnd := 60;
+      B := RenderToBitmap(T);
+      B.Free;
+      T.Orientation := trVertical;
+      B := RenderToBitmap(T);
+      B.Free;
+      T.Orientation := trHorizontal;
+      T.BiDiMode := bdRightToLeft;
+      B := RenderToBitmap(T);
+      B.Free;
+      T.BiDiMode := bdLeftToRight;
+      T.Enabled := False;
+      B := RenderToBitmap(T);
+      B.Free;
+      T.Enabled := True;
+      T.RangeMode := False;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TTrackRangeTests.StreamsRangeProperties;
+var
+  M: TMemoryStream;
+  T, T2: TPPGTrackBar;
+begin
+  T := NewTrack;
+  T.RangeMode := True;
+  T.Position := 15;
+  T.PositionEnd := 45;
+  T.SelStart := 5;
+  T.SelEnd := 9;
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(T);
+    M.Position := 0;
+    T2 := TPPGTrackBar.Create(FForm);
+    M.ReadComponent(T2);
+    CheckTrue(T2.RangeMode);
+    CheckEquals(15, T2.Position);
+    CheckEquals(45, T2.PositionEnd);
+    CheckEquals(5, T2.SelStart);
+    CheckEquals(9, T2.SelEnd);
+  finally
+    M.Free;
+  end;
+end;
+
+
 initialization
   RegisterTest('Phase20', TPlannerSeriesTests.Suite);
   RegisterTest('Phase20', TKanbanFilterTests.Suite);
   RegisterTest('Phase20', TRibbonPopupKeyTests.Suite);
+  RegisterTest('Phase20', TTrackRangeTests.Suite);
 
 end.

@@ -304,6 +304,11 @@ resourcestring
   SPPGKanbanCountHidden = '%d (+%d)';
   SPPGKanbanColumnMoved = 'Column %s moved to position %d of %d';
 
+  // TrackBar: Bereichsregler (Phase 20d)
+  SPPGTrackRangeValue = '%d to %d';
+  SPPGTrackRangeFrom = 'From %d';
+  SPPGTrackRangeTo = 'To %d';
+
 implementation
 
 end.

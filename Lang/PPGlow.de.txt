@@ -257,3 +257,6 @@ SPPGApptEndsOn=Endet am
 SPPGApptEndBeforeStart=Das Ende darf nicht vor dem Beginn liegen.
 SPPGKanbanCountHidden=%d (+%d)
 SPPGKanbanColumnMoved=Spalte %s an Position %d von %d verschoben
+SPPGTrackRangeValue=%d bis %d
+SPPGTrackRangeFrom=Von %d
+SPPGTrackRangeTo=Bis %d

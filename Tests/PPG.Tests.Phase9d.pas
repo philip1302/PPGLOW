@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..254] of PResStringRec = (
+  AllTexts: array[0..257] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -151,7 +151,10 @@ const
     @SPPGApptEndsOn,
     @SPPGApptEndBeforeStart,
     @SPPGKanbanCountHidden,
-    @SPPGKanbanColumnMoved);
+    @SPPGKanbanColumnMoved,
+    @SPPGTrackRangeValue,
+    @SPPGTrackRangeFrom,
+    @SPPGTrackRangeTo);
 
 var
   GChanges: Integer;
