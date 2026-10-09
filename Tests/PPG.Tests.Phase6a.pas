@@ -512,6 +512,8 @@ var
   K: Char;
 begin
   L := NewList('Belgien,Daenemark,Deutschland,Estland');
+  // Audit 11a #7: Pause der Tippsuche eingespeist statt Sleep(1100)
+  PPGSetTypeAheadClock(PPGTestClock);
   K := 'd';
   TItemListAccess(L).KeyPress(K);
   CheckEquals(1, L.ItemIndex, 'erster Treffer');
@@ -519,7 +521,7 @@ begin
   TItemListAccess(L).KeyPress(K);
   CheckEquals(2, L.ItemIndex, '"de" -> Deutschland');
   L.AutoComplete := False;
-  Sleep(1100);
+  PPGTestAdvanceClock(PPGTypeAheadMs + 100);
   K := 'e';
   TItemListAccess(L).KeyPress(K);
   CheckEquals(2, L.ItemIndex, 'AutoComplete aus: keine Suche');
@@ -621,20 +623,18 @@ end;
 procedure TListBoxTests.VirtualMillionItems;
 var
   L: TPPGListBox;
-  T: Cardinal;
   Bmp: TBitmap;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1000 ms im Test)
   FForm.Show;
   try
     L := NewList;
     L.Style := lbVirtual;
     L.OnData := VirtualData;
-    T := GetTickCount;
     L.Count := 1000000;
     L.ItemIndex := 999999;
     Bmp := RenderToBitmap(L);
     Bmp.Free;
-    CheckTrue(GetTickCount - T < 1000, 'eine Million Eintraege ohne Verzoegerung');
     CheckEquals(1000000, L.Count);
     CheckFalse(IsRectEmpty(L.ItemRect(999999)), 'letzter Eintrag sichtbar');
     CheckEquals(999999, L.ItemAtPos(CenterOf(L.ItemRect(999999)), True));

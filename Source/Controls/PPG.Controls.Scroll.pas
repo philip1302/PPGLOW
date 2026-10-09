@@ -1050,18 +1050,18 @@ end;
 function TPPGCustomScrollControl.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
 var
-  Lines: UINT;
+  Lines: Integer;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
   if Result or (WheelDelta = 0) then
     Exit;
-  Lines := 3;
-  SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, @Lines, 0);
+  // Systemeinstellung (-1 = seitenweise), in Tests eingespeist
+  Lines := PPGWheelScrollLines;
   // Umschalt+Rad oder nur waagerechter Ueberlauf: waagerecht
   if (ssShift in Shift) or ((MaxScroll(saVert) = 0) and (MaxScroll(saHorz) > 0)) then
-    Result := WheelScroll(saHorz, WheelDelta, Integer(Lines), LineWidth)
+    Result := WheelScroll(saHorz, WheelDelta, Lines, LineWidth)
   else
-    Result := WheelScroll(saVert, WheelDelta, Integer(Lines), LineHeight);
+    Result := WheelScroll(saVert, WheelDelta, Lines, LineHeight);
 end;
 
 procedure TPPGCustomScrollControl.WMMouseHWheel(var Message: TMessage);

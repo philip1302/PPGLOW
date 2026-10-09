@@ -113,7 +113,13 @@ var
   I: Integer;
 begin
   CheckEquals(PPGKanbanHashIndex('bug', 8), PPGKanbanHashIndex('BUG', 8), 'ohne Gross-/Kleinschreibung');
-  CheckEquals(PPGKanbanHashIndex('Frontend', 8), PPGKanbanHashIndex('Frontend', 8));
+  // Audit 11a #4: vorher mit sich selbst verglichen. Stabil heisst: dieselbe
+  // Farbe in jeder Version und auf Win32/Win64. Erwartung nach FNV-1a (32 Bit,
+  // Grossbuchstaben) unabhaengig vom Code nachgerechnet (Perl, Math::BigInt):
+  // FNV1a('FRONTEND') = 1231609661, mod 8 = 5; FNV1a('BUG') = 4169862805,
+  // mod 8 = 5. Der Code ist seit 1f3422ec (07.10.2026) unveraendert.
+  CheckEquals(5, PPGKanbanHashIndex('Frontend', 8), 'Frontend');
+  CheckEquals(5, PPGKanbanHashIndex('bug', 8), 'bug');
   for I := 1 to 50 do
     CheckTrue((PPGKanbanHashIndex('Label' + IntToStr(I), 8) >= 0) and
       (PPGKanbanHashIndex('Label' + IntToStr(I), 8) < 8));

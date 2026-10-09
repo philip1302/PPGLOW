@@ -491,9 +491,9 @@ var
   I: Integer;
   O: TArray<TPPGOccurrence>;
   A: TPPGAppointment;
-  T0: Cardinal;
 begin
   // 50 000 Termine ueber ein Jahr; Abfrage einer Woche
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1000 ms im Test)
   FItems.BeginUpdate;
   try
     for I := 0 to 49999 do
@@ -505,9 +505,7 @@ begin
   finally
     FItems.EndUpdate;
   end;
-  T0 := GetTickCount;
   O := FItems.GetOccurrences(DT(2026, 3, 2), DT(2026, 3, 9));
-  CheckTrue(GetTickCount - T0 < 1000, 'Wochenabfrage schnell');
   CheckTrue((Length(O) > 900) and (Length(O) < 1100), IntToStr(Length(O)));
   // Mehrtaegiger Termin beruehrt den Bereich
   A := FItems.AddAppointment(DT(2025, 12, 1), DT(2026, 12, 31), 'Projekt');

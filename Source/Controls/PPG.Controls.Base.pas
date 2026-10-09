@@ -388,9 +388,16 @@ type
 /// bzw. Parent (fuer ImageName an Eintraegen und Seiten).
 function PPGImagesOf(Start: TPersistent): TCustomImageList;
 
+type
+  /// Ersatz fuer die Systemabfrage SPI_GETWHEELSCROLLLINES (Tests): liefert
+  /// den Rohwert wie Windows (UINT, $FFFFFFFF = WHEEL_PAGESCROLL).
+  TPPGWheelScrollLinesReader = function: Cardinal;
+
 /// Zeilen je Rastung aus der Systemeinstellung (SPI_GETWHEELSCROLLLINES,
 /// Vorgabe 3); -1 = seitenweise (WHEEL_PAGESCROLL), 0 = Scrollen aus.
 function PPGWheelScrollLines: Integer;
+/// Testhaken: ersetzt die Systemabfrage der Radzeilen (nil = System).
+procedure PPGSetWheelScrollLinesReader(Reader: TPPGWheelScrollLinesReader);
 /// Sammelt Rad-Deltas in Rest und liefert ganze Schritte (Delta * Lines je
 /// WHEEL_DELTA); ein Richtungswechsel verwirft den Rest.
 function PPGWheelSteps(var Rest: Integer; Delta, Lines: Integer): Integer;
@@ -2352,12 +2359,22 @@ begin
   end;
 end;
 
+var
+  GWheelScrollLinesReader: TPPGWheelScrollLinesReader = nil;
+
+procedure PPGSetWheelScrollLinesReader(Reader: TPPGWheelScrollLinesReader);
+begin
+  GWheelScrollLinesReader := Reader;
+end;
+
 function PPGWheelScrollLines: Integer;
 var
   L: UINT;
 begin
   L := 3;
-  if not SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, @L, 0) then
+  if Assigned(GWheelScrollLinesReader) then
+    L := GWheelScrollLinesReader()
+  else if not SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, @L, 0) then
     L := 3;
   if L = UINT($FFFFFFFF) then // WHEEL_PAGESCROLL
     Result := -1

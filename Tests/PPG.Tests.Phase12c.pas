@@ -9,7 +9,7 @@ uses
   System.Types, System.Variants, Vcl.Controls, Vcl.Forms, Vcl.Graphics,
   PPG.Types, PPG.Render.Registry, PPG.Controls.Base, PPG.Controls.Field, PPG.Edit,
   PPG.Controls.DropDown, PPG.RowPopup, PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit,
-  PPG.Accessibility, PPG.Tests.Controls;
+  PPG.Accessibility, PPG.Tests.Controls, PPG.Exceptions;
 
 type
   TDropTestCase = class(TControlTestCase)
@@ -306,8 +306,10 @@ begin
     C.Checked[9] := True;
     Fail('Index ausserhalb');
   except
-    on E: Exception do
-      CheckFalse(E is ETestFailure);
+    // Audit 11a #4: konkrete Klasse (vorher galt jede Exception ausser
+    // ETestFailure als Erfolg, auch eine Zugriffsverletzung)
+    on EPPGError do
+      ;
   end;
 end;
 
@@ -468,19 +470,17 @@ end;
 procedure TColumnComboTests.VirtualRowsAreFast;
 var
   C: TPPGColumnComboBox;
-  T: Cardinal;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1000 ms im Test)
   C := NewCombo;
   C.OnGetCellText := GetCell;
   C.VirtualRowCount := 100000;
   CheckEquals(100000, C.RowCount);
   CheckEquals('Kunde 99999', C.CellText(99999, 1));
-  T := GetTickCount;
   C.SetFocus;
   C.DropDown;
   KeyTo(C, VK_END);
   CheckEquals(99999, TPPGColumnPopup(C.Popup).FocusRow);
-  CheckTrue(GetTickCount - T < 1000, 'Aufklappen mit 100 000 Zeilen: ' + IntToStr(GetTickCount - T));
   C.CloseUp(False);
 end;
 
@@ -717,12 +717,11 @@ procedure TTagEditTests.ManyTagsLayoutFast;
 var
   T: TPPGTagEdit;
   I: Integer;
-  Tick: Cardinal;
   B: TBitmap;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1500 ms im Test)
   T := NewTags;
   T.Width := 500;
-  Tick := GetTickCount;
   T.Tags.BeginUpdate;
   try
     for I := 1 to 500 do
@@ -732,7 +731,6 @@ begin
   end;
   B := RenderToBitmap(T);
   B.Free;
-  CheckTrue(GetTickCount - Tick < 1500, '500 Tags: ' + IntToStr(GetTickCount - Tick) + ' ms');
   CheckEquals(500, T.Tags.Count);
 end;
 

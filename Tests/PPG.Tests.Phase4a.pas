@@ -1162,7 +1162,17 @@ begin
       RenderToBitmap(S).Free;
       RenderToBitmap(M).Free;
     end;
-    CheckTrue(TFieldAccess(E).Inner.Width >= 0);
+    // Audit 11a #4: vorher nur Inner.Width >= 0. Das Innenfeld hat nie eine
+    // negative Groesse; ab 30 px Breite liegt es ganz im Feld, und im breiten
+    // Feld nimmt der Textbereich den groessten Teil ein.
+    CheckTrue(TFieldAccess(E).Inner.Width >= 0, 'Breite nicht negativ');
+    CheckTrue(TFieldAccess(E).Inner.Height >= 0, 'Hoehe nicht negativ');
+    if Sizes[I].X >= 30 then
+      CheckTrue((TFieldAccess(E).Inner.Left >= 0) and
+        (TFieldAccess(E).Inner.Left + TFieldAccess(E).Inner.Width <= E.Width),
+        Format('Innenfeld im Feld (%d x %d)', [Sizes[I].X, Sizes[I].Y]));
+    if Sizes[I].X >= 2000 then
+      CheckTrue(TFieldAccess(E).Inner.Width > E.Width div 2, 'Textbereich im breiten Feld');
   end;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;

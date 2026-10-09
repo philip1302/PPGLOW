@@ -221,7 +221,7 @@ var
 begin
   if not PPGUiaAvailable then
   begin
-    Status('UIAutomationCore.dll fehlt - Test entfaellt');
+    Skip('UIAutomationCore.dll fehlt - UI Automation nicht verfuegbar');
     Exit;
   end;
   G := NewGrid;
@@ -254,7 +254,10 @@ var
   V: OleVariant;
 begin
   if not PPGUiaAvailable then
+  begin
+    Skip('UIAutomationCore.dll fehlt - UI Automation nicht verfuegbar');
     Exit;
+  end;
   G := NewGrid;
   SendMessage(G.Handle, WM_GETOBJECT, 0, LPARAM(PPGUiaRootObjectId));
   Held := G.UiaRoot.ElementFor(PPGUiaId(PPGUiaKindGridCell, 1, 1));
@@ -288,7 +291,7 @@ procedure TUiaHostTests.InterfaceGuidsMatchWindows;
 begin
   if not PPGUiaAvailable then
   begin
-    Status('UIAutomationCore.dll fehlt - Test entfaellt');
+    Skip('UIAutomationCore.dll fehlt - UI Automation nicht verfuegbar');
     Exit;
   end;
   CheckGuid(IRawElementProviderSimple, 'IRawElementProviderSimple');
@@ -821,7 +824,7 @@ var
 begin
   if not PPGUiaAvailable then
   begin
-    Status('UIAutomationCore.dll fehlt - Test entfaellt');
+    Skip('UIAutomationCore.dll fehlt - UI Automation nicht verfuegbar');
     Exit;
   end;
   G := NewGrid;

@@ -10,7 +10,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Variants, System.Types, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.Grids,
   PPG.Types, PPG.Render.Intf, PPG.Grid, PPG.Grid.Columns, PPG.Grid.View, PPG.Grid.Data,
-  PPG.Grid.Paint, PPG.Grid.Edit, PPG.NumberEdit, PPG.Tests.Controls;
+  PPG.Grid.Paint, PPG.Grid.Edit, PPG.NumberEdit, PPG.Tests.Controls, PPG.Exceptions;
 
 type
   /// Host fuer die Ansicht ohne Grid: Werte je Datenzeile.
@@ -335,9 +335,10 @@ begin
     G.Cells[3, 0] := 'x';
     Fail('Index ausserhalb');
   except
-    on E: Exception do
-      if E is ETestFailure then
-        raise;
+    // Audit 11a #4: konkrete Klasse (vorher galt jede Exception ausser
+    // ETestFailure als Erfolg, auch eine Zugriffsverletzung)
+    on EPPGError do
+      ;
   end;
 end;
 

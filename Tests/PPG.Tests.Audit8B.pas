@@ -102,7 +102,7 @@ type
 implementation
 
 uses
-  System.Math, System.Generics.Collections, PPG.Grid.Data, PPG.Tests.Visual;
+  System.Math, System.Generics.Collections, PPG.Exceptions, PPG.Grid.Data, PPG.Tests.Visual;
 
 type
   TGridAccess = class(TPPGGrid);
@@ -1127,20 +1127,19 @@ var
   G: TPPGGrid;
   R: TRect;
   V: Integer;
-  T0: Cardinal;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 2000 ms im Test)
   SetLength(FVirt, 0);
   G := NewGrid;
   G.ColCount := 3;
   G.OnGetCellText := VirtText;
   G.RowCount := 1000001;
-  T0 := GetTickCount;
   G.RowHeights[0] := 30;
   G.RowHeights[3] := 10;
   G.RowHeights[999999] := 40;
   for V := 0 to 49 do
     G.ColWidths[1] := 60 + V;
-  CheckTrue(GetTickCount - T0 < 2000, Format('%d ms', [GetTickCount - T0]));
+  CheckEquals(109, G.ColWidths[1], 'letzte Breite');
   R := TGridAccess(G).RawCellRect(1, 0);
   CheckEquals(30, R.Bottom - R.Top);
   R := TGridAccess(G).RawCellRect(1, 3);
@@ -1218,9 +1217,12 @@ begin
     G.RowHeights[11] := 5;
     Fail('Index ausserhalb');
   except
-    on E: Exception do
-      CheckTrue(E.ClassName <> 'ETestFailure', E.ClassName);
+    // Audit 11a #4: genau die Klasse aus SetRowHeights (vorher galt jede
+    // Exception ausser ETestFailure, auch eine Zugriffsverletzung)
+    on E: EPPGError do
+      CheckEquals(EPPGError.ClassName, E.ClassName, 'Klasse');
   end;
+  CheckEquals(11, G.RowCount, 'RowCount unveraendert');
 end;
 
 procedure TAudit8BTests.RowLayoutMatchesModel;
