@@ -247,6 +247,8 @@ type
     FPanelRect: TRect;
     FTextCache: TDictionary<string, Integer>;
     FTextCachePPI: Integer;
+    FTextHeight: Integer;        // Audit 8D: Hoehe von 'Wg' (0 = neu messen)
+    FTextHeightPPI: Integer;
     FPainter: TPPGItemPainter;
     { Bedienung }
     FHot: TPPGRibbonHit;
@@ -362,6 +364,8 @@ type
     procedure EnterPopupNavigation;
     { Bedienung }
     procedure SetHot(const Hit: TPPGRibbonHit);
+    function HotRect(const Hit: TPPGRibbonHit): TRect;
+    procedure InvalidateHot(const Hit: TPPGRibbonHit);
     procedure HitMouseDown(const Hit: TPPGRibbonHit; Shift: TShiftState);
     procedure HitMouseUp(const Hit: TPPGRibbonHit);
     procedure ActivateHit(const Hit: TPPGRibbonHit; ByKeyboard: Boolean);
@@ -430,10 +434,14 @@ type
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
+  protected
+    /// Anzahl Layout-Neuaufbauten (Tests).
+    FLayoutCount: Integer;
     { IPPGRibbonHost }
     procedure RibbonModelChanged;
     procedure RibbonWatch(AComponent: TComponent);
     procedure RibbonControlChanged(Item: TPPGRibbonItem; OldControl: TControl);
+    procedure RibbonStateChanged(Item: TPPGRibbonItem);
     { Barrierefreiheit }
     function AccName: string; override;
     function AccRole: Integer; override;
@@ -1731,6 +1739,19 @@ begin
   LayoutChanged;
 end;
 
+procedure TPPGCustomRibbon.RibbonStateChanged(Item: TPPGRibbonItem);
+begin
+  // Audit 8D: Enabled/Down (Action-Update im Leerlauf) aendern nur die
+  // Darstellung - neu zeichnen ohne neues Layout
+  if csDestroying in ComponentState then
+    Exit;
+  Invalidate;
+  if (FPanelPopup <> nil) and FPanelPopup.IsOpen then
+    FPanelPopup.Invalidate;
+  if (FGroupPopup <> nil) and FGroupPopup.IsOpen then
+    FGroupPopup.Invalidate;
+end;
+
 { ---- Masse ---- }
 
 function TPPGCustomRibbon.Sc(V: Integer): Integer;
@@ -1756,7 +1777,13 @@ end;
 
 function TPPGCustomRibbon.TextHeight: Integer;
 begin
-  Result := PPGMeasureTextNoCanvas('Wg', Font, 0, False).cy;
+  // Audit 8D: gemessen einmal je Schrift und PPI (vorher bei jeder Hoehe)
+  if (FTextHeight <= 0) or (FTextHeightPPI <> ScalePPI) then
+  begin
+    FTextHeight := PPGMeasureTextNoCanvas('Wg', Font, 0, False).cy;
+    FTextHeightPPI := ScalePPI;
+  end;
+  Result := FTextHeight;
 end;
 
 function TPPGCustomRibbon.RowHeight: Integer;
@@ -1976,6 +2003,7 @@ begin
   inherited;
   if FTextCache <> nil then
     FTextCache.Clear;
+  FTextHeight := 0;
   LayoutChanged;
 end;
 
@@ -2063,6 +2091,7 @@ begin
   FLayoutValid := True;
   FLayoutWidth := Width;
   FLayoutPPI := ScalePPI;
+  Inc(FLayoutCount);
   FLayoutLang := PPGLanguage;
   Y := 0;
   FQatRect := Rect(0, 0, 0, 0);
@@ -2601,6 +2630,37 @@ begin
         end;
       end;
   end;
+end;
+
+function TPPGCustomRibbon.HotRect(const Hit: TPPGRibbonHit): TRect;
+begin
+  // Flaeche, die sich beim Hover aendert: ganzes Item (Teile wie Pfeil oder
+  // Galerie-Kachel liegen darin), sonst das Rechteck des Teils
+  Result := Rect(0, 0, 0, 0);
+  case Hit.Part of
+    rpNone:
+      Exit;
+    rpItem, rpItemArrow, rpGalleryTile, rpGalleryUp, rpGalleryDown, rpGalleryMore:
+      if HitItem(Hit) <> nil then
+        Result := Hit.View.Groups[Hit.Index].Places[Hit.Item].Bounds;
+  else
+    Result := HitRect(Hit);
+  end;
+  if not IsRectEmpty(Result) then
+    InflateRect(Result, Sc(2), Sc(2));
+end;
+
+procedure TPPGCustomRibbon.InvalidateHot(const Hit: TPPGRibbonHit);
+var
+  R: TRect;
+begin
+  if (Hit.Part = rpNone) or not HandleAllocated then
+    Exit;
+  R := HotRect(Hit);
+  if IsRectEmpty(R) then
+    Invalidate
+  else
+    Winapi.Windows.InvalidateRect(Handle, @R, False);
 end;
 
 function TPPGCustomRibbon.HitScreenRect(const Hit: TPPGRibbonHit): TRect;
@@ -3529,8 +3589,11 @@ begin
     Exit;
   Old := FHot;
   FHot := Hit;
-  if (Old.View = nil) or (Old.View = FMainView) or (Hit.View = nil) or (Hit.View = FMainView) then
-    Invalidate;
+  // Audit 8D: im Band nur die alte und neue Hover-Flaeche neu zeichnen
+  if (Old.View = nil) or (Old.View = FMainView) then
+    InvalidateHot(Old);
+  if (Hit.View = nil) or (Hit.View = FMainView) then
+    InvalidateHot(Hit);
   if (Old.View <> nil) and (Old.View <> FMainView) and (Old.View.Host <> nil) then
     Old.View.Host.Invalidate;
   if (Hit.View <> nil) and (Hit.View <> FMainView) and (Hit.View.Host <> nil) then
