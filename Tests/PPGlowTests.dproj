@@ -351,6 +351,7 @@
         <DCCReference Include="PPG.Tests.Audit8B.pas"/>
         <DCCReference Include="PPG.Tests.Audit8C.pas"/>
         <DCCReference Include="PPG.Tests.Audit8D.pas"/>
+        <DCCReference Include="PPG.TestDesktop.pas"/>
         <DCCReference Include="PPG.Tests.Phase13g.pas"/>
         <DCCReference Include="PPG.Tests.Phase14a.pas"/>
         <DCCReference Include="PPG.Tests.Phase14aPlanner.pas"/>

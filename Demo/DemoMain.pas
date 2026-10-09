@@ -126,7 +126,8 @@ uses
   Vcl.Themes,
   Vcl.Styles, // registriert die Engine fuer .vsf-Dateien (sonst ist jeder Style "ungueltig")
   PPG.Chart, PPG.IconFont, PPG.Grid.Data, PPG.Grid.Export, PPG.Grid.Print, PPG.Ribbon.Layout, PPG.Ribbon, DemoPages1, DemoPages2, DemoPages3, DemoPages4,
-  DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, DemoPages11, PPG.Hints, PPG.Validator, PPG.BusyOverlay, PPG.Panel;
+  DemoPages5, DemoPages6, DemoPages7, DemoPages8, DemoPages9, DemoPages10, DemoPages11, PPG.Hints, PPG.Validator, PPG.BusyOverlay, PPG.Panel,
+  PPG.TestDesktop;
 
 type
   TPageDef = record
@@ -950,22 +951,114 @@ begin
   end;
 end;
 
+function CollectOwnWindow(Wnd: HWND; Param: LPARAM): BOOL; stdcall;
+var
+  Pid: DWORD;
+begin
+  GetWindowThreadProcessId(Wnd, Pid);
+  if (Pid = GetCurrentProcessId) and IsWindowVisible(Wnd) and not IsIconic(Wnd) then
+    TList<HWND>(Param).Add(Wnd);
+  Result := True;
+end;
+
+/// Sichtbarer Rahmen eines Fensters (ohne die unsichtbaren Ziehraender ab Windows 10).
+function VisibleBounds(Wnd: HWND): TRect;
+begin
+  if Failed(DwmGetWindowAttribute(Wnd, DWMWA_EXTENDED_FRAME_BOUNDS, @Result, SizeOf(Result))) then
+    Winapi.Windows.GetWindowRect(Wnd, Result);
+end;
+
+procedure PaintTree(Control: TWinControl; DC: HDC; X, Y: Integer); forward;
+
+/// Zeichnet alle sichtbaren VCL-Fenster dieses Prozesses, die R schneiden, in
+/// Z-Reihenfolge in Bmp (Ursprung = R.TopLeft). Keine Bildschirmpixel: fremde
+/// Fenster erscheinen nie, und es funktioniert auch auf dem Testdesktop (/hidden),
+/// den DWM nicht zusammensetzt (PrintWindow liefert dort nur Weiss). Die Fenster
+/// zeichnen sich selbst wie RenderToBitmap in den Tests - ohne Titelleiste und
+/// ohne Nicht-VCL-Fenster (z. B. den Fensterschatten von Windows).
+procedure CaptureOwnWindows(const R: TRect; Bmp: TBitmap);
+var
+  List: TList<HWND>;
+  I: Integer;
+  Wnd: HWND;
+  Part: TRect;
+  Tmp: TBitmap;
+  Ctl: TWinControl;
+  Origin: TPoint;
+  Alpha, A: Byte;
+  Key: COLORREF;
+  Flags: DWORD;
+  Blend: TBlendFunction;
+begin
+  Bmp.Canvas.Brush.Color := clBtnFace;
+  Bmp.Canvas.FillRect(Rect(0, 0, Bmp.Width, Bmp.Height));
+  List := TList<HWND>.Create;
+  try
+    // EnumWindows liefert von oben nach unten; gezeichnet wird von unten nach oben
+    EnumWindows(@CollectOwnWindow, LPARAM(List));
+    for I := List.Count - 1 downto 0 do
+    begin
+      Wnd := List[I];
+      Ctl := FindControl(Wnd);
+      if (Ctl = nil) or not IntersectRect(Part, VisibleBounds(Wnd), R) then
+        Continue;
+      // Geschichtete Fenster mit Deckkraft (Abdunklung, Toast beim Einblenden)
+      // bzw. Schluesselfarbe (KeyTips: durchsichtige Flaeche in Magenta)
+      Alpha := 255;
+      Flags := 0;
+      if (GetWindowLong(Wnd, GWL_EXSTYLE) and WS_EX_LAYERED <> 0) and
+        GetLayeredWindowAttributes(Wnd, Key, A, Flags) and (Flags and LWA_ALPHA <> 0) then
+        Alpha := A;
+      if Alpha = 0 then
+        Continue;
+      Origin := Point(0, 0);
+      Winapi.Windows.ClientToScreen(Wnd, Origin);
+      Tmp := TBitmap.Create;
+      try
+        Tmp.PixelFormat := pf24bit;
+        Tmp.SetSize(Ctl.ClientWidth, Ctl.ClientHeight);
+        // Lock: sonst gibt die VCL den Bitmap-DC nach der naechsten Nachricht
+        // eines Kind-Controls frei und der Rest bleibt leer (wie SaveScreenshot)
+        Tmp.Canvas.Lock;
+        try
+          if Ctl is TCustomForm then
+            PaintTree(Ctl, Tmp.Canvas.Handle, 0, 0)
+          else
+            Ctl.PaintTo(Tmp.Canvas.Handle, 0, 0);
+          if Flags and LWA_COLORKEY <> 0 then
+            Winapi.Windows.TransparentBlt(Bmp.Canvas.Handle, Origin.X - R.Left, Origin.Y - R.Top,
+              Tmp.Width, Tmp.Height, Tmp.Canvas.Handle, 0, 0, Tmp.Width, Tmp.Height, Key)
+          else
+          begin
+            Blend.BlendOp := AC_SRC_OVER;
+            Blend.BlendFlags := 0;
+            Blend.SourceConstantAlpha := Alpha;
+            Blend.AlphaFormat := 0;
+            Winapi.Windows.AlphaBlend(Bmp.Canvas.Handle, Origin.X - R.Left, Origin.Y - R.Top,
+              Tmp.Width, Tmp.Height, Tmp.Canvas.Handle, 0, 0, Tmp.Width, Tmp.Height, Blend);
+          end;
+        finally
+          Tmp.Canvas.Unlock;
+        end;
+      finally
+        Tmp.Free;
+      end;
+    end;
+  finally
+    List.Free;
+  end;
+end;
+
 procedure SaveScreenRect(const R: TRect; const FileName: string);
 var
   Bmp: TBitmap;
   Png: TPngImage;
-  DC: HDC;
 begin
   Bmp := TBitmap.Create;
   try
     Bmp.PixelFormat := pf24bit;
     Bmp.SetSize(R.Right - R.Left, R.Bottom - R.Top);
-    DC := GetDC(0);
-    try
-      BitBlt(Bmp.Canvas.Handle, 0, 0, Bmp.Width, Bmp.Height, DC, R.Left, R.Top, SRCCOPY);
-    finally
-      ReleaseDC(0, DC);
-    end;
+    CaptureOwnWindows(R, Bmp);
     Png := TPngImage.Create;
     try
       Png.Assign(Bmp);
@@ -999,6 +1092,9 @@ var
   WA: TRect;
 begin
   FNotify.Duration := 0;
+  // Auf dem Testdesktop (/hidden) meldet Windows "beschaeftigt"; die Aufnahme
+  // soll die Toasts trotzdem zeigen
+  FNotify.RespectQuietHours := False;
   FNotify.Show('Hinweis', L('Ein einfacher Toast.'), psInformational);
   FNotify.Show('Export fertig', L('Die Datei <b>Bericht.pdf</b> wurde erstellt.'), psSuccess, -1,
     [L('{Oe}ffnen'), 'Ordner']);
@@ -1111,7 +1207,9 @@ procedure TDemoForm.SaveScreenCapture(const FileName: string);
 var
   R: TRect;
 begin
-  Winapi.Windows.GetWindowRect(Handle, R);
+  // Client-Bereich (Rahmen und Titelleiste zeichnet CaptureOwnWindows nicht)
+  R.TopLeft := ClientToScreen(Point(0, 0));
+  R.BottomRight := ClientToScreen(Point(ClientWidth, ClientHeight));
   SaveScreenRect(R, FileName);
 end;
 

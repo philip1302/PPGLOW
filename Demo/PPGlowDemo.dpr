@@ -15,15 +15,18 @@ program PPGlowDemo;
     /preset <Name>           Preset fuer alle Controls (Standard: Fluent11)
     /theme dark|light|system Dark Mode ohne VCL-Style
     /style <Name>            VCL-Style aktivieren (z.B. Windows10Dark)
-    /datepopup <datei.png>   DatePicker aufklappen, Bildschirmpixel speichern
+    /datepopup <datei.png>   DatePicker aufklappen, Fenster speichern
     /toastcapture <datei.png> drei Toasts zeigen, Bildschirmecke speichern
+                             (Aufnahmen zeigen nur Fenster der Demo, auch mit /hidden)
     /ribboncapture <modus> <datei.png>  Ribbon: keytips, keytips2, minimized, group, groupkeys, gallery
     /busycapture <modus> <datei.png>    Bestellung: busy (Warte-Overlay) oder errors (Validator)
     /mica [/screencapture <datei.png>]  Prototyp Mica-Hintergrund
-    /selftest <datei.txt>    Szenarien aller Seiten pruefen, Exit-Code = Fehlerzahl }
+    /selftest <datei.txt>    Szenarien aller Seiten pruefen, Exit-Code = Fehlerzahl
+    /hidden                  auf eigenem Windows-Desktop laufen (keine Fenster auf dem Bildschirm) }
 
 uses
   System.SysUtils,
+  PPG.TestDesktop in '..\Tests\PPG.TestDesktop.pas',
   Winapi.Windows,
   Winapi.Messages,
   Vcl.Forms,
@@ -195,6 +198,9 @@ var
   ShotFile: string;
   Tick: Cardinal;
 begin
+  // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
+  if PPGRunOnHiddenDesktop then
+    Exit;
   {$WARN SYMBOL_PLATFORM OFF}
   ReportMemoryLeaksOnShutdown := DebugHook <> 0;
   {$WARN SYMBOL_PLATFORM ON}
@@ -256,7 +262,7 @@ begin
       Exit;
     end;
 
-  // /datepopup datei.png: DatePicker aufklappen, Bildschirmpixel speichern
+  // /datepopup datei.png: DatePicker aufklappen, Fenster speichern
   for I := 1 to ParamCount - 1 do
     if SameText(ParamStr(I), '/datepopup') then
     begin

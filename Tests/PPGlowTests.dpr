@@ -3,12 +3,14 @@ program PPGlowTests;
 { Konsolen-Testlauf (DUnit, von XE2 bis Delphi 13 identisch verfuegbar).
   Exit-Code = Anzahl Fehler + Failures (0 = alles gruen) -> CI-tauglich.
   Parameter /gui startet den grafischen DUnit-Runner.
-  /suite Name[,Name] laeuft nur die genannten Gruppen bzw. Test-Klassen. }
+  /suite Name[,Name] laeuft nur die genannten Gruppen bzw. Test-Klassen.
+  /hidden laeuft auf einem eigenen Windows-Desktop (keine Fenster auf dem Bildschirm). }
 
 {$APPTYPE CONSOLE}
 
 uses
   System.SysUtils,
+  PPG.TestDesktop in 'PPG.TestDesktop.pas',
   System.Classes,
   Vcl.Forms,
   TestFramework,
@@ -339,6 +341,9 @@ var
   Errors: Integer;
   Before, After: Int64;
 begin
+  // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
+  if PPGRunOnHiddenDesktop then
+    Exit;
   // Leak-Meldung beim Beenden (FastMM): nur im GUI-Modus, sonst blockiert
   // die MessageBox einen automatischen Lauf.
   Application.Initialize;

@@ -29,6 +29,12 @@
 - Prüfung: 1466 Tests Win32 und Win64, Leak-Lauf grün, Demo-Selbsttest 185/185, Benchmark eingehalten (zwei neue Messungen).
 - **Noch nicht installiert.**
 
+**09.10.2026: Testlauf ohne sichtbare Fenster** (Wunsch des Users; Plan `C:\Users\Administrator\.claude\plans\k-nnen-wir-die-testsuite-witty-widget.md`):
+- Schalter `/hidden` für Tests, Benchmark und Demo (`Tests\PPG.TestDesktop.pas`). Das Programm startet sich auf einem eigenen Windows-Desktop „PPGlowTest“ neu; Ausgabe und Exit-Code kommen an.
+- Geprüft: 0 sichtbare Fenster auf dem Desktop des Users während des ganzen Laufs. Alle Tests verhalten sich wie sichtbar. Der Toast-Test hängt nicht mehr davon ab, wo die Maus des Users steht.
+- Demo-Aufnahmen kopieren keine Bildschirmpixel mehr. Die eigenen Fenster zeichnen sich selbst ein (`CaptureOwnWindows`, mit Deckkraft und Schlüsselfarbe), ohne fremde Fenster und ohne Titelleiste; das geht auch versteckt.
+- Auf dem Testdesktop meldet Windows „beschäftigt“, deshalb hält das NotificationCenter Toasts zurück (`RespectQuietHours`). Die Toast-Aufnahme schaltet das ab.
+
 **09.10.2026: Audit-Paket 7 fertig** (UI/UX, Details und Abweichungen: `Docs\Audit-Paket7-Plan.md`, Abschnitt Umsetzung):
 - 7a Aufklappfelder: Enter gehört dem Feld nur bei offenem Popup oder getipptem Text (Default-Button reagiert). Der DatePicker läuft auf der Aufklapp-Basis. Popups folgen dem Formular (`FollowSource`). Gemeinsame Tippsuche `TPPGTypeAhead`.
 - 7b Mausrad: gemeinsamer Helfer (Teil-Deltas, Systemeinstellung), Wert-Controls nur mit Fokus.
@@ -109,10 +115,16 @@ Ausführliche Doku: `Docs\Architektur.md` (Architektur, SOLID, Exception-Konzept
 cd C:\AI\Claude_Arbeitsplatz\PPGlow
 powershell -ExecutionPolicy Bypass -File Build\check-rules.ps1   # Coding-Rules ohne Compiler (läuft auch in build.ps1)
 powershell -ExecutionPolicy Bypass -File Build\build.ps1 -Only Delphi13 -Projects Runtime,Design,DBRuntime,DBDesign,Tests,Demo
-Tests\PPGlowTests.exe                       # 0 = alles grün
-Tests\PPGlowTests.exe /leaks                # zwei Läufe, Exit-Code <> 0 bei Speicherlecks
+# /hidden: auf eigenem Windows-Desktop "PPGlowTest" laufen - keine Fenster auf dem Bildschirm,
+#   die Maus des Users stört nicht; Ausgabe und Exit-Code kommen an. Für automatische Läufe immer nutzen.
+Tests\PPGlowTests.exe /hidden               # 0 = alles grün
+Tests\PPGlowTests.exe /leaks /hidden        # zwei Läufe, Exit-Code <> 0 bei Speicherlecks
+Tests\PPGlowTests.exe /suite Audit8A,TGridTests /hidden   # nur diese Gruppen/Testklassen
 Tests\PPGlowTests.exe /leaksuites           # Leck-Suche: Zuwachs je Testklasse ("LEAKSUITE Klasse Bytes", ab 1 KB)
-Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt   # Szenarien aller Demo-Seiten
+Tests\Bench\PPGlowBench.exe /hidden         # Benchmark (vorher build.ps1 -Projects Bench -Config Release)
+Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt /hidden   # Szenarien aller Demo-Seiten
+# Aufnahmen (/datepopup, /toastcapture, /ribboncapture, /busycapture, /screencapture) zeigen nur Fenster
+#   der Demo (keine fremden Fenster, keine Bildschirmpixel) und gehen auch mit /hidden.
 # Generatoren (Ergebnis wird eingecheckt):
 powershell -ExecutionPolicy Bypass -File Build\make-icons.ps1 [-Preview Docs\palette-icons.png]   # Palettensymbole (.dcr)
 powershell -ExecutionPolicy Bypass -File Build\make-lang.ps1            # Lang\PPGlow.de.txt -> PPG.Lang.De.pas (-Check prüft nur)

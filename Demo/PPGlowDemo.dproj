@@ -293,6 +293,7 @@
         <DCCReference Include="DemoPages10.pas"/>
         <DCCReference Include="DemoPages11.pas"/>
         <DCCReference Include="DemoMain.pas"/>
+        <DCCReference Include="..\Tests\PPG.TestDesktop.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

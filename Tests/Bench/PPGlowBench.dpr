@@ -7,6 +7,7 @@ program PPGlowBench;
 
 uses
   System.SysUtils,
+  PPG.TestDesktop in '..\PPG.TestDesktop.pas',
   System.IOUtils,
   System.Variants,
   System.Classes,
@@ -555,6 +556,9 @@ begin
 end;
 
 begin
+  // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
+  if PPGRunOnHiddenDesktop then
+    Exit;
   Application.Initialize;
   Form := TForm.CreateNew(nil);
   try
