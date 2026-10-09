@@ -140,8 +140,17 @@ type
     Count: Integer;     // nicht leere Werte
     NumCount: Integer;  // davon Zahlen
     Sum, Min, Max: Double;
+    /// Kahan-Ausgleich der Summe (Wert = Sum - Comp), Audit 8c #6: Summen
+    /// bleiben auch nach vielen Einzelaenderungen (Remove + Add) genau.
+    Comp: Double;
     procedure Reset;
     procedure Add(const S: string);
+    /// Wert herausnehmen (Gegenstueck zu Add). Min/Max bleiben unveraendert:
+    /// vorher mit CanReplace pruefen.
+    procedure Remove(const S: string);
+    /// Laesst sich Min bzw. Max ohne Neuberechnung halten, wenn OldText durch
+    /// NewText ersetzt wird? (Min/Max wachsen nur "aufbauend".)
+    function CanReplace(Kind: TPPGGridAggregate; const OldText, NewText: string): Boolean;
     procedure Merge(const Other: TPPGAggregateAcc);
     /// Ergebnis; False = kein Wert (z.B. Summe ohne Zahlen).
     function Value(Kind: TPPGGridAggregate; out V: Double): Boolean;
@@ -330,8 +339,27 @@ begin
   Count := 0;
   NumCount := 0;
   Sum := 0;
+  Comp := 0;
   Min := 0;
   Max := 0;
+end;
+
+/// Zahl eines Summenwerts: schneller Weg zuerst, Tausendertrenner u.ae.
+/// ueber PPGParseNumber.
+function AggNumber(const S: string; out D: Double): Boolean;
+begin
+  Result := (S <> '') and (TryStrToFloat(S, D) or PPGParseNumber(S, FormatSettings, D));
+end;
+
+/// Kahan-Summe: X zu (Sum, Comp) addieren.
+procedure KahanAdd(var Sum, Comp: Double; X: Double);
+var
+  Y, T: Double;
+begin
+  Y := X - Comp;
+  T := Sum + Y;
+  Comp := (T - Sum) - Y;
+  Sum := T;
 end;
 
 procedure TPPGAggregateAcc.Add(const S: string);
@@ -341,8 +369,7 @@ begin
   if S = '' then
     Exit;
   Inc(Count);
-  // Schneller Weg zuerst; Tausendertrenner u.ae. ueber PPGParseNumber
-  if not TryStrToFloat(S, D) and not PPGParseNumber(S, FormatSettings, D) then
+  if not AggNumber(S, D) then
     Exit;
   if NumCount = 0 then
   begin
@@ -357,7 +384,45 @@ begin
       Max := D;
   end;
   Inc(NumCount);
-  Sum := Sum + D;
+  KahanAdd(Sum, Comp, D);
+end;
+
+procedure TPPGAggregateAcc.Remove(const S: string);
+var
+  D: Double;
+begin
+  if S = '' then
+    Exit;
+  Dec(Count);
+  if not AggNumber(S, D) then
+    Exit;
+  Dec(NumCount);
+  if NumCount = 0 then
+  begin
+    // Keine Zahl mehr: Summe exakt null (kein Rundungsrest)
+    Sum := 0;
+    Comp := 0;
+  end
+  else
+    KahanAdd(Sum, Comp, -D);
+end;
+
+function TPPGAggregateAcc.CanReplace(Kind: TPPGGridAggregate;
+  const OldText, NewText: string): Boolean;
+var
+  OldV, NewV: Double;
+  NewNum: Boolean;
+begin
+  Result := True;
+  if not (Kind in [agMin, agMax]) or (NumCount <= 1) or not AggNumber(OldText, OldV) then
+    Exit;
+  NewNum := AggNumber(NewText, NewV);
+  // Der alte Wert war nicht das Extrem: bleibt, das neue kommt per Add dazu;
+  // sonst nur, wenn das neue mindestens so extrem ist
+  if Kind = agMin then
+    Result := (OldV > Min) or (NewNum and (NewV <= OldV))
+  else
+    Result := (OldV < Max) or (NewNum and (NewV >= OldV));
 end;
 
 procedure TPPGAggregateAcc.Merge(const Other: TPPGAggregateAcc);
@@ -379,18 +444,19 @@ begin
   end;
   Inc(Count, Other.Count);
   Inc(NumCount, Other.NumCount);
-  Sum := Sum + Other.Sum;
+  KahanAdd(Sum, Comp, Other.Sum);
+  KahanAdd(Sum, Comp, -Other.Comp);
 end;
 
 function TPPGAggregateAcc.Value(Kind: TPPGGridAggregate; out V: Double): Boolean;
 begin
   Result := True;
   case Kind of
-    agSum: V := Sum;
+    agSum: V := Sum - Comp;
     agCount: V := Count;
     agAvg:
       if NumCount > 0 then
-        V := Sum / NumCount
+        V := (Sum - Comp) / NumCount
       else
         Result := False;
     agMin:
@@ -427,9 +493,18 @@ end;
 { TPPGCellStore }
 
 procedure TPPGCellStore.EnsureRow(ARow: Integer);
+var
+  N: Integer;
 begin
+  // Geometrisch wachsen (Audit 8c #11): Zeile fuer Zeile fuellen kopiert das
+  // Zeilen-Array sonst bei jeder neuen Zeile. Leere Zeilen dahinter sind nil.
   if Length(FRows) <= ARow then
-    SetLength(FRows, ARow + 1);
+  begin
+    N := Length(FRows) + Length(FRows) div 2 + 16;
+    if N <= ARow then
+      N := ARow + 1;
+    SetLength(FRows, N);
+  end;
   if Length(FRows[ARow]) < FColCount then
     SetLength(FRows[ARow], FColCount);
 end;

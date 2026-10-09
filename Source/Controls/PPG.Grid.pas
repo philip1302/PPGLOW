@@ -115,6 +115,12 @@ type
 
   TPPGCustomGrid = class;
 
+  /// Eine Zellaenderung fuer die inkrementelle Summe (intern, Audit 8c #6).
+  TPPGGridAggChange = record
+    Col, Row: Integer;
+    OldText, NewText: string;
+  end;
+
   // Editoren stehen seit Phase 13a in PPG.Grid.Edit (Registry).
   TPPGGridEdit = PPG.Grid.Edit.TPPGGridEdit;
   TPPGGridCombo = PPG.Grid.Edit.TPPGGridCombo;
@@ -133,8 +139,9 @@ type
   end;
 
   TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren, IPPGUiaSource,
-    IPPGGridColumnsHost, IPPGGridViewHost, IPPGTableSource, IPPGGridStylesHost,
-    IPPGGridPrintSource, IPPGTableExport, IPPGTableLook)
+    IPPGGridColumnsHost, IPPGGridViewHost, IPPGGridViewSortKeys, IPPGGridViewFilterKey,
+    IPPGTableSource,
+    IPPGGridStylesHost, IPPGGridPrintSource, IPPGTableExport, IPPGTableLook)
   private
     FPaint: TPPGGridPaintColors;
     FColCount: Integer;
@@ -146,7 +153,8 @@ type
     FDefaultColWidth: Integer;
     FDefaultRowHeight: Integer;
     FColWidths: array of Integer;   // logisch, 0 = Standard (ohne Spalte)
-    FRowHeights: array of Integer;  // logisch je Datenzeile, 0 = Standard
+    // Eigene Zeilenhoehen je Datenzeile (logisch), duenn besetzt (Audit 8c #5)
+    FRowHeightStore: TPPGRowLayout;
     FHasRowHeights: Boolean;
     FStore: TPPGCellStore;         // Cells[] (PPG.Grid.Data)
     FPainter: TPPGCellPainter;     // Texte, Zellarten (PPG.Grid.Paint)
@@ -171,13 +179,30 @@ type
     FGroupCustom: array of array of string;
     FAggDirty: Boolean;
     FAggPosted: Boolean;
+    // Audit 8c #6: Einzelaenderungen fuer die inkrementelle Summe (verzoegert
+    // bis zur geposteten Nachricht bzw. FooterText)
+    FAggPend: array of TPPGGridAggChange;
+    FAggPendCount: Integer;
+    FAggHasCustom: Boolean;      // agCustom in der letzten Rechnung
+    FAggRowLeaf: TArray<Integer>; // Datenzeile -> unterste Gruppe (bei Bedarf)
+    FDataVersion: Integer;       // zaehlt Datenaenderungen (Cells, Zeilenzahl)
+    FAggViewKey: string;         // Zeilenmenge der letzten Rechnung (Audit 8c #7)
+    FFilterEvalCount: Integer;   // Aufrufe von RowPassesFilter (Tests)
     FDropToGroup: Boolean;
     FGroupMarkup: TPPGMarkupLayout;
     FCondFormats: TPPGGridConditionalFormats;
     FMerges: array of TPPGGridMerge;
     FKindCtx: TPPGCellKindContext;  // je Zeichenvorgang gefuellt
     FStyles: TPPGGridStyles;
-    FFontCache: TPPGFontCache;  // Schriften eines Zeichenvorgangs
+    // Schriften der Element-Stile; bleiben ueber Zeichenvorgaenge (Audit 8c
+    // #10), geleert bei Schrift-, Stil-, Spalten-, DPI- und Theme-Aenderung
+    FFontCache: TPPGFontCache;
+    FFontCachePPI: Integer;
+    // Waehrend PaintViewport: Werte, die RawCellRect/ColLeft je Zelle brauchen
+    FPaintCached: Boolean;
+    FPaintGV: TRect;
+    FPaintMaxColScroll: Integer;
+    FPaintFirstRight: Integer;
     FHotV: Integer;              // Zeile unter der Maus (Styles.HotRow)
     FGridLineWidth: Integer;
     FDrawingStyle: TGridDrawingStyle;
@@ -185,13 +210,20 @@ type
     FGradientEndColor: TColor;
     FLayout: TPPGRowLayout;
     FColX: array of Integer;        // Pixel-Anfang je Spalte (+ Ende)
-    FGeomValid: Boolean;
+    // Audit 8c #2/#5: Spalten- und Zeilengeometrie getrennt (Spaltenbreite
+    // ziehen baut die Zeilen nicht neu auf)
+    FColGeomValid: Boolean;
+    FRowGeomValid: Boolean;
     FGeomPPI: Integer;
+    FAggSig: string;            // Aggregate der Spalten bei der letzten Rechnung
+    FAggRecalcCount: Integer;   // volle Neuberechnungen (Tests)
+    FRowGeomCount: Integer;     // Neuaufbau der Zeilengeometrie (Tests)
     FView: TPPGGridView;           // Filter -> Sortieren (PPG.Grid.View)
     FSortCol: Integer;
     FSortAscending: Boolean;
     FSortOnHeaderClick: Boolean;
     FFilters: array of string;
+    FFilterUpper: array of string;  // Filter in Grossbuchstaben (je Lauf, Audit 8c #3)
     FShowFilterRow: Boolean;
     FFocusC: Integer;
     FFocusV: Integer;
@@ -262,6 +294,8 @@ type
     function GetFixedColor: TColor;
     procedure SetFixedColor(const Value: TColor);
     procedure SetHotRow(VRow: Integer);
+    /// Nur eine sichtbare Zeile neu zeichnen (ganze Breite), Audit 8b.
+    procedure InvalidateViewRow(VRow: Integer);
     function GetCells(ACol, ARow: Integer): string;
     procedure SetCells(ACol, ARow: Integer; const Value: string);
     function GetColWidths(Index: Integer): Integer;
@@ -304,7 +338,15 @@ type
     procedure Scrolled; override;
     { Geometrie }
     procedure InvalidateGeometry;
+    /// Nur die Spalten (Breite, Reihenfolge, Sichtbarkeit) neu.
+    procedure InvalidateColGeometry;
     procedure EnsureGeometry;
+    procedure BuildRowGeometry(PPI: Integer);
+    /// Aggregate der Spalten als Text (aendert er sich, wird neu gerechnet).
+    function AggSignature: string;
+    /// Zaehler fuer Tests: volle Summen-Rechnungen, Neuaufbau der Zeilen.
+    property AggRecalcCount: Integer read FAggRecalcCount;
+    property RowGeomCount: Integer read FRowGeomCount;
     function VFixedRows: Integer;
     function VRowCount: Integer;
     function FixedWidth: Integer;
@@ -400,13 +442,47 @@ type
     /// Summen oder Statistiken fuer bedingte Formate muessen nach einer
     /// Zellaenderung neu gerechnet werden.
     function StatsNeeded: Boolean;
+    { Inkrementelle Summen (Audit 8c #6) }
+    /// Eine Datenzelle hat sich geaendert (Cells, SetCellByUser).
+    procedure CellDataChanged(ACol, ARow: Integer; const OldText, NewText: string;
+      HaveOld: Boolean);
+    /// Laesst sich eine Aenderung dieser Spalte inkrementell verrechnen?
+    function AggIncrementalOk(ACol: Integer): Boolean;
+    /// Vorgemerkte Einzelaenderungen verrechnen (sonst voll neu rechnen).
+    procedure ApplyPendingAggregates;
+    function ApplyAggChange(const Ch: TPPGGridAggChange): Boolean;
+    procedure ClearPendingAggregates;
+    procedure PostAggregateMessage;
+    /// Unterste Gruppe einer Datenzeile (-1 = nicht in der Ansicht).
+    function LeafGroupOf(ARow: Integer): Integer;
+    /// Datenzeile in der (ungruppierten) Ansicht?
+    function RowInView(ARow: Integer): Boolean;
+    /// Text kommt direkt aus Cells (kein OnGetCellText, GetCellText nicht
+    /// ueberschrieben)?
+    function PlainCellText: Boolean;
     { Zeilen-Abbildung (Sortieren/Filtern) }
     procedure RebuildMap;
     function CompareDataRows(ACol, R1, R2: Integer): Integer; virtual;
     function RowPassesFilter(ARow: Integer): Boolean; virtual;
+    /// Filtertexte in Grossbuchstaben vorbereiten (vor jedem Filterlauf).
+    procedure PrepareFilters;
     { IPPGGridViewHost }
     function ViewRowPasses(ARow: Integer): Boolean;
     function ViewCompareRows(ACol, R1, R2: Integer): Integer;
+    { IPPGGridViewSortKeys (Audit 8c #1): nur mit dem Standardvergleich }
+    function ViewSortKeys(ACol: Integer; const Rows: TArray<Integer>;
+      out Keys: TArray<TPPGGridSortKey>): Boolean;
+    /// Vergleicht das Grid mit der Standardlogik (kein OnCompareCells, kein
+    /// ueberschriebenes CompareDataRows)?
+    function StandardCompare: Boolean;
+    { IPPGGridViewFilterKey (Audit 8c #7): Filtertexte + Datenstand; '' bei
+      virtuellen Texten oder eigenem RowPassesFilter }
+    function ViewFilterKey: string;
+    /// Schluessel der Zeilenmenge, ueber die summiert wird ('' = immer neu
+    /// rechnen): gleich = reines Umsortieren, die Summen bleiben.
+    function AggViewKey: string;
+    /// Zaehler fuer Tests: Aufrufe von RowPassesFilter.
+    property FilterEvalCount: Integer read FFilterEvalCount;
     { IPPGTableSource (Druck, Export) }
     function TableColCount: Integer; virtual;
     function TableRowCount: Integer; virtual;
@@ -487,6 +563,8 @@ type
     procedure PrepareStyleColors;
     /// Schrift (und Textfarbe) einer Datenzelle nach Spalte, Zeile und Zellstil.
     function CellFont(Col: TPPGGridColumn; const St: TPPGGridCellStyle; Extra: TFontStyles): TFont;
+    /// Schriften der Element-Stile verwerfen (Schrift, Stil, Spalten geaendert).
+    procedure FontsChanged;
     { Eingabe }
     procedure ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseMove(Shift: TShiftState; X, Y: Integer); override;
@@ -834,7 +912,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
+  System.SysUtils, System.Generics.Collections, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Menus, PPG.Render.Shapes, System.UITypes,
   PPG.Controls.Field;
@@ -908,6 +986,7 @@ begin
   FEditV := -1;
   FLastFocusRow := -1;
   FLayout := TPPGRowLayout.Create;
+  FRowHeightStore := TPPGRowLayout.Create;
   FColumns := CreateColumns;
   FBands := TPPGGridBands.Create(Self, TPPGGridBand);
   FHeaderMenu := True;
@@ -934,6 +1013,7 @@ begin
   FreeAndNil(FColumns);
   FreeAndNil(FBands);
   FreeAndNil(FLayout);
+  FreeAndNil(FRowHeightStore);
   FreeAndNil(FView);
   FreeAndNil(FStore);
   FreeAndNil(FPainter);
@@ -956,7 +1036,7 @@ begin
   // Summen/Statistiken, die vor dem Fenster geaendert wurden, jetzt nachholen
   // (eine fuer ein frueheres Fenster gepostete Nachricht ging verloren)
   FAggPosted := False;
-  if FAggDirty and (GMsgAggregate <> 0) then
+  if (FAggDirty or (FAggPendCount > 0)) and (GMsgAggregate <> 0) then
   begin
     FAggPosted := True;
     PostMessage(Handle, GMsgAggregate, 0, 0);
@@ -989,18 +1069,22 @@ var
   I: Integer;
   Same: Boolean;
 begin
+  // Spaltenstile koennen eigene Schriften haben
+  FontsChanged;
   // Spalten bestimmen die Spaltenzahl
   if (FColumns.Count > 0) and (FColCount <> FColumns.Count) then
     ColCount := FColumns.Count
   else
   begin
     RebuildColumnMap;
-    InvalidateGeometry;
+    // Spalten aendern nur die Spaltengeometrie (Audit 8c #2)
+    InvalidateColGeometry;
     Invalidate;
   end;
   if csLoading in ComponentState then
     Exit;
-  // GroupIndex geaendert: neu gruppieren; sonst nur Summen (Aggregate)
+  // GroupIndex geaendert: neu gruppieren; sonst Summen nur bei geaenderten
+  // Aggregaten (Breite, Titel, Stil ... rechnen nicht neu, Audit 8c #2)
   if CanGroup then
     G := CurrentGroupColumns
   else
@@ -1012,8 +1096,24 @@ begin
         Same := False;
   if not Same then
     RebuildMap
-  else
+  else if AggSignature <> FAggSig then
     AggregatesChanged;
+end;
+
+function TPPGCustomGrid.AggSignature: string;
+var
+  I: Integer;
+  C: TPPGGridColumn;
+begin
+  SetLength(Result, FColCount);
+  for I := 0 to FColCount - 1 do
+  begin
+    C := ColumnOf(I);
+    if C = nil then
+      Result[I + 1] := '-'
+    else
+      Result[I + 1] := Chr(Ord('A') + Ord(C.Aggregate));
+  end;
 end;
 
 function TPPGCustomGrid.RowScrollY: Integer;
@@ -1082,19 +1182,20 @@ end;
 
 procedure TPPGCustomGrid.ReadRowHeights(Reader: TReader);
 var
-  I: Integer;
+  I, V: Integer;
 begin
   Reader.ReadListBegin;
   I := 0;
   while not Reader.EndOfList do
   begin
-    if I >= Length(FRowHeights) then
-      SetLength(FRowHeights, I + 1);
-    FRowHeights[I] := Reader.ReadInteger;
-    if FRowHeights[I] = FDefaultRowHeight then
-      FRowHeights[I] := 0
-    else
+    V := Reader.ReadInteger;
+    // Standardhoehe = keine eigene Hoehe (folgt spaeter DefaultRowHeight)
+    if V <> FDefaultRowHeight then
+    begin
       FHasRowHeights := True;
+      if (V > 0) and (I < FRowHeightStore.Count) then
+        FRowHeightStore.SetRowHeight(I, V);
+    end;
     Inc(I);
   end;
   Reader.ReadListEnd;
@@ -1121,6 +1222,7 @@ begin
     Exit;
   HideEditor(False);
   FColCount := V;
+  Inc(FDataVersion);
   SetLength(FColWidths, V);
   SetLength(FFilters, V);
   FStore.SetColCount(V);
@@ -1141,9 +1243,9 @@ begin
     Exit;
   HideEditor(False);
   FRowCount := V;
+  Inc(FDataVersion);
   FStore.TruncateRows(V);
-  if Length(FRowHeights) > V then
-    SetLength(FRowHeights, V);
+  FRowHeightStore.Count := V; // Hoehen dahinter verfallen
   if FFixedRows >= V then
     FFixedRows := V - 1;
   RebuildMap;
@@ -1279,20 +1381,23 @@ begin
     raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FColCount - 1]);
   V := PPGCheckRange(Self, 'ColWidths', Value, 0, 10000);
   C := ColumnOf(Index);
+  // Mit Spalte meldet die Spalte selbst (ColumnsChanged); kein zweites
+  // InvalidateGeometry (Audit 8c #2)
   if C <> nil then
     C.Width := V
-  else
+  else if FColWidths[Index] <> V then
+  begin
     FColWidths[Index] := V;
-  InvalidateGeometry;
+    InvalidateColGeometry;
+  end;
 end;
 
 function TPPGCustomGrid.GetRowHeights(Index: Integer): Integer;
 begin
   if (Index < 0) or (Index >= FRowCount) then
     raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FRowCount - 1]);
-  if (Index < Length(FRowHeights)) and (FRowHeights[Index] > 0) then
-    Result := FRowHeights[Index]
-  else
+  Result := FRowHeightStore.OwnHeight(Index);
+  if Result <= 0 then
     Result := FDefaultRowHeight;
 end;
 
@@ -1303,12 +1408,16 @@ begin
   if (Index < 0) or (Index >= FRowCount) then
     raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FRowCount - 1]);
   V := PPGCheckRange(Self, 'RowHeights', Value, 0, 10000);
-  if Length(FRowHeights) < FRowCount then
-    SetLength(FRowHeights, FRowCount);
-  FRowHeights[Index] := V;
   if (V > 0) and (V <> FDefaultRowHeight) then
     FHasRowHeights := True;
-  InvalidateGeometry;
+  if FRowHeightStore.OwnHeight(Index) = V then
+    Exit;
+  FRowHeightStore.SetRowHeight(Index, V);
+  // Nur die Zeilen neu (Audit 8c #5)
+  FRowGeomValid := False;
+  Invalidate;
+  if HandleAllocated and not (csLoading in ComponentState) then
+    EnsureGeometry;
 end;
 
 { ---- Zellen ---- }
@@ -1328,13 +1437,19 @@ begin
 end;
 
 procedure TPPGCustomGrid.SetCells(ACol, ARow: Integer; const Value: string);
+var
+  Old: string;
+  HaveOld: Boolean;
 begin
   CheckCell(ACol, ARow);
+  // Alten Text nur, wenn er fuer eine inkrementelle Summe gebraucht wird
+  HaveOld := not FAggDirty and StatsNeeded;
+  if HaveOld then
+    Old := FStore.Get(ACol, ARow);
   if FStore.Put(ACol, ARow, Value) then
   begin
     Invalidate;
-    if StatsNeeded then
-      AggregatesChanged;
+    CellDataChanged(ACol, ARow, Old, Value, HaveOld);
   end;
 end;
 
@@ -1370,13 +1485,19 @@ begin
 end;
 
 procedure TPPGCustomGrid.SetCellByUser(ACol, ARow: Integer; const Value: string);
+var
+  Old: string;
+  HaveOld: Boolean;
 begin
+  HaveOld := not FAggDirty and StatsNeeded;
+  if HaveOld then
+    Old := FStore.Get(ACol, ARow);
   FStore.Put(ACol, ARow, Value);
+  // Summen vormerken, bevor das Ereignis weitere Zellen aendern kann
+  CellDataChanged(ACol, ARow, Old, Value, HaveOld);
   if Assigned(FOnSetEditText) then
     FOnSetEditText(Self, ACol, ARow, Value);
   Invalidate;
-  if StatsNeeded then
-    AggregatesChanged;
 end;
 
 function TPPGCustomGrid.GetFilter(ACol: Integer): string;
@@ -1453,14 +1574,27 @@ begin
   end;
 end;
 
+procedure TPPGCustomGrid.PrepareFilters;
+var
+  C: Integer;
+begin
+  SetLength(FFilterUpper, Length(FFilters));
+  for C := 0 to High(FFilters) do
+    FFilterUpper[C] := AnsiUpperCase(FFilters[C]);
+end;
+
 function TPPGCustomGrid.RowPassesFilter(ARow: Integer): Boolean;
 var
   C: Integer;
 begin
+  // Filtertexte stehen schon in Grossbuchstaben (PrepareFilters, einmal je Lauf)
+  if Length(FFilterUpper) <> Length(FFilters) then
+    PrepareFilters;
+  Inc(FFilterEvalCount);
   Result := True;
   for C := 0 to High(FFilters) do
     if (FFilters[C] <> '') and
-      (Pos(AnsiUpperCase(FFilters[C]), AnsiUpperCase(GetCellText(C, ARow))) = 0) then
+      (Pos(FFilterUpper[C], AnsiUpperCase(GetCellText(C, ARow))) = 0) then
       Exit(False);
 end;
 
@@ -1500,6 +1634,7 @@ begin
     Exit;
   EndEditorForRebuild;
   FocusData := DataRow(FFocusV);
+  PrepareFilters;
   Filtered := False;
   for I := 0 to High(FFilters) do
     if FFilters[I] <> '' then
@@ -1516,8 +1651,12 @@ begin
   FView.Group.SortAscending := FSortAscending;
   FView.Group.Footers := FGroupFooter;
   FView.Rebuild(Self, FFixedRows, FRowCount);
-  // Summen gehoeren zur Ansicht: gleich mit neu (nicht beim Zeichnen)
-  RecalcAggregates;
+  // Summen gehoeren zur Ansicht: gleich mit neu (nicht beim Zeichnen).
+  // Reines Umsortieren ohne Gruppen aendert die Zeilenmenge nicht: die
+  // Summen (und Statistiken) bleiben (Audit 8c #7)
+  if FAggDirty or (FAggViewKey = '') or (AggViewKey <> FAggViewKey) or
+    (AggSignature <> FAggSig) then
+    RecalcAggregates;
   // Fokus bleibt an der Datenzeile (sonst erste sichtbare Datenzeile)
   if FocusData >= 0 then
     I := VisualRow(FocusData)
@@ -1542,6 +1681,63 @@ end;
 function TPPGCustomGrid.ViewCompareRows(ACol, R1, R2: Integer): Integer;
 begin
   Result := CompareDataRows(ACol, R1, R2);
+end;
+
+function TPPGCustomGrid.ViewFilterKey: string;
+var
+  M: function(ARow: Integer): Boolean of object;
+  I: Integer;
+begin
+  Result := '';
+  // Virtuelle Texte koennen sich unbemerkt aendern; eigener Filter: unbekannt
+  M := RowPassesFilter;
+  if not PlainCellText or (TMethod(M).Code <> @TPPGCustomGrid.RowPassesFilter) then
+    Exit;
+  Result := IntToStr(FDataVersion) + '|' + IntToStr(FFixedRows) + '|' + IntToStr(FRowCount);
+  for I := 0 to High(FFilters) do
+    Result := Result + #1 + FFilters[I];
+end;
+
+function TPPGCustomGrid.AggViewKey: string;
+begin
+  Result := '';
+  if not CanGroup or FView.Grouped or (Length(FGroupCols) > 0) or not PlainCellText then
+    Exit;
+  if FView.Filter.Active then
+  begin
+    Result := ViewFilterKey;
+    if Result <> '' then
+      Result := 'F' + Result;
+  end
+  else
+    Result := 'A|' + IntToStr(FFixedRows) + '|' + IntToStr(FRowCount);
+end;
+
+function TPPGCustomGrid.StandardCompare: Boolean;
+var
+  M: function(ACol, R1, R2: Integer): Integer of object;
+begin
+  M := CompareDataRows;
+  Result := not Assigned(FOnCompareCells) and
+    (TMethod(M).Code = @TPPGCustomGrid.CompareDataRows);
+end;
+
+function TPPGCustomGrid.ViewSortKeys(ACol: Integer; const Rows: TArray<Integer>;
+  out Keys: TArray<TPPGGridSortKey>): Boolean;
+var
+  I: Integer;
+begin
+  // Gleiche Logik wie CompareDataRows, nur einmal je Zeile: Text lesen
+  // (Cells bzw. OnGetCellText) und Zahl erkennen
+  Result := StandardCompare;
+  if not Result then
+    Exit;
+  SetLength(Keys, Length(Rows));
+  for I := 0 to High(Rows) do
+  begin
+    Keys[I].Text := GetCellText(ACol, Rows[I]);
+    Keys[I].IsNum := TryStrToFloat(Keys[I].Text, Keys[I].Num);
+  end;
 end;
 
 { ---- IPPGTableSource: Ansicht ohne feste Zeilen, alle Spalten ---- }
@@ -2006,7 +2202,7 @@ begin
       I := FFocusC;
     FAnchorC := EnsureRangeInt(I, FFixedCols, K - 1);
   end;
-  FGeomValid := False;
+  FColGeomValid := False;
 end;
 
 function TPPGCustomGrid.VColCount: Integer;
@@ -2087,6 +2283,14 @@ begin
   // ganz nach rechts gescrollt), die uebrigen scrollen
   if VCol < FFixedCols then
     Result := FColX[VCol]
+  else if FPaintCached then
+  begin
+    // Waehrend des Zeichnens einmal berechnet (Audit 8c #8)
+    if VCol >= FPaintFirstRight then
+      Result := FColX[VCol] - FPaintMaxColScroll
+    else
+      Result := FColX[VCol] - ScrollX;
+  end
   else if VCol >= FirstRightCol then
     Result := FColX[VCol] - MaxColScroll
   else
@@ -2972,12 +3176,203 @@ begin
   // Verzoegert neu rechnen: viele Aenderungen hintereinander (Cells in einer
   // Schleife) loesen nur EINE Berechnung aus
   FAggDirty := True;
+  ClearPendingAggregates; // die volle Rechnung deckt sie ab
+  PostAggregateMessage;
+  Invalidate;
+end;
+
+procedure TPPGCustomGrid.PostAggregateMessage;
+begin
   if HandleAllocated and not FAggPosted and (GMsgAggregate <> 0) then
   begin
     FAggPosted := True;
     PostMessage(Handle, GMsgAggregate, 0, 0);
   end;
-  Invalidate;
+end;
+
+procedure TPPGCustomGrid.ClearPendingAggregates;
+var
+  I: Integer;
+begin
+  for I := 0 to FAggPendCount - 1 do
+  begin
+    FAggPend[I].OldText := '';
+    FAggPend[I].NewText := '';
+  end;
+  FAggPendCount := 0;
+end;
+
+function TPPGCustomGrid.PlainCellText: Boolean;
+var
+  M: function(ACol, ARow: Integer): string of object;
+begin
+  M := GetCellText;
+  Result := not Assigned(FOnGetCellText) and
+    (TMethod(M).Code = @TPPGCustomGrid.GetCellText);
+end;
+
+function TPPGCustomGrid.AggIncrementalOk(ACol: Integer): Boolean;
+const
+  MaxPending = 4096; // danach ist eine volle Rechnung billiger
+var
+  I: Integer;
+begin
+  // Voll rechnen: Custom (Ereignis sieht alle Zeilen), virtuelle bzw.
+  // umgeleitete Texte, Gruppenspalte, Statistik der bedingten Formate
+  Result := CanGroup and not FAggHasCustom and (FAggPendCount < MaxPending) and PlainCellText;
+  if not Result then
+    Exit;
+  for I := 0 to High(FGroupCols) do
+    if FGroupCols[I] = ACol then
+      Exit(False);
+  for I := 0 to FCondFormats.Count - 1 do
+    if FCondFormats[I].NeedsStats and (FCondFormats[I].Column = ACol) then
+      Exit(False);
+end;
+
+procedure TPPGCustomGrid.CellDataChanged(ACol, ARow: Integer; const OldText, NewText: string;
+  HaveOld: Boolean);
+var
+  N: Integer;
+begin
+  Inc(FDataVersion);
+  if not StatsNeeded or ([csLoading, csDestroying] * ComponentState <> []) then
+    Exit;
+  if not HaveOld or FAggDirty or not AggIncrementalOk(ACol) then
+  begin
+    AggregatesChanged;
+    Exit;
+  end;
+  // Spalte ohne Summe (und ohne Statistik): an den Summen aendert sich nichts
+  if AggIndex(ACol) < 0 then
+    Exit;
+  // Vormerken: die Nachricht (bzw. FooterText) verrechnet alle zusammen
+  if FAggPendCount >= Length(FAggPend) then
+  begin
+    N := Length(FAggPend) * 2;
+    if N < 16 then
+      N := 16;
+    SetLength(FAggPend, N);
+  end;
+  FAggPend[FAggPendCount].Col := ACol;
+  FAggPend[FAggPendCount].Row := ARow;
+  FAggPend[FAggPendCount].OldText := OldText;
+  FAggPend[FAggPendCount].NewText := NewText;
+  Inc(FAggPendCount);
+  PostAggregateMessage;
+end;
+
+function TPPGCustomGrid.RowInView(ARow: Integer): Boolean;
+begin
+  if (ARow < FFixedRows) or (ARow >= FRowCount) then
+    Result := False
+  else if not FView.Mapped then
+    Result := True
+  else
+    Result := FView.ViewIndexOf(ARow) >= 0;
+end;
+
+function TPPGCustomGrid.LeafGroupOf(ARow: Integer): Integer;
+var
+  G, R: Integer;
+  Gr: TPPGGridGroup;
+  Rows: TArray<Integer>;
+begin
+  // Datenzeile -> unterste Gruppe, einmal je Rechnung aufgebaut
+  if FAggRowLeaf = nil then
+  begin
+    SetLength(FAggRowLeaf, FRowCount);
+    for R := 0 to High(FAggRowLeaf) do
+      FAggRowLeaf[R] := -1;
+    Rows := FView.Group.Grouped;
+    for G := 0 to GroupCount - 1 do
+    begin
+      Gr := FView.Group.Groups[G];
+      if Gr.FirstChild < 0 then
+        for R := Gr.First to Gr.First + Gr.Count - 1 do
+          if (Rows[R] >= 0) and (Rows[R] < Length(FAggRowLeaf)) then
+            FAggRowLeaf[Rows[R]] := G;
+    end;
+  end;
+  if (ARow >= 0) and (ARow < Length(FAggRowLeaf)) then
+    Result := FAggRowLeaf[ARow]
+  else
+    Result := -1;
+end;
+
+function TPPGCustomGrid.ApplyAggChange(const Ch: TPPGGridAggChange): Boolean;
+var
+  K, G, P: Integer;
+  C: TPPGGridColumn;
+  Kind: TPPGGridAggregate;
+begin
+  Result := True;
+  K := AggIndex(Ch.Col);
+  if (K < 0) or (K >= Length(FFooterAcc)) then
+    Exit;
+  C := ColumnOf(Ch.Col);
+  if (C = nil) or (C.Aggregate = agCustom) then
+    Exit(False);
+  Kind := C.Aggregate;
+  // Gehoert die Zeile zur Ansicht (und zu welcher Gruppe)?
+  if FView.Grouped then
+  begin
+    G := LeafGroupOf(Ch.Row);
+    if G < 0 then
+      Exit;
+  end
+  else
+  begin
+    if not RowInView(Ch.Row) then
+      Exit;
+    G := -1;
+  end;
+  // Min/Max nur aufbauend, sonst voll rechnen
+  if not FFooterAcc[K].CanReplace(Kind, Ch.OldText, Ch.NewText) then
+    Exit(False);
+  P := G;
+  while P >= 0 do
+  begin
+    if (P >= Length(FGroupAcc)) or (K >= Length(FGroupAcc[P])) then
+      Exit(False);
+    if not FGroupAcc[P][K].CanReplace(Kind, Ch.OldText, Ch.NewText) then
+      Exit(False);
+    P := FView.Group.Groups[P].Parent;
+  end;
+  // Gruppe, ihre Eltern und die Summenzeile
+  FFooterAcc[K].Remove(Ch.OldText);
+  FFooterAcc[K].Add(Ch.NewText);
+  P := G;
+  while P >= 0 do
+  begin
+    FGroupAcc[P][K].Remove(Ch.OldText);
+    FGroupAcc[P][K].Add(Ch.NewText);
+    P := FView.Group.Groups[P].Parent;
+  end;
+end;
+
+procedure TPPGCustomGrid.ApplyPendingAggregates;
+var
+  I: Integer;
+  Ok: Boolean;
+begin
+  if FAggPendCount = 0 then
+    Exit;
+  if FAggDirty then
+  begin
+    RecalcAggregates;
+    Exit;
+  end;
+  Ok := True;
+  for I := 0 to FAggPendCount - 1 do
+    if not ApplyAggChange(FAggPend[I]) then
+    begin
+      Ok := False;
+      Break;
+    end;
+  ClearPendingAggregates;
+  if not Ok then
+    RecalcAggregates;
 end;
 
 procedure TPPGCustomGrid.RecalcAggregates;
@@ -2990,6 +3385,12 @@ var
   S: string;
 begin
   FAggDirty := False;
+  Inc(FAggRecalcCount);
+  FAggSig := AggSignature;
+  ClearPendingAggregates;
+  FAggRowLeaf := nil;
+  FAggHasCustom := False;
+  FAggViewKey := '';
   // Spalten mit Zusammenfassung
   SetLength(FAggCols, FColCount);
   NAgg := 0;
@@ -3008,6 +3409,10 @@ begin
   SetLength(FAggCols, NAgg);
   SetLength(FFooterAcc, NAgg);
   SetLength(FFooterCustom, NAgg);
+  FAggHasCustom := HasCustom;
+  // agCustom kann von der Reihenfolge abhaengen: dann immer neu rechnen
+  if not HasCustom then
+    FAggViewKey := AggViewKey;
   for K := 0 to NAgg - 1 do
   begin
     FFooterAcc[K].Reset;
@@ -3141,14 +3546,18 @@ end;
 function TPPGCustomGrid.FooterText(ACol: Integer): string;
 begin
   if FAggDirty then
-    RecalcAggregates;
+    RecalcAggregates
+  else
+    ApplyPendingAggregates;
   Result := CachedFooterText(ACol);
 end;
 
 function TPPGCustomGrid.GroupFooterText(Group, ACol: Integer): string;
 begin
   if FAggDirty then
-    RecalcAggregates;
+    RecalcAggregates
+  else
+    ApplyPendingAggregates;
   Result := CachedGroupFooterText(Group, ACol);
 end;
 
@@ -3784,16 +4193,18 @@ end;
 
 procedure TPPGCustomGrid.ComputeCondStats;
 var
-  I, R, Col, N: Integer;
+  I, J, R, Col, N: Integer;
   Rule: TPPGGridConditionalFormat;
   Vals: TArray<Double>;
+  Done: array of Boolean;
   V: Double;
   S: string;
 begin
+  SetLength(Done, FCondFormats.Count);
   for I := 0 to FCondFormats.Count - 1 do
   begin
     Rule := FCondFormats[I];
-    if not Rule.NeedsStats or (Rule.Column >= FColCount) then
+    if Done[I] or not Rule.NeedsStats or (Rule.Column >= FColCount) then
       Continue;
     Col := Rule.Column;
     SetLength(Vals, FView.AllRowCount);
@@ -3808,7 +4219,13 @@ begin
       end;
     end;
     SetLength(Vals, N);
-    Rule.ComputeStats(Vals);
+    // Alle Regeln dieser Spalte mit denselben Werten (Spalte nur einmal lesen)
+    for J := I to FCondFormats.Count - 1 do
+      if not Done[J] and FCondFormats[J].NeedsStats and (FCondFormats[J].Column = Col) then
+      begin
+        FCondFormats[J].ComputeStats(Vals);
+        Done[J] := True;
+      end;
   end;
 end;
 
@@ -3816,7 +4233,16 @@ end;
 
 procedure TPPGCustomGrid.InvalidateGeometry;
 begin
-  FGeomValid := False;
+  FColGeomValid := False;
+  FRowGeomValid := False;
+  Invalidate;
+  if HandleAllocated and not (csLoading in ComponentState) then
+    EnsureGeometry;
+end;
+
+procedure TPPGCustomGrid.InvalidateColGeometry;
+begin
+  FColGeomValid := False;
   Invalidate;
   if HandleAllocated and not (csLoading in ComponentState) then
     EnsureGeometry;
@@ -3831,45 +4257,81 @@ end;
 
 procedure TPPGCustomGrid.EnsureGeometry;
 var
-  I, N, X, V, D, H, Def, BH: Integer;
+  I, N, X, H, BH: Integer;
   PPI: Integer;
 begin
   PPI := ScalePPI;
-  if FGeomValid and (FGeomPPI = PPI) then
+  if FColGeomValid and FRowGeomValid and (FGeomPPI = PPI) then
     Exit;
-  FGeomValid := True;
+  FPaintCached := False; // Geometrie aendert sich: keine Paint-Werte mehr
+  if FGeomPPI <> PPI then
+  begin
+    FColGeomValid := False;
+    FRowGeomValid := False;
+  end;
   FGeomPPI := PPI;
   // Spalten in Anzeige-Reihenfolge (ausgeblendete fehlen)
   N := VColCount;
-  SetLength(FColX, N + 1);
-  X := 0;
-  for I := 0 to N - 1 do
+  if not FColGeomValid or (Length(FColX) <> N + 1) then
   begin
-    FColX[I] := X;
-    Inc(X, ColPixelWidth(FVisCols[I]));
-  end;
-  FColX[N] := X;
-  Def := PPGScale(FDefaultRowHeight, PPI);
-  FLayout.Count := 0;
-  FLayout.DefaultHeight := Def;
-  FLayout.Count := VRowCount;
-  if FHasRowHeights then
-    for V := 0 to FLayout.Count - 1 do
+    FColGeomValid := True;
+    SetLength(FColX, N + 1);
+    X := 0;
+    for I := 0 to N - 1 do
     begin
-      D := DataRow(V);
-      if D >= 0 then
-      begin
-        H := PPGScale(GetRowHeights(D), PPI);
-        if H <> Def then
-          FLayout.SetRowHeight(V, H);
-      end;
+      FColX[I] := X;
+      Inc(X, ColPixelWidth(FVisCols[I]));
     end;
+    FColX[N] := X;
+  end;
+  X := FColX[N];
+  if not FRowGeomValid then
+    BuildRowGeometry(PPI);
   // Baender liegen ueber dem Kopf und gehoeren zur Inhaltshoehe
   BH := BandHeight + GroupPanelHeight + FooterHeight;
   H := RowsContentHeight;
   if H > MaxInt - BH then
     H := MaxInt - BH;
   SetContentSize(X, H + BH);
+end;
+
+procedure TPPGCustomGrid.BuildRowGeometry(PPI: Integer);
+var
+  J, N, V, H, Def: Integer;
+  Pairs: TArray<Int64>;
+  Sorted: Boolean;
+begin
+  FRowGeomValid := True;
+  Inc(FRowGeomCount);
+  Def := PPGScale(FDefaultRowHeight, PPI);
+  FLayout.Count := 0;
+  FLayout.DefaultHeight := Def;
+  FLayout.Count := VRowCount;
+  if not FHasRowHeights or (FRowHeightStore.OwnHeightCount = 0) then
+    Exit;
+  // Nur die k Zeilen mit eigener Hoehe (Audit 8c #5): Datenzeile ->
+  // sichtbare Zeile, aufsteigend ins Layout (Anhaengen ist O(1))
+  SetLength(Pairs, FRowHeightStore.OwnHeightCount);
+  N := 0;
+  Sorted := True;
+  for J := 0 to FRowHeightStore.OwnHeightCount - 1 do
+  begin
+    H := PPGScale(FRowHeightStore.OwnHeightValue(J), PPI);
+    if H = Def then
+      Continue;
+    V := VisualRow(FRowHeightStore.OwnHeightRow(J));
+    if (V < 0) or (V >= FLayout.Count) then
+      Continue;
+    Pairs[N] := (Int64(V) shl 32) or Cardinal(H);
+    if (N > 0) and (Pairs[N] < Pairs[N - 1]) then
+      Sorted := False;
+    Inc(N);
+  end;
+  SetLength(Pairs, N);
+  if not Sorted then
+    TArray.Sort<Int64>(Pairs);
+  for J := 0 to N - 1 do
+    FLayout.SetRowHeight(Integer(Pairs[J] shr 32), Integer(Pairs[J] and $FFFFFFFF));
 end;
 
 function TPPGCustomGrid.FixedWidth: Integer;
@@ -4016,7 +4478,14 @@ end;
 procedure TPPGCustomGrid.CMFontChanged(var Message: TMessage);
 begin
   inherited;
+  FontsChanged;
   InvalidateGeometry;
+end;
+
+procedure TPPGCustomGrid.FontsChanged;
+begin
+  if FFontCache <> nil then
+    FFontCache.Clear;
 end;
 
 { ---- Farben und Zeichnen ---- }
@@ -4030,6 +4499,7 @@ end;
 
 procedure TPPGCustomGrid.StylesObjChanged(Sender: TObject);
 begin
+  FontsChanged; // Schrift eines Element-Stils kann sich geaendert haben
   Invalidate;
 end;
 
@@ -4090,14 +4560,48 @@ begin
 end;
 
 procedure TPPGCustomGrid.SetHotRow(VRow: Integer);
+var
+  Old: Integer;
 begin
   if FHotV = VRow then
     Exit;
+  Old := FHotV;
   FHotV := VRow;
-  // Nur neu zeichnen, wenn die Zeile ueberhaupt hervorgehoben wird
+  // Nur neu zeichnen, wenn die Zeile ueberhaupt hervorgehoben wird - und
+  // nur die alte und die neue Zeile (Audit 8b)
   if FStyles.HotRow.HasFill(UseDarkMode) or FStyles.HotRow.HasText(UseDarkMode) or
     (FStyles.HotRow.FontStyle <> []) then
-    Invalidate;
+  begin
+    if Assigned(FOnDrawCell) or Assigned(FOnGetCellStyle) or MergesActive then
+      Invalidate
+    else
+    begin
+      InvalidateViewRow(Old);
+      InvalidateViewRow(VRow);
+    end;
+  end;
+end;
+
+procedure TPPGCustomGrid.InvalidateViewRow(VRow: Integer);
+var
+  R, GV: TRect;
+begin
+  // Ganze Breite der Zeile (feste und rechts fixierte Spalten eingeschlossen)
+  if (VRow < 0) or not HandleAllocated then
+    Exit;
+  EnsureGeometry;
+  if VRow >= FLayout.Count then
+    Exit;
+  GV := GridViewRect;
+  R := RawCellRect(0, VRow);
+  R.Left := GV.Left;
+  R.Right := GV.Right;
+  // Feste Zeilen bleiben oben stehen, scrollende nicht darueber
+  if (VRow >= VFixedRows) and (R.Top < GV.Top + FixedHeight) then
+    R.Top := GV.Top + FixedHeight;
+  IntersectRect(R, R, GV);
+  if not IsRectEmpty(R) then
+    InvalidateRect(Handle, @R, False);
 end;
 
 procedure TPPGCustomGrid.PrepareStyleColors;
@@ -4247,7 +4751,10 @@ var
   X, Y: Int64;
 begin
   // Wie CellRect, aber ohne Sichtbarkeitspruefung (fuer Auswahl-Rechtecke)
-  V := GridViewRect;
+  if FPaintCached then
+    V := FPaintGV
+  else
+    V := GridViewRect;
   X := ColLeft(ACol);
   Y := FLayout.RowTop(VRow);
   if VRow >= VFixedRows then
@@ -4376,10 +4883,98 @@ var
   Al: TAlignment;
   IsHead: Boolean;
   Cut: array of TPoint; // ausgesparte Abschnitte (Von, Bis) einer Linie
+  // Audit 8c #12: Text je Zelle nur einmal je Zeichnen lesen
+  CellTexts: array of string;
+  HaveText: array of Boolean;
+  // Zellart und ihr Kontext je Spalte (statt je Zelle)
+  KindArr: array of IPPGCellKind;
+  KindCtxArr: array of TPPGCellKindContext;
+  HaveCtx: array of Boolean;
+  K2: IPPGCellKind;
+  // Audit 8c #8: deckende Flaechen gesammelt, per GDI in einem Block
+  FillR: array of TRect;
+  FillC: array of TColor;
+  NF: Integer;
 
   function CellIndex(AC, AV: Integer): Integer;
   begin
     Result := (AV - RowFrom) * (ColTo - ColFrom + 1) + (AC - ColFrom);
+  end;
+
+  function CellText(AC, AV, AD, ADCol: Integer): string;
+  var
+    J: Integer;
+  begin
+    J := CellIndex(AC, AV);
+    if not HaveText[J] then
+    begin
+      CellTexts[J] := GetCellText(ADCol, AD);
+      HaveText[J] := True;
+    end;
+    Result := CellTexts[J];
+  end;
+
+  procedure AddFill(const AR: TRect; AColor: TColor);
+  var
+    L: Integer;
+  begin
+    if IsRectEmpty(AR) then
+      Exit;
+    // Nachbarzellen gleicher Farbe in derselben Zeile zu einer Spanne
+    L := NF - 1;
+    if (L >= 0) and (FillC[L] = AColor) and (FillR[L].Top = AR.Top) and
+      (FillR[L].Bottom = AR.Bottom) and ((FillR[L].Right = AR.Left) or (AR.Right = FillR[L].Left)) then
+    begin
+      if AR.Left < FillR[L].Left then
+        FillR[L].Left := AR.Left;
+      if AR.Right > FillR[L].Right then
+        FillR[L].Right := AR.Right;
+      Exit;
+    end;
+    if NF >= Length(FillR) then
+    begin
+      SetLength(FillR, NF * 2 + 16);
+      SetLength(FillC, NF * 2 + 16);
+    end;
+    FillR[NF] := AR;
+    FillC[NF] := AColor;
+    Inc(NF);
+  end;
+
+  procedure FlushFills;
+  var
+    J: Integer;
+    FDC: HDC;
+    B: HBRUSH;
+    BC: TColor;
+  begin
+    if NF = 0 then
+      Exit;
+    FDC := ACanvas.BeginGdi;
+    try
+      B := 0;
+      BC := clNone;
+      try
+        for J := 0 to NF - 1 do
+        begin
+          if (B = 0) or (FillC[J] <> BC) then
+          begin
+            if B <> 0 then
+              DeleteObject(B);
+            B := CreateSolidBrush(ColorToRGB(FillC[J]));
+            BC := FillC[J];
+          end;
+          if B <> 0 then
+            Winapi.Windows.FillRect(FDC, FillR[J], B);
+        end;
+      finally
+        if B <> 0 then
+          DeleteObject(B);
+      end;
+    finally
+      ACanvas.EndGdi(FDC);
+    end;
+    NF := 0;
   end;
 
   function InMerge(AC, AV: Integer): Boolean;
@@ -4469,9 +5064,10 @@ var
         CR := RawCellRect(AC, AV);
         IntersectRect(CR, CR, Clip);
         if not IsRectEmpty(CR) then
-          ACanvas.FillRoundRect(CR, 0, CF, 255);
+          AddFill(CR, CF);
       end;
     end;
+    FlushFills;
   end;
 
   procedure LineSegments(AFrom, ATo: Integer; Vertical: Boolean; Fixed: Integer);
@@ -4519,6 +5115,15 @@ begin
   PPI := ScalePPI;
   Pad := PPGScale(CellPadX, PPI);
   IconW := PPGScale(14, PPI);
+  I := (ColTo - ColFrom + 1) * (RowTo - RowFrom + 1);
+  SetLength(CellTexts, I);
+  SetLength(HaveText, I);
+  SetLength(KindArr, ColTo - ColFrom + 1);
+  SetLength(KindCtxArr, ColTo - ColFrom + 1);
+  SetLength(HaveCtx, ColTo - ColFrom + 1);
+  for C := ColFrom to ColTo do
+    KindArr[C - ColFrom] := KindOf(FVisCols[C]);
+  NF := 0;
   ACanvas.PushClipRoundRect(Clip, 0);
   try
     // 0. Verbundene Zellen in diesem Bereich (auch mit Ursprung ausserhalb)
@@ -4598,12 +5203,25 @@ begin
           if (D < FFixedRows) or (C < FFixedCols) or
             not (Assigned(FOnGetCellStyle) or FCondFormats.HasRulesFor(DCol)) then
             Continue;
-          St := CellStyle(DCol, D, GetCellText(DCol, D));
+          St := CellStyle(DCol, D, CellText(C, V, D, DCol));
           if St.IsDefault then
             Continue;
-          R := RawCellRect(C, V);
+          // Flaechen erst sammeln (ein GDI-Block), Balken und Symbole danach
           if St.Fill <> clNone then
-            ACanvas.FillRoundRect(R, 0, St.Fill, 255);
+            AddFill(RawCellRect(C, V), St.Fill);
+          StyleRec[Idx] := St;
+          StyleIcon[Idx] := St.Icon >= 0;
+        end;
+      end;
+      FlushFills;
+      for V := RowFrom to RowTo do
+        for C := ColFrom to ColTo do
+        begin
+          Idx := CellIndex(C, V);
+          St := StyleRec[Idx];
+          if (St.Bar < 0) and (St.Icon < 0) then
+            Continue;
+          R := RawCellRect(C, V);
           if St.Bar >= 0 then
           begin
             SR := R;
@@ -4646,11 +5264,8 @@ begin
               Pts[3] := Point(W - IconW div 4, K);
             end;
             PPGFillPolygon(ACanvas, Pts, St.IconColor, 255);
-            StyleIcon[Idx] := True;
           end;
-          StyleRec[Idx] := St;
         end;
-      end;
     end;
     // 2. Auswahl als ein halbtransparentes Rechteck (nur Datenzellen)
     if HasSel then
@@ -4739,10 +5354,10 @@ begin
           end;
         end
         else if D >= 0 then
-          S := GetCellText(DCol, D)
+          S := CellText(C, V, D, DCol)
         else
           S := '';
-        HasKind := (D >= FFixedRows) and (C >= FFixedCols) and (KindOf(DCol) <> nil);
+        HasKind := (D >= FFixedRows) and (C >= FFixedCols) and (KindArr[C - ColFrom] <> nil);
         if HasKind or ((D = 0) and (FFixedRows > 0) and (DCol = FSortCol)) then
         begin
           ExtraC[NX] := C;
@@ -4921,10 +5536,50 @@ begin
     finally
       ACanvas.EndGdi(DC); // stellt Schrift, Farbe und Modus wieder her
     end;
-    // 5. Zellarten und Sortierpfeil (Preset-Renderer)
-    for I := 0 to NX - 1 do
-      DrawCellExtras(ACanvas, FVisCols[ExtraC[I]], ExtraV[I],
-        RawCellRect(ExtraC[I], ExtraV[I]), ExtraS[I]);
+    // 5. Zellarten und Sortierpfeil (Preset-Renderer). Wie DrawCellExtras,
+    // aber Zellart und Kontext je Spalte; Texte eingebauter Zellarten in
+    // EINEM GDI-Block (Audit 8c #9)
+    if NX > 0 then
+    begin
+      try
+        for I := 0 to NX - 1 do
+        begin
+          C := ExtraC[I];
+          V := ExtraV[I];
+          DCol := FVisCols[C];
+          D := DataRow(V);
+          R := RawCellRect(C, V);
+          K2 := KindArr[C - ColFrom];
+          if (K2 <> nil) and (D >= FFixedRows) and (C >= FFixedCols) then
+          begin
+            Idx := C - ColFrom;
+            if not HaveCtx[Idx] then
+            begin
+              KindCtxArr[Idx] := KindContext(DCol);
+              KindCtxArr[Idx].Canvas := ACanvas;
+              HaveCtx[Idx] := True;
+            end;
+            FPainter.CollectTexts := PPGCellKindIsBuiltIn(K2);
+            K2.PaintCell(KindCtxArr[Idx], R, ExtraS[I]);
+            FPainter.CollectTexts := False;
+          end;
+          if (D = 0) and (FFixedRows > 0) and (DCol = FSortCol) then
+            FPainter.DrawSortArrow(ACanvas, R, FSortAscending, UseRightToLeftAlignment,
+              PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.3), PPI);
+        end;
+      finally
+        FPainter.CollectTexts := False;
+      end;
+      if FPainter.TextCount > 0 then
+      begin
+        DC := ACanvas.BeginGdi;
+        try
+          FPainter.FlushTexts(DC, Font.Handle);
+        finally
+          ACanvas.EndGdi(DC);
+        end;
+      end;
+    end;
     // 5b. Gruppenkopf-Zeilen ueber die ganze Breite (Text nur im scrollbaren
     // Bereich, dort bleibt er beim waagerechten Scrollen stehen)
     if HasGroups then
@@ -4987,11 +5642,23 @@ begin
     Exit;
   // Farben einmal pro Zeichnen (nicht je Zelle)
   GetGridColors(FPaint.Fill, FPaint.Text, FPaint.Header, FPaint.Line, FPaint.Accent);
-  FFontCache.Clear;
+  // Schriften bleiben ueber Zeichenvorgaenge (Audit 8c #10); neu bei anderer
+  // DPI bzw. wenn sich zu viele angesammelt haben
+  if (FFontCachePPI <> ScalePPI) or (FFontCache.Count > 64) then
+  begin
+    FFontCache.Clear;
+    FFontCachePPI := ScalePPI;
+  end;
   PrepareStyleColors;
   FPaint.Hint := PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.55);
   FPainter.Prepare(Renderer);
   PrepareKindContext(ACanvas);
+  // Werte fuer RawCellRect/ColLeft einmal je Zeichnen (Audit 8c #8)
+  FPaintGV := GridViewRect;
+  FPaintMaxColScroll := MaxColScroll;
+  FPaintFirstRight := FirstRightCol;
+  FPaintCached := True;
+  FPainter.Painting := True;
   try
     GV := View;
     PH := GroupPanelHeight;
@@ -5062,9 +5729,11 @@ begin
         X + PPGScale(1, ScalePPI), GV.Top + FH), 0, FPaint.Accent, 255);
     end;
   finally
+    FPaintCached := False;
+    FPainter.Painting := False;
+    FPainter.CollectTexts := False;
     FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
     FPaint.HeaderFont := nil;
-    FFontCache.Clear; // keine Schrift-Handles ueber das Zeichnen hinaus
   end;
 end;
 
@@ -5294,8 +5963,9 @@ end;
 
 function TPPGCustomGrid.MoveFocus(ACol, VRow: Integer; Extend, ByUser: Boolean): Boolean;
 var
-  D, M0, N0, M1, N1: Integer;
+  D, M0, N0, M1, N1, OldV, SX, SY: Integer;
   ColChanged: Boolean;
+  OldSel, NewSel: TGridRect;
 begin
   Result := False;
   ACol := EnsureRangeInt(ACol, FFixedCols, VColCount - 1);
@@ -5315,6 +5985,10 @@ begin
   ColChanged := ACol <> FFocusC;
   if ColChanged then
     ColExit;
+  OldSel := GetSelection;
+  OldV := FFocusV;
+  SX := ScrollX;
+  SY := ScrollY;
   FFocusC := ACol;
   FFocusV := VRow;
   if not Extend or not (goRangeSelect in FOptions) then
@@ -5323,7 +5997,18 @@ begin
     FAnchorV := VRow;
   end;
   MakeCellVisible(ACol, VRow);
-  Invalidate;
+  // Audit 8b: ohne Scrollen und ohne Bereich ueber mehrere Zeilen nur die
+  // alte und die neue Zeile neu zeichnen (Fokusrahmen, Auswahl, Fokuszelle)
+  NewSel := GetSelection;
+  if (SX = ScrollX) and (SY = ScrollY) and (OldSel.Top = OldSel.Bottom) and
+    (NewSel.Top = NewSel.Bottom) and not Assigned(FOnDrawCell) and
+    not Assigned(FOnGetCellStyle) and not MergesActive then
+  begin
+    InvalidateViewRow(OldV);
+    InvalidateViewRow(VRow);
+  end
+  else
+    Invalidate;
   if HandleAllocated and Focused and (VRow <> FLastFocusRow) then
     NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, VRow + 1);
   FLastFocusRow := VRow;
@@ -6460,11 +7145,22 @@ begin
     begin
       RecalcAggregates;
       Invalidate;
+    end
+    else if FAggPendCount > 0 then
+    begin
+      // Einzelaenderungen inkrementell (Audit 8c #6)
+      ApplyPendingAggregates;
+      Invalidate;
     end;
     Exit;
   end;
   if Message.Msg = CM_MOUSELEAVE then
     SetHotRow(-1);
+  // Theme bzw. Systemfarben: Schriften neu (Audit 8c #10)
+  if (Message.Msg = CM_STYLECHANGED) or (Message.Msg = CM_SYSCOLORCHANGE) or
+    (Message.Msg = WM_THEMECHANGED) or (Message.Msg = WM_SETTINGCHANGE) or
+    (Message.Msg = CM_PARENTFONTCHANGED) then
+    FontsChanged;
   if (GMsgRowAction <> 0) and (Message.Msg = GMsgRowAction) then
   begin
     if (Integer(Message.WParam) >= VFixedRows) and (Integer(Message.WParam) < VRowCount) then

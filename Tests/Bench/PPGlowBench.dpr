@@ -316,7 +316,126 @@ end;
 
 /// Audit-Paket 8B (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
 procedure Bench8B;
+var
+  G: TPPGGrid;
+  Rule: TPPGGridConditionalFormat;
 begin
+  // Ein Grid mit 1 000 000 Zeilen x 5 Spalten aus Cells[] fuer alle Messungen
+  G := TPPGGrid.Create(Form);
+  try
+    G.Parent := Form;
+    G.SetBounds(0, 0, 800, 600);
+    G.SmoothScrolling := False;
+    G.Columns.Add.Title := '#';
+    G.Columns.Add.Title := 'Zahl';
+    G.Columns.Add.Title := 'Text';
+    G.Columns.Add.Title := 'Menge';
+    G.Columns.Add.Title := 'Klasse';
+    Measure('8B Grid: 1 000 000 x 5 per Cells[] fuellen', 27000,
+      procedure
+      var
+        R: Integer;
+      begin
+        G.RowCount := 1000001;
+        for R := 1 to 1000000 do
+        begin
+          G.Cells[0, R] := IntToStr(R);
+          G.Cells[1, R] := IntToStr((Int64(R) * 7919) mod 1000003);
+          G.Cells[2, R] := 'Text ' + IntToStr((Int64(R) * 104729) mod 999983);
+          G.Cells[3, R] := IntToStr(R mod 100);
+          G.Cells[4, R] := IntToStr(R mod 7);
+        end;
+      end);
+    Measure('8B Grid 1 Mio.: sortieren Zahl auf + ab, Text auf', 3500,
+      procedure
+      begin
+        G.SortBy(1, True);
+        G.SortBy(1, False);
+        G.SortBy(2, True);
+        if G.Cells[1, G.DataRow(1)] = '' then
+          raise Exception.Create('Sortieren falsch');
+      end);
+    Measure('8B Grid 1 Mio.: filtern + 3 x umsortieren mit Filter', 700,
+      procedure
+      begin
+        G.SortBy(-1);
+        G.Filters[3] := '5';
+        G.SortBy(1, True);
+        G.SortBy(1, False);
+        G.SortBy(2, True);
+        if G.DataRow(1) < 1 then
+          raise Exception.Create('Filtern falsch');
+      end);
+    G.ClearFilters;
+    G.SortBy(-1);
+    Measure('8B Grid 1 Mio.: bedingte Formate (Oben-10 %, Farbskala)', 600,
+      procedure
+      begin
+        Rule := G.ConditionalFormats.Add;
+        Rule.Column := 1;
+        Rule.Rule := crTop;
+        Rule.Value1 := '10%';
+        Rule := G.ConditionalFormats.Add;
+        Rule.Column := 4;
+        Rule.Rule := crColorScale;
+        G.RecalcAggregates;
+      end);
+    G.Columns[3].Aggregate := agSum;
+    G.ShowFooter := True;
+    G.RowHeights[0] := 30;
+    G.RecalcAggregates;
+    Measure('8B Grid 1 Mio.: Spaltenbreite 100 x (Summe, Farbskala, RowHeights)', 1500,
+      procedure
+      var
+        I: Integer;
+      begin
+        for I := 0 to 99 do
+        begin
+          G.ColWidths[2] := 60 + I;
+          Application.ProcessMessages;
+        end;
+      end);
+    Measure('8B Grid 1 Mio.: 100 Einzelaenderungen mit Summe', 1400,
+      procedure
+      var
+        I: Integer;
+      begin
+        for I := 1 to 100 do
+        begin
+          G.Cells[3, I * 9973] := IntToStr(I);
+          Application.ProcessMessages;
+        end;
+        if G.FooterText(3) = '' then
+          raise Exception.Create('Summe fehlt');
+      end);
+    Measure('8B Grid 1 Mio.: Hover 300 x mit HotRow-Stil + zeichnen', 3000,
+      procedure
+      var
+        I: Integer;
+      begin
+        G.Styles.HotRow.Color := $00C0FFFF;
+        for I := 0 to 299 do
+        begin
+          G.Perform(WM_MOUSEMOVE, 0, MakeLParam(200, 40 + (I mod 20) * 24));
+          PaintToBitmap(G);
+        end;
+      end);
+    Measure('8B Grid 1 Mio.: 100 x zeichnen mit Zellarten (Fortschritt, Link)', 1200,
+      procedure
+      var
+        I: Integer;
+      begin
+        G.Columns[3].CellKind := ckProgress;
+        G.Columns[2].CellKind := ckLink;
+        for I := 0 to 99 do
+        begin
+          G.ScrollTo(0, I * 5000);
+          PaintToBitmap(G);
+        end;
+      end);
+  finally
+    G.Free;
+  end;
 end;
 
 /// Audit-Paket 8C (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.

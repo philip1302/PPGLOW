@@ -36,6 +36,31 @@ type
     function ViewGroupKey(ACol, ARow: Integer): string;
   end;
 
+  /// Vorberechneter Sortierschluessel einer Zelle (Audit 8c #1): Text und,
+  /// falls der Text eine Zahl ist, ihr Wert.
+  TPPGGridSortKey = record
+    Text: string;
+    Num: Double;
+    IsNum: Boolean;
+  end;
+
+  /// Optional am Host: Schluessel einmal je Zeile statt Text je Vergleich.
+  /// Der Vergleich ist PPGGridCompareSortKeys (gleich der Standardlogik des
+  /// Grids). False = der Host vergleicht selbst (OnCompareCells u.ae.).
+  IPPGGridViewSortKeys = interface
+    ['{0B6E2F43-8C1D-4A57-9E3B-5D7A1C64F820}']
+    function ViewSortKeys(ACol: Integer; const Rows: TArray<Integer>;
+      out Keys: TArray<TPPGGridSortKey>): Boolean;
+  end;
+
+  /// Optional am Host: Schluessel fuer das Filterergebnis (Audit 8c #7).
+  /// Gleicher Schluessel = gleiches Ergebnis (Filtertexte und Datenstand);
+  /// '' = nicht zwischenspeichern (z.B. virtuelle Daten).
+  IPPGGridViewFilterKey = interface
+    ['{7F3C9A12-6B4E-4D81-A2C5-E81B0D3F6A97}']
+    function ViewFilterKey: string;
+  end;
+
   IPPGGridViewStage = interface
     ['{5D2F8A61-C3B7-4E09-A14D-7E6F0B2C9D38}']
     function StageActive: Boolean;
@@ -44,12 +69,18 @@ type
     procedure StageApply(var Rows: TArray<Integer>; const Host: IPPGGridViewHost);
   end;
 
+  /// Filter (Audit 8c #7: das Ergebnis wird mit dem Schluessel des Hosts
+  /// zwischengespeichert; reines Umsortieren filtert nicht erneut).
   TPPGGridFilterStage = class(TInterfacedObject, IPPGGridViewStage)
   private
     FActive: Boolean;
+    FCacheKey: string;
+    FCacheRows: TArray<Integer>;
   public
     function StageActive: Boolean;
     procedure StageApply(var Rows: TArray<Integer>; const Host: IPPGGridViewHost);
+    /// Zwischengespeichertes Ergebnis verwerfen.
+    procedure ClearCache;
     property Active: Boolean read FActive write FActive;
   end;
 
@@ -164,12 +195,32 @@ type
     property Group: TPPGGridGroupStage read FGroup;
   end;
 
+/// Vergleich zweier Sortierschluessel: beide Zahlen numerisch, sonst
+/// AnsiCompareText (wie TPPGCustomGrid.CompareDataRows; nicht transitiv bei
+/// gemischten Spalten - bewusst unveraendert).
+function PPGGridCompareSortKeys(const A, B: TPPGGridSortKey): Integer;
+
 /// Gruppen-Eintraege in der Ansicht: Kopf = -(2*G+2), Fuss = -(2*G+3).
 function PPGGridEntryIsGroup(Entry: Integer): Boolean; inline;
 function PPGGridEntryGroup(Entry: Integer): Integer; inline;
 function PPGGridEntryIsFooter(Entry: Integer): Boolean; inline;
 
 implementation
+
+function PPGGridCompareSortKeys(const A, B: TPPGGridSortKey): Integer;
+begin
+  if A.IsNum and B.IsNum then
+  begin
+    if A.Num < B.Num then
+      Result := -1
+    else if A.Num > B.Num then
+      Result := 1
+    else
+      Result := 0;
+  end
+  else
+    Result := AnsiCompareText(A.Text, B.Text);
+end;
 
 function PPGGridEntryIsGroup(Entry: Integer): Boolean;
 begin
@@ -196,7 +247,25 @@ end;
 procedure TPPGGridFilterStage.StageApply(var Rows: TArray<Integer>; const Host: IPPGGridViewHost);
 var
   I, N: Integer;
+  FK: IPPGGridViewFilterKey;
+  Key: string;
 begin
+  // Gleicher Schluessel (Filter, Datenstand) und gleiche Eingabe: Ergebnis
+  // wiederverwenden
+  Key := '';
+  if Supports(Host, IPPGGridViewFilterKey, FK) then
+    Key := FK.ViewFilterKey;
+  if Key <> '' then
+  begin
+    Key := Key + '#' + IntToStr(Length(Rows));
+    if Length(Rows) > 0 then
+      Key := Key + '#' + IntToStr(Rows[0]) + '#' + IntToStr(Rows[High(Rows)]);
+    if Key = FCacheKey then
+    begin
+      Rows := Copy(FCacheRows);
+      Exit;
+    end;
+  end;
   N := 0;
   for I := 0 to High(Rows) do
     if Host.ViewRowPasses(Rows[I]) then
@@ -205,6 +274,17 @@ begin
       Inc(N);
     end;
   SetLength(Rows, N);
+  FCacheKey := Key;
+  if Key <> '' then
+    FCacheRows := Copy(Rows)
+  else
+    FCacheRows := nil;
+end;
+
+procedure TPPGGridFilterStage.ClearCache;
+begin
+  FCacheKey := '';
+  FCacheRows := nil;
 end;
 
 { TPPGGridSortStage }
@@ -223,10 +303,15 @@ end;
 
 procedure TPPGGridSortStage.StageApply(var Rows: TArray<Integer>; const Host: IPPGGridViewHost);
 var
-  Tmp: TArray<Integer>;
-  Col: Integer;
-  Asc: Boolean;
+  Tmp, A: TArray<Integer>;
+  Keys: TArray<TPPGGridSortKey>;
+  KH: IPPGGridViewSortKeys;
+  Col, I: Integer;
+  Asc, ByKey: Boolean;
 
+  // A = Datenzeilen (Host vergleicht) bzw. Positionen in Keys (Schluessel).
+  // Gleicher Mergesort in beiden Faellen: gleiche Reihenfolge, auch wenn der
+  // Vergleich bei gemischten Spalten nicht transitiv ist.
   procedure MergeSort(L, R: Integer);
   var
     M, I1, I2, K, C: Integer;
@@ -241,36 +326,38 @@ var
     K := L;
     while (I1 <= M) and (I2 <= R) do
     begin
-      C := Host.ViewCompareRows(Col, Rows[I1], Rows[I2]);
+      if ByKey then
+        C := PPGGridCompareSortKeys(Keys[A[I1]], Keys[A[I2]])
+      else
+        C := Host.ViewCompareRows(Col, A[I1], A[I2]);
       if not Asc then
         C := -C;
       // stabil: bei Gleichheit links zuerst
       if C <= 0 then
       begin
-        Tmp[K] := Rows[I1];
+        Tmp[K] := A[I1];
         Inc(I1);
       end
       else
       begin
-        Tmp[K] := Rows[I2];
+        Tmp[K] := A[I2];
         Inc(I2);
       end;
       Inc(K);
     end;
     while I1 <= M do
     begin
-      Tmp[K] := Rows[I1];
+      Tmp[K] := A[I1];
       Inc(I1);
       Inc(K);
     end;
     while I2 <= R do
     begin
-      Tmp[K] := Rows[I2];
+      Tmp[K] := A[I2];
       Inc(I2);
       Inc(K);
     end;
-    for K := L to R do
-      Rows[K] := Tmp[K];
+    Move(Tmp[L], A[L], (R - L + 1) * SizeOf(Integer));
   end;
 
 begin
@@ -279,7 +366,26 @@ begin
   Col := FColumn;
   Asc := FAscending;
   SetLength(Tmp, Length(Rows));
-  MergeSort(0, High(Rows));
+  // Audit 8c #1: Schluessel einmal je Zeile (Text lesen, Zahl erkennen)
+  // statt bei jedem Vergleich
+  ByKey := Supports(Host, IPPGGridViewSortKeys, KH) and KH.ViewSortKeys(Col, Rows, Keys) and
+    (Length(Keys) = Length(Rows));
+  if ByKey then
+  begin
+    SetLength(A, Length(Rows));
+    for I := 0 to High(A) do
+      A[I] := I;
+    MergeSort(0, High(A));
+    Tmp := Copy(Rows);
+    for I := 0 to High(A) do
+      Rows[I] := Tmp[A[I]];
+  end
+  else
+  begin
+    A := Rows;
+    MergeSort(0, High(A));
+    Rows := A;
+  end;
 end;
 
 { TPPGGridGroupStage }
@@ -615,6 +721,8 @@ begin
   FFirst := First;
   FEnd := EndRow;
   FMapped := False;
+  if not FFilter.Active then
+    FFilter.ClearCache;
   for I := 0 to High(FStageRefs) do
     if FStageRefs[I].StageActive then
       FMapped := True;

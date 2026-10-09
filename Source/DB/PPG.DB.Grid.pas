@@ -1184,6 +1184,7 @@ end;
 procedure TPPGCustomDBGrid.ColumnsChanged;
 begin
   // Persistente Spalten geaendert: Felder neu zuordnen
+  FontsChanged; // Spaltenstile koennen eigene Schriften haben (Audit 8c #10)
   if not (csLoading in ComponentState) and not FLayoutBusy then
     BuildColumns;
   RebuildColumnMap;

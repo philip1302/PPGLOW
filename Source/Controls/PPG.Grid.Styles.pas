@@ -244,20 +244,86 @@ begin
     (FRule in [crTop, crBottom, crColorScale, crDataBar, crIconSet]);
 end;
 
+/// K-kleinster Wert (0-basiert) per Quickselect (Audit 8c #4): derselbe Wert
+/// wie Sorted[K] nach dem Sortieren, aber in O(n). A wird umgeordnet.
+function SelectKth(var A: TArray<Double>; K: Integer): Double;
+var
+  L, R, I, J, M: Integer;
+  P, T: Double;
+begin
+  L := 0;
+  R := High(A);
+  while L < R do
+  begin
+    // Pivot: Median aus Anfang, Mitte, Ende
+    M := L + (R - L) div 2;
+    if A[M] < A[L] then
+    begin
+      T := A[M];
+      A[M] := A[L];
+      A[L] := T;
+    end;
+    if A[R] < A[L] then
+    begin
+      T := A[R];
+      A[R] := A[L];
+      A[L] := T;
+    end;
+    if A[R] < A[M] then
+    begin
+      T := A[R];
+      A[R] := A[M];
+      A[M] := T;
+    end;
+    P := A[M];
+    I := L;
+    J := R;
+    repeat
+      while A[I] < P do
+        Inc(I);
+      while P < A[J] do
+        Dec(J);
+      if I <= J then
+      begin
+        T := A[I];
+        A[I] := A[J];
+        A[J] := T;
+        Inc(I);
+        Dec(J);
+      end;
+    until I > J;
+    // [L..J] <= P, [I..R] >= P, dazwischen = P
+    if K <= J then
+      R := J
+    else if K >= I then
+      L := I
+    else
+      Break;
+  end;
+  Result := A[K];
+end;
+
 procedure TPPGGridConditionalFormat.ComputeStats(const Values: TArray<Double>);
 var
-  Sorted: TArray<Double>;
-  N, K: Integer;
+  Work: TArray<Double>;
+  N, K, I: Integer;
   T: string;
 begin
   N := Length(Values);
   FStatsValid := N > 0;
   if not FStatsValid then
     Exit;
-  Sorted := Copy(Values);
-  TArray.Sort<Double>(Sorted);
-  FStatMin := Sorted[0];
-  FStatMax := Sorted[N - 1];
+  // Min/Max in einem Durchlauf; Oben/Unten-N per Quickselect auf einer Kopie
+  // (vorher: ganze Spalte kopiert und sortiert, Audit 8c #4)
+  FStatMin := Values[0];
+  FStatMax := Values[0];
+  for I := 1 to N - 1 do
+  begin
+    if Values[I] < FStatMin then
+      FStatMin := Values[I];
+    if Values[I] > FStatMax then
+      FStatMax := Values[I];
+  end;
   if FRule in [crTop, crBottom] then
   begin
     // Anzahl: '10' oder '10%' (Vorgabe 10)
@@ -270,10 +336,11 @@ begin
       K := 1;
     if K > N then
       K := N;
+    Work := Copy(Values);
     if FRule = crTop then
-      FThreshold := Sorted[N - K]
+      FThreshold := SelectKth(Work, N - K)
     else
-      FThreshold := Sorted[K - 1];
+      FThreshold := SelectKth(Work, K - 1);
   end;
 end;
 

@@ -154,8 +154,12 @@ type
       ASize: Integer = 0): TFont;
     /// Schrift eines Element-Stils (Font bzw. Base, plus FontStyle und Extra).
     function ForStyle(Style: TPPGElementStyle; Base: TFont; Extra: TFontStyles = []): TFont;
-    /// Alle Kopien freigeben (nach dem Zeichnen).
+    /// Alle Kopien freigeben (nach dem Zeichnen bzw. bei Aenderungen von
+    /// Schrift, Stil, DPI oder Theme, wenn der Cache ueber Zeichenvorgaenge
+    /// lebt).
     procedure Clear;
+    /// Anzahl zwischengespeicherter Schriften.
+    function Count: Integer;
   end;
 
 implementation
@@ -566,6 +570,11 @@ end;
 procedure TPPGFontCache.Clear;
 begin
   FFonts.Clear;
+end;
+
+function TPPGFontCache.Count: Integer;
+begin
+  Result := FFonts.Count;
 end;
 
 function TPPGFontCache.Find(Base: TFont; Extra: TFontStyles; const AName: string;
