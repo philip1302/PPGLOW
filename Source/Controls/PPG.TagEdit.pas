@@ -98,6 +98,9 @@ type
     procedure UpdateSuggestions;
     function IsDelimiter(C: Char): Boolean;
     procedure WMRemoveTag(var Message: TMessage); message WM_USER + $540;
+    procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
+    procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
+    procedure ClearHot;
   protected
     procedure DefineProperties(Filer: TFiler); override;
     function CreatePopup: TPPGDropPopup; override;
@@ -918,6 +921,31 @@ begin
     FHotCross := Cross;
     Invalidate;
   end;
+end;
+
+procedure TPPGTagEdit.ClearHot;
+begin
+  if (FHotTag >= 0) or FHotCross then
+  begin
+    FHotTag := -1;
+    FHotCross := False;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGTagEdit.CMMouseLeave(var Message: TMessage);
+begin
+  // Audit 7f #3: Maus verlaesst das Feld - kein Tag bleibt hervorgehoben
+  ClearHot;
+  inherited;
+end;
+
+procedure TPPGTagEdit.CMMouseEnter(var Message: TMessage);
+begin
+  // Wechsel ins innere Edit: es meldet sein Betreten an den Parent (LParam = Kind)
+  if Message.LParam <> 0 then
+    ClearHot;
+  inherited;
 end;
 
 procedure TPPGTagEdit.DoPaintField(const ACanvas: IPPGCanvas; const Style: TPPGSurfaceStyle);

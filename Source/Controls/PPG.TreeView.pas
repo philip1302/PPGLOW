@@ -229,7 +229,6 @@ type
     FRowSelect: Boolean;
     FHideSelection: Boolean;
     FHotTrack: Boolean;
-    FToolTips: Boolean;
     FOnCustomDrawNode: TPPGTVCustomDrawEvent;
     FAutoExpand: Boolean;
     FMultiSelect: Boolean;
@@ -256,7 +255,6 @@ type
     FOnNodeDrop: TPPGTVNodeDropEvent;
     procedure SetRowSelect(const Value: Boolean);
     procedure SetHotTrack(const Value: Boolean);
-    procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure SetItems(const Value: TPPGTreeNodes);
     procedure SetIndent(const Value: Integer);
     procedure SetShowLines(const Value: Boolean);
@@ -292,7 +290,7 @@ type
   protected
     procedure CreateParams(var Params: TCreateParams); override;
     procedure Loaded; override;
-    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure NavigateKey(var Key: Word; Shift: TShiftState); override;
     procedure DblClick; override;
     procedure Scrolled; override;
     { TPPGCustomItemList }
@@ -361,8 +359,9 @@ type
     property HideSelection: Boolean read FHideSelection write SetHideSelection default False;
     /// Wie TTreeView: Knoten unter der Maus unterstrichen.
     property HotTrack: Boolean read FHotTrack write SetHotTrack default False;
-    /// Wie TTreeView: abgeschnittene Knotentexte als Hinweis (braucht ShowHint).
-    property ToolTips: Boolean read FToolTips write FToolTips default True;
+    /// Wie TTreeView: abgeschnittene Knotentexte als Hinweis (braucht ShowHint;
+    /// seit Audit 7f #1 in der ItemList-Basis).
+    property ToolTips;
     /// Vor dem Zeichnen jedes Knotens: Style anpassen oder selbst zeichnen
     /// (Pfeil, Linien und Kaestchen zeichnet der Baum immer).
     property OnCustomDrawNode: TPPGTVCustomDrawEvent read FOnCustomDrawNode write FOnCustomDrawNode;
@@ -1547,7 +1546,6 @@ begin
   FShowButtons := True;
   FAutoCheck := True;
   FRowSelect := True;
-  FToolTips := True;
   FRows := TList.Create;
   FItems := TPPGTreeNodes.Create(Self);
   FExpandAnim := TPPGAnimation.Create(Self);
@@ -2421,7 +2419,7 @@ begin
   end;
 end;
 
-procedure TPPGCustomTreeView.KeyDown(var Key: Word; Shift: TShiftState);
+procedure TPPGCustomTreeView.NavigateKey(var Key: Word; Shift: TShiftState);
 var
   N: TPPGTreeNode;
 begin
@@ -2452,7 +2450,7 @@ begin
         Exit;
       end;
   end;
-  inherited KeyDown(Key, Shift);
+  inherited NavigateKey(Key, Shift);
 end;
 
 { ---- Ziehen ---- }
@@ -2772,39 +2770,6 @@ begin
   finally
     ACanvas.EndGdi(DC);
   end;
-end;
-
-procedure TPPGCustomTreeView.CMHintShow(var Message: TCMHintShow);
-var
-  N: TPPGTreeNode;
-  P: TPoint;
-  R: TRect;
-  Avail, W: Integer;
-  Row: Integer;
-  D: TPPGItemData;
-begin
-  inherited;
-  // ToolTips: abgeschnittener Knotentext als Hinweis (nur ohne eigenen Hint)
-  if not FToolTips or (Hint <> '') or (Message.HintInfo = nil) then
-    Exit;
-  P := Message.HintInfo^.CursorPos;
-  N := GetNodeAt(P.X, P.Y);
-  Row := RowOfNode(N);
-  if Row < 0 then
-    Exit;
-  R := ItemRect(Row);
-  if IsRectEmpty(R) then
-    Exit;
-  PPGInitItemData(D);
-  W := PPGMeasureTextNoCanvas(PPGStripMarkup(N.FText), Font, 0, False).cx;
-  Avail := (R.Right - R.Left) - ItemIndent(Row, D) -
-    PPGScale(PPGItemPadX + 6, ScalePPI);
-  if Images <> nil then
-    Dec(Avail, Images.Width + PPGScale(PPGItemGap, ScalePPI));
-  if W <= Avail then
-    Exit;
-  Message.HintInfo^.HintStr := PPGStripMarkup(N.FText);
-  Message.HintInfo^.CursorRect := R;
 end;
 
 procedure TPPGCustomTreeView.SetHideSelection(const Value: Boolean);

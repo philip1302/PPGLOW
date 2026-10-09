@@ -4095,8 +4095,7 @@ begin
       begin
         if FDrag = pdPending then
         begin
-          if (Abs(X - FDragDown.X) < GetSystemMetrics(SM_CXDRAG)) and
-            (Abs(Y - FDragDown.Y) < GetSystemMetrics(SM_CYDRAG)) then
+          if not PPGDragExceeded(FDragDown, Point(X, Y)) then
             Exit;
           if FReadOnly or (FDragOcc.Appointment.ReadOnly and not (ssCtrl in Shift)) then
           begin

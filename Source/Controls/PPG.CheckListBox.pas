@@ -137,6 +137,7 @@ type
     property PopupMenu;
     property ScrollWidth;
     property ShowHint;
+    property ToolTips;
     property Sorted;
     property Style;
     {$IFDEF PPG_HAS_STYLEELEMENTS}

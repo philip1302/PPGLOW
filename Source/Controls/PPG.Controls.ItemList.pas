@@ -53,8 +53,8 @@ type
     FAllowMarkup: Boolean;
     FAllowReorder: Boolean;
     FTypeAhead: Boolean;
-    FSearch: string;
-    FSearchTick: Cardinal;
+    FTypeBuf: TPPGTypeAhead;
+    FToolTips: Boolean;
     FDownIndex: Integer;
     FDownPos: TPoint;
     FDragging: Boolean;
@@ -72,6 +72,7 @@ type
     FOnCustomDrawItem: TPPGCustomDrawItemEvent;
     FDrawCanvas: TCanvas;
     procedure ReleaseDownIndex;
+    procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure SetListStyles(const Value: TPPGListStyles);
     procedure ListStylesChanged(Sender: TObject);
     procedure SetItemHeight(const Value: Integer);
@@ -165,6 +166,10 @@ type
     procedure ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure DoAutoScroll(const P: TPoint); override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    /// Eigene Tastennavigation (Audit 7c #1): laeuft in KeyDown NACH OnKeyDown
+    /// und nur, wenn das Ereignis die Taste nicht verbraucht hat (Key <> 0).
+    /// Nachfahren ueberschreiben das statt KeyDown, damit OnKeyDown genau einmal kommt.
+    procedure NavigateKey(var Key: Word; Shift: TShiftState); virtual;
     procedure KeyPress(var Key: Char); override;
     /// Klick auf einen Eintrag (vor der Auswahl). True = verbraucht (z.B. Kaestchen).
     function ItemMouseDown(Index: Integer; Shift: TShiftState; X, Y: Integer): Boolean; virtual;
@@ -256,6 +261,9 @@ type
     property AllowReorder: Boolean read FAllowReorder write FAllowReorder default False;
     /// Tippsuche ueber die Anfangsbuchstaben (TListBox.AutoComplete).
     property TypeAhead: Boolean read FTypeAhead write FTypeAhead default True;
+    /// Wie TTreeView.ToolTips: abgeschnittene Texte als Hinweis (nur ohne eigenen
+    /// Hint; braucht ShowHint).
+    property ToolTips: Boolean read FToolTips write FToolTips default True;
     property OnReorder: TPPGReorderEvent read FOnReorder write FOnReorder;
     /// Bereiche der Liste (Auswahl, Zebra, Hover, Gruppenkopf, Detailzeile).
     property Styles: TPPGListStyles read FListStyles write SetListStyles;
@@ -294,11 +302,10 @@ uses
   PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc, Vcl.StdCtrls, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
-  PPG.Render.Registry, PPG.Markup;
+  PPG.Render.Registry, PPG.Markup, PPG.Render.Gdi;
 
 const
   MaxVariableRows = 200000;   // darueber nie einzeln vermessen
-  SearchResetMs = 1000;       // Tippsuche: Puffer verfaellt nach 1 s
 
 var
   GMsgChildAction: Cardinal = 0;
@@ -318,6 +325,7 @@ begin
   Color := clWindow;
   FBorderStyle := bsSingle;
   FTypeAhead := True;
+  FToolTips := True;
   FHotIndex := -1;
   FDownIndex := -1;
   FDropRow := -1;
@@ -1293,8 +1301,7 @@ begin
     Exit;
   if FAllowReorder and (ListColumns = 0) then
   begin
-    if not FDragging and ((Abs(X - FDownPos.X) >= GetSystemMetrics(SM_CXDRAG)) or
-      (Abs(Y - FDownPos.Y) >= GetSystemMetrics(SM_CYDRAG))) then
+    if not FDragging and PPGDragExceeded(FDownPos, Point(X, Y)) then
       FDragging := True;
     if FDragging then
       UpdateDrag(X, Y);
@@ -1545,7 +1552,30 @@ end;
 
 procedure TPPGCustomItemList.KeyDown(var Key: Word; Shift: TShiftState);
 var
-  N, F, T, Dir, PageRows, RPC, CW: Integer;
+  Scroll: Boolean;
+begin
+  // Audit 7c #1: OnKeyDown zuerst (inherited), dann die eigene Navigation,
+  // erst danach das Scrollen per Tastatur der Basis.
+  Scroll := KeyboardScrolling;
+  KeyboardScrolling := False;
+  try
+    inherited KeyDown(Key, Shift);
+  finally
+    KeyboardScrolling := Scroll;
+  end;
+  // Eine Liste ist keine Schaltflaeche: Leertaste loest kein Click aus
+  if KeyPressed then
+    SetKeyPressed(False);
+  if Key = 0 then
+    Exit;
+  NavigateKey(Key, Shift);
+  if (Key <> 0) and KeyboardScrolling and ScrollKey(Key, Shift) then
+    Key := 0;
+end;
+
+procedure TPPGCustomItemList.NavigateKey(var Key: Word; Shift: TShiftState);
+var
+  N, F, T, I, Dir, PageRows, RPC, CW: Integer;
   V: TRect;
   Horz: Boolean;
 begin
@@ -1616,18 +1646,34 @@ begin
       Exit;
     end;
     if F < 0 then
-      T := 0;
+    begin
+      // Ohne Fokus: Ende springt ans Ende, alles andere an den Anfang
+      if Key = VK_END then
+        T := N - 1
+      else
+        T := 0;
+    end;
     if T < 0 then
       T := 0;
     if T > N - 1 then
       T := N - 1;
-    // Ueberschriften/nicht waehlbare Eintraege ueberspringen
-    if Key in [VK_UP, VK_PRIOR, VK_END] then
+    // Ueberschriften/nicht waehlbare Eintraege ueberspringen: in Laufrichtung
+    // (zurueck bei hoch, Bild hoch, Ende und links), findet sich dort nichts
+    // (Rand), in der Gegenrichtung
+    if (Key = VK_UP) or (Key = VK_PRIOR) or (Key = VK_END) or (Key = VK_LEFT) then
       Dir := -1
     else
       Dir := 1;
-    while (T >= 0) and (T < N) and not CanSelectItem(T) do
-      Inc(T, Dir);
+    I := T;
+    while (I >= 0) and (I < N) and not CanSelectItem(I) do
+      Inc(I, Dir);
+    if (I < 0) or (I >= N) then
+    begin
+      I := T - Dir;
+      while (I >= 0) and (I < N) and not CanSelectItem(I) do
+        Dec(I, Dir);
+    end;
+    T := I;
     if (T < 0) or (T >= N) or ((T <> F) and not CanChangeFocusTo(T)) then
     begin
       Key := 0;
@@ -1643,7 +1689,6 @@ begin
     Key := 0;
     Exit;
   end;
-  inherited KeyDown(Key, Shift);
 end;
 
 function TPPGCustomItemList.FindItemByPrefix(const S: string; Start: Integer): Integer;
@@ -1669,26 +1714,15 @@ end;
 
 procedure TPPGCustomItemList.KeyPress(var Key: Char);
 var
-  Now: Cardinal;
   Start, I: Integer;
   S: string;
 begin
   inherited KeyPress(Key);
   if not FTypeAhead or (Key < ' ') or (ItemCount = 0) then
     Exit;
-  // Tippsuche (ohne Timer): Puffer verfaellt nach 1 s; derselbe Buchstabe
+  // Tippsuche (TPPGTypeAhead): Puffer verfaellt nach 1 s; derselbe Buchstabe
   // wiederholt blaettert durch die Treffer
-  Now := GetTickCount;
-  if Now - FSearchTick > SearchResetMs then
-    FSearch := '';
-  FSearchTick := Now;
-  if (Length(FSearch) = 1) and (FSearch[1] = Key) then
-    S := FSearch
-  else
-  begin
-    FSearch := FSearch + Key;
-    S := FSearch;
-  end;
+  S := FTypeBuf.Add(Key);
   Start := FSelection.Focus;
   if Length(S) = 1 then
     Inc(Start); // neuer Buchstabe: ab dem naechsten suchen
@@ -1707,6 +1741,50 @@ begin
 end;
 
 { ---- Nachrichten ---- }
+
+procedure TPPGCustomItemList.CMHintShow(var Message: TCMHintShow);
+var
+  I, Avail, W, PPI: Integer;
+  R: TRect;
+  D: TPPGItemData;
+  S: string;
+  F, Temp: TFont;
+begin
+  inherited;
+  // Audit 7f #1: abgeschnittener Eintrag als Hinweis (wie TTreeView.ToolTips;
+  // nur ohne eigenen Hint)
+  if not FToolTips or (Hint <> '') or (Message.HintInfo = nil) then
+    Exit;
+  I := ItemAtPos(Message.HintInfo^.CursorPos.X, Message.HintInfo^.CursorPos.Y);
+  if I < 0 then
+    Exit;
+  R := ItemRect(I);
+  if IsRectEmpty(R) then
+    Exit;
+  GetItemData(I, D);
+  S := TPPGItemPainter.PlainText(D);
+  if S = '' then
+    Exit;
+  PPI := ScalePPI;
+  Temp := nil;
+  try
+    F := PPGStyledFont(Font, D.FontStyle, Temp);
+    W := PPGMeasureTextNoCanvas(S, F, 0, False).cx;
+  finally
+    Temp.Free;
+  end;
+  // Platz wie in TPPGItemPainter.PaintItemContent: Einzug, Rand, Bild, Plakette
+  Avail := (R.Right - R.Left) - ItemIndent(I, D) - PPGScale(PPGItemPadX + 6, PPI);
+  if (Images <> nil) and (D.ImageIndex >= 0) and (D.ImageIndex < Images.Count) then
+    Dec(Avail, Images.Width + PPGScale(PPGItemGap, PPI));
+  if D.Badge <> '' then
+    Dec(Avail, PPGMeasureTextNoCanvas(D.Badge, Font, 0, False).cx +
+      PPGScale(PPGItemGap + 12, PPI));
+  if W <= Avail then
+    Exit;
+  Message.HintInfo^.HintStr := S;
+  Message.HintInfo^.CursorRect := R;
+end;
 
 procedure TPPGCustomItemList.WndProc(var Message: TMessage);
 var

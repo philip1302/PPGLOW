@@ -168,6 +168,7 @@ TPPGCustomGrid.ShowGroupPanel = True: Über dem Grid erscheint eine Leiste; eine
 TPPGCustomGrid.SortOnHeaderClick = True: Klick auf einen Spaltenkopf sortiert die Ansicht nach dieser Spalte, erneuter Klick kehrt die Richtung um (nur Spalten mit Sortable = True).
 TPPGCustomGrid.Styles = Bereiche des Grids einzeln gestalten: Header, Footer, Selection, SelectionInactive, AlternateRow (Zebra), HotRow, GridLine, FocusedCell, GroupRow, FilterRow. Nur gesetzte Werte zählen, der Rest kommt vom Preset.
 > `Grid1.Styles.AlternateRow.Color := $00FAF5EE; Grid1.Styles.Header.FontStyle := [fsBold];`
+TPPGCustomGrid.ToolTips = Wie TTreeView.ToolTips: Ein abgeschnittener Zelltext (auch im Spaltenkopf) erscheint ganz als Hinweis, solange die Maus auf der Zelle steht. Nicht bei Zellarten wie Haken oder Fortschritt; nur ohne eigenen Hint; braucht ShowHint = True.
 
 # --- TPPGCustomMaskEdit ---
 TPPGCustomMaskEdit.AutoSelect = True: Beim Fokus per Tab wird der ganze Text markiert.

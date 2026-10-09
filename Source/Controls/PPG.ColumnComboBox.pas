@@ -66,6 +66,7 @@ type
     FOrder: TArray<Integer>;   // Zeile der Ansicht -> Datenzeile
     FSortColumn: Integer;
     FSortAsc: Boolean;
+    FTypeBuf: TPPGTypeAhead;
     procedure BuildOrder;
     function ColumnLeft(Col: Integer; const R: TRect): Integer;
   protected
@@ -112,8 +113,7 @@ type
     FDisplayColumn: Integer;
     FDropDownCount: Integer;
     FDropDownWidth: Integer;
-    FSearch: string;
-    FSearchTick: Cardinal;
+    FTypeBuf: TPPGTypeAhead;
     FOnGetCellText: TPPGGetCellTextEvent;
     procedure SetDisplayColumn(const Value: Integer);
     procedure SetKeyColumn(const Value: Integer);
@@ -235,9 +235,6 @@ uses
   System.Math, System.Generics.Defaults, System.Generics.Collections, Winapi.oleacc,
   PPG.Appearance, PPG.DpiUtils, PPG.Lang, PPG.Consts, PPG.Exceptions;
 
-const
-  SearchResetMs = 1000;
-
 { TPPGComboColumn }
 
 constructor TPPGComboColumn.Create(Collection: TCollection);
@@ -289,6 +286,7 @@ end;
 procedure TPPGColumnPopup.Prepare(ACombo: TPPGColumnComboBox);
 begin
   FCombo := ACombo;
+  FTypeBuf.Reset;
   MaxRows := ACombo.DropDownCount;
   HeaderHeight := RowHeight;
   FilterEnabled := False;
@@ -496,21 +494,30 @@ end;
 
 function TPPGColumnPopup.TypeAhead(Key: Char): Boolean;
 var
-  Row: Integer;
+  I, N, Row, Start: Integer;
+  S: string;
 begin
   // Tippsuche in der Anzeigespalte, in der Reihenfolge der Ansicht
-  FCombo.FSearch := FCombo.FSearch + Key;
-  if GetTickCount - FCombo.FSearchTick > SearchResetMs then
-    FCombo.FSearch := Key;
-  FCombo.FSearchTick := GetTickCount;
+  // (TPPGTypeAhead: derselbe Buchstabe wiederholt blaettert weiter)
   Result := True;
-  for Row := 0 to RowCount - 1 do
-    if Pos(AnsiLowerCase(FCombo.FSearch),
-      AnsiLowerCase(FCombo.CellText(DataRow(Row), FCombo.DisplayColumn))) = 1 then
+  N := RowCount;
+  if N = 0 then
+    Exit;
+  S := AnsiLowerCase(FTypeBuf.Add(Key));
+  Start := FocusRow;
+  if Length(S) = 1 then
+    Inc(Start);
+  if Start < 0 then
+    Start := 0;
+  for I := 0 to N - 1 do
+  begin
+    Row := (Start + I) mod N;
+    if Pos(S, AnsiLowerCase(FCombo.CellText(DataRow(Row), FCombo.DisplayColumn))) = 1 then
     begin
       SetFocusRow(Row);
       Exit;
     end;
+  end;
 end;
 
 function TPPGColumnPopup.AccName: string;
@@ -769,7 +776,7 @@ end;
 
 procedure TPPGColumnComboBox.PreparePopup(APopup: TPPGDropPopup);
 begin
-  FSearch := '';
+  FTypeBuf.Reset;
   TPPGColumnPopup(APopup).Prepare(Self);
 end;
 
@@ -804,14 +811,17 @@ end;
 procedure TPPGColumnComboBox.ClosedKeyPress(var Key: Char);
 var
   Row: Integer;
+  S: string;
 begin
   if Key < #32 then
     Exit;
-  if GetTickCount - FSearchTick > SearchResetMs then
-    FSearch := '';
-  FSearch := FSearch + Key;
-  FSearchTick := GetTickCount;
-  Row := FindRow(FSearch, Max(FItemIndex, 0));
+  // TPPGTypeAhead: neuer Anfang oder derselbe Buchstabe wiederholt sucht ab
+  // dem naechsten Eintrag (blaettern), ein laengerer Text ab dem aktuellen
+  S := FTypeBuf.Add(Key);
+  if Length(S) = 1 then
+    Row := FindRow(S, FItemIndex + 1)
+  else
+    Row := FindRow(S, Max(FItemIndex, 0));
   if Row >= 0 then
     SelectRow(Row);
   Key := #0;

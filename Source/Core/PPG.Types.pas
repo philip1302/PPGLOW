@@ -120,6 +120,28 @@ type
   /// Ein Eintrag wurde vom Anwender an- oder abgehakt.
   TPPGItemCheckEvent = procedure(Sender: TObject; Index: Integer) of object;
 
+  /// Tippsuche ohne Timer (Audit 7a #7), gemeinsam fuer Listen, Combos und
+  /// TileView: Zeichen sammeln sich bis zu einer Pause von PPGTypeAheadMs.
+  /// Derselbe Buchstabe wiederholt blaettert durch die Treffer (wie Windows).
+  TPPGTypeAhead = record
+    Text: string;
+    Tick: Cardinal;
+    /// Nimmt ein Zeichen auf und liefert den Suchtext. Hat er die Laenge 1
+    /// (neuer Anfang oder Blaettern), sucht der Aufrufer ab dem Eintrag NACH
+    /// dem aktuellen, sonst ab dem aktuellen.
+    function Add(Key: Char): string;
+    procedure Reset;
+  end;
+
+const
+  /// Pause, nach der die Tippsuche neu beginnt.
+  PPGTypeAheadMs = 1000;
+
+/// True, wenn sich die Maus seit DownPt weit genug fuer ein Ziehen bewegt hat
+/// (Audit 7f #4): ausserhalb des Rechtecks SM_CXDRAG x SM_CYDRAG um DownPt,
+/// wie DragDetect von Windows.
+function PPGDragExceeded(const DownPt, P: TPoint): Boolean;
+
 implementation
 
 uses
@@ -128,6 +150,46 @@ uses
 
 type
   TPersistentAccess = class(TPersistent);
+
+{ TPPGTypeAhead }
+
+function TPPGTypeAhead.Add(Key: Char): string;
+var
+  Now: Cardinal;
+  I: Integer;
+  Same: Boolean;
+begin
+  Now := GetTickCount;
+  if Now - Tick > PPGTypeAheadMs then
+    Text := '';
+  Tick := Now;
+  Text := Text + Key;
+  // Nur derselbe Buchstabe: blaettern (Suchtext ist der eine Buchstabe)
+  Same := True;
+  for I := 2 to Length(Text) do
+    if AnsiUpperCase(Text[I]) <> AnsiUpperCase(Text[1]) then
+    begin
+      Same := False;
+      Break;
+    end;
+  if Same then
+    Result := Text[1]
+  else
+    Result := Text;
+end;
+
+procedure TPPGTypeAhead.Reset;
+begin
+  Text := '';
+  Tick := 0;
+end;
+
+function PPGDragExceeded(const DownPt, P: TPoint): Boolean;
+begin
+  // DragDetect: Rechteck SM_CXDRAG x SM_CYDRAG, mittig um den Startpunkt
+  Result := (Abs(P.X - DownPt.X) > Max(1, GetSystemMetrics(SM_CXDRAG) div 2)) or
+    (Abs(P.Y - DownPt.Y) > Max(1, GetSystemMetrics(SM_CYDRAG) div 2));
+end;
 
 function PPGColorIsSet(Color: TColor): Boolean;
 begin

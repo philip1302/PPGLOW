@@ -98,6 +98,7 @@ TPPGCustomListBox.MultiSelect = True: Mehrere Einträge sind gleichzeitig wählb
 TPPGCustomListBox.OnData = Virtueller Stil (lbVirtual) wie bei TListBox: liefert den Text der Zeile Index in den var-Parameter Data. Für mehr Angaben OnGetItem verwenden.
 > `List.Style := lbVirtual; List.Count := 1000000;` und in OnData `Data := 'Zeile ' + IntToStr(Index);`
 TPPGCustomListBox.OnDataFind = Virtueller Stil: Tippsuche bzw. IndexOf fragen nach dem Index des Eintrags mit diesem Text; die Funktion liefert ihn als Ergebnis (-1 = nicht gefunden).
+TPPGCustomItemList.ToolTips = Wie TTreeView.ToolTips: Ein abgeschnittener Eintrag erscheint ganz als Hinweis, wenn die Maus darauf steht. Nur ohne eigenen Hint; braucht ShowHint = True.
 TPPGCustomListBox.OnDataObject = Virtueller Stil: liefert das Objekt (Objects[]) der Zeile Index.
 TPPGCustomListBox.OnDrawItem = Owner-Draw wie TListBox (Style = lbOwnerDrawFixed/Variable bzw. lbVirtualOwnerDraw): zeichnet den Eintrag auf Canvas; Hintergrund und Auswahl hat das Preset schon gezeichnet. Für Farbänderungen ohne eigenes Zeichnen ist OnCustomDrawItem einfacher.
 TPPGCustomListBox.OnGetItem = Virtuell mit allen Angaben: füllt Data (Text, Detail, Bild, Plakette, Kästchen, Farben) für die Zeile Index. Anzahl über Count.

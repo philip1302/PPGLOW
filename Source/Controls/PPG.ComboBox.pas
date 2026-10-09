@@ -59,8 +59,7 @@ type
     FArrowAnim: TPPGAnimation;
     FQuiet: Integer;
     FTyping: Boolean;
-    FSearchText: string;
-    FSearchTick: Cardinal;
+    FTypeBuf: TPPGTypeAhead;
     FDisplayText: string; // Text ohne WM_GETTEXT (Paint sendet keine Nachrichten)
     FItemsEx: TPPGItems;
     FItemsExSource: IPPGItemSource;
@@ -315,9 +314,6 @@ begin
   Data.TextColor := It.TextColor;
   Data.FontStyle := It.FontStyle;
 end;
-
-const
-  SearchResetMs = 1000; // Tippsuche: Pause, nach der ein neuer Suchtext beginnt
 
 { TPPGCustomComboBox }
 
@@ -875,39 +871,24 @@ end;
 
 procedure TPPGCustomComboBox.TypeAhead(Key: Char);
 var
-  Now: Cardinal;
   Cur, Start, I, J, N: Integer;
   S: string;
-  Same: Boolean;
 begin
   N := FItems.Count;
   if N = 0 then
     Exit;
-  Now := GetTickCount;
-  if Now - FSearchTick > SearchResetMs then
-    FSearchText := '';
-  FSearchTick := Now;
-  FSearchText := FSearchText + Key;
+  S := FTypeBuf.Add(Key);
   if DroppedDown then
     Cur := PopupList.Highlight
   else
     Cur := FItemIndex;
-  // Derselbe Buchstabe wiederholt: durch die Eintraege mit diesem Anfang
-  // blaettern (wie Windows); sonst Praefix ab dem aktuellen Eintrag suchen
-  Same := True;
-  for I := 2 to Length(FSearchText) do
-    if FSearchText[I] <> FSearchText[1] then
-      Same := False;
-  if Same then
-  begin
-    S := FSearchText[1];
-    Start := Cur + 1;
-  end
+  // Neuer Anfang oder derselbe Buchstabe wiederholt (TPPGTypeAhead): ab dem
+  // naechsten Eintrag suchen (blaettern wie Windows); sonst Praefix ab dem
+  // aktuellen Eintrag
+  if Length(S) = 1 then
+    Start := Cur + 1
   else
-  begin
-    S := FSearchText;
     Start := Cur;
-  end;
   if Start < 0 then
     Start := 0;
   for I := 0 to N - 1 do
