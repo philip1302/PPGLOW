@@ -2,7 +2,7 @@ unit PPG.TestDesktop;
 
 { Werkzeug fuer Testlauf, Benchmark und Demo (nicht Teil der Suite):
   Schalter /hidden startet das Programm auf einem eigenen Windows-Desktop
-  ("PPGlowTest") neu. Dort ist fuer Windows alles sichtbar (Fokus,
+  ("PPGlowTest-<Prozess-Id>", je Lauf ein eigener) neu. Dort ist fuer Windows alles sichtbar (Fokus,
   IsWindowVisible, Popups, Toasts), auf dem Bildschirm des Anwenders erscheint
   aber nichts, und seine Maus stoert die Tests nicht. Ausgabe (stdout/stderr)
   und Exit-Code kommen beim Aufrufer an.
@@ -76,21 +76,23 @@ var
   Desk: HDESK;
   SI: TStartupInfo;
   PI: TProcessInformation;
-  Cmd, DeskPath: string;
+  Cmd, DeskPath, DeskName: string;
   Code: DWORD;
   HIn, HOut, HErr: THandle;
 begin
   Result := False;
   if PPGOnHiddenDesktop or not FindCmdLineSwitch(SwitchHidden, ['/', '-'], True) then
     Exit;
-  // Legt den Desktop an oder oeffnet ihn, wenn ein anderer Lauf ihn schon hat
-  Desk := CreateDesktop(TestDesktopName, nil, nil, 0, GENERIC_ALL, nil);
+  // Eigener Desktop je Lauf: parallele Laeufe (z. B. mehrere Agenten) teilen
+  // sich sonst Fokus, Vordergrund und Popups
+  DeskName := TestDesktopName + '-' + IntToStr(GetCurrentProcessId);
+  Desk := CreateDesktop(PChar(DeskName), nil, nil, 0, GENERIC_ALL, nil);
   if Desk = 0 then
     RaiseLastOSError;
   try
     FillChar(SI, SizeOf(SI), 0);
     SI.cb := SizeOf(SI);
-    DeskPath := 'WinSta0\' + TestDesktopName;
+    DeskPath := 'WinSta0\' + DeskName;
     SI.lpDesktop := PChar(DeskPath);
     HIn := InheritableStdHandle(STD_INPUT_HANDLE);
     HOut := InheritableStdHandle(STD_OUTPUT_HANDLE);
