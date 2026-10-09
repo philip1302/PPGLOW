@@ -16,8 +16,10 @@ TPPGCustomChoiceGroup.OnChange = Die Auswahl hat sich geändert (Benutzer oder C
 TPPGCustomChoiceGroup.OnItemClick = Der Benutzer hat einen Eintrag gewählt bzw. umgeschaltet; Index nennt den Eintrag.
 TPPGCustomChoiceGroup.SelectedStyle = Aussehen des gewählten Eintrags; leer = Akzentfarbe des Presets.
 TPPGCustomChoiceGroup.ShowFrame = True: Rahmen und Beschriftungsplakette wie TPPGGroupBox. False: nur die Einträge, z. B. ein Segment-Umschalter in einer Werkzeugleiste.
-TPPGCustomChoiceGroup.ValidationState = Fehler- bzw. Warnzustand wie bei den Eingabefeldern, z. B. rot bei fehlender Pflichtauswahl.
-> `if Grp.ItemIndex < 0 then Grp.ValidationState := vsError;`
+TPPGCustomChoiceGroup.ValidationState = Fehler- bzw. Warnzustand wie bei den Eingabefeldern, z. B. rot bei fehlender Pflichtauswahl. ValidationHint erklärt den Zustand.
+> `if Grp.ItemIndex < 0 then Grp.ValidationState := pvsError;`
+TPPGCustomChoiceGroup.ValidationHint = Erklärung zum ValidationState wie bei den Eingabefeldern: Solange ein Zustand gesetzt ist, erscheint der Text als Tooltip (vor den Hinweisen der Einträge, auch wenn das Formular sonst keine Hints zeigt) und als Beschreibung für den Screenreader; der Hint der Gruppe bleibt unverändert. TPPGValidator setzt hier den Text seiner Regel, TPPGDBRadioGroup beim Verlassen die Meldung des Felds (z. B. aus OnValidate).
+> `Grp.ValidationHint := 'Bitte eine Zahlungsart wählen'; Grp.ValidationState := pvsError;`
 
 # --- TPPGChoiceItem ---
 TPPGChoiceItem.Caption = Beschriftung des Eintrags.

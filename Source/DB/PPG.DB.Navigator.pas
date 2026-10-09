@@ -1405,19 +1405,32 @@ begin
     Exit;
   end;
   if FBinding.Link.Editing and FBinding.Link.Active then
-  try
-    FBinding.Link.UpdateRecord;
-  except
-    on Exception do
-    begin
-      // Grenze Fokuswechsel (CM_EXIT): Fehler beim Zurueckschreiben (auch aus
-      // OnValidate des Anwenders) wie bei den Feldern: kein Dialog, Fokus
-      // bleibt, Fehler am Control
-      ValidationState := pvsError;
-      if CanFocus and IsWindowVisible(Handle) then
-        SetFocus;
-      Exit;
+  begin
+    try
+      FBinding.Link.UpdateRecord;
+    except
+      on E: Exception do
+      begin
+        // Wie PPGDBCommitField bei den Feldern: Fehler beim Zurueckschreiben
+        // (auch aus OnValidate des Anwenders) mit seiner Meldung am Control,
+        // kein Dialog, Fokus bleibt
+        ValidationHint := E.Message;
+        ValidationState := pvsError;
+        // Unsichtbares Fenster (Formular schliesst/ist verborgen): kein Fokus,
+        // sonst ersetzt EInvalidOperation den stillen Abbruch
+        if CanFocus and HandleAllocated and IsWindowVisible(Handle) then
+          SetFocus;
+        // Still abbrechen: der Fokuswechsel unterbleibt (EAbort ist der
+        // VCL-Weg fuer "abbrechen", kein Fehler)
+        Abort;
+      end;
     end;
+  end;
+  // Geschrieben bzw. nichts zu schreiben: Fehler zuruecknehmen (wie Felder)
+  if ValidationState = pvsError then
+  begin
+    ValidationState := pvsNone;
+    ValidationHint := '';
   end;
   inherited;
 end;

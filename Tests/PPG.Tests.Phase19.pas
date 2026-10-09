@@ -15,7 +15,7 @@ uses
   PPG.Types, PPG.Controls.Field, PPG.Edit, PPG.NumberEdit, PPG.DatePicker, PPG.RadioGroup,
   PPG.CheckBox, PPG.Labels, PPG.Panel, PPG.PageControl, PPG.Expander, PPG.Validator,
   PPG.Feedback, PPG.Button, PPG.Wizard, Data.DB, Datasnap.DBClient, MidasLib, PPG.DB.Controls,
-  PPG.DB.Validator, PPG.BusyOverlay, PPG.Overlay, Vcl.Graphics, PPG.Tests.Controls;
+  PPG.DB.Validator, PPG.BusyOverlay, PPG.Overlay, Vcl.Graphics, PPG.DB.Navigator, PPG.Tests.Controls;
 
 type
   TValidatorTests = class(TControlTestCase)
@@ -128,11 +128,37 @@ type
     procedure StreamsProperties;
   end;
 
+  { Audit 11 R: ValidationHint der Auswahlgruppen (RadioGroup, CheckGroup,
+    DBRadioGroup) wie bei den Feldern: Meldung aus OnValidate beim
+    Verlassen, Text der Validator-Regel, Screenreader-Beschreibung mit
+    Ereignissen, Tooltip, Streaming. }
+  TChoiceValidationHintTests = class(TControlTestCase)
+  private
+    FData: TClientDataSet;
+    FSource: TDataSource;
+    FOther: TPPGEdit;
+    procedure ValidatePayment(Sender: TField);
+    function NewDBGroup: TPPGDBRadioGroup;
+    function AccDescr(Wnd: HWND): string;
+    procedure CheckRoundTrip(AClass: TComponentClass);
+  protected
+    procedure SetUp; override;
+  published
+    procedure DBRadioGroupExitShowsFieldMessage;
+    procedure DBRadioGroupCommitClearsError;
+    procedure ValidatorRequiredSetsHintOnChoiceGroups;
+    procedure DescriptionForScreenReader;
+    procedure DescriptionEvents;
+    procedure TooltipShowsValidationText;
+    procedure TooltipForcedOnlyWhileHovering;
+    procedure StreamsValidationHint;
+  end;
+
 
 implementation
 
 uses
-  PPG.Exceptions, PPG.Lang, PPG.Consts, Winapi.oleacc, Vcl.Imaging.pngimage, PPG.Render.Registry;
+  PPG.Exceptions, PPG.Lang, PPG.Consts, Winapi.oleacc, Vcl.Imaging.pngimage, PPG.Render.Registry, System.TypInfo;
 
 { TValidatorTests }
 
@@ -1802,10 +1828,427 @@ begin
   end;
 end;
 
+{ TChoiceValidationHintTests }
+
+const
+  SPayMsg = 'Bitte eine gueltige Zahlungsart waehlen';
+
+type
+  TDBRadioCrack = class(TPPGDBRadioGroup);
+  TChoiceWinCrack = class(TWinControl);
+
+var
+  GChoiceEvents: TStringList;
+  GChoiceEventWnd: HWND;
+
+procedure ChoiceWinEventProc(hWinEventHook: THandle; Event: DWORD; Wnd: HWND;
+  idObject, idChild: Longint; idEventThread, dwmsEventTime: DWORD); stdcall;
+begin
+  if (GChoiceEvents <> nil) and (Wnd = GChoiceEventWnd) and
+    (DWORD(idObject) = DWORD(OBJID_CLIENT)) and (idChild = CHILDID_SELF) then
+    GChoiceEvents.Add(IntToStr(Event));
+end;
+
+procedure TChoiceValidationHintTests.SetUp;
+begin
+  inherited SetUp;
+  FData := TClientDataSet.Create(FForm);
+  FData.FieldDefs.Add('Zahlart', ftString, 20);
+  FData.CreateDataSet;
+  FData.AppendRecord(['Rechnung']);
+  FData.First;
+  FData.FieldByName('Zahlart').OnValidate := ValidatePayment;
+  FSource := TDataSource.Create(FForm);
+  FSource.DataSet := FData;
+  FOther := TPPGEdit.Create(FForm);
+  FOther.Parent := FForm;
+  FOther.SetBounds(10, 230, 100, 28);
+  FForm.Show;
+end;
+
+procedure TChoiceValidationHintTests.ValidatePayment(Sender: TField);
+begin
+  // Wie eine Geschaeftsregel des Anwenders: Scheck wird nicht angenommen
+  if Sender.AsString = 'Scheck' then
+    DatabaseError(SPayMsg);
+end;
+
+function TChoiceValidationHintTests.NewDBGroup: TPPGDBRadioGroup;
+begin
+  Result := TPPGDBRadioGroup.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(10, 10, 300, 120);
+  Result.Caption := 'Zahlart';
+  Result.Items.CommaText := 'Rechnung,Lastschrift,Scheck';
+  Result.DataSource := FSource;
+  Result.DataField := 'Zahlart';
+end;
+
+function TChoiceValidationHintTests.AccDescr(Wnd: HWND): string;
+var
+  Acc: IAccessible;
+  W: WideString;
+begin
+  Acc := nil;
+  CheckEquals(S_OK, AccessibleObjectFromWindow(Wnd, OBJID_CLIENT, IID_IAccessible, Acc),
+    'AccessibleObjectFromWindow');
+  CheckTrue(Acc <> nil);
+  W := '';
+  Acc.Get_accDescription(CHILDID_SELF, W);
+  Result := W;
+end;
+
+procedure TChoiceValidationHintTests.DBRadioGroupExitShowsFieldMessage;
+var
+  G: TPPGDBRadioGroup;
+begin
+  G := NewDBGroup;
+  CheckEquals(0, G.ItemIndex, 'Ausgangswert aus dem Feld');
+  G.SetFocus;
+  Application.ProcessMessages;
+  CheckTrue(G.Focused, 'Ausgangslage: Gruppe hat den Fokus');
+  // Anwender waehlt Scheck; OnValidate lehnt das beim Zurueckschreiben ab
+  TDBRadioCrack(G).ActivateItem(2);
+  CheckTrue(FData.State = dsEdit, 'Auswahl setzt in Bearbeitung');
+  FOther.SetFocus;
+  Application.ProcessMessages;
+  CheckEquals(SPayMsg, G.ValidationHint, 'Meldung aus OnValidate am Control');
+  CheckTrue(G.ValidationState = pvsError, 'Fehlerzustand');
+  CheckTrue(G.Focused, 'Fokus bleibt an der Gruppe');
+  CheckTrue(FForm.ActiveControl = G, 'aktives Control bleibt die Gruppe');
+  CheckFalse(FOther.Focused, 'Fokuswechsel unterbleibt');
+  CheckEquals(0, FAppExceptions, 'kein Dialog');
+  CheckEquals('Rechnung', FData.FieldByName('Zahlart').AsString,
+    'abgelehnter Wert nicht geschrieben');
+  CheckEquals(SPayMsg, AccDescr(G.Handle), 'Screenreader findet die Meldung');
+  FData.Cancel;
+end;
+
+procedure TChoiceValidationHintTests.DBRadioGroupCommitClearsError;
+var
+  G: TPPGDBRadioGroup;
+begin
+  G := NewDBGroup;
+  G.SetFocus;
+  Application.ProcessMessages;
+  TDBRadioCrack(G).ActivateItem(2);
+  FOther.SetFocus;
+  Application.ProcessMessages;
+  CheckTrue(G.ValidationState = pvsError, 'Ausgangslage: Fehler');
+  // Gueltige Auswahl: beim Verlassen geschrieben, Fehler und Text weg
+  TDBRadioCrack(G).ActivateItem(1);
+  FOther.SetFocus;
+  Application.ProcessMessages;
+  CheckTrue(G.ValidationState = pvsNone, 'Fehler zurueckgenommen');
+  CheckEquals('', G.ValidationHint, 'Text zurueckgenommen');
+  CheckTrue(FOther.Focused, 'Fokus wechselt');
+  CheckEquals('Lastschrift', FData.FieldByName('Zahlart').AsString, 'geschrieben');
+  CheckEquals(0, FAppExceptions, 'kein Dialog');
+  FData.Cancel;
+end;
+
+procedure TChoiceValidationHintTests.ValidatorRequiredSetsHintOnChoiceGroups;
+var
+  V: TPPGValidator;
+  G: TPPGRadioGroup;
+  C: TPPGCheckGroup;
+  Res: TPPGValidationResult;
+begin
+  V := TPPGValidator.Create(FForm);
+  G := TPPGRadioGroup.Create(FForm);
+  G.Name := 'Anrede';
+  G.Parent := FForm;
+  G.SetBounds(10, 10, 200, 90);
+  G.Caption := 'Anrede';
+  G.Items.CommaText := 'Frau,Herr';
+  C := TPPGCheckGroup.Create(FForm);
+  C.Name := 'Themen';
+  C.Parent := FForm;
+  C.SetBounds(10, 110, 200, 90);
+  C.Caption := 'Themen';
+  C.Items.CommaText := 'Technik,Sport';
+  V.Rules.AddRule(G, vrRequired);
+  V.Rules.AddRule(C, vrRequired);
+  CheckFalse(V.Validate);
+  CheckTrue(V.ResultFor(G, Res));
+  CheckEquals(Format(PPGStr(@SPPGValMustChoose), ['Anrede']), G.ValidationHint,
+    'Regeltext an der RadioGroup');
+  CheckEquals(Res.Message, G.ValidationHint);
+  CheckTrue(G.ValidationState = pvsError);
+  CheckTrue(V.ResultFor(C, Res));
+  CheckEquals(Format(PPGStr(@SPPGValMustChoose), ['Themen']), C.ValidationHint,
+    'Regeltext an der CheckGroup');
+  CheckEquals(Res.Message, C.ValidationHint);
+  CheckEquals(G.ValidationHint, AccDescr(G.Handle), 'Screenreader: Regeltext');
+  G.ItemIndex := 0;
+  C.Checked[1] := True;
+  CheckTrue(V.Validate);
+  CheckTrue(G.ValidationState = pvsNone);
+  CheckEquals('', G.ValidationHint, 'zurueckgenommen');
+  CheckEquals('', C.ValidationHint, 'zurueckgenommen (CheckGroup)');
+  CheckEquals('', AccDescr(G.Handle), 'ohne Validierung leer');
+end;
+
+procedure TChoiceValidationHintTests.DescriptionForScreenReader;
+var
+  G: TPPGRadioGroup;
+  C: TPPGCheckGroup;
+begin
+  G := TPPGRadioGroup.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(10, 10, 200, 90);
+  G.Items.CommaText := 'Frau,Herr';
+  G.HandleNeeded;
+  CheckEquals('', AccDescr(G.Handle), 'Ausgangslage leer');
+  G.ValidationHint := 'Bitte waehlen';
+  CheckEquals('', AccDescr(G.Handle), 'Zustand pvsNone: Text nicht vorgelesen');
+  G.ValidationState := pvsError;
+  CheckEquals('Bitte waehlen', AccDescr(G.Handle), 'Fehler');
+  G.ValidationHint := 'Anrede fehlt';
+  CheckEquals('Anrede fehlt', AccDescr(G.Handle), 'neuer Text');
+  G.ValidationState := pvsWarning;
+  CheckEquals('Anrede fehlt', AccDescr(G.Handle), 'Warnung');
+  G.ValidationState := pvsNone;
+  CheckEquals('', AccDescr(G.Handle), 'pvsNone: leer');
+  // Der Hint des Anwenders bleibt die Beschreibung ohne Validierung und
+  // wird vom Validierungstext nicht ueberschrieben
+  G.Hint := 'Anrede fuer den Brief';
+  CheckEquals('Anrede fuer den Brief', AccDescr(G.Handle), 'Anwender-Hint');
+  G.ValidationState := pvsError;
+  CheckEquals('Anrede fehlt', AccDescr(G.Handle), 'Fehler vor Anwender-Hint');
+  CheckEquals('Anrede fuer den Brief', G.Hint, 'Hint unveraendert');
+  G.ValidationState := pvsNone;
+  CheckEquals('Anrede fuer den Brief', AccDescr(G.Handle), 'Anwender-Hint zurueck');
+  // Nach neuem Fensterhandle gilt dasselbe
+  G.ValidationState := pvsError;
+  TChoiceWinCrack(G).RecreateWnd;
+  G.HandleNeeded;
+  CheckEquals('Anrede fehlt', AccDescr(G.Handle), 'nach RecreateWnd');
+  C := TPPGCheckGroup.Create(FForm);
+  C.Parent := FForm;
+  C.SetBounds(10, 110, 200, 90);
+  C.Items.CommaText := 'Technik,Sport';
+  C.HandleNeeded;
+  C.ValidationHint := 'Mindestens ein Thema';
+  C.ValidationState := pvsError;
+  CheckEquals('Mindestens ein Thema', AccDescr(C.Handle), 'CheckGroup');
+  C.ValidationState := pvsNone;
+  CheckEquals('', AccDescr(C.Handle), 'CheckGroup ohne Validierung leer');
+end;
+
+procedure TChoiceValidationHintTests.DescriptionEvents;
+var
+  G: TPPGRadioGroup;
+  Hook: THandle;
+  Alerts, I: Integer;
+begin
+  G := TPPGRadioGroup.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(10, 10, 200, 90);
+  G.Items.CommaText := 'Frau,Herr';
+  G.HandleNeeded;
+  G.ValidationHint := 'Bitte waehlen';
+  GChoiceEvents := TStringList.Create;
+  try
+    GChoiceEventWnd := G.Handle;
+    Hook := SetWinEventHook(EVENT_SYSTEM_ALERT, EVENT_OBJECT_DESCRIPTIONCHANGE, 0,
+      @ChoiceWinEventProc, GetCurrentProcessId, 0, WINEVENT_OUTOFCONTEXT);
+    CheckTrue(Hook <> 0, 'SetWinEventHook');
+    try
+      Application.ProcessMessages;
+      GChoiceEvents.Clear;
+      G.ValidationState := pvsError;
+      Application.ProcessMessages;
+      CheckTrue(GChoiceEvents.IndexOf(IntToStr(EVENT_OBJECT_DESCRIPTIONCHANGE)) >= 0,
+        'DESCRIPTIONCHANGE beim Fehler');
+      CheckTrue(GChoiceEvents.IndexOf(IntToStr(EVENT_SYSTEM_ALERT)) >= 0, 'ALERT beim Fehler');
+      GChoiceEvents.Clear;
+      G.ValidationHint := 'Anrede fehlt';
+      Application.ProcessMessages;
+      CheckTrue(GChoiceEvents.IndexOf(IntToStr(EVENT_OBJECT_DESCRIPTIONCHANGE)) >= 0,
+        'DESCRIPTIONCHANGE bei neuem Text');
+      Alerts := 0;
+      for I := 0 to GChoiceEvents.Count - 1 do
+        if GChoiceEvents[I] = IntToStr(EVENT_SYSTEM_ALERT) then
+          Inc(Alerts);
+      CheckEquals(0, Alerts, 'kein ALERT ohne Wechsel auf Fehler');
+      GChoiceEvents.Clear;
+      G.ValidationState := pvsWarning;
+      Application.ProcessMessages;
+      CheckEquals(-1, GChoiceEvents.IndexOf(IntToStr(EVENT_SYSTEM_ALERT)), 'kein ALERT bei Warnung');
+      CheckTrue(GChoiceEvents.IndexOf(IntToStr(EVENT_OBJECT_DESCRIPTIONCHANGE)) >= 0,
+        'DESCRIPTIONCHANGE bei Warnung');
+      GChoiceEvents.Clear;
+      G.ValidationState := pvsNone;
+      Application.ProcessMessages;
+      CheckTrue(GChoiceEvents.IndexOf(IntToStr(EVENT_OBJECT_DESCRIPTIONCHANGE)) >= 0,
+        'DESCRIPTIONCHANGE beim Zuruecknehmen');
+    finally
+      UnhookWinEvent(Hook);
+    end;
+  finally
+    FreeAndNil(GChoiceEvents);
+    GChoiceEventWnd := 0;
+  end;
+end;
+
+procedure TChoiceValidationHintTests.TooltipShowsValidationText;
+var
+  G: TPPGRadioGroup;
+  HI: THintInfo;
+  R: TRect;
+
+  procedure Ask;
+  begin
+    FillChar(HI, SizeOf(HI), 0);
+    HI.HintControl := G;
+    HI.CursorPos := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+    HI.HintStr := GetShortHint(G.Hint);
+    G.Perform(CM_HINTSHOW, 0, LPARAM(@HI));
+  end;
+
+begin
+  G := TPPGRadioGroup.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(10, 10, 200, 90);
+  G.Items.CommaText := 'Frau,Herr';
+  G.ItemsEx[0].Hint := 'Eintragshinweis';
+  G.Hint := 'Gruppenhinweis';
+  R := G.ItemRect(0);
+  CheckFalse(IsRectEmpty(R), 'Eintrag sichtbar');
+  Ask;
+  CheckEquals('Eintragshinweis', HI.HintStr, 'ohne Validierung: Hinweis des Eintrags');
+  G.ValidationHint := 'Bitte waehlen';
+  Ask;
+  CheckEquals('Eintragshinweis', HI.HintStr, 'pvsNone: Validierungstext nicht gezeigt');
+  G.ValidationState := pvsError;
+  Ask;
+  CheckEquals('Bitte waehlen', HI.HintStr, 'Fehler: Validierungstext als Tooltip');
+  CheckEquals('Gruppenhinweis', G.Hint, 'Hint des Anwenders unveraendert');
+  G.ValidationState := pvsWarning;
+  Ask;
+  CheckEquals('Bitte waehlen', HI.HintStr, 'Warnung: Validierungstext');
+  G.ValidationState := pvsNone;
+  Ask;
+  CheckEquals('Eintragshinweis', HI.HintStr, 'zurueck zum Hinweis des Eintrags');
+end;
+
+procedure TChoiceValidationHintTests.TooltipForcedOnlyWhileHovering;
+var
+  G: TPPGRadioGroup;
+begin
+  // Das Formular zeigt keine Hints (VCL-Vorgabe); wie beim Feld erscheint
+  // der Validierungstext trotzdem, solange die Maus ueber der Gruppe steht
+  G := TPPGRadioGroup.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(10, 10, 200, 90);
+  G.Items.CommaText := 'Frau,Herr';
+  CheckFalse(FForm.ShowHint, 'Ausgangslage: Formular ohne Hints');
+  CheckTrue(G.ParentShowHint);
+  CheckFalse(G.ShowHint);
+  G.ValidationHint := 'Bitte waehlen';
+  G.ValidationState := pvsError;
+  CheckFalse(G.ShowHint, 'ohne Maus unveraendert');
+  G.Perform(CM_MOUSEENTER, 0, 0);
+  CheckTrue(G.ShowHint, 'Maus ueber der Gruppe: Tooltip moeglich');
+  G.Perform(CM_MOUSELEAVE, 0, 0);
+  CheckFalse(G.ShowHint, 'Maus weg: wieder wie vorher');
+  CheckTrue(G.ParentShowHint, 'ParentShowHint wie vorher');
+  // Fehler behoben, waehrend die Maus darueber steht
+  G.Perform(CM_MOUSEENTER, 0, 0);
+  CheckTrue(G.ShowHint);
+  G.ValidationState := pvsNone;
+  CheckFalse(G.ShowHint, 'ohne Validierung: wieder wie vorher');
+  CheckTrue(G.ParentShowHint);
+  // Fehler kommt, waehrend die Maus darueber steht
+  G.ValidationState := pvsWarning;
+  CheckTrue(G.ShowHint, 'Warnung unter der Maus');
+  G.Perform(CM_MOUSELEAVE, 0, 0);
+  CheckFalse(G.ShowHint);
+  // Eigene Einstellung des Anwenders bleibt unberuehrt
+  G.ShowHint := True;
+  CheckFalse(G.ParentShowHint);
+  G.Perform(CM_MOUSEENTER, 0, 0);
+  G.Perform(CM_MOUSELEAVE, 0, 0);
+  CheckTrue(G.ShowHint, 'eigenes ShowHint bleibt');
+  CheckFalse(G.ParentShowHint, 'eigenes ParentShowHint bleibt');
+end;
+
+function ChoiceDfmText(M: TMemoryStream): string;
+var
+  SS: TStringStream;
+begin
+  M.Position := 0;
+  SS := TStringStream.Create('');
+  try
+    ObjectBinaryToText(M, SS);
+    Result := SS.DataString;
+  finally
+    SS.Free;
+  end;
+  M.Position := 0;
+end;
+
+procedure TChoiceValidationHintTests.CheckRoundTrip(AClass: TComponentClass);
+var
+  A, B: TComponent;
+  M: TMemoryStream;
+  S: string;
+begin
+  CheckTrue(GetPropInfo(AClass, 'ValidationHint') <> nil,
+    AClass.ClassName + ': ValidationHint published');
+  A := AClass.Create(nil);
+  try
+    // Vorgabe: nichts gespeichert
+    M := TMemoryStream.Create;
+    try
+      M.WriteComponent(A);
+      S := ChoiceDfmText(M);
+    finally
+      M.Free;
+    end;
+    CheckEquals(0, Pos('ValidationHint', S), AClass.ClassName + ': leer nicht gespeichert');
+    SetOrdProp(A, 'ValidationState', Ord(pvsWarning));
+    SetStrProp(A, 'ValidationHint', 'Bitte waehlen');
+    M := TMemoryStream.Create;
+    try
+      M.WriteComponent(A);
+      S := ChoiceDfmText(M);
+      CheckTrue(Pos('ValidationHint = ''Bitte waehlen''', S) > 0,
+        AClass.ClassName + ': im DFM');
+      CheckTrue(Pos('ValidationState', S) < Pos('ValidationHint', S),
+        AClass.ClassName + ': Reihenfolge wie bei den Feldern');
+      M.Position := 0;
+      B := AClass.Create(nil);
+      try
+        M.ReadComponent(B);
+        CheckEquals('Bitte waehlen', GetStrProp(B, 'ValidationHint'),
+          AClass.ClassName + ': gelesen');
+        CheckEquals(Ord(pvsWarning), GetOrdProp(B, 'ValidationState'),
+          AClass.ClassName + ': Zustand gelesen');
+      finally
+        B.Free;
+      end;
+    finally
+      M.Free;
+    end;
+  finally
+    A.Free;
+  end;
+end;
+
+procedure TChoiceValidationHintTests.StreamsValidationHint;
+begin
+  CheckRoundTrip(TPPGRadioGroup);
+  CheckRoundTrip(TPPGCheckGroup);
+  CheckRoundTrip(TPPGDBRadioGroup);
+end;
+
 
 initialization
   RegisterTest('Phase19', TValidatorTests.Suite);
   RegisterTest('Phase19', TValidatorComfortTests.Suite);
   RegisterTest('Phase19', TBusyOverlayTests.Suite);
+  RegisterTest('Audit11R', TChoiceValidationHintTests.Suite);
 
 end.
