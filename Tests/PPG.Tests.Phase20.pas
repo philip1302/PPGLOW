@@ -5,7 +5,8 @@ unit PPG.Tests.Phase20;
   bearbeiten, Termin-Dialog (Laden, Speichern, Pruefen, Haken).
   20b: Kanban - Filter (Text, Labels, Person, Ereignis), Spalten ziehen.
   20c: Ribbon - Tastatur in Gruppen- und Band-Popups, Galerie-Kategorien.
-  20d: TrackBar - SelStart/SelEnd, Bereichsregler mit zwei Griffen. }
+  20d: TrackBar - SelStart/SelEnd, Bereichsregler mit zwei Griffen.
+  20e: ComboBox auf der Aufklapp-Basis - festhaltende Tests. }
 
 interface
 
@@ -14,7 +15,7 @@ uses
   System.Types, System.DateUtils, Vcl.Forms, Vcl.Controls,
   PPG.Calendar, PPG.Planner.Model, PPG.Planner.Recurrence, PPG.Planner, PPG.Planner.Dialog,
   Vcl.Graphics, PPG.Kanban.Items, PPG.Kanban.Layout, PPG.Kanban, PPG.Items, PPG.Ribbon.Items, PPG.Ribbon.Layout, PPG.Ribbon,
-  Vcl.ComCtrls, PPG.Controls.Range, PPG.TrackBar, PPG.Tests.Controls;
+  Vcl.ComCtrls, PPG.Controls.Range, PPG.TrackBar, Vcl.StdCtrls, PPG.ComboBox, PPG.Tests.Controls;
 
 type
   TPlannerSeriesTests = class(TControlTestCase)
@@ -117,6 +118,24 @@ type
     procedure AccessibleThumbs;
     procedure PaintsSelectionAndRange;
     procedure StreamsRangeProperties;
+  end;
+
+
+  TComboDropBaseTests = class(TControlTestCase)
+  private
+    FLog: string;
+    function NewCombo(AStyle: TComboBoxStyle): TPPGComboBox;
+    procedure LogDrop(Sender: TObject);
+    procedure LogClose(Sender: TObject);
+    procedure LogSelect(Sender: TObject);
+  protected
+    procedure SetUp; override;
+  published
+    procedure CharsGoToEditWhileOpen;
+    procedure HomeEndWhileOpen;
+    procedure ClosedKeysAndEnterPassThrough;
+    procedure ArrowAndEventsOnOpenClose;
+    procedure MouseLeaveKeepsHighlight;
   end;
 
 
@@ -1476,10 +1495,186 @@ begin
 end;
 
 
+{ TComboDropBaseTests }
+
+type
+  TComboAccess20 = class(TPPGCustomComboBox);
+
+function LP20(X, Y: Integer): LPARAM;
+begin
+  Result := MakeLParam(Word(X and $FFFF), Word(Y and $FFFF));
+end;
+
+procedure TComboDropBaseTests.SetUp;
+begin
+  inherited SetUp;
+  FLog := '';
+end;
+
+procedure TComboDropBaseTests.LogDrop(Sender: TObject);
+begin
+  FLog := FLog + 'drop;';
+end;
+
+procedure TComboDropBaseTests.LogClose(Sender: TObject);
+begin
+  FLog := FLog + 'close:' + IntToStr(TPPGComboBox(Sender).ItemIndex) + ';';
+end;
+
+procedure TComboDropBaseTests.LogSelect(Sender: TObject);
+begin
+  FLog := FLog + 'select:' + IntToStr(TPPGComboBox(Sender).ItemIndex) + ';';
+end;
+
+function TComboDropBaseTests.NewCombo(AStyle: TComboBoxStyle): TPPGComboBox;
+begin
+  Result := TPPGComboBox.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(10, 10, 160, 25);
+  Result.Animation.Enabled := False;
+  Result.Style := AStyle;
+  Result.Items.CommaText := 'Apfel,Banane,Birne,Cola,Dattel';
+  Result.OnDropDown := LogDrop;
+  Result.OnCloseUp := LogClose;
+  Result.OnSelect := LogSelect;
+  FForm.Show;
+  Result.SetFocus;
+end;
+
+procedure TComboDropBaseTests.CharsGoToEditWhileOpen;
+var
+  C: TPPGComboBox;
+  Ch: Char;
+begin
+  C := NewCombo(csDropDown);
+  C.DropDown;
+  CheckTrue(C.DroppedDown);
+  Ch := 'B';
+  TComboAccess20(C).FieldKeyPress(Ch);
+  CheckEquals('B', string(Ch), 'Zeichen bleibt fuer das Edit');
+  CheckTrue(C.DroppedDown, 'Liste bleibt offen');
+  Ch := #13;
+  TComboAccess20(C).FieldKeyPress(Ch);
+  CheckEquals(#0, string(Ch), 'Enter ohne Signalton');
+  C.CloseUp(False);
+  // Liste: Zeichen sind Tippsuche und werden verbraucht
+  C.Style := csDropDownList;
+  C.DropDown;
+  Ch := 'c';
+  TComboAccess20(C).FieldKeyPress(Ch);
+  CheckEquals(#0, string(Ch));
+  CheckEquals(3, C.PopupList.Highlight, 'Tippsuche in der offenen Liste');
+  CheckTrue(C.DroppedDown);
+  C.CloseUp(False);
+end;
+
+procedure TComboDropBaseTests.HomeEndWhileOpen;
+var
+  C: TPPGComboBox;
+  K: Word;
+begin
+  C := NewCombo(csDropDown);
+  C.ItemIndex := 2;
+  C.DropDown;
+  K := VK_HOME;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckEquals(VK_HOME, K, 'Pos1 bewegt den Cursor im Edit');
+  CheckEquals(2, C.PopupList.Highlight, 'Hervorhebung bleibt');
+  K := VK_LEFT;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckEquals(VK_LEFT, K, 'Pfeil links gehoert dem Edit');
+  CheckTrue(C.DroppedDown);
+  C.CloseUp(False);
+  C.Style := csDropDownList;
+  C.DropDown;
+  K := VK_END;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckEquals(0, K);
+  CheckEquals(4, C.PopupList.Highlight, 'Ende: letzter Eintrag');
+  K := VK_HOME;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckEquals(0, C.PopupList.Highlight);
+  K := VK_NEXT;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckTrue(C.PopupList.Highlight > 0, 'Bild ab');
+  K := VK_RETURN;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckFalse(C.DroppedDown);
+  CheckEquals(C.ItemIndex, C.PopupList.Highlight, 'Enter uebernimmt');
+end;
+
+procedure TComboDropBaseTests.ClosedKeysAndEnterPassThrough;
+var
+  C: TPPGComboBox;
+  K: Word;
+begin
+  C := NewCombo(csDropDownList);
+  K := VK_DOWN;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckEquals(0, C.ItemIndex, 'Pfeil waehlt geschlossen direkt');
+  K := VK_NEXT;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckEquals(4, C.ItemIndex, 'Bild ab: DropDownCount - 1 weiter');
+  K := VK_RETURN;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckEquals(VK_RETURN, K, 'Enter geschlossen: fuer den Default-Button');
+  CheckFalse(TComboAccess20(C).WantSpecialKey(VK_RETURN));
+  CheckFalse(TComboAccess20(C).WantSpecialKey(VK_ESCAPE));
+  K := VK_F4;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckTrue(C.DroppedDown);
+  CheckTrue(TComboAccess20(C).WantSpecialKey(VK_ESCAPE));
+  K := VK_ESCAPE;
+  TComboAccess20(C).FieldKeyDown(K, []);
+  CheckFalse(C.DroppedDown);
+  CheckEquals('select:0;select:4;drop;close:4;', FLog);
+end;
+
+procedure TComboDropBaseTests.ArrowAndEventsOnOpenClose;
+var
+  C: TPPGComboBox;
+begin
+  C := NewCombo(csDropDownList);
+  CheckEquals(0.0, C.ArrowProgress, 0.001);
+  C.DroppedDown := True;
+  CheckEquals(1.0, C.ArrowProgress, 0.001, 'Pfeil gedreht');
+  CheckEquals(0, C.PopupList.TopIndex);
+  CheckEquals(-1, C.PopupList.Highlight, 'ohne Auswahl keine Hervorhebung');
+  C.PopupList.SetHighlight(1);
+  C.CloseUp(True);
+  CheckEquals(0.0, C.ArrowProgress, 0.001);
+  CheckEquals('drop;select:1;close:1;', FLog, 'Auswahl vor OnCloseUp');
+  C.Enabled := False;
+  C.DroppedDown := True;
+  CheckFalse(C.DroppedDown, 'abgeschaltet: kein Aufklappen');
+end;
+
+procedure TComboDropBaseTests.MouseLeaveKeepsHighlight;
+var
+  C: TPPGComboBox;
+  P: TPoint;
+begin
+  C := NewCombo(csDropDownList);
+  C.DropDown;
+  P := C.ScreenToClient(C.PopupList.ClientToScreen(Point(10,
+    (C.PopupList.ItemRect(2).Top + C.PopupList.ItemRect(2).Bottom) div 2)));
+  C.Perform(WM_MOUSEMOVE, 0, LP20(P.X, P.Y));
+  CheckEquals(2, C.PopupList.Highlight, 'Maus hebt hervor');
+  C.Perform(WM_MOUSEMOVE, 0, LP20(-5, -5));
+  CheckEquals(2, C.PopupList.Highlight, 'ausserhalb bleibt die Hervorhebung');
+  CheckTrue(C.DroppedDown);
+  // Loslassen ausserhalb uebernimmt nichts
+  C.Perform(WM_LBUTTONUP, 0, LP20(-5, -5));
+  CheckTrue(C.DroppedDown);
+  CheckEquals(-1, C.ItemIndex);
+  C.CloseUp(False);
+end;
+
 initialization
   RegisterTest('Phase20', TPlannerSeriesTests.Suite);
   RegisterTest('Phase20', TKanbanFilterTests.Suite);
   RegisterTest('Phase20', TRibbonPopupKeyTests.Suite);
   RegisterTest('Phase20', TTrackRangeTests.Suite);
+  RegisterTest('Phase20', TComboDropBaseTests.Suite);
 
 end.
