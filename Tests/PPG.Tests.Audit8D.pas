@@ -1,26 +1,1048 @@
 unit PPG.Tests.Audit8D;
 
-{ Audit-Paket 8D (Docs\Audit-Paket8-Plan.md): Regressionstests. }
+{ Audit-Paket 8D (Docs\Audit-Paket8-Plan.md): Regressionstests.
+
+  Die festhaltenden Tests vergleichen ein "benutztes" Control (Caches aus
+  frueheren Abfragen, danach geaendert) mit einem frisch aufgebauten Control
+  gleicher Einstellung bzw. mit einer Messung nach der alten Formel. Sie
+  liefen vor den Optimierungen gegen den alten Code gruen. }
 
 interface
 
 uses
-  TestFramework, PPG.Tests.Controls;
+  TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
+  System.Types, System.Math, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.Menus, Vcl.ComCtrls,
+  Data.DB, Datasnap.DBClient, MidasLib,
+  PPG.Types, PPG.Appearance, PPG.Render.Gdi, PPG.AppHooks, PPG.MenuBar, PPG.Chart.Series,
+  PPG.Chart, PPG.Kanban.Items, PPG.Kanban, PPG.DB.Kanban, PPG.Planner.Model, PPG.Planner,
+  PPG.Ribbon.Layout, PPG.Ribbon.Items, PPG.Ribbon, PPG.TabStrip, PPG.TabControl, PPG.PageControl, PPG.Feedback,
+  PPG.TeachingTip, PPG.TagEdit, PPG.Tests.Controls;
 
 type
   TAudit8DTests = class(TControlTestCase)
+  private
+    FHookLog: TStringList;
+    procedure HookA(var Msg: TMsg; var Handled: Boolean);
+    procedure HookB(var Msg: TMsg; var Handled: Boolean);
+    procedure HookC(var Msg: TMsg; var Handled: Boolean);
+    procedure WatchA(Control: TControl; var Message: TMessage);
+    procedure WatchB(Control: TControl; var Message: TMessage);
+    function NewMenu(Count: Integer): TMainMenu;
+    procedure CheckMenuBarRects(Bar: TPPGMenuBar; const Context: string);
+    procedure ConfigureChart(C: TPPGChart; Step: Integer);
+    function ChartSignature(C: TPPGChart): string;
+    function NewKanban(Cards: Integer): TPPGKanban;
+    procedure CheckSameKanban(A, B: TPPGKanban; const Context: string);
+    function NewPlanner: TPPGPlanner;
+    function PieceDigest(P: TPPGPlanner): string;
+    function NewRibbon(DisabledItem, DownItem: Boolean): TPPGRibbon;
+    procedure CheckSameBitmap(A, B: TBitmap; const Context: string);
+    function BitmapsEqual(A, B: TBitmap): Boolean;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
   published
-    procedure Placeholder;
+    procedure MenuBarRectsFollowChanges;
+    procedure ChartHitTestMatchesFreshChart;
+    procedure ChartHotFollowsHitTest;
+    procedure KanbanHeightsMatchFreshBoard;
+    procedure PlannerGroupedLayoutIsUnchanged;
+    procedure PlannerTimelineLayoutIsUnchanged;
+    procedure PlannerTimelinePaintMatchesFresh;
+    procedure RibbonEnabledDownMatchFreshRibbon;
+    procedure PageControlUpdateBracketKeepsOrder;
+    procedure TabStripMakeVisibleIsMinimal;
+    procedure InfoBarHeightMatchesFresh;
+    procedure TeachingTipFollowsContentChange;
+    procedure TagEditChipsFollowFont;
+    procedure AppHooksChangesDuringDispatch;
+  end;
+
+  TAudit8DDBTests = class(TControlTestCase)
+  private
+    FData: TClientDataSet;
+    FSource: TDataSource;
+    FPosts: Integer;
+    procedure CountPost(DataSet: TDataSet);
+    procedure AddRow(AId: Integer; const AStatus: string; AOrder: Integer; const ATitle: string);
+    function OrderOf(AId: Integer): Integer;
+  protected
+    procedure SetUp; override;
+  published
+    procedure SortedDataSetRenumbersInOrder;
   end;
 
 implementation
 
-procedure TAudit8DTests.Placeholder;
+function MouseLParam(X, Y: Integer): LPARAM;
 begin
-  CheckTrue(True);
+  Result := MakeLParam(Word(SmallInt(X)), Word(SmallInt(Y)));
+end;
+
+function RectText(const R: TRect): string;
+begin
+  Result := Format('(%d,%d,%d,%d)', [R.Left, R.Top, R.Right, R.Bottom]);
+end;
+
+function Digest(const S: string): Int64;
+var
+  I: Integer;
+begin
+  Result := 17;
+  for I := 1 to Length(S) do
+    Result := (Result * 131 + Ord(S[I])) mod 1000000007;
+end;
+
+function BitmapDigest(B: TBitmap): Int64;
+var
+  X, Y: Integer;
+  P: PByte;
+begin
+  B.PixelFormat := pf24bit;
+  Result := 17;
+  for Y := 0 to B.Height - 1 do
+  begin
+    P := B.ScanLine[Y];
+    for X := 0 to B.Width * 3 - 1 do
+    begin
+      Result := (Result * 131 + P^) mod 1000000007;
+      Inc(P);
+    end;
+  end;
+end;
+
+{ TAudit8DTests }
+
+procedure TAudit8DTests.SetUp;
+begin
+  inherited SetUp;
+  FHookLog := TStringList.Create;
+end;
+
+procedure TAudit8DTests.TearDown;
+begin
+  FreeAndNil(FHookLog);
+  inherited TearDown;
+end;
+
+function TAudit8DTests.BitmapsEqual(A, B: TBitmap): Boolean;
+var
+  Y: Integer;
+begin
+  Result := (A.Width = B.Width) and (A.Height = B.Height);
+  if not Result then
+    Exit;
+  A.PixelFormat := pf24bit;
+  B.PixelFormat := pf24bit;
+  for Y := 0 to A.Height - 1 do
+    if not CompareMem(A.ScanLine[Y], B.ScanLine[Y], A.Width * 3) then
+      Exit(False);
+end;
+
+procedure TAudit8DTests.CheckSameBitmap(A, B: TBitmap; const Context: string);
+begin
+  CheckTrue(BitmapsEqual(A, B), Context + ': Bilder verschieden');
+end;
+
+{ ---- MenuBar ---- }
+
+function TAudit8DTests.NewMenu(Count: Integer): TMainMenu;
+var
+  I: Integer;
+  It: TMenuItem;
+begin
+  Result := TMainMenu.Create(FForm);
+  for I := 0 to Count - 1 do
+  begin
+    It := TMenuItem.Create(Result);
+    It.Caption := '&Menue ' + IntToStr(I) + StringOfChar('x', I mod 4);
+    It.Add(TMenuItem.Create(Result));
+    It.Items[0].Caption := 'Eintrag';
+    Result.Items.Add(It);
+  end;
+end;
+
+procedure TAudit8DTests.CheckMenuBarRects(Bar: TPPGMenuBar; const Context: string);
+var
+  I, X, W, PPI, Pad: Integer;
+  R, Exp: TRect;
+  P: TPoint;
+begin
+  // Alte Formel: Eintraege nebeneinander, je Text + 2 x Rand
+  PPI := Bar.ScalePPI;
+  Pad := PPGScale(10, PPI);
+  X := PPGScale(4, PPI);
+  for I := 0 to Bar.ItemCount - 1 do
+  begin
+    W := PPGMeasureTextNoCanvas(Bar.Item(I).Caption, Bar.Font, 0, False).cx + 2 * Pad;
+    Exp := Rect(X, PPGScale(4, PPI), X + W, Bar.ClientHeight - PPGScale(4, PPI));
+    if Bar.UseRightToLeftAlignment then
+      Exp := Rect(Bar.ClientWidth - Exp.Right, Exp.Top, Bar.ClientWidth - Exp.Left, Exp.Bottom);
+    Inc(X, W);
+    R := Bar.ItemRect(I);
+    CheckEquals(RectText(Exp), RectText(R), Context + ': ItemRect ' + IntToStr(I));
+    P := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+    CheckEquals(I, Bar.ItemAtPos(P.X, P.Y), Context + ': ItemAtPos ' + IntToStr(I));
+  end;
+  CheckEquals(-1, Bar.ItemAtPos(-5, 2), Context + ': ausserhalb');
+end;
+
+procedure TAudit8DTests.MenuBarRectsFollowChanges;
+var
+  Bar: TPPGMenuBar;
+  M: TMainMenu;
+  It: TMenuItem;
+  I: Integer;
+begin
+  FForm.Width := 900;
+  M := NewMenu(10);
+  Bar := TPPGMenuBar.Create(FForm);
+  Bar.Parent := FForm;
+  Bar.Menu := M;
+  Bar.HandleNeeded;
+  CheckMenuBarRects(Bar, 'Start');
+  // Mausbewegungen fuellen einen etwaigen Zwischenspeicher
+  for I := 0 to 40 do
+    Bar.Perform(WM_MOUSEMOVE, 0, MouseLParam(I * 20, Bar.Height div 2));
+  M.Items[2].Caption := '&Ein viel laengerer Titel';
+  CheckMenuBarRects(Bar, 'Titel geaendert');
+  M.Items[4].Visible := False;
+  CheckMenuBarRects(Bar, 'ausgeblendet');
+  It := TMenuItem.Create(M);
+  It.Caption := '&Neu';
+  M.Items.Insert(1, It);
+  CheckMenuBarRects(Bar, 'eingefuegt');
+  M.Items[0].Free;
+  CheckMenuBarRects(Bar, 'entfernt');
+  Bar.Font.Size := Bar.Font.Size + 4;
+  CheckMenuBarRects(Bar, 'Schrift');
+  Bar.BiDiMode := bdRightToLeft;
+  CheckMenuBarRects(Bar, 'RTL');
+  FForm.Width := 700;
+  CheckMenuBarRects(Bar, 'RTL schmaler');
+  Bar.BiDiMode := bdLeftToRight;
+  CheckMenuBarRects(Bar, 'LTR');
+  Bar.Menu := NewMenu(3);
+  CheckMenuBarRects(Bar, 'anderes Menue');
+  Bar.Free;
+end;
+
+{ ---- Chart ---- }
+
+procedure TAudit8DTests.ConfigureChart(C: TPPGChart; Step: Integer);
+var
+  S: TPPGChartSeries;
+begin
+  if Step < 0 then
+  begin
+    // Grundaufbau
+    C.Parent := FForm;
+    C.Animation.Enabled := False;
+    C.SetBounds(0, 0, 600, 320);
+    S := C.Series.Add;
+    S.Title := 'Umsatz';
+    S.Kind := cskColumn;
+    S.SetValues([3, 5, 2, 8, 6, 4, 7]);
+    S := C.Series.Add;
+    S.Title := 'Kosten';
+    S.Kind := cskLine;
+    S.SetValues([2, 4, 3, 5, 4, 3, 6]);
+    Exit;
+  end;
+  case Step of
+    0: C.Series[0].Add(9);
+    1: C.SetBounds(0, 0, 520, 360);
+    2: C.Font.Size := C.Font.Size + 3;
+    3: C.LegendPosition := clpRight;
+    4: C.Series[1].Visible := False;
+    5:
+      begin
+        C.YAxis.AutoMax := False;
+        C.YAxis.Max := 20;
+      end;
+    6: C.Title := 'Quartal';
+    7: C.BiDiMode := bdRightToLeft;
+    8: C.Stacking := cstStacked;
+    9: C.Categories.Text := 'Jan'#13#10'Feb'#13#10'Maerz';
+    10: C.Series[0].Y[2] := 15;
+    11: C.Series[1].Visible := True;
+    12: C.LegendPosition := clpTop;
+    13: C.YAxis.Format := '0.000';
+  end;
+end;
+
+function TAudit8DTests.ChartSignature(C: TPPGChart): string;
+var
+  X, Y: Integer;
+  H: TPPGChartHit;
+  P: TPoint;
+  SB: TStringBuilder;
+begin
+  SB := TStringBuilder.Create;
+  try
+    Y := 2;
+    while Y < C.ClientHeight do
+    begin
+      X := 2;
+      while X < C.ClientWidth do
+      begin
+        H := C.HitTest(X, Y);
+        SB.Append(Ord(H.Kind)).Append(',').Append(H.Series).Append(',').Append(H.Index).Append(';');
+        Inc(X, 9);
+      end;
+      Inc(Y, 9);
+    end;
+    if C.PointPos(0, 1, P) then
+      SB.Append(P.X).Append('/').Append(P.Y);
+    SB.Append(RectText(C.Layout.PlotR));
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
+end;
+
+procedure TAudit8DTests.ChartHitTestMatchesFreshChart;
+var
+  Used, Fresh: TPPGChart;
+  Step, K, I: Integer;
+  BU, BF: TBitmap;
+begin
+  Used := TPPGChart.Create(FForm);
+  ConfigureChart(Used, -1);
+  for Step := 0 to 13 do
+  begin
+    // Benutzen: zeichnen, Maus bewegen (fuellt einen etwaigen Cache)
+    BU := RenderToBitmap(Used);
+    BU.Free;
+    for I := 0 to 10 do
+      Used.Perform(WM_MOUSEMOVE, 0, MouseLParam(30 + I * 50, 40 + I * 20));
+    ConfigureChart(Used, Step);
+    Fresh := TPPGChart.Create(FForm);
+    try
+      ConfigureChart(Fresh, -1);
+      for K := 0 to Step do
+        ConfigureChart(Fresh, K);
+      CheckEquals(ChartSignature(Fresh), ChartSignature(Used), 'Schritt ' + IntToStr(Step));
+      // Ohne Maus (kein Tooltip) zeichnen beide gleich
+      Used.Perform(CM_MOUSELEAVE, 0, 0);
+      BU := RenderToBitmap(Used);
+      BF := RenderToBitmap(Fresh);
+      try
+        CheckSameBitmap(BF, BU, 'Bild Schritt ' + IntToStr(Step));
+      finally
+        BU.Free;
+        BF.Free;
+      end;
+    finally
+      Fresh.Free;
+    end;
+  end;
+end;
+
+procedure TAudit8DTests.ChartHotFollowsHitTest;
+var
+  C: TPPGChart;
+  I, X, Y: Integer;
+  H: TPPGChartHit;
+begin
+  C := TPPGChart.Create(FForm);
+  ConfigureChart(C, -1);
+  for I := 0 to 30 do
+  begin
+    X := 20 + I * 18;
+    Y := 30 + (I * 37) mod 250;
+    C.Perform(WM_MOUSEMOVE, 0, MouseLParam(X, Y));
+    H := C.HitTest(X, Y);
+    CheckEquals(Ord(H.Kind), Ord(C.Hot.Kind), 'Art ' + IntToStr(I));
+    CheckEquals(H.Series, C.Hot.Series, 'Serie ' + IntToStr(I));
+    CheckEquals(H.Index, C.Hot.Index, 'Index ' + IntToStr(I));
+    if I = 15 then
+    begin
+      // Daten aendern: Hit-Test sieht sofort die neuen Daten
+      C.Series[0].Add(30);
+      C.Series[1].Add(1);
+    end;
+  end;
+end;
+
+{ ---- Kanban ---- }
+
+function TAudit8DTests.NewKanban(Cards: Integer): TPPGKanban;
+var
+  I: Integer;
+  Col: array[0..2] of TPPGKanbanColumn;
+begin
+  Result := TPPGKanban.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 900, 600);
+  Result.Animation.Enabled := False;
+  for I := 0 to 2 do
+    Col[I] := Result.Columns.AddColumn('Spalte ' + IntToStr(I));
+  Result.Cards.BeginUpdate;
+  try
+    for I := 0 to Cards - 1 do
+      with Result.Cards.AddCard(Col[I mod 3].Id, 'Aufgabe ' + IntToStr(I), 'Text <b>' + IntToStr(I) + '</b>') do
+      begin
+        if I mod 2 = 0 then
+          Labels := 'Bug, UI';
+        if I mod 3 = 0 then
+          Assignee := 'Anna Berg';
+        if I mod 4 = 0 then
+          Progress := 40;
+      end;
+  finally
+    Result.Cards.EndUpdate;
+  end;
+end;
+
+procedure TAudit8DTests.CheckSameKanban(A, B: TPPGKanban; const Context: string);
+var
+  C, I: Integer;
+  BA, BB: TBitmap;
+begin
+  CheckEquals(B.ColumnCount, A.ColumnCount, Context + ': Spalten');
+  for C := 0 to B.ColumnCount - 1 do
+  begin
+    CheckEquals(B.CardCount(C, 0), A.CardCount(C, 0), Context + ': Karten ' + IntToStr(C));
+    for I := 0 to B.CardCount(C, 0) - 1 do
+      CheckEquals(RectText(B.CardRect(C, 0, I)), RectText(A.CardRect(C, 0, I)),
+        Context + Format(': Karte %d/%d', [C, I]));
+  end;
+  BA := RenderToBitmap(A);
+  BB := RenderToBitmap(B);
+  try
+    CheckSameBitmap(BB, BA, Context);
+  finally
+    BA.Free;
+    BB.Free;
+  end;
+end;
+
+procedure TAudit8DTests.KanbanHeightsMatchFreshBoard;
+const
+  Long = 'Ein deutlich laengerer Titel, der auf jeden Fall in die zweite Zeile umbricht';
+var
+  Used, Fresh: TPPGKanban;
+  Step, K: Integer;
+  B: TBitmap;
+
+  procedure Apply(Kb: TPPGKanban; S: Integer);
+  begin
+    case S of
+      0: Kb.Cards[4].Title := Long;
+      1: Kb.Cards[7].Labels := '';
+      2: Kb.Cards[1].Text := 'Erste Zeile<br>Zweite Zeile<br>Dritte Zeile';
+      3: Kb.FilterText := '1';
+      4: Kb.ColumnWidth := 220;
+      5: Kb.FilterText := '';
+      6: Kb.Cards[2].Assignee := '';
+      7: Kb.Font.Size := Kb.Font.Size + 2;
+      8: Kb.MaxTextLines := 1;
+      9: Kb.Cards[4].Title := 'kurz';
+      10: Kb.Cards[5].Progress := -1;
+      11: Kb.Cards[3].Color := clRed;
+      12: Kb.Cards.Delete(6);
+      13: Kb.Cards.AddCard(Kb.Columns[1].Id, Long, 'neu');
+    end;
+  end;
+
+begin
+  Used := NewKanban(30);
+  for Step := 0 to 13 do
+  begin
+    B := RenderToBitmap(Used);
+    B.Free;
+    Apply(Used, Step);
+    Fresh := NewKanban(30);
+    try
+      for K := 0 to Step do
+        Apply(Fresh, K);
+      CheckSameKanban(Used, Fresh, 'Schritt ' + IntToStr(Step));
+    finally
+      Fresh.Free;
+    end;
+  end;
+end;
+
+{ ---- Planner ---- }
+
+function TAudit8DTests.NewPlanner: TPPGPlanner;
+var
+  I: Integer;
+  A: TPPGAppointment;
+  D: TDateTime;
+begin
+  Result := TPPGPlanner.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 1000, 640);
+  Result.ShowNowLine := False;
+  Result.Animation.Enabled := False;
+  Result.Resources.AddResource(1, 'Anna');
+  Result.Resources.AddResource(2, 'Ben');
+  Result.Resources.AddResource(3, 'Cleo');
+  Result.Resources.AddResource(2, 'Doppelt');
+  Result.Resources.AddResource(5, 'Emil');
+  D := EncodeDate(2025, 3, 3);
+  Result.Appointments.BeginUpdate;
+  try
+    for I := 0 to 239 do
+    begin
+      A := Result.Appointments.AddAppointment(D + (I mod 9) + (7 + (I * 5) mod 11) / 24 + (I mod 4) / 96,
+        D + (I mod 9) + (8 + (I * 5) mod 11) / 24 + (I mod 3) / 48, 'Termin ' + IntToStr(I));
+      // 4 = unbekannte Ressource, 0 = keine
+      A.ResourceId := I mod 6;
+      if I mod 17 = 0 then
+        A.AllDay := True;
+      if I mod 23 = 0 then
+        A.FinishTime := A.StartTime + 2.5;
+    end;
+  finally
+    Result.Appointments.EndUpdate;
+  end;
+  Result.Date := D + 2;
+end;
+
+function TAudit8DTests.PieceDigest(P: TPPGPlanner): string;
+var
+  I: Integer;
+  Pc: TPPGPlannerPiece;
+  S: string;
+begin
+  S := '';
+  for I := 0 to P.PieceCount - 1 do
+  begin
+    Pc := P.Piece(I);
+    S := S + Format('%d:%d:%d:%d:%d%s;', [Pc.Item, Ord(Pc.Area), Ord(Pc.Band), Ord(Pc.ContBefore),
+      Ord(Pc.ContAfter), RectText(Pc.R)]);
+  end;
+  Result := Format('%d/%d', [P.PieceCount, Digest(S)]);
+end;
+
+procedure TAudit8DTests.PlannerGroupedLayoutIsUnchanged;
+var
+  P: TPPGPlanner;
+  S: string;
+begin
+  P := NewPlanner;
+  P.View := pvWeek;
+  P.EnsureLayout;
+  S := PieceDigest(P);
+  P.View := pvWorkWeek;
+  P.EnsureLayout;
+  S := S + '|' + PieceDigest(P);
+  P.GroupByResource := False;
+  P.EnsureLayout;
+  S := S + '|' + PieceDigest(P);
+  P.View := pvMonth;
+  P.EnsureLayout;
+  S := S + '|' + PieceDigest(P);
+  if P.ScalePPI <> 96 then
+  begin
+    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
+    Exit;
+  end;
+  // Referenz: alter Code (vor Audit 8D), 96 PPI
+  CheckEquals('121/710716172|81/348966264|135/753421768|11/471133041', S, 'Anordnung Woche/Arbeitswoche/ohne Gruppen/Monat');
+end;
+
+procedure TAudit8DTests.PlannerTimelineLayoutIsUnchanged;
+var
+  P: TPPGPlanner;
+  S: string;
+begin
+  P := NewPlanner;
+  P.View := pvTimeline;
+  P.TimelineDays := 14;
+  P.EnsureLayout;
+  S := PieceDigest(P);
+  if P.ScalePPI <> 96 then
+  begin
+    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
+    Exit;
+  end;
+  CheckEquals('174/691175223', S, 'Anordnung Zeitleiste');
+end;
+
+procedure TAudit8DTests.PlannerTimelinePaintMatchesFresh;
+var
+  P: TPPGPlanner;
+  B: TBitmap;
+  I: Integer;
+  S: string;
+begin
+  P := NewPlanner;
+  P.View := pvTimeline;
+  P.TimelineDays := 60;
+  P.SlotMinutes := 60;
+  S := '';
+  for I := 0 to 4 do
+  begin
+    P.ScrollTo(I * 1733, I * 23);
+    B := RenderToBitmap(P);
+    try
+      S := S + IntToStr(BitmapDigest(B)) + ';';
+    finally
+      B.Free;
+    end;
+  end;
+  if P.ScalePPI <> 96 then
+  begin
+    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
+    Exit;
+  end;
+  CheckEquals('615531511;924146489;125693176;400710589;716246505;', S, 'Bilder der Zeitleiste');
+end;
+
+{ ---- Ribbon ---- }
+
+function TAudit8DTests.NewRibbon(DisabledItem, DownItem: Boolean): TPPGRibbon;
+var
+  G: TPPGRibbonGroup;
+  It: TPPGRibbonItem;
+begin
+  Result := TPPGRibbon.Create(FForm);
+  Result.Parent := FForm;
+  Result.Width := 900;
+  G := Result.Tabs.AddTab('Start').Groups.AddGroup('Zwischenablage');
+  G.Items.AddButton('Einfuegen', $E77F, rsLarge);
+  It := G.Items.AddButton('Ausschneiden', $E8C6, rsMedium);
+  It.Enabled := not DisabledItem;
+  G.Items.AddButton('Kopieren', $E8C8, rsMedium);
+  G := Result.Tabs[0].Groups.AddGroup('Absatz');
+  It := G.Items.AddCheck('Fett', $E8DD, rsSmall);
+  It.Down := DownItem;
+  G.Items.AddCheck('Kursiv', $E8DB, rsSmall);
+end;
+
+procedure TAudit8DTests.RibbonEnabledDownMatchFreshRibbon;
+var
+  Used, Fresh: TPPGRibbon;
+  B0, BU, BF: TBitmap;
+begin
+  Used := NewRibbon(False, False);
+  B0 := RenderToBitmap(Used);
+  try
+    Used.Tabs[0].Groups[0].Items[1].Enabled := False;
+    Used.Tabs[0].Groups[1].Items[0].Down := True;
+    BU := RenderToBitmap(Used);
+    Fresh := NewRibbon(True, True);
+    BF := RenderToBitmap(Fresh);
+    try
+      CheckFalse(BitmapsEqual(B0, BU), 'Aenderung sichtbar');
+      CheckSameBitmap(BF, BU, 'wie frisch aufgebaut');
+    finally
+      BU.Free;
+      BF.Free;
+      Fresh.Free;
+    end;
+    // Zurueck: wieder wie am Anfang
+    Used.Tabs[0].Groups[0].Items[1].Enabled := True;
+    Used.Tabs[0].Groups[1].Items[0].Down := False;
+    BU := RenderToBitmap(Used);
+    try
+      CheckSameBitmap(B0, BU, 'zurueck');
+    finally
+      BU.Free;
+    end;
+  finally
+    B0.Free;
+  end;
+end;
+
+{ ---- PageControl / TabStrip ---- }
+
+procedure TAudit8DTests.PageControlUpdateBracketKeepsOrder;
+var
+  A, B: TPPGPageControl;
+  S: TPPGTabSheet;
+  I: Integer;
+  First: TPPGTabSheet;
+
+  procedure Fill(PC: TPPGPageControl; Bracket: Boolean);
+  var
+    K: Integer;
+    T: TPPGTabSheet;
+  begin
+    if Bracket then
+      PC.BeginUpdate;
+    try
+      for K := 0 to 29 do
+      begin
+        T := TPPGTabSheet.Create(PC);
+        T.Caption := 'Seite ' + IntToStr(K) + StringOfChar('w', K mod 5);
+        T.PageControl := PC;
+        if K = 3 then
+          T.TabVisible := False;
+      end;
+      PC.Pages[10].PageIndex := 2;
+      PC.Pages[29].Free;
+    finally
+      if Bracket then
+        PC.EndUpdate;
+    end;
+  end;
+
+begin
+  FForm.Width := 800;
+  A := TPPGPageControl.Create(FForm);
+  A.Parent := FForm;
+  A.SetBounds(0, 0, 700, 250);
+  B := TPPGPageControl.Create(FForm);
+  B.Parent := FForm;
+  B.SetBounds(0, 0, 700, 250);
+  Fill(A, True);
+  Fill(B, False);
+  CheckEquals(B.PageCount, A.PageCount, 'Anzahl');
+  for I := 0 to B.PageCount - 1 do
+    CheckEquals(B.Pages[I].Caption, A.Pages[I].Caption, 'Reihenfolge ' + IntToStr(I));
+  First := B.ActivePage;
+  CheckTrue(First <> nil, 'aktive Seite');
+  CheckEquals(First.Caption, A.ActivePage.Caption, 'aktive Seite gleich');
+  for I := 0 to B.PageCount - 1 do
+    CheckEquals(RectText(B.TabRect(I)), RectText(A.TabRect(I)), 'Reiter ' + IntToStr(I));
+  A.ActivePageIndex := A.PageCount - 1;
+  B.ActivePageIndex := B.PageCount - 1;
+  for I := 0 to B.PageCount - 1 do
+    CheckEquals(RectText(B.TabRect(I)), RectText(A.TabRect(I)), 'Reiter nach Wahl ' + IntToStr(I));
+  // Klammer mit Entfernen der aktiven Seite
+  A.BeginUpdate;
+  try
+    S := A.ActivePage;
+    S.Free;
+  finally
+    A.EndUpdate;
+  end;
+  CheckTrue(A.ActivePage <> nil, 'Nachbarseite aktiv');
+  CheckEquals(B.Pages[B.PageCount - 2].Caption, A.ActivePage.Caption, 'Nachbar');
+end;
+
+procedure TAudit8DTests.TabStripMakeVisibleIsMinimal;
+var
+  T: TPPGTabControl;
+  I, Pos, First, Pass: Integer;
+  R: TRect;
+  S: string;
+begin
+  S := '';
+  T := TPPGTabControl.Create(FForm);
+  T.Parent := FForm;
+  T.SetBounds(0, 0, 380, 120);
+  for I := 0 to 39 do
+    T.Tabs.Add('Reiter ' + IntToStr(I) + StringOfChar('m', I mod 6));
+  CheckTrue(T.Strip.Overflow, 'Ueberlauf');
+  for Pass := 0 to 1 do
+  begin
+    if Pass = 1 then
+      T.TabPosition := tpLeft;
+    for Pos := 0 to 39 do
+    begin
+      T.TabIndex := (Pos * 17) mod 40;
+      I := T.Strip.PosOf(T.TabIndex);
+      R := T.Strip.TabRectAt(I);
+      CheckFalse(IsRectEmpty(R), 'sichtbar ' + IntToStr(Pos));
+      First := T.Strip.FirstVisible;
+      CheckTrue(First <= I, 'erster sichtbarer davor');
+      if Pass = 0 then
+        CheckTrue(R.Right <= T.Strip.PrevRect.Left, 'nicht unter den Pfeilen ' + IntToStr(Pos));
+      S := S + IntToStr(First) + ',';
+    end;
+  end;
+  if T.ScalePPI <> 96 then
+  begin
+    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
+    Exit;
+  end;
+  // Referenz: erste sichtbare Reiter mit dem alten MakeVisible (96 PPI)
+  CheckEquals('0,16,32,11,26,5,20,37,16,31,10,25,4,19,36,15,30,9,24,3,18,35,14,29,8,23,2,17,34,13,' +
+    '28,7,22,1,16,34,12,28,6,22,0,16,33,11,27,5,21,38,16,32,10,26,4,20,37,15,31,9,25,3,19,36,14,' +
+    '30,8,24,2,18,35,13,29,7,23,1,17,34,12,28,6,22,', S, 'erste sichtbare Reiter');
+end;
+
+{ ---- InfoBar / TeachingTip / TagEdit ---- }
+
+procedure TAudit8DTests.InfoBarHeightMatchesFresh;
+var
+  Used, Fresh: TPPGInfoBar;
+  Step, K: Integer;
+
+  procedure Apply(B: TPPGInfoBar; S: Integer);
+  begin
+    case S of
+      0: B.Message := 'Kurz';
+      1: B.Message := StringOfChar('a', 20) + ' ' + StringOfChar('b', 300) + ' Ende <b>fett</b>';
+      2: B.Width := 300;
+      3: B.Font.Size := B.Font.Size + 3;
+      4: B.Title := 'Ein Titel';
+      5: B.ActionCaption := 'Aktion';
+      6: B.ShowCloseButton := False;
+      7: B.Width := 640;
+      8: B.Style.Font.Size := 16;
+    end;
+  end;
+
+  function NewBar: TPPGInfoBar;
+  begin
+    Result := TPPGInfoBar.Create(FForm);
+    Result.Parent := FForm;
+    Result.Animation.Enabled := False;
+    Result.Width := 500;
+    Result.Message := 'Start';
+  end;
+
+begin
+  Used := NewBar;
+  for Step := 0 to 8 do
+  begin
+    Apply(Used, Step);
+    Fresh := NewBar;
+    try
+      for K := 0 to Step do
+        Apply(Fresh, K);
+      CheckEquals(Fresh.Height, Used.Height, 'Hoehe Schritt ' + IntToStr(Step));
+    finally
+      Fresh.Free;
+    end;
+  end;
+end;
+
+procedure TAudit8DTests.TeachingTipFollowsContentChange;
+var
+  Target: TPPGTagEdit;
+  Tip: TPPGTeachingTip;
+  R1, R2, R3: TRect;
+  I: Integer;
+begin
+  FForm.Show;
+  try
+    Target := TPPGTagEdit.Create(FForm);
+    Target.Parent := FForm;
+    Target.SetBounds(40, 40, 200, 30);
+    Tip := TPPGTeachingTip.Create(FForm);
+    Tip.Title := 'Titel';
+    Tip.Text := 'Kurz';
+    Tip.ShowFor(Target);
+    for I := 0 to 20 do
+      Application.ProcessMessages;
+    GetWindowRect(Tip.Window.Handle, R1);
+    Tip.Text := 'Ein deutlich laengerer Text, der mehrere Zeilen braucht und das Fenster ' +
+      'hoeher macht als vorher. Noch ein Satz, damit es sicher umbricht.';
+    for I := 0 to 20 do
+      Application.ProcessMessages;
+    GetWindowRect(Tip.Window.Handle, R2);
+    CheckTrue(R2.Bottom - R2.Top > R1.Bottom - R1.Top, 'hoeher nach Textaenderung');
+    Tip.Hide;
+    Tip.ShowFor(Target);
+    for I := 0 to 20 do
+      Application.ProcessMessages;
+    GetWindowRect(Tip.Window.Handle, R3);
+    CheckEquals(RectText(R3), RectText(R2), 'wie frisch gezeigt');
+    Tip.Hide;
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TAudit8DTests.TagEditChipsFollowFont;
+var
+  A, B: TPPGTagEdit;
+  I: Integer;
+
+  function NewEdit: TPPGTagEdit;
+  begin
+    Result := TPPGTagEdit.Create(FForm);
+    Result.Parent := FForm;
+    Result.SetBounds(0, 0, 360, 30);
+    Result.Tags.Add('Delphi');
+    Result.Tags.Add('VCL');
+    Result.Tags.Add('Ein langer Eintrag');
+    Result.Tags.Add('XE2');
+  end;
+
+begin
+  A := NewEdit;
+  for I := 0 to A.Tags.Count - 1 do
+    A.ChipRect(I);
+  A.Font.Size := A.Font.Size + 4;
+  A.Tags.Add('Neu');
+  B := NewEdit;
+  B.Font.Size := B.Font.Size + 4;
+  B.Tags.Add('Neu');
+  CheckEquals(B.Height, A.Height, 'Hoehe');
+  for I := 0 to B.Tags.Count - 1 do
+    CheckEquals(RectText(B.ChipRect(I)), RectText(A.ChipRect(I)), 'Chip ' + IntToStr(I));
+end;
+
+{ ---- AppHooks ---- }
+
+procedure TAudit8DTests.HookA(var Msg: TMsg; var Handled: Boolean);
+begin
+  if Msg.message = WM_USER + 802 then
+    FHookLog.Add('A');
+end;
+
+procedure TAudit8DTests.HookB(var Msg: TMsg; var Handled: Boolean);
+begin
+  if Msg.message <> WM_USER + 802 then
+    Exit;
+  FHookLog.Add('B');
+  // Waehrend der Verteilung: A abmelden, C anmelden
+  PPGRemoveMessageHook(HookA);
+  PPGAddMessageHook(HookC);
+end;
+
+procedure TAudit8DTests.HookC(var Msg: TMsg; var Handled: Boolean);
+begin
+  if Msg.message = WM_USER + 802 then
+    FHookLog.Add('C');
+end;
+
+procedure TAudit8DTests.WatchA(Control: TControl; var Message: TMessage);
+begin
+  if Message.Msg = WM_USER + 803 then
+    FHookLog.Add('wA');
+end;
+
+procedure TAudit8DTests.WatchB(Control: TControl; var Message: TMessage);
+begin
+  if Message.Msg <> WM_USER + 803 then
+    Exit;
+  FHookLog.Add('wB');
+  PPGUnwatchControl(Control, WatchA);
+end;
+
+procedure TAudit8DTests.AppHooksChangesDuringDispatch;
+var
+  N, I: Integer;
+  Ctl: TPPGTagEdit;
+begin
+  N := PPGMessageHookCount;
+  PPGAddMessageHook(HookA);
+  PPGAddMessageHook(HookB); // zuletzt angemeldet = zuerst gerufen
+  try
+    PostMessage(FForm.Handle, WM_USER + 802, 0, 0);
+    for I := 0 to 5 do
+      Application.ProcessMessages;
+    // Die Runde laeuft mit dem Stand zu ihrem Beginn: A noch, C noch nicht
+    CheckEquals('B,A', FHookLog.CommaText, 'erste Runde');
+    CheckEquals(N + 2, PPGMessageHookCount, 'A ab, C an');
+    FHookLog.Clear;
+    PostMessage(FForm.Handle, WM_USER + 802, 0, 0);
+    for I := 0 to 5 do
+      Application.ProcessMessages;
+    CheckEquals('C,B', FHookLog.CommaText, 'zweite Runde');
+  finally
+    PPGRemoveMessageHook(HookA);
+    PPGRemoveMessageHook(HookB);
+    PPGRemoveMessageHook(HookC);
+  end;
+  CheckEquals(N, PPGMessageHookCount, 'alle ab');
+  // Beobachter: Abmelden waehrend der Meldung
+  FHookLog.Clear;
+  Ctl := TPPGTagEdit.Create(FForm);
+  Ctl.Parent := FForm;
+  PPGWatchControl(Ctl, WatchA);
+  PPGWatchControl(Ctl, WatchB);
+  Ctl.Perform(WM_USER + 803, 0, 0);
+  CheckEquals('wB,wA', FHookLog.CommaText, 'Beobachter erste Runde');
+  CheckEquals(1, PPGControlWatchCount(Ctl), 'A abgemeldet');
+  FHookLog.Clear;
+  Ctl.Perform(WM_USER + 803, 0, 0);
+  CheckEquals('wB', FHookLog.CommaText, 'Beobachter zweite Runde');
+  PPGUnwatchControl(Ctl, WatchB);
+  CheckEquals(0, PPGControlWatchCount(Ctl), 'alle Beobachter ab');
+  Ctl.Free;
+end;
+
+{ TAudit8DDBTests }
+
+procedure TAudit8DDBTests.SetUp;
+begin
+  inherited SetUp;
+  FForm.SetBounds(0, 0, 1100, 700);
+  FData := TClientDataSet.Create(FForm);
+  FData.FieldDefs.Add('ID', ftInteger);
+  FData.FieldDefs.Add('Status', ftString, 20);
+  FData.FieldDefs.Add('Reihe', ftInteger);
+  FData.FieldDefs.Add('Titel', ftString, 80);
+  FData.CreateDataSet;
+  FData.IndexFieldNames := 'Reihe';
+  FData.AfterPost := CountPost;
+  FSource := TDataSource.Create(FForm);
+  FSource.DataSet := FData;
+end;
+
+procedure TAudit8DDBTests.CountPost(DataSet: TDataSet);
+begin
+  Inc(FPosts);
+end;
+
+procedure TAudit8DDBTests.AddRow(AId: Integer; const AStatus: string; AOrder: Integer;
+  const ATitle: string);
+begin
+  FData.Append;
+  FData.FieldByName('ID').AsInteger := AId;
+  FData.FieldByName('Status').AsString := AStatus;
+  FData.FieldByName('Reihe').AsInteger := AOrder;
+  FData.FieldByName('Titel').AsString := ATitle;
+  FData.Post;
+end;
+
+function TAudit8DDBTests.OrderOf(AId: Integer): Integer;
+begin
+  CheckTrue(FData.Locate('ID', AId, []));
+  Result := FData.FieldByName('Reihe').AsInteger;
+end;
+
+procedure TAudit8DDBTests.SortedDataSetRenumbersInOrder;
+var
+  K: TPPGDBKanban;
+  I: Integer;
+  S: string;
+begin
+  // Datenmenge nach dem Sortierfeld indiziert: Post verschiebt den Satz
+  for I := 1 to 8 do
+    AddRow(I, 'todo', I * 10, Chr(Ord('A') + I - 1));
+  AddRow(9, 'doing', 10, 'X');
+  AddRow(10, 'doing', 20, 'Y');
+  K := TPPGDBKanban.Create(FForm);
+  K.Parent := FForm;
+  K.SetBounds(0, 0, 1080, 640);
+  K.Animation.Enabled := False;
+  K.ReloadDelay := 0;
+  K.Columns.AddColumn('Offen').Key := 'todo';
+  K.Columns.AddColumn('In Arbeit').Key := 'doing';
+  K.KeyField := 'ID';
+  K.ColumnField := 'Status';
+  K.OrderField := 'Reihe';
+  K.TitleField := 'Titel';
+  K.DataSource := FSource;
+  K.HandleNeeded;
+  FPosts := 0;
+  // Letzte Karte nach vorn: alle Saetze der Spalte bekommen neue Nummern
+  CheckTrue(K.MoveCard(0, 0, 7, 0, 0, 0));
+  S := '';
+  for I := 0 to K.CardCount(0, 0) - 1 do
+    S := S + K.CardData(0, 0, I).Title;
+  CheckEquals('HABCDEFG', S, 'Anzeige');
+  CheckEquals(10, OrderOf(8));
+  for I := 1 to 7 do
+    CheckEquals((I + 1) * 10, OrderOf(I), 'Reihe ' + IntToStr(I));
+  CheckEquals(9, FPosts, 'jede Karte einmal geschrieben, die gezogene zweimal');
+  // Karte in die andere Spalte: beide Zellen neu nummeriert, nur Abweichungen
+  FPosts := 0;
+  CheckTrue(K.MoveCard(0, 0, 0, 1, 0, 1));
+  CheckEquals(10, OrderOf(9));
+  CheckEquals(20, OrderOf(8));
+  CheckEquals(30, OrderOf(10));
+  for I := 1 to 7 do
+    CheckEquals(I * 10, OrderOf(I), 'Reihe nach Wechsel ' + IntToStr(I));
+  // Ziel: 8 (Spalte+Reihe) + 10 (neu 30); Quelle: alle 7 rutschen auf
+  CheckEquals(10, FPosts, 'nur Abweichungen geschrieben');
+  K.Free;
 end;
 
 initialization
   RegisterTest('Audit8D', TAudit8DTests.Suite);
+  RegisterTest('Audit8D', TAudit8DDBTests.Suite);
 
 end.
