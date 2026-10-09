@@ -60,7 +60,7 @@ type
 implementation
 
 uses
-  Winapi.oleacc, PPG.Exceptions, PPG.Lang, PPG.Consts;
+  Winapi.oleacc, System.Math, PPG.Tests.Visual, PPG.Exceptions, PPG.Lang, PPG.Consts;
 
 type
   TKanbanAccess = class(TPPGKanban);
@@ -208,6 +208,7 @@ begin
   B := RenderToBitmap(K);
   try
     CheckEquals(0, FErrors.Count, 'Fehler beim Zeichnen: ' + FErrors.Text);
+    PPGCheckPainted(Self, B, 'Kanban ' + Name); // Audit 11b
     Dir := GetEnvironmentVariable('PPG_SHOTS');
     if Dir <> '' then
     begin
@@ -763,47 +764,115 @@ begin
   Shot(K, 'rtl');
 end;
 
+{ Audit 11b: Pixel, die sich innerhalb von R zwischen A und B deutlich
+  unterscheiden (Summe RGB > 40). }
+function RegionDiff(A, B: TBitmap; const R: TRect): Integer;
+var
+  X, Y: Integer;
+  PA, PB: PByteArray;
+begin
+  Result := 0;
+  A.PixelFormat := pf24bit;
+  B.PixelFormat := pf24bit;
+  for Y := Max(R.Top, 0) to Min(R.Bottom, Min(A.Height, B.Height)) - 1 do
+  begin
+    PA := A.ScanLine[Y];
+    PB := B.ScanLine[Y];
+    for X := Max(R.Left, 0) to Min(R.Right, Min(A.Width, B.Width)) - 1 do
+      if Abs(PA[X * 3] - PB[X * 3]) + Abs(PA[X * 3 + 1] - PB[X * 3 + 1]) +
+        Abs(PA[X * 3 + 2] - PB[X * 3 + 2]) > 40 then
+        Inc(Result);
+  end;
+end;
+
+{ Luminanz 0..1 eines Pixels }
+function PixelLuma(B: TBitmap; X, Y: Integer): Double;
+var
+  P: PByteArray;
+begin
+  B.PixelFormat := pf24bit;
+  P := B.ScanLine[Y];
+  Result := (0.2126 * P[X * 3 + 2] + 0.7152 * P[X * 3 + 1] + 0.0722 * P[X * 3]) / 255;
+end;
+
 procedure TKanbanTests.PaintsAllStates;
 var
   K: TPPGKanban;
+  Light, Drag, Dark, Normal, Disabled: TBitmap;
+  Col1, Empty0: TRect;
 begin
-  K := NewBoard;
-  K.Cards[0].Text := 'Mit <b>Markup</b> und <i>mehr</i> Text, damit die Karte waechst.';
-  K.Cards[0].Labels := 'Feature, Frontend';
-  K.Cards[0].Due := Date - 1;
-  K.Cards[0].Assignee := 'Ben Kraus';
-  K.Cards[0].Progress := 40;
-  K.Cards[1].Color := $0050A0E0;
-  K.Cards.AddCard(2, 'B3');
-  K.Select(0, 0, 0);
-  K.Perform(WM_MOUSEMOVE, 0, MakeLParam(Center(K.CardRect(0, 0, 1)).X, Center(K.CardRect(0, 0, 1)).Y));
-  Shot(K, 'light');
-  // waehrend des Ziehens (Platzhalter und Karte an der Maus)
-  K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(Center(K.CardRect(0, 0, 2)).X, Center(K.CardRect(0, 0, 2)).Y));
-  K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(Center(K.ColumnRect(1)).X, K.CardRect(1, 0, 1).Top + 4));
-  Shot(K, 'drag');
-  Key(K, VK_ESCAPE);
-  K.Perform(WM_LBUTTONUP, 0, 0);
-  K.Columns[2].Collapsed := True;
-  K.Lanes.AddLane('Anna');
-  K.Lanes.AddLane('Ben');
-  K.Cards[3].LaneId := 2;
-  Shot(K, 'lanes');
-  K.Lanes.Clear;
-  K.Preset := 'Classic';
-  Shot(K, 'classic');
-  K.Preset := 'Fluent11';
-  TPPGTheme.Mode := tmDark;
+  Light := nil;
+  Drag := nil;
+  Dark := nil;
+  Normal := nil;
+  Disabled := nil;
   try
-    Shot(K, 'dark');
+    K := NewBoard;
+    K.Cards[0].Text := 'Mit <b>Markup</b> und <i>mehr</i> Text, damit die Karte waechst.';
+    K.Cards[0].Labels := 'Feature, Frontend';
+    K.Cards[0].Due := Date - 1;
+    K.Cards[0].Assignee := 'Ben Kraus';
+    K.Cards[0].Progress := 40;
+    K.Cards[1].Color := $0050A0E0;
+    K.Cards.AddCard(2, 'B3');
+    K.Select(0, 0, 0);
+    K.Perform(WM_MOUSEMOVE, 0, MakeLParam(Center(K.CardRect(0, 0, 1)).X, Center(K.CardRect(0, 0, 1)).Y));
+    Shot(K, 'light');
+    Light := RenderToBitmap(K);
+    PPGCheckPainted(Self, Light, 'hell');
+    // waehrend des Ziehens (Platzhalter und Karte an der Maus)
+    K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(Center(K.CardRect(0, 0, 2)).X, Center(K.CardRect(0, 0, 2)).Y));
+    K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(Center(K.ColumnRect(1)).X, K.CardRect(1, 0, 1).Top + 4));
+    Shot(K, 'drag');
+    Drag := RenderToBitmap(K);
+    // Pixelprobe: in der Zielspalte erscheint der Platzhalter (und die Karte an der Maus)
+    Col1 := K.ColumnRect(1);
+    CheckTrue(RegionDiff(Light, Drag, Col1) >= 200,
+      Format('Ziehen: Zielspalte unveraendert (%d Pixel)', [RegionDiff(Light, Drag, Col1)]));
+    Key(K, VK_ESCAPE);
+    K.Perform(WM_LBUTTONUP, 0, 0);
+    K.Columns[2].Collapsed := True;
+    K.Lanes.AddLane('Anna');
+    K.Lanes.AddLane('Ben');
+    K.Cards[3].LaneId := 2;
+    Shot(K, 'lanes');
+    K.Lanes.Clear;
+    K.Preset := 'Classic';
+    Shot(K, 'classic');
+    K.Preset := 'Fluent11';
+    FreeAndNil(Light);
+    Light := RenderToBitmap(K);
+    TPPGTheme.Mode := tmDark;
+    try
+      Shot(K, 'dark');
+      Dark := RenderToBitmap(K);
+    finally
+      TPPGTheme.Mode := tmLight;
+    end;
+    // Dunkel anders als hell; Probe unten in der ersten Spalte (leere Spaltenflaeche):
+    // dunkel dunkler Grund, hell heller Grund
+    PPGCheckDiffers(Self, Light, Dark, 'Dunkel gegen hell');
+    Empty0 := K.ColumnRect(0);
+    CheckTrue(PixelLuma(Dark, Center(Empty0).X, Empty0.Bottom - 6) < 0.35, 'dunkel: Spaltengrund dunkel');
+    CheckTrue(PixelLuma(Light, Center(Empty0).X, Empty0.Bottom - 6) > 0.6, 'hell: Spaltengrund hell');
+    TPPGRendererRegistry.ForceGdiFallback := True;
+    Shot(K, 'gdi');
+    Normal := RenderToBitmap(K);
+    PPGCheckPainted(Self, Normal, 'GDI');
+    TPPGRendererRegistry.ForceGdiFallback := False;
+    FreeAndNil(Normal);
+    Normal := RenderToBitmap(K);
+    K.Enabled := False;
+    Shot(K, 'disabled');
+    Disabled := RenderToBitmap(K);
+    PPGCheckDiffers(Self, Normal, Disabled, 'Deaktiviert');
   finally
-    TPPGTheme.Mode := tmLight;
+    Light.Free;
+    Drag.Free;
+    Dark.Free;
+    Normal.Free;
+    Disabled.Free;
   end;
-  TPPGRendererRegistry.ForceGdiFallback := True;
-  Shot(K, 'gdi');
-  TPPGRendererRegistry.ForceGdiFallback := False;
-  K.Enabled := False;
-  Shot(K, 'disabled');
 end;
 
 procedure TKanbanTests.ManyCardsStayFast;

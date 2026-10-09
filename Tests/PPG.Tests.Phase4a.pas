@@ -90,6 +90,9 @@ type
 
 implementation
 
+uses
+  PPG.Tests.Visual;
+
 {$WARN SYMBOL_PLATFORM OFF}
 
 type
@@ -1129,8 +1132,21 @@ begin
             TBaseFieldAccess(Fields[F]).BorderStyle := bsNone
           else
             TBaseFieldAccess(Fields[F]).BorderStyle := bsSingle;
-          RenderToBitmap(Fields[F]).Free;
+          PPGPaintCheck(Self, Fields[F], 'Fields[F]');
         end;
+  // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+  FForm.Show;
+  for F := 0 to High(Fields) do
+  begin
+    TBaseFieldAccess(Fields[F]).Preset := PPGPresetModernFlat;
+    TBaseFieldAccess(Fields[F]).Enabled := True;
+    TBaseFieldAccess(Fields[F]).ValidationState := TPPGValidationState(0);
+    TBaseFieldAccess(Fields[F]).BiDiMode := bdLeftToRight;
+    TBaseFieldAccess(Fields[F]).BorderStyle := bsSingle;
+    PPGCheckStates(Self, Fields[F], Fields[F].ClassName, True, True, True,
+      Point(Fields[F].Width div 2, Fields[F].Height div 2));
+  end;
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

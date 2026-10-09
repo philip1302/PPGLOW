@@ -79,6 +79,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   Winapi.oleacc, PPG.Theme, PPG.Popup;
 
 type
@@ -881,8 +882,14 @@ end;
 
 { TPhase7bPaintTests }
 
+function CenterOf7b(const R: TRect): TPoint;
+begin
+  Result := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+end;
+
 procedure TPhase7bPaintTests.PaintAllPresetsAndModes;
 var
+  W: TWinControl;
   Names: TStringList;
   P, I: Integer;
   Dark, Gdi: Boolean;
@@ -922,7 +929,7 @@ begin
             for I := 0 to High(L) do
             begin
               TCC7b(L[I]).Preset := Names[P];
-              RenderToBitmap(L[I]).Free;
+              PPGPaintCheck(Self, L[I], 'L[I]');
             end;
             for I := 0 to High(L) do
               L[I].Free;
@@ -935,6 +942,19 @@ begin
   finally
     Names.Free;
   end;
+  // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+  FForm.Show;
+  C := NewCalendar;
+  C.Date := EncodeDate(2026, 10, 8);
+  PPGCheckStates(Self, C, 'Calendar', True, True, True, CenterOf7b(C.CellRect(16)));
+  C.Free;
+  W := NewPicker(FForm, Self);
+  PPGCheckStates(Self, W, 'DatePicker', True, True, True, Point(W.Width div 2, W.Height div 2));
+  W.Free;
+  W := NewTime(FForm, Self);
+  PPGCheckStates(Self, W, 'TimePicker', True, True, True, Point(W.Width div 2, W.Height div 2));
+  W.Free;
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

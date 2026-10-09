@@ -73,7 +73,7 @@ type
 implementation
 
 uses
-  Winapi.oleacc, PPG.Exceptions;
+  Winapi.oleacc, PPG.Tests.Visual, PPG.Exceptions;
 
 type
   TWinControlAccess = class(TWinControl);
@@ -211,6 +211,7 @@ begin
   B := RenderToBitmap(P);
   try
     CheckEquals(0, FErrors.Count, 'Fehler beim Zeichnen: ' + FErrors.Text);
+    PPGCheckPainted(Self, B, 'Planner ' + Name); // Audit 11b
     // Bilder fuer die Sichtpruefung nur auf Wunsch
     Dir := GetEnvironmentVariable('PPG_SHOTS');
     if Dir <> '' then
@@ -919,6 +920,7 @@ procedure TPlannerTests.PaintsAllViews;
 const
   Names: array[TPPGPlannerView] of string = ('day', 'workweek', 'week', 'month', 'timeline', 'agenda');
 var
+  R: TRect;
   P: TPPGPlanner;
   V: TPPGPlannerView;
   A: TPPGAppointment;
@@ -969,6 +971,18 @@ begin
   TPPGRendererRegistry.ForceGdiFallback := True;
   P.View := pvMonth;
   Shot(P, 'month-gdi');
+  FForm.Hide;
+  // Audit 11b: Zustaende sichtbar (GDI+ und GDI): Hover ueber einem Termin,
+  // Fokus am gewaehlten Termin, Deaktiviert
+  FForm.Show;
+  P.View := pvWeek;
+  P.GroupByResource := False;
+  P.SelectAppointment(nil);
+  R := P.ItemRect(0);
+  PPGCheckStates(Self, P, 'Planner', True, False, False,
+    Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+  P.SelectAppointment(P.Appointments[0]);
+  PPGCheckStates(Self, P, 'Planner gewaehlt', False, True, True, Point(0, 0));
   FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;

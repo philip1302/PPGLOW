@@ -73,6 +73,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   System.StrUtils, Winapi.oleacc, Vcl.Imaging.pngimage, PPG.Theme, PPG.Lang, PPG.Consts, PPG.Accessibility;
 
 type
@@ -547,6 +548,7 @@ begin
         Sheet.Canvas.TextOut(4, Row * 480, Names[Pn] + IfThen(Dark, ' dunkel', ' hell'));
         B := RenderToBitmap(P);
         try
+          PPGCheckPainted(Self, B, Names[Pn] + ' Picker'); // Audit 11b
           Sheet.Canvas.Draw(10, Row * 480 + 18, B);
         finally
           B.Free;
@@ -558,6 +560,7 @@ begin
           TPPGColorPopup(P.Popup).SetCustomMode(Custom);
           B := RenderToBitmap(P.Popup);
           try
+            PPGCheckPainted(Self, B, Names[Pn] + ' Popup'); // Audit 11b
             Sheet.Canvas.Draw(X, Row * 480 + 18, B);
             Inc(X, B.Width + 20);
           finally
@@ -577,6 +580,8 @@ begin
     finally
       Png.Free;
     end;
+    // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+    PPGCheckStates(Self, P, 'ColorPicker', True, True, True, Point(P.Width div 2, P.Height div 2));
     CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
     Sheet.Free;

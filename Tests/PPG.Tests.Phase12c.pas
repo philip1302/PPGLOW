@@ -84,6 +84,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   System.StrUtils, Winapi.oleacc, Vcl.Imaging.pngimage, PPG.Lang, PPG.Consts, PPG.Theme,
   PPG.NumberFormat, PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit;
 
@@ -864,6 +865,7 @@ begin
         begin
           B := RenderToBitmap(Ctl[I]);
           try
+            PPGCheckPainted(Self, B, Names[P] + ' ' + Ctl[I].ClassName); // Audit 11b
             Sheet.Canvas.Draw(10, Y, B);
             Inc(Y, B.Height + 8);
           finally
@@ -875,6 +877,7 @@ begin
         Chk.DropDown;
         B := RenderToBitmap(Chk.Popup);
         try
+          PPGCheckPainted(Self, B, Names[P] + ' CheckCombo-Popup'); // Audit 11b
           Sheet.Canvas.Draw(300, Row * 420 + 18, B);
         finally
           B.Free;
@@ -884,6 +887,7 @@ begin
         Col.DropDown;
         B := RenderToBitmap(Col.Popup);
         try
+          PPGCheckPainted(Self, B, Names[P] + ' ColumnCombo-Popup'); // Audit 11b
           Sheet.Canvas.Draw(560, Row * 420 + 18, B);
         finally
           B.Free;
@@ -900,6 +904,13 @@ begin
       Png.SaveToFile(Dir + 'Fields12.png');
     finally
       Png.Free;
+    end;
+    // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+    FForm.Show;
+    for I := 0 to High(Ctl) do
+    begin
+      TCtrlCrack(Ctl[I]).Preset := PPGPresetModernFlat;
+      PPGCheckStates(Self, Ctl[I], Ctl[I].ClassName, True, True, True, Point(100, 16));
     end;
     CheckEquals(0, FErrors.Count, FErrors.Text);
   finally

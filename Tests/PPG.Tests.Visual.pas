@@ -72,11 +72,25 @@ function PPGPixelDiff(A, B: TBitmap; Tol: Integer = 40): Integer;
 /// Pixel, die sich deutlich von der Farbe links oben (Hintergrund) abheben;
 /// 0 = leeres Bild.
 function PPGContentPixels(B: TBitmap): Integer;
+/// Audit 11b: Pruefungen fuer Zeichentests. Nicht leer: mindestens 20 Pixel
+/// heben sich vom Hintergrund ab.
+procedure PPGCheckPainted(Test: TTestCase; B: TBitmap; const What: string);
+/// Zustand sichtbar: mindestens 8 Pixel weichen deutlich ab (wie die Galerie).
+procedure PPGCheckDiffers(Test: TTestCase; A, B: TBitmap; const What: string);
+/// Zeichnet C (PaintTo), prueft "nicht leer" und gibt das Bild frei.
+procedure PPGPaintCheck(Test: TTestCase; C: TWinControl; const What: string);
+/// Wie TControlTestCase.RenderToBitmap.
+function PPGRender(C: TWinControl): TBitmap;
+/// Zustaende sichtbar anders als Normal (je True): Hover ueber Pt, Fokus,
+/// Deaktiviert; mit GDI+ und GDI-Rueckfall. C muss auf einem sichtbaren
+/// Formular liegen; danach ist C wieder aktiv, ohne Hover.
+procedure PPGCheckStates(Test: TTestCase; C: TWinControl; const What: string;
+  Hover, Focus, Disabled: Boolean; const Pt: TPoint);
 
 implementation
 
 uses
-  System.Math, System.StrUtils, System.DateUtils, PPG.Consts, PPG.Theme, PPG.Tokens, PPG.DpiUtils,
+  System.Math, System.StrUtils, System.DateUtils, System.TypInfo, PPG.Consts, PPG.Theme, PPG.Tokens, PPG.DpiUtils,
   PPG.Controls.ItemList,
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar,
   PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.TileView, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
@@ -270,6 +284,146 @@ end;
 function PPGContentPixels(B: TBitmap): Integer;
 begin
   Result := ContentPixels(B);
+end;
+
+procedure PPGCheckPainted(Test: TTestCase; B: TBitmap; const What: string);
+begin
+  Test.CheckTrue((B <> nil) and (B.Width > 0) and (B.Height > 0) and (ContentPixels(B) >= 20),
+    What + ': Bild leer');
+end;
+
+procedure PPGCheckDiffers(Test: TTestCase; A, B: TBitmap; const What: string);
+var
+  D: Integer;
+begin
+  D := PPGPixelDiff(A, B, 15);
+  Test.CheckTrue(D >= 8, Format('%s: kein sichtbarer Unterschied (%d Pixel)', [What, D]));
+end;
+
+function StateLParam(X, Y: Integer): LPARAM;
+begin
+  Result := LPARAM(Word(SmallInt(X)) or (Cardinal(Word(SmallInt(Y))) shl 16));
+end;
+
+function PPGRender(C: TWinControl): TBitmap;
+begin
+  Result := TBitmap.Create;
+  try
+    Result.PixelFormat := pf24bit;
+    Result.SetSize(C.Width, C.Height);
+    Result.Canvas.Lock;
+    try
+      C.PaintTo(Result.Canvas.Handle, 0, 0);
+    finally
+      Result.Canvas.Unlock;
+    end;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+procedure PPGPaintCheck(Test: TTestCase; C: TWinControl; const What: string);
+var
+  B: TBitmap;
+begin
+  B := PPGRender(C);
+  try
+    PPGCheckPainted(Test, B, What + ' ' + C.ClassName);
+  finally
+    B.Free;
+  end;
+end;
+
+procedure LeaveAll(C: TControl);
+var
+  I: Integer;
+begin
+  // Wie die echte Maus beim Verlassen: auch Kind-Fenster (inneres Edit der
+  // Felder) bekommen CM_MOUSELEAVE
+  if C is TWinControl then
+    for I := 0 to TWinControl(C).ControlCount - 1 do
+      LeaveAll(TWinControl(C).Controls[I]);
+  C.Perform(CM_MOUSELEAVE, 0, 0);
+end;
+
+procedure Unfocus(F: TCustomForm);
+begin
+  // Fokus sicher vom Control nehmen: ActiveControl := nil allein laesst ihn bei
+  // einem nicht aktiven Formular im Fenster (z. B. inneres Edit)
+  if F = nil then
+    Exit;
+  F.ActiveControl := nil;
+  if F.HandleAllocated then
+    Winapi.Windows.SetFocus(F.Handle);
+end;
+
+procedure PPGCheckStates(Test: TTestCase; C: TWinControl; const What: string;
+  Hover, Focus, Disabled: Boolean; const Pt: TPoint);
+var
+  G: Boolean;
+  N, S: TBitmap;
+  F: TCustomForm;
+  W: string;
+begin
+  // Zustandswechsel ohne Ueberblendung (sonst zeigt das erste Bild den Anfang)
+  if (GetPropInfo(C, 'Animation') <> nil) and (GetObjectProp(C, 'Animation') <> nil) and
+    (GetPropInfo(GetObjectProp(C, 'Animation'), 'Enabled') <> nil) then
+    SetOrdProp(GetObjectProp(C, 'Animation'), 'Enabled', 0);
+  F := GetParentForm(C);
+  for G := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := G;
+    try
+      W := What + IfThen(G, ' (GDI)', ' (GDI+)');
+      Unfocus(F);
+      LeaveAll(C);
+      N := PPGRender(C);
+      try
+        PPGCheckPainted(Test, N, W);
+        if Hover then
+        begin
+          C.Perform(CM_MOUSEENTER, 0, 0);
+          C.Perform(WM_MOUSEMOVE, 0, StateLParam(Pt.X, Pt.Y));
+          S := PPGRender(C);
+          try
+            PPGCheckDiffers(Test, N, S, W + ' Hover');
+          finally
+            S.Free;
+          end;
+          LeaveAll(C);
+        end;
+        if Focus then
+        begin
+          Test.CheckTrue(C.CanFocus, W + ': nicht fokussierbar');
+          C.SetFocus;
+          C.Perform(WM_UPDATEUISTATE, MakeWParam(UIS_CLEAR, UISF_HIDEFOCUS or UISF_HIDEACCEL), 0);
+          S := PPGRender(C);
+          try
+            PPGCheckDiffers(Test, N, S, W + ' Fokus');
+          finally
+            S.Free;
+          end;
+          Unfocus(F);
+        end;
+        if Disabled then
+        begin
+          C.Enabled := False;
+          S := PPGRender(C);
+          try
+            PPGCheckDiffers(Test, N, S, W + ' Deaktiviert');
+          finally
+            S.Free;
+            C.Enabled := True;
+          end;
+        end;
+      finally
+        N.Free;
+      end;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
 end;
 
 /// Mittlere Saettigung (max-min der Kanaele) der farbigen Pixel; 0 = keine.

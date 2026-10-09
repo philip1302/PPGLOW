@@ -85,7 +85,7 @@ type
 implementation
 
 uses
-  Winapi.oleacc, PPG.Exceptions;
+  Winapi.oleacc, PPG.Tests.Visual, PPG.Exceptions;
 
 type
   TPPGCustomControlAccess = class(TPPGCustomControl);
@@ -325,6 +325,7 @@ begin
   B := RenderToBitmap(C);
   try
     CheckEquals(0, FErrors.Count, 'Fehler beim Zeichnen: ' + FErrors.Text);
+    PPGCheckPainted(Self, B, 'Ribbon ' + Name); // Audit 11b
     Dir := GetEnvironmentVariable('PPG_SHOTS');
     if Dir <> '' then
     begin
@@ -1394,6 +1395,12 @@ begin
   TPPGRendererRegistry.ForceGdiFallback := True;
   Shot(R, 'gdi');
   TPPGRendererRegistry.ForceGdiFallback := False;
+  // Audit 11b: Zustaende sichtbar (GDI+ und GDI): Hover auf "Kopieren", Deaktiviert;
+  // das Ribbon steht nicht in der Tab-Folge (Tastatur ueber KeyTips)
+  R.Preset := 'ModernFlat';
+  R.Width := 1100;
+  R.UpdateLayout;
+  PPGCheckStates(Self, R, 'Ribbon', True, False, True, Center(R.ItemRect(FindItem(R, 'Kopieren'))));
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

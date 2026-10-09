@@ -133,6 +133,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   Vcl.Imaging.pngimage, PPG.Lang, PPG.Consts, Winapi.oleacc, PPG.Exceptions, PPG.Accessibility, PPG.Render.Registry, PPG.Tokens;
 
 type
@@ -627,18 +628,25 @@ begin
         G.ChoiceStyle := St;
         C.ChoiceStyle := St;
         G.Enabled := True;
-        B := RenderToBitmap(G);
-        B.Free;
-        B := RenderToBitmap(C);
-        B.Free;
+        PPGPaintCheck(Self, G, 'G');
+        PPGPaintCheck(Self, C, 'C');
         G.Enabled := False;
-        B := RenderToBitmap(G);
-        B.Free;
+        PPGPaintCheck(Self, G, 'G');
       end;
     finally
       TPPGRendererRegistry.ForceGdiFallback := False;
     end;
   end;
+  // Audit 11b: Zustaende sichtbar (GDI+ und GDI): Hover auf dem ersten Eintrag,
+  // Fokus, Deaktiviert
+  FForm.Show;
+  G.ChoiceStyle := Low(TPPGChoiceStyle);
+  C.ChoiceStyle := Low(TPPGChoiceStyle);
+  G.Enabled := True;
+  PPGCheckStates(Self, G, 'RadioGroup', True, True, True,
+    Point(G.ItemRect(0).Left + 8, (G.ItemRect(0).Top + G.ItemRect(0).Bottom) div 2));
+  PPGCheckStates(Self, C, 'CheckGroup', True, True, True,
+    Point(C.ItemRect(0).Left + 8, (C.ItemRect(0).Top + C.ItemRect(0).Bottom) div 2));
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 
@@ -1086,6 +1094,7 @@ end;
 
 procedure TTileViewTests.PaintsAllStylesGdiPlusAndGdi;
 var
+  Filtered: TBitmap;
   V: TPPGTileView;
   S: TPPGTileStyle;
   Gdi: Boolean;
@@ -1106,23 +1115,41 @@ begin
       begin
         V.TileStyle := S;
         V.FilterText := '';
-        B := RenderToBitmap(V);
-        B.Free;
+        PPGPaintCheck(Self, V, 'V');
         V.FilterText := 'trag 1';
         B := RenderToBitmap(V);
+        PPGCheckPainted(Self, B, 'TileView Suche'); // Audit 11b
         // Sichtpruefung: je Ansicht mit Suchtreffern in die Galerie
         if not Gdi then
           SaveGalleryPng(B, 'TileView_' + IntToStr(Ord(S)) + '_Suche.png');
         B.Free;
       end;
       V.Enabled := False;
-      B := RenderToBitmap(V);
-      B.Free;
+      PPGPaintCheck(Self, V, 'V');
       V.Enabled := True;
     finally
       TPPGRendererRegistry.ForceGdiFallback := False;
     end;
   end;
+  // Audit 11b: Suchtreffer sichtbar (Filter aendert das Bild), Zustaende sichtbar
+  FForm.Show;
+  V.TileStyle := Low(TPPGTileStyle);
+  V.FilterText := '';
+  B := RenderToBitmap(V);
+  try
+    V.FilterText := 'trag 1';
+    Filtered := RenderToBitmap(V);
+    try
+      PPGCheckDiffers(Self, B, Filtered, 'TileView Filter');
+    finally
+      Filtered.Free;
+    end;
+  finally
+    B.Free;
+  end;
+  V.FilterText := '';
+  PPGCheckStates(Self, V, 'TileView', True, True, True,
+    Point((V.ItemRect(1).Left + V.ItemRect(1).Right) div 2, (V.ItemRect(1).Top + V.ItemRect(1).Bottom) div 2));
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 
@@ -1379,6 +1406,7 @@ end;
 
 procedure TDBNavigatorTests.PaintsWithoutErrors;
 var
+  Edit: TBitmap;
   B: TBitmap;
   Gdi: Boolean;
 begin
@@ -1388,16 +1416,44 @@ begin
   begin
     TPPGRendererRegistry.ForceGdiFallback := Gdi;
     try
-      B := RenderToBitmap(FNav);
-      B.Free;
+      PPGPaintCheck(Self, FNav, 'FNav');
       FData.Edit;
-      B := RenderToBitmap(FNav);
-      B.Free;
+      PPGPaintCheck(Self, FNav, 'FNav');
       FData.Cancel;
       FNav.Enabled := False;
-      B := RenderToBitmap(FNav);
-      B.Free;
+      PPGPaintCheck(Self, FNav, 'FNav');
       FNav.Enabled := True;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  // Audit 11b: Bearbeiten-Zustand und Deaktiviert sichtbar (GDI+ und GDI)
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      B := RenderToBitmap(FNav);
+      try
+        PPGCheckPainted(Self, B, 'Navigator');
+        FData.Edit;
+        Edit := RenderToBitmap(FNav);
+        try
+          PPGCheckDiffers(Self, B, Edit, 'Navigator im Bearbeiten (Speichern/Abbrechen aktiv)');
+        finally
+          Edit.Free;
+          FData.Cancel;
+        end;
+        FNav.Enabled := False;
+        Edit := RenderToBitmap(FNav);
+        try
+          PPGCheckDiffers(Self, B, Edit, 'Navigator deaktiviert');
+        finally
+          Edit.Free;
+          FNav.Enabled := True;
+        end;
+      finally
+        B.Free;
+      end;
     finally
       TPPGRendererRegistry.ForceGdiFallback := False;
     end;

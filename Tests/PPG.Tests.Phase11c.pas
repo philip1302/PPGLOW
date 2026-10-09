@@ -23,6 +23,8 @@ type
     FRefuse: Integer;
     FSheet: TBitmap;
     FSheetY: Integer;
+    FShots: Integer;
+    FEmptyShots: string;
     procedure OnShowClick(Form: TPPGDialogForm);
     procedure OnShowCancel(Form: TPPGDialogForm);
     procedure OnShowTask(Form: TPPGDialogForm);
@@ -81,6 +83,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   System.StrUtils, Vcl.Menus, Vcl.Imaging.pngimage, PPG.Theme, PPG.Labels, PPG.RadioButton,
   PPG.CheckBox, PPG.Lang, PPG.Consts;
 
@@ -606,6 +609,9 @@ var
 begin
   B := RenderToBitmap(Form);
   try
+    Inc(FShots);
+    if PPGContentPixels(B) < 20 then
+      FEmptyShots := FEmptyShots + Form.Dialog.Preset + ' ' + FInfo + '; ';
     FSheet.Canvas.TextOut(4, FSheetY, Form.Dialog.Preset + ' ' + FInfo);
     FSheet.Canvas.Draw(10, FSheetY + 18, B);
     Inc(FSheetY, B.Height + 30);
@@ -635,6 +641,8 @@ begin
     FSheet.SetSize(1300, Names.Count * 2 * 2 * 330);
     FSheet.Canvas.Brush.Color := clWhite;
     FSheet.Canvas.FillRect(Rect(0, 0, FSheet.Width, FSheet.Height));
+    FShots := 0;
+    FEmptyShots := '';
     FSheetY := 0;
     PPGOnDialogShow := OnShowCapture;
     for P := 0 to Names.Count - 1 do
@@ -681,7 +689,10 @@ begin
     finally
       Png.Free;
     end;
-    CheckEquals(0, FErrors.Count, FErrors.Text);
+    // Audit 11b: jeder Dialog war gezeichnet (Pruefung nach der modalen Schleife)
+  CheckTrue(FShots > 0, 'kein Dialog aufgenommen');
+  CheckEquals('', FEmptyShots, 'leere Dialoge');
+  CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
     FreeAndNil(FSheet);
     Names.Free;
@@ -937,6 +948,7 @@ begin
           W.StepPosition := Pos;
           B := RenderToBitmap(W);
           try
+            PPGCheckPainted(Self, B, Names[P] + ' Wizard'); // Audit 11b
             Sheet.Canvas.Draw(10 + Ord(Pos) * 660, Y + 18, B);
           finally
             B.Free;
@@ -953,7 +965,11 @@ begin
     finally
       Png.Free;
     end;
-    CheckEquals(0, FErrors.Count, FErrors.Text);
+    // Audit 11b: Deaktiviert sichtbar (Schrittanzeige abgeblendet), GDI+ und GDI
+  W.ActivePage := W.Pages[1];
+  W.StepPosition := wspTop;
+  PPGCheckStates(Self, W, 'Wizard', False, False, True, Point(0, 0));
+  CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
     Sheet.Free;
     Names.Free;

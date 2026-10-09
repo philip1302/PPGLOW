@@ -117,6 +117,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   System.Math, Winapi.oleacc, PPG.Theme, PPG.Tokens;
 
 type
@@ -1400,6 +1401,9 @@ end;
 
 procedure TPhase7aPaintTests.PaintAllPresetsAndModes;
 var
+  Rt: TPPGRating;
+  Ex: TPPGExpander;
+  Se: TPPGSearchEdit;
   Names: TStringList;
   P: Integer;
   Dark, Gdi: Boolean;
@@ -1452,7 +1456,11 @@ begin
             begin
               List[I].Parent := FForm;
               TCCAccess(List[I]).Preset := Names[P];
-              RenderToBitmap(List[I]).Free;
+              // Splitter ohne Beveled ist absichtlich eine schlichte Flaeche
+              if List[I] is TPPGSplitter then
+                RenderToBitmap(List[I]).Free
+              else
+                PPGPaintCheck(Self, List[I], 'List[I]');
             end;
             L := TPPGLabel.Create(FForm);
             L.Parent := FForm;
@@ -1472,6 +1480,32 @@ begin
   finally
     Names.Free;
   end;
+  // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+  FForm.Show;
+  L := TPPGLabel.Create(FForm);
+  L.Parent := FForm;
+  L.AllowMarkup := True;
+  L.Caption := '<b>Label</b>';
+  Bmp := PaintLabel(L);
+  try
+    PPGCheckPainted(Self, Bmp, 'Label');
+  finally
+    Bmp.Free;
+  end;
+  L.Free;
+  Rt := TPPGRating.Create(FForm);
+  Rt.Parent := FForm;
+  Rt.Value := 3;
+  PPGCheckStates(Self, Rt, 'Rating', True, True, True, Point(Rt.StarRect(3).Left + 10, Rt.Height div 2));
+  Ex := TPPGExpander.Create(FForm);
+  Ex.Parent := FForm;
+  Ex.SetBounds(0, 0, 200, 100);
+  PPGCheckStates(Self, Ex, 'Expander', True, True, True, Point(100, 20));
+  Se := TPPGSearchEdit.Create(FForm);
+  Se.Parent := FForm;
+  Se.Text := 'Suche';
+  PPGCheckStates(Self, Se, 'SearchEdit', True, True, True, Point(Se.Width div 2, Se.Height div 2));
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

@@ -65,6 +65,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   Winapi.oleacc, PPG.Theme;
 
 type
@@ -875,8 +876,7 @@ begin
             G.SortBy(1);
             G.Columns.Add;
             G.SetFocus;
-            Bmp := RenderToBitmap(G);
-            Bmp.Free;
+            PPGPaintCheck(Self, G, 'G');
             G.Free;
           end;
     finally
@@ -887,6 +887,11 @@ begin
   finally
     Names.Free;
   end;
+  // Audit 11b: Fokus und Deaktiviert sichtbar (GDI+ und GDI); Grid ohne Hover
+  FForm.Show;
+  G := SampleGrid;
+  PPGCheckStates(Self, G, 'Grid', False, True, True, Point(0, 0));
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

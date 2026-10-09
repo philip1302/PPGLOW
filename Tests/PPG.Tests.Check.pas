@@ -64,6 +64,9 @@ type
 
 implementation
 
+uses
+  PPG.Tests.Visual;
+
 {$WARN SYMBOL_PLATFORM OFF}
 
 type
@@ -483,7 +486,10 @@ const
 var
   P, K, St, E, G: Integer;
   C: TPPGCustomCheckControl;
+  B, Enabled: TBitmap;
+  What: string;
 begin
+  Enabled := nil;
   FForm.Show;
   try
     for G := 0 to 1 do
@@ -513,13 +519,28 @@ begin
                 if C.Enabled then
                   C.SetFocus;
                 TCheckAccess(C).Alignment := TLeftRight(St mod 2);
-                RenderToBitmap(C).Free;
+                // Audit 11b: gezeichnet heisst nicht leer; deaktiviert sichtbar anders
+                What := Format('G%d P%d K%d St%d E%d', [G, P, K, St, E]);
+                B := RenderToBitmap(C);
+                PPGCheckPainted(Self, B, What);
+                if E = 0 then
+                begin
+                  FreeAndNil(Enabled);
+                  Enabled := B;
+                end
+                else
+                  try
+                    PPGCheckDiffers(Self, Enabled, B, What + ' deaktiviert');
+                  finally
+                    B.Free;
+                  end;
               finally
                 C.Free;
               end;
             end;
     end;
   finally
+    Enabled.Free;
     TPPGRendererRegistry.ForceGdiFallback := False;
     FForm.Hide;
   end;

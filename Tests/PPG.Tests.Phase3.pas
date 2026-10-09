@@ -95,6 +95,9 @@ type
 
 implementation
 
+uses
+  PPG.Tests.Visual;
+
 {$WARN SYMBOL_PLATFORM OFF}
 
 type
@@ -1304,7 +1307,7 @@ begin
               2: begin PB.Orientation := pbVertical; PB.SetBounds(0, 0, 20, 120); end;
               3: begin PB.State := pbsPaused; PB.BiDiMode := bdRightToLeft; end;
             end;
-            RenderToBitmap(PB).Free;
+            PPGPaintCheck(Self, PB, 'PB');
             PB.Free;
 
             T := NewTrack;
@@ -1319,7 +1322,7 @@ begin
             if T.Enabled then
               T.SetFocus;
             T.Perform(CM_MOUSEENTER, 0, 0);
-            RenderToBitmap(T).Free;
+            PPGPaintCheck(Self, T, 'T');
             T.Free;
 
             Pn := NewPanel;
@@ -1328,7 +1331,7 @@ begin
             Pn.Enabled := E = 0;
             Pn.WordWrap := V = 1;
             Pn.Alignment := TAlignment(V mod 3);
-            RenderToBitmap(Pn).Free;
+            PPGPaintCheck(Self, Pn, 'Pn');
             Pn.Free;
 
             Gb := NewGroup('&Gruppe');
@@ -1336,7 +1339,7 @@ begin
             Gb.Enabled := E = 0;
             if V = 3 then
               Gb.BiDiMode := bdRightToLeft;
-            RenderToBitmap(Gb).Free;
+            PPGPaintCheck(Self, Gb, 'Gb');
             Gb.Free;
           end;
     end;
@@ -1344,6 +1347,17 @@ begin
     TPPGRendererRegistry.ForceGdiFallback := False;
     FForm.Hide;
   end;
+  // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+  FForm.Show;
+  PB := NewProgress;
+  PB.Position := 60;
+  PPGCheckStates(Self, PB, 'ProgressBar', False, False, True, Point(0, 0));
+  T := NewTrack;
+  T.Position := 3;
+  PPGCheckStates(Self, T, 'TrackBar', True, True, True, Point(T.Width div 2, T.Height div 2));
+  Gb := NewGroup('&Gruppe');
+  PPGCheckStates(Self, Gb, 'GroupBox', False, False, True, Point(0, 0));
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

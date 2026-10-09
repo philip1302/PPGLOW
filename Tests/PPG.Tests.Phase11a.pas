@@ -97,6 +97,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   Winapi.oleacc, System.StrUtils, Vcl.Imaging.pngimage, PPG.Theme;
 
 function MouseLParam(X, Y: Integer): LPARAM;
@@ -765,6 +766,7 @@ end;
 
 procedure TMenuLoopTests.PaintsInAllPresets;
 var
+  Sub: TBitmap;
   Names: TStringList;
   P: Integer;
   Dark, Gdi: Boolean;
@@ -793,9 +795,8 @@ begin
           L.HandleKey(VK_DOWN, []);
           L.HandleKey(VK_DOWN, []);
           L.HandleKey(VK_RIGHT, []);
-          B := RenderToBitmap(L.Window(0));
-          B.Free;
-          RenderToBitmap(L.TopWindow).Free;
+          PPGPaintCheck(Self, L.Window(0), 'L.Window(0)');
+          PPGPaintCheck(Self, L.TopWindow, 'L.TopWindow');
           L.CloseAll;
         end;
   finally
@@ -803,6 +804,35 @@ begin
     TPPGRendererRegistry.ForceGdiFallback := False;
     L.Free;
     Names.Free;
+    FForm.Hide;
+  end;
+  // Audit 11b: der markierte Eintrag ist sichtbar (GDI+ und GDI)
+  FForm.Show;
+  L := TPPGMenuLoop.Create;
+  try
+    L.Animate := False;
+    for Gdi := False to True do
+    begin
+      TPPGRendererRegistry.ForceGdiFallback := Gdi;
+      L.OpenPopup(FMenu.Items, Rect(100, 100, 100, 100), ppsBelow, False);
+      B := RenderToBitmap(L.Window(0));
+      try
+        PPGCheckPainted(Self, B, 'Menue');
+        L.HandleKey(VK_DOWN, []);
+        Sub := RenderToBitmap(L.Window(0));
+        try
+          PPGCheckDiffers(Self, B, Sub, 'Menue markierter Eintrag');
+        finally
+          Sub.Free;
+        end;
+      finally
+        B.Free;
+      end;
+      L.CloseAll;
+    end;
+  finally
+    TPPGRendererRegistry.ForceGdiFallback := False;
+    L.Free;
     FForm.Hide;
   end;
   CheckEquals(0, FErrors.Count, FErrors.Text);
@@ -849,6 +879,9 @@ begin
         B := RenderToBitmap(L.Window(0));
         Sub := RenderToBitmap(L.TopWindow);
         try
+          // Audit 11b: Haupt- und Untermenue gezeichnet, nicht leer
+          PPGCheckPainted(Self, B, Names[P] + ' Menue');
+          PPGCheckPainted(Self, Sub, Names[P] + ' Untermenue');
           Sheet.Canvas.TextOut(4, Row * 260 + 4, Names[P] + IfThen(Dark, ' dunkel', ' hell'));
           Sheet.Canvas.Draw(10, Row * 260 + 24, B);
           X := 10 + B.Width - 4;

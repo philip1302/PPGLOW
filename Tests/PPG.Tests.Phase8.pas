@@ -88,6 +88,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   Winapi.Messages, Vcl.StdCtrls, PPG.Render.Fluent11, PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch,
   PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
   PPG.TabControl, PPG.PageControl, PPG.Theme, PPG.StyleManager, PPG.Animation,
@@ -613,6 +614,7 @@ end;
 
 procedure TFluent11Tests.AllControlsPaint;
 var
+  Focused: TBitmap;
   L: TList;
   Gdi: Boolean;
   I: Integer;
@@ -630,11 +632,29 @@ begin
         for I := 0 to L.Count - 1 do
         begin
           C := TPPGCustomControl(L[I]);
+          // Panel und GroupBox ohne Beschriftung sind fast leere Flaechen: fuer "nicht leer" beschriften
+          if C is TPPGPanel then
+            TPPGPanel(C).Caption := 'Panel';
+          if C is TPPGGroupBox then
+            TPPGGroupBox(C).Caption := 'Gruppe';
+          // Audit 11b: nicht leer; Controls in der Tab-Folge zeigen den Fokus
+          FForm.ActiveControl := nil;
           Bmp := RenderToBitmap(C);
-          Bmp.Free;
-          C.SetFocus;
-          Bmp := RenderToBitmap(C);
-          Bmp.Free;
+          try
+            PPGCheckPainted(Self, Bmp, C.ClassName);
+            C.SetFocus;
+            C.Perform(WM_UPDATEUISTATE, MakeWParam(UIS_CLEAR, UISF_HIDEFOCUS or UISF_HIDEACCEL), 0);
+            Focused := RenderToBitmap(C);
+            try
+              PPGCheckPainted(Self, Focused, C.ClassName + ' Fokus');
+              if C.TabStop then
+                PPGCheckDiffers(Self, Bmp, Focused, C.ClassName + ' Fokus');
+            finally
+              Focused.Free;
+            end;
+          finally
+            Bmp.Free;
+          end;
         end;
       end;
     finally

@@ -84,6 +84,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   System.Math, Winapi.oleacc, PPG.Lang, PPG.Theme;
 
 type
@@ -1240,7 +1241,7 @@ begin
               end;
               C.Perform(CM_MOUSEENTER, 0, 0);
               C.Perform(WM_MOUSEMOVE, 0, MouseLParam(C.Width div 2, C.Height div 2));
-              RenderToBitmap(C).Free;
+              PPGPaintCheck(Self, C, 'C');
               C.Free;
             end;
             G := TPPGGauge.Create(FForm);
@@ -1250,10 +1251,10 @@ begin
             G.Caption := 'Last';
             G.Ranges.Add.EndValue := 50;
             G.ShowTarget := True;
-            RenderToBitmap(G).Free;
+            PPGPaintCheck(Self, G, 'G');
             G.StartAngle := -90;
             G.SweepAngle := 180;
-            RenderToBitmap(G).Free;
+            PPGPaintCheck(Self, G, 'G');
             G.Free;
             K := TPPGKpiTile.Create(FForm);
             K.Parent := FForm;
@@ -1262,7 +1263,7 @@ begin
             K.Value := 12480;
             K.Change := -2;
             K.SparklineText := '1;3;2;4';
-            RenderToBitmap(K).Free;
+            PPGPaintCheck(Self, K, 'K');
             K.Free;
             Sp := TPPGSparkline.Create(FForm);
             Sp.Parent := FForm;
@@ -1270,7 +1271,7 @@ begin
             Sp.ValuesText := '1;-3;2;4';
             Sp.ShowReference := True;
             Sp.ReferenceValue := 1;
-            RenderToBitmap(Sp).Free;
+            PPGPaintCheck(Self, Sp, 'Sp');
             Sp.Free;
           end;
     finally
@@ -1281,6 +1282,30 @@ begin
   finally
     Names.Free;
   end;
+  // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+  FForm.Show;
+  C := SampleChart;
+  PPGCheckStates(Self, C, 'Chart', True, True, True, Point(C.Width div 2, C.Height div 2));
+  C.Free;
+  G := TPPGGauge.Create(FForm);
+  G.Parent := FForm;
+  G.Value := 70;
+  G.Caption := 'Last';
+  PPGCheckStates(Self, G, 'Gauge', False, False, True, Point(0, 0));
+  G.Free;
+  K := TPPGKpiTile.Create(FForm);
+  K.Parent := FForm;
+  K.Title := 'Umsatz';
+  K.Value := 12480;
+  K.SparklineText := '1;3;2;4';
+  PPGCheckStates(Self, K, 'KpiTile', True, True, True, Point(K.Width div 2, K.Height div 2));
+  K.Free;
+  Sp := TPPGSparkline.Create(FForm);
+  Sp.Parent := FForm;
+  Sp.ValuesText := '1;-3;2;4';
+  PPGCheckStates(Self, Sp, 'Sparkline', False, False, True, Point(0, 0));
+  Sp.Free;
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

@@ -94,6 +94,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual, PPG.Tokens,
   Winapi.oleacc, PPG.Theme;
 
 type
@@ -962,6 +963,8 @@ end;
 
 procedure TPhase7cPaintTests.PaintAllPresetsAndModes;
 var
+  W: TWinControl;
+  R: TRect;
   Names: TStringList;
   P, I: Integer;
   Dark, Gdi: Boolean;
@@ -983,6 +986,9 @@ begin
             else
               TPPGTheme.Mode := tmLight;
             TPPGRendererRegistry.ForceGdiFallback := Gdi;
+            // Audit 11b: Formular in der Farbe des Modus (durchsichtige Controls wie
+            // der Breadcrumb zeigen sonst hellen Text auf hellem Grund)
+            FForm.Color := PPGDefaultTokens(Dark).Background;
             SetLength(L, 5);
             L[0] := NewNav;
             TPPGNavigationView(L[0]).Selected := TPPGNavigationView(L[0]).FindItem('Briefe');
@@ -1003,7 +1009,7 @@ begin
             for I := 0 to High(L) do
             begin
               TCC7c(L[I]).Preset := Names[P];
-              RenderToBitmap(L[I]).Free;
+              PPGPaintCheck(Self, L[I], 'L[I]');
             end;
             for I := 0 to High(L) do
               L[I].Free;
@@ -1016,6 +1022,28 @@ begin
   finally
     Names.Free;
   end;
+  // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+  FForm.Show;
+  W := NewNav;
+  R := TPPGNavigationView(W).RowRect(1);
+  PPGCheckStates(Self, W, 'NavigationView', True, True, True, Point(100, (R.Top + R.Bottom) div 2));
+  W.Free;
+  B := NewCrumb(FForm, Self);
+  R := B.PartRect(1);
+  PPGCheckStates(Self, B, 'Breadcrumb', True, True, True,
+    Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+  B.Free;
+  W := NewTool(FForm, Self);
+  R := TPPGToolBar(W).ItemRect(0);
+  PPGCheckStates(Self, W, 'ToolBar', True, True, True,
+    Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+  W.Free;
+  S := TPPGStatusBar.Create(FForm);
+  S.Parent := FForm;
+  S.Panels.Add.Text := 'Bereit';
+  PPGCheckStates(Self, S, 'StatusBar', False, False, True, Point(0, 0));
+  S.Free;
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

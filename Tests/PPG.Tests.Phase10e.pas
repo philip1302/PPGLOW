@@ -40,6 +40,9 @@ type
 
 implementation
 
+uses
+  PPG.Tests.Visual, PPG.Render.Registry;
+
 type
   TDBChartAccess = class(TPPGDBChart);
 
@@ -378,6 +381,8 @@ end;
 procedure TDBChartTests.PaintsWithData;
 var
   C: TPPGDBChart;
+  A, B: TBitmap;
+  Gdi: Boolean;
 begin
   FForm.Show;
   try
@@ -385,13 +390,34 @@ begin
     C := NewChart;
     C.Series[0].Kind := cskColumn;
     FData.RecNo := 3;
-    RenderToBitmap(C).Free;
+    PPGPaintCheck(Self, C, 'C');
     C.XAxis.Kind := cxkDateTime;
     C.XField := 'Datum';
-    RenderToBitmap(C).Free;
+    PPGPaintCheck(Self, C, 'C');
   finally
     FForm.Hide;
   end;
+  // Audit 11b: der aktuelle Datensatz ist markiert - anderer Datensatz, anderes
+  // Bild (GDI+ und GDI); deaktiviert sichtbar
+  FForm.Show;
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    FData.RecNo := 3;
+    A := RenderToBitmap(C);
+    FData.RecNo := 7;
+    B := RenderToBitmap(C);
+    try
+      PPGCheckPainted(Self, A, 'DBChart');
+      PPGCheckDiffers(Self, A, B, 'DBChart Datensatzmarke');
+    finally
+      A.Free;
+      B.Free;
+    end;
+  end;
+  TPPGRendererRegistry.ForceGdiFallback := False;
+  PPGCheckStates(Self, C, 'DBChart', False, False, True, Point(0, 0));
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

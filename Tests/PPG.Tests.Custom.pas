@@ -232,6 +232,9 @@ type
 
 implementation
 
+uses
+  PPG.Tests.Visual;
+
 function ThemeTokens(const Preset: string; Dark: Boolean): TPPGTokens;
 var
   TR: IPPGThemeRenderer;
@@ -1579,12 +1582,34 @@ end;
 procedure TCustomBarTests.ButtonStyleDrawsWithoutOverlap;
 var
   PC: TPPGPageControl;
+  B, S: TBitmap;
+  I, J: Integer;
+  Dummy: TRect;
 begin
   PC := NewPages(3);
   PC.Style := tsButtons;
-  RenderToBitmap(PC).Free;
+  PPGPaintCheck(Self, PC, 'PC');
   PC.Style := tsFlatButtons;
-  RenderToBitmap(PC).Free;
+  PPGPaintCheck(Self, PC, 'PC');
+  // Audit 11b: "ohne Ueberlappung" pruefen - die Knopf-Reiter liegen nebeneinander,
+  // und der Knopf-Stil sieht anders aus als die Reiter
+  for I := 0 to 1 do
+    for J := I + 1 to 2 do
+      CheckFalse(IntersectRect(Dummy, PC.TabRect(I), PC.TabRect(J)),
+        Format('Reiter %d und %d ueberlappen', [I, J]));
+  PC.Style := tsTabs;
+  B := RenderToBitmap(PC);
+  try
+    PC.Style := tsButtons;
+    S := RenderToBitmap(PC);
+    try
+      PPGCheckDiffers(Self, B, S, 'Knopf-Stil gegen Reiter');
+    finally
+      S.Free;
+    end;
+  finally
+    B.Free;
+  end;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

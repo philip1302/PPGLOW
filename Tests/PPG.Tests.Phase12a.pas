@@ -92,6 +92,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   System.Math, Winapi.oleacc, PPG.Theme, PPG.Lang, PPG.Consts;
 
 type
@@ -927,15 +928,18 @@ begin
         P.Preset := Names[I];
         N.Preset := Names[I];
         M.Preset := Names[I];
-        B := RenderToBitmap(P);
-        B.Free;
-        B := RenderToBitmap(N);
-        B.Free;
-        B := RenderToBitmap(M);
-        B.Free;
+        PPGPaintCheck(Self, P, 'P');
+        PPGPaintCheck(Self, N, 'N');
+        PPGPaintCheck(Self, M, 'M');
       end;
     TPPGTheme.Mode := tmLight;
-    CheckEquals(0, FErrors.Count, FErrors.Text);
+    // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI)
+  P.Caps := False;
+  P.CheckCapsLock;
+  PPGCheckStates(Self, P, 'PasswordEdit', True, True, True, Point(60, 16));
+  PPGCheckStates(Self, N, 'NumberEdit', True, True, True, Point(60, 16));
+  PPGCheckStates(Self, M, 'MaskEdit', True, True, True, Point(60, 16));
+  CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
     Names.Free;
   end;

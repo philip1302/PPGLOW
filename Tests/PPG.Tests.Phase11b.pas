@@ -87,6 +87,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   System.Rtti, System.StrUtils, Winapi.oleacc, Vcl.Imaging.pngimage, PPG.Theme, PPG.Tokens, PPG.Consts,
   PPG.Lang;
 
@@ -373,6 +374,7 @@ begin
       finally
         B.Canvas.Unlock;
       end;
+      PPGCheckPainted(Self, B, 'CustomHint'); // Audit 11b
     finally
       B.Free;
     end;
@@ -419,6 +421,7 @@ begin
         W.SetBounds(-2000, -2000, R.Right, R.Bottom);
         B := RenderToBitmap(W);
         try
+          PPGCheckPainted(Self, B, Names[P] + ' Hinweis'); // Audit 11b
           Sheet.Canvas.TextOut(4, Row * 110 + 4, Names[P] + IfThen(Dark, ' dunkel', ' hell'));
           Sheet.Canvas.Draw(10, Row * 110 + 22, B);
         finally
@@ -950,8 +953,7 @@ begin
             FTip.Preset := Names[P];
             FTip.Placement := Pl;
             FTip.ShowFor(FTarget);
-            B := RenderToBitmap(FTip.Window);
-            B.Free;
+            PPGPaintCheck(Self, FTip.Window, 'FTip.Window');
           end;
     CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
@@ -1005,6 +1007,7 @@ begin
           FTip.ShowFor(FTarget);
           B := RenderToBitmap(FTip.Window);
           try
+            PPGCheckPainted(Self, B, Names[P] + ' TeachingTip'); // Audit 11b
             Sheet.Canvas.Draw(X, Row * 260 + 24, B);
             Inc(X, B.Width + 20);
           finally

@@ -90,6 +90,9 @@ type
 
 implementation
 
+uses
+  PPG.Tests.Visual;
+
 {$WARN SYMBOL_PLATFORM OFF}
 
 type
@@ -1120,19 +1123,30 @@ begin
           PC.Width := 120 + J * 60; // mit Ueberlauf
           if PC.CanFocus then
             PC.SetFocus;
-          RenderToBitmap(PC).Free;
+          PPGPaintCheck(Self, PC, 'PC');
           PC.Height := 10; // kleiner als die Reiter
-          RenderToBitmap(PC).Free;
+          PPGPaintCheck(Self, PC, 'PC');
           PC.Height := 200;
           T.TabWidth := J * 20;
           T.TabHeight := J * 8;
-          RenderToBitmap(T).Free;
+          PPGPaintCheck(Self, T, 'T');
           PC.Enabled := True;
         end;
   finally
     TPPGRendererRegistry.ForceGdiFallback := False;
     FForm.Hide;
   end;
+  // Audit 11b: Zustaende sichtbar anders als Normal (GDI+ und GDI): Hover auf dem
+  // zweiten Reiter, Fokus, Deaktiviert
+  FForm.Show;
+  PC.Free;
+  T.Free;
+  PC := NewPageControl(3);
+  PPGCheckStates(Self, PC, 'PageControl', True, True, True, CenterOf(PC.TabRect(1)));
+  T := NewTabControl('Eins,Zwei,Drei');
+  T.Top := 220;
+  PPGCheckStates(Self, T, 'TabControl', True, True, True, CenterOf(T.TabRect(1)));
+  FForm.Hide;
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

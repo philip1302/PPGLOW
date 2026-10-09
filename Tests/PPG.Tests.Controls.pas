@@ -123,6 +123,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   PPG.Theme, PPG.Lang, PPG.DpiUtils, PPG.Render.Gdi, PPG.Render.GdiPlus,
   PPG.Planner.Dialog;
 
@@ -648,6 +649,10 @@ begin
   RenderToBitmap(B).Free;
   B.SetBounds(0, 0, 1, 1);
   RenderToBitmap(B).Free;
+  // Audit 11b: mit den Extremwerten bei normaler Groesse sichtbar gezeichnet
+  // (bei 8x8 und 1x1 Pixel ist "nicht leer" keine sinnvolle Erwartung)
+  B.SetBounds(0, 0, 120, 36);
+  PPGPaintCheck(Self, B, 'Extremwerte 120x36');
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

@@ -142,6 +142,7 @@ type
 implementation
 
 uses
+  PPG.Tests.Visual,
   PPG.Validator, PPG.Lang, PPG.Consts, PPG.Render.Registry;
 
 type
@@ -932,6 +933,7 @@ end;
 
 procedure TKanbanFilterTests.PaintsFilteredAndDragging;
 var
+  S: TBitmap;
   K: TPPGKanban;
   B: TBitmap;
   Gdi: Boolean;
@@ -943,20 +945,51 @@ begin
     TPPGRendererRegistry.ForceGdiFallback := Gdi;
     try
       K.FilterText := 'bug';
-      B := RenderToBitmap(K);
-      B.Free;
+      PPGPaintCheck(Self, K, 'K');
       R := K.HeaderRect(0);
       K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(R.Left + 30, R.Top + 10));
       K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(K.HeaderRect(1).Right - 5, R.Top + 10));
-      B := RenderToBitmap(K);
-      B.Free;
+      PPGPaintCheck(Self, K, 'K');
       Key(K, VK_ESCAPE);
       K.Perform(WM_LBUTTONUP, 0, MakeLParam(R.Left + 30, R.Top + 10));
       K.BiDiMode := bdRightToLeft;
-      B := RenderToBitmap(K);
-      B.Free;
+      PPGPaintCheck(Self, K, 'K');
       K.BiDiMode := bdLeftToRight;
       K.FilterText := '';
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  // Audit 11b: Filter und Spalten-Ziehen sind sichtbar (GDI+ und GDI)
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      K.FilterText := '';
+      B := RenderToBitmap(K);
+      try
+        K.FilterText := 'bug';
+        S := RenderToBitmap(K);
+        try
+          PPGCheckDiffers(Self, B, S, 'Kanban Filter');
+        finally
+          S.Free;
+        end;
+        K.FilterText := '';
+        R := K.HeaderRect(0);
+        K.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(R.Left + 30, R.Top + 10));
+        K.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(K.HeaderRect(1).Right - 5, R.Top + 10));
+        S := RenderToBitmap(K);
+        try
+          PPGCheckDiffers(Self, B, S, 'Kanban Spalte ziehen');
+        finally
+          S.Free;
+          Key(K, VK_ESCAPE);
+          K.Perform(WM_LBUTTONUP, 0, MakeLParam(R.Left + 30, R.Top + 10));
+        end;
+      finally
+        B.Free;
+      end;
     finally
       TPPGRendererRegistry.ForceGdiFallback := False;
     end;
@@ -1229,6 +1262,7 @@ end;
 
 procedure TRibbonPopupKeyTests.PaintsPopupsWithFocusAndCategories;
 var
+  S: TBitmap;
   R: TPPGRibbon;
   B: TBitmap;
   Gdi: Boolean;
@@ -1243,17 +1277,41 @@ begin
       R.EnterKeyboardNavigation;
       NavTo(R, rpGroup);
       R.HandleNavKey(VK_RETURN, []);
-      B := RenderToBitmap(R.GroupPopup);
-      B.Free;
+      PPGPaintCheck(Self, R.GroupPopup, 'R.GroupPopup');
       R.HandleNavKey(VK_ESCAPE, []);
       R.LeaveKeyboardNavigation;
       R.Width := 900;
       R.UpdateLayout;
       R.OpenGallery(FGallery);
       R.GalleryPopup.HandleKey(VK_DOWN);
-      B := RenderToBitmap(R.GalleryPopup);
-      B.Free;
+      PPGPaintCheck(Self, R.GalleryPopup, 'R.GalleryPopup');
       R.ClosePopups;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  // Audit 11b: die Tastatur-Markierung im Galerie-Popup ist sichtbar (GDI+ und GDI)
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      R.Width := 900;
+      R.UpdateLayout;
+      R.OpenGallery(FGallery);
+      B := RenderToBitmap(R.GalleryPopup);
+      try
+        PPGCheckPainted(Self, B, 'Galerie');
+        R.GalleryPopup.HandleKey(VK_DOWN);
+        S := RenderToBitmap(R.GalleryPopup);
+        try
+          PPGCheckDiffers(Self, B, S, 'Galerie: Markierung nach Pfeil');
+        finally
+          S.Free;
+        end;
+      finally
+        B.Free;
+        R.ClosePopups;
+      end;
     finally
       TPPGRendererRegistry.ForceGdiFallback := False;
     end;
@@ -1429,6 +1487,7 @@ end;
 
 procedure TTrackRangeTests.PaintsSelectionAndRange;
 var
+  S: TBitmap;
   T: TPPGTrackBar;
   B: TBitmap;
   Gdi: Boolean;
@@ -1440,30 +1499,60 @@ begin
   begin
     TPPGRendererRegistry.ForceGdiFallback := Gdi;
     try
-      B := RenderToBitmap(T);
-      B.Free;
+      PPGPaintCheck(Self, T, 'T');
       T.RangeMode := True;
       T.Position := 30;
       T.PositionEnd := 60;
-      B := RenderToBitmap(T);
-      B.Free;
+      PPGPaintCheck(Self, T, 'T');
       T.Orientation := trVertical;
-      B := RenderToBitmap(T);
-      B.Free;
+      PPGPaintCheck(Self, T, 'T');
       T.Orientation := trHorizontal;
       T.BiDiMode := bdRightToLeft;
-      B := RenderToBitmap(T);
-      B.Free;
+      PPGPaintCheck(Self, T, 'T');
       T.BiDiMode := bdLeftToRight;
       T.Enabled := False;
-      B := RenderToBitmap(T);
-      B.Free;
+      PPGPaintCheck(Self, T, 'T');
       T.Enabled := True;
       T.RangeMode := False;
     finally
       TPPGRendererRegistry.ForceGdiFallback := False;
     end;
   end;
+  // Audit 11b: Auswahlbereich, Bereichsmodus und Deaktiviert sind sichtbar
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      T.SelStart := 0;
+      T.SelEnd := 0;
+      B := RenderToBitmap(T);
+      try
+        T.SelStart := 20;
+        T.SelEnd := 70;
+        S := RenderToBitmap(T);
+        try
+          PPGCheckDiffers(Self, B, S, 'Auswahlbereich');
+        finally
+          S.Free;
+        end;
+        T.RangeMode := True;
+        T.Position := 30;
+        T.PositionEnd := 60;
+        S := RenderToBitmap(T);
+        try
+          PPGCheckDiffers(Self, B, S, 'Bereichsmodus');
+        finally
+          S.Free;
+          T.RangeMode := False;
+        end;
+      finally
+        B.Free;
+      end;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  PPGCheckStates(Self, T, 'TrackBar', False, False, True, Point(0, 0));
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 
