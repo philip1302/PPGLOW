@@ -11,11 +11,11 @@ interface
 
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
-  System.Variants, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ExtCtrls,
+  System.Variants, System.Types, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ExtCtrls,
   PPG.Types, PPG.Controls.Field, PPG.Edit, PPG.NumberEdit, PPG.DatePicker, PPG.RadioGroup,
   PPG.CheckBox, PPG.Labels, PPG.Panel, PPG.PageControl, PPG.Expander, PPG.Validator,
   PPG.Feedback, PPG.Button, PPG.Wizard, Data.DB, Datasnap.DBClient, MidasLib, PPG.DB.Controls,
-  PPG.DB.Validator, PPG.Tests.Controls;
+  PPG.DB.Validator, PPG.BusyOverlay, PPG.Overlay, Vcl.Graphics, PPG.Tests.Controls;
 
 type
   TValidatorTests = class(TControlTestCase)
@@ -93,10 +93,44 @@ type
     procedure WizardPagesCountLikeTabs;
   end;
 
+  TBusyOverlayTests = class(TControlTestCase)
+  private
+    FO: TPPGBusyOverlay;
+    FPanel: TPPGPanel;
+    FInner, FOuter: TPPGEdit;
+    FShows, FHides, FCancels: Integer;
+    procedure Shown(Sender: TObject);
+    procedure Hidden(Sender: TObject);
+    procedure Cancelled(Sender: TObject);
+    procedure PumpFor(Ms: Cardinal);
+    function DimRect: TRect;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure ShowHideCountsAndCovers;
+    procedure FormTargetCoversClientArea;
+    procedure DelayBlocksFirstShowsLater;
+    procedure MinDisplayTimeKeepsVisible;
+    procedure KeyboardBlockedInTargetOnly;
+    procedure FormStaysOpenWhileActive;
+    procedure FollowsTargetAndHidesWithIt;
+    procedure RunWorksInThreadAndReports;
+    procedure RunReraisesWorkerException;
+    procedure RunCancelledByEsc;
+    procedure RunAsyncCallsOnDone;
+    procedure FreeWhileAsyncRunningWaits;
+    procedure InvalidValuesRaiseAndKeepState;
+    procedure PaintsCardInAllStates;
+    procedure AccessibleCard;
+    procedure StreamsProperties;
+  end;
+
+
 implementation
 
 uses
-  PPG.Exceptions, PPG.Lang, PPG.Consts;
+  PPG.Exceptions, PPG.Lang, PPG.Consts, Winapi.oleacc, Vcl.Imaging.pngimage, PPG.Render.Registry;
 
 { TValidatorTests }
 
@@ -1234,8 +1268,484 @@ begin
 end;
 
 
+/// Bild zur Sichtpruefung nach Tests\Visual\Gallery.
+procedure SaveGalleryPngBusy(B: TBitmap; const FileName: string);
+var
+  Png: TPngImage;
+  Dir: string;
+begin
+  Dir := ExtractFilePath(ParamStr(0)) + 'Visual\Gallery\';
+  ForceDirectories(Dir);
+  Png := TPngImage.Create;
+  try
+    Png.Assign(B);
+    Png.SaveToFile(Dir + FileName);
+  finally
+    Png.Free;
+  end;
+end;
+
+{ TBusyOverlayTests }
+
+type
+  TCardAccess = class(TPPGBusyCard);
+  TFieldInnerAccess = class(TPPGCustomField);
+
+function InnerWnd(E: TPPGEdit): HWND;
+begin
+  Result := TFieldInnerAccess(E).Inner.Handle;
+end;
+
+procedure TBusyOverlayTests.SetUp;
+begin
+  inherited SetUp;
+  FShows := 0;
+  FHides := 0;
+  FCancels := 0;
+  FForm.SetBounds(100, 100, 500, 400);
+  FPanel := TPPGPanel.Create(FForm);
+  FPanel.Parent := FForm;
+  FPanel.SetBounds(10, 10, 300, 220);
+  FPanel.Caption := '';
+  FInner := TPPGEdit.Create(FForm);
+  FInner.Parent := FPanel;
+  FInner.SetBounds(10, 10, 150, 28);
+  FInner.Text := '';
+  FOuter := TPPGEdit.Create(FForm);
+  FOuter.Parent := FForm;
+  FOuter.SetBounds(10, 300, 150, 28);
+  FOuter.Text := '';
+  FO := TPPGBusyOverlay.Create(FForm);
+  FO.Name := 'Busy';
+  FO.Target := FPanel;
+  FO.Delay := 0;
+  FO.MinDisplayTime := 0;
+  FO.OnShow := Shown;
+  FO.OnHide := Hidden;
+  FO.OnCancel := Cancelled;
+  FForm.Show;
+end;
+
+procedure TBusyOverlayTests.TearDown;
+begin
+  FreeAndNil(FO);
+  inherited TearDown;
+end;
+
+procedure TBusyOverlayTests.Shown(Sender: TObject);
+begin
+  Inc(FShows);
+end;
+
+procedure TBusyOverlayTests.Hidden(Sender: TObject);
+begin
+  Inc(FHides);
+end;
+
+procedure TBusyOverlayTests.Cancelled(Sender: TObject);
+begin
+  Inc(FCancels);
+end;
+
+procedure TBusyOverlayTests.PumpFor(Ms: Cardinal);
+var
+  T0: Cardinal;
+begin
+  T0 := GetTickCount;
+  repeat
+    Application.ProcessMessages;
+    Sleep(5);
+  until GetTickCount - T0 >= Ms;
+end;
+
+function TBusyOverlayTests.DimRect: TRect;
+begin
+  Result := Rect(0, 0, 0, 0);
+  if (FO.DimWindow <> nil) and FO.DimWindow.HandleAllocated then
+    GetWindowRect(FO.DimWindow.Handle, Result);
+end;
+
+procedure TBusyOverlayTests.ShowHideCountsAndCovers;
+begin
+  CheckFalse(FO.Active);
+  FO.Show;
+  CheckTrue(FO.Active);
+  CheckTrue(FO.Visible, 'Delay 0: sofort');
+  CheckEquals(1, FShows);
+  CheckTrue(FO.DimWindow.IsShown);
+  CheckTrue(EqualRect(DimRect, PPGOverlayRect(FPanel)), 'deckt genau das Ziel ab');
+  CheckTrue(FO.DimWindow.Opacity = FO.DimOpacity);
+  FO.Show;
+  FO.Hide;
+  CheckTrue(FO.Active, 'zaehlend');
+  FO.Hide;
+  CheckFalse(FO.Active);
+  CheckFalse(FO.Visible);
+  CheckFalse(FO.DimWindow.IsShown);
+  CheckEquals(1, FHides);
+  FO.Hide;
+  CheckFalse(FO.Active, 'ueberzaehliges Hide schadet nicht');
+end;
+
+procedure TBusyOverlayTests.FormTargetCoversClientArea;
+var
+  R: TRect;
+  P: TPoint;
+begin
+  FO.Target := nil;
+  FO.Show;
+  Winapi.Windows.GetClientRect(FForm.Handle, R);
+  P := FForm.ClientToScreen(Point(0, 0));
+  OffsetRect(R, P.X, P.Y);
+  CheckTrue(EqualRect(DimRect, R), 'ohne Target: Client-Bereich des Formulars');
+  FO.Hide;
+end;
+
+procedure TBusyOverlayTests.DelayBlocksFirstShowsLater;
+begin
+  FO.Delay := 150;
+  FO.Show;
+  CheckTrue(FO.DimWindow.IsShown, 'Eingaben sofort gesperrt');
+  CheckFalse(FO.Visible, 'Karte erst nach Delay');
+  CheckTrue(FO.DimWindow.Opacity <= 1, 'fast durchsichtig');
+  PumpFor(300);
+  CheckTrue(FO.Visible, 'nach Delay sichtbar');
+  CheckTrue(FO.DimWindow.Opacity = FO.DimOpacity);
+  FO.Hide;
+  FShows := 0;
+  FO.Show;
+  FO.Hide;
+  PumpFor(250);
+  CheckEquals(0, FShows, 'kurze Arbeit blitzt nicht');
+  CheckFalse(FO.DimWindow.IsShown);
+end;
+
+procedure TBusyOverlayTests.MinDisplayTimeKeepsVisible;
+begin
+  FO.MinDisplayTime := 250;
+  FO.Show;
+  FO.Hide;
+  CheckFalse(FO.Active);
+  CheckTrue(FO.Visible, 'steht noch');
+  FO.Show;
+  FO.Hide;
+  PumpFor(400);
+  CheckFalse(FO.Visible, 'danach weg');
+  CheckEquals(1, FHides, 'erneutes Show verlaengert nur');
+end;
+
+procedure TBusyOverlayTests.KeyboardBlockedInTargetOnly;
+begin
+  FO.ShowCancel := True;
+  FInner.SetFocus;
+  FO.Show;
+  PostMessage(InnerWnd(FInner), WM_CHAR, Ord('a'), 0);
+  PostMessage(InnerWnd(FOuter), WM_CHAR, Ord('b'), 0);
+  PumpFor(50);
+  CheckEquals('', FInner.Text, 'im Ziel gesperrt');
+  CheckEquals('b', FOuter.Text, 'ausserhalb frei');
+  PostMessage(InnerWnd(FInner), WM_KEYDOWN, VK_ESCAPE, 0);
+  PumpFor(50);
+  CheckTrue(FO.Cancelled, 'Esc bricht ab');
+  CheckEquals(1, FCancels);
+  FO.Cancel;
+  CheckEquals(1, FCancels, 'nur einmal');
+  FO.Hide;
+  PostMessage(InnerWnd(FInner), WM_CHAR, Ord('c'), 0);
+  PumpFor(50);
+  CheckEquals('c', FInner.Text, 'nach Hide wieder frei');
+end;
+
+procedure TBusyOverlayTests.FormStaysOpenWhileActive;
+begin
+  FForm.OnCloseQuery := nil;
+  FO.Show;
+  CheckFalse(FForm.CloseQuery, 'waehrend der Arbeit offen');
+  FO.Hide;
+  CheckTrue(FForm.CloseQuery);
+  CheckFalse(Assigned(FForm.OnCloseQuery), 'Handler zurueckgesetzt');
+end;
+
+procedure TBusyOverlayTests.FollowsTargetAndHidesWithIt;
+begin
+  FO.Show;
+  FPanel.SetBounds(40, 30, 260, 200);
+  Application.ProcessMessages;
+  CheckTrue(EqualRect(DimRect, PPGOverlayRect(FPanel)), 'folgt dem Ziel');
+  FPanel.Visible := False;
+  PumpFor(80);
+  CheckFalse(FO.DimWindow.IsShown, 'unsichtbares Ziel: nichts zeigen');
+  CheckTrue(FO.Active);
+  FPanel.Visible := True;
+  PumpFor(80);
+  CheckTrue(FO.DimWindow.IsShown, 'wieder da');
+  FO.Hide;
+end;
+
+procedure TBusyOverlayTests.RunWorksInThreadAndReports;
+var
+  WorkThread: TThreadID;
+begin
+  WorkThread := 0;
+  FO.Run(
+    procedure(const C: IPPGBusyContext)
+    begin
+      WorkThread := TThread.CurrentThread.ThreadID;
+      C.Report(50, 'Halb fertig');
+      C.SetDescription('Datei 3 von 6');
+      Sleep(150);
+    end);
+  CheckTrue(WorkThread <> 0, 'Arbeit lief');
+  CheckTrue(WorkThread <> MainThreadID, 'im Hintergrund-Thread');
+  CheckEquals(50, FO.Progress);
+  CheckEquals('Halb fertig', FO.Text);
+  CheckEquals('Datei 3 von 6', FO.Description);
+  CheckFalse(FO.Active, 'danach frei');
+end;
+
+procedure TBusyOverlayTests.RunReraisesWorkerException;
+begin
+  try
+    FO.Run(
+      procedure(const C: IPPGBusyContext)
+      begin
+        raise EPPGConfigError.Create('kaputt');
+      end);
+    Fail('Exception muss ankommen');
+  except
+    on E: EPPGConfigError do
+      CheckEquals('kaputt', E.Message);
+  end;
+  CheckFalse(FO.Active, 'auch nach Fehler frei');
+end;
+
+procedure TBusyOverlayTests.RunCancelledByEsc;
+var
+  Loops: Integer;
+begin
+  FO.ShowCancel := True;
+  FInner.SetFocus;
+  Loops := 0;
+  // Esc kommt in der Nachrichtenschleife von Run an
+  PostMessage(InnerWnd(FInner), WM_KEYDOWN, VK_ESCAPE, 0);
+  FO.Run(
+    procedure(const C: IPPGBusyContext)
+    var
+      T0: Cardinal;
+    begin
+      T0 := GetTickCount;
+      while not C.Cancelled and (GetTickCount - T0 < 3000) do
+      begin
+        Inc(Loops);
+        Sleep(10);
+      end;
+    end);
+  CheckTrue(FO.Cancelled);
+  CheckEquals(1, FCancels);
+  CheckTrue(Loops < 250, 'Arbeit hat den Abbruch gesehen');
+end;
+
+procedure TBusyOverlayTests.RunAsyncCallsOnDone;
+var
+  Done: Boolean;
+  Msg: string;
+  T0: Cardinal;
+begin
+  Done := False;
+  Msg := '-';
+  FO.RunAsync(
+    procedure(const C: IPPGBusyContext)
+    begin
+      Sleep(50);
+    end,
+    procedure(const Error: Exception)
+    begin
+      Done := True;
+      if Error = nil then
+        Msg := ''
+      else
+        Msg := Error.Message;
+    end);
+  CheckTrue(FO.Active, 'kehrt sofort zurueck');
+  T0 := GetTickCount;
+  while not Done and (GetTickCount - T0 < 3000) do
+    PumpFor(20);
+  CheckTrue(Done, 'OnDone kam');
+  CheckEquals('', Msg, 'ohne Fehler');
+  CheckFalse(FO.Active);
+  Done := False;
+  FO.RunAsync(
+    procedure(const C: IPPGBusyContext)
+    begin
+      raise EPPGConfigError.Create('async kaputt');
+    end,
+    procedure(const Error: Exception)
+    begin
+      Done := True;
+      Msg := Error.Message;
+    end);
+  T0 := GetTickCount;
+  while not Done and (GetTickCount - T0 < 3000) do
+    PumpFor(20);
+  CheckEquals('async kaputt', Msg, 'Fehler an OnDone');
+end;
+
+procedure TBusyOverlayTests.FreeWhileAsyncRunningWaits;
+var
+  O: TPPGBusyOverlay;
+  Start: Cardinal;
+begin
+  O := TPPGBusyOverlay.Create(FForm);
+  O.Target := FPanel;
+  O.RunAsync(
+    procedure(const C: IPPGBusyContext)
+    var
+      T0: Cardinal;
+    begin
+      T0 := GetTickCount;
+      while not C.Cancelled and (GetTickCount - T0 < 5000) do
+        Sleep(10);
+    end, nil);
+  Start := GetTickCount;
+  O.Free;
+  CheckTrue(GetTickCount - Start < 2000, 'Freigeben bricht ab und wartet kurz');
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TBusyOverlayTests.InvalidValuesRaiseAndKeepState;
+begin
+  FO.Progress := 40;
+  try
+    FO.Progress := 101;
+    Fail('101 muss werfen');
+  except
+    on EPPGError do
+  end;
+  try
+    FO.Progress := -2;
+    Fail('-2 muss werfen');
+  except
+    on EPPGError do
+  end;
+  CheckEquals(40, FO.Progress, 'unveraendert');
+  try
+    FO.Delay := -1;
+    Fail('Delay -1 muss werfen');
+  except
+    on EPPGError do
+  end;
+  try
+    FO.MinDisplayTime := 60001;
+    Fail('MinDisplayTime 60001 muss werfen');
+  except
+    on EPPGError do
+  end;
+  CheckEquals(0, FO.Delay);
+  FO.Progress := -1;
+  FO.Progress := 100;
+end;
+
+procedure TBusyOverlayTests.PaintsCardInAllStates;
+var
+  B: TBitmap;
+  Gdi: Boolean;
+begin
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      FO.Text := 'Export laeuft';
+      FO.Description := '1 000 000 Zeilen nach Excel';
+      FO.Progress := -1;
+      FO.ShowCancel := False;
+      FO.ShowNow;
+      B := RenderToBitmap(FO.Card);
+      B.Free;
+      FO.Progress := 40;
+      FO.ShowCancel := True;
+      B := RenderToBitmap(FO.Card);
+      if not Gdi then
+        SaveGalleryPngBusy(B, 'BusyOverlay-Card.png');
+      B.Free;
+      FO.Cancel;
+      B := RenderToBitmap(FO.Card);
+      B.Free;
+      FO.Hide;
+      // Zu wenig Platz: nur der Ring
+      FPanel.SetBounds(10, 10, 90, 70);
+      FO.ShowNow;
+      CheckTrue(FO.Card.Compact, 'kompakt');
+      B := RenderToBitmap(FO.Card);
+      B.Free;
+      FO.Hide;
+      FPanel.SetBounds(10, 10, 300, 220);
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TBusyOverlayTests.AccessibleCard;
+var
+  C: TCardAccess;
+begin
+  FO.Text := 'Speichern';
+  FO.ShowCancel := True;
+  FO.Progress := 30;
+  FO.ShowNow;
+  C := TCardAccess(FO.Card);
+  CheckEquals(ROLE_SYSTEM_PROGRESSBAR, C.AccRole);
+  CheckEquals('Speichern', C.AccName);
+  CheckEquals('30 %', C.AccValue);
+  CheckEquals(PPGStr(@SPPGBusyCancel), C.AccDefaultAction);
+  C.AccDoDefaultAction;
+  CheckFalse(FO.Cancelled, 'nur gepostet');
+  PumpFor(30);
+  CheckTrue(FO.Cancelled, 'Standardaktion bricht ab');
+  FO.Hide;
+end;
+
+procedure TBusyOverlayTests.StreamsProperties;
+var
+  M: TMemoryStream;
+  O2: TPPGBusyOverlay;
+begin
+  FO.Text := 'Bitte warten';
+  FO.Description := 'Daten werden geladen';
+  FO.Progress := 25;
+  FO.ShowCancel := True;
+  FO.CancelCaption := 'Stopp';
+  FO.Delay := 1200;
+  FO.MinDisplayTime := 800;
+  FO.DimOpacity := 40;
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(FO);
+    M.Position := 0;
+    O2 := TPPGBusyOverlay.Create(nil);
+    try
+      M.ReadComponent(O2);
+      CheckEquals('Bitte warten', O2.Text);
+      CheckEquals('Daten werden geladen', O2.Description);
+      CheckEquals(25, O2.Progress);
+      CheckTrue(O2.ShowCancel);
+      CheckEquals('Stopp', O2.CancelCaption);
+      CheckEquals(1200, O2.Delay);
+      CheckEquals(800, O2.MinDisplayTime);
+      CheckEquals(40, O2.DimOpacity);
+    finally
+      O2.Free;
+    end;
+  finally
+    M.Free;
+  end;
+end;
+
+
 initialization
   RegisterTest('Phase19', TValidatorTests.Suite);
   RegisterTest('Phase19', TValidatorComfortTests.Suite);
+  RegisterTest('Phase19', TBusyOverlayTests.Suite);
 
 end.

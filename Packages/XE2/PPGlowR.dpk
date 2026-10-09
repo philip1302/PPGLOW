@@ -77,6 +77,8 @@ contains
   PPG.RadioGroup in '..\..\Source\Controls\PPG.RadioGroup.pas',
   PPG.TileView in '..\..\Source\Controls\PPG.TileView.pas',
   PPG.Validator in '..\..\Source\Controls\PPG.Validator.pas',
+  PPG.Overlay in '..\..\Source\Controls\PPG.Overlay.pas',
+  PPG.BusyOverlay in '..\..\Source\Controls\PPG.BusyOverlay.pas',
   PPG.Controls.Field in '..\..\Source\Controls\PPG.Controls.Field.pas',
   PPG.Edit in '..\..\Source\Controls\PPG.Edit.pas',
   PPG.Memo in '..\..\Source\Controls\PPG.Memo.pas',

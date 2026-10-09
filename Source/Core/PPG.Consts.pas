@@ -258,6 +258,11 @@ resourcestring
   SPPGValAndMore = '%s and %d more';
   SPPGValGoToError = 'Go to error';
 
+  // Warte-Overlay (Phase 19c)
+  SPPGBusyWait = 'Please wait...';
+  SPPGBusyCancel = 'Cancel';
+  SPPGBusyCancelling = 'Cancelling...';
+
 implementation
 
 end.

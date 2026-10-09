@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 215;
+  PPGLangDeCount = 218;
 
 implementation
 
@@ -452,6 +452,12 @@ begin
     '%s und %d weitere');
   PPGAddTranslation(PPGLangDeCode, @SPPGValGoToError,
     'Zum Fehler');
+  PPGAddTranslation(PPGLangDeCode, @SPPGBusyWait,
+    'Bitte warten '#$2026);
+  PPGAddTranslation(PPGLangDeCode, @SPPGBusyCancel,
+    'Abbrechen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGBusyCancelling,
+    'Wird abgebrochen '#$2026);
 end;
 
 initialization

@@ -183,7 +183,7 @@ uses
   PPG.Sparkline, PPG.Gauge, PPG.Chart,
   PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
-  PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator, PPG.Controls.Field,
+  PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator, PPG.Controls.Field, PPG.BusyOverlay,
   PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
   PPG.Editors.Logic, PPG.Editors.Forms;
 
@@ -1062,7 +1062,7 @@ begin
     TPPGNavigationView, TPPGBreadcrumb, TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
     TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart, TPPGPlanner, TPPGRibbon, TPPGKanban,
     TPPGPopupMenu, TPPGMenuBar, TPPGHintManager, TPPGCustomHint, TPPGTeachingTip,
-    TPPGTaskDialog, TPPGWizard, TPPGValidator,
+    TPPGTaskDialog, TPPGWizard, TPPGValidator, TPPGBusyOverlay,
     TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
     TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit,
     TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager]);

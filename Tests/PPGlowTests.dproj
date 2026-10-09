@@ -280,6 +280,8 @@
         <DCCReference Include="..\Source\Controls\PPG.RadioGroup.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.TileView.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Validator.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Overlay.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.BusyOverlay.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Controls.Field.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Edit.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Memo.pas"/>
