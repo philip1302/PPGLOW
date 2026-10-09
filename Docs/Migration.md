@@ -115,6 +115,7 @@ Die Splitter-Breite (VCL 3, PPGlow 6) bleibt, weil die IDE `Width` immer speiche
 - **TToolBar/TToolButton:** andere Struktur (Einträge statt Kind-Buttons) – `TPPGToolBar` von Hand aufbauen.
 - **TListView:** API zu verschieden für eine automatische Umstellung. Symbol- und Kachelansichten werden zu `TPPGTileView` (Einträge über `Items` oder virtuell über `OnGetItem`), Detailansichten zu `TPPGGrid`.
 - **TMS-Erscheinungsbild:** Die `Appearance`-Werte von TMS passen nicht zu PPGlow und werden entfernt; das Preset (Standard ModernFlat) bestimmt die Optik. Ein `TPPGStyleManager` auf dem Formular stellt alle Controls auf einmal um („Apply preset to form...“).
+- **TTrackBar:** Der Auswahlbereich (`SelStart`, `SelEnd`, `ShowSelRange`) wird seit Phase 20d übernommen. `PositionToolTip` entfernt das Skript (im Bericht), manuelle Ticks per `SetTick` meldet der Compiler.
 - **TAdvStringGrid:** Nur die Grundfunktionen (Zellen, feste Zeilen/Spalten, Sortieren, Filter, Editoren) sind abgedeckt; TMS-spezifische Properties werden entfernt.
 - **Code:** Aufrufe, die es nur bei der alten Klasse gibt (z. B. `TBitBtn.Glyph.LoadFromFile`), meldet der Compiler.
 

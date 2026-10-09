@@ -176,6 +176,7 @@ type
     FOnColumnCollapse: TPPGKanbanColumnEvent;
     { Filter und Spalten ziehen (Phase 20b) }
     FFilterText: string;
+    FFilterUpper: string; // FilterText in Grossbuchstaben (einmal je Aenderung)
     FFilterLabels: string;
     FFilterAssignee: string;
     FOnFilterCard: TPPGKanbanFilterEvent;
@@ -1613,7 +1614,10 @@ begin
             end;
         end
         else if SameText(Key, 'FilterText') then
-          FFilterText := Val
+        begin
+          FFilterText := Val;
+          FFilterUpper := AnsiUpperCase(Val);
+        end
         else if SameText(Key, 'FilterLabels') then
           FFilterLabels := Val
         else if SameText(Key, 'FilterAssignee') then
@@ -1643,6 +1647,7 @@ begin
   if FFilterText <> Value then
   begin
     FFilterText := Value;
+    FFilterUpper := AnsiUpperCase(Value);
     LayoutChanged;
   end;
 end;
@@ -1674,10 +1679,14 @@ end;
 /// Text ohne Markup-Tags (fuer die Suche im Kartentext).
 function StripTags(const S: string): string;
 var
-  I: Integer;
+  I, N: Integer;
   InTag: Boolean;
 begin
-  Result := '';
+  if Pos('<', S) = 0 then
+    Exit(S);
+  // Ein Puffer statt Anhaengen je Zeichen (Filter ueber viele Karten)
+  SetLength(Result, Length(S));
+  N := 0;
   InTag := False;
   for I := 1 to Length(S) do
     if S[I] = '<' then
@@ -1685,7 +1694,11 @@ begin
     else if S[I] = '>' then
       InTag := False
     else if not InTag then
-      Result := Result + S[I];
+    begin
+      Inc(N);
+      Result[N] := S[I];
+    end;
+  SetLength(Result, N);
 end;
 
 function ListContains(const List, Value: string): Boolean;
@@ -1709,7 +1722,7 @@ begin
   Result := True;
   if FFilterText <> '' then
   begin
-    U := AnsiUpperCase(FFilterText);
+    U := FFilterUpper;
     Result := (Pos(U, AnsiUpperCase(Card.Title)) > 0) or
       (Pos(U, AnsiUpperCase(StripTags(Card.Text))) > 0) or
       (Pos(U, AnsiUpperCase(Card.Labels)) > 0) or (Pos(U, AnsiUpperCase(Card.Assignee)) > 0);

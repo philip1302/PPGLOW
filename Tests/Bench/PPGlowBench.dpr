@@ -909,6 +909,96 @@ begin
         end;
       end);
 
+    { Phase 20: ganze Serien verschieben, Kanban filtern }
+    Measure('Planer: 500 Serien, 50 x ganze Serie verschieben + zeichnen', 2500,
+      procedure
+      var
+        P: TPPGPlanner;
+        A: TPPGAppointment;
+        Occ: TPPGOccurrence;
+        I: Integer;
+      begin
+        P := TPPGPlanner.Create(Form);
+        try
+          P.Parent := Form;
+          P.SetBounds(0, 0, 1000, 700);
+          P.ShowNowLine := False;
+          P.SeriesEditMode := semSeries;
+          P.Appointments.BeginUpdate;
+          try
+            for I := 0 to 499 do
+            begin
+              A := P.Appointments.AddAppointment(EncodeDate(2026, 1, 5) + I mod 5 + (8 + I mod 9) / 24,
+                EncodeDate(2026, 1, 5) + I mod 5 + (8.5 + I mod 9) / 24, 'Serie ' + IntToStr(I));
+              A.Recurrence := 'FREQ=WEEKLY;BYDAY=MO,WE,FR';
+            end;
+          finally
+            P.Appointments.EndUpdate;
+          end;
+          P.Date := EncodeDate(2026, 3, 2);
+          for I := 1 to 50 do
+          begin
+            if P.ItemCount = 0 then
+              Break;
+            Occ := P.Item(I mod P.ItemCount);
+            P.ChangeAppointment(Occ, ackMove, Occ.Start + 1 / 96, Occ.Finish + 1 / 96,
+              Occ.Appointment.ResourceId);
+            PaintToBitmap(P);
+          end;
+        finally
+          P.Free;
+        end;
+      end);
+
+    Measure('Kanban 10 000 Karten aufbauen', High(Cardinal),
+      procedure
+      var
+        K: TPPGKanban;
+        C: array[0..3] of TPPGKanbanColumn;
+        I: Integer;
+      begin
+        K := TPPGKanban.Create(Form);
+        try
+          K.Parent := Form;
+          K.SetBounds(0, 0, 1000, 700);
+          for I := 0 to 3 do
+            C[I] := K.Columns.AddColumn('Spalte ' + IntToStr(I));
+          K.Cards.BeginUpdate;
+          try
+            for I := 0 to 9999 do
+              with K.Cards.AddCard(C[I mod 4].Id, 'Aufgabe ' + IntToStr(I), 'Text ' + IntToStr(I mod 97)) do
+              begin
+                Labels := 'L' + IntToStr(I mod 7);
+                Assignee := 'Person ' + IntToStr(I mod 5);
+              end;
+          finally
+            K.Cards.EndUpdate;
+          end;
+          PaintToBitmap(K);
+          // Nur das Filtern messen, nicht den Aufbau
+          Measure('Kanban 10 000 Karten: 20 x filtern + zeichnen', 2000,
+            procedure
+            var
+              J: Integer;
+            begin
+              for J := 0 to 19 do
+              begin
+                K.FilterText := IntToStr(J + 10);
+                if Odd(J) then
+                  K.FilterAssignee := 'Person 2'
+                else
+                  K.FilterAssignee := '';
+                PaintToBitmap(K);
+              end;
+              K.FilterText := '';
+              K.FilterAssignee := '';
+              PaintToBitmap(K);
+            end);
+        finally
+          K.Free;
+        end;
+      end);
+
     { Phase 18: Kachelansicht }
     Measure('TileView virtuell 100 000: 300 x scrollen + zeichnen', 3000,
       procedure

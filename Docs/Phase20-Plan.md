@@ -82,6 +82,32 @@ Regel wie in Phase 18/19: nur, was im Alltag fehlt oder Code spart, keine Nachba
 ## Reihenfolge
 20a → 20b → 20c → 20d → 20e → 20f, Bericht nach 20f. Zwischenstände in `NAECHSTE-SCHRITTE.md`.
 
+## Umsetzung (09.10.2026)
+Umgesetzt in der Reihenfolge 20a → 20f, je Teil ein Commit (20e in zwei: erst die festhaltenden Tests, dann der Umbau).
+
+- **20a** (`PPG.Planner`, `PPG.Planner.Model`, neu `PPG.Planner.Dialog`): `SeriesEditMode` (`semAsk` Vorgabe), `OnSeriesEdit`, Abfrage als `TPPGTaskDialog` mit Befehlslinks für Verschieben, Dauer, Betreff, Ort, Löschen und Dialog. `TPPGAppointment.ShiftSeries` verschiebt Beginn, Ausnahmen und bei Tageswechsel `BYDAY`/`BYMONTHDAY`. Löschen der ganzen Serie nimmt herausgelöste Einzeltermine mit. `BeginEditLocation` (Umschalt+F2), `ackLocation`/`ackDialog`. Termin-Dialog mit Validator, `DefaultEditor`, `EditAppointment`, `PPGAppointmentDialogHook`; nicht abbildbare Regeln bleiben unverändert stehen. 17 Tests.
+- **20b** (`PPG.Kanban`): `FilterText`, `FilterLabels`, `FilterAssignee`, `OnFilterCard`, `IsFiltered`, `ColumnTotalCount`/`ColumnHiddenCount`; Spalten ziehen, Strg+Umschalt+Links/Rechts, `MoveColumn`, `OnColumnMoving`/`OnColumnMoved`, Ansage; `SaveLayout` Version 2. 10 Tests.
+- **20c** (`PPG.Ribbon`): Tastatur in Gruppen- und Karten-Popups (`NavView`, Esc eine Ebene zurück, Pfeil nach Mausöffnung führt hinein), Galerie-Kategorien mit Zeilen (`TPPGGalleryRow`), `PaintGalleryTile`. 7 Tests.
+- **20d** (`PPG.TrackBar`): `SelStart`/`SelEnd`/`ShowSelRange`, `RangeMode` mit `PositionEnd`/`ActiveThumb`, Tab zwischen den Griffen, Screenreader-Kinder „Von“/„Bis“. 7 Tests.
+- **20e** (`PPG.Popup`, `PPG.Controls.DropDown`, `PPG.ComboBox`): erst 5 festhaltende Tests gegen den alten Code (Zeichen bei offener Liste, Pos1/Ende, Tasten bei geschlossener Liste, Pfeil und Ereignisse, Maus außerhalb), dann der Umbau. `TPPGDropPopup` liegt jetzt in `PPG.Popup`, `TPPGPopupList` erbt davon; die Basis bekam `CanDropDown`, `PopupOpened`/`PopupClosed`, `RepositionPopup` und `FreePopup`. Die ComboBox verliert rund 290 Zeilen eigene Popup-, Capture-, Tastatur- und Screenreader-Logik. Alle Combo-, SearchEdit-, TimePicker- und DB-Combo-Tests blieben unverändert grün.
+- **20f:**
+  - Demo: Planer mit Auswahl „Serie: nachfragen / nur Vorkommen / ganze Serie“ und Termin-Dialog per Doppelklick; Kanban mit Suchfeld und Personenfilter; Ribbon-Formatvorlagen nach Kategorien, neuer Capture-Modus `/ribboncapture groupkeys`; „Auswahl & Regler“ mit empfohlenem Bereich und Preisfilter (zwei Griffe). 14 neue Selbsttest-Prüfungen, darunter der Termin-Dialog über den Haken.
+  - `migrate.ps1`: Fixture mit `TTrackBar` samt `SelStart`/`SelEnd` (bleiben erhalten).
+  - Benchmark: „500 Serien, 50 × ganze Serie verschieben“ 672 ms (Vorgabe 2500), „Kanban 10 000 Karten, 20 × filtern“ rund 1860 ms (Vorgabe 2000; Aufbau getrennt gemessen, Referenz). Zwei kleine Optimierungen im Textfilter (Großschreibung einmal je Änderung, Markup ohne Anhängen je Zeichen) brachten nichts Messbares: Die Zeit steckt im Neu-Anordnen und Zeichnen der Spalten, nicht im Vergleich.
+  - Doku: Hilfe-Notizen (Planer, Kanban, Ribbon, ComboBox, TrackBar), Property-Referenz (ohne Beschreibung: 0), Architektur (Abschnitt Phase 20, TrackBar-Migration, Aufklapp-Basis), Migration, Roadmap3.
+- **Prüfung:** 1466 Tests Win32 und Win64, Leak-Lauf Win32/Win64 grün (kein Zuwachs), Demo-Selbsttest 185/185, `migrate.ps1 -SelfTest` grün, Benchmark eingehalten, Regel-Prüfer ohne Verstöße. Aufnahmen der Seiten Planer, Kanban, Ribbon, „Auswahl & Regler“ sowie `/ribboncapture gallery` und `groupkeys` angesehen. Dabei gefunden und behoben: zu lange Seitentexte (abgeschnitten) und die Ergebniszeile, die auf „Auswahl & Regler“ in die Regler rutschte.
+
+**Abweichungen:**
+- 20b: Ausgeblendete Karten stehen als „+n“ im Spaltenkopf statt „3 (+2 ausgeblendet)“; das passt in schmale Köpfe. Spalten ziehen zeigt eine Einfügemarke statt eines animierten Platzhalters. Ein `ColumnOrderField` für die DB-Variante gibt es nicht: Die Spalten legt die Anwendung an, ihre Reihenfolge merkt `SaveLayout`.
+- 20c: Keine eigene Property `Category` an den Galerie-Einträgen. Die Kategorie kommt aus „Kategorie|Text“ in `GalleryItems` oder aus `Data.Group` in `OnGetGalleryItem`, so bleibt die DFM unverändert.
+- 20d: Kein eigenes `OnRangeChange`; `OnChange` meldet beide Werte (wie `Position`).
+- 20e: Als Popup dient `TPPGPopupList` (nicht `TPPGRowPopup`), weil Filter, `ItemsEx` und Screenreader-Kinder dort schon fertig waren. `ReadOnly` sperrt das Aufklappen der ComboBox weiterhin nicht (bisheriges Verhalten; `TComboBox` kennt kein `ReadOnly`).
+
+**Offen:**
+- Nichts installiert.
+- Kein XE2-Lauf.
+- Kanban mit 10 000 Karten: rund 90 ms je Filterschritt. Reicht beim Tippen, schneller ginge es nur mit einem Layout, das nur geänderte Spalten neu anordnet.
+
 ## Verifikation
 - `Build\check-rules.ps1`, `build.ps1` (alle Projekte, Win32 und Win64)
 - `Tests\PPGlowTests.exe` (0 = grün) und `/leaks`, Win32 und Win64; Benchmark (Kanban mit Filter, Planer mit Serien)

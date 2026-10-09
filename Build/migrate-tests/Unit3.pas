@@ -12,6 +12,7 @@ type
     Nav1: TDBNavigator;
     State1: TDBRadioGroup;
     List1: TListView;
+    Track1: TTrackBar;
     procedure Kind1Click(Sender: TObject);
   end;
 

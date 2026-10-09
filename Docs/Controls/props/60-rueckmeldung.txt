@@ -103,6 +103,13 @@ TPPGCustomTrackBar.SliderVisible = False: Der Griff wird nicht gezeichnet (reine
 TPPGCustomTrackBar.ThumbLength = Durchmesser des Griffs in logischen 96-DPI-Pixeln (8..100), wie TTrackBar.
 TPPGCustomTrackBar.TickMarks = Lage der Teilstriche: tmBottomRight, tmTopLeft oder tmBoth.
 TPPGCustomTrackBar.TickStyle = tsAuto = Teilstriche im Abstand Frequency, tsNone = keine, tsManual = nur Anfang und Ende (manuelle Ticks per SetTick werden nicht unterstützt).
+TPPGCustomTrackBar.PositionEnd = Ende des Bereichs im RangeMode (zweiter Griff); bleibt immer zwischen Position und Max. Setzt der Code Position dahinter, wandert PositionEnd mit.
+TPPGCustomTrackBar.RangeMode = True: Bereichsregler mit zwei Griffen (Position = Anfang, PositionEnd = Ende), z. B. für einen Preisfilter. Klick bewegt den näheren Griff, Tab wechselt den Griff.
+> `TrackBar1.RangeMode := True; TrackBar1.Position := 50; TrackBar1.PositionEnd := 250;`
+TPPGCustomTrackBar.SelEnd = Ende des hervorgehobenen Bereichs auf der Schiene (wie TTrackBar); gezeichnet, wenn SelEnd > SelStart.
+TPPGCustomTrackBar.SelStart = Anfang des hervorgehobenen Bereichs auf der Schiene (wie TTrackBar), z. B. ein empfohlener Bereich; ändert Position nicht.
+> `TrackBar1.SelStart := 40; TrackBar1.SelEnd := 80;`
+TPPGCustomTrackBar.ShowSelRange = False: Der Bereich aus SelStart/SelEnd wird nicht gezeichnet (wie TTrackBar).
 
 # --- TPPGHintManager ---
 TPPGHintManager.Active = True: Alle Hints der Anwendung erscheinen zur Laufzeit im PPGlow-Stil (HintWindowClass wird ersetzt und beim Freigeben wiederhergestellt). Im Designer ohne Wirkung.

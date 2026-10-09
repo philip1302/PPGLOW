@@ -7,7 +7,9 @@ Palette **PPGlow** - Unit `PPG.TrackBar` - Basis `TPPGCustomTrackBar`
 ## Unterschiede und Hinweise
 
 - `Position` wird still begrenzt; `Min > Max` wirft.
-- Noch nicht vorhanden: Auswahlbereich (`SelStart`/`SelEnd`) und manuelle Ticks (`SetTick`).
+- Auswahlbereich wie `TTrackBar`: `SelStart`/`SelEnd` (mit `SelEnd` > `SelStart`) markieren einen Bereich auf der Schiene, `ShowSelRange` blendet ihn aus.
+- **Bereichsregler:** `RangeMode` zeigt zwei Griffe, `Position` ist der Anfang, `PositionEnd` das Ende; sie überholen sich nicht (setzt der Code den Anfang hinter das Ende, wandert das Ende mit). Klick auf die Schiene bewegt den näheren Griff, Tab wechselt den Griff (`ActiveThumb`), danach verlässt Tab das Control. Screenreader: zwei Kinder „Von“/„Bis“.
+- Noch nicht vorhanden: manuelle Ticks (`SetTick`) und `PositionToolTip`.
 
 ## Verhalten (aus dem Quelltext)
 
@@ -22,9 +24,17 @@ Bedienung:
 Geometrie (alles in einer Funktion, damit Zeichnen und Hit-Test nie
 auseinanderlaufen): siehe GetGeometry.
 
+Auswahlbereich (Phase 20d): SelStart/SelEnd/ShowSelRange wie TTrackBar -
+ein hervorgehobener Bereich auf der Schiene mit Marken an den Enden.
+
+Bereichsregler (RangeMode): zwei Griffe, Position = Anfang, PositionEnd =
+Ende; sie ueberholen sich nicht. Klick auf die Schiene bewegt den naeheren
+Griff, Tab wechselt den Griff (danach verlaesst Tab das Control).
+Screenreader: zwei Kinder "Von"/"Bis" mit ihrem Wert.
+
 Migration: Typen und Property-Namen von TTrackBar (Vcl.ComCtrls).
-Nicht unterstuetzt: Auswahlbereich (SelStart/SelEnd), PositionToolTip,
-manuelle Ticks per SetTick (tsManual zeigt nur Anfang und Ende).
+Nicht unterstuetzt: PositionToolTip, manuelle Ticks per SetTick
+(tsManual zeigt nur Anfang und Ende).
 
 ## PPGlow-Eigenschaften
 
@@ -47,6 +57,11 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `TickStyle` | `TTickStyle` | `tsAuto` | tsAuto = Teilstriche im Abstand Frequency, tsNone = keine, tsManual = nur Anfang und Ende (manuelle Ticks per SetTick werden nicht unterstützt). |
 | `ThumbLength` | `Integer` | `20` | Durchmesser des Griffs in logischen 96-DPI-Pixeln (8..100), wie TTrackBar. |
 | `SliderVisible` | `Boolean` | `True` | False: Der Griff wird nicht gezeichnet (reine Anzeige wie ein Füllbalken). |
+| `SelStart` | `Integer` | `0` | Anfang des hervorgehobenen Bereichs auf der Schiene (wie TTrackBar), z. B. ein empfohlener Bereich; ändert Position nicht. Nutzung: `TrackBar1.SelStart := 40; TrackBar1.SelEnd := 80;` |
+| `SelEnd` | `Integer` | `0` | Ende des hervorgehobenen Bereichs auf der Schiene (wie TTrackBar); gezeichnet, wenn SelEnd > SelStart. |
+| `ShowSelRange` | `Boolean` | `True` | False: Der Bereich aus SelStart/SelEnd wird nicht gezeichnet (wie TTrackBar). |
+| `RangeMode` | `Boolean` | `False` | True: Bereichsregler mit zwei Griffen (Position = Anfang, PositionEnd = Ende), z. B. für einen Preisfilter. Klick bewegt den näheren Griff, Tab wechselt den Griff. Nutzung: `TrackBar1.RangeMode := True; TrackBar1.Position := 50; TrackBar1.PositionEnd := 250;` |
+| `PositionEnd` | `Integer` | `0` | Ende des Bereichs im RangeMode (zweiter Griff); bleibt immer zwischen Position und Max. Setzt der Code Position dahinter, wandert PositionEnd mit. |
 | `ShowFocusRect` | `Boolean` | `True` | True: Bei Tastaturfokus wird der Fokusrahmen bzw. -ring gezeichnet. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
 

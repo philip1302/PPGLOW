@@ -17,7 +17,17 @@
 - Prüfung: 1420 Tests Win32 und Win64, Leak-Lauf grün, Demo-Selbsttest 171/171, Benchmark eingehalten.
 - **Noch nicht installiert.**
 
-Als Nächstes laut Roadmap: Phase 20 (Fertigstellen bestehender Controls) bzw. Audit-Pakete 4 und 5; vorher Bericht und OK.
+**09.10.2026: Phase 20 fertig** (Details `Docs\Phase20-Plan.md`, Abschnitt Umsetzung):
+- Planer: Serienabfrage „nur dieses Vorkommen / ganze Serie“ (`SeriesEditMode`, `OnSeriesEdit`), Ort direkt bearbeiten (Umschalt+F2), Termin-Dialog `PPG.Planner.Dialog` (`DefaultEditor`, `EditAppointment`, `PPGAppointmentDialogHook`).
+- Kanban: `FilterText`/`FilterLabels`/`FilterAssignee`/`OnFilterCard`, Spalten ziehen (Strg+Umschalt+Pfeile, `MoveColumn`), `SaveLayout` Version 2.
+- Ribbon: Tastatur in Gruppen- und Karten-Popups, Galerie-Kategorien („Kategorie|Text“ oder `Data.Group`).
+- TrackBar: `SelStart`/`SelEnd`/`ShowSelRange`, Bereichsregler `RangeMode` mit `PositionEnd`.
+- ComboBox (mit SearchEdit, TimePicker, DBComboBox) auf der gemeinsamen Aufklapp-Basis; `TPPGDropPopup` liegt jetzt in `PPG.Popup`.
+- Demo: Planer, Kanban, Ribbon und „Auswahl & Regler“ erweitert, `/ribboncapture groupkeys`.
+- Prüfung: 1466 Tests Win32 und Win64, Leak-Lauf grün, Demo-Selbsttest 185/185, Benchmark eingehalten (zwei neue Messungen).
+- **Noch nicht installiert.**
+
+Als Nächstes laut Roadmap: Audit-Pakete 4 und 5, Phase 21 erst nach einer Inventur, Phase 16 (Tour, Kommando-Palette); Phase 15 bleibt zurückgestellt (Arbeitgeber). Vorher Bericht und OK.
 
 **09.10.2026: Gesamt-Audit** (neun Prüfthemen, rund 260 Befunde, Plan und Stand in `Docs\Audit-Plan.md`). Pakete 1 (Abstürze/Datenverlust), 2 (Fehlergrenzen, NaN, Lebensdauer), 3 (xlsx/CSV/iCal/Zahlen-Parser) und 6 (`migrate.ps1`: Kodierung, `.bak`, abweichende VCL-Vorgaben) umgesetzt und in diesen Zweig gemergt (2bebd69). Danach: 1338 Tests Win32/Win64, Leak-Lauf grün, Demo-Selbsttest 160/160. Entscheidungen: Repo-Bereinigung zurückgestellt, einheitliche Benennung ja (Paket 5c), PPGlow-Vorgaben bleiben (migrate gleicht aus), Pakete 7–9 nach Phase 18. Als Nächstes aus dem Audit: Paket 4 (DB-Controls) und 5 (Properties/Benennung).
 

@@ -12,6 +12,8 @@ Palette **PPGlow** - Unit `PPG.Kanban` - Basis `TPPGCustomKanban`
 - **Virtuelle Spalten:** `Column.VirtualCount` > 0 und `OnGetCard`. Karten haben dann feste Höhe (`VirtualCardHeight`), Lage und Treffer in O(1); abgefragt wird nur Sichtbares. Verschieben meldet `OnCardMoved` mit Indizes (`Card = nil`), die Daten verschiebt die Anwendung. Zwischen virtuellen und normalen Spalten wird nicht verschoben.
 - **Ziehen:** Die Karte folgt der Maus, am Ziel öffnet sich ein Platzhalter, die anderen Karten weichen animiert aus. Am Rand scrollt das Board bzw. die Spalte. Esc bricht ab. Auf einer eingeklappten Spalte landet die Karte am Ende.
 - **WIP-Limit:** Die Kopfzeile zeigt „3 / 5“; voll = Warnfarbe, darüber = rot getönte Spalte. `WipMode = kwmBlock` lehnt Karten für volle Spalten ab (Umsortieren in der Spalte bleibt erlaubt). `OnCardMoving` kann jede Bewegung ablehnen.
+- **Filter:** `FilterText` (Titel, Text, Labels, Person; ohne Groß-/Kleinschreibung), `FilterLabels` (Komma-Liste, ein Label genügt), `FilterAssignee` (Komma-Liste) und `OnFilterCard` wirken zusammen. Ausgeblendete Karten zeigt der Spaltenkopf als „+n“ (`ColumnHiddenCount`), Treffer im Titel sind hervorgehoben. Das WIP-Limit zählt weiter alle Karten.
+- **Spalten verschieben:** Kopf ziehen (`AllowColumnDrag`, Esc bricht ab) oder Strg+Umschalt+Links/Rechts; `MoveColumn` im Code. `OnColumnMoving` kann ablehnen, `OnColumnMoved` meldet die neue Lage.
 - **Tastatur:** Pfeile wandern zwischen den Karten (leere Spalten werden übersprungen), Strg+Pfeile verschieben die gewählte Karte (auch in eine leere Spalte; Strg+Oben/Unten am Rand in die nächste Swimlane), Pos1/Ende, Bild auf/ab, Enter = `OnCardOpen`.
 - **Screenreader:** Bereich; Kinder sind je Spalte der Kopf („Spalte X, n Karten, Limit m“) und die Karten („Titel, Spalte X, Position Y von N, fällig …, Person, Labels“). Nach einem Verschieben steht „Verschoben nach Spalte X, Position Y von N“ vor dem Namen der fokussierten Karte (`Announcement`).
 - Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnSelectionChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
@@ -20,7 +22,7 @@ Palette **PPGlow** - Unit `PPG.Kanban` - Basis `TPPGCustomKanban`
 ## Anpassung
 
 - `KanbanStyles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
-- `SaveLayout`/`LoadLayout`: Spaltenbreiten und eingeklappte Spalten/Swimlanes (nach `Id`). Drucken mit `TPPGKanbanPrinter`.
+- `SaveLayout`/`LoadLayout`: Spaltenbreiten, Reihenfolge, Filter und eingeklappte Spalten/Swimlanes (nach `Id`; ältere Layouts ohne Reihenfolge laden weiter). Drucken mit `TPPGKanbanPrinter`.
 
 ## Beispiel
 
@@ -79,6 +81,10 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `KanbanStyles` | [TPPGKanbanStyles](types/TPPGKanbanStyles.md) |  | Bereiche des Boards einzeln gestalten: Spalten, Karten, Karte unter der Maus, gewählte Karte, Swimlane-Köpfe. Nicht gesetzte Werte kommen aus dem Preset. Nutzung: `Kanban1.KanbanStyles.Card.Color := $00FAFAFA;` |
 | `ScrollBarMode` | `TPPGScrollBarMode` | `sbmAuto` | Wann die Scrollleisten erscheinen: sbmAuto (bei Bedarf, als schmale Overlay-Leiste), sbmAlways (immer), sbmNever (nie; Scrollen nur per Rad, Tastatur oder Code). Werte: `sbmAuto`, `sbmAlways`, `sbmNever`. |
 | `SmoothScrolling` | `Boolean` | `True` | True: Scrollen per Rad und Tastatur gleitet weich statt sprunghaft. |
+| `FilterText` | `string` |  | Suchbegriff: nur Karten zeigen, deren Titel, Text, Labels oder Person ihn enthalten (ohne Groß-/Kleinschreibung); Treffer im Titel werden hervorgehoben. Ausgeblendete Karten zeigt der Spaltenkopf als „+n“, das WIP-Limit zählt weiter alle. Nutzung: `Kanban1.FilterText := SearchEdit1.Text;` |
+| `FilterLabels` | `string` |  | Nur Karten mit mindestens einem dieser Labels zeigen (durch Komma getrennt); leer = alle. |
+| `FilterAssignee` | `string` |  | Nur Karten dieser Personen zeigen (durch Komma getrennt, ohne Groß-/Kleinschreibung); leer = alle. Nutzung: `Kanban1.FilterAssignee := 'Anna Berg';` |
+| `AllowColumnDrag` | `Boolean` | `True` | True: Spalten lassen sich am Kopf greifen und verschieben, per Tastatur mit Strg+Umschalt+Links/Rechts. False: nur MoveColumn im Code. |
 
 ## Eigenschaften wie in der VCL
 
@@ -115,6 +121,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnGetCard` | `TPPGKanbanGetCardEvent` `(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer; var Data: TPPGKanbanCardData)` | Liefert den Inhalt einer Karte virtueller Spalten (Column.VirtualCount > 0): Data für Column und Index füllen. Wird nur für sichtbare Karten aufgerufen. Nutzung: `Data.Title := Liste[Index].Name;` |
 | `OnSelectionChange` | `TNotifyEvent` `(Sender: TObject)` | Die gewählte Karte hat sich durch den Anwender geändert (SelectedCard). |
 | `OnColumnCollapse` | `TPPGKanbanColumnEvent` `(Sender: TObject; Column: TPPGKanbanColumn)` | Der Anwender hat eine Spalte über den Pfeil im Kopf ein- oder ausgeklappt (Column.Collapsed ist schon umgestellt). |
+| `OnFilterCard` | `TPPGKanbanFilterEvent` `(Sender: TObject; Card: TPPGKanbanCard; var Accept: Boolean)` | Eigene Filterregel zusätzlich zu FilterText, FilterLabels und FilterAssignee: Accept := False blendet die Karte aus. Nutzung: `Accept := Card.Progress < 100; // Erledigtes ausblenden` |
+| `OnColumnMoving` | `TPPGKanbanColumnMovingEvent` `(Sender: TObject; Column: TPPGKanbanColumn; NewIndex: Integer; var Allow: Boolean)` | Bevor eine Spalte verschoben wird, mit der neuen sichtbaren Position; Allow := False lehnt ab. Nutzung: `if Column.Title = 'Backlog' then Allow := False; // Backlog bleibt vorn` |
+| `OnColumnMoved` | `TPPGKanbanColumnEvent` `(Sender: TObject; Column: TPPGKanbanColumn)` | Der Anwender hat eine Spalte verschoben (Ziehen, Strg+Umschalt+Pfeile oder MoveColumn); Column.Index ist schon die neue Lage. |
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
 | `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` |

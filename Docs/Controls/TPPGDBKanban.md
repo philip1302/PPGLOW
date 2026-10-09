@@ -78,6 +78,10 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
 | `ScrollBarMode` | `TPPGScrollBarMode` | `sbmAuto` | Wann die Scrollleisten erscheinen: sbmAuto (bei Bedarf, als schmale Overlay-Leiste), sbmAlways (immer), sbmNever (nie; Scrollen nur per Rad, Tastatur oder Code). Werte: `sbmAuto`, `sbmAlways`, `sbmNever`. |
 | `SmoothScrolling` | `Boolean` | `True` | True: Scrollen per Rad und Tastatur gleitet weich statt sprunghaft. |
+| `FilterText` | `string` |  | Suchbegriff: nur Karten zeigen, deren Titel, Text, Labels oder Person ihn enthalten (ohne Groß-/Kleinschreibung); Treffer im Titel werden hervorgehoben. Ausgeblendete Karten zeigt der Spaltenkopf als „+n“, das WIP-Limit zählt weiter alle. Nutzung: `Kanban1.FilterText := SearchEdit1.Text;` |
+| `FilterLabels` | `string` |  | Nur Karten mit mindestens einem dieser Labels zeigen (durch Komma getrennt); leer = alle. |
+| `FilterAssignee` | `string` |  | Nur Karten dieser Personen zeigen (durch Komma getrennt, ohne Groß-/Kleinschreibung); leer = alle. Nutzung: `Kanban1.FilterAssignee := 'Anna Berg';` |
+| `AllowColumnDrag` | `Boolean` | `True` | True: Spalten lassen sich am Kopf greifen und verschieben, per Tastatur mit Strg+Umschalt+Links/Rechts. False: nur MoveColumn im Code. |
 
 ## Eigenschaften wie in der VCL
 
@@ -113,6 +117,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnCardOpen` | `TPPGKanbanCardEvent` `(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer; Card: TPPGKanbanCard)` | Eine Karte soll geöffnet werden (Doppelklick oder Enter); hier z. B. einen Bearbeitungsdialog zeigen. |
 | `OnSelectionChange` | `TNotifyEvent` `(Sender: TObject)` | Die gewählte Karte hat sich durch den Anwender geändert (SelectedCard). |
 | `OnColumnCollapse` | `TPPGKanbanColumnEvent` `(Sender: TObject; Column: TPPGKanbanColumn)` | Der Anwender hat eine Spalte über den Pfeil im Kopf ein- oder ausgeklappt (Column.Collapsed ist schon umgestellt). |
+| `OnFilterCard` | `TPPGKanbanFilterEvent` `(Sender: TObject; Card: TPPGKanbanCard; var Accept: Boolean)` | Eigene Filterregel zusätzlich zu FilterText, FilterLabels und FilterAssignee: Accept := False blendet die Karte aus. Nutzung: `Accept := Card.Progress < 100; // Erledigtes ausblenden` |
+| `OnColumnMoving` | `TPPGKanbanColumnMovingEvent` `(Sender: TObject; Column: TPPGKanbanColumn; NewIndex: Integer; var Allow: Boolean)` | Bevor eine Spalte verschoben wird, mit der neuen sichtbaren Position; Allow := False lehnt ab. Nutzung: `if Column.Title = 'Backlog' then Allow := False; // Backlog bleibt vorn` |
+| `OnColumnMoved` | `TPPGKanbanColumnEvent` `(Sender: TObject; Column: TPPGKanbanColumn)` | Der Anwender hat eine Spalte verschoben (Ziehen, Strg+Umschalt+Pfeile oder MoveColumn); Column.Index ist schon die neue Lage. |
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
 

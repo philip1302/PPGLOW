@@ -134,7 +134,7 @@ Beide erben von `TPPGCustomRangeControl` (`Source\Controls\PPG.Controls.Range.pa
 | Laden aus der DFM | Werte roh übernehmen, in `Loaded` prüfen (`Min > Max` → `Max := Min` plus Warnung) | – |
 | `OnChange` | bei jeder Änderung von `Position`, nicht beim Laden | ebenso |
 
-**Migration:** Die Typen kommen aus `Vcl.ComCtrls` (`TProgressBarStyle`, `TProgressBarState`, `TTrackBarOrientation`, `TTickMark`, `TTickStyle`). Eine DFM lässt sich deshalb per Suchen/Ersetzen umstellen. `TProgressBar.Smooth` wird nur gelesen (PPGlow zeichnet immer durchgehend). Nicht unterstützt sind beim TrackBar der Auswahlbereich (`SelStart`/`SelEnd`), `PositionToolTip` und manuelle Ticks per `SetTick`.
+**Migration:** Die Typen kommen aus `Vcl.ComCtrls` (`TProgressBarStyle`, `TProgressBarState`, `TTrackBarOrientation`, `TTickMark`, `TTickStyle`). Eine DFM lässt sich deshalb per Suchen/Ersetzen umstellen. `TProgressBar.Smooth` wird nur gelesen (PPGlow zeichnet immer durchgehend). Der Auswahlbereich (`SelStart`/`SelEnd`/`ShowSelRange`) kommt seit Phase 20d mit. Nicht unterstützt sind beim TrackBar `PositionToolTip` und manuelle Ticks per `SetTick`.
 
 **ProgressBar:**
 - Spur = `Appearance.Normal`, Füllung = `Appearance.Checked`. `State = pbsError`/`pbsPaused` färbt die Füllung rot bzw. gelb, Glanz-Presets behalten dabei ihren Verlauf.
@@ -584,7 +584,7 @@ Jedes Verb fängt Exceptions und zeigt sie an. Die Palettensymbole erzeugt `Buil
 - Fokus-, Capture-, Enabled- und Visible-Verlust schließen das Popup.
 - Barrierefreiheit: Rolle ComboBox, auf-/zugeklappt.
 
-Das Popup (`TPPGDropPopup`) antwortet auf Maus und Tasten mit einer Aktion (`pdaKeepOpen`, `pdaAccept`, `pdaCancel`).
+Das Popup (`TPPGDropPopup`, seit Phase 20e in `PPG.Popup`) antwortet auf Maus und Tasten mit einer Aktion (`pdaKeepOpen`, `pdaAccept`, `pdaCancel`). Seit Phase 20e baut auch die ComboBox darauf auf.
 
 `TPPGRowPopup` ist die Zeilenliste dazu: Bildlauf mit Daumen, optionale Kopf- und Filterzeile. Getippte Zeichen kommen über die Tastatur des Felds, deshalb braucht auch eine Filter- oder Hex-Eingabe keinen Fokus im Popup.
 
@@ -682,6 +682,17 @@ Plan, Umsetzung und Abweichungen: `Docs\Phase19-Plan.md`.
 - **Einhängen ohne Ereignisse zu stehlen:** `CheckOnClose`, `SummaryBar` und `Wizard` verketten `OnCloseQuery`, `OnActionClick` bzw. `OnCanAdvance`: Der alte Handler wird gemerkt und zuerst aufgerufen. Zurückgesetzt wird nur, wenn der eigene Handler noch oben liegt. Eingehängt wird zur Laufzeit im Konstruktor (zur Laufzeit erzeugt) bzw. in `Loaded`, nie im Designer.
 - **`PPG.DB.Validator`:** Das Grundpaket linkt kein `Data.DB`. Die Feldregeln kommen deshalb über eine Funktion, die das DB-Paket beim Start anmeldet (`PPGSetFieldRuleProvider`). Datensensitiv ist jedes Control mit einer Property `Field: TField` (RTTI, je Klasse zwischengespeichert), also auch `TDBEdit`. Die DB-Units binden die Unit ein, damit sie gelinkt wird.
 - **`PPG.Overlay`/`PPG.BusyOverlay`:** Abdunklung (`TPPGDimWindow`) als eigenes Popup-Fenster mit gleichmäßiger Deckkraft, das dem Formular gehört; darüber die Karte als Popup, das der Abdunklung gehört (liegt so immer darüber). Ab `Show` hat die Abdunklung die Deckkraft 1 (fängt die Maus, ist unsichtbar), nach `Delay` die eingestellte Deckkraft und die Karte. Die Tastatur sperrt ein Haken in `PPG.AppHooks` für Fenster im Ziel; das Formular bleibt über ein verkettetes `OnCloseQuery` offen. Die Lage gleicht ein Beobachter an Formular und Ziel ab, dazu jeder Schritt der Ring-Animation (fängt auch Bewegungen der Eltern ab). `Run` startet einen `TThread`, wartet mit `MsgWaitForMultipleObjects` und `Application.ProcessMessages` und holt Fortschritt und Texte unter einer Sperre ab. Eine Exception im Thread wird mit `AcquireExceptionObject` übernommen und im Hauptthread erneut ausgelöst.
+
+## Phase 20: Fertigstellen bestehender Controls
+
+Plan, Umsetzung und Abweichungen: `Docs\Phase20-Plan.md`.
+
+- **Planer-Serien:** Alle Änderungswege (Ziehen, Dauer, Betreff, Ort, Dialog, Löschen) fragen über eine Stelle, `SeriesChoice(Occ, Aktion)`: erst `SeriesEditMode`, dann `OnSeriesEdit`, dann der Aufgabendialog (`TPPGTaskDialog` mit Befehlslinks). Ohne sichtbares Fenster wird nicht gefragt, damit Läufe ohne Bediener (Tests, Selbsttest) das alte Verhalten behalten. „Ganze Serie“ verschiebt über `TPPGAppointment.ShiftSeries` im Modell: Beginn, Dauer und die Wochentage der Regel wandern mit, Ausnahmen bleiben. Neue Änderungsarten `ackLocation` und `ackDialog` gehen durch `OnAppointmentChanging`.
+- **Termin-Dialog:** eigene Unit `PPG.Planner.Dialog` (Formular aus Suite-Controls, Prüfung über `TPPGValidator`). Der Planer ruft ihn über `PPGEditAppointmentDialog` auf; `PPGAppointmentDialogHook` ersetzt ihn (eigene Dialoge, Tests). Bei „nur dieses Vorkommen“ wird eine Kopie bearbeitet und erst nach OK herausgelöst.
+- **Kanban-Filter:** Ausgeblendete Karten kommen nicht ins Layout; Zähler und WIP-Limit rechnen weiter mit allen Karten der Spalte. Das Verschieben von Spalten arbeitet mit sichtbaren Positionen („einfügen vor“, 0..Anzahl) und rechnet auf den Index in der Collection um, damit ausgeblendete Spalten ihren Platz behalten. `SaveLayout` schreibt Version 2 (Reihenfolge und Filter); gelesen wird nach Schlüsseln, ältere Layouts ohne `Order` laden deshalb weiter.
+- **Ribbon-Tastatur in Popups:** Die Tastaturbedienung kennt eine aktuelle Ansicht (`NavView`): das Band oder die Ansicht eines offenen Gruppen- bzw. Karten-Popups. Enter auf einer geschrumpften Gruppe öffnet das Popup und wechselt die Ansicht, Esc schließt es und kehrt zur Gruppe zurück (eine Ebene). Die Galerie baut für Kategorien Zeilen (`TPPGGalleryRow`: Überschrift oder Kacheln), die Pfeiltasten gehen über diese Zeilen.
+- **Bereichsregler:** Die Geometrie-Funktion des TrackBar liefert beide Griffe, Zeichnen und Treffertest bleiben so gleich. Tab gehört dem Control nur, solange es noch einen Griff weiter gibt (`WM_GETDLGCODE` prüft die Taste in der mitgegebenen Nachricht). Screenreader-Kinder über `IPPGAccessibleChildren`.
+- **ComboBox auf der Aufklapp-Basis:** `TPPGDropPopup` und `TPPGDropAction` liegen jetzt in `PPG.Popup`; `TPPGPopupList` erbt davon und setzt Maus, Tasten, Rad und Größe (`DropDownCount`, `DropDownWidth`) selbst um. Die Basis bekam `CanDropDown`, `PopupOpened`/`PopupClosed`, `RepositionPopup` und `FreePopup`. `TPPGCustomComboBox` (und damit SearchEdit, TimePicker, DBComboBox) hat keine eigene Popup-, Capture-, Tastatur- und Screenreader-Logik mehr; sie behält nur ihre Abweichungen (Zeichen gehen ins Edit, Pos1/Ende im Edit, `ReadOnly` sperrt das Aufklappen nicht). Abgesichert durch festhaltende Tests, die vor dem Umbau gegen den alten Code liefen.
 
 ## Anpassbarkeit (Element-Stile, Tokens, Zeichen-Ereignisse)
 

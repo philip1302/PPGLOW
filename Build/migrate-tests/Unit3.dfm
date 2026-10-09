@@ -54,4 +54,15 @@ object Form3: TForm3
     Top = 320
     ViewStyle = vsIcon
   end
+  object Track1: TTrackBar
+    Left = 8
+    Top = 360
+    Width = 200
+    Height = 45
+    Max = 20
+    Position = 5
+    SelEnd = 15
+    SelStart = 3
+    TabOrder = 3
+  end
 end

@@ -4,7 +4,7 @@ interface
 
 uses
   Vcl.Forms, Vcl.ExtCtrls, Vcl.DBCtrls, Vcl.ComCtrls, Data.DB,
-  PPG.Panel, PPG.RadioGroup, PPG.DB.Navigator;
+  PPG.Panel, PPG.RadioGroup, PPG.DB.Navigator, PPG.TrackBar;
 
 type
   TForm3 = class(TForm)
@@ -13,6 +13,7 @@ type
     Nav1: TPPGDBNavigator;
     State1: TPPGDBRadioGroup;
     List1: TListView;
+    Track1: TPPGTrackBar;
     procedure Kind1Click(Sender: TObject);
   end;
 

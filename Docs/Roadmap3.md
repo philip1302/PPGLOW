@@ -34,11 +34,12 @@ Detailplan: `Docs\Phase19-Plan.md`. **Fertig (09.10.2026):** `TPPGValidator` (da
 - **`TPPGBusyOverlay`**: legt sich über ein Control oder Formular, ProgressRing plus Text, optional Abbrechen-Knopf und Fortschritt; Eingaben darunter gesperrt; Screenreader-Ansage.
 
 ## Phase 20 – Fertigstellen bestehender Controls
-- Planer: Abfrage „nur dieses Vorkommen oder ganze Serie“, Ort/Text direkt bearbeiten.
-- Kanban: Filter nach Label/Person, Spalten ziehen (Drucken ist mit `TPPGKanbanPrinter` erledigt).
+Detailplan: `Docs\Phase20-Plan.md`. **Fertig (09.10.2026).**
+- Planer: Abfrage „nur dieses Vorkommen oder ganze Serie“ (`SeriesEditMode`), Ort direkt bearbeiten (Umschalt+F2), eingebauter Termin-Dialog.
+- Kanban: Suche und Filter nach Label/Person, Spalten ziehen (Drucken ist mit `TPPGKanbanPrinter` erledigt).
 - Ribbon: Tastaturfokus in Popups, Galerie-Kategorien.
-- ComboBox auf die neue Aufklapp-Basis umstellen (Phase 12).
-- TrackBar-Auswahlbereich, `TPPGFloatSpinEdit` (falls NumberEdit nicht reicht).
+- ComboBox auf die gemeinsame Aufklapp-Basis umgestellt (Phase 12).
+- TrackBar: Auswahlbereich (`SelStart`/`SelEnd`) und Bereichsregler mit zwei Griffen. `TPPGFloatSpinEdit` entfällt (`TPPGNumberEdit` deckt es ab).
 
 ## Phase 21 – nach Inventur (nur bei Bedarf)
 Voraussetzung: `Build\inventory.ps1` aus dem Umstellungsplan läuft an einem echten Projekt und zeigt, welche Fremdklassen am häufigsten übrig bleiben.

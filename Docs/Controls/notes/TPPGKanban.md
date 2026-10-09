@@ -8,6 +8,8 @@
 - **Virtuelle Spalten:** `Column.VirtualCount` > 0 und `OnGetCard`. Karten haben dann feste Höhe (`VirtualCardHeight`), Lage und Treffer in O(1); abgefragt wird nur Sichtbares. Verschieben meldet `OnCardMoved` mit Indizes (`Card = nil`), die Daten verschiebt die Anwendung. Zwischen virtuellen und normalen Spalten wird nicht verschoben.
 - **Ziehen:** Die Karte folgt der Maus, am Ziel öffnet sich ein Platzhalter, die anderen Karten weichen animiert aus. Am Rand scrollt das Board bzw. die Spalte. Esc bricht ab. Auf einer eingeklappten Spalte landet die Karte am Ende.
 - **WIP-Limit:** Die Kopfzeile zeigt „3 / 5“; voll = Warnfarbe, darüber = rot getönte Spalte. `WipMode = kwmBlock` lehnt Karten für volle Spalten ab (Umsortieren in der Spalte bleibt erlaubt). `OnCardMoving` kann jede Bewegung ablehnen.
+- **Filter:** `FilterText` (Titel, Text, Labels, Person; ohne Groß-/Kleinschreibung), `FilterLabels` (Komma-Liste, ein Label genügt), `FilterAssignee` (Komma-Liste) und `OnFilterCard` wirken zusammen. Ausgeblendete Karten zeigt der Spaltenkopf als „+n“ (`ColumnHiddenCount`), Treffer im Titel sind hervorgehoben. Das WIP-Limit zählt weiter alle Karten.
+- **Spalten verschieben:** Kopf ziehen (`AllowColumnDrag`, Esc bricht ab) oder Strg+Umschalt+Links/Rechts; `MoveColumn` im Code. `OnColumnMoving` kann ablehnen, `OnColumnMoved` meldet die neue Lage.
 - **Tastatur:** Pfeile wandern zwischen den Karten (leere Spalten werden übersprungen), Strg+Pfeile verschieben die gewählte Karte (auch in eine leere Spalte; Strg+Oben/Unten am Rand in die nächste Swimlane), Pos1/Ende, Bild auf/ab, Enter = `OnCardOpen`.
 - **Screenreader:** Bereich; Kinder sind je Spalte der Kopf („Spalte X, n Karten, Limit m“) und die Karten („Titel, Spalte X, Position Y von N, fällig …, Person, Labels“). Nach einem Verschieben steht „Verschoben nach Spalte X, Position Y von N“ vor dem Namen der fokussierten Karte (`Announcement`).
 - Code setzt Werte ohne Ereignisse (`Cards`, `Collapsed`, `SelectedCard`); Anwenderaktionen lösen `OnCardMoving`/`OnCardMoved`, `OnCardClick`, `OnCardOpen` (Doppelklick, Enter), `OnSelectionChange` und `OnColumnCollapse` aus. `MoveCard` verschiebt wie der Anwender (mit Ereignissen).
@@ -16,7 +18,7 @@
 ## Anpassung
 
 - `KanbanStyles` (`Column`, `Card`, `HotCard`, `SelectedCard`, `LaneHeader`) und `OnCustomDrawCard`.
-- `SaveLayout`/`LoadLayout`: Spaltenbreiten und eingeklappte Spalten/Swimlanes (nach `Id`). Drucken mit `TPPGKanbanPrinter`.
+- `SaveLayout`/`LoadLayout`: Spaltenbreiten, Reihenfolge, Filter und eingeklappte Spalten/Swimlanes (nach `Id`; ältere Layouts ohne Reihenfolge laden weiter). Drucken mit `TPPGKanbanPrinter`.
 
 ## Beispiel
 
