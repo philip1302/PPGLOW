@@ -424,7 +424,7 @@ begin
   // Akzent-Plakette in einem flachen Preset: Flaeche, Rahmen, Text und
   // Schriftstil aus Appearance.Checked (wie die ProgressBar)
   Result := (FBadgeColor = bsvAccent) and Enabled and
-    not (HighContrastSupport and PPGIsHighContrast) and
+    not UseHighContrast and
     PPGCheckedIsAccent(EffectiveAppearance);
 end;
 
@@ -432,9 +432,9 @@ function TPPGCustomBadge.FillColor: TColor;
 var
   T: TPPGTokens;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
-    Exit(PPGColorToRGB(clHighlight));
   T := Tokens;
+  if UseHighContrast then
+    Exit(T.Accent); // eine Systemfarbe (clHighlight) fuer alle Arten
   case FBadgeColor of
     bsvSuccess: Result := T.Success;
     bsvWarning: Result := T.Warning;
@@ -812,12 +812,8 @@ begin
     W := 2;
   C := Point((ClientR.Left + ClientR.Right) div 2, (ClientR.Top + ClientR.Bottom) div 2);
   Rad := (D - W) div 2;
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    Accent := PPGColorToRGB(clHighlight);
-    Track := PPGColorToRGB(clBtnShadow);
-  end
-  else if not Enabled then
+  // Hochkontrast: die Appearance liefert die Systemfarben
+  if not Enabled then
   begin
     // Deaktiviert: grauer Bogen auf der Spur des Disabled-Zustands
     Accent := PPGColorToRGB(A.Disabled.TextColor);
@@ -953,10 +949,8 @@ end;
 
 function TPPGCustomInfoBar.SeverityColor: TColor;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
-    Result := PPGColorToRGB(clHighlight)
-  else
-    Result := PPGSeverityColor(Tokens, FSeverity);
+  // Hochkontrast: alle Signal-Tokens sind clHighlight
+  Result := PPGSeverityColor(Tokens, FSeverity);
 end;
 
 procedure TPPGCustomInfoBar.GetLayout(out IconR, TextR, ActionR, CloseR: TRect);
@@ -1115,15 +1109,19 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Sev := SeverityColor;
   if not Enabled and not HC then
     Sev := PPGBlendColor(Sev, Tokens.Surface, 0.6); // deaktiviert: Signalfarbe zuruecknehmen
   if HC then
   begin
-    Fill := PPGColorToRGB(clWindow);
-    Border := PPGColorToRGB(clWindowText);
-    Text := PPGColorToRGB(clWindowText);
+    // Sonderfall: keine getoente Flaeche
+    Fill := T.Surface;
+    Border := T.Stroke;
+    if Enabled then
+      Text := T.TextPrimary
+    else
+      Text := T.TextDisabled;
   end
   else
   begin
@@ -1182,9 +1180,9 @@ begin
   ACanvas.PushClipRoundRect(TR, 0);
   try
     if UseRightToLeftAlignment then
-      FMarkup.Draw(ACanvas, TR.Right - FMarkup.Size.cx, TR.Top, Text, A.FocusColor, Enabled)
+      FMarkup.Draw(ACanvas, TR.Right - FMarkup.Size.cx, TR.Top, Text, TextLinkColor, Enabled)
     else
-      FMarkup.Draw(ACanvas, TR.Left, TR.Top, Text, A.FocusColor, Enabled);
+      FMarkup.Draw(ACanvas, TR.Left, TR.Top, Text, TextLinkColor, Enabled);
   finally
     ACanvas.PopClip;
   end;

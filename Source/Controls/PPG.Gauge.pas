@@ -972,8 +972,8 @@ function TPPGCustomGauge.ArcColor(V: Double): TColor;
 var
   Rg: TPPGGaugeRange;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
-    Exit(PPGColorToRGB(clHighlight));
+  if UseHighContrast then
+    Exit(Tokens.Accent); // eigene Farben gelten im Hochkontrast nicht
   if not Enabled then
     Exit(Tokens.TextDisabled);
   if FValueColor <> clDefault then
@@ -1005,28 +1005,23 @@ var
 begin
   T := Tokens;
   PPI := ScalePPI;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   GetGeometry(C, Rad, Th);
   if Rad < 4 then
     Exit;
   Bg := PPGColorToRGB(GetBackgroundColor);
+  // Hochkontrast: die Tokens liefern die Systemfarben; Spur deutlich sichtbar
   if HC then
-  begin
-    Track := PPGColorToRGB(clGrayText);
-    TextCol := PPGColorToRGB(clWindowText);
-    SecCol := TextCol;
-  end
+    Track := T.StrokeDisabled
   else
-  begin
     Track := PPGBlendColor(Bg, T.TextPrimary, 0.12);
-    if Enabled then
-      TextCol := T.TextPrimary
-    else
-      TextCol := T.TextDisabled;
-    SecCol := T.TextSecondary;
-    if not Enabled then
-      SecCol := T.TextDisabled;
-  end;
+  if Enabled then
+    TextCol := T.TextPrimary
+  else
+    TextCol := T.TextDisabled;
+  SecCol := T.TextSecondary;
+  if not Enabled then
+    SecCol := T.TextDisabled;
   // Spur
   PPGShapeArcPoints(C, Rad, FStartAngle, FSweepAngle, Pts);
   ACanvas.DrawPolyline(Pts, Th, Track, 255);
@@ -1086,7 +1081,7 @@ begin
         VF.Style := [fsBold] + FValueStyle.FontStyle;
         VF.Height := -System.Math.Max(Round(Rad * 0.42), 8);
       end;
-      if not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle and Enabled then
+      if UseOwnColors and Enabled then
         TextCol := FValueStyle.TextFor(UseDarkMode, TextCol);
       TextTop := C.Y;
       if FShowValue then
@@ -1432,8 +1427,8 @@ var
   Good: Boolean;
 begin
   T := Tokens;
-  if HighContrastSupport and PPGIsHighContrast then
-    Exit(PPGColorToRGB(clWindowText));
+  if UseHighContrast then
+    Exit(T.TextPrimary); // Trend nur ueber den Pfeil, nicht ueber die Farbe
   if not Enabled then
     Exit(T.TextDisabled);
   if Trend = trNone then
@@ -1511,7 +1506,7 @@ var
 begin
   PPI := ScalePPI;
   T := Tokens;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Style := GetCurrentStyle;
   Style.GlowAlpha := 0;
   if not Supports(Renderer, IPPGContainerRenderer, CR) then
@@ -1532,7 +1527,7 @@ begin
   Flags := DT_SINGLELINE or DT_END_ELLIPSIS or DT_NOPREFIX or DT_VCENTER;
   if UseRightToLeftAlignment then
     Flags := Flags or DT_RIGHT or DT_RTLREADING;
-  UseColors := not HC and not UseVclStyle and Enabled;
+  UseColors := UseOwnColors and Enabled;
   VF := nil;
   try
     if UseColors then
@@ -1605,7 +1600,7 @@ begin
     Opt := PPGDefaultSparklineOptions(T, Style.Color, PPI);
     Opt.Kind := FSparklineKind;
     if HC then
-      Opt.Color := PPGColorToRGB(clHighlight)
+      Opt.Color := T.Accent
     else if Enabled then
       Opt.Color := PPGColorToRGB(EffectiveAppearance.FocusColor)
     else

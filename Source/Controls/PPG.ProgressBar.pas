@@ -420,11 +420,12 @@ begin
     Result.ColorMirror := Result.Color;
     Result.ColorMirrorTo := Result.Color;
   end;
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    Result.Color := PPGColorToRGB(clWindow);
-    Result.BorderColor := PPGColorToRGB(clWindowText);
-    Result.TextColor := PPGColorToRGB(clWindowText);
+    // Sonderfall: Spur auf Fensterflaeche mit sichtbarem Rahmen (Tokens)
+    Result.Color := Tokens.Surface;
+    Result.BorderColor := Tokens.Stroke;
+    Result.TextColor := Tokens.TextPrimary;
     Result.ColorTo := Result.Color;
     Result.ColorMirror := Result.Color;
     Result.ColorMirrorTo := Result.Color;
@@ -479,17 +480,18 @@ begin
         TintSurface(Result, Bar, PPGContrastTextColor(Bar, clWhite, $00202020));
       end;
     end;
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
+    // Sonderfall: Balken einfarbig, auch bei Fehler/Pause (Tokens)
     if Enabled then
-      Result.Color := PPGColorToRGB(clHighlight)
+      Result.Color := Tokens.Accent
     else
-      Result.Color := PPGColorToRGB(clGrayText);
+      Result.Color := Tokens.TextDisabled;
     Result.ColorTo := Result.Color;
     Result.ColorMirror := Result.Color;
     Result.ColorMirrorTo := Result.Color;
     Result.BorderColor := Result.Color;
-    Result.TextColor := PPGColorToRGB(clHighlightText);
+    Result.TextColor := Tokens.OnAccent;
     Result.GlowAlpha := 0;
   end;
 end;

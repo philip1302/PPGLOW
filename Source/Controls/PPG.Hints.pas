@@ -59,6 +59,7 @@ type
     FImageIndex: Integer;
     FRounding: Integer;
     FRightToLeft: Boolean;
+    FHighContrastSupport: Boolean;
     function Pad: Integer;
     function Gap: Integer;
     function HasImage: Boolean;
@@ -67,6 +68,8 @@ type
     property Rounding: Integer read FRounding write FRounding;
     /// Rechts-nach-links: Bild rechts, Titel und Text rechtsbuendig.
     property RightToLeft: Boolean read FRightToLeft write FRightToLeft;
+    /// Im Hochkontrastmodus Systemfarben (Standard True).
+    property HighContrastSupport: Boolean read FHighContrastSupport write FHighContrastSupport;
     constructor Create;
     destructor Destroy; override;
     /// Text ohne Markup wird maskiert (< und & bleiben sichtbar).
@@ -118,6 +121,7 @@ type
     FEvents: TApplicationEvents;
     FPrevClass: THintWindowClass;
     FApplied: Boolean;
+    FHighContrastSupport: Boolean;
     procedure SetPreset(const Value: string);
     procedure SetActive(const Value: Boolean);
     procedure SetStyleManager(const Value: TPPGStyleManager);
@@ -148,6 +152,8 @@ type
     property AllowMarkup: Boolean read FAllowMarkup write FAllowMarkup default False;
     /// Groesste Breite in logischen px.
     property MaxWidth: Integer read FMaxWidth write SetMaxWidth default 360;
+    /// Im Hochkontrastmodus Systemfarben (wie bei allen PPGlow-Controls).
+    property HighContrastSupport: Boolean read FHighContrastSupport write FHighContrastSupport default True;
   end;
 
   /// Fuer die CustomHint-Property einzelner Controls (wie TBalloonHint).
@@ -159,6 +165,7 @@ type
     FStyleManager: TPPGStyleManager;
     FAllowMarkup: Boolean;
     FMaxWidth: Integer;
+    FHighContrastSupport: Boolean;
     procedure SetPreset(const Value: string);
     procedure SetStyleManager(const Value: TPPGStyleManager);
     procedure SetMaxWidth(const Value: Integer);
@@ -177,12 +184,16 @@ type
     property AllowMarkup: Boolean read FAllowMarkup write FAllowMarkup default False;
     property MaxWidth: Integer read FMaxWidth write SetMaxWidth default 360;
     property Style default bhsStandard;
+    /// Im Hochkontrastmodus Systemfarben (wie bei allen PPGlow-Controls).
+    property HighContrastSupport: Boolean read FHighContrastSupport write FHighContrastSupport default True;
   end;
 
 /// Der Manager, der gerade die Hints stellt (nil = keiner).
 function PPGActiveHintManager: TPPGHintManager;
-/// Farben eines Hints fuer ein Preset (Hochkontrast und VCL-Style beachtet).
-procedure PPGHintColors(const Preset: string; out Fill, Border, Text: TColor);
+/// Farben eines Hints fuer ein Preset (Hochkontrast und VCL-Style beachtet;
+/// HighContrastSupport wie die gleichnamige Property der Komponenten).
+procedure PPGHintColors(const Preset: string; out Fill, Border, Text: TColor;
+  HighContrastSupport: Boolean = True);
 /// Preset-Name pruefen: leer oder unbekannt = Standard.
 function PPGHintPreset(StyleManager: TPPGStyleManager; const Preset: string): string;
 
@@ -240,29 +251,32 @@ begin
     Result := TPPGRendererRegistry.DefaultName;
 end;
 
-function PresetTokens(const Preset: string): TPPGTokens;
+function PresetTokens(const Preset: string; HighContrastSupport: Boolean): TPPGTokens;
+var
+  HC: Boolean;
 begin
-  Result := PPGPresetTokens(Preset, TPPGTheme.IsDark);
+  HC := PPGUseHighContrast(HighContrastSupport);
+  Result := PPGPresetTokens(Preset, TPPGTheme.IsDark and not HC, HC);
 end;
 
-/// Farbe der Links im Hint-Text: Link-Token, im Hochkontrast bzw. mit
-/// VCL-Style die Systemfarbe fuer Links.
-function HintLinkColor(const Preset: string): TColor;
+/// Farbe der Links im Hint-Text: Link-Token (im Hochkontrast clHotLight),
+/// mit VCL-Style die Systemfarbe fuer Links.
+function HintLinkColor(const Preset: string; HighContrastSupport: Boolean): TColor;
 begin
-  if PPGIsHighContrast then
-    Result := PPGColorToRGB(clHotLight)
-  else if not StyleServices.IsSystemStyle then
+  if not PPGUseHighContrast(HighContrastSupport) and not StyleServices.IsSystemStyle then
     Result := PPGColorToRGB(StyleServices.GetSystemColor(clHotLight))
   else
-    Result := PresetTokens(PPGHintPreset(nil, Preset)).Link;
+    Result := PresetTokens(PPGHintPreset(nil, Preset), HighContrastSupport).Link;
 end;
 
-procedure PPGHintColors(const Preset: string; out Fill, Border, Text: TColor);
+procedure PPGHintColors(const Preset: string; out Fill, Border, Text: TColor;
+  HighContrastSupport: Boolean);
 var
   T: TPPGTokens;
 begin
-  if PPGIsHighContrast then
+  if PPGUseHighContrast(HighContrastSupport) then
   begin
+    // Sonderfall: Tooltip-Systemfarben statt Fensterfarben (wie Windows)
     Fill := PPGColorToRGB(clInfoBk);
     Text := PPGColorToRGB(clInfoText);
     Border := Text;
@@ -276,7 +290,7 @@ begin
     Border := PPGBlendColor(Fill, Text, 0.3);
     Exit;
   end;
-  T := PresetTokens(PPGHintPreset(nil, Preset));
+  T := PresetTokens(PPGHintPreset(nil, Preset), False);
   Fill := T.Layer;
   Text := T.TextPrimary;
   Border := T.StrokeStrong;
@@ -294,6 +308,7 @@ constructor TPPGHintContent.Create;
 begin
   inherited Create;
   FRounding := 4;
+  FHighContrastSupport := True;
   FLayout := TPPGMarkupLayout.Create;
   FTitleFont := TFont.Create;
   FTextFont := TFont.Create;
@@ -388,7 +403,7 @@ var
   X, Y, L, Rt, IX: Integer;
   Flags: Cardinal;
 begin
-  PPGHintColors(Preset, Fill, Border, TextColor);
+  PPGHintColors(Preset, Fill, Border, TextColor, FHighContrastSupport);
   FillChar(Style, SizeOf(Style), 0);
   Style.Color := Fill;
   Style.BorderColor := Border;
@@ -429,7 +444,7 @@ begin
       X := L;
       if FRightToLeft then
         X := Rt - FLayout.Size.cx;
-      FLayout.Draw(C, X, Y, TextColor, HintLinkColor(Preset));
+      FLayout.Draw(C, X, Y, TextColor, HintLinkColor(Preset, FHighContrastSupport));
     end;
   finally
     C := nil;
@@ -539,7 +554,7 @@ end;
 procedure TPPGHintWindow.GetColors(out Fill, Border, Text: TColor);
 begin
   if GManager <> nil then
-    PPGHintColors(GManager.EffectivePreset, Fill, Border, Text)
+    PPGHintColors(GManager.EffectivePreset, Fill, Border, Text, GManager.HighContrastSupport)
   else
     PPGHintColors('', Fill, Border, Text);
 end;
@@ -548,6 +563,7 @@ procedure TPPGHintWindow.Paint;
 begin
   try
     FContent.RightToLeft := UseRightToLeftReading;
+    FContent.HighContrastSupport := (GManager = nil) or GManager.HighContrastSupport;
     if GManager <> nil then
       FContent.Paint(Canvas, ClientRect, GManager.EffectivePreset)
     else
@@ -585,6 +601,7 @@ begin
   FActive := True;
   FShowTitle := True;
   FMaxWidth := 360;
+  FHighContrastSupport := True;
   if not (csDesigning in ComponentState) then
   begin
     FEvents := TApplicationEvents.Create(Self);
@@ -696,7 +713,7 @@ end;
 
 function TPPGHintManager.Tokens: TPPGTokens;
 begin
-  Result := PresetTokens(EffectivePreset);
+  Result := PresetTokens(EffectivePreset, FHighContrastSupport);
 end;
 
 procedure TPPGHintManager.DoShowHint(var HintStr: string; var CanShow: Boolean;
@@ -726,6 +743,7 @@ begin
   inherited Create(AOwner);
   FContent := TPPGHintContent.Create;
   FMaxWidth := 360;
+  FHighContrastSupport := True;
   Style := bhsStandard;
 end;
 
@@ -799,6 +817,7 @@ begin
     // Fensters bzw. der Anwendung
     FContent.RightToLeft := HintWindow.UseRightToLeftReading or
       (Application.BiDiMode <> bdLeftToRight);
+    FContent.HighContrastSupport := FHighContrastSupport;
     FContent.Paint(TCustomHintWindowAccess(HintWindow).Canvas, HintWindow.ClientRect, EffectivePreset);
     FPaintErrorReported := False;
   except

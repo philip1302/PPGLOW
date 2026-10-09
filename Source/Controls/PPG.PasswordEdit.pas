@@ -432,16 +432,12 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   InflateRect(R, -PPGScale(3, PPI), -PPGScale(5, PPI));
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    Fill := PPGColorToRGB(clHighlight);
-    Txt := PPGColorToRGB(clHighlightText);
-  end
+  // Hochkontrast: Warning = clHighlight, Text darauf clHighlightText
+  Fill := T.Warning;
+  if UseHighContrast then
+    Txt := T.OnAccent
   else
-  begin
-    Fill := T.Warning;
     Txt := PPGContrastTextColor(Fill);
-  end;
   ACanvas.FillRoundRect(R, PPGScale(3, PPI), Fill, 255);
   ACanvas.DrawText(R, #$21EA, Font, Txt, DT_CENTER or DT_VCENTER or DT_SINGLELINE or DT_NOPREFIX);
 end;

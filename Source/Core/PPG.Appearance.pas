@@ -212,6 +212,11 @@ function PPGScale(Value, PPI: Integer): Integer;
 /// Uebertraegt die eigenen Dunkel-Farben (Appearance.Dark) in eine bereits
 /// dunkel eingefaerbte Appearance (Zustaende, Fokus, Fokusfarbe).
 procedure PPGApplyDarkColors(Target: TPPGAppearance; Dark: TPPGDarkColors);
+/// Faerbt eine Kopie der Appearance in den Systemfarben des Hochkontrastmodus
+/// (Formen bleiben): Ruhe/Hover clBtnFace/clBtnText (Hover mit Rand
+/// clHighlight), Druck und An clHighlight/clHighlightText, deaktiviert
+/// clGrayText, Fokusfarbe clHighlight. Eigene Fokusfarben gelten nicht.
+procedure PPGApplyHighContrastAppearance(Target: TPPGAppearance);
 
 /// Akzentrolle der Anzeige-Controls (Badge, ProgressRing, Rating; wie die
 /// ProgressBar): True, wenn Appearance.Checked sie traegt. Bei Glanz-Presets
@@ -265,6 +270,38 @@ begin
     Target.Focused.Assign(Dark.Focused);
     if Dark.FocusColor <> clDefault then
       Target.FocusColor := Dark.FocusColor;
+  finally
+    Target.EndUpdate;
+  end;
+end;
+
+procedure PPGApplyHighContrastAppearance(Target: TPPGAppearance);
+var
+  Face, BtnText, Highlight, HighlightText, Gray: TColor;
+begin
+  if Target = nil then
+    Exit;
+  Face := PPGColorToRGB(clBtnFace);
+  BtnText := PPGColorToRGB(clBtnText);
+  Highlight := PPGColorToRGB(clHighlight);
+  HighlightText := PPGColorToRGB(clHighlightText);
+  Gray := PPGColorToRGB(clGrayText);
+  Target.BeginUpdate;
+  try
+    // Flach (kein Verlauf); die Glow-Staerken bleiben, GetCurrentStyle
+    // schaltet den Glow im Hochkontrast ab
+    Target.Normal.SetAll(Face, Face, Face, Face, BtnText, Highlight, BtnText,
+      Target.Normal.GlowAlpha);
+    Target.Hot.SetAll(Face, Face, Face, Face, Highlight, Highlight, BtnText,
+      Target.Hot.GlowAlpha);
+    Target.Down.SetAll(Highlight, Highlight, Highlight, Highlight, HighlightText,
+      Highlight, HighlightText, Target.Down.GlowAlpha);
+    Target.Disabled.SetAll(Face, Face, Face, Face, Gray, Gray, Gray,
+      Target.Disabled.GlowAlpha);
+    Target.Checked.SetAll(Highlight, Highlight, Highlight, Highlight, Highlight,
+      Highlight, HighlightText, Target.Checked.GlowAlpha);
+    Target.Focused.Clear;
+    Target.FocusColor := Highlight;
   finally
     Target.EndUpdate;
   end;

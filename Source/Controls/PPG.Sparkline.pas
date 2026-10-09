@@ -746,14 +746,16 @@ begin
   Result.RangeMax := FRangeMax;
   Result.ShowReference := FShowReference;
   Result.Reference := FReferenceValue;
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    Result.Color := PPGColorToRGB(clHighlight);
-    Result.NegativeColor := PPGColorToRGB(clWindowText);
-    Result.MinColor := PPGColorToRGB(clWindowText);
-    Result.MaxColor := PPGColorToRGB(clHighlight);
-    Result.ReferenceColor := PPGColorToRGB(clGrayText);
-    Result.Background := PPGColorToRGB(clWindow);
+    // Sonderfall: Positiv/Negativ ueber Akzent und Textfarbe unterschieden,
+    // eigene Farben gelten nicht (Tokens = Systemfarben)
+    Result.Color := T.Accent;
+    Result.NegativeColor := T.TextPrimary;
+    Result.MinColor := T.TextPrimary;
+    Result.MaxColor := T.Accent;
+    Result.ReferenceColor := T.StrokeDisabled;
+    Result.Background := T.Surface;
   end
   else if not Enabled then
   begin

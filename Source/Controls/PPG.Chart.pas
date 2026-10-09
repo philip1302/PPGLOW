@@ -767,7 +767,7 @@ function TPPGCustomChart.SeriesColor(SeriesIndex: Integer): TColor;
 var
   S: TPPGChartSeries;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
     Exit(PPGChartHighContrastColor(SeriesIndex));
   if not Enabled then
     Exit(Tokens.TextDisabled);
@@ -784,7 +784,7 @@ function TPPGCustomChart.SliceColor(SeriesIndex, PointIndex: Integer): TColor;
 var
   P: TPPGChartPoint;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
     Exit(PPGChartHighContrastColor(PointIndex));
   if not Enabled then
     Exit(PPGBlendColor(Tokens.TextDisabled, PPGColorToRGB(GetBackgroundColor),
@@ -1533,7 +1533,7 @@ var
       else
         TxR.Left := SR.Right + Gap;
       TC := TextCol;
-      if not HC and not UseVclStyle and Enabled then
+      if UseOwnColors and Enabled then
         TC := FChartStyles.Legend.TextFor(UseDarkMode, TC);
       if not Shown then
         TC := SecCol;
@@ -1582,6 +1582,7 @@ var
     FillChar(St, SizeOf(St), 0);
     if HC then
     begin
+      // Sonderfall: Tooltip-Systemfarben wie die Hints
       St.Color := PPGColorToRGB(clInfoBk);
       St.BorderColor := PPGColorToRGB(clInfoText);
       St.TextColor := PPGColorToRGB(clInfoText);
@@ -1620,32 +1621,27 @@ begin
   T := Tokens;
   PPI := ScalePPI;
   RTL := UseRightToLeftAlignment;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   CR := PPGChartRendererOf(Renderer);
   Gap := PPGScale(6, PPI);
   Bg := PPGColorToRGB(GetBackgroundColor);
-  if HC then
-  begin
-    TextCol := PPGColorToRGB(clWindowText);
-    SecCol := TextCol;
-    GridCol := PPGColorToRGB(clGrayText);
-  end
+  // Hochkontrast: die Tokens liefern die Systemfarben
+  if Enabled then
+    TextCol := T.TextPrimary
   else
-  begin
-    if Enabled then
-      TextCol := T.TextPrimary
-    else
-      TextCol := T.TextDisabled;
-    SecCol := T.TextSecondary;
-    if not Enabled then
-      SecCol := T.TextDisabled;
+    TextCol := T.TextDisabled;
+  SecCol := T.TextSecondary;
+  if not Enabled then
+    SecCol := T.TextDisabled;
+  if HC then
+    GridCol := T.StrokeDisabled // Sonderfall: Gitter sichtbar (clGrayText)
+  else
     GridCol := PPGBlendColor(Bg, T.TextPrimary, 0.1);
-    if not UseVclStyle then
-    begin
-      GridCol := FChartStyles.Grid.FillFor(UseDarkMode, GridCol);
-      if Enabled then
-        SecCol := FChartStyles.Axis.TextFor(UseDarkMode, SecCol);
-    end;
+  if UseOwnColors then
+  begin
+    GridCol := FChartStyles.Grid.FillFor(UseDarkMode, GridCol);
+    if Enabled then
+      SecCol := FChartStyles.Axis.TextFor(UseDarkMode, SecCol);
   end;
   L := Layout;
 
@@ -1658,7 +1654,7 @@ begin
       if RTL then
         Flags := Flags or DT_RIGHT or DT_RTLREADING;
       Col := TextCol;
-      if not HC and not UseVclStyle and Enabled then
+      if UseOwnColors and Enabled then
         Col := FChartStyles.Title.TextFor(UseDarkMode, Col);
       ACanvas.DrawText(L.TitleR, FTitle, TitleFont(TF), Col, Flags);
     finally

@@ -71,7 +71,7 @@ type
     FUiaRoot: TPPGUiaRoot;      // UI Automation (nur Controls mit IPPGUiaSource)
     FUiaRootRef: IInterface;
     FStyledAppearance: TPPGAppearance; // Cache: Appearance mit Farben des VCL-Styles bzw. Dark Mode
-    FStyledKind: Byte; // Inhalt des Caches: 0 = leer, 1 = VCL-Style, 2 = Dark Mode
+    FStyledKind: Byte; // Inhalt des Caches: 0 = leer, 1 = VCL-Style, 2 = Dark Mode, 3 = Hochkontrast
     {$IFDEF PPG_HAS_IMAGENAME}
     FImageName: TImageName;
     FHotImageName: TImageName;
@@ -215,6 +215,10 @@ type
     /// Hell/Dunkel gewechselt (TPPGTheme). Standard: Farben neu aufbauen,
     /// AppearanceUpdated, neu zeichnen.
     procedure ThemeChanged; virtual;
+    /// Hochkontrast-Sonderfall fuer Kaestchen und Kreise in Listen und Gruppen:
+    /// Flaeche Surface, Haken/Rand TextPrimary (deaktiviert TextDisabled),
+    /// hervorgehoben (Hover/Fokus) Rand Accent, kein Glow - alles aus Tokens.
+    procedure ApplyHighContrastIndicator(var S: TPPGSurfaceStyle; Usable, Emphasized: Boolean);
     /// Farbe hinter dem Koerper (abgerundete Ecken). Standard: Color.
     function GetBackgroundColor: TColor; virtual;
     /// Schneller Eltern-Hintergrund: liefert ein Container die Farbe(n) seiner
@@ -314,14 +318,25 @@ type
     /// True, wenn der Dark Mode (TPPGTheme) fuer dieses Control gilt: dunkler
     /// Modus, kein VCL-Style, kein Hochkontrast (ab XE3 zusaetzlich seClient).
     function UseDarkMode: Boolean;
+    /// True, wenn Windows im Hochkontrastmodus laeuft und das Control ihm
+    /// folgt (HighContrastSupport). Dann liefern Tokens und
+    /// EffectiveAppearance die Systemfarben.
+    function UseHighContrast: Boolean;
+    /// True, wenn eigene Farben (Element-Stile, Item-Farben) gelten: weder
+    /// Hochkontrast noch VCL-Style. Schriften gelten immer.
+    function UseOwnColors: Boolean;
+    /// Farbe von Links im Text: eigene FocusColor bzw. VCL-Style bleiben,
+    /// sonst das Link-Token (4,5:1 zum Hintergrund; Hochkontrast clHotLight).
+    function TextLinkColor: TColor;
     /// Die beim Zeichnen tatsaechlich verwendete Appearance. Rangfolge:
-    /// VCL-Style (Formen aus dem Preset, Farben aus dem Style) > Dark Mode
-    /// (Formen aus der Appearance, dunkle Farben des Presets) > Appearance.
-    /// Hochkontrast ersetzen die Controls selbst beim Zeichnen.
+    /// Hochkontrast (Formen bleiben, Systemfarben) > VCL-Style (Formen aus
+    /// dem Preset, Farben aus dem Style) > Dark Mode (Formen aus der
+    /// Appearance, dunkle Farben des Presets) > Appearance.
     function EffectiveAppearance: TPPGAppearance;
     /// Design-Tokens des Presets (semantische Farben, Masse, Dauern), z.B.
     /// Signalfarben fuer Fehler/Warnung. Presets ohne eigene Tokens liefern die
-    /// neutrale Windows-11-Palette.
+    /// neutrale Windows-11-Palette. Im Hochkontrast (UseHighContrast) sind
+    /// alle Farben Systemfarben (PPGApplyHighContrastColors).
     function Tokens: TPPGTokens;
     /// UIA-Wurzel, sobald ein UIA-Client gefragt hat (sonst nil). Nur fuer
     /// Controls mit IPPGUiaSource (Grid, TreeView, ListBox, CheckListBox).
@@ -773,11 +788,36 @@ end;
 function TPPGCustomControl.UseDarkMode: Boolean;
 begin
   Result := TPPGTheme.IsDark and not UseVclStyle and
-    not (FHighContrastSupport and PPGIsHighContrast);
+    not UseHighContrast;
 {$IFDEF PPG_HAS_STYLEELEMENTS}
   // seClient abgewaehlt -> Control behaelt bewusst seine eigenen Farben
   Result := Result and (seClient in StyleElements);
 {$ENDIF}
+end;
+
+function TPPGCustomControl.UseHighContrast: Boolean;
+begin
+  Result := PPGUseHighContrast(FHighContrastSupport);
+end;
+
+function TPPGCustomControl.UseOwnColors: Boolean;
+begin
+  Result := not UseHighContrast and not UseVclStyle;
+end;
+
+function TPPGCustomControl.TextLinkColor: TColor;
+var
+  T: TPPGTokens;
+  F: TColor;
+begin
+  T := Tokens;
+  if UseHighContrast then
+    Exit(T.Link);
+  F := PPGColorToRGB(EffectiveAppearance.FocusColor);
+  if UseVclStyle or (F <> T.Accent) then
+    Result := F
+  else
+    Result := T.Link;
 end;
 
 function TPPGCustomControl.EffectiveAppearance: TPPGAppearance;
@@ -785,7 +825,9 @@ var
   Kind: Byte;
   TR: IPPGThemeRenderer;
 begin
-  if UseVclStyle then
+  if UseHighContrast then
+    Kind := 3
+  else if UseVclStyle then
     Kind := 1
   else if UseDarkMode then
     Kind := 2
@@ -798,7 +840,9 @@ begin
     FStyledAppearance := TPPGAppearance.Create(nil);
     try
       FStyledAppearance.Assign(FAppearance);  // Formen aus Appearance/Preset
-      if Kind = 1 then
+      if Kind = 3 then
+        PPGApplyHighContrastAppearance(FStyledAppearance) // Systemfarben
+      else if Kind = 1 then
         PPGApplyVclStyleColors(FStyledAppearance) // Farben aus dem Style
       else
       begin
@@ -828,6 +872,27 @@ begin
   // Bei Style-/Theme-Wechsel oder geaenderter Appearance neu aufbauen
   FreeAndNil(FStyledAppearance);
   FStyledKind := 0;
+end;
+
+procedure TPPGCustomControl.ApplyHighContrastIndicator(var S: TPPGSurfaceStyle;
+  Usable, Emphasized: Boolean);
+var
+  T: TPPGTokens;
+begin
+  T := Tokens;
+  S.GlowAlpha := 0;
+  S.Color := T.Surface;
+  S.ColorTo := S.Color;
+  S.ColorMirror := S.Color;
+  S.ColorMirrorTo := S.Color;
+  if Usable then
+    S.TextColor := T.TextPrimary
+  else
+    S.TextColor := T.TextDisabled;
+  if Usable and Emphasized then
+    S.BorderColor := T.Accent
+  else
+    S.BorderColor := S.TextColor;
 end;
 
 procedure TPPGCustomControl.ThemeChanged;
@@ -951,7 +1016,16 @@ function TPPGCustomControl.Tokens: TPPGTokens;
 var
   TR: IPPGThemeRenderer;
 begin
-  if Supports(FRenderer, IPPGThemeRenderer, TR) then
+  if UseHighContrast then
+  begin
+    // Masse und Dauern des Presets, Farben aus dem System
+    if Supports(FRenderer, IPPGThemeRenderer, TR) then
+      Result := TR.Tokens(False)
+    else
+      Result := PPGBaseTokens(False);
+    PPGApplyHighContrastColors(Result);
+  end
+  else if Supports(FRenderer, IPPGThemeRenderer, TR) then
     Result := TR.Tokens(UseDarkMode)
   else
     Result := PPGDefaultTokens(UseDarkMode);
@@ -1277,7 +1351,9 @@ end;
 procedure TPPGCustomControl.CMSysColorChange(var Message: TMessage);
 begin
   inherited;
-  Invalidate; // u.a. Wechsel in/aus dem Hochkontrastmodus
+  // u.a. Wechsel in/aus dem Hochkontrastmodus oder ein anderes
+  // Kontrastdesign: Systemfarben in Appearance und Tokens neu holen
+  ThemeChanged;
 end;
 
 procedure TPPGCustomControl.CMStyleChanged(var Message: TMessage);
@@ -1652,6 +1728,7 @@ var
   PPI: Integer;
   Focus: Boolean;
   N, H, D: TPPGSurfaceStyle;
+  SS: TPPGStateStyle;
 begin
   PPI := ScalePPI;
   Focus := FocusVisible;
@@ -1666,32 +1743,23 @@ begin
     Result := PPGBlendSurface(Result, D, FDownAnim.Value);
   end;
 
-  if FHighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    // Hochkontrast: ausschliesslich Systemfarben, kein Glow
+    // Hochkontrast: feste Zustaende ohne Ueberblendung und ohne Glow; die
+    // Systemfarben kommen aus der Hochkontrast-Appearance (EffectiveAppearance)
     Result.GlowAlpha := 0;
     Result.Direction := gdVertical;
     if not Enabled then
-    begin
-      Result.Color := PPGColorToRGB(clBtnFace);
-      Result.TextColor := PPGColorToRGB(clGrayText);
-      Result.BorderColor := PPGColorToRGB(clGrayText);
-    end
+      SS := EffectiveAppearance.Disabled
     else if IsDown then
-    begin
-      Result.Color := PPGColorToRGB(clHighlight);
-      Result.TextColor := PPGColorToRGB(clHighlightText);
-      Result.BorderColor := PPGColorToRGB(clHighlightText);
-    end
+      SS := EffectiveAppearance.Down
     else
-    begin
-      Result.Color := PPGColorToRGB(clBtnFace);
-      Result.TextColor := PPGColorToRGB(clBtnText);
-      if IsHot or Focus then
-        Result.BorderColor := PPGColorToRGB(clHighlight)
-      else
-        Result.BorderColor := PPGColorToRGB(clBtnText);
-    end;
+      SS := EffectiveAppearance.Normal;
+    Result.Color := PPGColorToRGB(SS.Color);
+    Result.TextColor := PPGColorToRGB(SS.TextColor);
+    Result.BorderColor := PPGColorToRGB(SS.BorderColor);
+    if Enabled and not IsDown and (IsHot or Focus) then
+      Result.BorderColor := PPGColorToRGB(EffectiveAppearance.FocusColor);
     Result.ColorTo := Result.Color;
     Result.ColorMirror := Result.Color;
     Result.ColorMirrorTo := Result.Color;
@@ -1967,7 +2035,7 @@ var
   E, O: Integer;
 begin
   Result := Rect(0, 0, 0, 0);
-  if (FShadow = nil) or not FShadow.IsVisible or (FHighContrastSupport and PPGIsHighContrast) then
+  if (FShadow = nil) or not FShadow.IsVisible or UseHighContrast then
     Exit;
   E := PPGScale(FShadow.Size, ScalePPI);
   O := PPGScale(FShadow.OffsetY, ScalePPI);
@@ -1980,7 +2048,7 @@ var
   R, SR: TRect;
   C: TColor;
 begin
-  if (FShadow = nil) or not FShadow.IsVisible or (FHighContrastSupport and PPGIsHighContrast) or
+  if (FShadow = nil) or not FShadow.IsVisible or UseHighContrast or
     IsRectEmpty(Body) then
     Exit;
   E := PPGScale(FShadow.Size, ScalePPI);

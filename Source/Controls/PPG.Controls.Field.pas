@@ -1382,20 +1382,11 @@ var
   A: TPPGAppearance;
   T: TPPGTokens;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    Fill := PPGColorToRGB(clWindow);
-    if Enabled then
-      Text := PPGColorToRGB(clWindowText)
-    else
-      Text := PPGColorToRGB(clGrayText);
-  end
-  else if UseVclStyle then
-    PPGVclStyleEditColors(Enabled, Fill, Text)
-  else if UseDarkMode then
+  if UseHighContrast or UseDarkMode then
   begin
     // Color/Font.Color sind fuer Hell gedacht (clWindow bleibt im Dark Mode
-    // weiss) - wie beim VCL-Style gelten die Farben des Presets
+    // weiss) - wie beim VCL-Style gelten die Farben des Presets; im
+    // Hochkontrast liefern die Tokens clWindow/clWindowText/clGrayText
     T := Tokens;
     if Enabled then
     begin
@@ -1408,6 +1399,8 @@ begin
       Text := T.TextDisabled;
     end;
   end
+  else if UseVclStyle then
+    PPGVclStyleEditColors(Enabled, Fill, Text)
   else if Enabled then
   begin
     Fill := PPGColorToRGB(Color);
@@ -1429,7 +1422,7 @@ end;
 function TPPGCustomField.UseReadOnlyColors: Boolean;
 begin
   Result := (FReadOnlyStyle <> nil) and (FInner <> nil) and Enabled and GetReadOnly and
-    not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+    UseOwnColors;
 end;
 
 procedure TPPGCustomField.SetReadOnlyStyle(const Value: TPPGElementStyle);
@@ -1476,6 +1469,7 @@ end;
 function TPPGCustomField.GetFieldStyle: TPPGSurfaceStyle;
 var
   A: TPPGAppearance;
+  T: TPPGTokens;
   PPI: Integer;
   Fill, Text, Accent, Signal: TColor;
 begin
@@ -1507,13 +1501,15 @@ begin
     Accent := Signal;
   end;
 
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
+    // Sonderfall: fester Rahmen ohne Ueberblendung; Signale nur ueber Text
+    T := Tokens;
     if Enabled and (IsHot or FieldFocused) then
-      Result.BorderColor := PPGColorToRGB(clHighlight)
+      Result.BorderColor := T.Accent
     else
-      Result.BorderColor := PPGColorToRGB(clWindowText);
-    Accent := PPGColorToRGB(clHighlight);
+      Result.BorderColor := T.Stroke;
+    Accent := T.Accent;
     if Result.BorderWidth < 1 then
       Result.BorderWidth := 1;
   end;

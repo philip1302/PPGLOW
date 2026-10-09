@@ -357,7 +357,7 @@ var
   T: TPPGTokens;
   A: TPPGAppearance;
   PPI, I, CX, CY, H: Integer;
-  HC, Last: Boolean;
+  Last: Boolean;
   TextCol, Secondary, Accent, C: TColor;
   R: TRect;
   Bold: TFont;
@@ -367,23 +367,14 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
-  if HC then
+  // Hochkontrast: Tokens und Appearance liefern die Systemfarben
+  TextCol := T.TextPrimary;
+  Secondary := T.TextSecondary;
+  Accent := PPGColorToRGB(A.FocusColor);
+  if UseVclStyle and not UseHighContrast then
   begin
-    TextCol := PPGColorToRGB(clWindowText);
-    Secondary := TextCol;
-    Accent := PPGColorToRGB(clHighlight);
-  end
-  else
-  begin
-    TextCol := T.TextPrimary;
-    Secondary := T.TextSecondary;
-    Accent := PPGColorToRGB(A.FocusColor);
-    if UseVclStyle then
-    begin
-      TextCol := PPGColorToRGB(A.Normal.TextColor);
-      Secondary := PPGBlendColor(TextCol, PPGColorToRGB(GetBackgroundColor), 0.35);
-    end;
+    TextCol := PPGColorToRGB(A.Normal.TextColor);
+    Secondary := PPGBlendColor(TextCol, PPGColorToRGB(GetBackgroundColor), 0.35);
   end;
   if not Enabled then
   begin

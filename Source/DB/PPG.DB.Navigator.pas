@@ -736,19 +736,16 @@ begin
   PPI := ScalePPI;
   A := EffectiveAppearance;
   St := A.Resolve(vsNormal, PPI, False);
-  HC := HighContrastSupport and PPGIsHighContrast;
-  if UseDarkMode then
+  HC := UseHighContrast;
+  // Hochkontrast: die Appearance liefert die Systemfarben (Text clBtnText)
+  if HC then
+    Txt := PPGColorToRGB(A.Normal.TextColor)
+  else if UseDarkMode then
     Txt := Tokens.TextPrimary
   else
     Txt := PPGColorToRGB(Font.Color);
   Dis := PPGColorToRGB(A.Disabled.TextColor);
   Accent := PPGColorToRGB(A.FocusColor);
-  if HC then
-  begin
-    Txt := PPGColorToRGB(clBtnText);
-    Dis := PPGColorToRGB(clGrayText);
-    Accent := PPGColorToRGB(clHighlight);
-  end;
   Rad := Max(St.Rounding, PPGScale(4, PPI));
   Sz := PPGScale(16, PPI);
   for I := 0 to High(FRects) do

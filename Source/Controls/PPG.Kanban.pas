@@ -1913,53 +1913,44 @@ var
   Overdue, Dim: Boolean;
 begin
   T := Tokens;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Dim := not Enabled and not HC;
   if Dim then
     T := PPGDisabledTokens(T);
   Dark := UseDarkMode;
   RTL := UseRightToLeftAlignment;
   Rad := Sc(6);
-  if HC then
+  // Hochkontrast: die Tokens liefern die Systemfarben, eigene Farben gelten nicht
+  Fill := T.Surface;
+  if Hot then
+    Fill := T.SurfaceHover;
+  Stroke := T.Stroke;
+  TextCol := T.TextPrimary;
+  Sec := T.TextSecondary;
+  // Element-Stile (Styles) und eigenes Zeichnen
+  if UseOwnColors then
   begin
-    Fill := PPGColorToRGB(clWindow);
-    Stroke := PPGColorToRGB(clWindowText);
-    TextCol := PPGColorToRGB(clWindowText);
-    Sec := TextCol;
-  end
-  else
-  begin
-    Fill := T.Surface;
+    KS := FKanbanStyles;
+    Fill := KS.Card.FillFor(Dark, Fill);
     if Hot then
-      Fill := T.SurfaceHover;
-    Stroke := T.Stroke;
-    TextCol := T.TextPrimary;
-    Sec := T.TextSecondary;
-    // Element-Stile (Styles) und eigenes Zeichnen
-    if not UseVclStyle then
-    begin
-      KS := FKanbanStyles;
-      Fill := KS.Card.FillFor(Dark, Fill);
-      if Hot then
-        Fill := KS.HotCard.FillFor(Dark, Fill);
-      Stroke := KS.Card.BorderFor(Dark, Stroke);
-      TextCol := KS.Card.TextFor(Dark, TextCol);
-      if DS.Fill <> clNone then
-        Fill := PPGColorToRGB(DS.Fill);
-      if DS.BorderColor <> clNone then
-        Stroke := PPGColorToRGB(DS.BorderColor);
-      if DS.TextColor <> clNone then
-        TextCol := PPGColorToRGB(DS.TextColor);
-    end;
-    if Dim then
-    begin
-      Fill := PPGDisabledColor(Fill, T.Background);
-      Stroke := T.StrokeDisabled;
-      TextCol := T.TextDisabled;
-    end;
+      Fill := KS.HotCard.FillFor(Dark, Fill);
+    Stroke := KS.Card.BorderFor(Dark, Stroke);
+    TextCol := KS.Card.TextFor(Dark, TextCol);
+    if DS.Fill <> clNone then
+      Fill := PPGColorToRGB(DS.Fill);
+    if DS.BorderColor <> clNone then
+      Stroke := PPGColorToRGB(DS.BorderColor);
+    if DS.TextColor <> clNone then
+      TextCol := PPGColorToRGB(DS.TextColor);
+  end;
+  if Dim then
+  begin
+    Fill := PPGDisabledColor(Fill, T.Background);
+    Stroke := T.StrokeDisabled;
+    TextCol := T.TextDisabled;
   end;
   SelCol := PPGColorToRGB(EffectiveAppearance.FocusColor);
-  if not HC and not UseVclStyle then
+  if UseOwnColors then
     SelCol := FKanbanStyles.SelectedCard.BorderFor(Dark, SelCol);
   SelCol := DimIf(Dim, SelCol, Fill);
   if Ghost then
@@ -2162,31 +2153,25 @@ var
   DrawIt, CardSel, CardHot, Dim: Boolean;
 begin
   T := Tokens;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Dim := not Enabled and not HC;
   if Dim then
     T := PPGDisabledTokens(T);
+  // Hochkontrast: die Tokens liefern die Systemfarben (Flaeche ohne Mischfarbe)
   if HC then
-  begin
-    Back := PPGColorToRGB(clBtnFace);
-    TextCol := PPGColorToRGB(clBtnText);
-    Sec := TextCol;
-    Accent := PPGColorToRGB(clHighlight);
-  end
+    Back := T.Layer
   else
-  begin
     Back := PPGBlendColor(T.Background, T.TextPrimary, 0.04);
-    TextCol := T.TextPrimary;
-    Sec := T.TextSecondary;
-    Accent := T.Accent;
-    if not UseVclStyle then
-    begin
-      Back := FKanbanStyles.Column.FillFor(UseDarkMode, Back);
-      TextCol := FKanbanStyles.Column.TextFor(UseDarkMode, TextCol);
-    end;
-    if Dim then
-      TextCol := T.TextDisabled;
+  TextCol := T.TextPrimary;
+  Sec := T.TextSecondary;
+  Accent := T.Accent;
+  if UseOwnColors then
+  begin
+    Back := FKanbanStyles.Column.FillFor(UseDarkMode, Back);
+    TextCol := FKanbanStyles.Column.TextFor(UseDarkMode, TextCol);
   end;
+  if Dim then
+    TextCol := T.TextDisabled;
   R := ColClientRect(C);
   if (R.Right < View.Left) or (R.Left > View.Right) then
     Exit;
@@ -2383,19 +2368,12 @@ var
 begin
   EnsureLayout;
   T := Tokens;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   if not Enabled and not HC then
     T := PPGDisabledTokens(T);
-  if HC then
-  begin
-    TextCol := PPGColorToRGB(clWindowText);
-    Sec := TextCol;
-  end
-  else
-  begin
-    TextCol := T.TextPrimary;
-    Sec := T.TextSecondary;
-  end;
+  // Hochkontrast: die Tokens liefern die Systemfarben
+  TextCol := T.TextPrimary;
+  Sec := T.TextSecondary;
   ACanvas.FillRoundRect(View, 0, PPGColorToRGB(GetBackgroundColor), 255);
   for C := 0 to High(FCols) do
     PaintColumn(ACanvas, C, View);

@@ -278,7 +278,7 @@ implementation
 uses
   PPG.Lang,
   System.SysUtils, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.VclStyles,
+  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.VclStyles, PPG.Tokens,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.AppHooks;
 
 type
@@ -1228,6 +1228,7 @@ procedure TPPGPopupWindow.GetPopupStyles(Fill, Text: TColor; out ListStyle,
   HighlightStyle: TPPGSurfaceStyle);
 var
   A: TPPGAppearance;
+  T: TPPGTokens;
   PPI: Integer;
   SelFill, SelText: TColor;
 begin
@@ -1244,14 +1245,16 @@ begin
     ListStyle.BorderWidth := 1;
   if ListStyle.Rounding > PPGScale(8, PPI) then
     ListStyle.Rounding := PPGScale(8, PPI);
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    ListStyle.Color := PPGColorToRGB(clWindow);
-    ListStyle.TextColor := PPGColorToRGB(clWindowText);
-    ListStyle.BorderColor := PPGColorToRGB(clWindowText);
-    ListStyle.GlowColor := PPGColorToRGB(clHighlight);
-    SelFill := PPGColorToRGB(clHighlight);
-    SelText := PPGColorToRGB(clHighlightText);
+    // Sonderfall: Rahmen ohne Mischfarbe, Auswahl als volle Markierung
+    T := Tokens;
+    ListStyle.Color := T.Layer;
+    ListStyle.TextColor := T.TextPrimary;
+    ListStyle.BorderColor := T.Stroke;
+    ListStyle.GlowColor := T.Accent;
+    SelFill := T.Accent;
+    SelText := T.OnAccent;
     HighlightStyle.Color := SelFill;
     HighlightStyle.ColorTo := SelFill;
     HighlightStyle.ColorMirror := SelFill;
@@ -1350,7 +1353,7 @@ begin
   Info.Enabled := True;
   Info.PPI := PPI;
   Info.Styles := FListStyles;
-  Info.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+  Info.UseColors := UseOwnColors;
   Info.Dark := UseDarkMode;
   Info.Focused := True;
   Info.TabWidth := 0;

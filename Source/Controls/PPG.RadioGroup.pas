@@ -1097,19 +1097,20 @@ end;
 
 function TPPGCustomChoiceGroup.GroupTextColor: TColor;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
+    // Text steht auf dem Formular: Textfarben der (Hochkontrast-)Tokens
     if Enabled then
-      Result := PPGColorToRGB(clWindowText)
+      Result := Tokens.TextPrimary
     else
-      Result := PPGColorToRGB(clGrayText);
+      Result := Tokens.TextDisabled;
   end
   else if UseVclStyle then
     Result := PPGVclStyleCheckTextColor(Enabled)
   else
   begin
     Result := GetContainerStyle(True).TextColor;
-    if Enabled and not (HighContrastSupport and PPGIsHighContrast) then
+    if Enabled then
       Result := FItemStyle.TextFor(UseDarkMode, Result);
   end;
 end;
@@ -1153,22 +1154,8 @@ begin
     Result.Focused := True;
     Result.BorderColor := PPGColorToRGB(A.FocusColor);
   end;
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    Result.GlowAlpha := 0;
-    Result.Color := PPGColorToRGB(clWindow);
-    Result.ColorTo := Result.Color;
-    Result.ColorMirror := Result.Color;
-    Result.ColorMirrorTo := Result.Color;
-    if Usable then
-      Result.TextColor := PPGColorToRGB(clWindowText)
-    else
-      Result.TextColor := PPGColorToRGB(clGrayText);
-    if Result.Focused or (Index = FHot) then
-      Result.BorderColor := PPGColorToRGB(clHighlight)
-    else
-      Result.BorderColor := Result.TextColor;
-  end;
+  if UseHighContrast then
+    ApplyHighContrastIndicator(Result, Usable, Result.Focused or (Index = FHot));
 end;
 
 procedure DrawItemSymbol(const ACanvas: IPPGCanvas; Group: TPPGCustomChoiceGroup;
@@ -1272,7 +1259,7 @@ begin
   PPI := ScalePPI;
   A := EffectiveAppearance;
   Dark := UseDarkMode;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Base := A.Resolve(vsNormal, PPI, False);
   Chk := A.ResolveStyle(A.Checked, PPI, False);
   Track := ItemRect(0);
@@ -1292,10 +1279,11 @@ begin
   SelText := PPGReadableTextColor(SelText, SelFill);
   if HC then
   begin
-    C := PPGColorToRGB(clWindow);
-    Line := PPGColorToRGB(clWindowText);
-    SelFill := PPGColorToRGB(clHighlight);
-    SelText := PPGColorToRGB(clHighlightText);
+    // Sonderfall: Spur ohne Mischfarbe, Auswahl als volle Markierung (Tokens)
+    C := Tokens.Surface;
+    Line := Tokens.Stroke;
+    SelFill := Tokens.Accent;
+    SelText := Tokens.OnAccent;
   end;
   if not Enabled then
     SelFill := PPGBlendColor(SelFill, C, 0.6);
@@ -1402,7 +1390,7 @@ begin
   A := EffectiveAppearance;
   Base := A.Resolve(vsNormal, PPI, False);
   Dark := UseDarkMode;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Pad := PPGScale(CardPad, PPI);
   Ic := PPGScale(CardIcon, PPI);
   S := PPGScale(IndSize, PPI);
@@ -1445,11 +1433,12 @@ begin
       Border := PPGBlendColor(Border, Txt, 0.35);
     if HC then
     begin
-      Fill := PPGColorToRGB(clWindow);
+      // Sonderfall: Karten nur ueber den Rahmen hervorgehoben (Tokens)
+      Fill := Tokens.Surface;
       if Sel or (I = FHot) then
-        Border := PPGColorToRGB(clHighlight)
+        Border := Tokens.Accent
       else
-        Border := PPGColorToRGB(clWindowText);
+        Border := Tokens.Stroke;
     end;
     ACanvas.FillRoundRect(R, Rad, Fill, 255);
     if Sel then

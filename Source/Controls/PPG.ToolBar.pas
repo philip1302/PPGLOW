@@ -1158,11 +1158,9 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
-  if HC then
-    TextCol := PPGColorToRGB(clBtnText)
-  else if UseVclStyle then
-    TextCol := PPGColorToRGB(A.Normal.TextColor)
+  HC := UseHighContrast;
+  if HC or UseVclStyle then
+    TextCol := PPGColorToRGB(A.Normal.TextColor) // Hochkontrast: clBtnText
   else
     TextCol := T.TextPrimary;
   for I := 0 to FItems.Count - 1 do
@@ -1182,7 +1180,7 @@ begin
     Down := Hot and (FDownPart = I);
     Checked := (It.Style = tisCheck) and It.Down;
     // Eigene Flaeche des Eintrags (auch in Ruhe); Hover/Druck dann als Abdunkelung
-    UseColors := not HC and not UseVclStyle;
+    UseColors := UseOwnColors;
     OwnFill := UseColors and (It.Color <> clDefault) and (It.Color <> clNone);
     if OwnFill then
     begin
@@ -1221,10 +1219,7 @@ begin
     if UseColors and (It.TextColor <> clDefault) and (It.TextColor <> clNone) then
       C := PPGColorToRGB(It.TextColor);
     if not (Enabled and It.Enabled) then
-      if HC then
-        C := PPGColorToRGB(clGrayText)
-      else
-        C := T.TextDisabled;
+      C := T.TextDisabled;
     HasIcon := (It.IconChar <> 0) or ((Images <> nil) and (It.ImageIndex >= 0));
     TextR := Rect(R.Left + PPGScale(BtnPadH, PPI), R.Top, R.Right - PPGScale(BtnPadH, PPI), R.Bottom);
     if HasIcon then

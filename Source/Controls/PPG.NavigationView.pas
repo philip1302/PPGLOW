@@ -1892,35 +1892,24 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
-  if HC then
+  // Hochkontrast: Tokens und Appearance liefern die Systemfarben
+  HC := UseHighContrast;
+  Fill := PPGBlendColor(T.Background, T.Layer, 0.5);
+  Border := T.Stroke;
+  TextCol := T.TextPrimary;
+  Secondary := T.TextSecondary;
+  Accent := PPGColorToRGB(A.FocusColor);
+  DisabledCol := T.TextDisabled;
+  if UseVclStyle and not HC then
   begin
-    Fill := PPGColorToRGB(clWindow);
-    Border := PPGColorToRGB(clWindowText);
-    TextCol := PPGColorToRGB(clWindowText);
-    Secondary := TextCol;
-    Accent := PPGColorToRGB(clHighlight);
-    DisabledCol := PPGColorToRGB(clGrayText);
-  end
-  else
-  begin
-    Fill := PPGBlendColor(T.Background, T.Layer, 0.5);
-    Border := T.Stroke;
-    TextCol := T.TextPrimary;
-    Secondary := T.TextSecondary;
-    Accent := PPGColorToRGB(A.FocusColor);
-    DisabledCol := T.TextDisabled;
-    if UseVclStyle then
-    begin
-      Fill := PPGColorToRGB(A.Normal.Color);
-      TextCol := PPGColorToRGB(A.Normal.TextColor);
-      Secondary := PPGBlendColor(TextCol, Fill, 0.4);
-      DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
-    end;
+    Fill := PPGColorToRGB(A.Normal.Color);
+    TextCol := PPGColorToRGB(A.Normal.TextColor);
+    Secondary := PPGBlendColor(TextCol, Fill, 0.4);
+    DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
   end;
   // Element-Stile (Styles): Leiste, Ueberschriften; Eintraege unten
   NS := FNavStyles;
-  UseColors := not HC and not UseVclStyle;
+  UseColors := UseOwnColors;
   Dk := UseDarkMode;
   if UseColors then
   begin

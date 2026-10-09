@@ -447,12 +447,13 @@ var
 begin
   PPI := ScalePPI;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Back := PPGColorToRGB(GetBackgroundColor);
   if HC then
   begin
-    FillCol := PPGColorToRGB(clHighlight);
-    EmptyCol := PPGColorToRGB(clWindowText);
+    // Sonderfall: Sterne auch deaktiviert kraeftig (Tokens = Systemfarben)
+    FillCol := Tokens.Accent;
+    EmptyCol := Tokens.Stroke;
   end
   else if not Enabled then
   begin
@@ -499,9 +500,8 @@ begin
   if FocusVisible and Focused then
   begin
     R := ClientR;
-    if HC then
-      FocusCol := PPGColorToRGB(clHighlight)
-    else if PPGColorIsSet(A.Focused.BorderColor) then
+    // Hochkontrast: die Appearance hat keine eigenen Fokusfarben (clHighlight)
+    if PPGColorIsSet(A.Focused.BorderColor) then
       FocusCol := PPGColorToRGB(A.Focused.BorderColor)
     else
       FocusCol := PPGColorToRGB(A.FocusColor);

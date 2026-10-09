@@ -417,27 +417,8 @@ begin
     Result.BorderColor := PPGColorToRGB(EffectiveAppearance.FocusColor);
   end;
 
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    Result.GlowAlpha := 0;
-    Result.Color := PPGColorToRGB(clWindow);
-    Result.ColorTo := Result.Color;
-    Result.ColorMirror := Result.Color;
-    Result.ColorMirrorTo := Result.Color;
-    if not Enabled then
-    begin
-      Result.BorderColor := PPGColorToRGB(clGrayText);
-      Result.TextColor := PPGColorToRGB(clGrayText);
-    end
-    else
-    begin
-      Result.TextColor := PPGColorToRGB(clWindowText);
-      if Focus or (HotProgress > 0.5) then
-        Result.BorderColor := PPGColorToRGB(clHighlight)
-      else
-        Result.BorderColor := PPGColorToRGB(clWindowText);
-    end;
-  end;
+  if UseHighContrast then
+    ApplyHighContrastIndicator(Result, Enabled, Focus or (HotProgress > 0.5));
 end;
 
 procedure TPPGCustomCheckControl.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
@@ -489,17 +470,20 @@ begin
   Text := Caption;
   if (Text = '') or (TextRight <= TextLeft) then
     Exit;
-  if UseVclStyle then
+  if UseHighContrast then
+  begin
+    // Text steht auf dem Formular: Textfarben der (Hochkontrast-)Tokens
+    if Enabled then
+      TextColor := Tokens.TextPrimary
+    else
+      TextColor := Tokens.TextDisabled;
+  end
+  else if UseVclStyle then
     TextColor := PPGVclStyleCheckTextColor(Enabled) // Text steht auf dem Formular, nicht auf dem Button
   else if Enabled then
     TextColor := EffectiveAppearance.Normal.TextColor // im Dark Mode hell
   else
     TextColor := EffectiveAppearance.Disabled.TextColor;
-  if HighContrastSupport and PPGIsHighContrast then
-    if Enabled then
-      TextColor := clWindowText
-    else
-      TextColor := clGrayText;
 
   Flags := DT_LEFT or DT_NOCLIP or DT_END_ELLIPSIS;
   if WordWrap then

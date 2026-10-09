@@ -52,6 +52,9 @@ type
     procedure RtlGallery;
     /// Phase 9e: alle Controls bei 144 und 192 DPI (Galerie DPI.png, ab 10.3).
     procedure DpiGallery;
+    /// Audit 7e #7: alle Controls im simulierten Hochkontrast (Galerie
+    /// HighContrast.png; Systemfarben des Testrechners).
+    procedure HighContrastGallery;
   end;
 
 /// Anzahl Pixel, die sich deutlich (Summe RGB > Tol) unterscheiden.
@@ -60,7 +63,7 @@ function PPGPixelDiff(A, B: TBitmap; Tol: Integer = 40): Integer;
 implementation
 
 uses
-  System.Math, System.StrUtils, System.DateUtils, PPG.Consts, PPG.Theme, PPG.Tokens,
+  System.Math, System.StrUtils, System.DateUtils, PPG.Consts, PPG.Theme, PPG.Tokens, PPG.DpiUtils,
   PPG.Controls.ItemList,
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar,
   PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.TileView, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
@@ -236,6 +239,7 @@ end;
 
 procedure TVisualTests.TearDown;
 begin
+  PPGSetHighContrastReader(nil);
   ResetVariant;
   FreeAndNil(FToastCenter);
   if FForm <> nil then
@@ -1091,6 +1095,70 @@ begin
     CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
     NotMirrored.Free;
+    Errors.Free;
+    Rows.Free;
+  end;
+end;
+
+function VisualHighContrastOn: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TVisualTests.HighContrastGallery;
+var
+  Index, N: Integer;
+  Cells: array of TBitmap;
+  Rows, Errors, Unchanged: TStringList;
+  Ok: Boolean;
+  Dir: string;
+  I: Integer;
+begin
+  Dir := ExtractFilePath(ParamStr(0)) + 'Visual\Gallery\';
+  ForceDirectories(Dir);
+  Rows := TStringList.Create;
+  Errors := TStringList.Create;
+  Unchanged := TStringList.Create;
+  try
+    for Index := 0 to LastControl do
+      if Index <> ToastIndex then // eigenes Fenster
+        Rows.Add(ControlNames[Index]);
+    SetLength(Cells, Rows.Count * 3);
+    try
+      N := 0;
+      for Index := 0 to LastControl do
+      begin
+        if Index = ToastIndex then
+          Continue;
+        PPGSetHighContrastReader(nil);
+        Cells[N * 3] := Render(Index, vvFlatLight, vsNormalV, Ok);
+        PPGSetHighContrastReader(VisualHighContrastOn);
+        try
+          Cells[N * 3 + 1] := Render(Index, vvFlatLight, vsNormalV, Ok);
+          Cells[N * 3 + 2] := Render(Index, vvFlatLight, vsDisabledV, Ok);
+        finally
+          PPGSetHighContrastReader(nil);
+        end;
+        if ContentPixels(Cells[N * 3 + 1]) < 20 then
+          Errors.Add(ControlNames[Index] + ': Hochkontrast leer');
+        if PPGPixelDiff(Cells[N * 3], Cells[N * 3 + 1], 40) < 8 then
+          Unchanged.Add(ControlNames[Index]);
+        Inc(N);
+      end;
+      ResetVariant;
+      SaveSheet(Dir + 'HighContrast.png', ['Normal', 'Hochkontrast', 'Hochkontrast deaktiviert'],
+        Rows, Cells);
+    finally
+      for I := 0 to High(Cells) do
+        Cells[I].Free;
+    end;
+    // Hinweis statt Fehler: einfache Controls sehen mit Systemfarben gleich aus
+    if Unchanged.Count > 0 then
+      Status('Hochkontrast unveraendert (in HighContrast.png pruefen): ' + Unchanged.CommaText);
+    CheckEquals('', Errors.Text, Errors.Text);
+    CheckEquals(0, FErrors.Count, FErrors.Text);
+  finally
+    Unchanged.Free;
     Errors.Free;
     Rows.Free;
   end;

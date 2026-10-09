@@ -896,19 +896,15 @@ var
   SelFill, SelText: TColor;
   T: TPPGTokens;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast or UseDarkMode then
   begin
-    Fill := PPGColorToRGB(clWindow);
-    Text := PPGColorToRGB(clWindowText);
-  end
-  else if UseVclStyle then
-    PPGVclStyleListColors(Fill, Text, SelFill, SelText)
-  else if UseDarkMode then
-  begin
+    // Dunkle Tokens bzw. im Hochkontrast clWindow/clWindowText
     T := Tokens;
     Fill := T.Surface;
     Text := T.TextPrimary;
   end
+  else if UseVclStyle then
+    PPGVclStyleListColors(Fill, Text, SelFill, SelText)
   else
   begin
     Fill := PPGColorToRGB(Color);
@@ -919,6 +915,7 @@ end;
 procedure TPPGCustomItemList.GetListStyles(out ListStyle, HighlightStyle: TPPGSurfaceStyle);
 var
   A: TPPGAppearance;
+  T: TPPGTokens;
   PPI: Integer;
   Fill, Text, SelFill, SelText: TColor;
 begin
@@ -940,12 +937,14 @@ begin
   // schwach: Hover dann als dezente Mischung mit der Textfarbe
   if PPGContrastRatio(HighlightStyle.Color, Fill) < 1.05 then
     HighlightStyle.Color := PPGBlendColor(Fill, Text, 0.06);
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    ListStyle.BorderColor := PPGColorToRGB(clWindowText);
-    ListStyle.GlowColor := PPGColorToRGB(clHighlight);
-    SelFill := PPGColorToRGB(clHighlight);
-    SelText := PPGColorToRGB(clHighlightText);
+    // Sonderfall: Rahmen in Textfarbe, Auswahl als volle Markierung
+    T := Tokens;
+    ListStyle.BorderColor := T.Stroke;
+    ListStyle.GlowColor := T.Accent;
+    SelFill := T.Accent;
+    SelText := T.OnAccent;
     HighlightStyle.Color := SelFill;
     HighlightStyle.ColorTo := SelFill;
     HighlightStyle.ColorMirror := SelFill;
@@ -965,7 +964,7 @@ begin
     HighlightStyle.TextColor := SelText;
   end;
   // Deaktiviert: Auswahl und Akzent-Indikator zuruecknehmen (Classic: sonst kraeftig gelb)
-  if not Enabled and not (HighContrastSupport and PPGIsHighContrast) then
+  if not Enabled and not UseHighContrast then
   begin
     HighlightStyle.Color := PPGBlendColor(PPGBlendColor(HighlightStyle.Color, Fill, 0.6),
       PPGBlendColor(Fill, Text, 0.08), 0.5);
@@ -988,7 +987,7 @@ begin
   Result.Enabled := Enabled;
   Result.PPI := ScalePPI;
   Result.Styles := FListStyles;
-  Result.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+  Result.UseColors := UseOwnColors;
   Result.Dark := UseDarkMode;
   Result.Focused := Focused;
   Result.TabWidth := 0;

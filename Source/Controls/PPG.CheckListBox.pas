@@ -469,7 +469,7 @@ begin
   inherited PaintItem(ACanvas, Index, R, Data, Info);
   if Data.IsHeader then
     Exit;
-  if not FFlat and not (HighContrastSupport and PPGIsHighContrast) then
+  if not FFlat and not UseHighContrast then
   begin
     DrawNativeCheck(ACanvas, IndicatorRect(R), Data.Checked, Enabled and Data.Enabled, Index = HotIndex);
     Exit;
@@ -499,15 +499,8 @@ begin
   end;
   S.GlowAlpha := 0;
   S.GlowSize := 0;
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    S.Color := PPGColorToRGB(clWindow);
-    S.ColorTo := S.Color;
-    S.ColorMirror := S.Color;
-    S.ColorMirrorTo := S.Color;
-    S.BorderColor := PPGColorToRGB(clWindowText);
-    S.TextColor := PPGColorToRGB(clWindowText);
-  end;
+  if UseHighContrast then
+    ApplyHighContrastIndicator(S, ItemOn, False);
   IR.DrawCheckIndicator(ACanvas, IndicatorRect(R), S, Data.Checked, PPI);
 end;
 

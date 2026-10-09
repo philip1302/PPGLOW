@@ -118,6 +118,15 @@ function PPGFixAccentPair(const Pair: TPPGAccentPair): TPPGAccentPair;
 /// einschliesslich der anwendungsweiten Ueberschreibungen.
 function PPGDefaultTokens(Dark: Boolean): TPPGTokens;
 
+/// Ersetzt alle Farben durch die Systemfarben des Hochkontrastmodus (als RGB):
+/// Flaechen clWindow, Text und Raender clWindowText, Akzent und Signale
+/// clHighlight, OnAccent clHighlightText, deaktiviert clGrayText, Link
+/// clHotLight. Masse und Bewegung bleiben (die des Presets).
+procedure PPGApplyHighContrastColors(var T: TPPGTokens);
+/// Vollstaendiger Token-Satz fuer den Hochkontrastmodus (Masse des
+/// Standard-Presets, Farben aus dem System; ohne Ueberschreibungen).
+function PPGHighContrastTokens: TPPGTokens;
+
 /// Relative Leuchtdichte nach WCAG 2.x (0 = schwarz, 1 = weiss).
 function PPGRelativeLuminance(C: TColor): Double;
 /// Kontrastverhaeltnis nach WCAG 2.x (1..21). Text braucht mindestens 4,5:1,
@@ -151,6 +160,46 @@ function PPGDefaultTokens(Dark: Boolean): TPPGTokens;
 begin
   Result := PPGBaseTokens(Dark);
   PPGApplyTokenOverrides(Result, Dark);
+end;
+
+procedure PPGApplyHighContrastColors(var T: TPPGTokens);
+var
+  Window, Text, Highlight, Gray: TColor;
+begin
+  // Hochkontrast: ausschliesslich Systemfarben (Rangfolge HC > VCL-Style >
+  // Dark Mode > Appearance); keine anwendungsweiten Ueberschreibungen
+  Window := PPGColorToRGB(clWindow);
+  Text := PPGColorToRGB(clWindowText);
+  Highlight := PPGColorToRGB(clHighlight);
+  Gray := PPGColorToRGB(clGrayText);
+  T.Accent := Highlight;
+  T.AccentHover := Highlight;
+  T.AccentPressed := Highlight;
+  T.OnAccent := PPGColorToRGB(clHighlightText);
+  T.Background := Window;
+  T.Layer := Window;
+  T.Surface := Window;
+  T.SurfaceHover := Window;
+  T.SurfacePressed := Window;
+  T.SurfaceDisabled := Window;
+  T.Stroke := Text;
+  T.StrokeStrong := Text;
+  T.StrokeDisabled := Gray;
+  T.TextPrimary := Text;
+  T.TextSecondary := Text;
+  T.TextDisabled := Gray;
+  T.Link := PPGColorToRGB(clHotLight);
+  // Keine eigenen Signalfarben: die Bedeutung tragen Symbol und Text
+  T.Danger := Highlight;
+  T.Warning := Highlight;
+  T.Success := Highlight;
+  T.Paused := Highlight;
+end;
+
+function PPGHighContrastTokens: TPPGTokens;
+begin
+  Result := PPGBaseTokens(False);
+  PPGApplyHighContrastColors(Result);
 end;
 
 function PPGBaseTokens(Dark: Boolean): TPPGTokens;

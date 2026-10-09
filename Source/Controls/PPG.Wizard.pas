@@ -419,15 +419,16 @@ var
 begin
   T := Tokens;
   St := GetContainerStyle(False);
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    Bg := PPGColorToRGB(clWindow);
-    Bar := PPGColorToRGB(clBtnFace);
-    Text := PPGColorToRGB(clWindowText);
-    Line := Text;
-    Secondary := Text;
-    Accent := PPGColorToRGB(clHighlight);
-    OnAccent := PPGColorToRGB(clHighlightText);
+    // Sonderfall: keine Mischfarben; die Tokens liefern die Systemfarben
+    Bg := T.Background;
+    Bar := T.Layer;
+    Text := T.TextPrimary;
+    Line := T.Stroke;
+    Secondary := T.TextSecondary;
+    Accent := T.Accent;
+    OnAccent := T.OnAccent;
     Exit(True);
   end;
   Bg := PPGColorToRGB(St.Color);

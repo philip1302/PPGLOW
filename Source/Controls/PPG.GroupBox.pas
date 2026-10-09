@@ -258,7 +258,7 @@ begin
   PlateStyle := Style;
   PlateStyle.Rounding := (Plate.Bottom - Plate.Top) div 2;
   // CaptionStyle: eigene Flaeche, Rand und Textfarbe der Plakette
-  if not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle then
+  if UseOwnColors then
   begin
     if FCaptionStyle.HasFill(UseDarkMode) then
     begin
@@ -272,7 +272,7 @@ begin
       PlateStyle.TextColor := FCaptionStyle.TextFor(UseDarkMode, PlateStyle.TextColor);
   end;
   Highlight := FHighlightFocus and FFocusInside and Enabled and
-    not (HighContrastSupport and PPGIsHighContrast);
+    not UseHighContrast;
   if Highlight then
   begin
     // Fokus in der Gruppe: Plakette leuchtet in der Fokusfarbe

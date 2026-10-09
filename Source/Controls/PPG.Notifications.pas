@@ -402,7 +402,6 @@ var
   T: TPPGTokens;
   A: TPPGAppearance;
   PPI, I, Rad: Integer;
-  HC: Boolean;
   Fill, Border, TextCol, Sev: TColor;
   IR, TR, CR, R: TRect;
   AR: TArray<TRect>;
@@ -414,21 +413,11 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  // Hochkontrast: die Tokens liefern die Systemfarben (Signale = clHighlight)
   Sev := PPGSeverityColor(T, FSeverity);
-  if HC then
-  begin
-    Fill := PPGColorToRGB(clWindow);
-    Border := PPGColorToRGB(clWindowText);
-    TextCol := PPGColorToRGB(clWindowText);
-    Sev := PPGColorToRGB(clHighlight);
-  end
-  else
-  begin
-    Fill := T.Layer;
-    Border := T.Stroke;
-    TextCol := T.TextPrimary;
-  end;
+  Fill := T.Layer;
+  Border := T.Stroke;
+  TextCol := T.TextPrimary;
   // Kein Fenster-Hintergrund dahinter: Region schneidet die Ecken ab
   Rad := PPGScale(T.RadiusLarge, PPI);
   ACanvas.FillRoundRect(ClientR, 0, Fill, 255);

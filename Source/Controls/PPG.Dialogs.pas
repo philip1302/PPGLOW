@@ -137,10 +137,13 @@ type
     procedure CenterOnParent;
     procedure WMDlgClose(var Message: TMessage); message WM_USER + $520;
     function ExpandCaption: string;
+    procedure ApplyHighContrastSupport;
   protected
     procedure CreateParams(var Params: TCreateParams); override;
   public
     constructor CreateFor(ADialog: TPPGTaskDialog; AParentWnd: HWND); reintroduce;
+    /// Hochkontrast fuer dieses Formular (Dialog.HighContrastSupport).
+    function UseHighContrast: Boolean;
     destructor Destroy; override;
     /// Ordnet alle Teile neu an (nach Ausklappen, geaenderten Texten).
     procedure Arrange;
@@ -175,6 +178,7 @@ type
     FPreset: string;
     FStyleManager: TPPGStyleManager;
     FAllowMarkup: Boolean;
+    FHighContrastSupport: Boolean;
     FContentControl: TControl;
     FForm: TPPGDialogForm;
     // nur fuer die Funktionen dieser Unit (MessageDlg, InputQuery)
@@ -238,6 +242,9 @@ type
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// Text, Titel-Zusatz und Fusszeile mit Markup (<b>, <i>, <color=...>).
     property AllowMarkup: Boolean read FAllowMarkup write FAllowMarkup default False;
+    /// Im Hochkontrastmodus Systemfarben (wie bei allen PPGlow-Controls); gilt
+    /// fuer alle Teile des Dialogs.
+    property HighContrastSupport: Boolean read FHighContrastSupport write FHighContrastSupport default True;
     /// Eigenes Control im Dialog unter dem Text (z.B. ein Panel mit Feldern).
     property ContentControl: TControl read FContentControl write SetContentControl;
   end;
@@ -308,10 +315,8 @@ begin
     [rfReplaceAll]);
 end;
 
-function IsHC: Boolean;
-begin
-  Result := PPGIsHighContrast;
-end;
+type
+  TPPGControlAccess = class(TPPGCustomControl);
 
 { TPPGCommandLink }
 
@@ -377,7 +382,7 @@ var
 begin
   PPI := ScalePPI;
   T := Tokens;
-  HC := HighContrastSupport and IsHC;
+  HC := UseHighContrast;
   PrepareFonts;
   St := GetCurrentStyle;
   St.GlowAlpha := 0;
@@ -387,7 +392,8 @@ begin
     Renderer.DrawSurface(ACanvas, ClientR, St);
   if HC then
   begin
-    TextC := PPGColorToRGB(clBtnText);
+    // Sonderfall: alles in der Button-Textfarbe (Systemfarbe aus GetCurrentStyle)
+    TextC := St.TextColor;
     NoteC := TextC;
     ArrowC := TextC;
   end
@@ -443,6 +449,7 @@ var
   Ch: Word;
   Fallback: string;
   Sz: Integer;
+  HC: Boolean;
 begin
   R := ClientRect;
   if (FIcon <> nil) and not FIcon.Empty then
@@ -452,7 +459,8 @@ begin
   end;
   if FKind = tdiNone then
     Exit;
-  FTokens := PPGDefaultTokens(TPPGTheme.IsDark and not PPGVclStyleActive);
+  HC := (Owner is TPPGDialogForm) and TPPGDialogForm(Owner).UseHighContrast;
+  FTokens := PPGPresetTokens('', TPPGTheme.IsDark and not PPGVclStyleActive and not HC, HC);
   Ch := 0;
   case FKind of
     tdiWarning: begin G := igWarning; Col := FTokens.Warning; Fallback := '!'; end;
@@ -462,8 +470,8 @@ begin
   else
     begin G := igInfo; Col := FTokens.Accent; Fallback := 'i'; end;
   end;
-  if IsHC then
-    Col := PPGColorToRGB(clWindowText);
+  if HC then
+    Col := FTokens.TextPrimary; // Symbole einfarbig in der Textfarbe
   Sz := Height * 7 div 8;
   C := TPPGRendererRegistry.CreateCanvas(Canvas.Handle);
   try
@@ -527,7 +535,29 @@ begin
     Caption := Application.Title;
   TPPGTheme.ApplyToForm(Self);
   BuildControls;
+  ApplyHighContrastSupport;
   Arrange;
+end;
+
+function TPPGDialogForm.UseHighContrast: Boolean;
+begin
+  Result := PPGUseHighContrast(FDialog.HighContrastSupport);
+end;
+
+procedure TPPGDialogForm.ApplyHighContrastSupport;
+var
+  I: Integer;
+  C: TComponent;
+begin
+  // HighContrastSupport des Dialogs an alle eigenen Teile weitergeben
+  for I := 0 to ComponentCount - 1 do
+  begin
+    C := Components[I];
+    if C is TPPGCustomControl then
+      TPPGControlAccess(C).HighContrastSupport := FDialog.HighContrastSupport
+    else if C is TPPGLabel then
+      TPPGLabel(C).HighContrastSupport := FDialog.HighContrastSupport;
+  end;
 end;
 
 destructor TPPGDialogForm.Destroy;
@@ -665,8 +695,8 @@ begin
   FFooter.Caption := '';
   FFooter.ParentBackground := False;
   FooterColor := Color;
-  if IsHC then
-    FooterColor := clBtnFace
+  if UseHighContrast then
+    FooterColor := clBtnFace // Formularfarbe des Systems (wie TForm)
   else if not PPGVclStyleActive then
     FooterColor := PPGBlendColor(PPGColorToRGB(Color), PPGColorToRGB(Font.Color), 0.05);
   FFooter.Color := FooterColor;
@@ -1093,7 +1123,7 @@ begin
     CenterOnParent;
     FCentered := True;
   end;
-  TPPGTheme.SetDarkTitleBar(Handle, TPPGTheme.IsDark and not PPGVclStyleActive and not IsHC);
+  TPPGTheme.SetDarkTitleBar(Handle, TPPGTheme.IsDark and not PPGVclStyleActive and not UseHighContrast);
   Desc := FDialog.Title;
   if FDialog.Text <> '' then
   begin
@@ -1352,6 +1382,7 @@ end;
 constructor TPPGTaskDialog.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FHighContrastSupport := True;
   FPosX := -1;
   FPosY := -1;
 end;
