@@ -10,7 +10,7 @@ Collection: Die Eintraege sind vom Typ [TPPGItem](TPPGItem.md). Im Designer uebe
 
 ## Verwendet in
 
-[TPPGCheckListBox](../TPPGCheckListBox.md), [TPPGComboBox](../TPPGComboBox.md), [TPPGDBComboBox](../TPPGDBComboBox.md), [TPPGDBLookupComboBox](../TPPGDBLookupComboBox.md), [TPPGListBox](../TPPGListBox.md), [TPPGSearchEdit](../TPPGSearchEdit.md)
+[TPPGCheckListBox](../TPPGCheckListBox.md), [TPPGComboBox](../TPPGComboBox.md), [TPPGDBComboBox](../TPPGDBComboBox.md), [TPPGDBLookupComboBox](../TPPGDBLookupComboBox.md), [TPPGListBox](../TPPGListBox.md), [TPPGSearchEdit](../TPPGSearchEdit.md), [TPPGTileView](../TPPGTileView.md)
 
 ---
 Erzeugt von `Build\make-docs.ps1`; Beschreibungen in `Docs\Controls\props\*.txt`.

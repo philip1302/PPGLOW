@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBNavigator</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBNavigator</h1>
+<p>Palette <strong>PPGlow DB</strong> - Unit <code>PPG.DB.Navigator</code> - Basis <code>TPPGCustomDBNavigator</code></p>
+<p><strong>Vorbild:</strong> TDBNavigator (DFM gleich: <code>DataSource</code>, <code>VisibleButtons</code>, <code>Hints</code>, <code>ConfirmDelete</code>, <code>Flat</code>, <code>BeforeAction</code>, <code>OnClick</code>)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li><code>ShowCounter</code> (Vorgabe an): „Datensatz 12 von 340“ bzw. „neu“; Screenreader lesen den Z&#228;hler mit.</li>
+<li><code>ShowSearch</code>: Suchfeld im Navigator, Enter springt zum n&#228;chsten Treffer (Teiltreffer in <code>SearchField</code>, leer = alle Textfelder). <code>FindText</code> macht dasselbe im Code.</li>
+<li><code>ShowFilter</code>: Schnellfilter auf den Suchbegriff mit Knopf zum Aufheben; ein eigenes <code>OnFilterRecord</code> der Datenmenge bleibt wirksam. Im Code <code>SetQuickFilter</code>.</li>
+<li>Passt nicht alles in die Breite, wandern Kn&#246;pfe in ein &#220;berlaufmen&#252; statt zu schrumpfen.</li>
+<li>Tastatur: Strg+Pos1/Ende springen an Anfang/Ende, Einfg legt an, Strg+Entf l&#246;scht.</li>
+<li>Nur waagerecht; <code>Kind</code> der VCL entf&#228;llt (die Migration entfernt es). <code>nbApplyUpdates</code>/<code>nbCancelUpdates</code> nutzen die Datenmengen-Schnittstelle der VCL und sind unter XE2 nicht verf&#252;gbar.</li>
+<li>Liegt in der Unit <code>PPG.DB.Navigator</code> (Paket PPGlowDBR).</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGDBNavigator1.ShowSearch := True;
+PPGDBNavigator1.ShowFilter := True;
+PPGDBNavigator1.SearchField := &#39;NAME&#39;;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGDBNavigator und TPPGDBRadioGroup (Phase 18c).</p>
+<p>TPPGDBNavigator - DFM wie TDBNavigator (DataSource, VisibleButtons, Hints, ConfirmDelete, Flat, BeforeAction, OnClick mit TNavigateBtn). Mehrwert:</p>
+<ul>
+<li>ShowCounter: &quot;Datensatz 12 von 340&quot; bzw. &quot;Neuer Datensatz&quot; (auch fuer Screenreader), ohne RecNo-Unterstuetzung nur die Anzahl.</li>
+<li>ShowSearch: Suchfeld; Tippen sucht ab dem aktuellen Datensatz (Feld SearchField bzw. alle Textfelder, enthaelt, ohne Gross-/Kleinschreibung), Enter springt zum naechsten Treffer, ohne Treffer rot markiert.</li>
+<li>ShowFilter: Knopf &quot;Nur Treffer&quot; filtert die Datenmenge auf das Suchwort. Dafuer haengt sich der Navigator in OnFilterRecord ein und ruft einen vorhandenen Handler zuerst auf; Filtered und Handler werden beim Aufheben wiederhergestellt.</li>
+<li>Ueberlauf: Passen nicht alle Knoepfe, kommen die hinteren in ein Menue.</li>
+<li>Tastatur (mit Fokus): Pfeile wechseln den Knopf, Leertaste/Enter loest aus; Strg+Pos1/Ende, Bild auf/ab, Einfg, Strg+Entf, F2, Strg+Enter, Esc.</li>
+<li>Ein Control mit selbst gezeichneten Knoepfen und Fluent-Symbolen; das Suchfeld ist ein eingebettetes TPPGSearchEdit.</li>
+</ul>
+<p>TPPGDBRadioGroup - wie TDBRadioGroup (Items, Values, DataField, ReadOnly) auf TPPGRadioGroup: Segmente und Kacheln auch fuer Datenbankfelder.</p>
+<p>Eigene Unit (statt PPG.DB.Controls), damit die laufenden Arbeiten an den DB-Controls (Audit Paket 4) unabhaengig bleiben.</p>
+<h2>PPGlow-Eigenschaften</h2>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage: „Classic&quot; (gl&#228;nzend, Office-Stil), „ModernFlat&quot; (flach mit Glow, Standard) oder „Fluent11&quot; (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel &#252;bernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name l&#246;st zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zur&#252;ckgefallen. Nutzung: <code>PPGButton1.Preset := &#39;Fluent11&#39;;</code> F&#252;r alle Controls eines Formulars einheitlich &#252;ber StyleManager.</td></tr>
+<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen.</td></tr>
+<tr><td><code>Appearance</code></td><td><a href="types/TPPGAppearance.html">TPPGAppearance</a></td><td></td><td>Aussehen je Zustand: Farben, Verl&#228;ufe, Rand, Glow und Textfarbe f&#252;r Normal, Hot (Maus dar&#252;ber), Down (gedr&#252;ckt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Gr&#246;&#223;e, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu bef&#252;llt. Nutzung: <code>PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;</code></td></tr>
+<tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>&#220;berg&#228;nge zwischen den Zust&#228;nden (Hover, Dr&#252;cken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen&quot; beachtet wird.</td></tr>
+<tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen f&#252;r Barrierefreiheit).</td></tr>
+<tr><td><code>DataSource</code></td><td><code>TDataSource</code></td><td></td><td>Datenquelle, die der Navigator bewegt und deren Zustand er zeigt.</td></tr>
+<tr><td><code>VisibleButtons</code></td><td><code>TNavButtonSet</code></td><td><code>[nbFirst, nbPrior, nbNext, nbLast, nbInsert, nbDelete, nbEdit, nbPost, nbCancel, nbRefresh]</code></td><td>Sichtbare Kn&#246;pfe wie bei TDBNavigator; passen nicht alle in die Breite, kommen die &#252;brigen ins &#220;berlaufmen&#252;.</td></tr>
+<tr><td><code>Hints</code></td><td><code>TStrings</code></td><td></td><td>Eigene Hinweistexte je Knopf in der Reihenfolge von TNavigateBtn; leere Zeilen behalten den Standardtext.</td></tr>
+<tr><td><code>ConfirmDelete</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>Vor dem L&#246;schen nachfragen (Vorgabe True).</td></tr>
+<tr><td><code>Flat</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Kn&#246;pfe ohne Fl&#228;che, erst beim &#220;berfahren sichtbar (wie TDBNavigator.Flat).</td></tr>
+<tr><td><code>ShowCounter</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>Zeigt „Datensatz 12 von 340“ bzw. „neu“; Screenreader lesen den Z&#228;hler mit.</td></tr>
+<tr><td><code>ShowSearch</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Suchfeld im Navigator; Enter springt zum n&#228;chsten Datensatz, der den Begriff enth&#228;lt (Teiltreffer, ohne Gro&#223;-/Kleinschreibung). Nutzung: <code>Nav.ShowSearch := True; Nav.SearchField := &#39;NAME&#39;;</code></td></tr>
+<tr><td><code>ShowFilter</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Schnellfilter: zeigt nur Datens&#228;tze, deren SearchField den Suchbegriff enth&#228;lt; ein Knopf hebt den Filter auf. Ein vorhandenes OnFilterRecord bleibt wirksam.</td></tr>
+<tr><td><code>SearchField</code></td><td><code>string</code></td><td></td><td>Feld f&#252;r Suchfeld und Schnellfilter; leer = alle Textfelder.</td></tr>
+<tr><td><code>BeforeAction</code></td><td><code>ENavClick</code></td><td></td><td>Vor der Aktion eines Knopfs, wie bei TDBNavigator; mit Abort im Handler unterbleibt sie.</td></tr>
+<tr><td><code>OnClick</code></td><td><code>ENavClick</code></td><td></td><td>Nach der Aktion eines Knopfs; Button nennt den Knopf (gleiche Signatur wie TDBNavigator.OnClick).</td></tr>
+</table>
+<h2>Eigenschaften wie in der VCL</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Align</code></td><td><code>TAlign</code></td><td></td><td>Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder f&#252;llt den Rest (alClient). alNone = freie Position. Nutzung: <code>Panel1.Align := alClient;</code> Abst&#228;nde &#252;ber <code>AlignWithMargins</code> und <code>Margins</code>.</td></tr>
+<tr><td><code>Anchors</code></td><td><code>TAnchors</code></td><td></td><td>Kanten, deren Abstand zum Parent beim Vergr&#246;&#223;ern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: <code>Edit1.Anchors := [akLeft, akTop, akRight];</code></td></tr>
+<tr><td><code>BiDiMode</code></td><td><code>TBiDiMode</code></td><td></td><td>Leserichtung. bdRightToLeft spiegelt Layout und Text f&#252;r Arabisch und Hebr&#228;isch. Nutzung: Meist &#252;ber <code>ParentBiDiMode</code> vom Formular &#252;bernehmen.</td></tr>
+<tr><td><code>Constraints</code></td><td><code>TSizeConstraints</code></td><td></td><td>Mindest- und H&#246;chstma&#223;e (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: <code>Panel1.Constraints.MinWidth := 200;</code></td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt.</td></tr>
+<tr><td><code>Font</code></td><td><code>TFont</code></td><td></td><td>Schrift (Name, Gr&#246;&#223;e, Stil, Farbe). Die Textfarbe der Zust&#228;nde kann Appearance &#252;berschreiben. Nutzung: <code>Label1.Font.Size := 12; Label1.Font.Style := [fsBold];</code></td></tr>
+<tr><td><code>ParentBiDiMode</code></td><td><code>Boolean</code></td><td></td><td>True: BiDiMode wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>ParentFont</code></td><td><code>Boolean</code></td><td></td><td>True: Font wird vom Parent &#252;bernommen; wird automatisch False, sobald Font ge&#228;ndert wird.</td></tr>
+<tr><td><code>ParentShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: ShowHint wird vom Parent &#252;bernommen (meist vom Formular).</td></tr>
+<tr><td><code>PopupMenu</code></td><td><code>TPopupMenu</code></td><td></td><td>Kontextmen&#252; bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu.</td></tr>
+<tr><td><code>ShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: Hint wird als Tooltip angezeigt.</td></tr>
+<tr><td><code>StyleElements</code></td><td><code>TStyleElements</code></td><td></td><td>Welche Teile ein aktiver VCL-Style f&#228;rbt (seFont, seClient, seBorder). Ohne seClient beh&#228;lt ein PPGlow-Control seine eigenen Farben aus Appearance.</td></tr>
+<tr><td><code>TabOrder</code></td><td><code>TTabOrder</code></td><td></td><td>Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst).</td></tr>
+<tr><td><code>TabStop</code></td><td><code>Boolean</code></td><td></td><td>True: Das Control ist mit Tab erreichbar.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein.</td></tr>
+</table>
+<h2>Ereignisse</h2>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnContextPopup</code></td><td><code>TContextPopupEvent</code> <code>(Sender: TObject; MousePos: TPoint; var Handled: Boolean)</code></td><td>Vor dem Kontextmen&#252;; Handled := True unterdr&#252;ckt das Standardmen&#252;.</td></tr>
+<tr><td><code>OnEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus erhalten.</td></tr>
+<tr><td><code>OnExit</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus verloren; guter Ort f&#252;r Pr&#252;fungen der Eingabe.</td></tr>
+<tr><td><code>OnResize</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Nach einer Gr&#246;&#223;en&#228;nderung.</td></tr>
+</table>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBNavigator.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

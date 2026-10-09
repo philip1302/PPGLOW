@@ -143,7 +143,7 @@ function Read-PPGSources([string]$Dir) {
       }
       # in einer Klasse
       if ($t -match '^(?i)(strict\s+)?(private|protected|public|published)\s*$') { $section = $Matches[2].ToLower(); $doc.Clear(); continue }
-      if ($t -match '^(?i)(record|case\b.*\bof)\b' -or $t -match '=\s*record\b') { $depth++; continue }
+      if ($t -match '^(?i)(record|case\b.*\bof)\b' -or $t -match '=\s*record\b' -or $t -match ':\s*(packed\s+)?(array\b.*\bof\s+)?record\s*$') { $depth++; continue }
       if ($t -match '^(?i)end\s*;') {
         if ($depth -gt 0) { $depth--; continue }
         $cur = $null; $doc.Clear(); continue

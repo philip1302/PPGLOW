@@ -29,6 +29,7 @@
   - Binaere DFMs: vorher in der IDE als Text speichern.
   - TTreeView-Knoten (binaer gespeichert) gehen verloren.
   - TToolBar/TToolButton: andere Struktur - nicht automatisch.
+  - TListView: nur gemeldet (TPPGTileView bzw. TPPGGrid von Hand).
 #>
 param(
   [string]$Path = '',
@@ -87,6 +88,18 @@ $ClassMap = [ordered]@{
   'TDBComboBox'       = @('TPPGDBComboBox', 'PPG.DB.Controls')
   'TDBLookupComboBox' = @('TPPGDBLookupComboBox', 'PPG.DB.Lookup')
   'TDBGrid'           = @('TPPGDBGrid', 'PPG.DB.Grid')
+  'TRadioGroup'       = @('TPPGRadioGroup', 'PPG.RadioGroup')
+  'TcxRadioGroup'     = @('TPPGRadioGroup', 'PPG.RadioGroup')
+  'TcxCheckGroup'     = @('TPPGCheckGroup', 'PPG.RadioGroup')
+  'TDBRadioGroup'     = @('TPPGDBRadioGroup', 'PPG.DB.Navigator')
+  'TDBNavigator'      = @('TPPGDBNavigator', 'PPG.DB.Navigator')
+  'TScrollBox'        = @('TPPGScrollBox', 'PPG.Panel')
+}
+
+# Klassen, die nicht automatisch umgestellt werden (API zu verschieden),
+# aber im Bericht mit einem Hinweis erscheinen
+$ReportOnly = @{
+  'TListView' = 'nicht umgestellt - Symbol-/Kachelansicht: TPPGTileView, Detailansicht (vsReport): TPPGGrid (von Hand)'
 }
 
 # Umbenennungen je ALTER Klasse: alter Name -> neuer Name ('' = entfernen)
@@ -290,6 +303,9 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         $report.Add("$File : $name $cls -> $new")
         $changed = $true
         if ($cls -eq 'TTreeView') { $report.Add("$File :   $name - Knoten (Items.NodeData) gehen verloren, im Editor neu anlegen") }
+      }
+      elseif ($ReportOnly.ContainsKey($cls)) {
+        $report.Add("$File : $name $cls $($ReportOnly[$cls])")
       }
       $stack.Add($entry)
       $out.Add($line)

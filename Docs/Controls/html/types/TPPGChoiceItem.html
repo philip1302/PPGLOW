@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGChoiceItem</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGChoiceItem</h1>
+<p>Typ in Unit <code>PPG.RadioGroup</code> - Basis <code>TCollectionItem</code></p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung des Eintrags.</td></tr>
+<tr><td><code>Description</code></td><td><code>string</code></td><td></td><td>Zweite Zeile unter dem Titel (Kacheln) bzw. ged&#228;mpfter Zusatz in der Liste.</td></tr>
+<tr><td><code>Icon</code></td><td><code>Word</code></td><td><code>0</code></td><td>Zeichen der Symbolschrift (Segoe Fluent Icons bzw. MDL2), z. B. $E80F; 0 = kein Symbol. Wird nur gezeigt, wenn ImageIndex -1 ist.</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus Images der Gruppe; hat Vorrang vor Icon. -1 = kein Bild.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Eintrag grau und nicht w&#228;hlbar; die &#252;brigen bleiben bedienbar.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Hinweis, wenn die Maus &#252;ber diesem Eintrag steht (ShowHint der Gruppe muss an sein).</td></tr>
+<tr><td><code>Value</code></td><td><code>string</code></td><td></td><td>Wert f&#252;r Programm und Datenbank; leer = Caption. Bei der CheckGroup ergibt Value der Gruppe die Kommaliste der angehakten Werte.</td></tr>
+<tr><td><code>State</code></td><td><code>TCheckBoxState</code></td><td><code>cbUnchecked</code></td><td>Nur CheckGroup: Zustand des K&#228;stchens (cbUnchecked, cbChecked, cbGrayed mit AllowGrayed).</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGChoiceItems.html">TPPGChoiceItems</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

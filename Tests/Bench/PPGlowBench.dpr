@@ -177,6 +177,7 @@ type
     procedure ListData(Control: TWinControl; Index: Integer; var Data: string);
     procedure GridText(Sender: TObject; ACol, ARow: Integer; var Text: string);
     procedure GroupText(Sender: TObject; ACol, ARow: Integer; var Text: string);
+    procedure TileItem(Sender: TObject; Index: Integer; var Data: TPPGItemData);
   end;
 
   TBenchProc = reference to procedure;
@@ -254,6 +255,13 @@ begin
   else
     Text := IntToStr(ARow);
   end;
+end;
+
+procedure TBenchData.TileItem(Sender: TObject; Index: Integer; var Data: TPPGItemData);
+begin
+  Data.Text := 'Produkt ' + IntToStr(Index);
+  Data.Detail := 'Lager ' + IntToStr(Index mod 17);
+  Data.Group := 'Gruppe ' + IntToStr(Index div 1000);
 end;
 
 function Measure(const Name: string; BudgetMs: Cardinal; const Proc: TBenchProc): Cardinal;
@@ -894,6 +902,63 @@ begin
           end;
         finally
           P.Free;
+        end;
+      end);
+
+    { Phase 18: Kachelansicht }
+    Measure('TileView virtuell 100 000: 300 x scrollen + zeichnen', 3000,
+      procedure
+      var
+        V: TPPGTileView;
+        D: TBenchData;
+        I: Integer;
+      begin
+        D := TBenchData.Create;
+        V := TPPGTileView.Create(Form);
+        try
+          V.Parent := Form;
+          V.SetBounds(0, 0, 800, 600);
+          V.SmoothScrolling := False;
+          V.GroupView := False;
+          V.OnGetItem := D.TileItem;
+          V.OwnerData := True;
+          V.ItemCount := 100000;
+          for I := 0 to 299 do
+          begin
+            V.MakeItemVisible(I * 333);
+            PaintToBitmap(V);
+          end;
+        finally
+          V.Free;
+          D.Free;
+        end;
+      end);
+
+    Measure('TileView virtuell 100 000: 20 x filtern + zeichnen', 3000,
+      procedure
+      var
+        V: TPPGTileView;
+        D: TBenchData;
+        I: Integer;
+      begin
+        D := TBenchData.Create;
+        V := TPPGTileView.Create(Form);
+        try
+          V.Parent := Form;
+          V.SetBounds(0, 0, 800, 600);
+          V.OnGetItem := D.TileItem;
+          V.OwnerData := True;
+          V.ItemCount := 100000;
+          for I := 0 to 19 do
+          begin
+            V.FilterText := IntToStr(I + 10);
+            PaintToBitmap(V);
+          end;
+          V.FilterText := '';
+          PaintToBitmap(V);
+        finally
+          V.Free;
+          D.Free;
         end;
       end);
 

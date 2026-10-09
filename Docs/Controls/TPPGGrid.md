@@ -86,9 +86,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `DefaultDrawing` | `Boolean` | `True` | False: Der Zelltext wird nicht gezeichnet (Hintergrund, Linien und Auswahl schon); den Inhalt zeichnet man in OnDrawCell selbst. |
 | `DefaultRowHeight` | `Integer` | `24` | Höhe der Zeilen ohne eigene Höhe in logischen Pixeln (1..10000). |
 | `FixedCols` | `Integer` | `1` | Anzahl fester Spalten links, die beim waagerechten Scrollen stehen bleiben (0..ColCount-1). |
+| `RowCount` | `Integer` | `5` | Anzahl der Zeilen einschließlich fester Zeilen (1 bis etwa 1 Milliarde); auch große Zahlen sind schnell (virtuell mit OnGetCellText). |
 | `FixedRows` | `Integer` | `1` | Anzahl fester Kopfzeilen oben (0..RowCount-1). |
 | `Options` | `TGridOptions` | `[goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect]` | Verhalten wie bei TStringGrid: goEditing (bearbeiten), goRowSelect (ganze Zeile wählen), goRangeSelect (Bereich wählen), goColSizing/goRowSizing (Breite/Höhe ziehen), goColMoving (Spalten verschieben), goTabs (Tab wechselt Zelle), goVertLine/goHorzLine und goFixedVertLine/goFixedHorzLine (Gitterlinien), goAlwaysShowEditor, goThumbTracking. Nutzung: `Grid1.Options := Grid1.Options + [goEditing, goColSizing];` |
-| `RowCount` | `Integer` | `5` | Anzahl der Zeilen einschließlich fester Zeilen (1 bis etwa 1 Milliarde); auch große Zahlen sind schnell (virtuell mit OnGetCellText). |
 
 ## Eigenschaften wie in der VCL
 

@@ -100,3 +100,24 @@ Statt die `TListView` zu klonen: Deren Detailansicht kann das Grid schon besser.
 - `Tests\PPGlowTests.exe` (0 = grün), `/leaks`, Benchmark für `TPPGTileView` (100 000 virtuell, Scrollen und Filtern)
 - `Demo\PPGlowDemo.exe /selftest datei.txt` sowie Screenshots der neuen Seiten (vergrößert ansehen), Narrator-Stichprobe
 - `migrate.ps1 -SelfTest` mit den neuen Fixtures
+
+## Umsetzung (09.10.2026)
+Freigegeben mit „Nach Mehrwert umbauen“ und „weiter“. Umgesetzt in der Reihenfolge 18a → 18e, je Teil ein Commit.
+
+- **18a** (`PPG.RadioGroup`): `TPPGCustomChoiceGroup` auf der GroupBox-Basis, `TPPGRadioGroup` und `TPPGCheckGroup`. `ChoiceStyle` `csList`/`csSegmented`/`csCards`, `ItemsEx` (`TPPGChoiceItem`: `Caption`, `Description`, `ImageIndex`, `Icon`, `Enabled`, `Hint`, `Value`, `State`), `Items` als Sicht darauf, `Columns = 0` nach Breite, `ShowFrame`, `ValidationState`, `ItemStyle`/`SelectedStyle`, `AllowGrayed`, `Value` (CheckGroup: Kommaliste). Liste spaltenweise wie die VCL, Segmente und Kacheln zeilenweise.
+- **18b** (`PPG.TileView`): `TPPGTileView` mit `tsIcons`/`tsTiles`/`tsCards`, `Zoom` 50–200 (Strg+Rad), `FilterText` mit Hervorhebung, `OnFilterItem`, Gruppen mit klappbarem Kopf, virtuell (`OwnerData`, `ItemCount`, `OnGetItem`), Mehrfachauswahl mit Gummiband, Kästchen, F2/`EditItem`, Tippsuche, `OnGetItemIcon`/`OnGetPicture`, `IPPGTableSource` (xlsx, CSV, HTML, Druck). Auswahl und Ereignisse arbeiten mit Datenindizes, auch bei aktivem Filter.
+- **18c** (`PPG.DB.Navigator`, Paket PPGlowDBR): `TPPGDBNavigator` (DFM wie `TDBNavigator`), Zähler, Suchfeld (`FindText`), Schnellfilter (`SetQuickFilter`, verkettet ein vorhandenes `OnFilterRecord`), Überlaufmenü, Tastenkürzel. `nbApplyUpdates`/`nbCancelUpdates` über `IDataSetCommandSupport`. Dazu `TPPGDBRadioGroup` (`Values`, `ReadOnly`).
+- **18d** (`PPG.Panel`): `TPPGPanel.AutoScroll`, `HorzScrollBar`/`VertScrollBar` (`TPPGPanelScrollBar`: `Visible`, `Range`, `Increment`, `Position`, `Tracking`, `Smooth`), `ScrollTo`, `ScrollInView`, `ContentSize`. `TPPGScrollBox` (AutoScroll an, ohne Beschriftung, `BorderStyle`). Jede Demo-Seite liegt jetzt in einer `TPPGScrollBox` (Schalter `/scroll`).
+- **18e:**
+  - `migrate.ps1`: `TRadioGroup`/`TcxRadioGroup`, `TcxCheckGroup`, `TDBRadioGroup`, `TDBNavigator` (`Kind` entfällt), `TScrollBox`; `TListView` wird nur gemeldet. Neues Fixture `Build\migrate-tests\Unit3`, Selbsttest 6/6.
+  - Doku: Hilfe-Notizen der sechs neuen Controls, Property-Referenz `Docs\Controls\props\70-auswahl-kacheln.txt` (ohne Beschreibung: 0), `Docs\Migration.md`, Architektur. `docs-parser.ps1` erkennt jetzt Felder `array of record` (vorher endete die Klasse dort, Properties fehlten).
+  - Benchmark: Kachelansicht virtuell 100 000, 300 × scrollen und zeichnen 1,3 s, 20 × filtern 1,1 s (Vorgabe je 3 s).
+- **Prüfung:** 61 neue Tests (`Tests\PPG.Tests.Phase18.pas`), insgesamt 1360 Tests Win32 und Win64, Leak-Lauf Win32 und Win64 grün (kein Zuwachs), Demo-Selbsttest 163/163, Benchmark eingehalten, Regel-Prüfer ohne Verstöße.
+
+**Abweichungen:**
+- Auswahlgruppe: kein `ImageName` je Eintrag, dafür `Icon` (Zeichen der Symbolschrift) neben `ImageIndex`.
+- Kachelansicht: kein eigenes Umsortieren per Ziehen, nur `DragMode` der VCL.
+- Scrollen: statt `ScrollWindowEx` werden die Kind-Fenster verschoben (Neuzeichnen per `WM_SETREDRAW` gebündelt). Die Leisten liegen in einem schmalen Streifen am Rand, weil sich echte Kind-Fenster nicht überlagern lassen. Das Mausrad über Kind-Controls kommt über die Weitergabe von Windows an, nicht über `PPG.AppHooks`.
+- Keine Narrator-Stichprobe; die Screenreader-Kinder sind per Test geprüft (`AccessibleChildren`, `AccessibleButtons`).
+
+**Offen:** `ImageName` für Auswahl-Einträge, Umsortieren per Ziehen in der Kachelansicht, XE2-Lauf. Unter XE2 gibt es `nbApplyUpdates`/`nbCancelUpdates` und `IDataSetCommandSupport` noch nicht; der Navigator lässt sie dort über den neuen Schalter `PPG_HAS_DATASETCOMMANDS` (`PPG.inc`, ab XE3) weg. Nicht kompiliert, weil hier nur Delphi 13 vorhanden ist.

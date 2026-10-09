@@ -14,6 +14,8 @@
   {$DEFINE PPG_HAS_STYLEELEMENTS}
   // XE3+: TBasicAction/TContainedAction in der Unit System.Actions
   {$DEFINE PPG_HAS_SYSTEM_ACTIONS}
+  // XE3+: TDBNavigator-Knoepfe nbApplyUpdates/nbCancelUpdates, IDataSetCommandSupport
+  {$DEFINE PPG_HAS_DATASETCOMMANDS}
 {$IFEND}
 
 // 10.3 Rio+: Per-Monitor-V2, TControl.CurrentPPI, TImageCollection

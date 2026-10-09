@@ -1,0 +1,27 @@
+unit Unit3;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.ExtCtrls, Vcl.DBCtrls, Vcl.ComCtrls, Data.DB,
+  PPG.Panel, PPG.RadioGroup, PPG.DB.Navigator;
+
+type
+  TForm3 = class(TForm)
+    Box1: TPPGScrollBox;
+    Kind1: TPPGRadioGroup;
+    Nav1: TPPGDBNavigator;
+    State1: TPPGDBRadioGroup;
+    List1: TListView;
+    procedure Kind1Click(Sender: TObject);
+  end;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm3.Kind1Click(Sender: TObject);
+begin
+end;
+
+end.

@@ -1,0 +1,94 @@
+# Phase 18: Auswahlgruppen, Kachelansicht, DB-Navigator, Scrollen in Containern.
+
+# --- TPPGCustomChoiceGroup (TPPGRadioGroup, TPPGCheckGroup, TPPGDBRadioGroup) ---
+TPPGCustomChoiceGroup.AllowGrayed = Nur CheckGroup: Kästchen kennen auch den dritten Zustand (cbGrayed); ein Klick wechselt dann aus – grau – an.
+TPPGCustomChoiceGroup.ChoiceStyle = Darstellung: csList = Kreise bzw. Kästchen wie die VCL, csSegmented = Umschalter in einer Zeile mit gleitendem Akzent, csCards = Kacheln mit Symbol, Titel und Beschreibung.
+> `Grp.ChoiceStyle := csSegmented; Grp.ShowFrame := False;`
+TPPGCustomChoiceGroup.Columns = Spalten wie bei TRadioGroup; 0 = so viele, wie in die Breite passen (die Einträge brechen um wie Kacheln).
+TPPGCustomChoiceGroup.ItemIndex = Gewählter Eintrag (-1 = keiner). Setzen im Code löst OnChange aus, aber kein OnClick.
+> `if Grp.ItemIndex = 1 then ...`
+TPPGCustomChoiceGroup.Items = Einfache Sicht auf die Einträge als Stringliste, wie TRadioGroup.Items; jede Zeile ist ein Eintrag in ItemsEx.
+> `Grp.Items.Add('Firma');`
+TPPGCustomChoiceGroup.ItemsEx = Einträge mit Beschreibung, Symbol, Bild, Wert, Hinweis und Enabled. Im Designer per Doppelklick.
+> `with Grp.ItemsEx.Add do begin Caption := 'Express'; Description := 'Lieferung morgen'; Icon := $E7C1; end;`
+TPPGCustomChoiceGroup.ItemStyle = Aussehen der Einträge: Fläche, Text, Rand und Schrift (Segmente, Kacheln, Text der Liste).
+TPPGCustomChoiceGroup.OnChange = Die Auswahl hat sich geändert (Benutzer oder Code).
+TPPGCustomChoiceGroup.OnItemClick = Der Benutzer hat einen Eintrag gewählt bzw. umgeschaltet; Index nennt den Eintrag.
+TPPGCustomChoiceGroup.SelectedStyle = Aussehen des gewählten Eintrags; leer = Akzentfarbe des Presets.
+TPPGCustomChoiceGroup.ShowFrame = True: Rahmen und Beschriftungsplakette wie TPPGGroupBox. False: nur die Einträge, z. B. ein Segment-Umschalter in einer Werkzeugleiste.
+TPPGCustomChoiceGroup.ValidationState = Fehler- bzw. Warnzustand wie bei den Eingabefeldern, z. B. rot bei fehlender Pflichtauswahl.
+> `if Grp.ItemIndex < 0 then Grp.ValidationState := vsError;`
+
+# --- TPPGChoiceItem ---
+TPPGChoiceItem.Caption = Beschriftung des Eintrags.
+TPPGChoiceItem.Description = Zweite Zeile unter dem Titel (Kacheln) bzw. gedämpfter Zusatz in der Liste.
+TPPGChoiceItem.Enabled = False: Eintrag grau und nicht wählbar; die übrigen bleiben bedienbar.
+TPPGChoiceItem.Hint = Hinweis, wenn die Maus über diesem Eintrag steht (ShowHint der Gruppe muss an sein).
+TPPGChoiceItem.Icon = Zeichen der Symbolschrift (Segoe Fluent Icons bzw. MDL2), z. B. $E80F; 0 = kein Symbol. Wird nur gezeigt, wenn ImageIndex -1 ist.
+TPPGChoiceItem.ImageIndex = Bild aus Images der Gruppe; hat Vorrang vor Icon. -1 = kein Bild.
+TPPGChoiceItem.State = Nur CheckGroup: Zustand des Kästchens (cbUnchecked, cbChecked, cbGrayed mit AllowGrayed).
+TPPGChoiceItem.Value = Wert für Programm und Datenbank; leer = Caption. Bei der CheckGroup ergibt Value der Gruppe die Kommaliste der angehakten Werte.
+
+# --- TPPGDBRadioGroup ---
+TPPGDBRadioGroup.DataField = Feld, dessen Wert die Auswahl bestimmt.
+TPPGDBRadioGroup.DataSource = Datenquelle des Felds.
+TPPGDBRadioGroup.ReadOnly = True: zeigt den Wert, lässt aber keine Änderung zu.
+TPPGDBRadioGroup.Values = Wert im Feld je Eintrag, in derselben Reihenfolge wie Items; fehlt eine Zeile oder ist sie leer, gilt die Beschriftung (wie TDBRadioGroup).
+> `Grp.Items.CommaText := 'aktiv,inaktiv'; Grp.Values.CommaText := 'A,I';`
+
+# --- TPPGCustomTileView (TPPGTileView) ---
+TPPGCustomTileView.Checkboxes = Kästchen in jeder Kachel zum Abhaken (Checked des Eintrags), unabhängig von der Auswahl.
+TPPGCustomTileView.EmptyText = Text in der Mitte, wenn kein Eintrag da ist oder der Filter nichts findet; leer = „Keine Einträge“.
+TPPGCustomTileView.FilterText = Suchbegriff: zeigt nur Einträge, deren Text oder Detail ihn enthält (ohne Groß-/Kleinschreibung), und hebt ihn hervor. Leer = alle.
+> `Tiles.FilterText := SearchEdit1.Text;`
+TPPGCustomTileView.GroupStyle = Aussehen der Gruppenköpfe: Fläche, Text und Schrift.
+TPPGCustomTileView.GroupView = Einträge nach Item.Group gruppieren, mit Kopfzeile je Gruppe; ein Klick auf den Kopf klappt die Gruppe zu.
+TPPGCustomTileView.ItemCount = Nur mit OwnerData: Zahl der Einträge; die Daten holt OnGetItem erst beim Zeichnen (auch 100 000 und mehr).
+> `Tiles.OwnerData := True; Tiles.ItemCount := Length(Produkte);`
+TPPGCustomTileView.Items = Einträge (Text, Detail, Gruppe, Bild, Plakette). Wird nicht benutzt, wenn OwnerData an ist.
+TPPGCustomTileView.ItemStyle = Aussehen der Kacheln: Fläche, Text, Rand und Schrift.
+TPPGCustomTileView.MultiSelect = Mehrfachauswahl wie im Explorer: Strg+Klick, Umschalt+Klick und Gummiband mit der Maus.
+TPPGCustomTileView.OnChange = Auswahl oder aktueller Eintrag haben sich geändert.
+TPPGCustomTileView.OnFilterItem = Eigene Filterregel zusätzlich zu FilterText: Accept := False blendet den Eintrag aus.
+TPPGCustomTileView.OnGetItem = Mit OwnerData: liefert die Daten des Eintrags Index (Text, Detail, Bild …) in den übergebenen Eintrag.
+> `Data.Text := Produkte[Index].Name; Data.Detail := FormatFloat('0.00 €', Produkte[Index].Preis);`
+TPPGCustomTileView.OnGetItemIcon = Symbol (Zeichen der Symbolschrift) je Eintrag, wenn kein Bild aus Images gezeigt wird.
+TPPGCustomTileView.OnGetPicture = Nur bei tsCards: Vorschaubild je Eintrag (z. B. Foto eines Produkts). Das Bild gehört dem Aufrufer, das Control kopiert es nicht; große Mengen am besten aus einem eigenen Cache liefern.
+TPPGCustomTileView.OnItemClick = Klick auf eine Kachel; Index nennt den Eintrag (Datenindex, auch bei aktivem Filter).
+TPPGCustomTileView.OnItemDblClick = Doppelklick bzw. Enter auf einer Kachel, z. B. zum Öffnen.
+TPPGCustomTileView.OnRename = Nach dem Umbenennen mit F2 bzw. EditItem: Accept := False verwirft den neuen Text.
+TPPGCustomTileView.OwnerData = Virtueller Modus: ItemCount und OnGetItem statt Items.
+TPPGCustomTileView.ReadOnly = True: kein Umbenennen mit F2.
+TPPGCustomTileView.SelectedStyle = Aussehen gewählter Kacheln; leer = Akzentfarbe des Presets.
+TPPGCustomTileView.TileStyle = Ansicht: tsIcons = große Symbole mit Text darunter (Explorer), tsTiles = Symbol links mit Titel und Detailzeilen, tsCards = Karten mit Vorschaubild, Titel, Untertitel und Plakette.
+TPPGCustomTileView.Zoom = Größe in Prozent (50 … 200); Strg+Mausrad ändert sie.
+
+# --- TPPGCustomDBNavigator (TPPGDBNavigator) ---
+TPPGCustomDBNavigator.BeforeAction = Vor der Aktion eines Knopfs, wie bei TDBNavigator; mit Abort im Handler unterbleibt sie.
+TPPGCustomDBNavigator.ConfirmDelete = Vor dem Löschen nachfragen (Vorgabe True).
+TPPGCustomDBNavigator.DataSource = Datenquelle, die der Navigator bewegt und deren Zustand er zeigt.
+TPPGCustomDBNavigator.Flat = Knöpfe ohne Fläche, erst beim Überfahren sichtbar (wie TDBNavigator.Flat).
+TPPGCustomDBNavigator.Hints = Eigene Hinweistexte je Knopf in der Reihenfolge von TNavigateBtn; leere Zeilen behalten den Standardtext.
+TPPGCustomDBNavigator.OnClick = Nach der Aktion eines Knopfs; Button nennt den Knopf (gleiche Signatur wie TDBNavigator.OnClick).
+TPPGCustomDBNavigator.SearchField = Feld für Suchfeld und Schnellfilter; leer = alle Textfelder.
+TPPGCustomDBNavigator.ShowCounter = Zeigt „Datensatz 12 von 340“ bzw. „neu“; Screenreader lesen den Zähler mit.
+TPPGCustomDBNavigator.ShowFilter = Schnellfilter: zeigt nur Datensätze, deren SearchField den Suchbegriff enthält; ein Knopf hebt den Filter auf. Ein vorhandenes OnFilterRecord bleibt wirksam.
+TPPGCustomDBNavigator.ShowSearch = Suchfeld im Navigator; Enter springt zum nächsten Datensatz, der den Begriff enthält (Teiltreffer, ohne Groß-/Kleinschreibung).
+> `Nav.ShowSearch := True; Nav.SearchField := 'NAME';`
+TPPGCustomDBNavigator.VisibleButtons = Sichtbare Knöpfe wie bei TDBNavigator; passen nicht alle in die Breite, kommen die übrigen ins Überlaufmenü.
+
+# --- TPPGCustomPanel (Scrollen) ---
+TPPGCustomPanel.AutoScroll = Scrollleisten erscheinen, sobald Kind-Controls über den Rand hinausragen, wie bei TScrollBox. Das Mausrad scrollt auch über Kind-Controls, Tab zu einem verdeckten Feld holt es ins Bild.
+> `Panel1.AutoScroll := True;`
+TPPGCustomPanel.HorzScrollBar = Waagerechte Scrollleiste: Sichtbarkeit, Range, Schrittweite, Position, weiches Scrollen.
+TPPGCustomPanel.VertScrollBar = Senkrechte Scrollleiste: Sichtbarkeit, Range, Schrittweite, Position, weiches Scrollen.
+> `Box.VertScrollBar.Increment := 24;`
+TPPGScrollBox.BorderStyle = bsSingle = dünner Rahmen wie TScrollBox (Vorgabe), bsNone = ohne Rahmen.
+
+# --- TPPGPanelScrollBar ---
+TPPGPanelScrollBar.Increment = Schritt in Pixeln für Pfeiltasten und einen Klick auf die Leiste (Mausrad: 48 logische Pixel je Rastung).
+TPPGPanelScrollBar.Position = Aktuelle Scrollposition in Pixeln (0 = oben bzw. links); Setzen verschiebt den Inhalt.
+TPPGPanelScrollBar.Range = Inhaltsgröße in Pixeln; mit AutoScroll aus den Kind-Controls berechnet, sonst fest (wie TControlScrollBar.Range).
+TPPGPanelScrollBar.Smooth = Weiches Scrollen beim Mausrad und Klick in die Spur.
+TPPGPanelScrollBar.Tracking = Der Inhalt folgt dem Daumen schon beim Ziehen (sonst erst beim Loslassen).
+TPPGPanelScrollBar.Visible = False: diese Richtung nie scrollen, auch wenn Inhalt herausragt.

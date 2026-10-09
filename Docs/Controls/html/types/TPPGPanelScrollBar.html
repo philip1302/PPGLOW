@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGPanelScrollBar</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGPanelScrollBar</h1>
+<p>Typ in Unit <code>PPG.Panel</code> - Basis <code>TPersistent</code></p>
+<p>Einstellungen einer Leiste (DFM-kompatibel zu TControlScrollBar).</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: diese Richtung nie scrollen, auch wenn Inhalt herausragt.</td></tr>
+<tr><td><code>Range</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Inhaltsgr&#246;&#223;e in Pixeln; mit AutoScroll aus den Kind-Controls berechnet, sonst fest (wie TControlScrollBar.Range).</td></tr>
+<tr><td><code>Increment</code></td><td><code>Integer</code></td><td><code>8</code></td><td>Schritt in Pixeln f&#252;r Pfeiltasten und einen Klick auf die Leiste (Mausrad: 48 logische Pixel je Rastung).</td></tr>
+<tr><td><code>Position</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Aktuelle Scrollposition in Pixeln (0 = oben bzw. links); Setzen verschiebt den Inhalt.</td></tr>
+<tr><td><code>Tracking</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Der Inhalt folgt dem Daumen schon beim Ziehen (sonst erst beim Loslassen).</td></tr>
+<tr><td><code>Smooth</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>Weiches Scrollen beim Mausrad und Klick in die Spur.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="../TPPGPanel.html">TPPGPanel</a>, <a href="../TPPGScrollBox.html">TPPGScrollBox</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

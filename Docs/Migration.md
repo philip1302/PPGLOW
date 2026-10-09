@@ -63,6 +63,13 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TDBComboBox | | TPPGDBComboBox | PPG.DB.Controls |
 | TDBLookupComboBox | | TPPGDBLookupComboBox | PPG.DB.Lookup |
 | TDBGrid | | TPPGDBGrid | PPG.DB.Grid |
+| TRadioGroup | TcxRadioGroup (DevExpress) | TPPGRadioGroup | PPG.RadioGroup |
+| | TcxCheckGroup (DevExpress) | TPPGCheckGroup | PPG.RadioGroup |
+| TDBRadioGroup | | TPPGDBRadioGroup | PPG.DB.Navigator |
+| TDBNavigator | | TPPGDBNavigator | PPG.DB.Navigator |
+| TScrollBox | | TPPGScrollBox | PPG.Panel |
+
+Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTileView`, Detailansicht `vsReport` → `TPPGGrid`, beides von Hand).
 
 ## Umbenennungen und Sonderfälle
 
@@ -82,6 +89,7 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TButton | `Style = bsPushButton/bsSplitButton` | `Style = pbsPushButton/pbsSplitButton` |
 | TButton | `Style = bsCommandLink` | entfernt (gemeldet) |
 | TDBGrid | `Options`: `dgAlwaysShowEditor`, `dgAlwaysShowSelection`, `dgThumbTracking`, `dgMultiSelect` | bleiben stehen, wirken aber nicht (gemeldet) |
+| TDBNavigator | `Kind` | entfernt (der Navigator ist immer waagerecht) |
 
 ## Abweichende Vorgaben
 
@@ -105,6 +113,7 @@ Die Splitter-Breite (VCL 3, PPGlow 6) bleibt, weil die IDE `Width` immer speiche
 - **Bilder:** `Glyph` gibt es nicht; eine ImageList (bzw. ab 10.4 `TVirtualImageList`) zuweisen und `ImageIndex`/`ImageName` setzen.
 - **TTreeView-Knoten:** sind in der DFM binär gespeichert und gehen verloren; im Designer über „Edit nodes...“ neu anlegen (oder im Code füllen).
 - **TToolBar/TToolButton:** andere Struktur (Einträge statt Kind-Buttons) – `TPPGToolBar` von Hand aufbauen.
+- **TListView:** API zu verschieden für eine automatische Umstellung. Symbol- und Kachelansichten werden zu `TPPGTileView` (Einträge über `Items` oder virtuell über `OnGetItem`), Detailansichten zu `TPPGGrid`.
 - **TMS-Erscheinungsbild:** Die `Appearance`-Werte von TMS passen nicht zu PPGlow und werden entfernt; das Preset (Standard ModernFlat) bestimmt die Optik. Ein `TPPGStyleManager` auf dem Formular stellt alle Controls auf einmal um („Apply preset to form...“).
 - **TAdvStringGrid:** Nur die Grundfunktionen (Zellen, feste Zeilen/Spalten, Sortieren, Filter, Editoren) sind abgedeckt; TMS-spezifische Properties werden entfernt.
 - **Code:** Aufrufe, die es nur bei der alten Klasse gibt (z. B. `TBitBtn.Glyph.LoadFromFile`), meldet der Compiler.
@@ -115,5 +124,7 @@ Die Splitter-Breite (VCL 3, PPGlow 6) bleibt, weil die IDE `Width` immer speiche
 - `ItemHeight` ist bei Combo, Liste und Baum eine **Mindesthöhe** (alte DFMs speichern 13).
 - Grid: `Row`/`Cells[]` meinen Datenzeilen, `Selection` sichtbare Zeilen (Sortierung, Filter).
 - DB-Controls: ungültige Werte erscheinen als Fehlerzustand am Feld statt als Dialog.
+- `TPPGDBNavigator` zeigt als Vorgabe den Zähler „Datensatz 12 von 340“ (`ShowCounter = True`); wird es eng, wandern Knöpfe ins Überlaufmenü. Wer den alten Platz braucht, setzt `ShowCounter = False`.
+- `TPPGRadioGroup` löst `OnClick` nur bei einer Auswahl durch den Benutzer aus, nicht beim Setzen von `ItemIndex` im Code (wie bei den übrigen PPGlow-Controls).
 
 Die vollständige Liste je Control steht in der Hilfe: `Docs\Controls\README.md`.

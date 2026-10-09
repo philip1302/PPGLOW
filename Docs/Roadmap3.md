@@ -26,7 +26,7 @@ Nicht geplant (bewusst): Gantt, Pivot-Grid, Docking, RichEdit/HTML-Editor, Code-
 - Prüfung: Pixeltests auf der Druckvorschau und Vergleich mit dem Grid-Screenshot.
 
 ## Phase 18 – Mehrwert statt Klone
-Detailplan: `Docs\Phase18-Plan.md`. Zurückgestellt bis zu einer Inventur: `TPPGDBText`, `TPPGDBListBox`, `TPPGDBLookupListBox`, `TPPGDBSpinEdit`, `TPPGDBToggleSwitch` und eine 1:1-`TPPGListView` (reine Nachbauten ohne Mehrwert).
+Detailplan: `Docs\Phase18-Plan.md`. **Fertig (09.10.2026):** `TPPGRadioGroup`/`TPPGCheckGroup` (Segmente, Kacheln), `TPPGTileView`, `TPPGDBNavigator` mit Zähler/Suche/Filter, `TPPGDBRadioGroup`, `TPPGPanel.AutoScroll` und `TPPGScrollBox`, Migration dazu. Zurückgestellt bis zu einer Inventur: `TPPGDBText`, `TPPGDBListBox`, `TPPGDBLookupListBox`, `TPPGDBSpinEdit`, `TPPGDBToggleSwitch` und eine 1:1-`TPPGListView` (reine Nachbauten ohne Mehrwert).
 
 ## Phase 19 – Formular-Produktivität
 - **`TPPGValidator`** (nicht sichtbar): Regeln je Control (Pflicht, Bereich, Länge, Muster, eigene per Ereignis), nutzt den vorhandenen `ValidationState` der Felder, Fehlertext am Feld, Sammelliste, `Validate: Boolean`, springt zum ersten Fehler, optional OK-Button sperren, Prüfung beim Verlassen oder erst beim Speichern.

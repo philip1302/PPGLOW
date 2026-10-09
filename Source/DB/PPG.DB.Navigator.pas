@@ -272,7 +272,9 @@ begin
     nbPost: Result := PPGStr(@SPPGNavPost);
     nbCancel: Result := PPGStr(@SPPGNavCancel);
     nbRefresh: Result := PPGStr(@SPPGNavRefresh);
+    {$IFDEF PPG_HAS_DATASETCOMMANDS}
     nbApplyUpdates: Result := PPGStr(@SPPGNavApply);
+    {$ENDIF}
   else
     Result := PPGStr(@SPPGNavCancelUpdates);
   end;
@@ -476,7 +478,9 @@ end;
 function TPPGCustomDBNavigator.ButtonEnabled(Btn: TNavigateBtn): Boolean;
 var
   DS: TDataSet;
+  {$IFDEF PPG_HAS_DATASETCOMMANDS}
   Cmd: IDataSetCommandSupport;
+  {$ENDIF}
   Browse, CanMod, Empty: Boolean;
 begin
   Result := False;
@@ -495,10 +499,12 @@ begin
     nbEdit: Result := CanMod and Browse and not Empty;
     nbPost, nbCancel: Result := CanMod and not Browse;
     nbRefresh: Result := Browse;
+    {$IFDEF PPG_HAS_DATASETCOMMANDS}
     nbApplyUpdates: Result := Supports(DS, IDataSetCommandSupport, Cmd) and
       (dcEnabled in Cmd.GetCommandStates(sApplyUpdatesDataSetCommand));
     nbCancelUpdates: Result := Supports(DS, IDataSetCommandSupport, Cmd) and
       (dcEnabled in Cmd.GetCommandStates(sCancelUpdatesDataSetCommand));
+    {$ENDIF}
   end;
 end;
 
@@ -760,7 +766,9 @@ end;
 procedure TPPGCustomDBNavigator.BtnClick(Index: TNavigateBtn);
 var
   DS: TDataSet;
+  {$IFDEF PPG_HAS_DATASETCOMMANDS}
   Cmd: IDataSetCommandSupport;
+  {$ENDIF}
 begin
   if not FDataLink.Active or not ButtonEnabled(Index) then
     Exit;
@@ -781,6 +789,7 @@ begin
       if not FConfirmDelete or (PPGMessageDlg(PPGStr(@SPPGNavDeleteConfirm), mtConfirmation,
         [mbYes, mbNo], 0, mbNo) = mrYes) then
         DS.Delete;
+    {$IFDEF PPG_HAS_DATASETCOMMANDS}
     // Wie TDBNavigator ueber IDataSetCommandSupport (FireDAC, ClientDataSet)
     nbApplyUpdates:
       if Supports(DS, IDataSetCommandSupport, Cmd) then
@@ -788,6 +797,7 @@ begin
     nbCancelUpdates:
       if Supports(DS, IDataSetCommandSupport, Cmd) then
         Cmd.ExecuteCommand(sCancelUpdatesDataSetCommand, [-1]);
+    {$ENDIF}
   end;
   if Assigned(FOnNavClick) then
     FOnNavClick(Self, Index);

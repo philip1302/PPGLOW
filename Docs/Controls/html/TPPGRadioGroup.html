@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGRadioGroup</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGRadioGroup</h1>
+<p>Palette <strong>PPGlow</strong> - Unit <code>PPG.RadioGroup</code> - Basis <code>TPPGCustomChoiceGroup</code></p>
+<p><strong>Vorbild:</strong> TRadioGroup (DFM gleich: <code>Items</code>, <code>ItemIndex</code>, <code>Columns</code>, <code>Caption</code>, <code>OnClick</code>)</p>
+<h2>Unterschiede und Hinweise</h2>
+<ul>
+<li>Keine Kind-Buttons: Die Eintr&#228;ge zeichnet die Gruppe selbst. <code>Buttons[]</code> der VCL gibt es nicht; Bild, Beschreibung und Sperre je Eintrag stehen in <code>ItemsEx</code>.</li>
+<li><code>ChoiceStyle</code>: <code>csList</code> (Kreise wie die VCL), <code>csSegmented</code> (Umschalter in einer Zeile, der Akzent gleitet zum neuen Eintrag), <code>csCards</code> (Kacheln mit Symbol, Titel und Beschreibung).</li>
+<li><code>Columns = 0</code>: so viele Spalten, wie in die Breite passen.</li>
+<li><code>ItemIndex</code> im Code setzen l&#246;st <code>OnChange</code> aus, aber kein <code>OnClick</code> (wie bei den &#252;brigen PPGlow-Controls).</li>
+<li>Tastatur wie die VCL: Pfeile wechseln innerhalb der Gruppe, Tab verl&#228;sst sie. UI Automation: Gruppe mit Auswahl-Muster, Eintr&#228;ge als Optionsfelder.</li>
+<li><code>ValidationState</code> markiert eine fehlende Pflichtauswahl wie bei den Eingabefeldern.</li>
+</ul>
+<h2>Beispiel</h2>
+<pre><code>PPGRadioGroup1.ChoiceStyle := csCards;
+PPGRadioGroup1.Columns := 0;
+with PPGRadioGroup1.ItemsEx.Add do
+begin
+  Caption := &#39;Standard&#39;;
+  Description := &#39;3 bis 5 Werktage&#39;;
+  Icon := $E7BF;
+end;
+</code></pre>
+<h2>Verhalten (aus dem Quelltext)</h2>
+<p>TPPGRadioGroup und TPPGCheckGroup - Auswahlgruppen (Phase 18a).</p>
+<p>Mehrwert gegenueber TRadioGroup/TcxRadioGroup:</p>
+<ul>
+<li>ChoiceStyle: csList (Kreise bzw. Kaestchen wie die VCL), csSegmented (Umschalter in einer Zeile mit gleitendem Akzent) und csCards (Kacheln mit Symbol, Titel und Beschreibung).</li>
+<li>ItemsEx: je Eintrag Beschreibung, Symbol (Zeichen der Symbolschrift oder ImageIndex), Enabled, Hint und Value. Items bleibt als einfache Sicht (TStrings) und laedt alte DFMs von TRadioGroup unveraendert.</li>
+<li>Columns = 0 passt die Spalten der Breite an.</li>
+<li>ValidationState wie bei den Feldern (Pflichtauswahl rot markieren).</li>
+</ul>
+<p>Aufbau:</p>
+<ul>
+<li>Basis TPPGCustomGroupBox (Rahmen und Plakette); ein Fenster, Eintraege selbst gezeichnet (keine Fensterflut). ShowFrame = False ohne Rahmen.</li>
+<li>Gespeichert wird ItemsEx nur, wenn ein Eintrag mehr als die Beschriftung hat, sonst Items.Strings (wie TRadioGroup).</li>
+<li>csList ordnet wie TRadioGroup spaltenweise (erst nach unten), die Zeilen teilen sich die Hoehe. Kacheln, Segmente und Columns = 0 ordnen zeilenweise.</li>
+<li>Ereignisse: Anwender waehlt -&gt; OnClick, dann OnChange. Code setzt ItemIndex bzw. Checked[] ohne Ereignis (PPGlow-Regel, wie CheckBox).</li>
+<li>Tastatur: Pfeile wechseln (RadioGroup: Auswahl folgt), Leertaste kreuzt an (CheckGroup), Pos1/Ende, Accelerator &amp; in den Eintraegen.</li>
+<li>Screenreader: jeder Eintrag ist ein Kind (Optionsfeld bzw. Kontrollkaestchen).</li>
+</ul>
+<h2>PPGlow-Eigenschaften</h2>
+<p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage: „Classic&quot; (gl&#228;nzend, Office-Stil), „ModernFlat&quot; (flach mit Glow, Standard) oder „Fluent11&quot; (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel &#252;bernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name l&#246;st zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zur&#252;ckgefallen. Nutzung: <code>PPGButton1.Preset := &#39;Fluent11&#39;;</code> F&#252;r alle Controls eines Formulars einheitlich &#252;ber StyleManager.</td></tr>
+<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen.</td></tr>
+<tr><td><code>Appearance</code></td><td><a href="types/TPPGAppearance.html">TPPGAppearance</a></td><td></td><td>Aussehen je Zustand: Farben, Verl&#228;ufe, Rand, Glow und Textfarbe f&#252;r Normal, Hot (Maus dar&#252;ber), Down (gedr&#252;ckt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Gr&#246;&#223;e, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu bef&#252;llt. Nutzung: <code>PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;</code></td></tr>
+<tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>&#220;berg&#228;nge zwischen den Zust&#228;nden (Hover, Dr&#252;cken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen&quot; beachtet wird.</td></tr>
+<tr><td><code>HighlightFocus</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Liegt der Fokus auf einem Kind-Control, leuchtet die Plakette in der Fokusfarbe und zeigt so, in welcher Gruppe gerade gearbeitet wird.</td></tr>
+<tr><td><code>CaptionStyle</code></td><td><a href="types/TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Aussehen der Beschriftungs-Plakette auf der Rahmenlinie: Fl&#228;che, Rand, Textfarbe und Schrift; clDefault = vom Preset. Nutzung: <code>PPGGroupBox1.CaptionStyle.Color := clNavy; PPGGroupBox1.CaptionStyle.TextColor := clWhite;</code></td></tr>
+<tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen f&#252;r Barrierefreiheit).</td></tr>
+<tr><td><code>Items</code></td><td><code>TStrings</code></td><td></td><td>Einfache Sicht auf die Eintr&#228;ge als Stringliste, wie TRadioGroup.Items; jede Zeile ist ein Eintrag in ItemsEx. Nutzung: <code>Grp.Items.Add(&#39;Firma&#39;);</code></td></tr>
+<tr><td><code>ItemsEx</code></td><td><a href="types/TPPGChoiceItems.html">TPPGChoiceItems</a></td><td></td><td>Eintr&#228;ge mit Beschreibung, Symbol, Bild, Wert, Hinweis und Enabled. Im Designer per Doppelklick. Nutzung: <code>with Grp.ItemsEx.Add do begin Caption := &#39;Express&#39;; Description := &#39;Lieferung morgen&#39;; Icon := $E7C1; end;</code></td></tr>
+<tr><td><code>ItemIndex</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>Gew&#228;hlter Eintrag (-1 = keiner). Setzen im Code l&#246;st OnChange aus, aber kein OnClick. Nutzung: <code>if Grp.ItemIndex = 1 then ...</code></td></tr>
+<tr><td><code>Columns</code></td><td><code>Integer</code></td><td><code>1</code></td><td>Spalten wie bei TRadioGroup; 0 = so viele, wie in die Breite passen (die Eintr&#228;ge brechen um wie Kacheln).</td></tr>
+<tr><td><code>ChoiceStyle</code></td><td><code>TPPGChoiceStyle</code></td><td><code>csList</code></td><td>Darstellung: csList = Kreise bzw. K&#228;stchen wie die VCL, csSegmented = Umschalter in einer Zeile mit gleitendem Akzent, csCards = Kacheln mit Symbol, Titel und Beschreibung. Werte: <code>csList</code>, <code>csSegmented</code>, <code>csCards</code>. Nutzung: <code>Grp.ChoiceStyle := csSegmented; Grp.ShowFrame := False;</code></td></tr>
+<tr><td><code>ShowFrame</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Rahmen und Beschriftungsplakette wie TPPGGroupBox. False: nur die Eintr&#228;ge, z. B. ein Segment-Umschalter in einer Werkzeugleiste.</td></tr>
+<tr><td><code>ValidationState</code></td><td><code>TPPGValidationState</code></td><td><code>pvsNone</code></td><td>Fehler- bzw. Warnzustand wie bei den Eingabefeldern, z. B. rot bei fehlender Pflichtauswahl. Werte: <code>pvsNone</code>, <code>pvsValid</code>, <code>pvsWarning</code>, <code>pvsError</code>. Nutzung: <code>if Grp.ItemIndex &lt; 0 then Grp.ValidationState := vsError;</code></td></tr>
+<tr><td><code>Images</code></td><td><code>TCustomImageList</code></td><td></td><td>Bildliste f&#252;r ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten).</td></tr>
+<tr><td><code>ItemStyle</code></td><td><a href="types/TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Aussehen der Eintr&#228;ge: Fl&#228;che, Text, Rand und Schrift (Segmente, Kacheln, Text der Liste).</td></tr>
+<tr><td><code>SelectedStyle</code></td><td><a href="types/TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Aussehen des gew&#228;hlten Eintrags; leer = Akzentfarbe des Presets.</td></tr>
+</table>
+<h2>Eigenschaften wie in der VCL</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Align</code></td><td><code>TAlign</code></td><td></td><td>Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder f&#252;llt den Rest (alClient). alNone = freie Position. Nutzung: <code>Panel1.Align := alClient;</code> Abst&#228;nde &#252;ber <code>AlignWithMargins</code> und <code>Margins</code>.</td></tr>
+<tr><td><code>Anchors</code></td><td><code>TAnchors</code></td><td></td><td>Kanten, deren Abstand zum Parent beim Vergr&#246;&#223;ern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: <code>Edit1.Anchors := [akLeft, akTop, akRight];</code></td></tr>
+<tr><td><code>BiDiMode</code></td><td><code>TBiDiMode</code></td><td></td><td>Leserichtung. bdRightToLeft spiegelt Layout und Text f&#252;r Arabisch und Hebr&#228;isch. Nutzung: Meist &#252;ber <code>ParentBiDiMode</code> vom Formular &#252;bernehmen.</td></tr>
+<tr><td><code>Caption</code></td><td><code>TCaption</code></td><td></td><td>Beschriftung. Ein &amp; vor einem Buchstaben macht ihn zur Zugriffstaste (Alt+Buchstabe). Nutzung: <code>Button1.Caption := &#39;&amp;Speichern&#39;;</code></td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td></td><td>Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Fl&#228;chenfarben der Zust&#228;nde stehen in Appearance. Nutzung: <code>clWindow</code>, <code>clBtnFace</code> oder eine RGB-Farbe wie <code>$00F0F0F0</code>.</td></tr>
+<tr><td><code>Constraints</code></td><td><code>TSizeConstraints</code></td><td></td><td>Mindest- und H&#246;chstma&#223;e (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: <code>Panel1.Constraints.MinWidth := 200;</code></td></tr>
+<tr><td><code>DragCursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger w&#228;hrend das Control gezogen wird (Drag &amp; Drop).</td></tr>
+<tr><td><code>DragKind</code></td><td><code>TDragKind</code></td><td></td><td>dkDrag = Drag &amp; Drop, dkDock = Andocken beim Ziehen.</td></tr>
+<tr><td><code>DragMode</code></td><td><code>TDragMode</code></td><td></td><td>dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt.</td></tr>
+<tr><td><code>Font</code></td><td><code>TFont</code></td><td></td><td>Schrift (Name, Gr&#246;&#223;e, Stil, Farbe). Die Textfarbe der Zust&#228;nde kann Appearance &#252;berschreiben. Nutzung: <code>Label1.Font.Size := 12; Label1.Font.Style := [fsBold];</code></td></tr>
+<tr><td><code>ParentBackground</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Der Hintergrund des Parents scheint durch (transparente Wirkung).</td></tr>
+<tr><td><code>ParentBiDiMode</code></td><td><code>Boolean</code></td><td></td><td>True: BiDiMode wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>ParentColor</code></td><td><code>Boolean</code></td><td></td><td>True: Color wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>ParentFont</code></td><td><code>Boolean</code></td><td></td><td>True: Font wird vom Parent &#252;bernommen; wird automatisch False, sobald Font ge&#228;ndert wird.</td></tr>
+<tr><td><code>ParentShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: ShowHint wird vom Parent &#252;bernommen (meist vom Formular).</td></tr>
+<tr><td><code>PopupMenu</code></td><td><code>TPopupMenu</code></td><td></td><td>Kontextmen&#252; bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu.</td></tr>
+<tr><td><code>ShowHint</code></td><td><code>Boolean</code></td><td></td><td>True: Hint wird als Tooltip angezeigt.</td></tr>
+<tr><td><code>StyleElements</code></td><td><code>TStyleElements</code></td><td></td><td>Welche Teile ein aktiver VCL-Style f&#228;rbt (seFont, seClient, seBorder). Ohne seClient beh&#228;lt ein PPGlow-Control seine eigenen Farben aus Appearance.</td></tr>
+<tr><td><code>TabOrder</code></td><td><code>TTabOrder</code></td><td></td><td>Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst).</td></tr>
+<tr><td><code>TabStop</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Das Control ist mit Tab erreichbar.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein.</td></tr>
+<tr><td><code>Touch</code></td><td><code>TTouchManager</code></td><td></td><td>Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten.</td></tr>
+</table>
+<h2>Ereignisse</h2>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnGesture</code></td><td><code>TGestureEvent</code> <code>(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)</code></td><td>Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: <code>if EventInfo.GestureID = sgiLeft then NaechsteSeite;</code></td></tr>
+<tr><td><code>OnChange</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Auswahl hat sich ge&#228;ndert (Benutzer oder Code).</td></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Ausl&#246;sen per Zugriffstaste.</td></tr>
+<tr><td><code>OnContextPopup</code></td><td><code>TContextPopupEvent</code> <code>(Sender: TObject; MousePos: TPoint; var Handled: Boolean)</code></td><td>Vor dem Kontextmen&#252;; Handled := True unterdr&#252;ckt das Standardmen&#252;.</td></tr>
+<tr><td><code>OnDragDrop</code></td><td><code>TDragDropEvent</code> <code>(Sender, Source: TObject; X, Y: Integer)</code></td><td>Ein gezogenes Objekt wurde &#252;ber dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control.</td></tr>
+<tr><td><code>OnDragOver</code></td><td><code>TDragOverEvent</code> <code>(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)</code></td><td>Ein Objekt wird &#252;ber dem Control gezogen; Accept := True erlaubt das Ablegen.</td></tr>
+<tr><td><code>OnEndDock</code></td><td><code>TEndDragEvent</code> <code>(Sender, Target: TObject; X, Y: Integer)</code></td><td>Andock-Vorgang dieses Controls beendet.</td></tr>
+<tr><td><code>OnEndDrag</code></td><td><code>TEndDragEvent</code> <code>(Sender, Target: TObject; X, Y: Integer)</code></td><td>Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch).</td></tr>
+<tr><td><code>OnEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus erhalten.</td></tr>
+<tr><td><code>OnExit</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus verloren; guter Ort f&#252;r Pr&#252;fungen der Eingabe.</td></tr>
+<tr><td><code>OnMouseEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus ist in das Control hineinbewegt worden.</td></tr>
+<tr><td><code>OnMouseLeave</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus hat das Control verlassen.</td></tr>
+<tr><td><code>OnStartDock</code></td><td><code>TStartDockEvent</code> <code>(Sender: TObject; var DragObject: TDragDockObject)</code></td><td>Beginn des Andockens dieses Controls.</td></tr>
+<tr><td><code>OnStartDrag</code></td><td><code>TStartDragEvent</code> <code>(Sender: TObject; var DragObject: TDragObject)</code></td><td>Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden.</td></tr>
+</table>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGRadioGroup.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

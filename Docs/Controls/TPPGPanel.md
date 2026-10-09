@@ -24,6 +24,17 @@ VCL selbst bei BevelKind <> bkNone). Color bestimmt nur den Hintergrund
 hinter den abgerundeten Ecken (ParentBackground = False); die Flaeche kommt
 aus Appearance.Normal.
 
+Scrollen (Phase 18d): AutoScroll, HorzScrollBar und VertScrollBar wie
+TScrollingWinControl. Gescrollt werden echte Kind-Fenster (Lage wird
+verschoben, Neuzeichnen per WM_SETREDRAW gebuendelt), Rahmen und
+Beschriftung des Panels bleiben stehen. Die Leisten liegen in einem
+schmalen Streifen am Rand (Kind-Fenster lassen sich nicht ueberlagern) und
+kommen vom Scroll-Renderer des Presets wie bei Liste und Grid. Mausrad (auch
+ueber Kind-Controls, die es nicht nutzen: Windows reicht es weiter),
+weiches Scrollen, Tab zu einem verdeckten Kind holt es ins Bild
+(ScrollInView). TPPGScrollBox ist ein Panel mit AutoScroll = True und
+BorderStyle wie TScrollBox.
+
 ## PPGlow-Eigenschaften
 
 Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
@@ -40,6 +51,10 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `RoundedCorners` | `TPPGCorners` | `[pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft]` | Welche Ecken gerundet sind; die übrigen werden eckig. Für Button-Gruppen und Segment-Schalter: linker Button [pcTopLeft, pcBottomLeft], mittlere [], rechter [pcTopRight, pcBottomRight]. Menge aus: `pcTopLeft`, `pcTopRight`, `pcBottomRight`, `pcBottomLeft`. Nutzung: `PPGButton2.RoundedCorners := [];` |
 | `Shadow` | [TPPGShadow](types/TPPGShadow.md) |  | Schatten unter der Fläche (Elevation): Größe, Versatz, Farbe, Deckkraft. Die Fläche wird um den Platz für den Schatten kleiner; im Hochkontrast entfällt er. Nutzung: `PPGButton1.Shadow.Size := 6; PPGButton1.Shadow.Opacity := 80;` |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
+| `AutoScroll` | `Boolean` | `False` | Scrollleisten erscheinen, sobald Kind-Controls über den Rand hinausragen, wie bei TScrollBox. Das Mausrad scrollt auch über Kind-Controls, Tab zu einem verdeckten Feld holt es ins Bild. Nutzung: `Panel1.AutoScroll := True;` |
+| `HorzScrollBar` | [TPPGPanelScrollBar](types/TPPGPanelScrollBar.md) |  | Waagerechte Scrollleiste: Sichtbarkeit, Range, Schrittweite, Position, weiches Scrollen. |
+| `VertScrollBar` | [TPPGPanelScrollBar](types/TPPGPanelScrollBar.md) |  | Senkrechte Scrollleiste: Sichtbarkeit, Range, Schrittweite, Position, weiches Scrollen. Nutzung: `Box.VertScrollBar.Increment := 24;` |
+| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
 
 ## Eigenschaften wie in der VCL
 
@@ -102,6 +117,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. |
 | `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
 | `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
 | `OnResize` | `TNotifyEvent` `(Sender: TObject)` | Nach einer Größenänderung. |
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |

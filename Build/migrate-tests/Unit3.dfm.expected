@@ -1,0 +1,56 @@
+object Form3: TForm3
+  Left = 0
+  Top = 0
+  Caption = 'Kunden'
+  object Box1: TPPGScrollBox
+    Left = 8
+    Top = 8
+    Width = 300
+    Height = 200
+    VertScrollBar.Increment = 20
+    TabOrder = 0
+    object Kind1: TPPGRadioGroup
+      Left = 8
+      Top = 8
+      Width = 200
+      Height = 80
+      Caption = 'Art'
+      Columns = 2
+      ItemIndex = 0
+      Items.Strings = (
+        'Privat'
+        'Firma')
+      TabOrder = 0
+      OnClick = Kind1Click
+    end
+  end
+  object Nav1: TPPGDBNavigator
+    Left = 8
+    Top = 220
+    Width = 240
+    Height = 25
+    DataSource = DS1
+    VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast]
+    TabOrder = 1
+  end
+  object State1: TPPGDBRadioGroup
+    Left = 8
+    Top = 250
+    Width = 200
+    Height = 60
+    DataField = 'STATUS'
+    DataSource = DS1
+    Items.Strings = (
+      'aktiv'
+      'inaktiv')
+    Values.Strings = (
+      'A'
+      'I')
+    TabOrder = 2
+  end
+  object List1: TListView
+    Left = 8
+    Top = 320
+    ViewStyle = vsIcon
+  end
+end

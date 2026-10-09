@@ -80,9 +80,9 @@ PPGExportXlsx(Grid1 as IPPGTableSource, &#39;Liste.xlsx&#39;);
 <tr><td><code>DefaultDrawing</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Der Zelltext wird nicht gezeichnet (Hintergrund, Linien und Auswahl schon); den Inhalt zeichnet man in OnDrawCell selbst.</td></tr>
 <tr><td><code>DefaultRowHeight</code></td><td><code>Integer</code></td><td><code>24</code></td><td>H&#246;he der Zeilen ohne eigene H&#246;he in logischen Pixeln (1..10000).</td></tr>
 <tr><td><code>FixedCols</code></td><td><code>Integer</code></td><td><code>1</code></td><td>Anzahl fester Spalten links, die beim waagerechten Scrollen stehen bleiben (0..ColCount-1).</td></tr>
+<tr><td><code>RowCount</code></td><td><code>Integer</code></td><td><code>5</code></td><td>Anzahl der Zeilen einschlie&#223;lich fester Zeilen (1 bis etwa 1 Milliarde); auch gro&#223;e Zahlen sind schnell (virtuell mit OnGetCellText).</td></tr>
 <tr><td><code>FixedRows</code></td><td><code>Integer</code></td><td><code>1</code></td><td>Anzahl fester Kopfzeilen oben (0..RowCount-1).</td></tr>
 <tr><td><code>Options</code></td><td><code>TGridOptions</code></td><td><code>[goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect]</code></td><td>Verhalten wie bei TStringGrid: goEditing (bearbeiten), goRowSelect (ganze Zeile w&#228;hlen), goRangeSelect (Bereich w&#228;hlen), goColSizing/goRowSizing (Breite/H&#246;he ziehen), goColMoving (Spalten verschieben), goTabs (Tab wechselt Zelle), goVertLine/goHorzLine und goFixedVertLine/goFixedHorzLine (Gitterlinien), goAlwaysShowEditor, goThumbTracking. Nutzung: <code>Grid1.Options := Grid1.Options + [goEditing, goColSizing];</code></td></tr>
-<tr><td><code>RowCount</code></td><td><code>Integer</code></td><td><code>5</code></td><td>Anzahl der Zeilen einschlie&#223;lich fester Zeilen (1 bis etwa 1 Milliarde); auch gro&#223;e Zahlen sind schnell (virtuell mit OnGetCellText).</td></tr>
 </table>
 <h2>Eigenschaften wie in der VCL</h2>
 <table>

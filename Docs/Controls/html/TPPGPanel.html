@@ -16,6 +16,7 @@
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>TPPGPanel - Container-Flaeche in der Optik des Presets (abgerundet, Rahmen, im Classic-Preset mit dezentem Verlauf).</p>
 <p>Migration von TPanel: Caption, Alignment, VerticalAlignment, ShowCaption, Padding und die Bevel-Properties bleiben gueltig (Bevels zeichnet nur die VCL selbst bei BevelKind &lt;&gt; bkNone). Color bestimmt nur den Hintergrund hinter den abgerundeten Ecken (ParentBackground = False); die Flaeche kommt aus Appearance.Normal.</p>
+<p>Scrollen (Phase 18d): AutoScroll, HorzScrollBar und VertScrollBar wie TScrollingWinControl. Gescrollt werden echte Kind-Fenster (Lage wird verschoben, Neuzeichnen per WM_SETREDRAW gebuendelt), Rahmen und Beschriftung des Panels bleiben stehen. Die Leisten liegen in einem schmalen Streifen am Rand (Kind-Fenster lassen sich nicht ueberlagern) und kommen vom Scroll-Renderer des Presets wie bei Liste und Grid. Mausrad (auch ueber Kind-Controls, die es nicht nutzen: Windows reicht es weiter), weiches Scrollen, Tab zu einem verdeckten Kind holt es ins Bild (ScrollInView). TPPGScrollBox ist ein Panel mit AutoScroll = True und BorderStyle wie TScrollBox.</p>
 <h2>PPGlow-Eigenschaften</h2>
 <p>Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.</p>
 <table>
@@ -30,6 +31,10 @@
 <tr><td><code>RoundedCorners</code></td><td><code>TPPGCorners</code></td><td><code>[pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft]</code></td><td>Welche Ecken gerundet sind; die &#252;brigen werden eckig. F&#252;r Button-Gruppen und Segment-Schalter: linker Button [pcTopLeft, pcBottomLeft], mittlere [], rechter [pcTopRight, pcBottomRight]. Menge aus: <code>pcTopLeft</code>, <code>pcTopRight</code>, <code>pcBottomRight</code>, <code>pcBottomLeft</code>. Nutzung: <code>PPGButton2.RoundedCorners := [];</code></td></tr>
 <tr><td><code>Shadow</code></td><td><a href="types/TPPGShadow.html">TPPGShadow</a></td><td></td><td>Schatten unter der Fl&#228;che (Elevation): Gr&#246;&#223;e, Versatz, Farbe, Deckkraft. Die Fl&#228;che wird um den Platz f&#252;r den Schatten kleiner; im Hochkontrast entf&#228;llt er. Nutzung: <code>PPGButton1.Shadow.Size := 6; PPGButton1.Shadow.Opacity := 80;</code></td></tr>
 <tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen f&#252;r Barrierefreiheit).</td></tr>
+<tr><td><code>AutoScroll</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Scrollleisten erscheinen, sobald Kind-Controls &#252;ber den Rand hinausragen, wie bei TScrollBox. Das Mausrad scrollt auch &#252;ber Kind-Controls, Tab zu einem verdeckten Feld holt es ins Bild. Nutzung: <code>Panel1.AutoScroll := True;</code></td></tr>
+<tr><td><code>HorzScrollBar</code></td><td><a href="types/TPPGPanelScrollBar.html">TPPGPanelScrollBar</a></td><td></td><td>Waagerechte Scrollleiste: Sichtbarkeit, Range, Schrittweite, Position, weiches Scrollen.</td></tr>
+<tr><td><code>VertScrollBar</code></td><td><a href="types/TPPGPanelScrollBar.html">TPPGPanelScrollBar</a></td><td></td><td>Senkrechte Scrollleiste: Sichtbarkeit, Range, Schrittweite, Position, weiches Scrollen. Nutzung: <code>Box.VertScrollBar.Increment := 24;</code></td></tr>
+<tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>&#220;berg&#228;nge zwischen den Zust&#228;nden (Hover, Dr&#252;cken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen&quot; beachtet wird.</td></tr>
 </table>
 <h2>Eigenschaften wie in der VCL</h2>
 <table>
@@ -90,6 +95,7 @@
 <tr><td><code>OnMouseLeave</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Die Maus hat das Control verlassen.</td></tr>
 <tr><td><code>OnMouseMove</code></td><td><code>TMouseMoveEvent</code> <code>(Sender: TObject; Shift: TShiftState; X, Y: Integer)</code></td><td>Maus &#252;ber dem Control bewegt.</td></tr>
 <tr><td><code>OnMouseUp</code></td><td><code>TMouseEvent</code> <code>(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)</code></td><td>Maustaste &#252;ber dem Control losgelassen.</td></tr>
+<tr><td><code>OnMouseWheel</code></td><td><code>TMouseWheelEvent</code> <code>(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)</code></td><td>Mausrad gedreht; Handled := True verhindert das Standard-Scrollen.</td></tr>
 <tr><td><code>OnResize</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Nach einer Gr&#246;&#223;en&#228;nderung.</td></tr>
 <tr><td><code>OnStartDock</code></td><td><code>TStartDockEvent</code> <code>(Sender: TObject; var DragObject: TDragDockObject)</code></td><td>Beginn des Andockens dieses Controls.</td></tr>
 <tr><td><code>OnStartDrag</code></td><td><code>TStartDragEvent</code> <code>(Sender: TObject; var DragObject: TDragObject)</code></td><td>Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden.</td></tr>
