@@ -37,7 +37,7 @@ Diese Regeln sind verbindlich für jede neue Unit und jedes neue Control. Sie si
 
 ## Ressourcen
 - Jede GDI-/GDI+-Ressource bekommt ihr **eigenes** `try/finally`. Dazu gehören auch `SaveDC`/`RestoreDC`.
-- Keine dauerhaften GDI-Handles pro Control. Einzige Ausnahme (Audit 8a #1): der Rückpuffer der Basis für den Fenster-DC, ein Bitmap je sichtbarem Control, neu nur bei Größen- oder Farbtiefenwechsel, freigegeben bei `DestroyWnd`, Unsichtbarkeit und Destroy. Alles andere (Puffer für fremde DCs, Ebenen, Schriften) wird pro Paint angelegt; globale Caches (ein Mess-DC, Pixel-Caches) gibt es nur einmal je Anwendung.
+- Keine dauerhaften GDI-Handles pro Control. Es gibt genau zwei Ausnahmen: der Rückpuffer der Basis für den Fenster-DC (Audit 8a #1: ein Bitmap je sichtbarem Control, neu nur bei Größen- oder Farbtiefenwechsel, freigegeben bei `DestroyWnd`, Unsichtbarkeit und Destroy) und die Grid-Schriften (unten). Alles andere (Puffer für fremde DCs, Ebenen, übrige Schriften) wird pro Paint angelegt; globale Caches (ein Mess-DC, Pixel-Caches) gibt es nur einmal je Anwendung.
 - Neu zeichnen gezielt: `InvalidateArea(R)` statt `Invalidate`, wenn sich nur ein Bereich ändert; in `PaintViewport` Teile außerhalb von `NeedsPaint`/`ViewportClip` überspringen (Rand für Glow, Fokus, Schatten mitrechnen).
 - Timer laufen nur über den gemeinsamen Animator.
 - Ausnahme Grid-Schriften (Audit 8c #10): Der Font-Cache des Grids (`TPPGFontCache`) behält seine Schrift-Handles über Zeichenvorgänge; er wird bei Änderung von Schrift, Element-Stil, Spalten, DPI oder Theme geleert und hält höchstens 64 Schriften.
