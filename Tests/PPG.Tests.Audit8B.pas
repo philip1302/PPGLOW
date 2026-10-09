@@ -64,6 +64,7 @@ type
     procedure ColumnWidthDoesNotRecalc;
     { #5 Zeilenhoehen }
     procedure RowHeightsFollowDataRows;
+    procedure RowHeightsMillionRows;
     procedure RowHeightsStreaming;
     procedure RowHeightsRowCountAndDefault;
     procedure RowLayoutMatchesModel;
@@ -1015,6 +1016,39 @@ begin
   G.RowHeights[3] := 0;
   CheckEquals(24, G.RowHeights[3], '0 = Standard');
   CheckHeights('zurueckgesetzt');
+end;
+
+procedure TAudit8BTests.RowHeightsMillionRows;
+var
+  G: TPPGGrid;
+  R: TRect;
+  V: Integer;
+  T0: Cardinal;
+begin
+  SetLength(FVirt, 0);
+  G := NewGrid;
+  G.ColCount := 3;
+  G.OnGetCellText := VirtText;
+  G.RowCount := 1000001;
+  T0 := GetTickCount;
+  G.RowHeights[0] := 30;
+  G.RowHeights[3] := 10;
+  G.RowHeights[999999] := 40;
+  for V := 0 to 49 do
+    G.ColWidths[1] := 60 + V;
+  CheckTrue(GetTickCount - T0 < 2000, Format('%d ms', [GetTickCount - T0]));
+  R := TGridAccess(G).RawCellRect(1, 0);
+  CheckEquals(30, R.Bottom - R.Top);
+  R := TGridAccess(G).RawCellRect(1, 3);
+  CheckEquals(10, R.Bottom - R.Top);
+  CheckEquals(30 + 24 + 24, R.Top - TGridAccess(G).RawCellRect(1, 0).Top);
+  V := G.VisualRow(999999);
+  R := TGridAccess(G).RawCellRect(1, V);
+  CheckEquals(40, R.Bottom - R.Top);
+  // Gesamthoehe: 1 000 001 Zeilen, drei davon mit eigener Hoehe
+  R := TGridAccess(G).RawCellRect(1, 1000000);
+  CheckEquals(Int64(30) + 10 + 40 + Int64(999998) * 24,
+    Int64(R.Bottom) - TGridAccess(G).RawCellRect(1, 0).Top);
 end;
 
 procedure TAudit8BTests.RowHeightsStreaming;

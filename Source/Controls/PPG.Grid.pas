@@ -146,7 +146,8 @@ type
     FDefaultColWidth: Integer;
     FDefaultRowHeight: Integer;
     FColWidths: array of Integer;   // logisch, 0 = Standard (ohne Spalte)
-    FRowHeights: array of Integer;  // logisch je Datenzeile, 0 = Standard
+    // Eigene Zeilenhoehen je Datenzeile (logisch), duenn besetzt (Audit 8c #5)
+    FRowHeightStore: TPPGRowLayout;
     FHasRowHeights: Boolean;
     FStore: TPPGCellStore;         // Cells[] (PPG.Grid.Data)
     FPainter: TPPGCellPainter;     // Texte, Zellarten (PPG.Grid.Paint)
@@ -857,7 +858,7 @@ implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
+  System.SysUtils, System.Generics.Collections, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Menus, PPG.Render.Shapes, System.UITypes,
   PPG.Controls.Field;
@@ -931,6 +932,7 @@ begin
   FEditV := -1;
   FLastFocusRow := -1;
   FLayout := TPPGRowLayout.Create;
+  FRowHeightStore := TPPGRowLayout.Create;
   FColumns := CreateColumns;
   FBands := TPPGGridBands.Create(Self, TPPGGridBand);
   FHeaderMenu := True;
@@ -957,6 +959,7 @@ begin
   FreeAndNil(FColumns);
   FreeAndNil(FBands);
   FreeAndNil(FLayout);
+  FreeAndNil(FRowHeightStore);
   FreeAndNil(FView);
   FreeAndNil(FStore);
   FreeAndNil(FPainter);
@@ -1123,19 +1126,20 @@ end;
 
 procedure TPPGCustomGrid.ReadRowHeights(Reader: TReader);
 var
-  I: Integer;
+  I, V: Integer;
 begin
   Reader.ReadListBegin;
   I := 0;
   while not Reader.EndOfList do
   begin
-    if I >= Length(FRowHeights) then
-      SetLength(FRowHeights, I + 1);
-    FRowHeights[I] := Reader.ReadInteger;
-    if FRowHeights[I] = FDefaultRowHeight then
-      FRowHeights[I] := 0
-    else
+    V := Reader.ReadInteger;
+    // Standardhoehe = keine eigene Hoehe (folgt spaeter DefaultRowHeight)
+    if V <> FDefaultRowHeight then
+    begin
       FHasRowHeights := True;
+      if (V > 0) and (I < FRowHeightStore.Count) then
+        FRowHeightStore.SetRowHeight(I, V);
+    end;
     Inc(I);
   end;
   Reader.ReadListEnd;
@@ -1183,8 +1187,7 @@ begin
   HideEditor(False);
   FRowCount := V;
   FStore.TruncateRows(V);
-  if Length(FRowHeights) > V then
-    SetLength(FRowHeights, V);
+  FRowHeightStore.Count := V; // Hoehen dahinter verfallen
   if FFixedRows >= V then
     FFixedRows := V - 1;
   RebuildMap;
@@ -1335,9 +1338,8 @@ function TPPGCustomGrid.GetRowHeights(Index: Integer): Integer;
 begin
   if (Index < 0) or (Index >= FRowCount) then
     raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FRowCount - 1]);
-  if (Index < Length(FRowHeights)) and (FRowHeights[Index] > 0) then
-    Result := FRowHeights[Index]
-  else
+  Result := FRowHeightStore.OwnHeight(Index);
+  if Result <= 0 then
     Result := FDefaultRowHeight;
 end;
 
@@ -1348,12 +1350,16 @@ begin
   if (Index < 0) or (Index >= FRowCount) then
     raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FRowCount - 1]);
   V := PPGCheckRange(Self, 'RowHeights', Value, 0, 10000);
-  if Length(FRowHeights) < FRowCount then
-    SetLength(FRowHeights, FRowCount);
-  FRowHeights[Index] := V;
   if (V > 0) and (V <> FDefaultRowHeight) then
     FHasRowHeights := True;
-  InvalidateGeometry;
+  if FRowHeightStore.OwnHeight(Index) = V then
+    Exit;
+  FRowHeightStore.SetRowHeight(Index, V);
+  // Nur die Zeilen neu (Audit 8c #5)
+  FRowGeomValid := False;
+  Invalidate;
+  if HandleAllocated and not (csLoading in ComponentState) then
+    EnsureGeometry;
 end;
 
 { ---- Zellen ---- }
@@ -3974,7 +3980,9 @@ end;
 
 procedure TPPGCustomGrid.BuildRowGeometry(PPI: Integer);
 var
-  V, D, H, Def: Integer;
+  J, N, V, H, Def: Integer;
+  Pairs: TArray<Int64>;
+  Sorted: Boolean;
 begin
   FRowGeomValid := True;
   Inc(FRowGeomCount);
@@ -3982,17 +3990,31 @@ begin
   FLayout.Count := 0;
   FLayout.DefaultHeight := Def;
   FLayout.Count := VRowCount;
-  if FHasRowHeights then
-    for V := 0 to FLayout.Count - 1 do
-    begin
-      D := DataRow(V);
-      if D >= 0 then
-      begin
-        H := PPGScale(GetRowHeights(D), PPI);
-        if H <> Def then
-          FLayout.SetRowHeight(V, H);
-      end;
-    end;
+  if not FHasRowHeights or (FRowHeightStore.OwnHeightCount = 0) then
+    Exit;
+  // Nur die k Zeilen mit eigener Hoehe (Audit 8c #5): Datenzeile ->
+  // sichtbare Zeile, aufsteigend ins Layout (Anhaengen ist O(1))
+  SetLength(Pairs, FRowHeightStore.OwnHeightCount);
+  N := 0;
+  Sorted := True;
+  for J := 0 to FRowHeightStore.OwnHeightCount - 1 do
+  begin
+    H := PPGScale(FRowHeightStore.OwnHeightValue(J), PPI);
+    if H = Def then
+      Continue;
+    V := VisualRow(FRowHeightStore.OwnHeightRow(J));
+    if (V < 0) or (V >= FLayout.Count) then
+      Continue;
+    Pairs[N] := (Int64(V) shl 32) or Cardinal(H);
+    if (N > 0) and (Pairs[N] < Pairs[N - 1]) then
+      Sorted := False;
+    Inc(N);
+  end;
+  SetLength(Pairs, N);
+  if not Sorted then
+    TArray.Sort<Int64>(Pairs);
+  for J := 0 to N - 1 do
+    FLayout.SetRowHeight(Integer(Pairs[J] shr 32), Integer(Pairs[J] and $FFFFFFFF));
 end;
 
 function TPPGCustomGrid.FixedWidth: Integer;
