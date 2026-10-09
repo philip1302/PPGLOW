@@ -521,12 +521,10 @@ function TPPGCustomSpinEdit.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer
   MousePos: TPoint): Boolean;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
-  if Result or FReadOnly or not Enabled or (WheelDelta = 0) then
+  // Audit 7b: nur mit Fokus (sonst scrollt die Seite), Teil-Deltas sammeln
+  if Result or FReadOnly or not Enabled or (WheelDelta = 0) or WheelNeedsFocus then
     Exit;
-  if WheelDelta > 0 then
-    Spin(1)
-  else
-    Spin(-1);
+  Spin(WheelSteps(WheelDelta));
   Result := True;
 end;
 

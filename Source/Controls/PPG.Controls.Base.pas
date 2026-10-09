@@ -58,6 +58,7 @@ type
     FShadow: TPPGShadow;
     FMouseInside: Boolean;
     FMousePressed: Boolean;
+    FWheelRest: Integer;   // Teil-Deltas des Mausrads (WheelSteps)
     FKeyPressed: Boolean;
     FHotAnim: TPPGAnimation;
     FDownAnim: TPPGAnimation;
@@ -325,6 +326,15 @@ type
     /// UIA-Wurzel, sobald ein UIA-Client gefragt hat (sonst nil). Nur fuer
     /// Controls mit IPPGUiaSource (Grid, TreeView, ListBox, CheckListBox).
     function UiaRoot: TPPGUiaRoot;
+    /// Mausrad (Audit 7b): ganze Schritte aus WheelDelta, Lines je Raste.
+    /// Teil-Deltas hochaufloesender Raeder und Touchpads werden gesammelt
+    /// (3 x 40 = eine Raste), ein Richtungswechsel verwirft den Rest.
+    /// Positiv = Rad nach vorn bzw. oben.
+    function WheelSteps(WheelDelta: Integer; Lines: Integer = 1): Integer;
+    /// True, wenn weder das Control noch ein Kind den Fokus hat. Wert-Controls
+    /// aendern ihren Wert dann nicht: das Rad geht an den Elternteil (Seite
+    /// scrollt), wie DoMouseWheel = False es weiterreicht.
+    function WheelNeedsFocus: Boolean;
     property Renderer: IPPGRenderer read FRenderer;
     property VisualState: TPPGVisualState read GetVisualState;
   end;
@@ -332,6 +342,13 @@ type
 /// Bilderliste (published "Images") des naechsten Besitzers: Collection-Owner
 /// bzw. Parent (fuer ImageName an Eintraegen und Seiten).
 function PPGImagesOf(Start: TPersistent): TCustomImageList;
+
+/// Zeilen je Rastung aus der Systemeinstellung (SPI_GETWHEELSCROLLLINES,
+/// Vorgabe 3); -1 = seitenweise (WHEEL_PAGESCROLL), 0 = Scrollen aus.
+function PPGWheelScrollLines: Integer;
+/// Sammelt Rad-Deltas in Rest und liefert ganze Schritte (Delta * Lines je
+/// WHEEL_DELTA); ein Richtungswechsel verwirft den Rest.
+function PPGWheelSteps(var Rest: Integer; Delta, Lines: Integer): Integer;
 
 implementation
 
@@ -2097,6 +2114,46 @@ begin
     else
       Exit;
   end;
+end;
+
+function PPGWheelScrollLines: Integer;
+var
+  L: UINT;
+begin
+  L := 3;
+  if not SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, @L, 0) then
+    L := 3;
+  if L = UINT($FFFFFFFF) then // WHEEL_PAGESCROLL
+    Result := -1
+  else if L > 1000 then
+    Result := 1000
+  else
+    Result := Integer(L);
+end;
+
+function PPGWheelSteps(var Rest: Integer; Delta, Lines: Integer): Integer;
+begin
+  if ((Delta > 0) and (Rest < 0)) or ((Delta < 0) and (Rest > 0)) then
+    Rest := 0;
+  Inc(Rest, Delta * Lines);
+  Result := Rest div WHEEL_DELTA; // schneidet zur Null hin ab: Rest behaelt das Vorzeichen
+  Dec(Rest, Result * WHEEL_DELTA);
+end;
+
+function TPPGCustomControl.WheelSteps(WheelDelta: Integer; Lines: Integer): Integer;
+begin
+  Result := PPGWheelSteps(FWheelRest, WheelDelta, Lines);
+end;
+
+function TPPGCustomControl.WheelNeedsFocus: Boolean;
+var
+  F: HWND;
+begin
+  Result := True;
+  if not HandleAllocated then
+    Exit;
+  F := GetFocus;
+  Result := not ((F <> 0) and ((F = Handle) or IsChild(Handle, F)));
 end;
 
 initialization

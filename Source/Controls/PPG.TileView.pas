@@ -1716,14 +1716,15 @@ end;
 
 function TPPGCustomTileView.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
+var
+  N: Integer;
 begin
   if ssCtrl in Shift then
   begin
-    // Strg+Rad: Zoom in 10er-Schritten
-    if WheelDelta > 0 then
-      Zoom := Min(200, FZoom + 10)
-    else
-      Zoom := Max(50, FZoom - 10);
+    // Strg+Rad: Zoom in 10er-Schritten, eine Stufe je Raste (Audit 7b)
+    N := WheelSteps(WheelDelta);
+    if N <> 0 then
+      Zoom := EnsureRange(FZoom + 10 * N, 50, 200);
     Result := True;
     Exit;
   end;

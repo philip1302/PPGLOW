@@ -856,6 +856,9 @@ begin
   T := NewTrack;
   T.LineSize := 3;
   T.Position := 5;
+  // Audit 7b: das Rad aendert den Wert nur mit Fokus
+  FForm.Show;
+  T.SetFocus;
   CheckTrue(TTBAccess(T).DoMouseWheelDown([], Point(0, 0)));
   CheckEquals(8, T.Position, 'Rad runter = groesser (wie TTrackBar)');
   TTBAccess(T).DoMouseWheelUp([], Point(0, 0));

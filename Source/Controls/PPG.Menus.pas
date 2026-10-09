@@ -1702,6 +1702,7 @@ var
   W: TPPGMenuWindow;
   Shift: TShiftState;
   Delta: SmallInt;
+  Lines: Integer;
 begin
   if not FActive or (FOpenCount = 0) then
     Exit;
@@ -1740,7 +1741,11 @@ begin
         if (W <> nil) and W.Scrollable then
         begin
           Delta := SmallInt(HiWord(Msg.wParam));
-          W.ScrollBy(-Delta div WHEEL_DELTA * W.LineHeight * 3);
+          // Audit 7b: Zeilen aus der Systemeinstellung, Teil-Deltas gesammelt
+          Lines := PPGWheelScrollLines;
+          if Lines < 0 then
+            Lines := Max(1, W.ClientHeight div Max(1, W.LineHeight)); // seitenweise
+          W.ScrollBy(-W.WheelSteps(Delta, Lines * W.LineHeight));
         end;
         Handled := True;
       end;

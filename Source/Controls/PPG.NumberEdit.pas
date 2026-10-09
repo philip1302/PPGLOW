@@ -96,6 +96,7 @@ type
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
     procedure FieldKeyPress(var Key: Char); override;
     function WantSpecialKey(Key: Word): Boolean; override;
+    function InputPending: Boolean; override;
     procedure GetButtons(var Buttons: TPPGFieldButtons); override;
     function ButtonEnabled(Id: Integer): Boolean; override;
     procedure ButtonDown(Id: Integer); override;
@@ -781,12 +782,16 @@ end;
 
 function TPPGCustomNumberEdit.WantSpecialKey(Key: Word): Boolean;
 begin
-  // Enter uebernimmt; Esc nur, wenn es etwas zu verwerfen gibt
+  // Enter (Basis) und Esc nur, wenn es etwas zu uebernehmen bzw. verwerfen
+  // gibt; sonst gehoeren sie Default- bzw. Cancel-Button (Audit 7a #2)
   Result := inherited WantSpecialKey(Key);
-  if Key = VK_RETURN then
-    Result := FEditing
-  else if Key = VK_ESCAPE then
-    Result := FEditing and (Trim(Text) <> EditText);
+  if Key = VK_ESCAPE then
+    Result := InputPending;
+end;
+
+function TPPGCustomNumberEdit.InputPending: Boolean;
+begin
+  Result := FEditing and (Trim(Text) <> EditText);
 end;
 
 procedure TPPGCustomNumberEdit.FieldKeyPress(var Key: Char);
@@ -882,15 +887,17 @@ end;
 
 function TPPGCustomNumberEdit.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
+var
+  Steps: Integer;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
   // Mausrad nur mit Fokus: sonst aendert Scrollen durch ein Formular Werte
   if Result or not FieldFocused or ReadOnly or not Enabled or (WheelDelta = 0) then
     Exit;
-  if WheelDelta > 0 then
-    Spin(1)
-  else
-    Spin(-1);
+  // Audit 7b: Teil-Deltas hochaufloesender Raeder sammeln
+  Steps := WheelSteps(WheelDelta);
+  if Steps <> 0 then
+    Spin(Steps);
   Result := True;
 end;
 

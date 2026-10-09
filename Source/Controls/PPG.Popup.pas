@@ -11,7 +11,11 @@ unit PPG.Popup;
     und gibt Mausaktionen mit Popup-Koordinaten weiter). So erkennt er Klicks
     ausserhalb, Fokus- und Capture-Verlust und schliesst das Popup.
   - Platzierung unter dem Anker, sonst darueber, wenn oben mehr Platz ist
-    (Arbeitsflaeche des Monitors); Aufklappen als Hoehen-Animation.
+    (Arbeitsflaeche des Monitors); Aufklappen als Hoehen-Animation. Die
+    Fensterregion (runde Ecken) wird dabei nicht je Bild neu gesetzt.
+  - FollowSource: das Popup folgt dem Ausloeser, wenn dieser oder sein
+    Formular verschoben wird (OnFollow, sonst um denselben Versatz), und
+    meldet OnSourceHidden, wenn er verschwindet (Audit 7a #4).
 
   TPPGPopupList - Liste im Popup:
   - zeichnet nur sichtbare Zeilen, schmale eigene Scrollleiste (ziehbar)
@@ -46,14 +50,32 @@ type
     FFullRect: TRect;  // Zielgroesse in Bildschirmkoordinaten
     FDropAnim: TPPGAnimation;
     FSource: TPPGCustomControl;
+    FRgnKey: TRect;          // zuletzt gesetzte Region (Rundung, Breite, Hoehe)
+    FRgnValid: Boolean;
+    FFollowSource: Boolean;
+    FFollowing: TPPGCustomControl;  // beobachteter Ausloeser
+    FFollowForm: TCustomForm;       // und sein Formular
+    FFollowOrigin: TPoint;          // Ursprung des Ausloesers beim Platzieren
+    FOnFollow: TNotifyEvent;
+    FOnSourceHidden: TNotifyEvent;
     procedure DropAnimStep(Sender: TObject);
+    procedure StartFollow;
+    procedure StopFollow;
+    procedure FollowEvent(Control: TControl; var Message: TMessage);
     procedure ApplyBounds(Progress: Single);
     procedure WMMouseActivate(var Message: TWMMouseActivate); message WM_MOUSEACTIVATE;
     procedure WMNCHitTest(var Message: TWMNCHitTest); message WM_NCHITTEST;
     function GetFullHeight: Integer;
   protected
     procedure CreateParams(var Params: TCreateParams); override;
+    procedure DestroyWnd; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Resize; override;
+    /// Ausloeser oder Formular verschoben (FollowSource): OnFollow, sonst
+    /// um denselben Versatz mitgehen.
+    procedure SourceMoved; virtual;
+    /// Ausloeser nicht mehr sichtbar bzw. Formular minimiert (FollowSource).
+    procedure SourceHidden; virtual;
     /// Rundung des Popups (fuer die Fensterregion), 0 = eckig.
     function PopupRounding: Integer; virtual;
     /// Fensterregion (Standard: abgerundetes Rechteck nach PopupRounding).
@@ -87,6 +109,12 @@ type
     property Source: TPPGCustomControl read FSource;
     /// PPI fuer das Zeichnen ohne PPGlow-Ausloeser (0 = aus dem Fenster).
     property PopupPPI: Integer read FPPI write FPPI;
+    /// Offen dem Ausloeser (Source) und seinem Formular folgen (Audit 7a #4).
+    property FollowSource: Boolean read FFollowSource write FFollowSource;
+    /// Statt mitzugehen neu platzieren (z.B. RepositionPopup des Felds).
+    property OnFollow: TNotifyEvent read FOnFollow write FOnFollow;
+    /// Ausloeser verschwunden (Formular versteckt bzw. minimiert): schliessen.
+    property OnSourceHidden: TNotifyEvent read FOnSourceHidden write FOnSourceHidden;
   end;
 
   /// Antwort des Popups auf Maus oder Taste.
@@ -96,6 +124,8 @@ type
   /// das Feld reicht Maus und Tastatur in Popup-Koordinaten weiter.
   TPPGDropPopup = class(TPPGPopupWindow)
   public
+    /// Folgt dem Feld (FollowSource = True).
+    constructor Create(AOwner: TComponent); override;
     /// Groesse fuer ein Feld der Breite FieldWidth (physische px).
     function PreferredSize(FieldWidth: Integer): TSize; virtual;
     procedure DropMouseMove(X, Y: Integer; Shift: TShiftState); virtual;
@@ -134,6 +164,14 @@ type
     FOnCustomDrawItem: TPPGCustomDrawItemEvent;
     FDrawCanvas: TCanvas;
     FStyleSource: TObject;
+    // ItemHeight zwischengespeichert (Audit 7a #6): gilt fuer PPI, Bildhoehe,
+    // Zweizeiligkeit und Mindesthoehe; die Schrift verwirft ihn (CM_FONTCHANGED)
+    FIHValue: Integer;
+    FIHPPI: Integer;
+    FIHImageH: Integer;
+    FIHTwoLine: Boolean;
+    FIHMin: Integer;
+    procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure SetItemIndex(Value: Integer);
     procedure SetTopIndex(Value: Integer);
     procedure SetListColor(const Value: TColor);
@@ -241,7 +279,7 @@ uses
   PPG.Lang,
   System.SysUtils, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.VclStyles,
-  PPG.Render.Registry, PPG.Render.Gdi;
+  PPG.Render.Registry, PPG.Render.Gdi, PPG.AppHooks;
 
 type
   TSourceAccess = class(TPPGCustomControl);
@@ -270,6 +308,7 @@ end;
 
 destructor TPPGPopupWindow.Destroy;
 begin
+  StopFollow;
   if FDropAnim <> nil then
     FDropAnim.OnStep := nil;
   FreeAndNil(FDropAnim); // meldet sich selbst beim Animator ab
@@ -291,6 +330,24 @@ begin
     Params.WndParent := Application.MainForm.Handle
   else
     Params.WndParent := Application.Handle;
+end;
+
+procedure TPPGPopupWindow.DestroyWnd;
+begin
+  FRgnValid := False; // die Region gehoert dem Fenster
+  inherited DestroyWnd;
+end;
+
+procedure TPPGPopupWindow.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if Operation = opRemove then
+  begin
+    if AComponent = FFollowForm then
+      FFollowForm := nil;
+    if AComponent = FFollowing then
+      FFollowing := nil;
+  end;
 end;
 
 function TPPGPopupWindow.ScalePPI: Integer;
@@ -390,7 +447,96 @@ begin
     FDropAnim.Jump(1);
     ApplyBounds(1);
   end;
+  if FFollowSource then
+    StartFollow;
   NotifyAccessibility(EVENT_OBJECT_SHOW);
+end;
+
+{ Dem Ausloeser folgen (Audit 7a #4) }
+
+procedure TPPGPopupWindow.StartFollow;
+var
+  F: TCustomForm;
+begin
+  if (FSource = nil) or not FSource.HandleAllocated then
+    Exit;
+  FFollowOrigin := FSource.ClientOrigin;
+  // Neu platziert (z.B. nach dem Filtern): nur den Ursprung merken
+  if FFollowing = FSource then
+    Exit;
+  StopFollow;
+  FFollowing := FSource;
+  FFollowing.FreeNotification(Self);
+  PPGWatchControl(FFollowing, FollowEvent);
+  F := GetParentForm(FSource);
+  if (F <> nil) and (TObject(F) <> TObject(FSource)) then
+  begin
+    FFollowForm := F;
+    F.FreeNotification(Self);
+    PPGWatchControl(F, FollowEvent);
+  end;
+end;
+
+procedure TPPGPopupWindow.StopFollow;
+begin
+  if FFollowing <> nil then
+  begin
+    PPGUnwatchControl(FFollowing, FollowEvent);
+    if FFollowing <> Owner then
+      FFollowing.RemoveFreeNotification(Self);
+    FFollowing := nil;
+  end;
+  if FFollowForm <> nil then
+  begin
+    PPGUnwatchControl(FFollowForm, FollowEvent);
+    if FFollowForm <> Owner then
+      FFollowForm.RemoveFreeNotification(Self);
+    FFollowForm := nil;
+  end;
+end;
+
+procedure TPPGPopupWindow.FollowEvent(Control: TControl; var Message: TMessage);
+begin
+  if not FOpen or (FSource = nil) or not HandleAllocated or
+    (csDestroying in ComponentState) then
+    Exit;
+  case Message.Msg of
+    WM_WINDOWPOSCHANGED, WM_SIZE, WM_MOVE:
+      if (FFollowForm <> nil) and FFollowForm.HandleAllocated and IsIconic(FFollowForm.Handle) then
+        SourceHidden
+      else
+        SourceMoved;
+    CM_SHOWINGCHANGED, CM_VISIBLECHANGED, WM_SHOWWINDOW:
+      // Showing der Kinder bleibt beim Verstecken des Formulars stehen:
+      // die tatsaechliche Sichtbarkeit des Fensters zaehlt
+      if not FSource.HandleAllocated or not IsWindowVisible(FSource.Handle) then
+        SourceHidden;
+  end;
+end;
+
+procedure TPPGPopupWindow.SourceMoved;
+var
+  O: TPoint;
+begin
+  if not FSource.HandleAllocated then
+    Exit;
+  O := FSource.ClientOrigin;
+  if (O.X = FFollowOrigin.X) and (O.Y = FFollowOrigin.Y) then
+    Exit;
+  if Assigned(FOnFollow) then
+  begin
+    FOnFollow(Self);
+    Exit;
+  end;
+  OffsetRect(FFullRect, O.X - FFollowOrigin.X, O.Y - FFollowOrigin.Y);
+  FFollowOrigin := O;
+  ApplyBounds(FDropAnim.Value);
+end;
+
+procedure TPPGPopupWindow.SourceHidden;
+begin
+  if Assigned(FOnSourceHidden) then
+    FOnSourceHidden(Self);
 end;
 
 procedure TPPGPopupWindow.ApplyBounds(Progress: Single);
@@ -428,6 +574,7 @@ begin
   if not FOpen then
     Exit;
   FOpen := False;
+  StopFollow;
   FDropAnim.Jump(0);
   if HandleAllocated then
   begin
@@ -449,19 +596,34 @@ end;
 
 procedure TPPGPopupWindow.ApplyRegion;
 var
-  R: Integer;
+  R, H: Integer;
+  Key: TRect;
   Rgn: HRGN;
 begin
   if not HandleAllocated then
     Exit;
   R := PopupRounding;
-  if R <= 0 then
+  // Audit 7a #5: beim Aufklappen keine neue Region je Bild. Die Region hat
+  // gleich die Endgroesse (nach unten: die wandernde Unterkante schneidet sie
+  // ab); nach oben aufklappend bleibt das Fenster bis zum Ende eckig.
+  H := FullHeight;
+  if not FOpen or (H <= 0) then
+    H := Height;
+  if (R <= 0) or (FOpen and FOpenedAbove and (FDropAnim.Value < 1)) then
+    Key := Rect(0, 0, 0, 0)
+  else
+    Key := Rect(R, 0, Width, H);
+  if FRgnValid and EqualRect(Key, FRgnKey) then
+    Exit;
+  FRgnKey := Key;
+  FRgnValid := True;
+  if Key.Right = 0 then
   begin
     SetWindowRgn(Handle, 0, True);
     Exit;
   end;
   // Abgerundete Ecken auch fuer das Fenster selbst (sonst stehen Ecken ueber)
-  Rgn := CreateRoundRectRgn(0, 0, Width + 1, Height + 1, 2 * R, 2 * R);
+  Rgn := CreateRoundRectRgn(0, 0, Width + 1, H + 1, 2 * R, 2 * R);
   if Rgn <> 0 then
     if SetWindowRgn(Handle, Rgn, True) = 0 then
       DeleteObject(Rgn); // nur bei Fehler gehoert die Region noch uns
@@ -626,9 +788,15 @@ begin
     Data.Text := FItems[Item];
 end;
 
+procedure TPPGPopupList.CMFontChanged(var Message: TMessage);
+begin
+  inherited;
+  FIHValue := 0;
+end;
+
 function TPPGPopupList.ItemHeight: Integer;
 var
-  PPI, Min: Integer;
+  PPI, Min, ImgH: Integer;
   Img: TCustomImageList;
 begin
   PPI := ScalePPI;
@@ -636,12 +804,24 @@ begin
   Img := nil;
   if FSource <> nil then
     Img := Images;
+  ImgH := -1;
+  if Img <> nil then
+    ImgH := Img.Height;
+  // Audit 7a #6: ItemRect/ItemAtPos fragen je Zeile - kein DC je Aufruf
+  if (FIHValue > 0) and (FIHPPI = PPI) and (FIHImageH = ImgH) and
+    (FIHTwoLine = FTwoLineItems) and (FIHMin = FMinItemHeight) then
+    Exit(FIHValue);
   Result := TPPGItemPainter.RowHeight(Font, Img, FTwoLineItems, PPI);
   Min := PPGScale(FMinItemHeight, PPI);
   if Result < Min then
     Result := Min;
   if Result < 1 then
     Result := 1;
+  FIHValue := Result;
+  FIHPPI := PPI;
+  FIHImageH := ImgH;
+  FIHTwoLine := FTwoLineItems;
+  FIHMin := FMinItemHeight;
 end;
 
 function TPPGPopupList.HeightForRows(Rows: Integer): Integer;
@@ -832,6 +1012,12 @@ end;
 
 { TPPGDropPopup }
 
+constructor TPPGDropPopup.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FollowSource := True;
+end;
+
 function TPPGDropPopup.PreferredSize(FieldWidth: Integer): TSize;
 begin
   Result.cx := FieldWidth;
@@ -939,13 +1125,16 @@ begin
 end;
 
 procedure TPPGPopupList.DropWheel(Delta: Integer);
-const
-  WheelLines = 3;
+var
+  Lines: Integer;
 begin
-  if Delta > 0 then
-    ScrollLines(-WheelLines)
-  else if Delta < 0 then
-    ScrollLines(WheelLines);
+  // Audit 7b: Zeilen aus der Systemeinstellung, Teil-Deltas gesammelt
+  Lines := PPGWheelScrollLines;
+  if Lines < 0 then
+    Lines := VisibleRows - 1; // seitenweise
+  if Lines < 1 then
+    Lines := 1;
+  ScrollLines(-WheelSteps(Delta, Lines));
 end;
 
 procedure TPPGPopupList.DropMouseLeave;

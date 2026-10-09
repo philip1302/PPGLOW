@@ -935,6 +935,9 @@ begin
   CheckEquals(22, S.Value, 'Bild auf = 10 Schritte');
   I.Perform(WM_KEYDOWN, VK_DOWN, 0);
   CheckEquals(20, S.Value);
+  // Audit 7b: das Rad aendert den Wert nur mit Fokus
+  FForm.Show;
+  S.SetFocus;
   TInnerAccess(I).DoMouseWheel([], 120, Point(0, 0));
   CheckEquals(22, S.Value, 'Mausrad ueber das innere Edit');
   TInnerAccess(I).DoMouseWheel([], -120, Point(0, 0));

@@ -3036,7 +3036,8 @@ function TPPGCustomKanban.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; 
 var
   P: TPoint;
   H: TPPGKanbanHit;
-  C: Integer;
+  C, Lines, Step: Integer;
+  R: TRect;
 begin
   // Ohne Swimlanes: das Rad scrollt die Spalte unter der Maus
   if not HasLanes and not (ssShift in Shift) and HandleAllocated then
@@ -3046,7 +3047,17 @@ begin
     C := H.Col;
     if (C >= 0) and (ColMaxScroll(C) > 0) then
     begin
-      ScrollColumn(C, -WheelDelta * 3 * Sc(20) div WHEEL_DELTA);
+      // Audit 7b: Zeilen aus der Systemeinstellung (je 20 px), Teil-Deltas
+      // gesammelt statt je Nachricht gerundet
+      Lines := PPGWheelScrollLines;
+      if Lines < 0 then
+      begin
+        R := ColumnRect(C);
+        Step := R.Bottom - R.Top; // seitenweise
+      end
+      else
+        Step := Lines * Sc(20);
+      ScrollColumn(C, -WheelSteps(WheelDelta, Step));
       Exit(True);
     end;
   end;

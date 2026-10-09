@@ -9,14 +9,20 @@ unit PPG.DatePicker;
     (Strg: Monat). Beim Verlassen bzw. Enter wird geprueft: gueltig =
     uebernehmen (OnChange), ungueltig = ValidationState pvsError, der Text
     bleibt zum Korrigieren stehen. Grenzen MinDate/MaxDate.
-  - Popup: TPPGCalendar in einem Popup ohne Aktivierung. Das Feld behaelt
-    den Fokus und leitet Pfeile, Bild, Pos1/Ende und Enter an den Kalender
-    weiter. Klick ausserhalb (Maus-Hook des Threads, solange offen), Esc und
-    Fokusverlust schliessen; Klick auf einen Tag uebernimmt.
+  - Popup: TPPGCalendar in einem Popup ohne Aktivierung, auf der gemeinsamen
+    Aufklapp-Basis TPPGCustomDropDownField (Audit 7a #3): das Feld behaelt
+    Fokus und Maus (SetCapture) und reicht Maus, Pfeile, Bild, Pos1/Ende und
+    Enter an den Kalender weiter. Klick ausserhalb, Esc und Fokusverlust
+    schliessen ohne Uebernahme; Klick auf einen Tag, Enter, F4 und Alt+Pfeil
+    uebernehmen.
   - DFM-nah zu TDateTimePicker: Date, Time, MinDate, MaxDate, ShowCheckbox,
     Checked, DateFormat, Format, CalAlignment, Kind, DateMode, ParseInput.
-  - Kind: dtkDate (Datum mit Kalender), dtkTime (Uhrzeit, Auf/Ab-Knoepfe,
-    Oben/Unten = Minute, Strg = Stunde), dtkDateTime (Datum und Uhrzeit).
+  - Kind: dtkDate (Datum mit Kalender), dtkTime (Uhrzeit, Auf/Ab-Knoepfe),
+    dtkDateTime (Datum und Uhrzeit). Oben/Unten, Auf/Ab und das Rad aendern
+    in der Uhrzeit den Teil unter der Einfuegemarke (Stunde, Minute, Sekunde,
+    AM/PM; Strg = Stunde, wie der TimePicker), im Datum den Tag (Strg: Monat).
+    Ohne Fokus (Text im Anzeigeformat) bleibt es bei Minute bzw. Tag.
+  - Das Rad aendert den Wert nur mit Fokus (Audit 7b).
   - DateMode = dmUpDown: Auf/Ab-Knoepfe statt Kalender (Tag, Strg = Monat).
   - ParseInput + OnUserInput: eigene Auswertung der Eingabe (wie
     TDateTimePicker.OnUserInput), z. B. "morgen" oder "+3".
@@ -30,29 +36,54 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
   Vcl.Controls, Vcl.Graphics, Vcl.ComCtrls,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base, PPG.Controls.Field,
-  PPG.Popup, PPG.Calendar;
+  PPG.Controls.DropDown, PPG.Popup, PPG.Calendar;
 
 type
   TPPGCustomDatePicker = class;
 
-  /// Popup mit Kalender (gehoert dem DatePicker).
-  TPPGCalendarPopup = class(TPPGPopupWindow)
+  /// Popup mit Kalender (gehoert dem DatePicker). Maus und Tastatur kommen
+  /// ueber die Drop*-Methoden vom Feld (Audit 7a #3).
+  TPPGCalendarPopup = class(TPPGDropPopup)
   private
     FCalendar: TPPGCalendar;
+    FPicked: Boolean;
+    FStartFocus: TDate;
+    FMouseDown: Boolean;
+    FDownDay: TDate;
+    FForwarding: Integer;
+    procedure CalendarChange(Sender: TObject);
+    function CalPoint(X, Y: Integer): TPoint;
+    function DayAt(X, Y: Integer): TDate;
+    procedure SendMouse(Msg: Cardinal; Keys: WPARAM; X, Y: Integer);
   protected
     function PopupRounding: Integer; override;
     procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     procedure SyncFrom(Source: TPPGCustomControl); override;
+    /// Vor dem Zeigen: noch nichts gewaehlt, Ausgangspunkt der Tastatur.
+    procedure StartPick;
+    function PreferredSize(FieldWidth: Integer): TSize; override;
+    procedure DropMouseMove(X, Y: Integer; Shift: TShiftState); override;
+    function DropMouseDown(X, Y: Integer): TPPGDropAction; override;
+    /// Loslassen auf einem Tag: uebernehmen (auch den schon gewaehlten).
+    function DropMouseUp(X, Y: Integer): TPPGDropAction; override;
+    /// Pfeile, Bild, Pos1/Ende bewegen den Fokus-Tag, Enter waehlt.
+    function DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction; override;
+    procedure DropWheel(Delta: Integer); override;
+    procedure DropMouseLeave; override;
     /// Kalenderfenster zeigen bzw. verstecken. Das Popup hat keinen Parent, die
     /// VCL fuehrt deshalb kein UpdateShowing fuer seine Kinder aus.
     procedure ShowCalendar;
     procedure HideCalendar;
     property Calendar: TPPGCalendar read FCalendar;
+    /// Ein Tag wurde gewaehlt (Klick bzw. Enter).
+    property Picked: Boolean read FPicked;
+    /// Fokus-Tag beim Aufklappen.
+    property StartFocus: TDate read FStartFocus;
   end;
 
-  TPPGCustomDatePicker = class(TPPGCustomField)
+  TPPGCustomDatePicker = class(TPPGCustomDropDownField)
   private
     FDateTime: TDateTime;   // 0 = kein Datum
     FCalendarStyles: TPPGCalendarStyles;
@@ -68,12 +99,8 @@ type
     FCalAlignment: TDTCalAlignment;
     FParseInput: Boolean;
     FOnUserInput: TDTParseInputEvent;
-    FPopup: TPPGCalendarPopup;
-    FDroppedDown: Boolean;
     FQuiet: Integer;
     FEditing: Boolean;
-    FOnDropDown: TNotifyEvent;
-    FOnCloseUp: TNotifyEvent;
     procedure SetCalendarStyles(const Value: TPPGCalendarStyles);
     function GetDate: TDate;
     procedure SetDate(const Value: TDate);
@@ -95,30 +122,38 @@ type
     function EditFormatted(const DT: TDateTime): string;
     /// Oben/Unten bzw. Auf/Ab: Tag/Monat oder Minute/Stunde weiterzaehlen.
     procedure StepValue(Delta: Integer; Coarse: Boolean);
+    /// Teil der Uhrzeit unter der Einfuegemarke (nur beim Bearbeiten im Feld;
+    /// False = Datumsteil bzw. kein Bearbeitungstext).
+    function TimeSegmentAtCaret(out Segment: Integer): Boolean;
+    /// Oben/Unten, Auf/Ab und Rad: Teil unter der Marke bzw. Tag/Monat.
+    procedure StepAtCaret(Delta: Integer; Coarse: Boolean);
+    function GetDroppedDown: Boolean;
     procedure SetDroppedDown(const Value: Boolean);
+    function GetCalendarPopup: TPPGCalendarPopup;
     procedure UpdateText;
-    procedure CalendarChange(Sender: TObject);
     function ClampToRange(D: TDate): TDate;
     procedure ApplyDateRange;
-    procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
   protected
     procedure Loaded; override;
     procedure GetButtons(var Buttons: TPPGFieldButtons); override;
-    procedure ButtonDown(Id: Integer); override;
     procedure ButtonClick(Id: Integer); override;
-    procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure ClosedKeyDown(var Key: Word; Shift: TShiftState); override;
     procedure FieldKeyPress(var Key: Char); override;
-    function WantSpecialKey(Key: Word): Boolean; override;
+    function InputPending: Boolean; override;
+    { Aufklapp-Basis }
+    function CreatePopup: TPPGDropPopup; override;
+    procedure PreparePopup(APopup: TPPGDropPopup); override;
+    procedure AcceptPopup(APopup: TPPGDropPopup); override;
+    function CanDropDown: Boolean; override;
+    procedure PopupOpened; override;
+    procedure PopupClosed; override;
     procedure FocusChanged; override;
     procedure Change; override;
+    function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
+      MousePos: TPoint): Boolean; override;
     procedure GetFieldColors(out Fill, Text: TColor); override;
     procedure DoPaintField(const ACanvas: IPPGCanvas; const Style: TPPGSurfaceStyle); override;
-    function AccRole: Integer; override;
     function AccValue: string; override;
-    function AccState: Integer; override;
-    function AccDefaultAction: string; override;
-    procedure AccDoDefaultAction; override;
-    procedure WndProc(var Message: TMessage); override;
     /// Text des Edits pruefen und uebernehmen (True = gueltig oder leer erlaubt).
     function CommitText(UserAction: Boolean): Boolean;
     /// Datum durch den Anwender setzen (OnChange).
@@ -127,8 +162,6 @@ type
     /// Anwender hat Datum oder Kaestchen geaendert: loest OnChange aus.
     /// DB-Variante: Datensatz vorher in den Bearbeiten-Modus setzen.
     procedure UserChange; virtual;
-    procedure DoDropDown; virtual;
-    procedure DoCloseUp; virtual;
     property Date: TDate read GetDate write SetDate;
     property Time: TTime read GetTime write SetTime;
     property MinDate: TDate read FMinDate write SetMinDate;
@@ -150,13 +183,9 @@ type
     /// True: Eingaben zuerst an OnUserInput geben (eigene Auswertung).
     property ParseInput: Boolean read FParseInput write FParseInput default False;
     property OnUserInput: TDTParseInputEvent read FOnUserInput write FOnUserInput;
-    property OnDropDown: TNotifyEvent read FOnDropDown write FOnDropDown;
-    property OnCloseUp: TNotifyEvent read FOnCloseUp write FOnCloseUp;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure DropDown;
-    procedure CloseUp(Accept: Boolean);
     /// Text, wie er fuer ein Datum angezeigt wird.
     function FormatDate(D: TDate): string;
     /// Anzeige des Werts nach Kind (Datum, Uhrzeit oder beides).
@@ -168,8 +197,9 @@ type
     /// True, wenn ein Datum gilt (Checked und nicht leer).
     function HasDate: Boolean;
     property DateTime: TDateTime read FDateTime write SetDateTime;
-    property DroppedDown: Boolean read FDroppedDown write SetDroppedDown;
-    property Popup: TPPGCalendarPopup read FPopup;
+    property DroppedDown: Boolean read GetDroppedDown write SetDroppedDown;
+    /// Das Kalender-Popup (nil vor dem ersten Aufklappen).
+    property Popup: TPPGCalendarPopup read GetCalendarPopup;
   end;
 
   TPPGDatePicker = class(TPPGCustomDatePicker)
@@ -266,41 +296,14 @@ implementation
 uses
   PPG.Lang,
   System.Math, System.DateUtils, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont;
+  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.TimePicker;
 
 type
   TCalendarAccess = class(TPPGCalendar);
 
-var
-  GMsgDateToggle: Cardinal = 0;
-  GMouseHook: HHOOK = 0;
-  GOpenPicker: TPPGCustomDatePicker = nil;
-
-function DateMouseHook(Code: Integer; WParam: WPARAM; LParam: LPARAM): LRESULT; stdcall;
-var
-  Info: PMouseHookStruct;
-  P: TPoint;
-  R: TRect;
+function MouseLParam(X, Y: Integer): LPARAM;
 begin
-  // Klick ausserhalb von Feld und Popup schliesst (asynchron per Nachricht)
-  if (Code = HC_ACTION) and (GOpenPicker <> nil) then
-    case WParam of
-      WM_LBUTTONDOWN, WM_RBUTTONDOWN, WM_MBUTTONDOWN,
-      WM_NCLBUTTONDOWN, WM_NCRBUTTONDOWN, WM_NCMBUTTONDOWN:
-        begin
-          Info := PMouseHookStruct(LParam);
-          P := Info^.pt;
-          GetWindowRect(GOpenPicker.Handle, R);
-          if not PtInRect(R, P) and (GOpenPicker.Popup <> nil) and
-            GOpenPicker.Popup.HandleAllocated then
-          begin
-            GetWindowRect(GOpenPicker.Popup.Handle, R);
-            if not PtInRect(R, P) then
-              PostMessage(GOpenPicker.Handle, GMsgDateToggle, 0, 1);
-          end;
-        end;
-    end;
-  Result := CallNextHookEx(GMouseHook, Code, WParam, LParam);
+  Result := LPARAM(Word(SmallInt(X)) or (Cardinal(Word(SmallInt(Y))) shl 16));
 end;
 
 { TPPGCalendarPopup }
@@ -311,7 +314,10 @@ begin
   FCalendar := TPPGCalendar.Create(Self);
   FCalendar.TabStop := False; // Fokus bleibt beim Feld
   FCalendar.ShowFocusAlways := True; // Tastatur kommt vom Feld: Fokus-Tag trotzdem zeigen
+  // Die Maus haelt das Feld (SetCapture); der Kalender darf sie nicht an sich ziehen
+  FCalendar.ControlStyle := FCalendar.ControlStyle - [csCaptureMouse];
   FCalendar.Parent := Self;
+  FCalendar.OnChange := CalendarChange;
 end;
 
 function TPPGCalendarPopup.PopupRounding: Integer;
@@ -343,6 +349,149 @@ begin
     ShowWindow(FCalendar.Handle, SW_HIDE);
 end;
 
+procedure TPPGCalendarPopup.StartPick;
+begin
+  FPicked := False;
+  FMouseDown := False;
+  FStartFocus := Trunc(FCalendar.FocusDate);
+end;
+
+procedure TPPGCalendarPopup.CalendarChange(Sender: TObject);
+begin
+  FPicked := True;
+  // Direkt am Kalender gewaehlt (nicht ueber das Feld, z.B. per Automation):
+  // wie ein Klick uebernehmen und schliessen
+  if (FForwarding = 0) and (Source is TPPGCustomDatePicker) and
+    TPPGCustomDatePicker(Source).DroppedDown then
+    TPPGCustomDatePicker(Source).CloseUp(True);
+end;
+
+function TPPGCalendarPopup.PreferredSize(FieldWidth: Integer): TSize;
+begin
+  Result.cx := PPGScale(300, ScalePPI);
+  Result.cy := PPGScale(330, ScalePPI);
+end;
+
+function TPPGCalendarPopup.CalPoint(X, Y: Integer): TPoint;
+begin
+  Result := Point(X - FCalendar.Left, Y - FCalendar.Top);
+end;
+
+function TPPGCalendarPopup.DayAt(X, Y: Integer): TDate;
+var
+  I: Integer;
+  P: TPoint;
+begin
+  // Tag unter dem Punkt (Popup-Koordinaten), nur in der Monatsansicht
+  Result := 0;
+  if FCalendar.View <> cvMonth then
+    Exit;
+  P := CalPoint(X, Y);
+  for I := 0 to 41 do
+    if PtInRect(FCalendar.CellRect(I), P) then
+      Exit(Trunc(FCalendar.CellDate(I)));
+end;
+
+procedure TPPGCalendarPopup.SendMouse(Msg: Cardinal; Keys: WPARAM; X, Y: Integer);
+var
+  P: TPoint;
+begin
+  // Ueber die Nachrichten (nicht MouseDown/MouseUp direkt): so laufen auch die
+  // Zustaende der Basis (gedrueckt, Hover) und die Maus-Ereignisse mit
+  P := CalPoint(X, Y);
+  Inc(FForwarding);
+  try
+    FCalendar.Perform(Msg, Keys, MouseLParam(P.X, P.Y));
+  finally
+    Dec(FForwarding);
+  end;
+end;
+
+procedure TPPGCalendarPopup.DropMouseMove(X, Y: Integer; Shift: TShiftState);
+var
+  Keys: WPARAM;
+begin
+  Keys := 0;
+  if ssLeft in Shift then
+    Keys := MK_LBUTTON;
+  SendMouse(WM_MOUSEMOVE, Keys, X, Y);
+end;
+
+function TPPGCalendarPopup.DropMouseDown(X, Y: Integer): TPPGDropAction;
+begin
+  FMouseDown := True;
+  FDownDay := DayAt(X, Y);
+  SendMouse(WM_LBUTTONDOWN, MK_LBUTTON, X, Y);
+  Result := pdaKeepOpen;
+end;
+
+function TPPGCalendarPopup.DropMouseUp(X, Y: Integer): TPPGDropAction;
+var
+  Day: TDate;
+begin
+  Result := pdaNone;
+  // Der oeffnende Klick (auf dem Feld) endet hier ebenfalls: nichts tun
+  if not FMouseDown then
+    Exit;
+  FMouseDown := False;
+  Day := DayAt(X, Y);
+  SendMouse(WM_LBUTTONUP, 0, X, Y);
+  if FPicked then
+    Result := pdaAccept
+  else if (Day <> 0) and (Day = FDownDay) and (Day = Trunc(FCalendar.Date)) then
+    Result := pdaAccept; // der schon gewaehlte Tag: schliessen wie Windows
+end;
+
+function TPPGCalendarPopup.DropKeyDown(var Key: Word; Shift: TShiftState): TPPGDropAction;
+var
+  WasMonth: Boolean;
+  K: Word;
+begin
+  Result := pdaNone;
+  K := Key; // der Kalender setzt Key auf 0
+  case K of
+    VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN, VK_PRIOR, VK_NEXT, VK_HOME, VK_END, VK_RETURN:
+      begin
+        WasMonth := FCalendar.View = cvMonth;
+        Inc(FForwarding);
+        try
+          TCalendarAccess(FCalendar).KeyDown(Key, Shift);
+        finally
+          Dec(FForwarding);
+        end;
+        Result := pdaKeepOpen;
+        // Enter waehlt den Fokus-Tag; auch der schon gewaehlte schliesst.
+        // In Jahr/Jahrzehnt zoomt Enter nur hinein.
+        if K = VK_RETURN then
+          if FPicked or (WasMonth and (Trunc(FCalendar.FocusDate) = Trunc(FCalendar.Date))) then
+            Result := pdaAccept;
+        Key := 0;
+      end;
+  end;
+end;
+
+procedure TPPGCalendarPopup.DropWheel(Delta: Integer);
+var
+  N: Integer;
+begin
+  N := WheelSteps(Delta); // eine Seite je Raste (Audit 7b)
+  while N > 0 do
+  begin
+    FCalendar.PrevPage;
+    Dec(N);
+  end;
+  while N < 0 do
+  begin
+    FCalendar.NextPage;
+    Inc(N);
+  end;
+end;
+
+procedure TPPGCalendarPopup.DropMouseLeave;
+begin
+  FCalendar.Perform(CM_MOUSELEAVE, 0, 0);
+end;
+
 procedure TPPGCalendarPopup.SyncFrom(Source: TPPGCustomControl);
 begin
   inherited SyncFrom(Source);
@@ -372,23 +521,12 @@ begin
   FChecked := True;
   FDateTime := System.SysUtils.Date; // wie TDateTimePicker: heute
   FCalendarStyles := TPPGCalendarStyles.Create(Self);
-  if GMsgDateToggle = 0 then
-    GMsgDateToggle := RegisterWindowMessage('PPGlow.DatePickerToggle');
   UpdateText;
 end;
 
 destructor TPPGCustomDatePicker.Destroy;
 begin
-  if GOpenPicker = Self then
-  begin
-    GOpenPicker := nil;
-    if GMouseHook <> 0 then
-    begin
-      UnhookWindowsHookEx(GMouseHook);
-      GMouseHook := 0;
-    end;
-  end;
-  FreeAndNil(FPopup);
+  // Das Popup gehoert dem Feld (Owner); die Basis schliesst es ohne Ereignisse
   inherited Destroy;
   FreeAndNil(FCalendarStyles);
 end;
@@ -426,7 +564,7 @@ begin
   if FKind <> Value then
   begin
     FKind := Value;
-    if FDroppedDown and SpinMode then
+    if DroppedDown and SpinMode then
       CloseUp(False);
     UpdateLayout; // Knoepfe: Kalender bzw. Auf/Ab
     if not (csLoading in ComponentState) then
@@ -439,7 +577,7 @@ begin
   if FDateMode <> Value then
   begin
     FDateMode := Value;
-    if FDroppedDown and SpinMode then
+    if DroppedDown and SpinMode then
       CloseUp(False);
     UpdateLayout;
   end;
@@ -552,6 +690,74 @@ begin
       DT := DT + Delta;
     UserSetDateTime(ClampToRange(Trunc(DT)) + Frac(DT));
   end;
+end;
+
+function TPPGCustomDatePicker.TimeSegmentAtCaret(out Segment: Integer): Boolean;
+var
+  S: string;
+  Caret, TimeStart: Integer;
+begin
+  // Audit 7c #6: Segmente wie im TimePicker. Nur im Bearbeitungsformat
+  // (EditFormatted) ist die Lage der Teile bekannt.
+  Result := False;
+  Segment := 1;
+  if not FEditing or (FDateTime = 0) then
+    Exit;
+  S := Text;
+  Caret := SelStart;
+  if TimeMode then
+  begin
+    Segment := PPGTimeSegmentAt(S, Caret, True);
+    Result := True;
+  end
+  else if DateTimeMode then
+  begin
+    // "Datum Uhrzeit": die Uhrzeit beginnt hinter dem Leerzeichen nach dem Datum
+    TimeStart := Length(FormatDateTime(FormatSettings.ShortDateFormat, FDateTime)) + 1;
+    if (Caret >= TimeStart) and (Length(S) > TimeStart) and (S[TimeStart] = ' ') then
+    begin
+      Segment := PPGTimeSegmentAt(Copy(S, TimeStart + 1, MaxInt), Caret - TimeStart, False);
+      Result := True;
+    end;
+  end;
+end;
+
+procedure TPPGCustomDatePicker.StepAtCaret(Delta: Integer; Coarse: Boolean);
+var
+  Seg, Caret: Integer;
+  DT: TDateTime;
+begin
+  if not TimeSegmentAtCaret(Seg) then
+  begin
+    StepValue(Delta, Coarse);
+    if FEditing then
+      SelectAll;
+    Exit;
+  end;
+  if Coarse then
+    Seg := 0; // Strg: Stunde
+  if not ParseValue(Text, DT) then
+    DT := FDateTime;
+  Caret := SelStart;
+  UserSetDateTime(Trunc(DT) + PPGStepTimeSegment(DT, Seg, Delta));
+  SelStart := Caret; // Einfuegemarke im selben Teil lassen
+end;
+
+function TPPGCustomDatePicker.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
+  MousePos: TPoint): Boolean;
+var
+  N: Integer;
+begin
+  // Offen: die Basis blaettert den Kalender; OnMouseWheel kommt zuerst
+  Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
+  // Audit 7b/7c #6: nur mit Fokus, Teil unter der Einfuegemarke
+  if Result or DroppedDown or ReadOnly or not Enabled or not FieldFocused or
+    (WheelDelta = 0) then
+    Exit;
+  N := WheelSteps(WheelDelta);
+  if N <> 0 then
+    StepAtCaret(N, ssCtrl in Shift);
+  Result := True;
 end;
 
 function TPPGCustomDatePicker.FormatDate(D: TDate): string;
@@ -743,13 +949,6 @@ begin
   end;
 end;
 
-procedure TPPGCustomDatePicker.CMEnabledChanged(var Message: TMessage);
-begin
-  inherited;
-  if not Enabled then
-    CloseUp(False);
-end;
-
 { ---- Eingabe ---- }
 
 procedure TPPGCustomDatePicker.Change;
@@ -846,51 +1045,28 @@ begin
     UserChange; // OnChange
 end;
 
-procedure TPPGCustomDatePicker.FieldKeyDown(var Key: Word; Shift: TShiftState);
+procedure TPPGCustomDatePicker.ClosedKeyDown(var Key: Word; Shift: TShiftState);
 begin
-  if FDroppedDown and (FPopup <> nil) then
-  begin
-    case Key of
-      VK_ESCAPE:
-        CloseUp(False);
-      VK_F4:
-        CloseUp(False);
-      VK_UP, VK_DOWN:
-        if ssAlt in Shift then
-          CloseUp(False)
-        else
-          TCalendarAccess(FPopup.Calendar).KeyDown(Key, Shift);
-      VK_LEFT, VK_RIGHT, VK_PRIOR, VK_NEXT, VK_HOME, VK_END, VK_RETURN:
-        TCalendarAccess(FPopup.Calendar).KeyDown(Key, Shift);
-    else
-      Exit;
-    end;
-    Key := 0;
-    Exit;
-  end;
+  // Auf-/Zuklappen (F4, Alt+Pfeil) und die Tasten bei offenem Kalender
+  // erledigt die Aufklapp-Basis
   case Key of
-    VK_F4:
-      if Shift = [] then
-        DropDown
-      else
-        Exit;
     VK_DOWN, VK_UP:
-      if ssAlt in Shift then
+      if ReadOnly then
+        Exit
+      else
       begin
-        if Key = VK_DOWN then
-          DropDown;
-      end
-      else if not ReadOnly then
-      begin
-        // Oben/Unten: Tag/Monat bzw. Minute/Stunde
-        StepValue(1 - 2 * Ord(Key = VK_DOWN), ssCtrl in Shift);
-        SelectAll;
+        // Oben/Unten: Teil der Uhrzeit unter der Marke bzw. Tag/Monat
+        StepAtCaret(1 - 2 * Ord(Key = VK_DOWN), ssCtrl in Shift);
       end;
     VK_RETURN:
+      // Nur getippten Text uebernehmen; sonst bleibt Enter frei (Audit 7a #2)
+      if InputPending then
       begin
         CommitText(True);
         SelectAll;
-      end;
+      end
+      else
+        Exit;
   else
     Exit;
   end;
@@ -916,9 +1092,14 @@ begin
   end;
 end;
 
-function TPPGCustomDatePicker.WantSpecialKey(Key: Word): Boolean;
+function TPPGCustomDatePicker.InputPending: Boolean;
 begin
-  Result := (Key = VK_RETURN) or (FDroppedDown and (Key = VK_ESCAPE));
+  if FDateTime = 0 then
+    Result := Trim(Text) <> ''
+  else if FEditing then
+    Result := Trim(Text) <> Trim(EditFormatted(FDateTime))
+  else
+    Result := Trim(Text) <> Trim(FormatValue(FDateTime));
 end;
 
 procedure TPPGCustomDatePicker.FocusChanged;
@@ -938,8 +1119,7 @@ begin
   end
   else
   begin
-    if FDroppedDown then
-      CloseUp(False);
+    // Ein offener Kalender ist schon zu (Basis)
     FEditing := False;
     if CommitText(True) then
       UpdateText;
@@ -958,13 +1138,20 @@ end;
 
 procedure TPPGCustomDatePicker.GetButtons(var Buttons: TPPGFieldButtons);
 var
-  N: Integer;
+  N, I, J: Integer;
 begin
-  inherited GetButtons(Buttons);
+  inherited GetButtons(Buttons); // mit dem Aufklapp-Knopf der Basis (Id 40)
   N := Length(Buttons);
   if SpinMode then
   begin
-    // Auf/Ab statt Kalender
+    // Auf/Ab statt Kalender: den Aufklapp-Knopf entfernen
+    for I := N - 1 downto 0 do
+      if Buttons[I].Id = PPGDropButton then
+      begin
+        for J := I to N - 2 do
+          Buttons[J] := Buttons[J + 1];
+        Dec(N);
+      end;
     SetLength(Buttons, N + 2);
     Buttons[N].Id := PPGDateButtonDown;
     Buttons[N].Glyph := fgSpinDown;
@@ -976,13 +1163,9 @@ begin
     Buttons[N + 1].LeftSide := False;
   end
   else
-  begin
-    SetLength(Buttons, N + 1);
-    Buttons[N].Id := PPGDateButtonCalendar;
-    Buttons[N].Glyph := fgNone; // Kalender-Symbol zeichnet DoPaintField
-    Buttons[N].ImageIndex := -1;
-    Buttons[N].LeftSide := False;
-  end;
+    for I := 0 to N - 1 do
+      if Buttons[I].Id = PPGDropButton then
+        Buttons[I].Glyph := fgNone; // Kalender-Symbol zeichnet DoPaintField
   if FShowCheckbox then
   begin
     N := Length(Buttons);
@@ -994,25 +1177,12 @@ begin
   end;
 end;
 
-procedure TPPGCustomDatePicker.ButtonDown(Id: Integer);
-begin
-  if Id = PPGDateButtonCalendar then
-  begin
-    if FDroppedDown then
-      CloseUp(False)
-    else
-      DropDown;
-  end
-  else
-    inherited ButtonDown(Id);
-end;
-
 procedure TPPGCustomDatePicker.ButtonClick(Id: Integer);
 begin
   if (Id = PPGDateButtonUp) or (Id = PPGDateButtonDown) then
   begin
     if not ReadOnly then
-      StepValue(1 - 2 * Ord(Id = PPGDateButtonDown), GetKeyState(VK_CONTROL) < 0);
+      StepAtCaret(1 - 2 * Ord(Id = PPGDateButtonDown), GetKeyState(VK_CONTROL) < 0);
     Exit;
   end;
   if Id = PPGDateButtonCheck then
@@ -1024,98 +1194,81 @@ begin
   inherited ButtonClick(Id);
 end;
 
-{ ---- Popup ---- }
+{ ---- Popup (Aufklapp-Basis) ---- }
 
-procedure TPPGCustomDatePicker.DropDown;
-var
-  P: TPoint;
-  Anchor: TRect;
-  W, H: Integer;
-  D: TDate;
-  Duration: Cardinal;
+function TPPGCustomDatePicker.CreatePopup: TPPGDropPopup;
 begin
-  if FDroppedDown or not Enabled or ReadOnly or (csDesigning in ComponentState) or
-    not HandleAllocated or not IsWindowVisible(Handle) or SpinMode then
-    Exit;
-  DoDropDown;
-  if FDroppedDown or not HandleAllocated then
-    Exit;
-  if FPopup = nil then
-  begin
-    FPopup := TPPGCalendarPopup.Create(Self);
-    FPopup.Calendar.OnChange := CalendarChange;
-  end;
-  FPopup.SyncFrom(Self);
-  FPopup.Calendar.MinDate := FMinDate;
-  FPopup.Calendar.MaxDate := FMaxDate;
-  FPopup.Calendar.View := cvMonth;
+  Result := TPPGCalendarPopup.Create(Self);
+end;
+
+function TPPGCustomDatePicker.CanDropDown: Boolean;
+begin
+  Result := inherited CanDropDown and not SpinMode;
+end;
+
+procedure TPPGCustomDatePicker.PreparePopup(APopup: TPPGDropPopup);
+var
+  P: TPPGCalendarPopup;
+  D: TDate;
+begin
+  P := TPPGCalendarPopup(APopup);
+  P.Calendar.MinDate := FMinDate;
+  P.Calendar.MaxDate := FMaxDate;
+  P.Calendar.View := cvMonth;
   if not ParseDate(Text, D) then
     D := Trunc(FDateTime);
   if D = 0 then
     D := System.SysUtils.Date;
-  FPopup.Calendar.Date := D;
+  P.Calendar.Date := D;
   if not HasDate then
-    FPopup.Calendar.ClearSelection;
-  FPopup.Calendar.FocusDate := D;
-  if Animation.EffectiveEnabled then
-    Duration := Animation.Duration
+    P.Calendar.ClearSelection;
+  P.Calendar.FocusDate := D;
+  P.Calendar.Animation.Enabled := Animation.Enabled;
+  P.StartPick;
+  // Lage zum Feld wie TDateTimePicker.CalAlignment (die Basis spiegelt bei RTL)
+  if FCalAlignment = dtaRight then
+    PopupAlign := taRightJustify
   else
-    Duration := 0;
-  FPopup.Calendar.Animation.Enabled := Animation.Enabled;
-  W := PPGScale(300, ScalePPI);
-  H := PPGScale(330, ScalePPI);
-  P := ClientToScreen(Point(0, 0));
-  Anchor := Rect(P.X, P.Y, P.X + Width, P.Y + Height);
-  FDroppedDown := True;
-  FPopup.Popup(Anchor, W, H, (FCalAlignment = dtaRight) <> UseRightToLeftAlignment, Duration);
-  FPopup.ShowCalendar;
-  GOpenPicker := Self;
-  if GMouseHook = 0 then
-    GMouseHook := SetWindowsHookEx(WH_MOUSE, @DateMouseHook, 0, GetCurrentThreadId);
-  Invalidate;
-  NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
+    PopupAlign := taLeftJustify;
 end;
 
-procedure TPPGCustomDatePicker.CloseUp(Accept: Boolean);
+procedure TPPGCustomDatePicker.PopupOpened;
+begin
+  inherited PopupOpened;
+  Popup.ShowCalendar;
+end;
+
+procedure TPPGCustomDatePicker.PopupClosed;
+begin
+  inherited PopupClosed;
+  Popup.HideCalendar;
+end;
+
+procedure TPPGCustomDatePicker.AcceptPopup(APopup: TPPGDropPopup);
 var
+  P: TPPGCalendarPopup;
   D: TDate;
 begin
-  if not FDroppedDown then
-    Exit;
-  FDroppedDown := False;
-  if GOpenPicker = Self then
-  begin
-    GOpenPicker := nil;
-    if GMouseHook <> 0 then
-    begin
-      UnhookWindowsHookEx(GMouseHook);
-      GMouseHook := 0;
-    end;
-  end;
+  P := TPPGCalendarPopup(APopup);
+  // Gewaehlt (Klick, Enter): der gewaehlte Tag. Sonst (F4, Alt+Pfeil) der
+  // Fokus-Tag, wenn die Tastatur ihn bewegt hat und er waehlbar ist.
   D := 0;
-  if FPopup <> nil then
-  begin
-    D := FPopup.Calendar.Date;
-    FPopup.HideCalendar;
-    FPopup.ClosePopup;
-  end;
-  CancelButtonPress;
-  Invalidate;
-  NotifyAccessibility(EVENT_OBJECT_STATECHANGE);
-  if Accept and (D <> 0) then
+  if P.Picked then
+    D := Trunc(P.Calendar.Date)
+  else if (P.Calendar.View = cvMonth) and (Trunc(P.Calendar.FocusDate) <> P.StartFocus) and
+    not P.Calendar.IsDateDisabled(P.Calendar.FocusDate) then
+    D := Trunc(P.Calendar.FocusDate);
+  if D <> 0 then
   begin
     UserSetDate(D);
     if FieldFocused then
       SelectAll;
   end;
-  DoCloseUp;
 end;
 
-procedure TPPGCustomDatePicker.CalendarChange(Sender: TObject);
+function TPPGCustomDatePicker.GetDroppedDown: Boolean;
 begin
-  // Tag im Popup gewaehlt (Klick oder Enter): uebernehmen und schliessen
-  if FDroppedDown then
-    CloseUp(True);
+  Result := inherited DroppedDown;
 end;
 
 procedure TPPGCustomDatePicker.SetDroppedDown(const Value: Boolean);
@@ -1126,30 +1279,9 @@ begin
     CloseUp(False);
 end;
 
-procedure TPPGCustomDatePicker.DoDropDown;
+function TPPGCustomDatePicker.GetCalendarPopup: TPPGCalendarPopup;
 begin
-  if Assigned(FOnDropDown) then
-    FOnDropDown(Self);
-end;
-
-procedure TPPGCustomDatePicker.DoCloseUp;
-begin
-  if Assigned(FOnCloseUp) then
-    FOnCloseUp(Self);
-end;
-
-procedure TPPGCustomDatePicker.WndProc(var Message: TMessage);
-begin
-  if (GMsgDateToggle <> 0) and (Message.Msg = GMsgDateToggle) then
-  begin
-    // LParam 1: Klick ausserhalb (Hook), 0: Screenreader-Aktion
-    if FDroppedDown then
-      CloseUp(False)
-    else if Message.LParam = 0 then
-      DropDown;
-    Exit;
-  end;
-  inherited WndProc(Message);
+  Result := TPPGCalendarPopup(inherited Popup);
 end;
 
 { ---- Zeichnen ---- }
@@ -1185,7 +1317,7 @@ begin
     if FChecked then
     begin
       ACanvas.FillRoundRect(B, PPGScale(3, PPI), PPGColorToRGB(EffectiveAppearance.FocusColor), 255);
-      PPGDrawIcon(ACanvas, B, igCheckMark, clWhite, PPGScale(10, PPI));
+      PPGDrawIcon(ACanvas, B, igCheckMark, Tokens.OnAccent, PPGScale(10, PPI));
     end
     else
       ACanvas.FrameRoundRect(B, PPGScale(3, PPI), Max(1, PPGScale(1, PPI)), Col, 255);
@@ -1193,11 +1325,6 @@ begin
 end;
 
 { ---- Barrierefreiheit ---- }
-
-function TPPGCustomDatePicker.AccRole: Integer;
-begin
-  Result := ROLE_SYSTEM_COMBOBOX;
-end;
 
 function TPPGCustomDatePicker.AccValue: string;
 begin
@@ -1210,29 +1337,6 @@ begin
     Result := FormatDateTime(FormatSettings.LongDateFormat, FDateTime)
   else
     Result := '';
-end;
-
-function TPPGCustomDatePicker.AccState: Integer;
-begin
-  Result := inherited AccState;
-  if FDroppedDown then
-    Result := Result or STATE_SYSTEM_EXPANDED
-  else
-    Result := Result or STATE_SYSTEM_COLLAPSED;
-end;
-
-function TPPGCustomDatePicker.AccDefaultAction: string;
-begin
-  if FDroppedDown then
-    Result := PPGStr(@SPPGAccClose)
-  else
-    Result := PPGStr(@SPPGAccOpen);
-end;
-
-procedure TPPGCustomDatePicker.AccDoDefaultAction;
-begin
-  if HandleAllocated then
-    PostMessage(Handle, GMsgDateToggle, 0, 0);
 end;
 
 end.

@@ -729,6 +729,7 @@ begin
   FView := TPPGRibbonView.Create;
   ControlStyle := ControlStyle + [csAcceptsControls];
   ShowHint := True;
+  FollowSource := True; // Audit 7a #4: folgt dem Formular
 end;
 
 destructor TPPGRibbonPanelPopup.Destroy;
@@ -814,6 +815,7 @@ begin
   FHot := -1;
   FFocus := -1;
   FPressed := -1;
+  FollowSource := True; // Audit 7a #4: folgt dem Formular
 end;
 
 function TPPGRibbonGalleryPopup.PopupRounding: Integer;

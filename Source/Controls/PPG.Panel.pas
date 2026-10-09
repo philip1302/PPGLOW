@@ -327,13 +327,13 @@ implementation
 
 uses
   System.SysUtils, System.Math, PPG.Appearance, PPG.Render.Gdi, PPG.Render.Registry, PPG.DpiUtils,
-  PPG.Accessibility, PPG.Exceptions, PPG.Lang, PPG.Consts;
+  PPG.Accessibility, PPG.Exceptions, PPG.Lang, PPG.Consts, PPG.Controls.Base;
 
 const
   CaptionPadding = 6; // logische px zwischen Rahmen und Beschriftung
   BarSize = 10;       // logische px: Streifen der Leiste
   MinThumb = 24;
-  WheelStep = 48;     // logische px je Rastung
+  WheelLine = 16;     // logische px je Zeile (Zeilen je Raste: Systemeinstellung)
   ScrollMs = 150;
 
 { TPPGPanelScrollBar }
@@ -834,17 +834,30 @@ end;
 function TPPGCustomPanel.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
 var
-  Step: Integer;
-  Smooth: Boolean;
+  Step, Lines: Integer;
+  Horz, Smooth: Boolean;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
   if Result or not Scrollable then
     Exit;
-  Step := MulDiv(PPGScale(WheelStep, ScalePPI), WheelDelta, WHEEL_DELTA);
-  if (ssShift in Shift) or not FNeedV then
+  Horz := (ssShift in Shift) or not FNeedV;
+  if Horz and not FNeedH then
+    Exit;
+  // Audit 7b: Zeilen aus der Systemeinstellung, Teil-Deltas gesammelt
+  Lines := PPGWheelScrollLines;
+  if Lines < 0 then
   begin
-    if not FNeedH then
-      Exit;
+    // seitenweise
+    if Horz then
+      Step := ClientWidth
+    else
+      Step := ClientHeight;
+  end
+  else
+    Step := Lines * PPGScale(WheelLine, ScalePPI);
+  Step := WheelSteps(WheelDelta, Step);
+  if Horz then
+  begin
     Smooth := FHorzBar.Smooth;
     ScrollTo(FScroll.X - Step, FScroll.Y, Smooth and (Abs(WheelDelta) >= WHEEL_DELTA));
   end

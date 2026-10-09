@@ -50,6 +50,7 @@ type
     procedure WndProc(var Message: TMessage); override;
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
     function WantSpecialKey(Key: Word): Boolean; override;
+    function InputPending: Boolean; override;
     procedure FocusChanged; override;
     procedure DoSelect; override;
     procedure Change; override;
@@ -146,6 +147,16 @@ type
 /// True, wenn das Gebietsschema 24 Stunden verwendet.
 function PPGLocaleUses24Hour: Boolean;
 
+/// Teil einer Uhrzeit unter der Einfuegemarke (gemeinsam mit dem DatePicker,
+/// Audit 7c #6): 0 = Stunde, 1 = Minute, 2 = Sekunde, 3 = AM/PM. S ist der
+/// Uhrzeit-Text ("14:30", "2:30:05 PM"), Caret die Position darin
+/// (0-basiert). Ohne Sekunden zaehlt der dritte Teil als Minute.
+function PPGTimeSegmentAt(const S: string; Caret: Integer; HasSeconds: Boolean): Integer;
+/// Tagesanteil von T im Teil Segment um Delta weiterzaehlen (mit Uebertrag,
+/// im Tag umlaufend); AM/PM wechselt bei ungeradem Delta. Liefert den neuen
+/// Tagesanteil (0 <= Ergebnis < 1).
+function PPGStepTimeSegment(const T: TDateTime; Segment, Delta: Integer): TDateTime;
+
 implementation
 
 uses
@@ -161,6 +172,38 @@ begin
   Result := True;
   if GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_ITIME, Buf, Length(Buf)) > 0 then
     Result := Buf[0] = '1';
+end;
+
+function PPGTimeSegmentAt(const S: string; Caret: Integer; HasSeconds: Boolean): Integer;
+var
+  I, Colons: Integer;
+begin
+  Colons := 0;
+  for I := 1 to Min(Caret, Length(S)) do
+    if S[I] = ':' then
+      Inc(Colons)
+    else if S[I] = ' ' then
+      Exit(3);
+  Result := Min(Colons, 2);
+  if (Result = 2) and not HasSeconds then
+    Result := 1;
+end;
+
+function PPGStepTimeSegment(const T: TDateTime; Segment, Delta: Integer): TDateTime;
+var
+  Secs: Integer;
+begin
+  Secs := Round(Frac(T) * SecsPerDay);
+  case Segment of
+    0: Inc(Secs, Delta * 3600);
+    1: Inc(Secs, Delta * 60);
+    2: Inc(Secs, Delta);
+    3:
+      if Odd(Delta) then
+        Inc(Secs, 12 * 3600);
+  end;
+  Secs := ((Secs mod SecsPerDay) + SecsPerDay) mod SecsPerDay;
+  Result := Secs / SecsPerDay;
 end;
 
 { TPPGCustomTimePicker }
@@ -441,42 +484,20 @@ begin
 end;
 
 function TPPGCustomTimePicker.SegmentAtCaret: Integer;
-var
-  S: string;
-  P, I, Colons: Integer;
 begin
   // 0 = Stunde, 1 = Minute, 2 = Sekunde, 3 = AM/PM
-  S := Text;
-  P := SelStart;
-  Colons := 0;
-  for I := 1 to Min(P, Length(S)) do
-    if S[I] = ':' then
-      Inc(Colons)
-    else if S[I] = ' ' then
-      Exit(3);
-  Result := Colons;
-  if (Result = 2) and not FShowSeconds then
-    Result := 1;
+  Result := PPGTimeSegmentAt(Text, SelStart, FShowSeconds);
 end;
 
 procedure TPPGCustomTimePicker.StepSegment(Segment, Delta: Integer);
 var
   T: TTime;
-  Secs: Integer;
   Caret: Integer;
 begin
   if not ParseTime(Text, T) then
     T := FTime;
-  Secs := Round(Frac(T) * SecsPerDay);
-  case Segment of
-    0: Inc(Secs, Delta * 3600);
-    1: Inc(Secs, Delta * 60);
-    2: Inc(Secs, Delta);
-    3: Inc(Secs, 12 * 3600);
-  end;
-  Secs := ((Secs mod SecsPerDay) + SecsPerDay) mod SecsPerDay;
   Caret := SelStart;
-  UserSetTime(Secs / SecsPerDay);
+  UserSetTime(PPGStepTimeSegment(T, Segment, Delta));
   SelStart := Caret; // Einfuegemarke im selben Teil lassen
 end;
 
@@ -495,6 +516,8 @@ begin
           Exit;
         end;
       VK_RETURN:
+        // Nur getippten Text uebernehmen; sonst bleibt Enter frei (Audit 7a #2)
+        if InputPending then
         begin
           CommitText(True);
           SelectAll;
@@ -507,11 +530,20 @@ end;
 
 function TPPGCustomTimePicker.WantSpecialKey(Key: Word): Boolean;
 begin
-  Result := inherited WantSpecialKey(Key) or (Key = VK_RETURN);
+  // Enter nur mit offener Liste oder getipptem Text (Basis), sonst gehoert er
+  // dem Default-Button (Audit 7a #2)
+  Result := inherited WantSpecialKey(Key);
+end;
+
+function TPPGCustomTimePicker.InputPending: Boolean;
+begin
+  Result := Trim(Text) <> FormatTime(FTime);
 end;
 
 function TPPGCustomTimePicker.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
+var
+  Steps: Integer;
 begin
   if DroppedDown or ReadOnly or not FieldFocused then
     Exit(inherited DoMouseWheel(Shift, WheelDelta, MousePos));
@@ -521,10 +553,10 @@ begin
     OnMouseWheel(Self, Shift, WheelDelta, MousePos, Result);
   if Result then
     Exit;
-  if WheelDelta > 0 then
-    StepSegment(SegmentAtCaret, 1)
-  else if WheelDelta < 0 then
-    StepSegment(SegmentAtCaret, -1);
+  // Audit 7b: Teil-Deltas hochaufloesender Raeder sammeln
+  Steps := WheelSteps(WheelDelta);
+  if Steps <> 0 then
+    StepSegment(SegmentAtCaret, Steps);
   Result := True;
 end;
 
