@@ -386,8 +386,14 @@ procedure TPPGCustomCheckListBox.CheckAll(AState: TCheckBoxState; AllowGrayed,
 var
   I: Integer;
   Data: TPPGItemData;
+  Ex: Boolean;
 begin
+  // Audit 8d #1: Auch ItemsEx klammern - sonst meldet jeder Eintrag einzeln
+  // (Index-Suche in der Collection und Neuauswertung je Eintrag, O(n^2))
+  Ex := Mode = lmItemsEx;
   Items.BeginUpdate;
+  if Ex then
+    ItemsEx.BeginUpdate;
   try
     for I := 0 to ItemCount - 1 do
     begin
@@ -401,6 +407,8 @@ begin
       SourceSetChecked(I, AState);
     end;
   finally
+    if Ex then
+      ItemsEx.EndUpdate;
     Items.EndUpdate;
   end;
   Invalidate;

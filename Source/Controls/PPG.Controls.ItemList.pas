@@ -87,6 +87,7 @@ type
     function GetSelected(Index: Integer): Boolean;
     procedure SetSelected(Index: Integer; const Value: Boolean);
     function GetSelCount: Integer;
+    function GetSelection: TPPGSelection;
     function DropRowAt(Y: Integer): Integer;
     procedure UpdateDrag(X, Y: Integer);
     procedure CancelDrag;
@@ -113,6 +114,9 @@ type
     function FrameInset: Integer; override;
     procedure InvalidateLayout;
     procedure EnsureLayout;
+    /// Audit 8d #6: vor jedem Zugriff auf Eintraege, Auswahl oder Layout; Unterklassen
+    /// mit verzoegertem Aufbau (TreeView) holen ihn hier nach.
+    procedure SyncItems; virtual;
     /// True: jede Zeile einzeln vermessen (Kosten O(n)). Standard: Quelle ist
     /// nicht virtuell und Gruppen/Detailzeilen vorhanden (siehe ScanRichItems).
     function UseVariableRows: Boolean; virtual;
@@ -284,7 +288,7 @@ type
     /// Anzahl der Eintraege der Quelle.
     function ItemCount: Integer;
     property Source: IPPGItemSource read FSource;
-    property Selection: TPPGSelection read FSelection;
+    property Selection: TPPGSelection read GetSelection;
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
     property TopIndex: Integer read GetTopIndex write SetTopIndex;
     property Selected[Index: Integer]: Boolean read GetSelected write SetSelected;
@@ -552,7 +556,12 @@ end;
 
 function TPPGCustomItemList.MeasureItem(Index: Integer; const Data: TPPGItemData): Integer;
 begin
-  Result := DefaultItemHeight;
+  // Audit 8d #2: EnsureLayout hat die Standardhoehe schon einmal berechnet
+  // (vorher je Eintrag eine Textmessung mit eigenem DC)
+  if FLayout.DefaultHeight > 0 then
+    Result := FLayout.DefaultHeight
+  else
+    Result := DefaultItemHeight;
 end;
 
 procedure TPPGCustomItemList.EnsureLayout;
@@ -563,6 +572,7 @@ var
   Group: string;
   Variable: Boolean;
 begin
+  SyncItems;
   if FLayoutValid and (FLayoutPPI = ScalePPI) and (FLayoutFontH = Font.Height) then
     Exit;
   FLayoutValid := True;
@@ -574,6 +584,8 @@ begin
   FLayout.Count := N;
   FHeaderH := TPPGItemPainter.GroupHeaderHeight(Font, ScalePPI);
   Variable := (N <= MaxVariableRows) and UseVariableRows;
+  // Erst leeren: TBits behaelt bei gleicher Groesse alte Ueberschriften
+  FHeaders.Size := 0;
   if Variable then
     FHeaders.Size := N
   else
@@ -821,8 +833,20 @@ procedure TPPGCustomItemList.UserSelectionChanged;
 begin
 end;
 
+procedure TPPGCustomItemList.SyncItems;
+begin
+  // nichts: Quelle ist immer aktuell
+end;
+
+function TPPGCustomItemList.GetSelection: TPPGSelection;
+begin
+  SyncItems;
+  Result := FSelection;
+end;
+
 function TPPGCustomItemList.GetItemIndex: Integer;
 begin
+  SyncItems;
   Result := FSelection.ItemIndex;
 end;
 
@@ -853,6 +877,7 @@ end;
 
 function TPPGCustomItemList.GetSelected(Index: Integer): Boolean;
 begin
+  SyncItems;
   Result := FSelection.Selected[Index];
 end;
 
@@ -865,6 +890,7 @@ end;
 
 function TPPGCustomItemList.GetSelCount: Integer;
 begin
+  SyncItems;
   if FSelection.Mode = smSingle then
     Result := -1 // wie TListBox ohne MultiSelect
   else
@@ -873,11 +899,13 @@ end;
 
 procedure TPPGCustomItemList.SelectAll;
 begin
+  SyncItems;
   FSelection.SelectAll;
 end;
 
 procedure TPPGCustomItemList.ClearSelection;
 begin
+  SyncItems;
   FSelection.Clear;
 end;
 

@@ -99,10 +99,13 @@ type
   TPPGItems = class(TOwnedCollection)
   private
     FOnChange: TPPGItemsChangeEvent;
+    FOnAdded: TPPGItemsChangeEvent;
+    FAppended: TCollectionItem; // einzeln angehaengt, Meldung steht aus
     function GetItem(Index: Integer): TPPGItem;
     procedure SetItem(Index: Integer; const Value: TPPGItem);
   protected
     procedure Update(Item: TCollectionItem); override;
+    procedure Notify(Item: TCollectionItem; Action: TCollectionNotification); override;
   public
     constructor Create(AOwner: TPersistent);
     function Add: TPPGItem; overload;
@@ -112,6 +115,9 @@ type
     property Items[Index: Integer]: TPPGItem read GetItem write SetItem; default;
     /// Index >= 0: Eintrag geaendert, -1: Struktur geaendert.
     property OnChange: TPPGItemsChangeEvent read FOnChange write FOnChange;
+    /// Audit 8d #10: Ein Eintrag wurde ohne aeussere Update-Klammer am Ende
+    /// angehaengt (Index = Count - 1). Ohne Handler kommt wie bisher OnChange(-1).
+    property OnAdded: TPPGItemsChangeEvent read FOnAdded write FOnAdded;
   end;
 
   /// Gemeinsame Basis der Quellen (Ereignis-Verwaltung).
@@ -365,13 +371,20 @@ begin
 end;
 
 function TPPGItems.Add(const AText: string; AImageIndex: Integer): TPPGItem;
+var
+  Own: Boolean;
 begin
+  Own := UpdateCount = 0;
+  Result := nil;
   BeginUpdate;
   try
     Result := Add;
     Result.Text := AText;
     Result.ImageIndex := AImageIndex;
   finally
+    // Eigene Klammer: EndUpdate meldet das Anhaengen (OnAdded)
+    if Own and (Result <> nil) then
+      FAppended := Result;
     EndUpdate;
   end;
 end;
@@ -391,9 +404,28 @@ begin
   Result := -1;
 end;
 
+procedure TPPGItems.Notify(Item: TCollectionItem; Action: TCollectionNotification);
+begin
+  if (Action = cnAdded) and (UpdateCount = 0) then
+    FAppended := Item
+  else
+    FAppended := nil;
+  inherited Notify(Item, Action);
+end;
+
 procedure TPPGItems.Update(Item: TCollectionItem);
+var
+  Appended: TCollectionItem;
 begin
   inherited Update(Item);
+  Appended := FAppended;
+  FAppended := nil;
+  if (Item = nil) and (Appended <> nil) and Assigned(FOnAdded) and (Count > 0) and
+    (inherited GetItem(Count - 1) = Appended) then
+  begin
+    FOnAdded(Self, Count - 1);
+    Exit;
+  end;
   if Assigned(FOnChange) then
     if Item <> nil then
       FOnChange(Self, Item.Index)

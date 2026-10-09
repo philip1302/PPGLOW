@@ -102,6 +102,7 @@ type
     procedure SetListItemIndex(const Value: Integer);
     procedure UpdateSelectMode;
     procedure ItemsExChange(Sender: TObject; Index: Integer);
+    procedure ItemsExAdded(Sender: TObject; Index: Integer);
     procedure ScanItemsEx;
     function IsVirtualStyle: Boolean;
     function IsOwnerDraw: Boolean;
@@ -552,6 +553,7 @@ begin
   FItems := TPPGListBoxStrings.Create(Self);
   FItemsEx := TPPGItems.Create(Self);
   FItemsEx.OnChange := ItemsExChange;
+  FItemsEx.OnAdded := ItemsExAdded;
   FItemCanvas := TCanvas.Create;
   SetSource(TPPGListBoxSource.Create(Self));
 end;
@@ -562,7 +564,10 @@ begin
   if FItems <> nil then
     FItems.FOwner := nil;
   if FItemsEx <> nil then
+  begin
     FItemsEx.OnChange := nil;
+    FItemsEx.OnAdded := nil;
+  end;
   if Source <> nil then
     TPPGListBoxSource(Source as TObject).FOwner := nil;
   SetSource(nil);
@@ -655,22 +660,65 @@ begin
       FHasDetail := True;
     if FItemsEx[I].Group <> '' then
       FHasGroups := True;
+    if FHasDetail and FHasGroups then
+      Break; // mehr ist nicht zu erfahren
   end;
 end;
 
 procedure TPPGCustomListBox.ItemsExChange(Sender: TObject; Index: Integer);
 var
   OldDetail, OldGroups: Boolean;
+  It: TPPGItem;
 begin
   if csLoading in ComponentState then
     Exit; // Loaded baut alles neu auf
   OldDetail := FHasDetail;
   OldGroups := FHasGroups;
-  ScanItemsEx;
+  // Audit 8d #8: Einzelaenderung ohne Durchlauf ueber alle Eintraege, solange
+  // der geaenderte Eintrag die Merker nur setzt oder bestaetigt
+  It := nil;
+  if (Index >= 0) and (Index < FItemsEx.Count) then
+    It := FItemsEx[Index];
+  if (It <> nil) and not ((It.Detail = '') and FHasDetail) and
+    not ((It.Group = '') and FHasGroups) then
+  begin
+    if It.Detail <> '' then
+      FHasDetail := True;
+    if It.Group <> '' then
+      FHasGroups := True;
+  end
+  else
+    ScanItemsEx;
   if (Index >= 0) and (OldDetail = FHasDetail) and (OldGroups = FHasGroups) then
     ItemChanged(Index)
   else
     ItemsReset;
+end;
+
+procedure TPPGCustomListBox.ItemsExAdded(Sender: TObject; Index: Integer);
+var
+  It: TPPGItem;
+begin
+  if csLoading in ComponentState then
+    Exit;
+  // Audit 8d #8: Angehaengt (vorher schon ItemsEx): einfuegen statt alles neu
+  if (Index > 0) and (Index = FItemsEx.Count - 1) and (Mode = lmItemsEx) and
+    (ItemCount = Index + 1) then
+  begin
+    It := FItemsEx[Index];
+    if ((It.Detail <> '') and not FHasDetail) or ((It.Group <> '') and not FHasGroups) then
+    begin
+      if It.Detail <> '' then
+        FHasDetail := True;
+      if It.Group <> '' then
+        FHasGroups := True;
+      ItemsReset;
+    end
+    else
+      ItemsInserted(Index, 1);
+  end
+  else
+    ItemsExChange(Sender, -1);
 end;
 
 procedure TPPGCustomListBox.GetItemData(Index: Integer; var Data: TPPGItemData);
@@ -750,7 +798,7 @@ end;
 
 function TPPGCustomListBox.MeasureItem(Index: Integer; const Data: TPPGItemData): Integer;
 begin
-  Result := DefaultItemHeight;
+  Result := inherited MeasureItem(Index, Data); // Standardhoehe aus dem Layout
   if (FStyle = lbOwnerDrawVariable) and Assigned(FOnMeasureItem) then
     FOnMeasureItem(Self, Index, Result);
 end;

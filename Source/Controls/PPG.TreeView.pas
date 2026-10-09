@@ -54,6 +54,8 @@ type
     FData: Pointer;
     FRow: Integer;
     FRowGen: Cardinal;
+    FIndex: Integer;        // Audit 8d #4: Stelle in der Geschwisterliste (Hinweis)
+    FCheckPending: Boolean; // Audit 8d #5: Kaestchen nach EndUpdate neu berechnen
     FUiaId: Integer; // UI Automation: stabile Nummer (0 = noch keine)
     FColor: TColor;
     FTextColor: TColor;
@@ -83,6 +85,8 @@ type
     function GetTreeView: TPPGCustomTreeView;
     function GetAbsoluteIndex: Integer;
     function Siblings: TList;
+    function SiblingIndex(L: TList): Integer;
+    function GetCheckState: TCheckBoxState;
     procedure Changed;
   public
     constructor Create(AOwner: TPPGTreeNodes);
@@ -126,7 +130,7 @@ type
     property Enabled: Boolean read FEnabled write SetEnabled;
     property Expanded: Boolean read FExpanded write SetExpanded;
     property HasChildren: Boolean read GetHasChildren write SetHasChildren;
-    property CheckState: TCheckBoxState read FCheckState write SetCheckState;
+    property CheckState: TCheckBoxState read GetCheckState write SetCheckState;
     property Checked: Boolean read GetChecked write SetChecked;
     property Selected: Boolean read GetSelected write SetSelected;
     property Focused: Boolean read GetFocused;
@@ -218,6 +222,7 @@ type
     FRows: TList;
     FGen: Cardinal;
     FRowsDirty: Boolean;
+    FCheckPending: TList; // Audit 8d #5: Eltern, deren Kaestchen nach EndUpdate neu berechnet werden
     FHasDetail: Boolean;
     FIndent: Integer;
     FShowLines: Boolean;
@@ -287,7 +292,16 @@ type
     procedure SetDescendantChecks(Node: TPPGTreeNode; State: TCheckBoxState);
     procedure SelectByUser(Node: TPPGTreeNode);
     procedure SortList(L: TList; Recurse: Boolean);
+    function RawRowOfNode(Node: TPPGTreeNode): Integer;
+    procedure RowsChanged;
+    procedure QueueCheckRecalc(P: TPPGTreeNode);
+    procedure FlushCheckRecalc;
   protected
+    procedure WndProc(var Message: TMessage); override;
+    /// Audit 8d #6: Zeilen, die ohne Update-Klammer verzoegert neu aufgebaut
+    /// werden, vor jedem Zugriff nachholen.
+    procedure SyncItems; override;
+    procedure EnsureRows;
     procedure CreateParams(var Params: TCreateParams); override;
     procedure Loaded; override;
     procedure NavigateKey(var Key: Word; Shift: TShiftState); override;
@@ -526,7 +540,10 @@ begin
   if (FOwner = nil) or (FOwner.FRows = nil) then
     Result := 0
   else
+  begin
+    FOwner.EnsureRows;
     Result := FOwner.FRows.Count;
+  end;
 end;
 
 procedure TPPGTreeSource.GetItem(Index: Integer; var Data: TPPGItemData);
@@ -599,6 +616,18 @@ begin
   Fields.Add(Copy(S, Start, MaxInt));
 end;
 
+/// Audit 8d #4: Stellen der Knoten ab From neu nummerieren (nach Einfuegen,
+/// Entfernen oder Sortieren in der Geschwisterliste L).
+procedure RenumberSiblings(L: TList; From: Integer);
+var
+  I: Integer;
+begin
+  if From < 0 then
+    From := 0;
+  for I := From to L.Count - 1 do
+    TPPGTreeNode(L[I]).FIndex := I;
+end;
+
 { TPPGTreeNode }
 
 constructor TPPGTreeNode.Create(AOwner: TPPGTreeNodes);
@@ -609,6 +638,7 @@ begin
   FSelectedIndex := -1;
   FEnabled := True;
   FRow := -1;
+  FIndex := -1;
   FColor := clDefault;
   FTextColor := clDefault;
 end;
@@ -683,6 +713,20 @@ begin
   Result := TPPGTreeNode(FChildren[Index]);
 end;
 
+function TPPGTreeNode.SiblingIndex(L: TList): Integer;
+begin
+  // Audit 8d #4: Die Stelle wird bei jeder Aenderung der Liste ab dort neu
+  // nummeriert (O(1) statt IndexOf); die Pruefung faengt jeden Pfad ab, der
+  // das nicht tut, und sucht dann wie bisher
+  if (FIndex >= 0) and (FIndex < L.Count) and (L[FIndex] = Self) then
+    Result := FIndex
+  else
+  begin
+    Result := L.IndexOf(Self);
+    FIndex := Result;
+  end;
+end;
+
 function TPPGTreeNode.GetIndex: Integer;
 var
   L: TList;
@@ -691,7 +735,7 @@ begin
   if L = nil then
     Result := -1
   else
-    Result := L.IndexOf(Self);
+    Result := SiblingIndex(L);
 end;
 
 function TPPGTreeNode.GetLevel: Integer;
@@ -828,9 +872,17 @@ begin
     Collapse(False);
 end;
 
+function TPPGTreeNode.GetCheckState: TCheckBoxState;
+begin
+  // Audit 8d #5: in der Update-Klammer vorgemerkte Eltern erst berechnen
+  if (FOwner <> nil) and (FOwner.FOwner <> nil) then
+    FOwner.FOwner.FlushCheckRecalc;
+  Result := FCheckState;
+end;
+
 function TPPGTreeNode.GetChecked: Boolean;
 begin
-  Result := FCheckState = cbChecked;
+  Result := GetCheckState = cbChecked;
 end;
 
 procedure TPPGTreeNode.SetChecked(const Value: Boolean);
@@ -907,7 +959,7 @@ begin
   L := Siblings;
   if L = nil then
     Exit;
-  I := L.IndexOf(Self);
+  I := SiblingIndex(L);
   if (I >= 0) and (I < L.Count - 1) then
     Result := TPPGTreeNode(L[I + 1]);
 end;
@@ -921,7 +973,7 @@ begin
   L := Siblings;
   if L = nil then
     Exit;
-  I := L.IndexOf(Self);
+  I := SiblingIndex(L);
   if I > 0 then
     Result := TPPGTreeNode(L[I - 1]);
 end;
@@ -995,6 +1047,8 @@ function TPPGTreeNode.IndexOf(Value: TPPGTreeNode): Integer;
 begin
   if FChildren = nil then
     Result := -1
+  else if (Value <> nil) and (Value.FParent = Self) then
+    Result := Value.SiblingIndex(FChildren) // Audit 8d #4
   else
     Result := FChildren.IndexOf(Value);
 end;
@@ -1130,35 +1184,42 @@ begin
   if FUpdateCount > 0 then
     Dec(FUpdateCount);
   if FUpdateCount = 0 then
+  begin
+    if FOwner <> nil then
+      FOwner.FlushCheckRecalc;
     Changed;
+  end;
 end;
 
 function TPPGTreeNodes.Attach(Node, Dest: TPPGTreeNode; Mode: TNodeAttachMode): TPPGTreeNode;
 var
   L: TList;
-  I: Integer;
+  I, Pos: Integer;
 begin
   Result := Node;
   Node.FOwner := Self;
   case Mode of
     naAddChild, naAddChildFirst:
-      if Dest = nil then
       begin
-        Node.FParent := nil;
-        if Mode = naAddChild then
-          FRoots.Add(Node)
+        if Dest = nil then
+        begin
+          Node.FParent := nil;
+          L := FRoots;
+        end
         else
-          FRoots.Insert(0, Node);
-      end
-      else
-      begin
-        Node.FParent := Dest;
-        if Dest.FChildren = nil then
-          Dest.FChildren := TList.Create;
+        begin
+          Node.FParent := Dest;
+          if Dest.FChildren = nil then
+            Dest.FChildren := TList.Create;
+          L := Dest.FChildren;
+        end;
         if Mode = naAddChild then
-          Dest.FChildren.Add(Node)
+          Pos := L.Add(Node)
         else
-          Dest.FChildren.Insert(0, Node);
+        begin
+          L.Insert(0, Node);
+          Pos := 0;
+        end;
       end;
   else
     begin
@@ -1175,22 +1236,28 @@ begin
       end;
       case Mode of
         naAddFirst:
-          L.Insert(0, Node);
+          begin
+            L.Insert(0, Node);
+            Pos := 0;
+          end;
         naInsert:
           begin
             if Dest = nil then
               I := L.Count
             else
-              I := L.IndexOf(Dest);
+              I := Dest.SiblingIndex(L);
             if I < 0 then
               I := L.Count;
             L.Insert(I, Node);
+            Pos := I;
           end;
       else
-        L.Add(Node);
+        Pos := L.Add(Node);
       end;
     end;
   end;
+  // Audit 8d #4: Stellen ab der Einfuegestelle (Anhaengen: nur der Knoten)
+  RenumberSiblings(L, Pos);
   FCacheNode := nil;
   if FOwner <> nil then
   begin
@@ -1202,11 +1269,20 @@ end;
 procedure TPPGTreeNodes.Detach(Node: TPPGTreeNode);
 var
   L: TList;
+  I: Integer;
 begin
   L := Node.Siblings;
   if L <> nil then
-    L.Remove(Node);
+  begin
+    I := Node.SiblingIndex(L);
+    if I >= 0 then
+    begin
+      L.Delete(I);
+      RenumberSiblings(L, I);
+    end;
+  end;
   Node.FParent := nil;
+  Node.FIndex := -1;
 end;
 
 function TPPGTreeNodes.Add(Sibling: TPPGTreeNode; const S: string): TPPGTreeNode;
@@ -1567,6 +1643,7 @@ begin
   FAnimNode := nil;
   FLastSelected := nil;
   FreeAndNil(FItems); // ohne OnDeletion (wie TTreeView beim Zerstoeren)
+  FreeAndNil(FCheckPending);
   FreeAndNil(FUiaNodes);
   FreeAndNil(FRows);
   inherited Destroy;
@@ -1592,8 +1669,9 @@ end;
 
 { ---- Zeilen ---- }
 
-function TPPGCustomTreeView.RowOfNode(Node: TPPGTreeNode): Integer;
+function TPPGCustomTreeView.RawRowOfNode(Node: TPPGTreeNode): Integer;
 begin
+  // Zeile im aktuellen (ggf. noch nicht nachgeholten) Aufbau
   if (Node <> nil) and (Node.FRowGen = FGen) and (Node.FRow >= 0) and
     (Node.FRow < FRows.Count) and (FRows[Node.FRow] = Node) then
     Result := Node.FRow
@@ -1601,12 +1679,50 @@ begin
     Result := -1;
 end;
 
+function TPPGCustomTreeView.RowOfNode(Node: TPPGTreeNode): Integer;
+begin
+  EnsureRows;
+  Result := RawRowOfNode(Node);
+end;
+
 function TPPGCustomTreeView.NodeOfRow(Row: Integer): TPPGTreeNode;
 begin
+  EnsureRows;
   if (FRows = nil) or (Row < 0) or (Row >= FRows.Count) then
     Result := nil
   else
     Result := TPPGTreeNode(FRows[Row]);
+end;
+
+procedure TPPGCustomTreeView.EnsureRows;
+begin
+  // Audit 8d #6: verzoegerten Neuaufbau nachholen (in der Update-Klammer
+  // bleibt es wie bisher beim alten Aufbau bis EndUpdate)
+  if FRowsDirty and (FItems <> nil) and (FItems.FUpdateCount = 0) and
+    not (csDestroying in ComponentState) then
+    RebuildRows;
+end;
+
+procedure TPPGCustomTreeView.SyncItems;
+begin
+  EnsureRows;
+end;
+
+procedure TPPGCustomTreeView.RowsChanged;
+begin
+  // Audit 8d #6: Ohne Update-Klammer nicht bei jedem Add neu aufbauen (O(n^2)
+  // bei n Knoten). Jede Nachricht an den Baum (Layout, Zeichnen, Eingabe) und
+  // jeder Zugriff auf Zeilen oder Auswahl holt den Aufbau vorher nach.
+  FRowsDirty := True;
+  InvalidateLayout;
+end;
+
+procedure TPPGCustomTreeView.WndProc(var Message: TMessage);
+begin
+  // CM_INVALIDATE schickt Invalidate selbst (RowsChanged): dort nicht nachholen
+  if FRowsDirty and (Message.Msg <> CM_INVALIDATE) then
+    EnsureRows;
+  inherited WndProc(Message);
 end;
 
 procedure TPPGCustomTreeView.RebuildRows;
@@ -1694,7 +1810,8 @@ procedure TPPGCustomTreeView.NodeChanged(Node: TPPGTreeNode);
 var
   R: Integer;
 begin
-  R := RowOfNode(Node);
+  // Ohne Nachholen: neue Knoten bekommen ihre Zeile mit dem ausstehenden Aufbau
+  R := RawRowOfNode(Node);
   if R >= 0 then
   begin
     if (Node.FDetail <> '') and not FHasDetail then
@@ -1717,19 +1834,26 @@ begin
   // Zeile: nur den Pfeil des Eltern-Knotens neu zeichnen (viele Add ohne
   // BeginUpdate bleiben so schnell)
   P := Node.FParent;
-  if (P <> nil) and (not P.FExpanded or (RowOfNode(P) < 0)) then
+  if (P <> nil) and (not P.FExpanded or (RawRowOfNode(P) < 0)) then
   begin
     NodeChanged(P);
     Exit;
   end;
-  RebuildRows;
+  RowsChanged;
 end;
 
 procedure TPPGCustomTreeView.NodeDeleting(Node: TPPGTreeNode);
 begin
   // Zeile leeren: bis zum Neuaufbau keine haengenden Zeiger in der Zeilenliste
-  if RowOfNode(Node) >= 0 then
+  // (auch im noch nicht nachgeholten Aufbau)
+  if RawRowOfNode(Node) >= 0 then
     FRows[Node.FRow] := nil;
+  if Node.FCheckPending then
+  begin
+    Node.FCheckPending := False;
+    if FCheckPending <> nil then
+      FCheckPending.Remove(Node);
+  end;
   if Node = FEditNode then
     EndEdit(False);
   if Node = FAnimNode then
@@ -2191,7 +2315,41 @@ end;
 procedure TPPGCustomTreeView.ChildrenChanged(P: TPPGTreeNode);
 begin
   if FCheckBoxes and FAutoCheck and (P <> nil) then
-    RecalcChecksFrom(P);
+  begin
+    // Audit 8d #5: in der Update-Klammer nur merken (sonst O(n) je Kind)
+    if FItems.FUpdateCount > 0 then
+      QueueCheckRecalc(P)
+    else
+      RecalcChecksFrom(P);
+  end;
+end;
+
+procedure TPPGCustomTreeView.QueueCheckRecalc(P: TPPGTreeNode);
+begin
+  if P.FCheckPending then
+    Exit;
+  if FCheckPending = nil then
+    FCheckPending := TList.Create;
+  FCheckPending.Add(P);
+  P.FCheckPending := True;
+end;
+
+procedure TPPGCustomTreeView.FlushCheckRecalc;
+var
+  I: Integer;
+  P: TPPGTreeNode;
+begin
+  if (FCheckPending = nil) or (FCheckPending.Count = 0) then
+    Exit;
+  // Je vorgemerktem Eltern-Knoten einmal (wie bisher bis zur Wurzel)
+  for I := 0 to FCheckPending.Count - 1 do
+  begin
+    P := TPPGTreeNode(FCheckPending[I]);
+    P.FCheckPending := False;
+    if FCheckBoxes and FAutoCheck then
+      RecalcChecksFrom(P);
+  end;
+  FCheckPending.Clear;
 end;
 
 procedure TPPGCustomTreeView.SetNodeCheck(Node: TPPGTreeNode; State: TCheckBoxState;
@@ -2199,6 +2357,7 @@ procedure TPPGCustomTreeView.SetNodeCheck(Node: TPPGTreeNode; State: TCheckBoxSt
 begin
   if Node = nil then
     Exit;
+  FlushCheckRecalc; // vorgemerkte Eltern zuerst (Reihenfolge wie ohne Klammer)
   Node.FCheckState := State;
   if FAutoCheck and (State <> cbGrayed) then
   begin
@@ -2614,8 +2773,70 @@ end;
 
 procedure TPPGCustomTreeView.SortList(L: TList; Recurse: Boolean);
 var
-  I, J, C: Integer;
-  A, B: TPPGTreeNode;
+  I, N: Integer;
+  Nodes: array of TPPGTreeNode;
+  Keys: array of string;
+  Idx, Tmp: array of Integer;
+  UseEvent: Boolean;
+
+  /// > 0: Eintrag A gehoert hinter B (A steht vorher vor B).
+  function Compare(A, B: Integer): Integer;
+  begin
+    if UseEvent then
+    begin
+      Result := 0;
+      FOnCompare(Self, Nodes[A], Nodes[B], Result);
+    end
+    else
+      Result := AnsiCompareText(Keys[A], Keys[B]);
+  end;
+
+  procedure MergeSort(Lo, Hi: Integer);
+  var
+    Mid, P, Q, K: Integer;
+  begin
+    if Hi - Lo < 1 then
+      Exit;
+    Mid := (Lo + Hi) div 2;
+    MergeSort(Lo, Mid);
+    MergeSort(Mid + 1, Hi);
+    // Bereits in Reihenfolge: nichts zu mischen
+    if Compare(Idx[Mid], Idx[Mid + 1]) <= 0 then
+      Exit;
+    for K := Lo to Hi do
+      Tmp[K] := Idx[K];
+    P := Lo;
+    Q := Mid + 1;
+    K := Lo;
+    while (P <= Mid) and (Q <= Hi) do
+    begin
+      // Stabil: bei Gleichheit bleibt der vordere Eintrag vorn
+      if Compare(Tmp[P], Tmp[Q]) > 0 then
+      begin
+        Idx[K] := Tmp[Q];
+        Inc(Q);
+      end
+      else
+      begin
+        Idx[K] := Tmp[P];
+        Inc(P);
+      end;
+      Inc(K);
+    end;
+    while P <= Mid do
+    begin
+      Idx[K] := Tmp[P];
+      Inc(P);
+      Inc(K);
+    end;
+    while Q <= Hi do
+    begin
+      Idx[K] := Tmp[Q];
+      Inc(Q);
+      Inc(K);
+    end;
+  end;
+
 begin
   if (L = nil) or (L.Count < 2) then
   begin
@@ -2624,29 +2845,27 @@ begin
         SortList(TPPGTreeNode(L[I]).FChildren, True);
     Exit;
   end;
-  // Einfuegesortierung: stabil, ohne zusaetzlichen Speicher (Kinderlisten
-  // sind in Baeumen klein)
-  for I := 1 to L.Count - 1 do
+  // Audit 8d #3: stabiler Merge-Sort (vorher Einfuegesortierung, O(n^2)
+  // Vergleiche) mit einmal berechneten Schluesseln statt PPGStripMarkup je
+  // Vergleich; gleiche Reihenfolge wie bisher
+  N := L.Count;
+  UseEvent := Assigned(FOnCompare);
+  SetLength(Nodes, N);
+  SetLength(Idx, N);
+  SetLength(Tmp, N);
+  if not UseEvent then
+    SetLength(Keys, N);
+  for I := 0 to N - 1 do
   begin
-    A := TPPGTreeNode(L[I]);
-    J := I - 1;
-    while J >= 0 do
-    begin
-      B := TPPGTreeNode(L[J]);
-      if Assigned(FOnCompare) then
-      begin
-        C := 0;
-        FOnCompare(Self, B, A, C);
-      end
-      else
-        C := AnsiCompareText(PPGStripMarkup(B.FText), PPGStripMarkup(A.FText));
-      if C <= 0 then
-        Break;
-      L[J + 1] := L[J];
-      Dec(J);
-    end;
-    L[J + 1] := A;
+    Nodes[I] := TPPGTreeNode(L[I]);
+    Idx[I] := I;
+    if not UseEvent then
+      Keys[I] := PPGStripMarkup(Nodes[I].FText);
   end;
+  MergeSort(0, N - 1);
+  for I := 0 to N - 1 do
+    L[I] := Nodes[Idx[I]];
+  RenumberSiblings(L, 0);
   if Recurse then
     for I := 0 to L.Count - 1 do
       SortList(TPPGTreeNode(L[I]).FChildren, True);

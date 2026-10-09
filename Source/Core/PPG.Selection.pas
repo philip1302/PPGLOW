@@ -31,6 +31,7 @@ type
     FMode: TPPGSelectMode;
     FBits: TBits;
     FSelCount: Integer;
+    FSingle: Integer; // Audit 8d #9: Stelle des einzigen gewaehlten Eintrags (-1 = unbekannt)
     FFocus: Integer;
     FAnchor: Integer;
     FUpdateCount: Integer;
@@ -87,6 +88,7 @@ begin
   inherited Create;
   FBits := TBits.Create;
   FFocus := -1;
+  FSingle := -1;
   FAnchor := -1;
 end;
 
@@ -135,9 +137,18 @@ begin
     Exit;
   FBits[Index] := Value;
   if Value then
-    Inc(FSelCount)
+  begin
+    Inc(FSelCount);
+    if FSelCount = 1 then
+      FSingle := Index
+    else
+      FSingle := -1;
+  end
   else
+  begin
     Dec(FSelCount);
+    FSingle := -1; // welcher bleibt, sucht NextSelected bei Bedarf
+  end;
   FChanged := True;
 end;
 
@@ -148,6 +159,7 @@ begin
   FBits.Size := 0;
   FBits.Size := FCount;
   FSelCount := 0;
+  FSingle := -1;
   FChanged := True;
 end;
 
@@ -174,6 +186,8 @@ begin
       end;
     FCount := N;
     FBits.Size := FCount;
+    if FSingle >= FCount then
+      FSingle := -1;
     if FFocus >= FCount then
     begin
       FFocus := FCount - 1;
@@ -410,6 +424,22 @@ var
 begin
   if From < 0 then
     From := 0;
+  // Audit 8d #9: ein einziger gewaehlter Eintrag (Single-Modus) ohne Durchlauf
+  if FSelCount = 1 then
+  begin
+    if FSingle < 0 then
+      for I := 0 to FCount - 1 do
+        if FBits[I] then
+        begin
+          FSingle := I;
+          Break;
+        end;
+    if FSingle >= From then
+      Result := FSingle
+    else
+      Result := -1;
+    Exit;
+  end;
   if FSelCount > 0 then
     for I := From to FCount - 1 do
       if FBits[I] then
@@ -433,14 +463,30 @@ begin
     Exit;
   if (Index < 0) or (Index > FCount) then
     Index := FCount;
+  // Audit 8d #9: ohne bzw. mit genau einem bekannten gewaehlten Eintrag nur
+  // die Groesse aendern (statt jedes Bit ab Index zu verschieben)
+  if FSelCount = 1 then
+    NextSelected(0); // FSingle bestimmen
   BeginUpdate;
   try
     FBits.Size := FCount + ACount;
-    // Bits ab Index nach hinten schieben
-    for I := FCount - 1 downto Index do
-      FBits[I + ACount] := FBits[I];
-    for I := Index to Index + ACount - 1 do
-      FBits[I] := False;
+    if FSelCount = 1 then
+    begin
+      if FSingle >= Index then
+      begin
+        FBits[FSingle] := False;
+        Inc(FSingle, ACount);
+        FBits[FSingle] := True;
+      end;
+    end
+    else if FSelCount > 0 then
+    begin
+      // Bits ab Index nach hinten schieben
+      for I := FCount - 1 downto Index do
+        FBits[I + ACount] := FBits[I];
+      for I := Index to Index + ACount - 1 do
+        FBits[I] := False;
+    end;
     Inc(FCount, ACount);
     if FFocus >= Index then
       Inc(FFocus, ACount);
@@ -460,15 +506,38 @@ begin
     Exit;
   if Index + ACount > FCount then
     ACount := FCount - Index;
+  if FSelCount = 1 then
+    NextSelected(0); // FSingle bestimmen
   BeginUpdate;
   try
-    for I := Index to Index + ACount - 1 do
-      if FBits[I] then
-        Dec(FSelCount);
-    for I := Index to FCount - ACount - 1 do
-      FBits[I] := FBits[I + ACount];
-    for I := FCount - ACount to FCount - 1 do
-      FBits[I] := False; // siehe SetCount
+    if FSelCount = 1 then
+    begin
+      // Audit 8d #9: nur das eine Bit verschieben bzw. loeschen
+      FBits[FSingle] := False;
+      if FSingle >= Index + ACount then
+      begin
+        Dec(FSingle, ACount);
+        FBits[FSingle] := True;
+      end
+      else if FSingle >= Index then
+      begin
+        FSelCount := 0;
+        FSingle := -1;
+      end
+      else
+        FBits[FSingle] := True;
+    end
+    else if FSelCount > 0 then
+    begin
+      for I := Index to Index + ACount - 1 do
+        if FBits[I] then
+          Dec(FSelCount);
+      for I := Index to FCount - ACount - 1 do
+        FBits[I] := FBits[I + ACount];
+      for I := FCount - ACount to FCount - 1 do
+        FBits[I] := False; // siehe SetCount
+      FSingle := -1;
+    end;
     Dec(FCount, ACount);
     FBits.Size := FCount;
     // Fokus: im geloeschten Bereich -> auf den Nachfolger (bzw. letzten)

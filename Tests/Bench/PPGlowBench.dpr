@@ -320,7 +320,233 @@ end;
 
 /// Audit-Paket 8C (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
 procedure Bench8C;
+var
+  TV: TPPGTreeView;
+  CLB: TPPGCheckListBox;
+  LB: TPPGListBox;
+  CB: TPPGComboBox;
+  I: Integer;
 begin
+  // Baum mit 10 000 Wurzeln (Markup in jedem dritten Text)
+  TV := TPPGTreeView.Create(Form);
+  try
+    TV.Parent := Form;
+    TV.SetBounds(0, 0, 300, 600);
+    TV.Items.BeginUpdate;
+    try
+      for I := 0 to 9999 do
+        if I mod 3 = 0 then
+          TV.Items.Add(nil, '<b>Knoten ' + IntToStr((I * 7919) mod 10000) + '</b>')
+        else
+          TV.Items.Add(nil, 'Knoten ' + IntToStr((I * 7919) mod 10000));
+    finally
+      TV.Items.EndUpdate;
+    end;
+    Measure('TreeView 10 000 Wurzeln: Items[]-Schleife', 100,
+      procedure
+      var
+        J, N: Integer;
+      begin
+        N := 0;
+        for J := 0 to TV.Items.Count - 1 do
+          if TV.Items[J] <> nil then
+            Inc(N);
+        if N <> 10000 then
+          Writeln('  Fehler: Anzahl ', N);
+      end);
+    Measure('TreeView 10 000 Wurzeln: AlphaSort', 100,
+      procedure
+      begin
+        TV.AlphaSort(True);
+      end);
+  finally
+    TV.Free;
+  end;
+
+  TV := TPPGTreeView.Create(Form);
+  try
+    TV.Parent := Form;
+    TV.SetBounds(0, 0, 300, 600);
+    Measure('TreeView 10 000 Wurzeln ohne BeginUpdate', 100,
+      procedure
+      var
+        J: Integer;
+      begin
+        for J := 0 to 9999 do
+          TV.Items.Add(nil, 'Knoten ' + IntToStr(J));
+        if TV.RowCount <> 10000 then
+          Writeln('  Fehler: Zeilen ', TV.RowCount);
+        PaintToBitmap(TV);
+      end);
+  finally
+    TV.Free;
+  end;
+
+  TV := TPPGTreeView.Create(Form);
+  try
+    TV.Parent := Form;
+    TV.SetBounds(0, 0, 300, 600);
+    TV.CheckBoxes := True;
+    Measure('TreeView AutoCheck: 10 000 Kinder in BeginUpdate', 100,
+      procedure
+      var
+        J: Integer;
+        P: TPPGTreeNode;
+      begin
+        TV.Items.BeginUpdate;
+        try
+          P := TV.Items.Add(nil, 'Eltern');
+          for J := 0 to 9999 do
+            TV.Items.AddChild(P, 'Kind ' + IntToStr(J));
+          P.Item[0].Checked := True;
+        finally
+          TV.Items.EndUpdate;
+        end;
+        if P.CheckState <> cbGrayed then
+          Writeln('  Fehler: Elternzustand');
+      end);
+  finally
+    TV.Free;
+  end;
+
+  CLB := TPPGCheckListBox.Create(Form);
+  try
+    CLB.Parent := Form;
+    CLB.SetBounds(0, 0, 300, 600);
+    CLB.ItemsEx.BeginUpdate;
+    try
+      for I := 0 to 9999 do
+        CLB.ItemsEx.Add('Eintrag ' + IntToStr(I));
+    finally
+      CLB.ItemsEx.EndUpdate;
+    end;
+    Measure('CheckListBox 10 000 (ItemsEx): CheckAll an + aus', 100,
+      procedure
+      begin
+        CLB.CheckAll(cbChecked);
+        CLB.CheckAll(cbUnchecked);
+      end);
+  finally
+    CLB.Free;
+  end;
+
+  LB := TPPGListBox.Create(Form);
+  try
+    LB.Parent := Form;
+    LB.SetBounds(0, 0, 300, 600);
+    LB.ItemsEx.BeginUpdate;
+    try
+      for I := 0 to 99999 do
+        LB.ItemsEx.Add('Eintrag ' + IntToStr(I)).Group := 'Gruppe ' + IntToStr(I div 1000);
+    finally
+      LB.ItemsEx.EndUpdate;
+    end;
+    Measure('ListBox 100 000 mit Gruppen: 5 x Layout + zeichnen', 100,
+      procedure
+      var
+        J: Integer;
+      begin
+        for J := 1 to 5 do
+        begin
+          // Neue Schrift erzwingt ein neues Layout
+          LB.Font.Height := -12 - (J mod 2);
+          LB.ItemRect(0);
+          PaintToBitmap(LB);
+        end;
+      end);
+  finally
+    LB.Free;
+  end;
+
+  Measure('Markup-Layout 20 000 x (gleiche Grundschrift)', 1300,
+    procedure
+    var
+      J: Integer;
+      ML: TPPGMarkupLayout;
+    begin
+      ML := TPPGMarkupLayout.Create;
+      try
+        for J := 0 to 19999 do
+          ML.Layout('Text <b>fett</b> und <i>kursiv</i> ' + IntToStr(J mod 50), Form.Font,
+            nil, 0, False);
+      finally
+        ML.Free;
+      end;
+    end);
+
+  CB := TPPGComboBox.Create(Form);
+  try
+    CB.Parent := Form;
+    Measure('ComboBox 10 000 x ItemsEx.Add (unsortiert)', 100,
+      procedure
+      var
+        J: Integer;
+      begin
+        for J := 0 to 9999 do
+          CB.ItemsEx.Add('Eintrag ' + IntToStr(J));
+      end);
+  finally
+    CB.Free;
+  end;
+
+  CB := TPPGComboBox.Create(Form);
+  try
+    CB.Parent := Form;
+    CB.Sorted := True;
+    Measure('ComboBox 2 000 x ItemsEx.Add (sortiert)', 100,
+      procedure
+      var
+        J: Integer;
+      begin
+        for J := 0 to 1999 do
+          CB.ItemsEx.Add('Eintrag ' + IntToStr((J * 7919) mod 2000));
+      end);
+  finally
+    CB.Free;
+  end;
+
+  Measure('Auswahl 100 000: 10 000 x ItemIndex (Single)', 100,
+    procedure
+    var
+      J, N: Integer;
+      S: TPPGSelection;
+    begin
+      S := TPPGSelection.Create;
+      try
+        S.Count := 100000;
+        S.Selected[99999] := True;
+        N := 0;
+        for J := 1 to 10000 do
+          Inc(N, S.ItemIndex);
+        if N <> 999990000 then
+          Writeln('  Fehler: ItemIndex');
+      finally
+        S.Free;
+      end;
+    end);
+
+  Measure('Auswahl 100 000: 10 000 x vorne einfuegen + loeschen', 100,
+    procedure
+    var
+      J: Integer;
+      S: TPPGSelection;
+    begin
+      S := TPPGSelection.Create;
+      try
+        S.Count := 100000;
+        for J := 1 to 5000 do
+          S.ItemsInserted(0, 1);
+        for J := 1 to 5000 do
+          S.ItemsDeleted(0, 1);
+        S.Selected[50000] := True;
+        for J := 1 to 5000 do
+          S.ItemsInserted(0, 1);
+        if S.ItemIndex <> 55000 then
+          Writeln('  Fehler: ItemIndex nach Einfuegen');
+      finally
+        S.Free;
+      end;
+    end);
 end;
 
 /// Audit-Paket 8D (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
