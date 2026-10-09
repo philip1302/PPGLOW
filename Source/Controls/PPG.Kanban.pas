@@ -2512,6 +2512,10 @@ begin
             PPGEndBatch(ACanvas);
           end;
         end;
+        // Audit 11b: Tastaturfokus sichtbar (die Auswahl allein sieht ohne Fokus gleich aus)
+        if CardSel and Focused and FocusVisible then
+          ACanvas.FrameRoundRect(Rect(CR.Left - Sc(3), CR.Top - Sc(3), CR.Right + Sc(3), CR.Bottom + Sc(3)),
+            Sc(9), Sc(2), PPGColorToRGB(EffectiveAppearance.FocusColor), 255);
       end;
     end;
   finally

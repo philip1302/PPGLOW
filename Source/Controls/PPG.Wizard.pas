@@ -429,6 +429,9 @@ begin
     Secondary := T.TextSecondary;
     Accent := T.Accent;
     OnAccent := T.OnAccent;
+    // Deaktiviert: Schrittkreise wie der Text in GrayText (Audit 11b)
+    if not Enabled then
+      Accent := T.TextDisabled;
     Exit(True);
   end;
   Bg := PPGColorToRGB(St.Color);
@@ -443,6 +446,9 @@ begin
     Accent := PPGColorToRGB(St.GlowColor);
     OnAccent := Bg;
   end;
+  // Deaktiviert: Schrittkreise und Linie abgeblendet wie die Titel (Audit 11b)
+  if not Enabled then
+    Accent := PPGDisabledColor(Accent, Bg);
   Result := True;
 end;
 

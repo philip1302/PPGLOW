@@ -12,15 +12,18 @@ unit PPG.Tests.Visual;
     anders als Normal, Dunkel anders als Hell mit hellem Text, keine
     Zeichenfehler.
   - Referenzbilder (Tests\Visual\Baseline): Normal in ModernFlat hell und
-    dunkel. Fehlt ein Bild, wird es angelegt; sonst darf hoechstens 0,5 % der
-    Pixel deutlich abweichen. Neu anlegen: Ordner Baseline loeschen. }
+    dunkel; hoechstens 0,5 % der Pixel duerfen deutlich abweichen. Ein
+    fehlendes Bild ist ein Fehlschlag; angelegt wird nur mit /baseline.
+  - Audit 11b: alle 84 Paletten-Controls (Indizes 42..77 neu, eigene Fenster
+    ueber RenderWindow, DB-Controls an einem TClientDataSet). Referenzbilder
+    der neuen Controls am 10.10.2026 mit /baseline angelegt und angesehen. }
 
 interface
 
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.ExtCtrls, Vcl.ComCtrls,
-  Vcl.Imaging.pngimage,
+  Vcl.Imaging.pngimage, Data.DB, Datasnap.DBClient, MidasLib,
   PPG.Types, PPG.Render.Registry, PPG.Controls.Base, PPG.Tests.Controls;
 
 type
@@ -33,6 +36,13 @@ type
     FToastCenter: TComponent;
     FRtl: Boolean;      // Phase 9d: Render von rechts nach links
     FPPI: Integer;      // Phase 9e: Render bei anderer DPI (96 = normal)
+    // Audit 11b: Datenquelle fuer die DB-Controls, Ziel fuer TeachingTip
+    FData, FOrte: TClientDataSet;
+    FSource, FOrtSrc: TDataSource;
+    FTipTarget: TControl;
+    function BuildNewControl(Index: Integer; P: TWinControl): TControl;
+    function RenderWindow(Index: Integer; Variant: TVisualVariant; State: TVisualState;
+      const Preset: string): TBitmap;
     /// Galerie aus Zeilen (je Control) und Spalten (je Variante) speichern.
     procedure SaveSheet(const FileName: string; const Columns: array of string;
       const Rows: TStrings; const Cells: array of TBitmap);
@@ -59,6 +69,9 @@ type
 
 /// Anzahl Pixel, die sich deutlich (Summe RGB > Tol) unterscheiden.
 function PPGPixelDiff(A, B: TBitmap; Tol: Integer = 40): Integer;
+/// Pixel, die sich deutlich von der Farbe links oben (Hintergrund) abheben;
+/// 0 = leeres Bild.
+function PPGContentPixels(B: TBitmap): Integer;
 
 implementation
 
@@ -71,40 +84,121 @@ uses
   PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NavigationView, PPG.Breadcrumb,
   PPG.ToolBar, PPG.StatusBar, PPG.Notifications,
-  PPG.Sparkline, PPG.Gauge, PPG.Chart, PPG.Chart.Series;
+  PPG.Sparkline, PPG.Gauge, PPG.Chart, PPG.Chart.Series,
+  Vcl.Menus, Vcl.DBCtrls, Vcl.Dialogs, System.Rtti, PPG.Planner.Model, PPG.Planner, PPG.Ribbon.Layout,
+  PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban.Items, PPG.Kanban, PPG.Popup.Placement, PPG.Menus,
+  PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs, PPG.Wizard, PPG.BusyOverlay,
+  PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
+  PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.DB.Controls, PPG.DB.Lookup,
+  PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Planner, PPG.DB.Kanban, PPG.DB.Fields, PPG.DB.Navigator;
 
 type
   TCCV = class(TPPGCustomControl);
 
 const
-  ControlCount = 43;
+  ControlCount = 79;
   ToastIndex = 41; // eigenes Fenster (Sonderweg in Render und den RTL-/DPI-Galerien)
+  // Audit 11b: ab hier die bisher fehlenden Paletten-Controls und die DB-Controls
+  FirstNewIndex = 42;
+  MenuIndex = 46;      // Menuefenster von TPPGPopupMenu
+  CustomHintIndex = 48;
+  TipIndex = 49;
+  DialogIndex = 50;
+  BusyIndex = 52;
   ControlNames: array[0..ControlCount - 1] of string = ('Button', 'CheckBox', 'RadioButton',
     'ToggleSwitch', 'ProgressBar', 'TrackBar', 'Panel', 'GroupBox', 'Edit', 'Memo', 'SpinEdit',
     'ComboBox', 'TabControl', 'PageControl', 'ListBox', 'CheckListBox', 'TreeView', 'Grid',
     'Label', 'LinkLabel', 'Badge', 'ProgressRing', 'InfoBar', 'Expander', 'Splitter', 'Rating',
     'SearchEdit', 'Calendar', 'DatePicker', 'TimePicker', 'NavigationView', 'Breadcrumb',
     'ToolBar', 'StatusBar', 'Sparkline', 'Gauge', 'KpiTile', 'Chart',
-    'RadioGroup', 'CheckGroup', 'TileView', 'Toast', 'StyleTitle');
-  // Welche Zustaende sichtbar anders sein muessen
+    'RadioGroup', 'CheckGroup', 'TileView', 'Toast',
+    // 42..60
+    'ScrollBox', 'Planner', 'Ribbon', 'Kanban', 'PopupMenu', 'MenuBar', 'CustomHint',
+    'TeachingTip', 'TaskDialog', 'Wizard', 'BusyOverlay', 'NumberEdit', 'MaskEdit',
+    'PasswordEdit', 'FileEdit', 'ColorPicker', 'CheckComboBox', 'ColumnComboBox', 'TagEdit',
+    // 61..77
+    'DBEdit', 'DBMemo', 'DBCheckBox', 'DBComboBox', 'DBLookupComboBox', 'DBDatePicker',
+    'DBGrid', 'DBChart', 'DBPlanner', 'DBKanban', 'DBMaskEdit', 'DBNumberEdit',
+    'DBColorPicker', 'DBCheckComboBox', 'DBTagEdit', 'DBNavigator', 'DBRadioGroup',
+    'StyleTitle');
+  // Welche Zustaende sichtbar anders sein muessen. Eigene Fenster (Hinweis,
+  // TeachingTip, Dialog, Busy-Karte) haben keinen Maus-/Fokus-/Deaktiviert-
+  // Zustand; das Menuefenster zeigt den markierten Eintrag als Hover.
   HasHover: array[0..ControlCount - 1] of Boolean = (True, True, True, True, False, True,
     False, False, True, True, True, True, True, True, True, True, True, False, // Grid: kein Hover
     False, True, False, False, True, True, True, True, True, True, True, True, True, True,
-    True, False, False, False, True, True, True, True, True, True, False);
+    True, False, False, False, True, True, True, True, True, True,
+    // ScrollBox, Planner, Ribbon, Kanban, PopupMenu, MenuBar, CustomHint, TeachingTip,
+    // TaskDialog, Wizard, BusyOverlay, Number, Mask, Password, File, Color, CheckCombo,
+    // ColumnCombo, TagEdit
+    False, True, True, True, True, True, False, False, False, False, False, True, True, True,
+    True, True, True, True, True,
+    // DB: Edit, Memo, CheckBox, ComboBox, Lookup, DatePicker, Grid (kein Hover wie Grid),
+    // Chart, Planner, Kanban, Mask, Number, Color, CheckCombo, TagEdit, Navigator, RadioGroup
+    True, True, True, True, True, True, False, True, True, True, True, True, True, True, True,
+    True, True,
+    False);
   HasFocus: array[0..ControlCount - 1] of Boolean = (True, True, True, True, False, True,
     False, False, True, True, True, True, True, True, True, True, True, True,
     False, True, False, False, True, True, True, True, True, True, True, True, True, True,
-    True, False, False, False, True, True, True, True, True, False, False);
+    True, False, False, False, True, True, True, True, True, False,
+    // ScrollBox und Wizard: Fokus liegt auf den Kind-Controls; MenuBar und Ribbon:
+    // nicht in der Tab-Folge (TabStop False), Tastatur ueber Alt bzw. KeyTips;
+    // Fenster ohne Fokus. Planner und Kanban: Fokus am gewaehlten Termin bzw.
+    // an der gewaehlten Karte (Galerie waehlt den ersten).
+    False, True, False, True, False, False, False, False, False, False, False, True, True, True,
+    True, True, True, True, True,
+    True, True, True, True, True, True, True, True, True, True, True, True, True, True, True,
+    True, True,
+    False);
   VariantNames: array[TVisualVariant] of string = ('ModernFlat hell', 'ModernFlat dunkel',
     'Classic', 'Fluent11 hell', 'Fluent11 dunkel', 'GDI');
   StateNames: array[TVisualState] of string = ('Normal', 'Hover', 'Gedrueckt', 'Fokus',
     'Deaktiviert');
   LastControl = ControlCount - 2; // StyleTitle ist nur Platzhalter
-  // Deaktiviert muss sichtbar sein (nicht: Panel ohne Text-Aenderung, Splitter, Toast)
+  // Deaktiviert muss sichtbar sein (nicht: Panel und ScrollBox ohne Text-Aenderung,
+  // Splitter, eigene Fenster)
   HasDisabled: array[0..ControlCount - 1] of Boolean = (True, True, True, True, True, True,
     False, True, True, True, True, True, True, True, True, True, True, True,
     True, True, True, True, True, True, False, True, True, True, True, True, True, True,
-    True, True, True, True, True, True, True, True, True, False, False);
+    True, True, True, True, True, True, True, True, True, False,
+    False, True, True, True, False, True, False, False, False, True, False, True, True, True,
+    True, True, True, True, True,
+    True, True, True, True, True, True, True, True, True, True, True, True, True, True, True,
+    True, True,
+    False);
+  // RTL: hier ist "keine Aenderung" fachlich richtig (symmetrisch bzw. Text fuellt
+  // das Control); bei allen anderen muss sich das Bild aendern.
+  // - Button, Panel: zentrierte Beschriftung; Label, LinkLabel: AutoSize, der Text
+  //   fuellt die Breite; Badge, ProgressRing, Splitter, Gauge: symmetrisch;
+  //   Sparkline: die Zeitachse laeuft auch in RTL von links nach rechts (wie Excel).
+  RtlUnchanged: array[0..8] of string = ('Button', 'Panel', 'Label', 'LinkLabel', 'Badge',
+    'ProgressRing', 'Splitter', 'Sparkline', 'Gauge');
+  // Hochkontrast mit den Systemfarben des Testrechners: Label (Fenstertext auf
+  // Fensterfarbe), LinkLabel (HotLight) und Badge (Highlight) haben dieselben
+  // Farben wie das Preset ModernFlat hell.
+  HcUnchanged: array[0..2] of string = ('Label', 'LinkLabel', 'Badge');
+
+function IsWindowIndex(Index: Integer): Boolean;
+begin
+  Result := (Index = ToastIndex) or (Index = MenuIndex) or (Index = CustomHintIndex) or
+    (Index = TipIndex) or (Index = DialogIndex) or (Index = BusyIndex);
+end;
+
+function VisualMonday: TDateTime;
+begin
+  Result := EncodeDate(2026, 6, 1); // ein Montag
+end;
+
+function InList(const Name: string; const List: array of string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to High(List) do
+    if SameText(Name, List[I]) then
+      Result := True;
+end;
 
 function PPGPixelDiff(A, B: TBitmap; Tol: Integer): Integer;
 var
@@ -173,6 +267,11 @@ begin
   end;
 end;
 
+function PPGContentPixels(B: TBitmap): Integer;
+begin
+  Result := ContentPixels(B);
+end;
+
 /// Mittlere Saettigung (max-min der Kanaele) der farbigen Pixel; 0 = keine.
 function MeanSaturation(B: TBitmap): Double;
 var
@@ -233,6 +332,42 @@ begin
   FPPI := 96;
   FForm.SetBounds(0, 0, 640, 520);
   FForm.Show;
+  // Datenquelle der DB-Controls (fester Inhalt, erster Datensatz aktiv)
+  FOrte := TClientDataSet.Create(FForm);
+  FOrte.FieldDefs.Add('ID', ftInteger);
+  FOrte.FieldDefs.Add('Ort', ftString, 40);
+  FOrte.CreateDataSet;
+  FOrte.AppendRecord([1, 'Hamburg']);
+  FOrte.AppendRecord([2, 'Koeln']);
+  FOrtSrc := TDataSource.Create(FForm);
+  FOrtSrc.DataSet := FOrte;
+  FData := TClientDataSet.Create(FForm);
+  FData.FieldDefs.Add('ID', ftInteger);
+  FData.FieldDefs.Add('Name', ftString, 40);
+  FData.FieldDefs.Add('Status', ftString, 20);
+  FData.FieldDefs.Add('Beginn', ftDateTime);
+  FData.FieldDefs.Add('Ende', ftDateTime);
+  FData.FieldDefs.Add('Wert', ftFloat);
+  FData.FieldDefs.Add('Farbe', ftInteger);
+  FData.FieldDefs.Add('Aktiv', ftBoolean);
+  FData.FieldDefs.Add('Kat', ftString, 40);
+  FData.FieldDefs.Add('Tags', ftString, 80);
+  FData.FieldDefs.Add('Notiz', ftString, 200);
+  FData.FieldDefs.Add('PLZ', ftString, 5);
+  FData.FieldDefs.Add('OrtID', ftInteger);
+  FData.CreateDataSet;
+  FData.AppendRecord([1, 'Anna', 'doing', VisualMonday + 2 + EncodeTime(9, 0, 0, 0),
+    VisualMonday + 2 + EncodeTime(10, 30, 0, 0), 12.5, clRed, True, 'Rot;Blau', 'Delphi;VCL',
+    'Erste Zeile', '12345', 2]);
+  FData.AppendRecord([2, 'Bernd', 'todo', VisualMonday + 3 + EncodeTime(11, 0, 0, 0),
+    VisualMonday + 3 + EncodeTime(12, 0, 0, 0), 7, clBlue, False, 'Gruen', 'Test',
+    'Zweite Zeile', '50667', 1]);
+  FData.AppendRecord([3, 'Clara', 'done', VisualMonday + 1 + EncodeTime(14, 0, 0, 0),
+    VisualMonday + 1 + EncodeTime(15, 30, 0, 0), 15.25, clGreen, True, 'Blau', '',
+    'Dritte Zeile', '20095', 1]);
+  FData.First;
+  FSource := TDataSource.Create(FForm);
+  FSource.DataSet := FData;
   // Fokus-Cues sichtbar (wie nach Tastaturbedienung)
   FForm.Perform(WM_UPDATEUISTATE, MakeWParam(UIS_CLEAR, UISF_HIDEFOCUS or UISF_HIDEACCEL), 0);
 end;
@@ -635,6 +770,8 @@ begin
         TPPGTileView(Result).ItemIndex := 1;
         Result.SetBounds(8, 8, 300, 180);
       end;
+  else
+    Result := BuildNewControl(Index, P);
   end;
   if (Result <> nil) and (Result.Parent = nil) then
     Result.Parent := P;
@@ -642,11 +779,509 @@ begin
     TCCV(Result).Animation.Enabled := False;
 end;
 
+function VisualDT(Day, H, M: Integer): TDateTime;
+begin
+  Result := VisualMonday + Day + EncodeTime(H, M, 0, 0);
+end;
+
+procedure SetHintField(Obj: TObject; const Field, Value: string);
+var
+  Ctx: TRttiContext;
+  F: TRttiField;
+begin
+  // TCustomHintWindow haelt Titel und Text privat (wie Phase 11b)
+  F := Ctx.GetType(TCustomHintWindow).GetField(Field);
+  if F = nil then
+    raise Exception.Create('Feld fehlt: ' + Field);
+  F.SetValue(Obj, TValue.From<string>(Value));
+end;
+
+{ Audit 11b: die bisher fehlenden Paletten-Controls (42..60, ohne die eigenen
+  Fenster) und die DB-Controls (61..77) an FData. }
+function TVisualTests.BuildNewControl(Index: Integer; P: TWinControl): TControl;
+const
+  WizardTitles: array[0..2] of string = ('Willkommen', 'Optionen', 'Fertig');
+  MenuTitles: array[0..2] of string = ('&Datei', '&Bearbeiten', '&Ansicht');
+var
+  Pl: TPPGPlanner;
+  DPl: TPPGDBPlanner;
+  Rb: TPPGRibbon;
+  G: TPPGRibbonGroup;
+  K: TPPGKanban;
+  DK: TPPGDBKanban;
+  Col: TPPGKanbanColumn;
+  Mm: TMainMenu;
+  It: TMenuItem;
+  Wz: TPPGWizard;
+  Pg: TPPGWizardPage;
+  I: Integer;
+  Lb: TPPGLabel;
+  Bt: TPPGButton;
+  Cc: TPPGColumnComboBox;
+  Ch: TPPGCheckComboBox;
+begin
+  Result := nil;
+  // Jedes DB-Control zeigt den ersten Datensatz (Kanban und Planer bewegen beim
+  // Waehlen den Datensatzzeiger)
+  FData.First;
+  case Index of
+    42:
+      begin
+        Result := TPPGScrollBox.Create(FForm);
+        Result.Parent := P;
+        Result.SetBounds(8, 8, 200, 110);
+        Bt := TPPGButton.Create(FForm);
+        Bt.Parent := TWinControl(Result);
+        Bt.Caption := 'Inhalt';
+        Bt.SetBounds(8, 8, 110, 30);
+        Lb := TPPGLabel.Create(FForm);
+        Lb.Parent := TWinControl(Result);
+        Lb.Caption := 'Weiter unten';
+        Lb.SetBounds(8, 260, 120, 20); // erzwingt die senkrechte Bildlaufleiste
+      end;
+    43:
+      begin
+        Pl := TPPGPlanner.Create(FForm);
+        Result := Pl;
+        Pl.Parent := P;
+        Pl.SetBounds(8, 8, 380, 300);
+        Pl.Animation.Enabled := False;
+        Pl.SmoothScrolling := False;
+        Pl.FirstDayOfWeek := fdMonday;
+        Pl.TimeZoneMode := tzmLocal;
+        Pl.View := pvDay;
+        Pl.DayStartHour := 8;
+        Pl.DayEndHour := 14;
+        Pl.Date := VisualMonday + 2;
+        Pl.NowOverride := VisualDT(2, 11, 15);
+        Pl.Appointments.AddAppointment(VisualDT(2, 9, 0), VisualDT(2, 10, 30), 'Besprechung');
+        Pl.Appointments.AddAppointment(VisualDT(2, 12, 0), VisualDT(2, 13, 0), 'Mittag').Category := 2;
+        Pl.SelectAppointment(Pl.Appointments[0]);
+      end;
+    44:
+      begin
+        Rb := TPPGRibbon.Create(FForm);
+        Result := Rb;
+        Rb.Parent := P;
+        Rb.SetBounds(8, 8, 380, 130);
+        G := Rb.Tabs.AddTab('Start').Groups.AddGroup('Zwischenablage');
+        G.Items.AddButton('Einfuegen', $E77F, rsLarge);
+        G.Items.AddButton('Ausschneiden', $E8C6, rsMedium);
+        G.Items.AddButton('Kopieren', $E8C8, rsMedium);
+        G := Rb.Tabs[0].Groups.AddGroup('Absatz');
+        G.Items.AddCheck('Fett', $E8DD, rsSmall).Down := True;
+        G.Items.AddCheck('Kursiv', $E8DB, rsSmall);
+        Rb.Tabs.AddTab('Einfuegen');
+      end;
+    45:
+      begin
+        K := TPPGKanban.Create(FForm);
+        Result := K;
+        K.Parent := P;
+        K.SetBounds(8, 8, 380, 240);
+        K.Animation.Enabled := False;
+        K.SmoothScrolling := False;
+        Col := K.Columns.AddColumn('Offen');
+        K.Cards.AddCard(Col.Id, 'Angebot', 'Kunde A');
+        K.Cards.AddCard(Col.Id, 'Rechnung');
+        Col := K.Columns.AddColumn('Fertig');
+        K.Cards.AddCard(Col.Id, 'Vertrag', 'unterschrieben');
+        K.HandleNeeded;
+        K.Select(0, 0, 0);
+      end;
+    47:
+      begin
+        Mm := TMainMenu.Create(FForm);
+        for I := 0 to High(MenuTitles) do
+        begin
+          It := TMenuItem.Create(Mm);
+          It.Caption := MenuTitles[I];
+          Mm.Items.Add(It);
+        end;
+        Result := TPPGMenuBar.Create(FForm);
+        Result.Parent := P;
+        TPPGMenuBar(Result).Menu := Mm;
+        Result.SetBounds(8, 8, 300, Result.Height);
+      end;
+    51:
+      begin
+        Wz := TPPGWizard.Create(FForm);
+        Result := Wz;
+        Wz.Parent := P;
+        Wz.SetBounds(8, 8, 380, 240);
+        for I := 0 to High(WizardTitles) do
+        begin
+          Pg := TPPGWizardPage.Create(FForm);
+          Pg.Caption := WizardTitles[I];
+          Pg.Wizard := Wz;
+        end;
+        Wz.ActivePageIndex := 1;
+      end;
+    53:
+      begin
+        Result := TPPGNumberEdit.Create(FForm);
+        TPPGNumberEdit(Result).ShowSpinButtons := True;
+        TPPGNumberEdit(Result).Value := 1234.5;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    54:
+      begin
+        Result := TPPGMaskEdit.Create(FForm);
+        Result.Parent := P;
+        TPPGMaskEdit(Result).EditMask := '00000;1;_';
+        TPPGMaskEdit(Result).Text := '12345';
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    55:
+      begin
+        Result := TPPGPasswordEdit.Create(FForm);
+        TPPGPasswordEdit(Result).Text := 'geheim';
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    56:
+      begin
+        Result := TPPGFileEdit.Create(FForm);
+        TPPGFileEdit(Result).FileName := 'C:\Daten\Bericht.docx';
+        Result.SetBounds(8, 8, 220, 28);
+      end;
+    57:
+      begin
+        Result := TPPGColorPicker.Create(FForm);
+        TPPGColorPicker(Result).Selected := clRed;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    58:
+      begin
+        Ch := TPPGCheckComboBox.Create(FForm);
+        Result := Ch;
+        Ch.Items.CommaText := 'Rot,Gruen,Blau';
+        Ch.Checked[0] := True;
+        Ch.Checked[2] := True;
+        Result.SetBounds(8, 8, 200, 28);
+      end;
+    59:
+      begin
+        Cc := TPPGColumnComboBox.Create(FForm);
+        Result := Cc;
+        Cc.Columns.Add.Title := 'Nr';
+        Cc.Columns.Add.Title := 'Name';
+        Cc.Items.Add('1|Mueller');
+        Cc.Items.Add('2|Albers');
+        Cc.DisplayColumn := 1;
+        Cc.ItemIndex := 0;
+        Result.SetBounds(8, 8, 200, 28);
+      end;
+    60:
+      begin
+        Result := TPPGTagEdit.Create(FForm);
+        Result.Parent := P;
+        TPPGTagEdit(Result).Tags.Add('Delphi');
+        TPPGTagEdit(Result).Tags.Add('VCL');
+        Result.SetBounds(8, 8, 240, 32);
+      end;
+    61:
+      begin
+        Result := TPPGDBEdit.Create(FForm);
+        TPPGDBEdit(Result).DataField := 'Name';
+        TPPGDBEdit(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    62:
+      begin
+        Result := TPPGDBMemo.Create(FForm);
+        Result.Parent := P;
+        TPPGDBMemo(Result).DataField := 'Notiz';
+        TPPGDBMemo(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 60);
+      end;
+    63:
+      begin
+        Result := TPPGDBCheckBox.Create(FForm);
+        TPPGDBCheckBox(Result).Caption := 'Aktiv';
+        TPPGDBCheckBox(Result).DataField := 'Aktiv';
+        TPPGDBCheckBox(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 120, 24);
+      end;
+    64:
+      begin
+        Result := TPPGDBComboBox.Create(FForm);
+        TPPGDBComboBox(Result).Items.CommaText := 'todo,doing,done';
+        TPPGDBComboBox(Result).DataField := 'Status';
+        TPPGDBComboBox(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    65:
+      begin
+        Result := TPPGDBLookupComboBox.Create(FForm);
+        TPPGDBLookupComboBox(Result).ListSource := FOrtSrc;
+        TPPGDBLookupComboBox(Result).KeyField := 'ID';
+        TPPGDBLookupComboBox(Result).ListField := 'Ort';
+        TPPGDBLookupComboBox(Result).DataField := 'OrtID';
+        TPPGDBLookupComboBox(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    66:
+      begin
+        Result := TPPGDBDatePicker.Create(FForm);
+        TPPGDBDatePicker(Result).DataField := 'Beginn';
+        TPPGDBDatePicker(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    67:
+      begin
+        Result := TPPGDBGrid.Create(FForm);
+        Result.Parent := P;
+        TPPGDBGrid(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 360, 150);
+      end;
+    68:
+      begin
+        Result := TPPGDBChart.Create(FForm);
+        TPPGDBChart(Result).Animation.Enabled := False;
+        TPPGDBChart(Result).ReloadDelay := 0;
+        TPPGDBChart(Result).ValueFields := 'Wert';
+        TPPGDBChart(Result).LabelField := 'Name';
+        TPPGDBChart(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 360, 220);
+      end;
+    69:
+      begin
+        DPl := TPPGDBPlanner.Create(FForm);
+        Result := DPl;
+        DPl.Parent := P;
+        DPl.SetBounds(8, 8, 380, 300);
+        DPl.Animation.Enabled := False;
+        DPl.SmoothScrolling := False;
+        DPl.FirstDayOfWeek := fdMonday;
+        DPl.TimeZoneMode := tzmLocal;
+        DPl.View := pvDay;
+        DPl.DayStartHour := 8;
+        DPl.DayEndHour := 14;
+        DPl.Date := VisualMonday + 2;
+        DPl.NowOverride := VisualDT(2, 11, 15);
+        DPl.ReloadDelay := 0;
+        DPl.KeyField := 'ID';
+        DPl.StartField := 'Beginn';
+        DPl.FinishField := 'Ende';
+        DPl.SubjectField := 'Name';
+        DPl.DataSource := FSource;
+        DPl.HandleNeeded;
+        if DPl.Appointments.Count > 0 then
+          DPl.SelectAppointment(DPl.Appointments[0]);
+      end;
+    70:
+      begin
+        DK := TPPGDBKanban.Create(FForm);
+        Result := DK;
+        DK.Parent := P;
+        DK.SetBounds(8, 8, 380, 240);
+        DK.Animation.Enabled := False;
+        DK.SmoothScrolling := False;
+        DK.ReloadDelay := 0;
+        DK.Columns.AddColumn('Offen').Key := 'todo';
+        DK.Columns.AddColumn('In Arbeit').Key := 'doing';
+        DK.Columns.AddColumn('Fertig').Key := 'done';
+        DK.KeyField := 'ID';
+        DK.ColumnField := 'Status';
+        DK.TitleField := 'Name';
+        DK.TextField := 'Notiz';
+        DK.DataSource := FSource;
+        DK.HandleNeeded;
+        DK.Select(0, 0, 0);
+      end;
+    71:
+      begin
+        Result := TPPGDBMaskEdit.Create(FForm);
+        Result.Parent := P;
+        TPPGDBMaskEdit(Result).EditMask := '00000;1;_';
+        TPPGDBMaskEdit(Result).DataField := 'PLZ';
+        TPPGDBMaskEdit(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    72:
+      begin
+        Result := TPPGDBNumberEdit.Create(FForm);
+        TPPGDBNumberEdit(Result).ShowSpinButtons := True;
+        TPPGDBNumberEdit(Result).DataField := 'Wert';
+        TPPGDBNumberEdit(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    73:
+      begin
+        Result := TPPGDBColorPicker.Create(FForm);
+        TPPGDBColorPicker(Result).DataField := 'Farbe';
+        TPPGDBColorPicker(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 180, 28);
+      end;
+    74:
+      begin
+        Result := TPPGDBCheckComboBox.Create(FForm);
+        TPPGDBCheckComboBox(Result).Items.CommaText := 'Rot,Gruen,Blau';
+        TPPGDBCheckComboBox(Result).DataField := 'Kat';
+        TPPGDBCheckComboBox(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 200, 28);
+      end;
+    75:
+      begin
+        Result := TPPGDBTagEdit.Create(FForm);
+        Result.Parent := P;
+        TPPGDBTagEdit(Result).DataField := 'Tags';
+        TPPGDBTagEdit(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 240, 32);
+      end;
+    76:
+      begin
+        Result := TPPGDBNavigator.Create(FForm);
+        TPPGDBNavigator(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 330, 34);
+      end;
+    77:
+      begin
+        Result := TPPGDBRadioGroup.Create(FForm);
+        TPPGDBRadioGroup(Result).Caption := 'Status';
+        TPPGDBRadioGroup(Result).Items.CommaText := 'todo,doing,done';
+        TPPGDBRadioGroup(Result).DataField := 'Status';
+        TPPGDBRadioGroup(Result).DataSource := FSource;
+        Result.SetBounds(8, 8, 170, 110);
+      end;
+  end;
+end;
+
+{ Eigene Fenster: Menuefenster, CustomHint, TeachingTip, Aufgabendialog,
+  Busy-Karte. Zustaende gibt es dort nicht (ausser dem markierten
+  Menueeintrag als Hover). }
+function TVisualTests.RenderWindow(Index: Integer; Variant: TVisualVariant; State: TVisualState;
+  const Preset: string): TBitmap;
+const
+  MenuTitles: array[0..3] of string = ('&Neu', '&Oeffnen', '-', '&Beenden');
+var
+  M: TPPGPopupMenu;
+  It: TMenuItem;
+  L: TPPGMenuLoop;
+  CH: TPPGCustomHint;
+  HW: TCustomHintWindow;
+  Tip: TPPGTeachingTip;
+  D: TPPGTaskDialog;
+  DF: TPPGDialogForm;
+  O: TPPGBusyOverlay;
+  Pn: TPanel;
+  I: Integer;
+begin
+  Result := nil;
+  case Index of
+    MenuIndex:
+      begin
+        M := TPPGPopupMenu.Create(FForm);
+        L := TPPGMenuLoop.Create;
+        try
+          for I := 0 to High(MenuTitles) do
+          begin
+            It := TMenuItem.Create(M);
+            It.Caption := MenuTitles[I];
+            M.Items.Add(It);
+          end;
+          M.Items[1].Checked := True;
+          L.Animate := False;
+          L.Preset := Preset;
+          L.OpenPopup(M.Items, Rect(100, 100, 100, 100), ppsBelow, False);
+          if State = vsHoverV then
+            L.HandleKey(VK_DOWN, []);
+          Result := RenderToBitmap(L.Window(0));
+          L.CloseAll;
+        finally
+          L.Free;
+          M.Free;
+        end;
+      end;
+    CustomHintIndex:
+      begin
+        CH := TPPGCustomHint.Create(nil);
+        HW := TCustomHintWindow.Create(nil);
+        try
+          CH.Preset := Preset;
+          HW.HintParent := CH;
+          SetHintField(HW, 'FTitle', 'Speichern');
+          SetHintField(HW, 'FDescription', 'Speichert das Dokument (Strg+S).');
+          CH.SetHintSize(HW);
+          HW.HandleNeeded;
+          Result := RenderToBitmap(HW);
+        finally
+          HW.Free;
+          CH.Free;
+        end;
+      end;
+    TipIndex:
+      begin
+        if FTipTarget = nil then
+        begin
+          FTipTarget := NewButton('Ziel');
+          FTipTarget.SetBounds(450, 300, 100, 32);
+        end;
+        Tip := TPPGTeachingTip.Create(FForm);
+        try
+          Tip.Preset := Preset;
+          Tip.Title := 'Neu hier?';
+          Tip.Text := 'Mit diesem Button speichern Sie.';
+          Tip.ActionButtonText := 'Weiter';
+          Tip.ShowFor(FTipTarget);
+          Result := RenderToBitmap(Tip.Window);
+        finally
+          Tip.Free;
+        end;
+      end;
+    DialogIndex:
+      begin
+        D := TPPGTaskDialog.Create(nil);
+        try
+          D.Preset := Preset;
+          D.Caption := 'PPGlow';
+          D.Title := 'Aenderungen speichern?';
+          D.Text := 'Das Dokument wurde geaendert.';
+          D.MainIcon := tdiWarning;
+          D.CommonButtons := [tcbYes, tcbNo, tcbCancel];
+          DF := TPPGDialogForm.CreateFor(D, 0);
+          try
+            DF.HandleNeeded;
+            Result := RenderToBitmap(DF);
+            // nur der Client-Bereich (ohne Rahmen des Formulars)
+            Result.SetSize(DF.ClientWidth, DF.ClientHeight);
+          finally
+            DF.Free;
+          end;
+        finally
+          D.Free;
+        end;
+      end;
+    BusyIndex:
+      begin
+        Pn := TPanel.Create(FForm);
+        O := TPPGBusyOverlay.Create(FForm);
+        try
+          Pn.Parent := FForm;
+          Pn.SetBounds(10, 10, 300, 220);
+          O.Preset := Preset;
+          O.Target := Pn;
+          O.Delay := 0;
+          O.MinDisplayTime := 0;
+          O.Text := 'Export laeuft';
+          O.Progress := 40;
+          O.ShowNow;
+          Result := RenderToBitmap(O.Card);
+          O.Hide;
+        finally
+          O.Free;
+          Pn.Free;
+        end;
+      end;
+  end;
+end;
+
 function TVisualTests.HotPoint(C: TControl; Index: Integer): TPoint;
 var
   R: TRect;
 begin
   Result := Point(C.Width div 2, C.Height div 2);
+  R := Rect(0, 0, 0, 0);
   case Index of
     12, 13: Result := Point(110, 14);                     // zweiter Reiter
     14, 15:
@@ -698,7 +1333,20 @@ begin
         R := TPPGTileView(C).ItemRect(0);
         Result := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
       end;
+    // Audit 11b
+    43, 69: R := TPPGCustomPlanner(C).ItemRect(0);       // erster Termin
+    44: R := TPPGCustomRibbon(C).ItemRect(TPPGCustomRibbon(C).Tabs[0].Groups[0].Items[0]);
+    45, 70: R := TPPGCustomKanban(C).CardRect(0, 0, 0);  // erste Karte
+    47: R := TPPGMenuBar(C).ItemRect(1);
+    76: R := TPPGDBNavigator(C).ButtonRect(nbNext);
+    77:
+      begin
+        R := TPPGCustomChoiceGroup(C).ItemRect(0);
+        Result := Point(R.Left + 8, (R.Top + R.Bottom) div 2);
+      end;
   end;
+  if (Index >= FirstNewIndex) and (Index <> 77) and not IsRectEmpty(R) then
+    Result := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
 end;
 
 function MouseLParam(X, Y: Integer): LPARAM;
@@ -741,6 +1389,11 @@ begin
     finally
       Center.Free;
     end;
+    Exit;
+  end;
+  if IsWindowIndex(Index) then
+  begin
+    Result := RenderWindow(Index, Variant, State, Presets[Variant]);
     Exit;
   end;
   FHost := TPanel.Create(FForm);
@@ -895,16 +1548,20 @@ begin
               Errors.Add(Format('%s %s: Deaktiviert nicht sichtbar', [Name, VariantNames[V]]));
             // Deaktiviert: Akzent- und Signalfarben deutlich zuruecknehmen
             // (gemessen: mittlere Saettigung der farbigen Pixel sinkt um mindestens 25 %)
+            // (ColorPicker/DBColorPicker: das Farbfeld zeigt den Wert, keine Akzentfarbe;
+            // wie das Windows-Farbfeld bleibt es farbig)
             Sat := SaturatedPixels(Cells[V, vsNormalV]);
-            if (Sat >= 30) and (MeanSaturation(Cells[V, vsDisabledV]) >
+            if (Index <> 57) and (Index <> 73) and (Sat >= 30) and (MeanSaturation(Cells[V, vsDisabledV]) >
               0.75 * MeanSaturation(Cells[V, vsNormalV])) and
               (SaturatedPixels(Cells[V, vsDisabledV]) * 2 > Sat) then
               Errors.Add(Format('%s %s: Deaktiviert behaelt kraeftige Farben (Saettigung %.0f statt %.0f)',
                 [Name, VariantNames[V], MeanSaturation(Cells[V, vsDisabledV]),
                 MeanSaturation(Cells[V, vsNormalV])]));
             // ... aber als Form erkennbar bleiben
-            // (NavigationView dunkel: graue Schrift auf dunkler Leiste, per Sichtpruefung lesbar)
-            if (Index <> 30) and
+            // (NavigationView dunkel: graue Schrift auf dunkler Leiste, per Sichtpruefung lesbar;
+            // Planner/DBPlanner: Terminflaechen werden grau, Raster und Text per Sichtpruefung
+            // lesbar, Audit 11b)
+            if (Index <> 30) and (Index <> 43) and (Index <> 69) and
               (ContentPixels(Cells[V, vsDisabledV]) * 10 < ContentPixels(Cells[V, vsNormalV]) * 3) then
               Errors.Add(Format('%s %s: Deaktiviert kaum noch erkennbar (%d statt %d Pixel)',
                 [Name, VariantNames[V], ContentPixels(Cells[V, vsDisabledV]),
@@ -1069,14 +1726,14 @@ begin
   NotMirrored := TStringList.Create;
   try
     for Index := 0 to LastControl do
-      if Index <> ToastIndex then // Toast: eigenes Fenster, folgt dem Formular nicht
+      if not IsWindowIndex(Index) then // eigenes Fenster, folgt dem Formular nicht
         Rows.Add(ControlNames[Index]);
     SetLength(Cells, Rows.Count * 2);
     try
       N := 0;
       for Index := 0 to LastControl do
       begin
-        if Index = ToastIndex then
+        if IsWindowIndex(Index) then
           Continue;
         FRtl := False;
         Cells[N * 2] := Render(Index, vvFlatLight, vsNormalV, Ok);
@@ -1085,8 +1742,9 @@ begin
         FRtl := False;
         if ContentPixels(Cells[N * 2 + 1]) < 20 then
           Errors.Add(ControlNames[Index] + ': RTL leer');
-        // Symmetrische Controls (Panel, Badge, Ring, Splitter) aendern sich nicht
-        if PPGPixelDiff(Cells[N * 2], Cells[N * 2 + 1], 40) < 8 then
+        // Audit 11b: Aenderung erwartet, ausser bei den begruendeten Ausnahmen
+        if (PPGPixelDiff(Cells[N * 2], Cells[N * 2 + 1], 40) < 8) and
+          not InList(ControlNames[Index], RtlUnchanged) then
           NotMirrored.Add(ControlNames[Index]);
         Inc(N);
       end;
@@ -1096,9 +1754,7 @@ begin
       for I := 0 to High(Cells) do
         Cells[I].Free;
     end;
-    // Hinweis statt Fehler: Die Galerie RTL.png zeigt, was (noch) nicht spiegelt
-    if NotMirrored.Count > 0 then
-      Status('RTL unveraendert (in RTL.png pruefen): ' + NotMirrored.CommaText);
+    CheckEquals('', NotMirrored.CommaText, 'RTL unveraendert, erwartet gespiegelt (RTL.png)');
     CheckEquals('', Errors.Text, Errors.Text);
     CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
@@ -1129,14 +1785,14 @@ begin
   Unchanged := TStringList.Create;
   try
     for Index := 0 to LastControl do
-      if Index <> ToastIndex then // eigenes Fenster
+      if not IsWindowIndex(Index) then // eigenes Fenster
         Rows.Add(ControlNames[Index]);
     SetLength(Cells, Rows.Count * 3);
     try
       N := 0;
       for Index := 0 to LastControl do
       begin
-        if Index = ToastIndex then
+        if IsWindowIndex(Index) then
           Continue;
         PPGSetHighContrastReader(nil);
         Cells[N * 3] := Render(Index, vvFlatLight, vsNormalV, Ok);
@@ -1149,7 +1805,8 @@ begin
         end;
         if ContentPixels(Cells[N * 3 + 1]) < 20 then
           Errors.Add(ControlNames[Index] + ': Hochkontrast leer');
-        if PPGPixelDiff(Cells[N * 3], Cells[N * 3 + 1], 40) < 8 then
+        if (PPGPixelDiff(Cells[N * 3], Cells[N * 3 + 1], 40) < 8) and
+          not InList(ControlNames[Index], HcUnchanged) then
           Unchanged.Add(ControlNames[Index]);
         Inc(N);
       end;
@@ -1160,9 +1817,7 @@ begin
       for I := 0 to High(Cells) do
         Cells[I].Free;
     end;
-    // Hinweis statt Fehler: einfache Controls sehen mit Systemfarben gleich aus
-    if Unchanged.Count > 0 then
-      Status('Hochkontrast unveraendert (in HighContrast.png pruefen): ' + Unchanged.CommaText);
+    CheckEquals('', Unchanged.CommaText, 'Hochkontrast unveraendert, erwartet Systemfarben (HighContrast.png)');
     CheckEquals('', Errors.Text, Errors.Text);
     CheckEquals(0, FErrors.Count, FErrors.Text);
   finally
@@ -1191,14 +1846,14 @@ begin
   Errors := TStringList.Create;
   try
     for Index := 0 to LastControl do
-      if Index <> ToastIndex then
+      if not IsWindowIndex(Index) then
         Rows.Add(ControlNames[Index]);
     SetLength(Cells, Rows.Count * Length(Ppis));
     try
       N := 0;
       for Index := 0 to LastControl do
       begin
-        if Index = ToastIndex then
+        if IsWindowIndex(Index) then
           Continue;
         for K := 0 to High(Ppis) do
         begin
