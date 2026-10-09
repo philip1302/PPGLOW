@@ -111,3 +111,46 @@ Flaches Zellarray im Grid, Frame-Bitmap im Chart, globale Markup-Font-LRU, Umbau
 2. **Grid RowHeights dünn + Aggregate inkrementell (8c #5/#6, mittleres Risiko):** jetzt mit? Empfehlung: **ja**, mit festhaltenden Tests zu Gruppen, Filter und Streaming.
 3. **TreeView lazy Zeilenaufbau (8d #6):** ändert intern das Timing, nach außen gleich. Empfehlung: **ja**.
 4. **Neue Benchmark-Vorgaben ≈ 2× Nachher-Wert** (strenger als heute, fängt künftige Rückschritte). Empfehlung: **ja**.
+
+## Umsetzung (09.10.2026)
+
+Wie bei Paket 7 parallel in Git-Worktrees: A Kern und Neuzeichnen, B Grid, C Listen/Baum, D Chart/Kanban/Planer/Rest, danach E Nachzug (Clip in Grid, Kanban, Planer). IDE-Builds und Benchmark-Läufe liefen über eine gemeinsame Sperre nacheinander. Vorab 84570c3 (Fehler in AppHooks, Testunits, Benchmark-Abschnitte). Während der Arbeit kam auf Wunsch des Users der Schalter `/hidden` dazu (10095e1, Tests auf eigenem Windows-Desktop).
+
+Ergebnis: **1764 Tests Win32 und Win64 grün** (vorher 1641), Leak-Lauf Win32/Win64 ohne Zuwachs, alle sechs Projekte gebaut, Demo-Selbsttest 185/185, `make-docs` 0 fehlend, Referenzbilder unverändert. Benchmark: alle 72 Vorgaben eingehalten (`Tests\Bench\Messung-vor-Paket8.txt` → `Messung-nach-Paket8.txt`; Endmessung im ruhigen Zustand, versteckt). Nichts installiert.
+
+**Messwerte (vorher → nachher, ms; vorher teils unter Last der parallelen Agenten gemessen):**
+
+| Bereich | Messung | vorher | nachher |
+|---|---|---|---|
+| Grid 1 Mio. | Sortieren (Zahl auf/ab, Text) | 12 922 | 1 672 |
+| | Spaltenbreite 100× (Summe, Farbskala, RowHeights) | 70 406 | 453 |
+| | 100 Einzeländerungen mit Summe | 66 922 | 422 |
+| | Filtern + 3× umsortieren | 2 359 | 328 |
+| | Hover 300× im Fenster | 969 | 281 |
+| Listen/Baum | TreeView 10 000: AlphaSort | 7 015 | 0 |
+| | ListBox 100 000 mit Gruppen, 5× Layout | 5 500 | 31 |
+| | CheckAll 10 000 mit ItemsEx | 704 | 0 |
+| | ComboBox 10 000× ItemsEx.Add | 1 938 | 16 |
+| Planer | Zeitleiste 366 Tage × 60 Ressourcen, 300× scrollen | 69 625 | 1 063 |
+| Kanban | 100× eine Karte ändern | 90 610 | 2 015 |
+| | 20× filtern + zeichnen (bestehend, Vorgabe 2000) | 1 891 | 344 |
+| | Hover 300× im Fenster | 1 875 | 234 |
+| Rest | Chart-Hover 300× | 921 | 47 |
+| | MenuBar-Hover 300× | 485 | 172 |
+| | ListBox: eine Zeile neu zeichnen 300× | 688 | 141 |
+| | `PPGMeasureTextNoCanvas` 100 000× | 1 250 | 78 |
+| Leerlauf | Wakeups/s mit Planer-Jetzt-Linie | 64 | 1 |
+| | Wakeups/s Maus über Scroll-Control | 48 | 5 |
+
+Nebenbei schneller: Calendar 20 000 Tage per Tastatur 594 → 47 ms, Kanban aufbauen 2 922 → 750 ms. Grid-Füllen per `Cells[]` und NavigationView-Auswahl waren unter Last scheinbar langsamer, ruhig nachgemessen aber gleich bzw. schneller (7 219 → 6 797 ms, 2 172 → 2 094 ms).
+
+**Wichtigste Bausteine:** Clip-Box als Dirty-Rect mit Rückpuffer je Control (`PaintClip`, `NeedsPaint`, `InvalidateArea`, `ViewportClip`), `UsesHotAnimation`, Fälligkeitsmodus im Animator (`StepInterval`, `StartLoop(Periode, Schritt)`), gemeinsamer Mess-DC mit Cache, verschachtelbare GDI+-Blöcke (`IPPGBatchCanvas`, `PPGBeginBatch`/`PPGEndBatch`), Caches für getönte Icons und Schatten; Grid-Sortierschlüssel, dünne RowHeights, inkrementelle Summen, Filter-Cache, Font-Cache; TreeView-Geschwisterindex und Merge-Sort, lazy Zeilenaufbau, `TPPGSelection.FSingle`, Markup-Schriften; Layout-Caches in MenuBar, Chart, Kanban, Ribbon, Tabs, InfoBar; Planer-Zeitleiste nur sichtbar; AppHooks copy-on-write.
+
+**Abweichungen:**
+- Coding-Rules: genau zwei Ausnahmen von „keine dauerhaften GDI-Handles“ (Rückpuffer, Grid-Schriften).
+- Grid: Auswahl nicht vorgemischt (nicht pixelgleich); Summen bleiben verzögert (bestehender Test „nicht sofort“); Texte gesammelt nur bei eingebauten Zellarten. Kein Clip bei verbundenen Zellen und bei fester Spalte mit Verlauf (Pixelgleichheit).
+- Chart.Series bündelt nicht über Flag + PostMessage (bestehende Tests erwarten den Übergang sofort); stattdessen entfällt die Wertekopie bei neuer Punktzahl.
+- `IsHot = False`-Sonderlösungen bleiben neben `UsesHotAnimation` (sonst ändert sich `AccState`).
+- Markup: ein gemeinsamer Mess-DC statt einer je Instanz. ComboBox sortiert mit doppelten Texten: Auswahl bleibt am selben Eintrag.
+- Planer-Layout-Tests haben je Plattform eine Referenz (Win32 x87 und Win64 SSE runden die Zeitpositionen unterschiedlich; mit dem alten Code unter Win64 nachgeprüft).
+- Nebenbei behoben: veraltete Gruppenköpfe in der ItemList (TBits behielt alte Bits).

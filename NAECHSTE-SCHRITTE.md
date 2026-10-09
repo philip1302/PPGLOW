@@ -1,6 +1,6 @@
 # PPGlow – Stand und nächste Schritte
 
-**Aktueller Stand (09.10.2026, abends):** Phase 20 und die Audit-Pakete 1–7 sind fertig und committet (Zweig `claude/task-elizkl`, gepusht bis 3bf70f7). Seit dem 08.10.2026 ist nichts installiert. Der neueste Eintrag ist „Audit-Paket 7 fertig“ weiter unten; Details in `Docs\Audit-Paket7-Plan.md` (Abschnitt Umsetzung) und `Docs\Audit-Plan.md` (Fortschritt). **Gewählt: Audit-Paket 8 (Performance).** Detailplan `Docs\Audit-Paket8-Plan.md` geschrieben (Befunde am 09.10.2026 neu geprüft, Benchmark vorher in `Tests\Bench\Messung-vor-Paket8.txt`), am 09.10.2026 freigegeben (Entscheidungen wie empfohlen); die Umsetzung läuft. Danach zur Wahl: 11 (Tests/Build/Demo/Doku), Phase 16 (Tour, Kommando-Palette) oder Phase 21 (nur nach einer Inventur). Phase 15 bleibt zurückgestellt. Regeln: je Schritt erst ein Detailplan, dann Bericht und OK; nie installieren, die IDE nie ungefragt schließen; `Demo/PPGlowDemo.alt-204712.exe` nicht committen.
+**Aktueller Stand (09.10.2026, abends):** Phase 20 und die Audit-Pakete 1–8 sind fertig und committet (Zweig `claude/task-elizkl`; gepusht bis 3bf70f7, Paket 8 noch nicht). Seit dem 08.10.2026 ist nichts installiert. Der neueste Eintrag ist „Audit-Paket 8 fertig“ weiter unten; Details in `Docs\Audit-Paket8-Plan.md` (Abschnitt Umsetzung) und `Docs\Audit-Plan.md` (Fortschritt). **Tests, Benchmark und Demo immer mit `/hidden` starten** (eigener Windows-Desktop, keine Fenster beim User). Offen ist die Wahl des Users, wie es weitergeht: Audit-Paket 11 (Tests/Build/Demo/Doku), 9 (Architektur), 10 (XE2), Phase 16 (Tour, Kommando-Palette) oder Phase 21 (nur nach einer Inventur). Phase 15 bleibt zurückgestellt. Regeln: je Schritt erst ein Detailplan, dann Bericht und OK; nie installieren, die IDE nie ungefragt schließen; `Demo/PPGlowDemo.alt-204712.exe` nicht committen.
 
 *Ältere Übergabe, Stand 07.10.2026: Phasen 5–13 und **Phase 14a–c (Terminplaner, Ribbon, Kanban)** sind abgeschlossen: 1105 Tests Win32 und Win64, Leak-Lauf grün (kein Zuwachs), Demo-Selbsttest 141/141. Phase 11–14c sind **noch nicht installiert**. 14d (Code-Editor) ist laut Entscheidung vom 05.10.2026 weggelassen; als Nächstes käme Phase 15 (Produkt) – vorher Bericht und OK.*
 
@@ -27,6 +27,15 @@
 - ComboBox (mit SearchEdit, TimePicker, DBComboBox) auf der gemeinsamen Aufklapp-Basis; `TPPGDropPopup` liegt jetzt in `PPG.Popup`.
 - Demo: Planer, Kanban, Ribbon und „Auswahl & Regler“ erweitert, `/ribboncapture groupkeys`.
 - Prüfung: 1466 Tests Win32 und Win64, Leak-Lauf grün, Demo-Selbsttest 185/185, Benchmark eingehalten (zwei neue Messungen).
+- **Noch nicht installiert.**
+
+**09.10.2026: Audit-Paket 8 fertig** (Performance; Details, Messwerte und Abweichungen: `Docs\Audit-Paket8-Plan.md`, Abschnitt Umsetzung):
+- Fehler behoben: AppHooks griff nach dem Freigeben eines beobachteten Controls auf den freigegebenen Beobachter zu.
+- Kern: Controls zeichnen nur den geänderten Bereich (`PaintClip`, `NeedsPaint`, `InvalidateArea`, Rückpuffer je Control), keine Hover-Animation in Daten-Controls, Animator ohne 67-Hz-Takt im Leerlauf, gemeinsamer Mess-DC mit Cache, GDI+-Blöcke, Caches für getönte Icons und Schatten.
+- Grid (1 Mio. Zeilen): Sortieren 8×, Spaltenbreite ziehen und Einzeländerungen mit Summen rund 150× schneller; RowHeights dünn, Filter-Cache, Font-Cache.
+- Listen/Baum: AlphaSort, Gruppenlisten, CheckAll, ComboBox-Add ohne quadratische Pfade.
+- Chart, Kanban, Planer, Ribbon, MenuBar, Tabs, InfoBar, TeachingTip, DB-Kanban: Layout- und Mess-Caches, gezieltes Neuzeichnen; Planer-Zeitleiste rund 60×, Kanban-Karte ändern rund 45× schneller.
+- Prüfung: 1764 Tests Win32 und Win64, Leak-Lauf grün, sechs Projekte gebaut, Demo-Selbsttest 185/185, Benchmark 72/72 Vorgaben (`Tests\Bench\Messung-nach-Paket8.txt`).
 - **Noch nicht installiert.**
 
 **09.10.2026: Testlauf ohne sichtbare Fenster** (Wunsch des Users; Plan `C:\Users\Administrator\.claude\plans\k-nnen-wir-die-testsuite-witty-widget.md`):

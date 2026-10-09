@@ -591,8 +591,13 @@ begin
     Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
     Exit;
   end;
-  // Referenz: alter Code (vor Audit 8D), 96 PPI
+  // Referenz: alter Code (vor Audit 8D, Commit 3594b0b), 96 PPI. Win32 (x87) und
+  // Win64 (SSE) runden die Zeitpositionen unterschiedlich, daher je Plattform.
+  {$IFDEF CPUX64}
+  CheckEquals('121/388305911|81/113361506|135/66903710|11/471133041', S, 'Anordnung Woche/Arbeitswoche/ohne Gruppen/Monat');
+  {$ELSE}
   CheckEquals('121/710716172|81/348966264|135/753421768|11/471133041', S, 'Anordnung Woche/Arbeitswoche/ohne Gruppen/Monat');
+  {$ENDIF}
 end;
 
 procedure TAudit8DTests.PlannerTimelineLayoutIsUnchanged;
@@ -610,7 +615,11 @@ begin
     Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
     Exit;
   end;
+  {$IFDEF CPUX64} // Referenz je Plattform, siehe PlannerGroupedLayoutIsUnchanged
+  CheckEquals('174/841465863', S, 'Anordnung Zeitleiste');
+  {$ELSE}
   CheckEquals('174/691175223', S, 'Anordnung Zeitleiste');
+  {$ENDIF}
 end;
 
 procedure TAudit8DTests.PlannerTimelinePaintMatchesFresh;
