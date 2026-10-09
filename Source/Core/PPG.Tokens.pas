@@ -40,6 +40,7 @@ type
     TextPrimary: TColor;
     TextSecondary: TColor;   // Detailzeilen, Hinweise
     TextDisabled: TColor;
+    Link: TColor;            // Links im Text (4,5:1 zum Hintergrund)
     { Signale }
     Danger: TColor;
     Warning: TColor;
@@ -61,7 +62,7 @@ type
     tkBackground, tkLayer, tkSurface, tkSurfaceHover, tkSurfacePressed,
     tkSurfaceDisabled, tkStroke, tkStrokeStrong, tkStrokeDisabled,
     tkTextPrimary, tkTextSecondary, tkTextDisabled, tkDanger, tkWarning,
-    tkSuccess, tkPaused);
+    tkSuccess, tkPaused, tkLink);
 
   /// Akzentfarben fuer beide Modi.
   TPPGAccentPair = record
@@ -122,6 +123,24 @@ function PPGRelativeLuminance(C: TColor): Double;
 /// Kontrastverhaeltnis nach WCAG 2.x (1..21). Text braucht mindestens 4,5:1,
 /// Bedienelemente und grosse Schrift 3:1.
 function PPGContrastRatio(A, B: TColor): Double;
+
+/// Textfarbe auf einer Flaeche: die hellere (Light) oder dunklere (Dark)
+/// Farbe, je nachdem welche den hoeheren Kontrast hat. Erreicht Light schon
+/// 4,5:1 (auf eine Stelle gerundet), bleibt Light (weisser Text auf mittleren
+/// Akzenten wie #0078D7).
+function PPGContrastTextColor(Fill: TColor; Light: TColor = clWhite;
+  Dark: TColor = clBlack): TColor;
+/// Text bleibt, wenn er 4,5:1 zur Flaeche erreicht; sonst PPGContrastTextColor.
+function PPGReadableTextColor(Text, Fill: TColor): TColor;
+/// Link-Farbe aus dem Akzent: so weit abgedunkelt (heller Hintergrund) bzw.
+/// aufgehellt (dunkler Hintergrund), dass sie 4,5:1 zum Hintergrund erreicht.
+function PPGLinkColor(Accent, Background: TColor): TColor;
+/// Farbe im deaktivierten Zustand: entsaettigt und zur Flaeche hin abgeblendet.
+function PPGDisabledColor(C, Background: TColor): TColor;
+/// Tokens fuer ein deaktiviertes Control: Akzent- und Signalfarben
+/// abgeblendet (PPGDisabledColor), Text TextDisabled, Raender StrokeDisabled,
+/// Flaechen SurfaceDisabled. Hintergrund und Layer bleiben.
+function PPGDisabledTokens(const T: TPPGTokens): TPPGTokens;
 
 implementation
 
@@ -191,6 +210,7 @@ begin
   Result.DurationFast := 83;
   Result.DurationNormal := 167;
   Result.DurationSlow := 250;
+  Result.Link := PPGLinkColor(Result.Accent, Result.Background);
 end;
 
 function Channel(V: Integer): Double;
@@ -225,6 +245,75 @@ begin
     Result := (LA + 0.05) / (LB + 0.05);
 end;
 
+{ ---- Textkontrast ---- }
+
+/// 4,5:1 (WCAG AA fuer Text), wie Pruefwerkzeuge auf eine Nachkommastelle
+/// gerundet: Weiss auf #0078D7 (4,499:1) gilt wie bei Windows als lesbar.
+function MeetsTextContrast(Ratio: Double): Boolean;
+begin
+  Result := Round(Ratio * 10) >= 45;
+end;
+
+function PPGContrastTextColor(Fill, Light, Dark: TColor): TColor;
+var
+  CL: Double;
+begin
+  Fill := PPGColorToRGB(Fill);
+  Light := PPGColorToRGB(Light);
+  Dark := PPGColorToRGB(Dark);
+  CL := PPGContrastRatio(Fill, Light);
+  if MeetsTextContrast(CL) or (CL >= PPGContrastRatio(Fill, Dark)) then
+    Result := Light
+  else
+    Result := Dark;
+end;
+
+function PPGReadableTextColor(Text, Fill: TColor): TColor;
+begin
+  if MeetsTextContrast(PPGContrastRatio(Text, Fill)) then
+    Result := PPGColorToRGB(Text)
+  else
+    Result := PPGContrastTextColor(Fill);
+end;
+
+function PPGDisabledColor(C, Background: TColor): TColor;
+var
+  RGB: Cardinal;
+  G: Integer;
+begin
+  // Grauwert gleicher Helligkeit, dann zur Haelfte in die Flaeche
+  RGB := Cardinal(PPGColorToRGB(C));
+  G := Round(0.299 * (RGB and $FF) + 0.587 * ((RGB shr 8) and $FF) +
+    0.114 * ((RGB shr 16) and $FF));
+  if G > 255 then
+    G := 255;
+  Result := PPGBlendColor(TColor(G or (G shl 8) or (G shl 16)), Background, 0.5);
+end;
+
+function PPGDisabledTokens(const T: TPPGTokens): TPPGTokens;
+var
+  B: TColor;
+begin
+  Result := T;
+  B := T.Background;
+  Result.Accent := PPGDisabledColor(T.Accent, B);
+  Result.AccentHover := Result.Accent;
+  Result.AccentPressed := Result.Accent;
+  Result.OnAccent := PPGBlendColor(PPGContrastTextColor(Result.Accent), Result.Accent, 0.3);
+  Result.Link := PPGDisabledColor(T.Link, B);
+  Result.Surface := T.SurfaceDisabled;
+  Result.SurfaceHover := T.SurfaceDisabled;
+  Result.SurfacePressed := T.SurfaceDisabled;
+  Result.Stroke := T.StrokeDisabled;
+  Result.StrokeStrong := T.StrokeDisabled;
+  Result.TextPrimary := T.TextDisabled;
+  Result.TextSecondary := T.TextDisabled;
+  Result.Danger := PPGDisabledColor(T.Danger, B);
+  Result.Warning := PPGDisabledColor(T.Warning, B);
+  Result.Success := PPGDisabledColor(T.Success, B);
+  Result.Paused := PPGDisabledColor(T.Paused, B);
+end;
+
 { ---- Akzent aus Grundfarbe ---- }
 
 function EnsureContrast(C, Against: TColor; Min: Double; TowardWhite: Boolean): TColor;
@@ -254,6 +343,13 @@ begin
   Result.Light := EnsureContrast(PPGColorToRGB(Pair.Light), clWhite, 4.5, False);
   Result.Dark := EnsureContrast(PPGColorToRGB(Pair.Dark), clBlack, 7.0, True);
   Result.Dark := EnsureContrast(Result.Dark, Dark.Background, 3.0, True);
+end;
+
+function PPGLinkColor(Accent, Background: TColor): TColor;
+begin
+  // Heller Hintergrund: Akzent bei Bedarf abdunkeln; dunkler: aufhellen
+  Result := EnsureContrast(PPGColorToRGB(Accent), PPGColorToRGB(Background), 4.5,
+    PPGRelativeLuminance(Background) < 0.4);
 end;
 
 function PPGAccentFromBase(Base: TColor): TPPGAccentPair;
@@ -292,8 +388,9 @@ begin
     tkDanger: Result := T.Danger;
     tkWarning: Result := T.Warning;
     tkSuccess: Result := T.Success;
+    tkPaused: Result := T.Paused;
   else
-    Result := T.Paused;
+    Result := T.Link;
   end;
 end;
 
@@ -319,8 +416,9 @@ begin
     tkDanger: T.Danger := Value;
     tkWarning: T.Warning := Value;
     tkSuccess: T.Success := Value;
+    tkPaused: T.Paused := Value;
   else
-    T.Paused := Value;
+    T.Link := Value;
   end;
 end;
 
@@ -357,6 +455,12 @@ begin
     if C <> clDefault then
       PPGSetTokenColor(T, K, PPGColorToRGB(C));
   end;
+  // Link folgt einem geaenderten Akzent bzw. Hintergrund (ausser bei eigener Link-Farbe)
+  if (TPPGTokenOverrides.FColors[Dark, tkLink] = clDefault) and
+    ((TPPGTokenOverrides.FAccentBase <> clDefault) or
+    (TPPGTokenOverrides.FColors[Dark, tkAccent] <> clDefault) or
+    (TPPGTokenOverrides.FColors[Dark, tkBackground] <> clDefault)) then
+    T.Link := PPGLinkColor(T.Accent, T.Background);
 end;
 
 { TPPGTokenOverrides }

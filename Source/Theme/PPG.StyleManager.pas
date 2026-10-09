@@ -76,6 +76,7 @@ type
     property Warning: TColor index Ord(tkWarning) read GetColor write SetColor default clDefault;
     property Success: TColor index Ord(tkSuccess) read GetColor write SetColor default clDefault;
     property Paused: TColor index Ord(tkPaused) read GetColor write SetColor default clDefault;
+    property Link: TColor index Ord(tkLink) read GetColor write SetColor default clDefault;
   end;
 
   /// Token-Ueberschreibungen fuer Hell und Dunkel.

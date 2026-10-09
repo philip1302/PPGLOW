@@ -458,11 +458,8 @@ begin
       BadgeR.Left := BadgeR.Right - BS.cx;
       Content.Right := BadgeR.Left - Gap;
     end;
-    // Text auf dem Akzent: weiss auf dunklem, schwarz auf hellem Akzent
-    if PPGRelativeLuminance(Info.ListStyle.GlowColor) < 0.4 then
-      BadgeText := clWhite
-    else
-      BadgeText := clBlack;
+    // Text auf dem Akzent in der Farbe mit dem hoeheren Kontrast
+    BadgeText := PPGContrastTextColor(Info.ListStyle.GlowColor);
     IR.DrawBadge(Canvas, BadgeR, Data.Badge, Info.Font, Info.ListStyle.GlowColor,
       BadgeText, PPI);
   end;

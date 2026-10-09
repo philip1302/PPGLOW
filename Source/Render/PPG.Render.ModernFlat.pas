@@ -89,6 +89,7 @@ begin
   Result.RadiusLarge := 8;
   Result.StrokeWidth := 1;
   Result.DurationNormal := 150;
+  Result.Link := PPGLinkColor(Result.Accent, Result.Background);
 end;
 
 procedure TPPGModernFlatRenderer.ApplyDefaults(Appearance: TPPGAppearance);

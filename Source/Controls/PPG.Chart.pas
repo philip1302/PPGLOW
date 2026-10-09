@@ -1722,10 +1722,7 @@ begin
             Y := P.Y + Round(K * Sin(Mid));
             Txt := FormatFloat('0', Pct) + '%';
             Col := SliceColor(L.PieSeries, J);
-            if PPGContrastRatio(Col, clWhite) >= PPGContrastRatio(Col, clBlack) then
-              LineCol := clWhite
-            else
-              LineCol := clBlack;
+            LineCol := PPGContrastTextColor(Col);
             ACanvas.DrawText(Rect(X - L.FontH * 2, Y - L.FontH, X + L.FontH * 2, Y + L.FontH),
               Txt, Font, LineCol, DT_CENTER or DT_VCENTER or DT_SINGLELINE or DT_NOPREFIX);
           end;

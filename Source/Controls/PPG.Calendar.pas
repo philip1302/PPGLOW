@@ -329,14 +329,6 @@ begin
       Result := Ord(Buf[0]) - Ord('0') + 1; // '0' = Montag
 end;
 
-function ContrastOn(Fill: TColor): TColor;
-begin
-  if PPGRelativeLuminance(Fill) < 0.4 then
-    Result := clWhite
-  else
-    Result := clBlack;
-end;
-
 { TPPGCustomCalendar }
 
 constructor TPPGCustomCalendar.Create(AOwner: TComponent);
@@ -1414,7 +1406,7 @@ begin
     TextCol := T.TextPrimary;
     Secondary := T.TextSecondary;
     Accent := PPGColorToRGB(A.FocusColor);
-    OnAccent := ContrastOn(Accent);
+    OnAccent := PPGContrastTextColor(Accent);
     DisabledCol := T.TextDisabled;
     if UseVclStyle then
     begin
@@ -1440,7 +1432,7 @@ begin
   if UseColors then
   begin
     SelFill := CS.Selected.FillFor(Dk, Accent);
-    OnAccent := CS.Selected.TextFor(Dk, ContrastOn(SelFill));
+    OnAccent := CS.Selected.TextFor(Dk, PPGContrastTextColor(SelFill));
     TodayRing := CS.Today.BorderFor(Dk, Accent);
   end;
   if not Enabled then

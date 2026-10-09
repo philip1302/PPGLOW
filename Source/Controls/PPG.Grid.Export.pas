@@ -103,15 +103,18 @@ var
   Info: array of TPPGTableColumnInfo;
   S, Style: string;
   St: TPPGGridCellStyle;
+  Plain: TPPGTableLook;
 begin
   Supports(Source, IPPGGridPrintSource, PS);
+  Plain := PPGPlainTableLook;
   SB := TStringBuilder.Create;
   try
     SB.Append('<!DOCTYPE html>'#13#10'<html><head><meta charset="utf-8">');
     if Title <> '' then
       SB.Append('<title>' + HtmlEscape(Title) + '</title>');
     SB.Append('<style>table{border-collapse:collapse;font-family:Segoe UI,sans-serif;font-size:10pt}' +
-      'th,td{border:1px solid #c8c8c8;padding:3px 6px}th{background:#f0f0f0}</style>');
+      'th,td{border:1px solid ' + LowerCase(CssColor(Plain.Line)) +
+      ';padding:3px 6px}th{background:' + LowerCase(CssColor(Plain.HeaderFill)) + '}</style>');
     SB.Append('</head><body>'#13#10);
     if Title <> '' then
       SB.Append('<h1>' + HtmlEscape(Title) + '</h1>'#13#10);
@@ -368,10 +371,7 @@ begin
             if (S <> '') and PPGCellColor(S, Clr) then
             begin
               Cs.Fill := PPGColorToRGB(Clr);
-              if PPGRelativeLuminance(Cs.Fill) > 0.45 then
-                Cs.TextColor := clBlack
-              else
-                Cs.TextColor := clWhite;
+              Cs.TextColor := PPGContrastTextColor(Cs.Fill);
             end;
           ckLink:
             if IsSafeLink(S) then

@@ -42,6 +42,8 @@ type
     destructor Destroy; override;
     /// Tatsaechliche Textfarbe (Dark Mode, deaktiviert, Secondary).
     function TextColor: TColor;
+    /// Farbe der Links im Markup (Link-Token; Hochkontrast/VCL-Style: clHotLight).
+    function LinkColor: TColor;
   published
     property AllowMarkup: Boolean read FAllowMarkup write SetAllowMarkup default False;
     property Secondary: Boolean read FSecondary write SetSecondary default False;
@@ -131,6 +133,8 @@ type
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure DoLinkClick(Index: Integer); virtual;
     function TextColor: TColor;
+    /// Link-Token; eigene FocusColor und VCL-Style gewinnen, Hochkontrast clHotLight.
+    function LinkColor: TColor;
     function AccRole: Integer; override;
     function AccName: string; override;
     { IPPGAccessibleChildren }
@@ -300,20 +304,26 @@ begin
     Exit;
   end;
   Dark := TPPGTheme.IsDark and not PPGVclStyleActive;
-  T := PPGDefaultTokens(Dark);
+  // Tokens des Standard-Presets (ein Label hat keine eigene Appearance)
+  T := PPGPresetTokens('', Dark);
   if not Enabled then
-  begin
-    if Dark then
-      Result := T.TextDisabled
-    else
-      Result := clGrayText;
-  end
+    Result := T.TextDisabled
   else if FSecondary then
     Result := T.TextSecondary
   else if Dark and IsDefaultTextColor(Font.Color) then
     Result := T.TextPrimary
   else
     Result := Font.Color;
+end;
+
+function TPPGLabel.LinkColor: TColor;
+begin
+  if PPGIsHighContrast then
+    Result := PPGColorToRGB(clHotLight)
+  else if PPGVclStyleActive then
+    Result := PPGColorToRGB(StyleServices.GetSystemColor(clHotLight))
+  else
+    Result := PPGPresetTokens('', TPPGTheme.IsDark).Link;
 end;
 
 procedure TPPGLabel.DoDrawText(var Rect: TRect; Flags: Longint);
@@ -349,7 +359,7 @@ begin
     else if Flags and DT_CENTER <> 0 then
       X := (Rect.Left + Rect.Right - FMarkup.Size.cx) div 2;
     C := TPPGRendererRegistry.CreateCanvas(Canvas.Handle);
-    FMarkup.Draw(C, X, Rect.Top, TextColor, clHotLight, Enabled);
+    FMarkup.Draw(C, X, Rect.Top, TextColor, LinkColor, Enabled);
     C := nil;
     Exit;
   end;
@@ -549,34 +559,47 @@ begin
     Result := PPGColorToRGB(Font.Color);
 end;
 
+function TPPGCustomLinkLabel.LinkColor: TColor;
+var
+  T: TPPGTokens;
+  F: TColor;
+begin
+  if HighContrastSupport and PPGIsHighContrast then
+    Exit(PPGColorToRGB(clHotLight));
+  F := PPGColorToRGB(EffectiveAppearance.FocusColor);
+  T := Tokens;
+  // VCL-Style und eigene FocusColor bleiben; sonst das Link-Token (4,5:1)
+  if UseVclStyle or (F <> T.Accent) then
+    Result := F
+  else
+    Result := T.Link;
+end;
+
 procedure TPPGCustomLinkLabel.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   O: TPoint;
-  LinkColor: TColor;
+  LinkCol: TColor;
   R: TRect;
   PPI: Integer;
 begin
   EnsureLayout;
   PPI := ScalePPI;
   O := Origin;
-  if HighContrastSupport and PPGIsHighContrast then
-    LinkColor := PPGColorToRGB(clHotLight)
-  else
-    LinkColor := PPGColorToRGB(EffectiveAppearance.FocusColor);
+  LinkCol := LinkColor;
   // Hover: dezente Flaeche hinter dem Link
   if (FHotLink >= 0) and Enabled then
   begin
     R := LinkRect(FHotLink);
     InflateRect(R, PPGScale(2, PPI), 0);
-    ACanvas.FillRoundRect(R, PPGScale(3, PPI), LinkColor, 28);
+    ACanvas.FillRoundRect(R, PPGScale(3, PPI), LinkCol, 28);
   end;
-  FMarkup.Draw(ACanvas, O.X, O.Y, TextColor, LinkColor, Enabled);
+  FMarkup.Draw(ACanvas, O.X, O.Y, TextColor, LinkCol, Enabled);
   if FocusVisible and (FFocusedLink >= 0) then
   begin
     R := LinkRect(FFocusedLink);
     // Nur 1 px nach aussen: sonst beruehrt der Rahmen die Nachbarwoerter
     InflateRect(R, PPGScale(1, PPI), PPGScale(1, PPI));
-    ACanvas.FrameRoundRect(R, PPGScale(3, PPI), PPGScale(2, PPI), LinkColor, 255);
+    ACanvas.FrameRoundRect(R, PPGScale(3, PPI), PPGScale(2, PPI), LinkCol, 255);
   end;
 end;
 

@@ -440,10 +440,7 @@ begin
   else
   begin
     Fill := T.Warning;
-    if PPGRelativeLuminance(Fill) > 0.4 then
-      Txt := clBlack
-    else
-      Txt := clWhite;
+    Txt := PPGContrastTextColor(Fill);
   end;
   ACanvas.FillRoundRect(R, PPGScale(3, PPI), Fill, 255);
   ACanvas.DrawText(R, #$21EA, Font, Txt, DT_CENTER or DT_VCENTER or DT_SINGLELINE or DT_NOPREFIX);

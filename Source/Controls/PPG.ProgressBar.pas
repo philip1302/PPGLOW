@@ -467,17 +467,16 @@ begin
       PPGColorToRGB(A.Disabled.TextColor))
   else
     case FState of
-      pbsError: TintSurface(Result, PPGColorToRGB(Tokens.Danger), clWhite);
-      pbsPaused: TintSurface(Result, PPGColorToRGB(Tokens.Paused), $00202020);
+      pbsError: TintSurface(Result, PPGColorToRGB(Tokens.Danger),
+        PPGContrastTextColor(Tokens.Danger, clWhite, $00202020));
+      pbsPaused: TintSurface(Result, PPGColorToRGB(Tokens.Paused),
+        PPGContrastTextColor(Tokens.Paused, clWhite, $00202020));
     else
       if PPGColorIsSet(FBarColor) then
       begin
         Bar := PPGColorToRGB(FBarColor);
         // Text auf dem Balken (ShowText) in der lesbareren Farbe
-        if PPGContrastRatio(Bar, clWhite) >= PPGContrastRatio(Bar, $00202020) then
-          TintSurface(Result, Bar, clWhite)
-        else
-          TintSurface(Result, Bar, $00202020);
+        TintSurface(Result, Bar, PPGContrastTextColor(Bar, clWhite, $00202020));
       end;
     end;
   if HighContrastSupport and PPGIsHighContrast then

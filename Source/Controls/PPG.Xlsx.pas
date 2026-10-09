@@ -663,10 +663,7 @@ var
             begin
               // Flaeche in der Farbe, Text mit Kontrast
               Cs.Fill := PPGColorToRGB(Clr);
-              if PPGRelativeLuminance(Cs.Fill) > 0.45 then
-                Cs.TextColor := clBlack
-              else
-                Cs.TextColor := clWhite;
+              Cs.TextColor := PPGContrastTextColor(Cs.Fill);
               TextCell(J, S, StyledXf(J, 0, Cs, Look.Text, [], Base));
               Continue;
             end;

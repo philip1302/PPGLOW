@@ -1289,8 +1289,7 @@ begin
   Txt := GroupTextColor;
   SelFill := FSelectedStyle.FillFor(Dark, PPGColorToRGB(A.FocusColor));
   SelText := FSelectedStyle.TextFor(Dark, Chk.TextColor);
-  if PPGContrastRatio(SelText, SelFill) < 3 then
-    SelText := Tokens.OnAccent;
+  SelText := PPGReadableTextColor(SelText, SelFill);
   if HC then
   begin
     C := PPGColorToRGB(clWindow);
