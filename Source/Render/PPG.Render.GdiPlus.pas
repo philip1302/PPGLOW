@@ -33,6 +33,7 @@ type
     FHeldDC: HDC;       // ausgeliehener DC (GetHDC), 0 = Graphics frei
     FGdiUse: Integer;   // offene GdiBegin (verschachtelbar)
     FBatch: Integer;    // offene BeginBatch
+    FBaseRgn: HRGN;     // Clip des DCs beim Anlegen (neu zu zeichnender Bereich), 0 = keiner
     procedure Check(Status: TStatus; const Call: string);
     function NewRoundRectPath(X, Y, W, H, Radius: Single): TGPGraphicsPath;
     function GdiBegin: HDC;
@@ -203,6 +204,13 @@ begin
   FDC := ADC;
   if not PPGGdiPlusAvailable then
     raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['GdiplusStartup', -1]);
+  // Audit 8a #1: Clip des DCs einmal merken (fuer die Clip-Uebernahme in AcquireDC)
+  FBaseRgn := CreateRectRgn(0, 0, 0, 0);
+  if (FBaseRgn <> 0) and (GetClipRgn(ADC, FBaseRgn) <> 1) then
+  begin
+    DeleteObject(FBaseRgn);
+    FBaseRgn := 0;
+  end;
   FGraphics := TGPGraphics.Create(ADC);
   Check(FGraphics.GetLastStatus, 'Graphics.Create');
   FGraphics.SetSmoothingMode(SmoothingModeAntiAlias);
@@ -229,6 +237,8 @@ begin
   if (FGraphics <> nil) and (Length(FClipStates) > 0) then
     FGraphics.Restore(FClipStates[0]);
   FGraphics.Free;
+  if FBaseRgn <> 0 then
+    DeleteObject(FBaseRgn);
   inherited Destroy;
 end;
 
@@ -600,7 +610,7 @@ end;
 procedure TPPGGdiPlusCanvas.AcquireDC;
 var
   Region: TGPRegion;
-  Rgn, Old: HRGN;
+  Rgn: HRGN;
   DC: HDC;
 begin
   // GDI+ puffert Operationen: vor GDI-Zugriff auf denselben DC muss der
@@ -631,14 +641,8 @@ begin
     begin
       // Audit 8a #1: ein vorhandener Clip des DCs (neu zu zeichnender
       // Bereich) bleibt bestehen - Schnittmenge statt Ersetzen
-      Old := CreateRectRgn(0, 0, 0, 0);
-      if Old <> 0 then
-      try
-        if GetClipRgn(DC, Old) = 1 then
-          CombineRgn(Rgn, Rgn, Old, RGN_AND);
-      finally
-        DeleteObject(Old);
-      end;
+      if FBaseRgn <> 0 then
+        CombineRgn(Rgn, Rgn, FBaseRgn, RGN_AND);
       SelectClipRgn(DC, Rgn);
     end;
   finally

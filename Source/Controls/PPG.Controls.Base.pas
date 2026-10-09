@@ -2032,10 +2032,10 @@ end;
 procedure TPPGCustomControl.Paint;
 var
   R, Clip, OldClip: TRect;
-  W, H: Integer;
+  W, H, Kind: Integer;
   DC, MemDC, OldDC: HDC;
   Bmp, OldBmp: HBITMAP;
-  Cached, OldHas: Boolean;
+  Cached, OldHas, Complex: Boolean;
   PPGCanvas: IPPGCanvas;
 begin
   R := ClientRect;
@@ -2046,10 +2046,15 @@ begin
   DC := Canvas.Handle;
   // Audit 8a #1: nur die Clip-Box neu zeichnen (Update-Region bzw. Clip von
   // PaintTo); ohne Clip bzw. bei einem Fehler die ganze Flaeche
-  case GetClipBox(DC, Clip) of
+  Kind := GetClipBox(DC, Clip);
+  Complex := Kind = COMPLEXREGION;
+  case Kind of
     SIMPLEREGION, COMPLEXREGION:
-      if not IntersectRect(Clip, Clip, R) then
-        Exit;
+      begin
+        // Nur eine zusammengesetzte Region braucht RectVisible in NeedsPaint
+        if not IntersectRect(Clip, Clip, R) then
+          Exit;
+      end;
   else
     Clip := R;
   end;
@@ -2081,7 +2086,10 @@ begin
             IntersectClipRect(MemDC, Clip.Left, Clip.Top, Clip.Right, Clip.Bottom);
           FPaintClip := Clip;
           FHasPaintClip := True;
-          FPaintDC := DC;
+          if Complex then
+            FPaintDC := DC
+          else
+            FPaintDC := 0;
           try
             FillBackground(MemDC, R);
             PPGCanvas := TPPGRendererRegistry.CreateCanvas(MemDC);
