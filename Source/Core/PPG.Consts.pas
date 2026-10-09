@@ -229,6 +229,29 @@ resourcestring
   SPPGThemeValueInvalid = 'Invalid value "%s" for %s';
   SPPGColorInvalid = '"%s" is not a valid color';
 
+  // Validator (Phase 19)
+  SPPGValRequired = '%s is required.';
+  SPPGValMustCheck = '%s must be checked.';
+  SPPGValMustChoose = 'Please choose an option for %s.';
+  SPPGValTooShort = '%s must have at least %d characters.';
+  SPPGValTooLong = '%s must not have more than %d characters.';
+  SPPGValBelowMin = '%s must be at least %s.';
+  SPPGValAboveMax = '%s must not be greater than %s.';
+  SPPGValNotANumber = '%s must be a number.';
+  SPPGValPattern = '%s has an invalid format.';
+  SPPGValEmail = '%s is not a valid e-mail address.';
+  SPPGValPhone = '%s is not a valid phone number.';
+  SPPGValPostalCode = '%s is not a valid postal code.';
+  SPPGValIBAN = '%s is not a valid IBAN.';
+  SPPGValEqual = '%s must match %s.';
+  SPPGValNotEqual = '%s must be different from %s.';
+  SPPGValLess = '%s must be less than %s.';
+  SPPGValLessOrEqual = '%s must not be greater than %s.';
+  SPPGValGreater = '%s must be greater than %s.';
+  SPPGValGreaterOrEqual = '%s must not be less than %s.';
+  SPPGValInvalid = '%s is invalid.';
+  SPPGValUnsupported = 'The validator cannot read the value of %s (%s).';
+
 implementation
 
 end.

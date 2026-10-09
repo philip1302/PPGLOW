@@ -42,6 +42,11 @@ const
   PPGColorWarning = TColor($00009DEA); // RGB(234, 157, 0)
   PPGColorSuccess = TColor($00107C10); // RGB(16, 124, 16)
 
+  /// Ein Eingabe-Control hat seinen Wert geaendert (Benutzer oder Code).
+  /// Per Perform an das Control selbst, nach dem internen Zustand und vor
+  /// OnChange; der Validator beobachtet es (CM_BASE + $7A0, Vcl.Controls).
+  CM_PPGVALUECHANGED = $B000 + $7A0;
+
 type
 
   /// Vollstaendig aufgeloester Stil fuer genau einen Zeichenvorgang.

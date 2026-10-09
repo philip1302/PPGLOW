@@ -761,6 +761,7 @@ end;
 procedure TPPGCustomField.Change;
 begin
   NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
+  Perform(CM_PPGVALUECHANGED, 0, 0);
   if Assigned(FOnChange) then
     FOnChange(Self);
 end;

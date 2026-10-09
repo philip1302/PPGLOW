@@ -63,6 +63,7 @@ $Icons = [ordered]@{
   'TPPGRadioGroup'  = @('rect 3 4 26 24 3 - S 1.5', 'circle 9 11 3.5 W S 1.2', 'circle 9 11 1.8 A', 'line 15 11 25 11 2 G', 'circle 9 21 3.5 W S 1.2', 'line 15 21 23 21 2 G')
   'TPPGCheckGroup'  = @('rect 3 4 26 24 3 - S 1.5', 'rect 6 8 6 6 1.5 A', 'path 1.5 W 7.5 11 9 12.5 11 9.5', 'line 15 11 25 11 2 G', 'rect 6 18 6 6 1.5 W S 1', 'line 15 21 23 21 2 G')
   'TPPGTileView'    = @('rect 3 4 11 11 2.5 A', 'rect 18 4 11 11 2.5 L', 'rect 3 17 11 11 2.5 L', 'rect 18 17 11 11 2.5 L', 'line 5 12.5 12 12.5 1.5 W')
+  'TPPGValidator'   = @('rect 2 5 22 13 3 W S 1.5', 'line 6 11.5 17 11.5 2 G', 'circle 22.5 22 7.5 N', 'path 2.5 W 18.5 22 21.5 25 26.5 19')
   'TPPGEdit'        = $Field + @('line 8 13 8 19 1.5 D', 'line 11 16 20 16 2 G', 'line 3 22.5 29 22.5 2 A')
   'TPPGMemo'        = @('rect 3 4 26 24 3 W S 1.5') + $Lines3 + @('line 4 27 28 27 2 A')
   'TPPGSpinEdit'    = $Field + @('line 7 16 15 16 2 G', 'line 22 9 22 23 1.5 S', 'path 1.8 D 23.5 14 25.5 12 27.5 14', 'path 1.8 D 23.5 18 25.5 20 27.5 18')

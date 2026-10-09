@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..187] of PResStringRec = (
+  AllTexts: array[0..208] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -84,7 +84,28 @@ const
     @SPPGKanbanPrintFitWidth,
     @SPPGThemeFileInvalid,
     @SPPGThemeValueInvalid,
-    @SPPGColorInvalid);
+    @SPPGColorInvalid,
+    @SPPGValRequired,
+    @SPPGValMustCheck,
+    @SPPGValMustChoose,
+    @SPPGValTooShort,
+    @SPPGValTooLong,
+    @SPPGValBelowMin,
+    @SPPGValAboveMax,
+    @SPPGValNotANumber,
+    @SPPGValPattern,
+    @SPPGValEmail,
+    @SPPGValPhone,
+    @SPPGValPostalCode,
+    @SPPGValIBAN,
+    @SPPGValEqual,
+    @SPPGValNotEqual,
+    @SPPGValLess,
+    @SPPGValLessOrEqual,
+    @SPPGValGreater,
+    @SPPGValGreaterOrEqual,
+    @SPPGValInvalid,
+    @SPPGValUnsupported);
 
 var
   GChanges: Integer;

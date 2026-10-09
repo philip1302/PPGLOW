@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 188;
+  PPGLangDeCount = 209;
 
 implementation
 
@@ -398,6 +398,48 @@ begin
     'Ung'#$00FC'ltiger Wert '#$201E'%s'#$201C' f'#$00FC'r %s');
   PPGAddTranslation(PPGLangDeCode, @SPPGColorInvalid,
     #$201E'%s'#$201C' ist keine g'#$00FC'ltige Farbe');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValRequired,
+    '%s ist ein Pflichtfeld.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValMustCheck,
+    '%s muss angekreuzt sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValMustChoose,
+    'Bitte w'#$00E4'hlen Sie bei %s eine M'#$00F6'glichkeit.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValTooShort,
+    '%s muss mindestens %d Zeichen haben.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValTooLong,
+    '%s darf h'#$00F6'chstens %d Zeichen haben.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValBelowMin,
+    '%s muss mindestens %s sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValAboveMax,
+    '%s darf h'#$00F6'chstens %s sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValNotANumber,
+    '%s muss eine Zahl sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValPattern,
+    '%s hat ein ung'#$00FC'ltiges Format.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValEmail,
+    '%s ist keine g'#$00FC'ltige E-Mail-Adresse.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValPhone,
+    '%s ist keine g'#$00FC'ltige Telefonnummer.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValPostalCode,
+    '%s ist keine g'#$00FC'ltige Postleitzahl.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValIBAN,
+    '%s ist keine g'#$00FC'ltige IBAN.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValEqual,
+    '%s muss mit %s '#$00FC'bereinstimmen.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValNotEqual,
+    '%s muss sich von %s unterscheiden.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValLess,
+    '%s muss kleiner als %s sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValLessOrEqual,
+    '%s darf nicht gr'#$00F6#$00DF'er als %s sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValGreater,
+    '%s muss gr'#$00F6#$00DF'er als %s sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValGreaterOrEqual,
+    '%s darf nicht kleiner als %s sein.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValInvalid,
+    '%s ist ung'#$00FC'ltig.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGValUnsupported,
+    'Der Validator kann den Wert von %s (%s) nicht lesen.');
 end;
 
 initialization

@@ -227,6 +227,7 @@ end;
 
 procedure TPPGCustomCheckControl.DoChange;
 begin
+  Perform(CM_PPGVALUECHANGED, 0, 0);
   if Assigned(FOnChange) then
     FOnChange(Self);
 end;
