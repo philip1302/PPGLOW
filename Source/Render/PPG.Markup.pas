@@ -10,6 +10,10 @@ unit PPG.Markup;
     <br>                          Zeilenumbruch (ebenso CR/LF im Text)
     &lt; &gt; &amp; &quot; &nbsp; Sonderzeichen
 
+  Der Parser (Runs, PPGParseMarkup(Cached), PPGStripMarkup, PPGIsPlainText)
+  liegt seit Audit 11d in der Core-Unit PPG.Markup.Parser; diese Unit
+  enthaelt Layout, Messen und Zeichnen.
+
   Robustheit: Der Parser wirft nie. Unbekannte oder kaputte Tags bleiben als
   Text sichtbar, nicht geschlossene Tags gelten bis zum Ende.
   Leistung: Text ohne '<' und '&' nimmt einen schnellen Pfad; geparste Texte
