@@ -28,6 +28,12 @@
   Aufruf:   powershell -ExecutionPolicy Bypass -File Build\install.ps1
             [-Version 37.0] [-Config Release] [-Platforms Win32,Win64] [-NoBuild] [-NoDB] [-LoadTest]
   Entfernen: powershell -ExecutionPolicy Bypass -File Build\install.ps1 -Uninstall
+             (nimmt PATH-Eintraege nur zurueck, wenn install.ps1 sie selbst gesetzt hat:
+             Marker unter HKCU\Software\PPGlow\Install\<Version>)
+
+  Vor jeder Aenderung (auch beim Entfernen) sichert das Skript die betroffenen
+  Registry-Schluessel nach Build\registry-backup (inkl. PATH-Schluessel).
+  BDSCOMMONDIR kommt aus den Umgebungsvariablen der IDE bzw. bin\rsvars.bat.
 #>
 param(
   [string]$Version = '37.0',
@@ -62,7 +68,36 @@ if (Get-Process bds -ErrorAction SilentlyContinue) {
   throw 'Bitte zuerst alle RAD-Studio-Instanzen schliessen (die IDE ueberschreibt die Registry beim Beenden).'
 }
 $StudioDir = (Get-ItemProperty $Key).RootDir
-$CommonDir = "C:\Users\Public\Documents\Embarcadero\Studio\$Version"
+# Eigener Registry-Schluessel von install.ps1: merkt sich, welche PATH-Eintraege
+# es selbst gesetzt hat (nur diese nimmt -Uninstall wieder zurueck)
+$MarkerKey = "HKCU:\Software\PPGlow\Install\$Version"
+
+# Ersetzt IDE-Variablen $(NAME) und %NAME% durch Umgebungsvariablen
+function Expand-IdeVars([string]$Text) {
+  $t = [regex]::Replace($Text, '\$\((\w+)\)', {
+    param($m)
+    $v = [Environment]::GetEnvironmentVariable($m.Groups[1].Value)
+    if ($v) { $v } else { $m.Value }
+  })
+  return [Environment]::ExpandEnvironmentVariables($t)
+}
+
+# BDSCOMMONDIR wie die IDE: Override in Tools > Optionen > Umgebungsvariablen,
+# sonst rsvars.bat der Installation, sonst der uebliche Standardpfad.
+function Get-BdsCommonDir([string]$RegKey, [string]$Studio, [string]$Ver) {
+  $v = (Get-ItemProperty "$RegKey\Environment Variables" -Name 'BDSCOMMONDIR' -ErrorAction SilentlyContinue).BDSCOMMONDIR
+  if ($v) { return (Expand-IdeVars $v).TrimEnd('\') }
+  if ($Studio) {
+    $rsvars = Join-Path $Studio 'bin\rsvars.bat'
+    if (Test-Path $rsvars -PathType Leaf) {
+      foreach ($line in [IO.File]::ReadAllLines($rsvars)) {
+        if ($line -match '^\s*@?\s*SET\s+BDSCOMMONDIR\s*=\s*(.+?)\s*$') { return (Expand-IdeVars $Matches[1]).TrimEnd('\') }
+      }
+    }
+  }
+  return "C:\Users\Public\Documents\Embarcadero\Studio\$Ver"
+}
+$CommonDir = Get-BdsCommonDir $Key $StudioDir $Version
 
 $Targets = @(
   @{ Platform = 'Win32'; BplDir = "$CommonDir\Bpl";       DcpDir = "$CommonDir\Dcp";       Known = 'Known Packages';
@@ -236,11 +271,77 @@ function Add-IdePath([string]$Dir) {
   $info = Get-IdePathInfo
   if ($info.Override) {
     Set-ItemProperty "$Key\Environment Variables" -Name 'PATH' -Value ($Dir + ';' + $info.Override)
+    Set-PathMarker $Dir 'Override'
     return 'Umgebungsvariablen der IDE (PATH-Override)'
   }
   $new = (@($info.User, $Dir) | Where-Object { $_ }) -join ';'
   [Environment]::SetEnvironmentVariable('Path', $new, 'User')   # meldet die Aenderung an Windows
+  Set-PathMarker $Dir 'User'
   return 'Benutzer-PATH'
+}
+
+# Merkt sich, dass install.ps1 $Dir selbst in den PATH eingetragen hat ($Where: Override|User)
+function Set-PathMarker([string]$Dir, [string]$Where) {
+  if (-not (Test-Path $MarkerKey)) { New-Item $MarkerKey -Force | Out-Null }
+  New-ItemProperty $MarkerKey -Name $Dir.TrimEnd('\') -Value $Where -PropertyType String -Force | Out-Null
+}
+
+# Entfernt $Dir aus einer PATH-Liste (Vergleich ohne Gross-/Kleinschreibung und
+# abschliessendes "\"); die uebrigen Eintraege bleiben unveraendert
+function Remove-PathEntry([string]$PathList, [string]$Dir) {
+  $d = $Dir.TrimEnd('\')
+  return (@($PathList -split ';' | Where-Object { $_ -and ($_.Trim().TrimEnd('\') -ine $d) }) -join ';')
+}
+
+# Nimmt PATH-Eintraege zurueck - nur die, die install.ps1 laut Marker selbst
+# eingetragen hat. Liefert die zurueckgenommenen Ordner.
+function Remove-IdePath([string[]]$Dirs) {
+  $done = @()
+  if (-not (Test-Path $MarkerKey)) { return $done }
+  foreach ($dir in $Dirs) {
+    $name = $dir.TrimEnd('\')
+    $where = (Get-ItemProperty $MarkerKey -Name $name -ErrorAction SilentlyContinue).$name
+    if (-not $where) { continue }
+    if ($where -eq 'Override') {
+      $cur = (Get-ItemProperty "$Key\Environment Variables" -Name 'PATH' -ErrorAction SilentlyContinue).PATH
+      if ($cur) { Set-ItemProperty "$Key\Environment Variables" -Name 'PATH' -Value (Remove-PathEntry $cur $name) }
+    } else {
+      $cur = [Environment]::GetEnvironmentVariable('Path', 'User')
+      if ($cur) { [Environment]::SetEnvironmentVariable('Path', (Remove-PathEntry $cur $name), 'User') }
+    }
+    Remove-ItemProperty $MarkerKey -Name $name
+    $done += $name
+  }
+  return $done
+}
+
+# Sichert die Registry-Schluessel, die install.ps1 aendert (auch beim Entfernen).
+# Ein fehlender Schluessel ist nur ein Hinweis; schlaegt der Export eines
+# vorhandenen Schluessels fehl, bricht das Skript ab, bevor es etwas aendert.
+function Backup-Registry {
+  $dir = Join-Path $PSScriptRoot 'registry-backup'
+  New-Item -ItemType Directory -Force $dir | Out-Null
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $keys = @('Known Packages', 'Known Packages x64', 'Disabled Packages', 'Library\Win32', 'Library\Win64',
+    'Environment Variables') | ForEach-Object { "HKCU\Software\Embarcadero\BDS\$Version\$_" }
+  $keys += 'HKCU\Environment'
+  $keys += ($MarkerKey -replace '^HKCU:', 'HKCU')
+  foreach ($regPath in $keys) {
+    if (-not (Test-Path ($regPath -replace '^HKCU\\', 'HKCU:\'))) {
+      Write-Host "  Hinweis: $regPath fehlt - nichts zu sichern" -ForegroundColor DarkGray
+      continue
+    }
+    $file = Join-Path $dir ("$stamp-" + (($regPath -replace '^HKCU\\(Software\\Embarcadero\\BDS\\[^\\]+\\)?', '') -replace '[\\ ]', '_') + '.reg')
+    # reg.exe schreibt Fehler auf stderr: unter 'Stop' wuerde das schon abbrechen
+    $old = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+      $out = & reg.exe export $regPath $file /y 2>&1 | Out-String
+      $code = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $old }
+    if ($code -ne 0) { throw "Registry-Sicherung von $regPath fehlgeschlagen (reg export, Code $code): $($out.Trim())" }
+  }
+  Write-Host "Registry-Sicherung: $dir\$stamp-*.reg" -ForegroundColor DarkGray
 }
 
 function Get-LoadHint([int]$Code) {
@@ -254,6 +355,7 @@ function Get-LoadHint([int]$Code) {
 
 # --- Entfernen ---------------------------------------------------------------
 if ($Uninstall) {
+  Backup-Registry
   foreach ($t in $Targets) {
     $r = Remove-PPGlowEntries "$Key\$($t.Known)" @()
     [void](Remove-PPGlowEntries "$Key\Disabled Packages" @())
@@ -265,6 +367,9 @@ if ($Uninstall) {
     }
     Set-SearchPath $t.Platform '' $false
     Write-Host "[$($t.Platform)] entfernt ($($r.Count) Registry-Eintraege)" -ForegroundColor Yellow
+    foreach ($d in (Remove-IdePath @($t.BplDir))) {
+      Write-Host "  $d aus dem PATH der IDE genommen (von install.ps1 eingetragen)." -ForegroundColor Yellow
+    }
   }
   exit 0
 }
@@ -277,8 +382,14 @@ if (-not $NoBuild) {
   foreach ($t in $Targets) {
     Write-Host "Baue $($Projects -join ', ') fuer $($t.Platform)/$Config ..." -ForegroundColor Cyan
     $global:LASTEXITCODE = 0
-    & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $Projects -Platform $t.Platform -Config $Config
-    if ($LASTEXITCODE -ne 0) { $BuildFailed[$t.Platform] = $true }
+    try {
+      & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $Projects -Platform $t.Platform -Config $Config
+      if ($LASTEXITCODE -ne 0) { $BuildFailed[$t.Platform] = $true }
+    } catch {
+      # build.ps1 wirft z.B. bei fehlender .err-Datei (Timeout) - wie ein Fehlschlag behandeln
+      Write-Host "  Build-Aufruf abgebrochen: $($_.Exception.Message)" -ForegroundColor Red
+      $BuildFailed[$t.Platform] = $true
+    }
   }
   if ($BuildFailed['Win32']) {
     Write-Host ''
@@ -292,16 +403,8 @@ if (-not $NoBuild) {
 $Newest = (Get-ChildItem (Join-Path $Root 'Source'), (Join-Path $Root "Packages\$Folder") -Recurse -File `
   -Include '*.pas', '*.inc', '*.dcr', '*.dpk' | Measure-Object LastWriteTime -Maximum).Maximum
 
-# Registry sichern
-$BackupDir = Join-Path $PSScriptRoot 'registry-backup'
-New-Item -ItemType Directory -Force $BackupDir | Out-Null
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-foreach ($sub in 'Known Packages', 'Known Packages x64', 'Disabled Packages', 'Library\Win32', 'Library\Win64') {
-  $regPath = "HKCU\Software\Embarcadero\BDS\$Version\$sub"
-  $file = Join-Path $BackupDir ("$stamp-" + ($sub -replace '[\\ ]', '_') + '.reg')
-  & reg.exe export $regPath $file /y 2>$null | Out-Null
-}
-Write-Host "Registry-Sicherung: $BackupDir\$stamp-*.reg" -ForegroundColor DarkGray
+# Registry sichern (vor jeder Aenderung)
+Backup-Registry
 
 $Problems = 0
 foreach ($t in $Targets) {
