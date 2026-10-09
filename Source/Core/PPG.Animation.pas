@@ -70,9 +70,14 @@ type
     FLooping: Boolean;
     FRegistered: Boolean;
     FEasing: TPPGEasing;
+    FStepInterval: Cardinal;
+    FLastStep: Cardinal;
     FOnStep: TNotifyEvent;
     FOwner: TObject;
     procedure Tick(Now: Cardinal);
+    procedure UpdateValue(Now: Cardinal);
+    function IsDue(Now: Cardinal): Boolean;
+    function DueIn(Now: Cardinal): Cardinal;
   public
     constructor Create(AOwner: TObject);
     destructor Destroy; override;
@@ -82,7 +87,9 @@ type
       AEasing: TPPGEasing = ekSmooth);
     /// Endlosschleife: Value laeuft linear von 0 bis 1 und beginnt dann von
     /// vorn (z.B. Marquee). Laeuft bis Stop, Jump oder AnimateTo.
-    procedure StartLoop(APeriodMs: Cardinal);
+    procedure StartLoop(APeriodMs: Cardinal); overload;
+    /// Wie StartLoop, mit Faelligkeitsmodus (StepInterval = AStepMs).
+    procedure StartLoop(APeriodMs, AStepMs: Cardinal); overload;
     procedure Stop;
     /// Setzt den Wert sofort und stoppt eine laufende Animation.
     procedure Jump(AValue: Single);
@@ -93,6 +100,14 @@ type
     /// Kurve der laufenden bzw. letzten Animation.
     property Easing: TPPGEasing read FEasing;
     property Owner: TObject read FOwner;
+    /// Faelligkeitsmodus (Audit 8a #3): 0 = jeder Frame (~15 ms); sonst
+    /// ruft der Animator OnStep nur alle StepInterval ms bzw. am Ende der
+    /// Animation. Laeuft keine Frame-Animation, schlaeft der gemeinsame
+    /// Timer bis zur naechsten Faelligkeit (lange Schleifen wie die
+    /// Jetzt-Linie oder eine Lebensdauer wecken so nicht 67-mal je Sekunde).
+    /// Value ist dazwischen der Stand des letzten Schritts; Stop rechnet ihn
+    /// auf den aktuellen Zeitpunkt nach.
+    property StepInterval: Cardinal read FStepInterval write FStepInterval;
     property OnStep: TNotifyEvent read FOnStep write FOnStep;
   end;
 
@@ -103,6 +118,10 @@ function PPGSystemAnimationsEnabled: Boolean;
 function PPGIsRemoteSession: Boolean;
 /// Anzahl gerade laufender Animationen (Diagnose/Tests).
 function PPGRunningAnimationCount: Integer;
+/// Diagnose/Tests: aktuelles Intervall des gemeinsamen Timers in ms
+/// (0 = Timer aus) und Anzahl seiner bisherigen Ticks.
+function PPGAnimatorInterval: Cardinal;
+function PPGAnimatorTicks: Cardinal;
 
 implementation
 
@@ -112,6 +131,10 @@ uses
 
 const
   AnimatorInterval = 15; // ms, ~60 fps
+  // Faelligkeitsmodus: Timer und GetTickCount haben ~16 ms Aufloesung; ein
+  // Schritt gilt so viel frueher als faellig (sonst ein zweiter Wakeup je
+  // Periode, nur um die letzten Millisekunden abzuwarten)
+  DueSlack = 16;
 
 type
   TPPGAnimator = class
@@ -119,6 +142,11 @@ type
     FTimer: TTimer;
     FItems: TList<TPPGAnimation>;
     FTicking: Boolean;
+    /// Kopie der Liste waehrend TimerTick; abgemeldete Eintraege werden
+    /// darin auf nil gesetzt (statt IndexOf je Eintrag und Tick).
+    FSnapshot: TArray<TPPGAnimation>;
+    FTickIndex: Integer;
+    FTicks: Cardinal;
     procedure TimerTick(Sender: TObject);
     procedure UpdateTimer;
   public
@@ -127,6 +155,7 @@ type
     procedure Add(A: TPPGAnimation);
     procedure Remove(A: TPPGAnimation);
     function Count: Integer;
+    function Interval: Cardinal;
   end;
 
 var
@@ -183,6 +212,22 @@ begin
     Result := 0
   else
     Result := GAnimator.Count;
+end;
+
+function PPGAnimatorInterval: Cardinal;
+begin
+  if GAnimator = nil then
+    Result := 0
+  else
+    Result := GAnimator.Interval;
+end;
+
+function PPGAnimatorTicks: Cardinal;
+begin
+  if GAnimator = nil then
+    Result := 0
+  else
+    Result := GAnimator.FTicks;
 end;
 
 { TPPGAnimationSettings }
@@ -299,12 +344,21 @@ begin
   if FDuration < AnimatorInterval then
     FDuration := AnimatorInterval;
   FStartTick := GetTickCount;
+  FLastStep := FStartTick;
   FRunning := True;
   if not FRegistered then
   begin
-    A.Add(Self);
     FRegistered := True;
-  end;
+    A.Add(Self);
+  end
+  else
+    A.UpdateTimer; // neues Ende bzw. Frame-Animation: Timer anpassen
+end;
+
+procedure TPPGAnimation.StartLoop(APeriodMs, AStepMs: Cardinal);
+begin
+  FStepInterval := AStepMs;
+  StartLoop(APeriodMs);
 end;
 
 procedure TPPGAnimation.StartLoop(APeriodMs: Cardinal);
@@ -322,12 +376,15 @@ begin
   FLooping := True;
   FDuration := APeriodMs;
   FStartTick := GetTickCount;
+  FLastStep := FStartTick;
   FRunning := True;
   if not FRegistered then
   begin
-    A.Add(Self);
     FRegistered := True;
-  end;
+    A.Add(Self);
+  end
+  else
+    A.UpdateTimer;
 end;
 
 procedure TPPGAnimation.Jump(AValue: Single);
@@ -345,6 +402,10 @@ end;
 
 procedure TPPGAnimation.Stop;
 begin
+  // Faelligkeitsmodus: Value auf den Zeitpunkt des Anhaltens nachziehen
+  // (z.B. Restdauer einer pausierten Lebensdauer)
+  if FRunning and (FStepInterval > 0) then
+    UpdateValue(GetTickCount);
   FRunning := False;
   FLooping := False;
   if FRegistered then
@@ -355,26 +416,66 @@ begin
   end;
 end;
 
-procedure TPPGAnimation.Tick(Now: Cardinal);
+procedure TPPGAnimation.UpdateValue(Now: Cardinal);
 var
   Elapsed: Cardinal;
   T: Single;
 begin
-  if not FRunning then
-    Exit;
   Elapsed := Now - FStartTick; // Cardinal-Arithmetik: korrekt auch bei Tick-Ueberlauf
   if FLooping then
     FValue := (Elapsed mod FDuration) / FDuration // linear, ohne Easing
   else if Elapsed >= FDuration then
-  begin
-    FValue := FTargetValue;
-    Stop;
-  end
+    FValue := FTargetValue
   else
   begin
     T := Elapsed / FDuration;
     T := PPGEase(FEasing, T);
     FValue := FStartValue + (FTargetValue - FStartValue) * T;
+  end;
+end;
+
+function TPPGAnimation.IsDue(Now: Cardinal): Boolean;
+begin
+  Result := (FStepInterval = 0) or (Now - FLastStep + DueSlack >= FStepInterval) or
+    (not FLooping and (Now - FStartTick + DueSlack >= FDuration));
+end;
+
+function TPPGAnimation.DueIn(Now: Cardinal): Cardinal;
+var
+  E, Rest: Cardinal;
+begin
+  if not FRunning then
+    Exit(High(Cardinal));
+  if FStepInterval = 0 then
+    Exit(0);
+  E := Now - FLastStep;
+  if E >= FStepInterval then
+    Exit(0);
+  Result := FStepInterval - E;
+  if not FLooping then
+  begin
+    E := Now - FStartTick;
+    if E >= FDuration then
+      Exit(0);
+    Rest := FDuration - E;
+    if Rest < Result then
+      Result := Rest;
+  end;
+end;
+
+procedure TPPGAnimation.Tick(Now: Cardinal);
+begin
+  if not FRunning then
+    Exit;
+  FLastStep := Now;
+  // Faelligkeitsmodus: innerhalb der Toleranz vor dem Ende = Ende
+  if (FStepInterval > 0) and not FLooping and (Now - FStartTick + DueSlack >= FDuration) then
+    Now := FStartTick + FDuration;
+  UpdateValue(Now);
+  if not FLooping and (Now - FStartTick >= FDuration) then
+  begin
+    FRunning := False; // Stop rechnet den Wert dann nicht nach
+    Stop;
   end;
   if Assigned(FOnStep) then
     FOnStep(Self);
@@ -411,15 +512,32 @@ end;
 
 procedure TPPGAnimator.Add(A: TPPGAnimation);
 begin
-  if FItems.IndexOf(A) < 0 then
-    FItems.Add(A);
+  // Nur aus AnimateTo/StartLoop, wenn A noch nicht angemeldet ist
+  // (FRegistered): kein IndexOf noetig
+  FItems.Add(A);
   UpdateTimer;
 end;
 
 procedure TPPGAnimator.Remove(A: TPPGAnimation);
+var
+  I: Integer;
 begin
   FItems.Remove(A);
-  if not FTicking then
+  if FTicking then
+  begin
+    // In der Kopie des laufenden Ticks austragen (A kann gleich danach
+    // freigegeben werden); meist ist es der gerade bearbeitete Eintrag
+    if (FTickIndex >= 0) and (FTickIndex <= High(FSnapshot)) and (FSnapshot[FTickIndex] = A) then
+      FSnapshot[FTickIndex] := nil
+    else
+      for I := 0 to High(FSnapshot) do
+        if FSnapshot[I] = A then
+        begin
+          FSnapshot[I] := nil;
+          Break;
+        end;
+  end
+  else
     UpdateTimer;
 end;
 
@@ -428,14 +546,49 @@ begin
   Result := FItems.Count;
 end;
 
-procedure TPPGAnimator.UpdateTimer;
+function TPPGAnimator.Interval: Cardinal;
 begin
-  FTimer.Enabled := FItems.Count > 0;
+  if FTimer.Enabled then
+    Result := FTimer.Interval
+  else
+    Result := 0;
+end;
+
+procedure TPPGAnimator.UpdateTimer;
+var
+  I: Integer;
+  Now, D, Wait: Cardinal;
+begin
+  if FTicking then
+    Exit; // TimerTick stellt den Timer am Ende ein
+  if FItems.Count = 0 then
+  begin
+    FTimer.Enabled := False;
+    Exit;
+  end;
+  // Frame-Takt, solange eine Animation jeden Frame braucht; sonst bis zur
+  // fruehesten Faelligkeit schlafen (Audit 8a #3)
+  Now := GetTickCount;
+  Wait := High(Cardinal);
+  for I := 0 to FItems.Count - 1 do
+  begin
+    D := FItems[I].DueIn(Now);
+    if D < Wait then
+      Wait := D;
+    if Wait <= AnimatorInterval then
+      Break;
+  end;
+  if Wait < AnimatorInterval then
+    Wait := AnimatorInterval;
+  if Wait > Cardinal(MaxInt) then
+    Wait := Cardinal(MaxInt);
+  if FTimer.Interval <> Wait then
+    FTimer.Interval := Wait; // startet einen laufenden Timer neu
+  FTimer.Enabled := True;
 end;
 
 procedure TPPGAnimator.TimerTick(Sender: TObject);
 var
-  Snapshot: TArray<TPPGAnimation>;
   A: TPPGAnimation;
   AOwner: TObject;
   I: Integer;
@@ -445,14 +598,17 @@ begin
     Exit; // Reentranz (z.B. ProcessMessages in einem OnStep-Handler)
   FTicking := True;
   try
-    // Kopie: OnStep darf Animationen stoppen, starten oder freigeben
-    Snapshot := FItems.ToArray;
+    Inc(FTicks);
+    // Kopie: OnStep darf Animationen stoppen, starten oder freigeben;
+    // abgemeldete Eintraege setzt Remove hier auf nil
+    FSnapshot := FItems.ToArray;
     Now := GetTickCount;
-    for I := 0 to High(Snapshot) do
+    for I := 0 to High(FSnapshot) do
     begin
-      A := Snapshot[I];
-      if FItems.IndexOf(A) < 0 then
-        Continue; // inzwischen abgemeldet/freigegeben
+      A := FSnapshot[I];
+      if (A = nil) or not A.IsDue(Now) then
+        Continue; // inzwischen abgemeldet/freigegeben bzw. noch nicht faellig
+      FTickIndex := I;
       AOwner := A.Owner; // vorher merken: OnStep kann A freigeben
       try
         A.Tick(Now);
@@ -461,13 +617,15 @@ begin
         begin
           // Fehlerhafte Animation sofort stoppen, sonst kommt alle 15 ms
           // derselbe Fehlerdialog.
-          if FItems.IndexOf(A) >= 0 then
+          if FSnapshot[I] <> nil then
             A.Stop;
           TPPGErrorHandler.HandleCallbackError(AOwner, E, 'Animation.Tick');
         end;
       end;
     end;
   finally
+    FSnapshot := nil;
+    FTickIndex := -1;
     FTicking := False;
     UpdateTimer;
   end;

@@ -4660,7 +4660,7 @@ begin
   if Need and not FNowAnim.Looping then
   begin
     FNowMinute := Trunc(T * MinsPerDay);
-    FNowAnim.StartLoop(60000);
+    FNowAnim.StartLoop(60000, 1000); // Audit 8a #3: einmal je Sekunde pruefen
   end
   else if not Need and FNowAnim.Looping then
     FNowAnim.Stop;
