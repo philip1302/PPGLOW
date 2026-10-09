@@ -38,6 +38,9 @@ type
     procedure RibbonWatch(AComponent: TComponent);
     /// Item.Control hat gewechselt (Parent und Lage verwaltet der Besitzer).
     procedure RibbonControlChanged(Item: TPPGRibbonItem; OldControl: TControl);
+    /// Nur der Zustand (Enabled, Down) hat sich geaendert: neu zeichnen, kein
+    /// neues Layout.
+    procedure RibbonStateChanged(Item: TPPGRibbonItem);
   end;
 
   TPPGRibbonItemActionLink = class(TActionLink)
@@ -103,6 +106,7 @@ type
     procedure SetIconChar(const Value: Word);
     procedure SetDown(const Value: Boolean);
     procedure SetEnabled(const Value: Boolean);
+    procedure StateChanged;
     procedure SetVisible(const Value: Boolean);
     procedure SetKeyTip(const Value: string);
     procedure SetBeginColumn(const Value: Boolean);
@@ -740,7 +744,19 @@ begin
           Other.FDown := False;
       end;
   end;
-  Changed(False);
+  StateChanged;
+end;
+
+procedure TPPGRibbonItem.StateChanged;
+var
+  H: IPPGRibbonHost;
+begin
+  // Audit 8D: Enabled/Down (z. B. Action-Update im Leerlauf) aendern die
+  // Groesse nicht - kein Neuaufbau des Layouts, nur neu zeichnen
+  if PPGRibbonHostOf(Self, H) then
+    H.RibbonStateChanged(Self)
+  else
+    Changed(False);
 end;
 
 procedure TPPGRibbonItem.SetEnabled(const Value: Boolean);
@@ -750,7 +766,7 @@ begin
     FEnabled := Value;
     if FControl <> nil then
       FControl.Enabled := Value;
-    Changed(False);
+    StateChanged;
   end;
 end;
 

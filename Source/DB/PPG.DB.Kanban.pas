@@ -520,26 +520,70 @@ end;
 
 procedure TPPGCustomDBKanban.RenumberCell(C, L: Integer);
 var
-  I: Integer;
+  I, Key, Target: Integer;
   Card: TPPGKanbanCard;
-  FOrd: TField;
+  FOrd, FKey: TField;
   DS: TDataSet;
+  Want: TDictionary<Integer, Integer>;
+  Seen: TDictionary<Integer, Boolean>;
+  Marks: TList<TBookmark>;
+  Values: TList<Integer>;
 begin
+  // Audit 8D: ein Durchlauf statt Locate je Karte. Soll-Nummer je Id, dann
+  // die Datenmenge einmal lesen (erster Satz je Schluessel wie Locate) und
+  // nur abweichende Saetze merken; geschrieben wird danach ueber
+  // Lesezeichen (Post kann in einer sortierten Datenmenge den Satz
+  // verschieben - waehrend des Lesens wuerde das die Reihenfolge stoeren).
   FOrd := Fld(3);
-  if FOrd = nil then
+  FKey := Fld(0);
+  if (FOrd = nil) or (FKey = nil) then
     Exit;
   DS := FDataLink.DataSet;
-  for I := 0 to CardCount(C, L) - 1 do
-  begin
-    Card := CardAt(C, L, I);
-    if (Card = nil) or not LocateKey(Card.Id) then
-      Continue;
-    if FOrd.IsNull or (FOrd.AsFloat <> (I + 1) * 10) then
+  Want := TDictionary<Integer, Integer>.Create;
+  Seen := TDictionary<Integer, Boolean>.Create;
+  Marks := TList<TBookmark>.Create;
+  Values := TList<Integer>.Create;
+  try
+    for I := 0 to CardCount(C, L) - 1 do
     begin
+      Card := CardAt(C, L, I);
+      if (Card <> nil) and not Want.ContainsKey(Card.Id) then
+        Want.Add(Card.Id, (I + 1) * 10);
+    end;
+    if Want.Count = 0 then
+      Exit;
+    DS.First;
+    while not DS.Eof do
+    begin
+      if not FKey.IsNull then
+      begin
+        Key := FKey.AsInteger;
+        if not Seen.ContainsKey(Key) then
+        begin
+          Seen.Add(Key, True);
+          if Want.TryGetValue(Key, Target) and (FOrd.IsNull or (FOrd.AsFloat <> Target)) then
+          begin
+            Marks.Add(DS.Bookmark);
+            Values.Add(Target);
+          end;
+        end;
+      end;
+      DS.Next;
+    end;
+    for I := 0 to Marks.Count - 1 do
+    begin
+      if not DS.BookmarkValid(Marks[I]) then
+        Continue;
+      DS.Bookmark := Marks[I];
       DS.Edit;
-      FOrd.AsInteger := (I + 1) * 10;
+      FOrd.AsInteger := Values[I];
       DS.Post;
     end;
+  finally
+    Values.Free;
+    Marks.Free;
+    Seen.Free;
+    Want.Free;
   end;
 end;
 

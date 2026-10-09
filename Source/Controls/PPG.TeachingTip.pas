@@ -128,6 +128,8 @@ type
   TPPGTeachingTip = class(TComponent)
   private
     FTarget: TControl;
+    // Audit 8D: Neu platzieren ist angefordert (eine Nachricht je Runde)
+    FRepositionPending: Boolean;
     FWatchedForm: TCustomForm;
     FTitle: string;
     FSubtitle: string;
@@ -149,6 +151,7 @@ type
     FOnLinkClick: TPPGTipLinkEvent;
     FOnClosing: TPPGTipClosingEvent;
     FOnClose: TPPGTipCloseEvent;
+    procedure RequestReposition;
     procedure SetPreset(const Value: string);
     procedure SetTarget(const Value: TControl);
     procedure SetStyleManager(const Value: TPPGStyleManager);
@@ -782,8 +785,12 @@ end;
 
 procedure TPPGTeachingTipWindow.WMTipReposition(var Message: TMessage);
 begin
-  if (FTip <> nil) and FTip.IsOpen then
+  if FTip = nil then
+    Exit;
+  // Schon neu platziert (z.B. durch Show): nichts mehr zu tun
+  if FTip.FRepositionPending and FTip.IsOpen then
     FTip.UpdatePosition;
+  FTip.FRepositionPending := False;
 end;
 
 function TPPGTeachingTipWindow.AccName: string;
@@ -1043,8 +1050,23 @@ end;
 
 procedure TPPGTeachingTip.ContentChanged;
 begin
-  if FOpen then
+  // Audit 8D: mehrere Aenderungen hintereinander (Titel, Text, Knoepfe)
+  // messen und platzieren nur einmal
+  if not FOpen then
+    Exit;
+  if (FWindow <> nil) and FWindow.HandleAllocated then
+    RequestReposition
+  else
     UpdatePosition;
+end;
+
+procedure TPPGTeachingTip.RequestReposition;
+begin
+  // Eine Nachricht je Runde: weitere Anforderungen bis dahin entfallen
+  if FRepositionPending or (FWindow = nil) or not FWindow.HandleAllocated then
+    Exit;
+  FRepositionPending := True;
+  PostMessage(FWindow.Handle, WM_TIPREPOSITION, 0, 0);
 end;
 
 function TPPGTeachingTip.EffectivePreset: string;
@@ -1151,6 +1173,7 @@ var
   OwnerWnd: HWND;
   PPI, Gap: Integer;
 begin
+  FRepositionPending := False;
   if not FOpen or (FWindow = nil) then
     Exit;
   // Ziel nicht sichtbar oder Formular minimiert: nur ausblenden
@@ -1271,7 +1294,7 @@ begin
   case Message.Msg of
     WM_WINDOWPOSCHANGED, WM_SIZE, WM_SHOWWINDOW, CM_VISIBLECHANGED, CM_SHOWINGCHANGED:
       // Gesammelt und ausserhalb der Nachricht des Ziels neu platzieren
-      PostMessage(FWindow.Handle, WM_TIPREPOSITION, 0, 0);
+      RequestReposition;
   end;
 end;
 

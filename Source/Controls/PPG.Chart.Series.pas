@@ -41,6 +41,9 @@ type
   IPPGChartHost = interface
     ['{7D3B9E51-2A64-4C8F-B90E-5F1A6C3D2E87}']
     procedure ChartBeforeDataChange;
+    /// Wie ChartBeforeDataChange, wenn sich die Anzahl der Punkte sicher
+    /// aendert (dann gibt es keinen weichen Uebergang).
+    procedure ChartCountChange;
     procedure ChartDataChanged;
     procedure ChartInvalidate;
     function ChartCanAnimate: Boolean;
@@ -79,6 +82,7 @@ type
     procedure StoreAt(Phys: Integer; const X, Y: Double; const Text: string; Color: TColor);
     function Host: IPPGChartHost;
     procedure BeforeChange;
+    procedure BeforeCountChange;
     procedure AfterChange;
     procedure SetTitle(const Value: string);
     procedure SetKind(const Value: TPPGChartSeriesKind);
@@ -107,6 +111,10 @@ type
     /// Neuer Punkt auf der Kategorieachse (X = Index).
     function Add(const Y: Double; const Text: string = ''; Color: TColor = clDefault): Integer;
     function AddXY(const X, Y: Double; const Text: string = ''; Color: TColor = clDefault): Integer;
+    /// Viele Punkte auf einmal (eine Datenaenderung, ein Neuzeichnen).
+    /// Ohne X: X = laufender Index wie bei Add.
+    procedure AddRange(const AYs: array of Double); overload;
+    procedure AddRange(const AXs, AYs: array of Double); overload;
     procedure Delete(Index: Integer);
     procedure Clear;
     /// Alle Werte ersetzen (X = Index).
@@ -159,6 +167,8 @@ type
   public
     constructor Create(AOwner: TPersistent);
     function Add: TPPGChartSeries;
+    /// True innerhalb von BeginUpdate/EndUpdate der Collection.
+    function IsUpdating: Boolean;
     property Items[Index: Integer]: TPPGChartSeries read GetItem; default;
   end;
 
@@ -348,6 +358,21 @@ begin
   H := Host;
   if H <> nil then
     H.ChartBeforeDataChange;
+end;
+
+procedure TPPGChartSeries.BeforeCountChange;
+var
+  H: IPPGChartHost;
+begin
+  // Virtuell bleibt die Anzahl (VirtualCount): dann wie jede andere Aenderung
+  if FVirtualCount > 0 then
+  begin
+    BeforeChange;
+    Exit;
+  end;
+  H := Host;
+  if H <> nil then
+    H.ChartCountChange;
 end;
 
 procedure TPPGChartSeries.AfterChange;
@@ -549,11 +574,54 @@ function TPPGChartSeries.AddXY(const X, Y: Double; const Text: string; Color: TC
 begin
   PPGCheckFinite(Self, 'X', X);
   PPGCheckFinite(Self, 'Y', Y);
-  BeforeChange;
+  BeforeCountChange;
   Reserve(FCount + 1);
   StoreAt(FStart + FCount, X, Y, Text, Color);
   Result := FCount;
   Inc(FCount);
+  AfterChange;
+end;
+
+procedure TPPGChartSeries.AddRange(const AYs: array of Double);
+var
+  I: Integer;
+begin
+  for I := 0 to High(AYs) do
+    PPGCheckFinite(Self, 'Y', AYs[I]);
+  if Length(AYs) = 0 then
+    Exit;
+  BeforeCountChange;
+  Reserve(FCount + Length(AYs));
+  for I := 0 to High(AYs) do
+  begin
+    StoreAt(FStart + FCount, FCount, AYs[I], '', clDefault);
+    Inc(FCount);
+  end;
+  AfterChange;
+end;
+
+procedure TPPGChartSeries.AddRange(const AXs, AYs: array of Double);
+var
+  I: Integer;
+begin
+  // Erst alles pruefen, dann aendern
+  if Length(AXs) <> Length(AYs) then
+    raise EPPGPropertyError.CreateInvalid(Self, 'AddRange', IntToStr(Length(AXs)) + '/' +
+      IntToStr(Length(AYs)));
+  for I := 0 to High(AYs) do
+  begin
+    PPGCheckFinite(Self, 'X', AXs[I]);
+    PPGCheckFinite(Self, 'Y', AYs[I]);
+  end;
+  if Length(AYs) = 0 then
+    Exit;
+  BeforeCountChange;
+  Reserve(FCount + Length(AYs));
+  for I := 0 to High(AYs) do
+  begin
+    StoreAt(FStart + FCount, AXs[I], AYs[I], '', clDefault);
+    Inc(FCount);
+  end;
   AfterChange;
 end;
 
@@ -563,7 +631,7 @@ var
 begin
   if (Index < 0) or (Index >= FCount) then
     raise EPPGPropertyError.CreateRange(Self, 'Index', Index, 0, FCount - 1);
-  BeforeChange;
+  BeforeCountChange;
   if Index = 0 then
   begin
     // Vorne: nur den Versatz erhoehen (Lauffenster)
@@ -596,7 +664,7 @@ procedure TPPGChartSeries.Clear;
 begin
   if FCount = 0 then
     Exit;
-  BeforeChange;
+  BeforeCountChange;
   FXs := nil;
   FYs := nil;
   FTexts := nil;
@@ -612,7 +680,10 @@ var
 begin
   for I := 0 to High(AValues) do
     PPGCheckFinite(Self, 'Values', AValues[I]);
-  BeforeChange;
+  if Length(AValues) <> Count then
+    BeforeCountChange
+  else
+    BeforeChange;
   FStart := 0;
   FCount := Length(AValues);
   FXs := nil;
@@ -634,7 +705,10 @@ var
   X: Double;
 begin
   PPGCheckFinite(Self, 'Y', Y);
-  BeforeChange;
+  if (MaxCount > 0) and (FCount = MaxCount) then
+    BeforeChange
+  else
+    BeforeCountChange;
   if FCount > 0 then
     X := FXs[FStart + FCount - 1] + 1
   else
@@ -791,6 +865,11 @@ end;
 function TPPGChartSeriesList.Add: TPPGChartSeries;
 begin
   Result := TPPGChartSeries(inherited Add);
+end;
+
+function TPPGChartSeriesList.IsUpdating: Boolean;
+begin
+  Result := UpdateCount > 0;
 end;
 
 function TPPGChartSeriesList.GetItem(Index: Integer): TPPGChartSeries;

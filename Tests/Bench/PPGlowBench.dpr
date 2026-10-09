@@ -19,6 +19,7 @@ uses
   Vcl.Graphics,
   Vcl.StdCtrls,
   Vcl.ExtCtrls,
+  Vcl.Menus,
   PPG.Consts in '..\..\Source\Core\PPG.Consts.pas',
   PPG.Lang in '..\..\Source\Core\PPG.Lang.pas',
   PPG.Lang.De in '..\..\Source\Core\PPG.Lang.De.pas',
@@ -166,6 +167,8 @@ type
 
   /// Ereignis-Handler der Daten-Controls (Ereignisse brauchen Methoden).
   TCalAccessB = class(TPPGCalendar);
+  /// Audit 8D: Hoehe der InfoBar wie in der Oeffnen-Animation anfordern.
+  TInfoBarAccessB = class(TPPGInfoBar);
 
   /// Virtuelle Tabelle fuer Export und Druck (1 000 000 Zeilen)
   TBenchTable = class(TInterfacedObject, IPPGTableSource)
@@ -672,6 +675,308 @@ end;
 /// Audit-Paket 8D (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
 procedure Bench8D;
 begin
+  Measure('MenuBar 10 Menues: 300 Mausbewegungen + zeichnen', 400,
+    procedure
+    var
+      M: TMainMenu;
+      Bar: TPPGMenuBar;
+      It: TMenuItem;
+      I: Integer;
+    begin
+      M := TMainMenu.Create(Form);
+      Bar := TPPGMenuBar.Create(Form);
+      try
+        for I := 0 to 9 do
+        begin
+          It := TMenuItem.Create(M);
+          It.Caption := '&Menue ' + IntToStr(I);
+          It.Add(TMenuItem.Create(M));
+          It.Items[0].Caption := 'Eintrag';
+          M.Items.Add(It);
+        end;
+        Bar.Parent := Form;
+        Bar.Menu := M;
+        Bar.HandleNeeded;
+        for I := 0 to 299 do
+        begin
+          Bar.Perform(WM_MOUSEMOVE, 0, MakeLParam(Word((I * 7) mod 900), Word(Bar.Height div 2)));
+          PaintToBitmap(Bar);
+        end;
+      finally
+        Bar.Free;
+        M.Free;
+      end;
+    end);
+
+  Measure('Chart 100 000 Punkte: 300 Mausbewegungen (Hover)', 100,
+    procedure
+    var
+      C: TPPGChart;
+      V: TArray<Double>;
+      I: Integer;
+    begin
+      C := TPPGChart.Create(Form);
+      try
+        C.Parent := Form;
+        C.Animation.Enabled := False;
+        C.SetBounds(0, 0, 800, 400);
+        SetLength(V, 100000);
+        for I := 0 to High(V) do
+          V[I] := Sin(I / 700) * 100 + (I mod 17);
+        C.Series.Add.SetValues(V);
+        PaintToBitmap(C);
+        for I := 0 to 299 do
+          C.Perform(WM_MOUSEMOVE, 0, MakeLParam(Word(60 + (I * 13) mod 700), Word(100 + I mod 150)));
+        PaintToBitmap(C);
+      finally
+        C.Free;
+      end;
+    end);
+
+  Measure('Chart: 10 000 x AddXY (sichtbar)', 100,
+    procedure
+    var
+      C: TPPGChart;
+      S: TPPGChartSeries;
+      I: Integer;
+    begin
+      C := TPPGChart.Create(Form);
+      try
+        C.Parent := Form;
+        C.SetBounds(0, 0, 800, 400);
+        C.HandleNeeded;
+        S := C.Series.Add;
+        S.AddXY(0, 0);
+        PaintToBitmap(C);
+        for I := 1 to 10000 do
+          S.AddXY(I, Sin(I / 50) * 20);
+        PaintToBitmap(C);
+      finally
+        C.Free;
+      end;
+    end);
+
+  Measure('Planer Zeitleiste 366 Tage, 60 Ressourcen: 300 x scrollen', 2500,
+    procedure
+    var
+      P: TPPGPlanner;
+      A: TPPGAppointment;
+      I: Integer;
+    begin
+      P := TPPGPlanner.Create(Form);
+      try
+        P.Parent := Form;
+        P.SetBounds(0, 0, 1000, 700);
+        P.ShowNowLine := False;
+        P.View := pvTimeline;
+        P.TimelineDays := 366;
+        for I := 1 to 60 do
+          P.Resources.AddResource(I, 'Raum ' + IntToStr(I));
+        P.Appointments.BeginUpdate;
+        try
+          for I := 0 to 2999 do
+          begin
+            A := P.Appointments.AddAppointment(EncodeDate(2026, 1, 1) + (I mod 366) + (8 + I mod 9) / 24,
+              EncodeDate(2026, 1, 1) + (I mod 366) + (10 + I mod 9) / 24, 'Termin ' + IntToStr(I));
+            A.ResourceId := 1 + I mod 60;
+          end;
+        finally
+          P.Appointments.EndUpdate;
+        end;
+        P.Date := EncodeDate(2026, 1, 1);
+        PaintToBitmap(P);
+        for I := 0 to 299 do
+        begin
+          P.ScrollTo((I * 997) mod 300000, (I * 37) mod 1500);
+          PaintToBitmap(P);
+        end;
+      finally
+        P.Free;
+      end;
+    end);
+
+  Measure('Planer Woche, 40 Ressourcen gruppiert: 50 x anordnen', 3000,
+    procedure
+    var
+      P: TPPGPlanner;
+      A: TPPGAppointment;
+      I: Integer;
+    begin
+      P := TPPGPlanner.Create(Form);
+      try
+        P.Parent := Form;
+        P.SetBounds(0, 0, 1000, 700);
+        P.ShowNowLine := False;
+        P.View := pvWeek;
+        for I := 1 to 40 do
+          P.Resources.AddResource(I, 'Raum ' + IntToStr(I));
+        P.Appointments.BeginUpdate;
+        try
+          for I := 0 to 3999 do
+          begin
+            A := P.Appointments.AddAppointment(EncodeDate(2026, 3, 2) + (I mod 7) + (8 + I mod 9) / 24,
+              EncodeDate(2026, 3, 2) + (I mod 7) + (9 + I mod 9) / 24, 'Termin ' + IntToStr(I));
+            A.ResourceId := 1 + I mod 40;
+          end;
+        finally
+          P.Appointments.EndUpdate;
+        end;
+        P.Date := EncodeDate(2026, 3, 4);
+        for I := 0 to 49 do
+        begin
+          P.InvalidateLayout;
+          P.EnsureLayout;
+        end;
+      finally
+        P.Free;
+      end;
+    end);
+
+  Measure('Kanban 10 000 Karten: 300 Mausbewegungen (Hover)', 3500,
+    procedure
+    var
+      K: TPPGKanban;
+      C: array[0..3] of TPPGKanbanColumn;
+      I: Integer;
+    begin
+      K := TPPGKanban.Create(Form);
+      try
+        K.Parent := Form;
+        K.SetBounds(0, 0, 1000, 700);
+        for I := 0 to 3 do
+          C[I] := K.Columns.AddColumn('Spalte ' + IntToStr(I));
+        K.Cards.BeginUpdate;
+        try
+          for I := 0 to 9999 do
+            K.Cards.AddCard(C[I mod 4].Id, 'Aufgabe ' + IntToStr(I), 'Text ' + IntToStr(I mod 97));
+        finally
+          K.Cards.EndUpdate;
+        end;
+        PaintToBitmap(K);
+        for I := 0 to 299 do
+        begin
+          K.Perform(WM_MOUSEMOVE, 0, MakeLParam(Word(30 + (I * 17) mod 900), Word(80 + (I * 29) mod 560)));
+          UpdateWindow(K.Handle);
+        end;
+      finally
+        K.Free;
+      end;
+    end);
+
+  Measure('Kanban 10 000 Karten: 100 x eine Karte aendern + zeichnen', 4500,
+    procedure
+    var
+      K: TPPGKanban;
+      C: array[0..3] of TPPGKanbanColumn;
+      I: Integer;
+    begin
+      K := TPPGKanban.Create(Form);
+      try
+        K.Parent := Form;
+        K.SetBounds(0, 0, 1000, 700);
+        for I := 0 to 3 do
+          C[I] := K.Columns.AddColumn('Spalte ' + IntToStr(I));
+        K.Cards.BeginUpdate;
+        try
+          for I := 0 to 9999 do
+            with K.Cards.AddCard(C[I mod 4].Id, 'Aufgabe ' + IntToStr(I), 'Text ' + IntToStr(I mod 97)) do
+              Labels := 'L' + IntToStr(I mod 7);
+        finally
+          K.Cards.EndUpdate;
+        end;
+        PaintToBitmap(K);
+        for I := 0 to 99 do
+        begin
+          K.Cards[(I * 101) mod 10000].Title := 'Geaendert ' + IntToStr(I);
+          PaintToBitmap(K);
+        end;
+      finally
+        K.Free;
+      end;
+    end);
+
+  Measure('Ribbon: 1000 x Enabled umschalten (100 x zeichnen)', 250,
+    procedure
+    var
+      R: TPPGRibbon;
+      G: TPPGRibbonGroup;
+      Items: array[0..9] of TPPGRibbonItem;
+      I, J: Integer;
+    begin
+      R := TPPGRibbon.Create(Form);
+      try
+        R.Parent := Form;
+        R.Width := 1100;
+        for I := 0 to 2 do
+        begin
+          G := R.Tabs.AddTab('Register ' + IntToStr(I)).Groups.AddGroup('Gruppe');
+          for J := 0 to 9 do
+            if I = 0 then
+              Items[J] := G.Items.AddButton('Befehl ' + IntToStr(J), $E77F, rsMedium)
+            else
+              G.Items.AddButton('Befehl ' + IntToStr(J), $E77F, rsMedium);
+        end;
+        PaintToBitmap(R);
+        for I := 0 to 99 do
+        begin
+          for J := 0 to 9 do
+            Items[J].Enabled := Odd(I + J);
+          PaintToBitmap(R);
+        end;
+      finally
+        R.Free;
+      end;
+    end);
+
+  Measure('PageControl: 200 Seiten einfuegen (BeginUpdate)', 100,
+    procedure
+    var
+      PC: TPPGPageControl;
+      S: TPPGTabSheet;
+      I: Integer;
+    begin
+      PC := TPPGPageControl.Create(Form);
+      try
+        PC.Parent := Form;
+        PC.SetBounds(0, 0, 800, 500);
+        PC.BeginUpdate;
+        try
+          for I := 0 to 199 do
+          begin
+            S := TPPGTabSheet.Create(PC);
+            S.Caption := 'Seite ' + IntToStr(I);
+            S.PageControl := PC;
+          end;
+        finally
+          PC.EndUpdate;
+        end;
+        PC.ActivePageIndex := 199;
+        PaintToBitmap(PC);
+      finally
+        PC.Free;
+      end;
+    end);
+
+  Measure('InfoBar: 1000 x Hoehe (Oeffnen-Animation)', 50,
+    procedure
+    var
+      B: TPPGInfoBar;
+      I: Integer;
+    begin
+      B := TPPGInfoBar.Create(Form);
+      try
+        B.Parent := Form;
+        B.Width := 600;
+        B.Title := 'Hinweis';
+        B.Message := 'Die Datei wurde <b>gespeichert</b>. Eine Sicherung liegt im Ordner ' +
+          '<a href="x">Sicherungen</a>; sie wird nach <i>30 Tagen</i> geloescht. ' +
+          'Weitere Informationen finden Sie in der Hilfe.';
+        for I := 0 to 999 do
+          TInfoBarAccessB(B).RequestAutoSize;
+      finally
+        B.Free;
+      end;
+    end);
 end;
 
 begin

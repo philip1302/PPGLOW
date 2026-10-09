@@ -283,6 +283,7 @@ type
     FGhostFinish: TDateTime;
     FGhostRes: Integer;
     FGhostCopy: Boolean;
+    FGhostValid: Boolean;    // Schatten seit der letzten Aenderung neu gezeichnet
     FHot: TPPGPlannerHit;
     // Bearbeiten
     FEditor: TPPGPlannerEdit;
@@ -348,6 +349,9 @@ type
     function WeekStart(D: TDate): TDate;
     procedure ComputeDays;
     procedure LayoutTimeGrid;
+    procedure InvalidateItemPieces(Item: Integer);
+    procedure DistributeTimeGrid(N, G: Integer; out BandStart, BandList, CellStart,
+      CellList: TArray<Integer>);
     procedure LayoutMonth;
     procedure LayoutTimeline;
     procedure LayoutAgenda;
@@ -672,7 +676,8 @@ implementation
 
 uses
   PPG.Lang,
-  System.Math, System.DateUtils, System.UITypes, System.TypInfo, Winapi.oleacc,
+  System.Math, System.DateUtils, System.UITypes, System.TypInfo, System.Generics.Collections,
+  Winapi.oleacc,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Chart.Palette,
   PPG.Planner.Layout, Vcl.Dialogs, PPG.Dialogs, PPG.Planner.Dialog;
 
@@ -1105,12 +1110,16 @@ end;
 procedure TPPGCustomPlanner.ThemeChanged;
 begin
   inherited ThemeChanged;
+  FFonts.Clear;
   Invalidate;
 end;
 
 procedure TPPGCustomPlanner.CMFontChanged(var Message: TMessage);
 begin
   inherited;
+  // Audit 8D: Schrift-Kopien leben ueber das Zeichnen hinaus, bis sich
+  // Schrift, Stil, DPI oder Theme aendern
+  FFonts.Clear;
   InvalidateLayout;
 end;
 
@@ -1747,9 +1756,119 @@ begin
   UpdateNowLoop;
 end;
 
+procedure TPPGCustomPlanner.DistributeTimeGrid(N, G: Integer; out BandStart, BandList, CellStart,
+  CellList: TArray<Integer>);
+var
+  I, D, B, Total: Integer;
+  Grp: TArray<Integer>;
+  Band: TArray<Boolean>;
+  DS, DE: TArray<TDateTime>;
+  Map: TDictionary<Integer, Integer>;
+  O: TPPGOccurrence;
+  Pass: Integer;
+  Fill: TArray<Integer>;
+begin
+  // Gruppe je Vorkommen (erste Spalte mit der Ressource, wie GroupOf)
+  SetLength(Grp, Length(FItems));
+  SetLength(Band, Length(FItems));
+  if FGrouped then
+  begin
+    Map := TDictionary<Integer, Integer>.Create;
+    try
+      for I := 0 to High(FResCols) do
+        if not Map.ContainsKey(FResCols[I]) then
+          Map.Add(FResCols[I], I);
+      for I := 0 to High(FItems) do
+        if not Map.TryGetValue(FItems[I].Appointment.ResourceId, Grp[I]) then
+          Grp[I] := -1;
+    finally
+      Map.Free;
+    end;
+  end
+  else
+    for I := 0 to High(FItems) do
+      Grp[I] := 0;
+  for I := 0 to High(FItems) do
+    Band[I] := InBand(FItems[I]);
+  SetLength(DS, N);
+  SetLength(DE, N);
+  for D := 0 to N - 1 do
+  begin
+    DS[D] := FDays[D] + FDayStartHour / 24;
+    DE[D] := FDays[D] + FDayEndHour / 24;
+  end;
+  // Zaehlen, dann fuellen (stabil: aufsteigende Indizes je Eimer)
+  SetLength(BandStart, G + 1);
+  SetLength(CellStart, G * N + 1);
+  for I := 0 to High(BandStart) do
+    BandStart[I] := 0;
+  for I := 0 to High(CellStart) do
+    CellStart[I] := 0;
+  for Pass := 0 to 1 do
+  begin
+    if Pass = 1 then
+    begin
+      // Zaehler -> Startpositionen
+      Total := 0;
+      for B := 0 to G - 1 do
+      begin
+        I := BandStart[B];
+        BandStart[B] := Total;
+        Inc(Total, I);
+      end;
+      BandStart[G] := Total;
+      SetLength(BandList, Total);
+      Total := 0;
+      for B := 0 to G * N - 1 do
+      begin
+        I := CellStart[B];
+        CellStart[B] := Total;
+        Inc(Total, I);
+      end;
+      CellStart[G * N] := Total;
+      SetLength(CellList, Total);
+      SetLength(Fill, G * N + G);
+      for B := 0 to G - 1 do
+        Fill[B] := BandStart[B];
+      for B := 0 to G * N - 1 do
+        Fill[G + B] := CellStart[B];
+    end;
+    for I := 0 to High(FItems) do
+    begin
+      if Grp[I] < 0 then
+        Continue;
+      O := FItems[I];
+      if Band[I] then
+      begin
+        if Pass = 0 then
+          Inc(BandStart[Grp[I]])
+        else
+        begin
+          BandList[Fill[Grp[I]]] := I;
+          Inc(Fill[Grp[I]]);
+        end;
+        Continue;
+      end;
+      for D := 0 to N - 1 do
+        if PPGOverlaps(O.Start, O.Finish, DS[D], DE[D]) then
+        begin
+          B := Grp[I] * N + D;
+          if Pass = 0 then
+            Inc(CellStart[B])
+          else
+          begin
+            CellList[Fill[G + B]] := I;
+            Inc(Fill[G + B]);
+          end;
+        end;
+    end;
+  end;
+end;
+
 procedure TPPGCustomPlanner.LayoutTimeGrid;
 var
-  N, G, Cols, C, Gi, D, I, K, Cnt, Rows, BH, MaxBand, X0, X1, Y0, Y1, W, First, Last: Integer;
+  N, G, Cols, C, Gi, D, I, J, K, Cnt, Rows, BH, MaxBand, X0, X1, Y0, Y1, W, First, Last: Integer;
+  BandStart, BandList, CellStart, CellList: TArray<Integer>;
   Spans: TArray<TPPGSpan>;
   Idx: TArray<Integer>;
   Slots: TArray<TPPGSpanSlot>;
@@ -1767,6 +1886,10 @@ begin
   FHeadH := S(HeadH);
   if FGrouped then
     Inc(FHeadH, S(ResHeadH));
+  // Audit 8D: Vorkommen einmal nach Gruppe (Band) bzw. [Gruppe][Tag]
+  // (Raster) verteilen, statt je Gruppe und Tag alle Vorkommen zu pruefen;
+  // die Reihenfolge in jedem Eimer ist die von FItems
+  DistributeTimeGrid(N, G, BandStart, BandList, CellStart, CellList);
   // Band: ganztaegige und mehrtaegige Termine, Zeilen je Gruppe
   BH := S(BandRowH);
   MaxBand := 0;
@@ -1775,11 +1898,10 @@ begin
   for Gi := 0 to G - 1 do
   begin
     Cnt := 0;
-    for I := 0 to High(FItems) do
+    for J := BandStart[Gi] to BandStart[Gi + 1] - 1 do
     begin
+      I := BandList[J];
       O := FItems[I];
-      if not InBand(O) or (GroupOf(O.Appointment.ResourceId) <> Gi) then
-        Continue;
       First := DayIndexFrom(O.Start);
       Last := DayIndexTo(Max(O.Finish, O.Start + OneMinute));
       if (First > Last) or (First >= N) or (Last < 0) then
@@ -1814,13 +1936,10 @@ begin
       DayS := FDays[D] + FDayStartHour / 24;
       DayE := FDays[D] + FDayEndHour / 24;
       Cnt := 0;
-      for I := 0 to High(FItems) do
+      for J := CellStart[C] to CellStart[C + 1] - 1 do
       begin
+        I := CellList[J];
         O := FItems[I];
-        if InBand(O) or (GroupOf(O.Appointment.ResourceId) <> Gi) then
-          Continue;
-        if not PPGOverlaps(O.Start, O.Finish, DayS, DayE) then
-          Continue;
         CS := Max(O.Start, DayS);
         CF := Min(Max(O.Finish, O.Start), DayE);
         Spans[Cnt] := PPGSpan(CS, CF);
@@ -1918,7 +2037,9 @@ end;
 
 procedure TPPGCustomPlanner.LayoutTimeline;
 var
-  NR, R, I, K, Cnt, Lanes, Top, LaneH, X0, X1, Res: Integer;
+  NR, R, I, K, Cnt, Lanes, Top, LaneH, X0, X1, Res, J, J0, J1, B: Integer;
+  BucketOf: TDictionary<Integer, Integer>;
+  BStart, BList, BFill: TArray<Integer>;
   Spans: TArray<TPPGSpan>;
   Idx: TArray<Integer>;
   RowOf: TArray<Integer>;
@@ -1937,35 +2058,76 @@ begin
   RS := FDays[0];
   RE := FDays[High(FDays)] + 1;
   Top := 0;
-  for R := 0 to NR - 1 do
-  begin
-    Cnt := 0;
-    if FResources.Count > 0 then
-      Res := FResources[R].Id
-    else
-      Res := 0;
+  // Audit 8D: Vorkommen einmal je Ressource verteilen (Dictionary), statt je
+  // Zeile alle Vorkommen zu pruefen; Zeilen mit gleicher Id teilen den Eimer
+  BucketOf := TDictionary<Integer, Integer>.Create;
+  try
+    for R := 0 to FResources.Count - 1 do
+      if not BucketOf.ContainsKey(FResources[R].Id) then
+        BucketOf.Add(FResources[R].Id, BucketOf.Count);
+    SetLength(BStart, BucketOf.Count + 1);
+    for B := 0 to High(BStart) do
+      BStart[B] := 0;
     for I := 0 to High(FItems) do
+      if BucketOf.TryGetValue(FItems[I].Appointment.ResourceId, B) then
+        Inc(BStart[B]);
+    J := 0;
+    for B := 0 to BucketOf.Count - 1 do
     begin
-      O := FItems[I];
-      if (FResources.Count > 0) and (O.Appointment.ResourceId <> Res) then
-        Continue;
-      Spans[Cnt] := PPGSpan(Max(O.Start, RS), Min(Max(O.Finish, O.Start), RE));
-      Idx[Cnt] := I;
-      Inc(Cnt);
+      K := BStart[B];
+      BStart[B] := J;
+      Inc(J, K);
     end;
-    RowOf := PPGLayoutRows(Copy(Spans, 0, Cnt), Lanes, FSlotMinutes * OneMinute);
-    FTLRowTop[R] := Top;
-    FTLRowH[R] := Max(1, Lanes) * LaneH + S(6);
-    for K := 0 to Cnt - 1 do
+    BStart[BucketOf.Count] := J;
+    SetLength(BList, J);
+    BFill := Copy(BStart);
+    for I := 0 to High(FItems) do
+      if BucketOf.TryGetValue(FItems[I].Appointment.ResourceId, B) then
+      begin
+        BList[BFill[B]] := I;
+        Inc(BFill[B]);
+      end;
+    for R := 0 to NR - 1 do
     begin
-      O := FItems[Idx[K]];
-      X0 := TimeToX(Spans[K].Start);
-      X1 := Max(TimeToX(Spans[K].Finish), X0 + S(6));
-      AddPiece(Idx[K], Rect(X0 + 1, Top + S(3) + RowOf[K] * LaneH, X1 - 1,
-        Top + S(3) + RowOf[K] * LaneH + LaneH - 2), paBodyXY, False,
-        O.Start < Spans[K].Start - Eps, O.Finish > Spans[K].Finish + Eps);
+      Cnt := 0;
+      if FResources.Count > 0 then
+        Res := FResources[R].Id
+      else
+        Res := 0;
+      J0 := 0;
+      J1 := High(FItems);
+      if (FResources.Count > 0) and BucketOf.TryGetValue(Res, B) then
+      begin
+        J0 := BStart[B];
+        J1 := BStart[B + 1] - 1;
+      end;
+      for J := J0 to J1 do
+      begin
+        if FResources.Count > 0 then
+          I := BList[J]
+        else
+          I := J;
+        O := FItems[I];
+        Spans[Cnt] := PPGSpan(Max(O.Start, RS), Min(Max(O.Finish, O.Start), RE));
+        Idx[Cnt] := I;
+        Inc(Cnt);
+      end;
+      RowOf := PPGLayoutRows(Copy(Spans, 0, Cnt), Lanes, FSlotMinutes * OneMinute);
+      FTLRowTop[R] := Top;
+      FTLRowH[R] := Max(1, Lanes) * LaneH + S(6);
+      for K := 0 to Cnt - 1 do
+      begin
+        O := FItems[Idx[K]];
+        X0 := TimeToX(Spans[K].Start);
+        X1 := Max(TimeToX(Spans[K].Finish), X0 + S(6));
+        AddPiece(Idx[K], Rect(X0 + 1, Top + S(3) + RowOf[K] * LaneH, X1 - 1,
+          Top + S(3) + RowOf[K] * LaneH + LaneH - 2), paBodyXY, False,
+          O.Start < Spans[K].Start - Eps, O.Finish > Spans[K].Finish + Eps);
+      end;
+      Inc(Top, FTLRowH[R]);
     end;
-    Inc(Top, FTLRowH[R]);
+  finally
+    BucketOf.Free;
   end;
   FTLRowTop[NR] := Top;
   FBodyH := Top;
@@ -2476,6 +2638,7 @@ end;
 
 procedure TPPGCustomPlanner.PlannerStylesChanged(Sender: TObject);
 begin
+  FFonts.Clear;
   Invalidate;
 end;
 
@@ -2764,7 +2927,6 @@ begin
     end;
     AF := FFonts.ForStyle(FPlannerStyles.Appointment, Font);
     Batch.Flush(ACanvas, Clip, AF, FFonts.Get(AF, [fsBold]));
-    FFonts.Clear;
   finally
     Batch.Free;
   end;
@@ -3135,11 +3297,24 @@ end;
 procedure TPPGCustomPlanner.PaintTimeline(const ACanvas: IPPGCanvas);
 var
   Col: TPlannerColors;
-  I, D, K, X, Y0, DayW, Slots, M, NR, Wd: Integer;
+  I, D, K, X, Y0, DayW, Slots, M, NR, Wd, D0, D1, K0, K1: Integer;
   Body, Res, Head, R: TRect;
   Batch: TTextBatch;
   NowT: TDateTime;
   S_: string;
+
+  procedure SlotRange(Day: Integer; out First, Last: Integer);
+  begin
+    // Audit 8D: nur Felder im sichtbaren Bereich (ein Feld Rand: die
+    // Stundenbeschriftung reicht ein Feld weiter nach rechts)
+    First := 0;
+    Last := Slots - 1;
+    if SlotW <= 0 then
+      Exit;
+    First := Max(0, (Body.Left - (X + Day * DayW)) div SlotW - 1);
+    Last := Min(Slots - 1, (Body.Right - (X + Day * DayW)) div SlotW + 1);
+  end;
+
 begin
   Col := GetColors(Self);
   Slots := SlotCount;
@@ -3150,17 +3325,27 @@ begin
   Head := Rect(FV.Left + FBodyLeft, FV.Top, FV.Right, FV.Top + FHeaderH);
   X := FV.Left + FBodyLeft - ScrollX;
   Y0 := FV.Top + FHeaderH - ScrollY;
+  // Audit 8D: Ein Jahr mit 48 Feldern je Tag waeren bis zu 105 000 Flaechen
+  // je Bild - gezeichnet werden nur die sichtbaren Tage (ein Tag Rand)
+  D0 := 0;
+  D1 := High(FDays);
+  if DayW > 0 then
+  begin
+    D0 := Max(0, (Body.Left - X) div DayW - 1);
+    D1 := Min(High(FDays), (Body.Right - X) div DayW + 1);
+  end;
   Batch := TTextBatch.Create;
   try
     ACanvas.PushClipRoundRect(Mirror(Body), 0);
     try
-      for D := 0 to High(FDays) do
+      for D := D0 to D1 do
       begin
         Wd := PPGIsoDayOfWeek(FDays[D]);
         if not (TPPGWeekDay(Wd - 1) in FWorkDays) then
           ACanvas.FillRoundRect(Mirror(Rect(X + D * DayW, Body.Top, X + (D + 1) * DayW, Body.Bottom)), 0,
             Col.Alt, 255);
-        for K := 0 to Slots - 1 do
+        SlotRange(D, K0, K1);
+        for K := K0 to K1 do
         begin
           M := FDayStartHour * 60 + K * FSlotMinutes;
           if (M < FWorkStart) or (M >= FWorkEnd) then
@@ -3173,8 +3358,9 @@ begin
           Col.Line, 255);
       end;
       for I := 0 to NR do
-        ACanvas.FillRoundRect(Mirror(Rect(Body.Left, Y0 + FTLRowTop[I], Body.Right, Y0 + FTLRowTop[I] + 1)),
-          0, Col.Line, 255);
+        if (Y0 + FTLRowTop[I] >= Body.Top - 1) and (Y0 + FTLRowTop[I] <= Body.Bottom) then
+          ACanvas.FillRoundRect(Mirror(Rect(Body.Left, Y0 + FTLRowTop[I], Body.Right, Y0 + FTLRowTop[I] + 1)),
+            0, Col.Line, 255);
       if (FSelItem < 0) and (FSelTo > FSelFrom) then
       begin
         K := Max(0, FResources.IndexOfId(FSelRes));
@@ -3205,7 +3391,7 @@ begin
     end;
     // Kopf: Tage und Uhrzeiten
     ACanvas.FillRoundRect(Mirror(Head), 0, Col.Header, 255);
-    for D := 0 to High(FDays) do
+    for D := D0 to D1 do
     begin
       R := Rect(X + D * DayW + S(6), FV.Top, X + (D + 1) * DayW - S(4), FV.Top + FHeaderH div 2);
       // Tagesname bleibt sichtbar, solange der Tag es ist
@@ -3217,7 +3403,8 @@ begin
       else
         Batch.Add(Mirror(R), DayHeaderText(FDays[D], DayW), Col.HeaderText, True,
           DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS));
-      for K := 0 to Slots - 1 do
+      SlotRange(D, K0, K1);
+      for K := K0 to K1 do
       begin
         M := FDayStartHour * 60 + K * FSlotMinutes;
         if (M mod 60 <> 0) and (SlotW < S(36)) then
@@ -3235,6 +3422,9 @@ begin
     ACanvas.FillRoundRect(Mirror(Rect(FV.Left, FV.Top, FV.Left + FBodyLeft, FV.Bottom)), 0, Col.Header, 255);
     for I := 0 to NR - 1 do
     begin
+      // Nur Zeilen im Bild (Trennlinie unten darf in den Kopf ragen)
+      if (Y0 + FTLRowTop[I + 1] < FV.Top - 1) or (Y0 + FTLRowTop[I] > FV.Bottom) then
+        Continue;
       if FResources.Count > 0 then
         S_ := FResources[I].Caption
       else
@@ -3249,7 +3439,6 @@ begin
       Col.Line, 255);
     Batch.Flush(ACanvas, Mirror(Res), FFonts.ForStyle(FPlannerStyles.Header, Font),
       FFonts.Get(FFonts.ForStyle(FPlannerStyles.Header, Font), [fsBold]));
-    FFonts.Clear;
   finally
     Batch.Free;
   end;
@@ -4068,8 +4257,10 @@ end;
 procedure TPPGCustomPlanner.UpdateDrag(X, Y: Integer; Shift: TShiftState);
 var
   Hit: TPPGPlannerHit;
-  Delta, Dur, T, Base, Len: TDateTime;
+  Delta, Dur, T, Base, Len, OldStart, OldFinish: TDateTime;
   LX: Integer;
+  OldRes: Integer;
+  OldCopy: Boolean;
 begin
   LX := X;
   if FRtl then
@@ -4112,10 +4303,15 @@ begin
           else
             FDrag := pdMove;
           end;
+          FGhostValid := False;
         end;
         if Hit.Time = 0 then
           Exit;
         Dur := FDragOcc.Finish - FDragOcc.Start;
+        OldStart := FGhostStart;
+        OldFinish := FGhostFinish;
+        OldRes := FGhostRes;
+        OldCopy := FGhostCopy;
         FGhostCopy := (ssCtrl in Shift) and (FDrag = pdMove);
         case FDrag of
           pdMove:
@@ -4151,7 +4347,13 @@ begin
               FGhostFinish := Max(T, FDragOcc.Start + FSlotMinutes * OneMinute);
             end;
         end;
-        Invalidate;
+        // Audit 8D: nur neu zeichnen, wenn sich der Schatten bewegt hat
+        if not FGhostValid or (FGhostStart <> OldStart) or (FGhostFinish <> OldFinish) or
+          (FGhostRes <> OldRes) or (FGhostCopy <> OldCopy) then
+        begin
+          FGhostValid := True;
+          Invalidate;
+        end;
       end;
   end;
 end;
@@ -4163,6 +4365,7 @@ var
 begin
   Drag := FDrag;
   FDrag := pdNone;
+  FGhostValid := False;
   StopAutoScroll;
   Invalidate;
   if not Commit then
@@ -4246,11 +4449,35 @@ begin
   Hit := HitTest(X, Y);
   if Hit.Item <> FHot.Item then
   begin
+    InvalidateItemPieces(FHot.Item);
     FHot := Hit;
     Application.CancelHint;
-    Invalidate;
+    InvalidateItemPieces(FHot.Item);
   end;
   FHot := Hit;
+end;
+
+procedure TPPGCustomPlanner.InvalidateItemPieces(Item: Integer);
+var
+  I: Integer;
+  R: TRect;
+begin
+  // Audit 8D: Hover zeichnet nur die Stuecke des Termins neu (alt und neu)
+  if (Item < 0) or not HandleAllocated then
+    Exit;
+  if not FLayoutValid then
+  begin
+    Invalidate;
+    Exit;
+  end;
+  for I := 0 to FPieceCount - 1 do
+    if FPieces[I].Item = Item then
+    begin
+      R := PieceRect(I);
+      InflateRect(R, S(3), S(3));
+      if not IsRectEmpty(R) then
+        Winapi.Windows.InvalidateRect(Handle, @R, False);
+    end;
 end;
 
 procedure TPPGCustomPlanner.ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -4272,9 +4499,9 @@ begin
   inherited;
   if FHot.Item >= 0 then
   begin
+    InvalidateItemPieces(FHot.Item);
     FHot.Item := -1;
     FHot.Kind := phNone;
-    Invalidate;
   end;
 end;
 

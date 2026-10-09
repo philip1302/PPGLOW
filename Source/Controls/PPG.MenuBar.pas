@@ -42,6 +42,17 @@ type
     FHooked: Boolean;
     FMenuStyles: TPPGMenuStyles;
     FOnCustomDrawItem: TPPGMenuCustomDrawEvent;
+    // Audit 8D: Lage der Eintraege (X und Breite ohne Spiegelung), gueltig
+    // solange Eintraege, Texte, Schrift und PPI gleich sind
+    FRectItems: array of TMenuItem;
+    FRectCaptions: array of string;
+    FRectX: array of Integer;
+    FRectW: array of Integer;
+    FRectPPI: Integer;
+    FRectsValid: Boolean;
+    procedure EnsureItemRects;
+    function CachedItemRect(Index: Integer): TRect;
+    procedure InvalidateItem(Index: Integer);
     procedure SetMenuStyles(const Value: TPPGMenuStyles);
     procedure SetMenu(const Value: TMainMenu);
     procedure Hook(var Msg: TMsg; var Handled: Boolean);
@@ -56,6 +67,8 @@ type
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
   protected
+    /// Anzahl Neuberechnungen der Eintragslage (Tests).
+    FItemLayoutCount: Integer;
     { IPPGMenuBarHost }
     procedure MenuBarStep(Delta: Integer);
     procedure MenuBarClosed(Escaped: Boolean);
@@ -167,7 +180,7 @@ uses
   PPG.Lang,
   System.Math, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.AppHooks, PPG.Popup.Placement,
-  PPG.Render.Registry, PPG.Render.Gdi;
+  PPG.Render.Registry, PPG.Render.Gdi, PPG.Exceptions;
 
 const
   ItemPadX = 10;   // logische px links/rechts im Eintrag
@@ -342,6 +355,7 @@ end;
 procedure TPPGCustomMenuBar.CMFontChanged(var Message: TMessage);
 begin
   inherited;
+  FRectsValid := False;
   RequestAutoSize;
   Invalidate;
 end;
@@ -375,27 +389,90 @@ begin
     end;
 end;
 
-function TPPGCustomMenuBar.ItemRect(Index: Integer): TRect;
+procedure TPPGCustomMenuBar.EnsureItemRects;
 var
-  I, X, W, PPI, Pad: Integer;
+  I, N, X, PPI, Pad: Integer;
+  It: TMenuItem;
+  Same: Boolean;
+  DC: HDC;
 begin
-  // Eintraege nebeneinander; jedes Mal neu gerechnet (Menue kann sich zur
-  // Laufzeit aendern: Visible, Caption, MDI-Zusammenfuehrung)
+  // Audit 8D: Das Menue kann sich zur Laufzeit ohne Nachricht aendern
+  // (Visible, Caption, MDI-Zusammenfuehrung). Statt je Abfrage alle Texte zu
+  // messen (je Mausbewegung n*(n+1)/2 Messungen mit eigenem DC), wird nur die
+  // Liste der sichtbaren Eintraege samt Texten verglichen.
   PPI := ScalePPI;
+  Same := FRectsValid and (FRectPPI = PPI);
+  N := 0;
+  if Same and (FMenu <> nil) then
+    for I := 0 to FMenu.Items.Count - 1 do
+    begin
+      It := FMenu.Items[I];
+      if not It.Visible then
+        Continue;
+      if (N > High(FRectItems)) or (FRectItems[N] <> It) or (FRectCaptions[N] <> It.Caption) then
+      begin
+        Same := False;
+        Break;
+      end;
+      Inc(N);
+    end;
+  if Same and (N = Length(FRectItems)) then
+    Exit;
+  Inc(FItemLayoutCount);
+  N := ItemCount;
+  SetLength(FRectItems, N);
+  SetLength(FRectCaptions, N);
+  SetLength(FRectX, N);
+  SetLength(FRectW, N);
   Pad := PPGScale(ItemPadX, PPI);
   X := PPGScale(4, PPI);
-  Result := Rect(0, 0, 0, 0);
-  for I := 0 to Index do
+  if N > 0 then
   begin
-    W := PPGMeasureTextNoCanvas(Item(I).Caption, Font, 0, False).cx + 2 * Pad;
-    if I = Index then
-      Result := Rect(X, PPGScale(BarPadY, PPI), X + W, ClientHeight - PPGScale(BarPadY, PPI))
-    else
-      Inc(X, W);
+    DC := CreateCompatibleDC(0);
+    if DC = 0 then
+      PPGRaiseLastOSError('CreateCompatibleDC');
+    try
+      N := 0;
+      for I := 0 to FMenu.Items.Count - 1 do
+      begin
+        It := FMenu.Items[I];
+        if not It.Visible then
+          Continue;
+        FRectItems[N] := It;
+        FRectCaptions[N] := It.Caption;
+        FRectX[N] := X;
+        FRectW[N] := PPGGdiMeasureText(DC, It.Caption, Font, 0, False).cx + 2 * Pad;
+        Inc(X, FRectW[N]);
+        Inc(N);
+      end;
+    finally
+      DeleteDC(DC);
+    end;
   end;
+  FRectPPI := PPI;
+  FRectsValid := True;
+end;
+
+function TPPGCustomMenuBar.CachedItemRect(Index: Integer): TRect;
+var
+  PPI: Integer;
+begin
+  // Eintraege nebeneinander (EnsureItemRects vorher); RTL gespiegelt
+  PPI := FRectPPI;
+  if (Index >= 0) and (Index <= High(FRectX)) then
+    Result := Rect(FRectX[Index], PPGScale(BarPadY, PPI), FRectX[Index] + FRectW[Index],
+      ClientHeight - PPGScale(BarPadY, PPI))
+  else
+    Result := Rect(0, 0, 0, 0);
   if UseRightToLeftAlignment then
     Result := Rect(ClientWidth - Result.Right, Result.Top, ClientWidth - Result.Left,
       Result.Bottom);
+end;
+
+function TPPGCustomMenuBar.ItemRect(Index: Integer): TRect;
+begin
+  EnsureItemRects;
+  Result := CachedItemRect(Index);
 end;
 
 function TPPGCustomMenuBar.ItemAtPos(X, Y: Integer): Integer;
@@ -403,17 +480,34 @@ var
   I: Integer;
 begin
   Result := -1;
-  for I := 0 to ItemCount - 1 do
-    if PtInRect(ItemRect(I), Point(X, Y)) then
+  EnsureItemRects;
+  for I := 0 to High(FRectX) do
+    if PtInRect(CachedItemRect(I), Point(X, Y)) then
       Exit(I);
 end;
 
+procedure TPPGCustomMenuBar.InvalidateItem(Index: Integer);
+var
+  R: TRect;
+begin
+  // Audit 8D: nur den Eintrag neu zeichnen (Hover)
+  if not HandleAllocated or (Index < 0) then
+    Exit;
+  R := ItemRect(Index);
+  if not IsRectEmpty(R) then
+    Winapi.Windows.InvalidateRect(Handle, @R, False);
+end;
+
 procedure TPPGCustomMenuBar.SetHot(Index: Integer);
+var
+  Old: Integer;
 begin
   if FHot = Index then
     Exit;
+  Old := FHot;
   FHot := Index;
-  Invalidate;
+  InvalidateItem(Old);
+  InvalidateItem(FHot);
   if FHot >= 0 then
     NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, FHot + 1);
 end;
@@ -848,14 +942,15 @@ begin
     Flags := Flags or DT_HIDEPREFIX;
   if UseRightToLeftAlignment then
     Flags := Flags or DT_RTLREADING;
-  for I := 0 to ItemCount - 1 do
+  EnsureItemRects;
+  for I := 0 to High(FRectItems) do
   begin
-    R := ItemRect(I);
+    R := CachedItemRect(I);
     Hot := 0;
     if I = FHot then
       Hot := 1;
     MR.DrawMenuBarItem(ACanvas, R, L, H, Hot, I = FOpen, PPI);
-    if not Enabled or not Item(I).Enabled then
+    if not Enabled or not FRectItems[I].Enabled then
       TextCol := T.TextDisabled
     else if HC and ((I = FHot) or (I = FOpen)) then
       TextCol := H.TextColor
@@ -863,7 +958,7 @@ begin
       TextCol := H.TextColor
     else
       TextCol := L.TextColor;
-    ACanvas.DrawText(R, Item(I).Caption, Font, TextCol, Flags);
+    ACanvas.DrawText(R, FRectCaptions[I], Font, TextCol, Flags);
   end;
 end;
 

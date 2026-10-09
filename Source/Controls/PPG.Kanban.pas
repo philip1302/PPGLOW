@@ -91,6 +91,23 @@ type
     BodyHeight: Integer;
   end;
 
+  /// Intern: Messwerte einer Karte (Audit 8D). Gueltig, solange Breite, PPI und
+  /// die hoehenwirksamen Inhalte gleich sind; Schrift- und Stilwechsel leeren alle.
+  TPPGKanbanCardMetrics = record
+    W: Integer;                      // Kartenbreite beim Messen
+    PPI: Integer;
+    Title: string;
+    Text: string;
+    Labels: string;
+    Footer: Boolean;                 // Faelligkeit oder Person
+    Progress: Boolean;
+    Stripe: Boolean;                 // Farbstreifen
+    Height: Integer;
+    TitleH: Integer;                 // Titelhoehe (hoechstens zwei Zeilen)
+    LabelsMeasured: Boolean;
+    LabelW: TArray<Integer>;         // Breite je Plakette (ohne Rand)
+  end;
+
   /// Bereiche des Boards (nur gesetzte Werte zaehlen, clDefault = Preset).
   TPPGKanbanStyles = class(TPPGStyleGroup)
   public
@@ -136,7 +153,15 @@ type
     FLaneL: array of TPPGKanbanLaneLayout;
     FHeaderH: Integer;
     FColScroll: TDictionary<Integer, Integer>;
-    FHeights: TDictionary<TPPGKanbanCard, Integer>;
+    FHeights: TDictionary<TPPGKanbanCard, TPPGKanbanCardMetrics>;
+    // Zeilenhoehen der Schriften (0 = noch nicht gemessen)
+    FSmallH: Integer;
+    FBoldH: Integer;
+    FFontH: Integer;
+    FTitleH: Integer;
+    // Ziehen: zuletzt gezeigte Lage der mitlaufenden Karte
+    FGhostR: TRect;
+    FGhostShown: Boolean;
     FMarkup: TPPGMarkupLayout;
     FBold: TFont;
     FSmall: TFont;
@@ -219,7 +244,17 @@ type
     function LaneHeaderHeight: Integer;
     function HasLanes: Boolean;
     function VirtualHeight: Integer;
-    function MeasureCard(const D: TPPGKanbanCardData; W: Integer): Integer;
+    function MeasureCard(const D: TPPGKanbanCardData; W: Integer; out TitleH: Integer): Integer;
+    function SmallH: Integer;
+    function BoldH: Integer;
+    function FontLineH: Integer;
+    function TitleLineH: Integer;
+    function CardMetricsMatch(const M: TPPGKanbanCardMetrics; const D: TPPGKanbanCardData;
+      W: Integer): Boolean;
+    procedure MetricsChanged;
+    function HitRect(const H: TPPGKanbanHit): TRect;
+    procedure InvalidateHit(const H: TPPGKanbanHit);
+    function GhostRect: TRect;
     function CardInnerWidth(C: Integer): Integer;
     { Layout }
     procedure LayoutChanged;
@@ -246,7 +281,7 @@ type
     procedure PaintColumn(const ACanvas: IPPGCanvas; C: Integer; const View: TRect);
     procedure PaintCard(const ACanvas: IPPGCanvas; const R: TRect; const D: TPPGKanbanCardData;
       const DS: TPPGDrawStyle;
-      Selected, Hot, Ghost: Boolean);
+      Selected, Hot, Ghost: Boolean; Card: TPPGKanbanCard = nil);
     function DragWidth: Integer;
     function DropPlaceholderRect: TRect;
     function RawCardRectX(C: Integer): TRect;
@@ -258,6 +293,8 @@ type
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
   protected
+    /// Anzahl gemessener Karten (Tests).
+    FMeasureCount: Integer;
     procedure WndProc(var Message: TMessage); override;
     procedure Resize; override;
     procedure Loaded; override;
@@ -550,7 +587,7 @@ begin
   FLanes := TPPGKanbanLanes.Create(Self);
   FCards := TPPGKanbanCards.Create(Self);
   FColScroll := TDictionary<Integer, Integer>.Create;
-  FHeights := TDictionary<TPPGKanbanCard, Integer>.Create;
+  FHeights := TDictionary<TPPGKanbanCard, TPPGKanbanCardMetrics>.Create;
   FMarkup := TPPGMarkupLayout.Create;
   FBold := TFont.Create;
   FKanbanStyles := TPPGKanbanStyles.Create(Self);
@@ -611,13 +648,17 @@ end;
 procedure TPPGCustomKanban.Loaded;
 begin
   inherited Loaded;
-  LayoutChanged;
+  MetricsChanged;
 end;
 
 procedure TPPGCustomKanban.SyncFonts;
 begin
   if FBold = nil then
     Exit;
+  FSmallH := 0;
+  FBoldH := 0;
+  FFontH := 0;
+  FTitleH := 0;
   FBold.Assign(Font);
   FBold.Style := Font.Style + [fsBold];
   FSmall.Assign(Font);
@@ -629,13 +670,13 @@ procedure TPPGCustomKanban.CMFontChanged(var Message: TMessage);
 begin
   inherited;
   SyncFonts;
-  LayoutChanged;
+  MetricsChanged;
 end;
 
 procedure TPPGCustomKanban.ThemeChanged;
 begin
   inherited ThemeChanged;
-  LayoutChanged;
+  MetricsChanged;
 end;
 
 procedure TPPGCustomKanban.KanbanModelChanged;
@@ -685,12 +726,24 @@ end;
 
 procedure TPPGCustomKanban.LayoutChanged;
 begin
+  // Audit 8D: Die Messwerte der Karten bleiben (sie pruefen selbst Breite
+  // und Inhalt); geleert werden sie nur bei Schrift-, Stil- und
+  // Theme-Wechsel (MetricsChanged)
   if (csDestroying in ComponentState) or (FCards = nil) then
     Exit;
   FLayoutValid := False;
+  Invalidate;
+end;
+
+procedure TPPGCustomKanban.MetricsChanged;
+begin
   if FHeights <> nil then
     FHeights.Clear;
-  Invalidate;
+  FSmallH := 0;
+  FBoldH := 0;
+  FFontH := 0;
+  FTitleH := 0;
+  LayoutChanged;
 end;
 
 procedure TPPGCustomKanban.Resize;
@@ -748,7 +801,7 @@ begin
   if V <> FMaxTextLines then
   begin
     FMaxTextLines := V;
-    LayoutChanged;
+    MetricsChanged;
   end;
 end;
 
@@ -832,7 +885,7 @@ end;
 
 function TPPGCustomKanban.LaneHeaderHeight: Integer;
 begin
-  Result := TextH(FBold) + Sc(14);
+  Result := BoldH + Sc(14);
 end;
 
 function TPPGCustomKanban.HasLanes: Boolean;
@@ -850,7 +903,7 @@ begin
   if FVirtualCardHeight > 0 then
     Result := Sc(FVirtualCardHeight)
   else
-    Result := 2 * CardPad + TextH(FBold) + Sc(6) + TextH(FSmall) + Sc(4);
+    Result := 2 * CardPad + BoldH + Sc(6) + SmallH + Sc(4);
 end;
 
 function TPPGCustomKanban.CardInnerWidth(C: Integer): Integer;
@@ -858,17 +911,70 @@ begin
   Result := FCols[C].W - 2 * Sc(8);
 end;
 
-function TPPGCustomKanban.MeasureCard(const D: TPPGKanbanCardData; W: Integer): Integer;
+function TPPGCustomKanban.SmallH: Integer;
+begin
+  if FSmallH <= 0 then
+    FSmallH := TextH(FSmall);
+  Result := FSmallH;
+end;
+
+function TPPGCustomKanban.BoldH: Integer;
+begin
+  if FBoldH <= 0 then
+    FBoldH := TextH(FBold);
+  Result := FBoldH;
+end;
+
+function TPPGCustomKanban.FontLineH: Integer;
+begin
+  if FFontH <= 0 then
+    FFontH := TextH(Font);
+  Result := FFontH;
+end;
+
+function TPPGCustomKanban.TitleLineH: Integer;
+var
+  TitleF, Temp: TFont;
+begin
+  // Zeilenhoehe des Kartentitels (Schrift des Karten-Stils, ohne eigenes Zeichnen)
+  if FTitleH <= 0 then
+  begin
+    Temp := nil;
+    try
+      if FKanbanStyles.Card.HasOwnFont then
+        TitleF := PPGStyledFont(FKanbanStyles.Card.Font, [fsBold] + FKanbanStyles.Card.FontStyle, Temp)
+      else
+        TitleF := PPGStyledFont(FBold, FKanbanStyles.Card.FontStyle, Temp);
+      FTitleH := TextH(TitleF);
+    finally
+      Temp.Free;
+    end;
+  end;
+  Result := FTitleH;
+end;
+
+function TPPGCustomKanban.CardMetricsMatch(const M: TPPGKanbanCardMetrics;
+  const D: TPPGKanbanCardData; W: Integer): Boolean;
+begin
+  // Was die Hoehe bzw. die gemerkten Messwerte bestimmt
+  Result := (M.W = W) and (M.PPI = ScalePPI) and (M.Title = D.Title) and (M.Text = D.Text) and
+    (M.Labels = D.Labels) and (M.Footer = ((D.Due <> 0) or (D.Assignee <> ''))) and
+    (M.Progress = (D.Progress >= 0)) and (M.Stripe = PPGColorIsSet(D.Color));
+end;
+
+function TPPGCustomKanban.MeasureCard(const D: TPPGKanbanCardData; W: Integer;
+  out TitleH: Integer): Integer;
 var
   Inner, Lh, TH: Integer;
   TitleF, Temp: TFont;
 begin
+  Inc(FMeasureCount);
   Inner := W - 2 * CardPad;
   if PPGColorIsSet(D.Color) then
     Dec(Inner, Sc(4));
   Result := CardPad;
   if D.Labels <> '' then
-    Inc(Result, TextH(FSmall) + Sc(4) + Sc(6));
+    Inc(Result, SmallH + Sc(4) + Sc(6));
   // Titel: hoechstens zwei Zeilen, in der Schrift des Karten-Stils
   Temp := nil;
   try
@@ -876,19 +982,20 @@ begin
       TitleF := PPGStyledFont(FKanbanStyles.Card.Font, [fsBold] + FKanbanStyles.Card.FontStyle, Temp)
     else
       TitleF := PPGStyledFont(FBold, FKanbanStyles.Card.FontStyle, Temp);
-    Lh := TextH(TitleF);
+    Lh := TitleLineH;
     TH := PPGMeasureTextNoCanvas(D.Title, TitleF, Max(10, Inner), True).cy;
-    Inc(Result, Max(Lh, Min(TH, 2 * Lh)));
+    TitleH := Max(Lh, Min(TH, 2 * Lh));
+    Inc(Result, TitleH);
   finally
     Temp.Free;
   end;
   if (D.Text <> '') and (FMaxTextLines > 0) then
   begin
     FMarkup.Layout(D.Text, Font, nil, Max(10, Inner), True);
-    Inc(Result, Sc(4) + Min(FMarkup.Size.cy, FMaxTextLines * TextH(Font)));
+    Inc(Result, Sc(4) + Min(FMarkup.Size.cy, FMaxTextLines * FontLineH));
   end;
   if (D.Due <> 0) or (D.Assignee <> '') then
-    Inc(Result, Sc(8) + Max(TextH(FSmall), Sc(22)));
+    Inc(Result, Sc(8) + Max(SmallH, Sc(22)));
   Inc(Result, CardPad);
   if D.Progress >= 0 then
     Inc(Result, Sc(6));
@@ -907,6 +1014,8 @@ var
   LaneIds: array of Integer;
   Hts: TArray<Integer>;
   TitleTemp: TFont;
+  D: TPPGKanbanCardData;
+  M: TPPGKanbanCardMetrics;
 begin
   if FLayoutValid then
     Exit;
@@ -1029,6 +1138,9 @@ begin
         Break;
       end;
   end;
+  // Messwerte geloeschter Karten nicht endlos sammeln
+  if FHeights.Count > 2 * FCards.Count + 100 then
+    FHeights.Clear;
   // Hoehen und Stapel
   for C := 0 to NC - 1 do
   begin
@@ -1041,12 +1153,25 @@ begin
       for I := 0 to FCols[C].Cells[L].Count - 1 do
       begin
         Card := FCols[C].Cells[L].Cards[I];
-        if not FHeights.TryGetValue(Card, H) then
+        // Audit 8D: nur Karten neu messen, deren Inhalt oder Breite sich
+        // geaendert hat (vorher leerte jede Aenderung alle Hoehen)
+        D := Card.AsData;
+        if not FHeights.TryGetValue(Card, M) or not CardMetricsMatch(M, D, CW) then
         begin
-          H := MeasureCard(Card.AsData, CW);
-          FHeights.Add(Card, H);
+          M.W := CW;
+          M.PPI := ScalePPI;
+          M.Title := D.Title;
+          M.Text := D.Text;
+          M.Labels := D.Labels;
+          M.Footer := (D.Due <> 0) or (D.Assignee <> '');
+          M.Progress := D.Progress >= 0;
+          M.Stripe := PPGColorIsSet(D.Color);
+          M.Height := MeasureCard(D, CW, M.TitleH);
+          M.LabelsMeasured := False;
+          M.LabelW := nil;
+          FHeights.AddOrSetValue(Card, M);
         end;
-        Hts[I] := H;
+        Hts[I] := M.Height;
       end;
       FCols[C].Cells[L].Heights := Copy(Hts);
       PPGKanbanStack(Hts, 0, Sc(FCardGap), FCols[C].Cells[L].Tops);
@@ -1894,12 +2019,14 @@ end;
 
 procedure TPPGCustomKanban.KanbanStylesChanged(Sender: TObject);
 begin
-  LayoutChanged; // Schrift der Kartentitel bestimmt die Hoehe
+  MetricsChanged; // Schrift der Kartentitel bestimmt die Hoehe
 end;
 
 procedure TPPGCustomKanban.PaintCard(const ACanvas: IPPGCanvas; const R: TRect;
-  const D: TPPGKanbanCardData; const DS: TPPGDrawStyle; Selected, Hot, Ghost: Boolean);
+  const D: TPPGKanbanCardData; const DS: TPPGDrawStyle; Selected, Hot, Ghost: Boolean; Card: TPPGKanbanCard);
 var
+  M: TPPGKanbanCardMetrics;
+  UseM: Boolean;
   KS: TPPGKanbanStyles;
   SelCol: TColor;
   TitleF, Temp: TFont;
@@ -1978,17 +2105,32 @@ begin
       Inc(Inner.Left, Sc(4));
     end;
   end;
+  // Audit 8D: Messwerte der Karte aus dem Layout (Titelhoehe, Plaketten),
+  // solange Breite und Inhalt passen und kein eigener Schriftstil gilt
+  UseM := (Card <> nil) and (DS.FontStyle = []) and FHeights.TryGetValue(Card, M) and
+    CardMetricsMatch(M, D, R.Right - R.Left);
   // Plaketten
   if D.Labels <> '' then
   begin
     Labels := PPGKanbanSplitLabels(D.Labels);
-    Lh := TextH(FSmall) + Sc(4);
+    Lh := SmallH + Sc(4);
+    if UseM and not M.LabelsMeasured then
+    begin
+      SetLength(M.LabelW, Length(Labels));
+      for I := 0 to High(Labels) do
+        M.LabelW[I] := PPGMeasureTextNoCanvas(Labels[I], FSmall, 0, False).cx;
+      M.LabelsMeasured := True;
+      FHeights.AddOrSetValue(Card, M);
+    end;
     X := Inner.Left;
     if RTL then
       X := Inner.Right;
     for I := 0 to High(Labels) do
     begin
-      W := PPGMeasureTextNoCanvas(Labels[I], FSmall, 0, False).cx + Sc(12);
+      if UseM and (I <= High(M.LabelW)) then
+        W := M.LabelW[I] + Sc(12)
+      else
+        W := PPGMeasureTextNoCanvas(Labels[I], FSmall, 0, False).cx + Sc(12);
       if RTL then
       begin
         if X - W < Inner.Left then
@@ -2027,9 +2169,17 @@ begin
         DS.FontStyle, Temp)
     else
       TitleF := PPGStyledFont(FBold, FKanbanStyles.Card.FontStyle + DS.FontStyle, Temp);
-    Lh := TextH(TitleF);
-    TH := PPGMeasureTextNoCanvas(D.Title, TitleF, Max(10, Inner.Right - Inner.Left), True).cy;
-    TH := Max(Lh, Min(TH, 2 * Lh));
+    if DS.FontStyle = [] then
+      Lh := TitleLineH
+    else
+      Lh := TextH(TitleF);
+    if UseM then
+      TH := M.TitleH
+    else
+    begin
+      TH := PPGMeasureTextNoCanvas(D.Title, TitleF, Max(10, Inner.Right - Inner.Left), True).cy;
+      TH := Max(Lh, Min(TH, 2 * Lh));
+    end;
     TR := Rect(Inner.Left, Inner.Top, Inner.Right, Inner.Top + TH);
     if (FFilterText <> '') and (TH = Lh) and not RTL then
     begin
@@ -2053,7 +2203,7 @@ begin
   if (D.Text <> '') and (FMaxTextLines > 0) then
   begin
     FMarkup.Layout(D.Text, Font, nil, Max(10, Inner.Right - Inner.Left), True);
-    TH := Min(FMarkup.Size.cy, FMaxTextLines * TextH(Font));
+    TH := Min(FMarkup.Size.cy, FMaxTextLines * FontLineH);
     TR := Rect(Inner.Left, Inner.Top + Sc(4), Inner.Right, Inner.Top + Sc(4) + TH);
     ACanvas.PushClipRoundRect(TR, 0);
     try
@@ -2070,7 +2220,7 @@ begin
   // Fusszeile: Faelligkeit und Person
   if (D.Due <> 0) or (D.Assignee <> '') then
   begin
-    Av := Max(TextH(FSmall), Sc(22));
+    Av := Max(SmallH, Sc(22));
     FR := Rect(Inner.Left, Inner.Top + Sc(8), Inner.Right, Inner.Top + Sc(8) + Av);
     if D.Due <> 0 then
     begin
@@ -2343,7 +2493,7 @@ begin
           end;
         end;
         if DrawIt then
-          PaintCard(ACanvas, CR, D, DS, CardSel, CardHot, False);
+          PaintCard(ACanvas, CR, D, DS, CardSel, CardHot, False, CardAt(C, L, I));
       end;
     end;
   finally
@@ -2599,6 +2749,7 @@ end;
 procedure TPPGCustomKanban.UpdateDrop(X, Y: Integer);
 var
   D: TPPGKanbanHit;
+  R, U: TRect;
 begin
   D := DropAt(X, Y);
   if not SameKHit(D, FDrop) then
@@ -2607,12 +2758,62 @@ begin
     // Animation von der aktuell gezeigten Lage aus (verkuerzt: ab dem vorigen Ziel)
     FDrop := D;
     FShiftAnim.Jump(0);
-    if Animation.EffectiveEnabled and Visible then
-      FShiftAnim.AnimateTo(1, 150, ekDecelerate)
-    else
-      FShiftAnim.Jump(1);
+    FGhostShown := False;
   end;
-  Invalidate;
+  // Audit 8D: Bleibt das Ziel, zieht nur die mitlaufende Karte um (alte und
+  // neue Lage neu zeichnen); bei neuem Ziel verschieben sich die Karten
+  R := GhostRect;
+  if FGhostShown and HandleAllocated and not FShiftAnim.Running then
+  begin
+    UnionRect(U, FGhostR, R);
+    Winapi.Windows.InvalidateRect(Handle, @U, False);
+  end
+  else
+    Invalidate;
+  FGhostR := R;
+  FGhostShown := True;
+end;
+
+function TPPGCustomKanban.GhostRect: TRect;
+begin
+  // Mitlaufende Karte samt Schein (DrawOuterGlow) und Rahmen
+  Result := Rect(FMousePt.X - FGrab.X, FMousePt.Y - FGrab.Y, FMousePt.X - FGrab.X + DragWidth,
+    FMousePt.Y - FGrab.Y + FDragH);
+  InflateRect(Result, Sc(12), Sc(12));
+end;
+
+function TPPGCustomKanban.HitRect(const H: TPPGKanbanHit): TRect;
+begin
+  // Flaeche, die sich beim Hover eines Teils aendert (leer = keine)
+  Result := Rect(0, 0, 0, 0);
+  if (H.Col < 0) or (H.Col > High(FCols)) then
+    Exit;
+  case H.Part of
+    kpCard:
+      Result := CardRect(H.Col, H.Lane, H.Index);
+    kpCollapse:
+      Result := HeaderRect(H.Col);
+    kpThumb:
+      Result := ThumbRectOf(H.Col);
+  end;
+  if not IsRectEmpty(Result) then
+    InflateRect(Result, Sc(3), Sc(3));
+end;
+
+procedure TPPGCustomKanban.InvalidateHit(const H: TPPGKanbanHit);
+var
+  R: TRect;
+begin
+  if not HandleAllocated or (H.Part = kpNone) then
+    Exit;
+  if not FLayoutValid then
+  begin
+    Invalidate;
+    Exit;
+  end;
+  R := HitRect(H);
+  if not IsRectEmpty(R) then
+    Winapi.Windows.InvalidateRect(Handle, @R, False);
 end;
 
 procedure TPPGCustomKanban.ColumnAutoScroll(X, Y: Integer);
@@ -2678,6 +2879,7 @@ begin
   Src := FDragSrc;
   Dst := FDrop;
   FDragging := False;
+  FGhostShown := False;
   FColAuto.Stop;
   StopAutoScroll;
   FShiftAnim.Jump(0);
@@ -2940,8 +3142,10 @@ begin
   H := HitTest(X, Y);
   if not SameKHit(H, FHot) then
   begin
+    // Audit 8D: nur alte und neue Hover-Flaeche neu zeichnen
+    InvalidateHit(FHot);
     FHot := H;
-    Invalidate;
+    InvalidateHit(FHot);
   end;
 end;
 
@@ -3005,8 +3209,8 @@ begin
   inherited;
   if FHot.Part <> kpNone then
   begin
+    InvalidateHit(FHot);
     FHot := NoHit;
-    Invalidate;
   end;
 end;
 

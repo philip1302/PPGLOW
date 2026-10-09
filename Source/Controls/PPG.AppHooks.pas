@@ -10,7 +10,9 @@ unit PPG.AppHooks;
   zuerst (oberstes Menue vor der Menueleiste). Setzt ein Haken Handled, ist
   die Nachricht verbraucht.
 
-  Ein Haken darf sich in seinem Aufruf selbst abmelden (Liste wird kopiert).
+  Ein Haken darf sich in seinem Aufruf selbst abmelden: Die Listen werden
+  nie veraendert, An- und Abmelden legen eine neue an (copy-on-write); eine
+  laufende Verteilung behaelt ihren Stand ohne Kopie je Nachricht.
 
   Beobachter fuer Controls (PPGWatchControl): TeachingTip und Tour folgen
   ihrem Ziel. Haengt sich einmal je Control in WindowProc ein (Hilfsobjekt,
@@ -85,16 +87,17 @@ end;
 
 procedure THookHost.AppMessage(var Msg: TMsg; var Handled: Boolean);
 var
-  Copy: TArray<TMethod>;
+  List: TArray<TMethod>;
   I: Integer;
 begin
   if Length(FMessageHooks) = 0 then
     Exit;
-  Copy := System.Copy(FMessageHooks);
-  for I := High(Copy) downto 0 do
+  // Audit 8D: nur eine Referenz (copy-on-write), keine Kopie je Nachricht
+  List := FMessageHooks;
+  for I := High(List) downto 0 do
   begin
     try
-      TPPGMessageHook(Copy[I])(Msg, Handled);
+      TPPGMessageHook(List[I])(Msg, Handled);
     except
       // Grenze: eine Exception im Haken darf die Nachrichtenschleife nicht
       // stoeren; gemeldet wird sie trotzdem
@@ -108,12 +111,12 @@ end;
 
 procedure THookHost.AppDeactivate(Sender: TObject);
 var
-  Copy: TArray<TMethod>;
+  List: TArray<TMethod>;
   I: Integer;
 begin
-  Copy := System.Copy(FDeactivateHooks);
-  for I := High(Copy) downto 0 do
-    TNotifyEvent(Copy[I])(Sender);
+  List := FDeactivateHooks;
+  for I := High(List) downto 0 do
+    TNotifyEvent(List[I])(Sender);
 end;
 
 function Host: THookHost;
@@ -126,25 +129,39 @@ end;
 procedure AddMethod(var List: TArray<TMethod>; const M: TMethod);
 var
   I, N: Integer;
+  NewList: TArray<TMethod>;
 begin
+  // Copy-on-write: immer eine neue Liste, die alte bleibt fuer eine
+  // laufende Verteilung unveraendert
   for I := 0 to High(List) do
     if SameMethod(List[I], M) then
       Exit;
   N := Length(List);
-  SetLength(List, N + 1);
-  List[N] := M;
+  SetLength(NewList, N + 1);
+  for I := 0 to N - 1 do
+    NewList[I] := List[I];
+  NewList[N] := M;
+  List := NewList;
 end;
 
 procedure RemoveMethod(var List: TArray<TMethod>; const M: TMethod);
 var
-  I, J: Integer;
+  I, J, K: Integer;
+  NewList: TArray<TMethod>;
 begin
   for I := High(List) downto 0 do
     if SameMethod(List[I], M) then
     begin
-      for J := I to High(List) - 1 do
-        List[J] := List[J + 1];
-      SetLength(List, Length(List) - 1);
+      // Copy-on-write (siehe AddMethod)
+      SetLength(NewList, Length(List) - 1);
+      K := 0;
+      for J := 0 to High(List) do
+        if J <> I then
+        begin
+          NewList[K] := List[J];
+          Inc(K);
+        end;
+      List := NewList;
       Exit;
     end;
 end;
@@ -266,7 +283,7 @@ end;
 
 procedure TControlWatcher.WatchProc(var Message: TMessage);
 var
-  Copy: TArray<TMethod>;
+  List: TArray<TMethod>;
   I: Integer;
   Frame: TWatchFrame;
   Ctl: TControl;
@@ -280,12 +297,14 @@ begin
     // Control (und damit dieser Beobachter) in der Nachricht freigegeben
     if Frame.Gone then
       Exit;
-    Copy := System.Copy(FEvents);
+    // Audit 8D: Referenz statt Kopie je Nachricht (Listen sind copy-on-write;
+    // die lokale Referenz haelt sie auch, wenn der Beobachter stirbt)
+    List := FEvents;
     Ctl := FControl;
-    for I := High(Copy) downto 0 do
+    for I := High(List) downto 0 do
     begin
       try
-        TPPGControlWatchEvent(Copy[I])(Ctl, Message);
+        TPPGControlWatchEvent(List[I])(Ctl, Message);
       except
         on E: Exception do
           if Frame.Gone then

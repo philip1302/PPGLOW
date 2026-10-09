@@ -217,6 +217,12 @@ type
     FMarkup: TPPGMarkupLayout;
     FOpenAnim: TPPGAnimation;   // 1 = offen, 0 = zu (Hoehe animiert)
     FFullH: Integer;             // volle Hoehe waehrend der Animation
+    // Audit 8D: volle Hoehe je (Breite, Text, PPI); Schrift und Stil leeren sie
+    FHeightValid: Boolean;
+    FHeightW: Integer;
+    FHeightPPI: Integer;
+    FHeightText: string;
+    FHeightFull: Integer;
     FHotPart: TPPGInfoBarPart;
     FDownPart: TPPGInfoBarPart;
     FFocusPart: TPPGInfoBarPart;
@@ -892,6 +898,7 @@ end;
 
 procedure TPPGCustomInfoBar.BarStyleChanged(Sender: TObject);
 begin
+  FHeightValid := False;
   RequestAutoSize;
   Realign;
   Invalidate;
@@ -1030,17 +1037,31 @@ function TPPGCustomInfoBar.HeightForTextWidth(TextWidth: Integer): Integer;
 var
   PPI: Integer;
   Temp: TFont;
+  Txt: string;
 begin
   PPI := ScalePPI;
-  Temp := nil;
-  try
-    FMarkup.Layout(MarkupText, PPGElementFont(FBarStyle, Font, [], Temp), nil, Max(TextWidth, 1), True);
-  finally
-    Temp.Free;
+  Txt := MarkupText;
+  // Audit 8D: Die Oeffnen-Animation fragt je Bild die volle Hoehe ab - der
+  // Umbruch wird nur bei neuer Breite, neuem Text oder neuer PPI gerechnet
+  if FHeightValid and (FHeightW = TextWidth) and (FHeightPPI = PPI) and (FHeightText = Txt) then
+    Result := FHeightFull
+  else
+  begin
+    Temp := nil;
+    try
+      FMarkup.Layout(Txt, PPGElementFont(FBarStyle, Font, [], Temp), nil, Max(TextWidth, 1), True);
+    finally
+      Temp.Free;
+    end;
+    Result := FMarkup.Size.cy + 2 * PPGScale(BarPad, PPI);
+    if Result < PPGScale(48, PPI) then
+      Result := PPGScale(48, PPI);
+    FHeightValid := True;
+    FHeightW := TextWidth;
+    FHeightPPI := PPI;
+    FHeightText := Txt;
+    FHeightFull := Result;
   end;
-  Result := FMarkup.Size.cy + 2 * PPGScale(BarPad, PPI);
-  if Result < PPGScale(48, PPI) then
-    Result := PPGScale(48, PPI);
   // Auf-/Zuklappen: Anteil der vollen Hoehe
   FFullH := Result;
   if (FOpenAnim <> nil) and (FOpenAnim.Value < 1) then
@@ -1090,6 +1111,7 @@ end;
 procedure TPPGCustomInfoBar.CMFontChanged(var Message: TMessage);
 begin
   inherited;
+  FHeightValid := False;
   RequestAutoSize;
 end;
 
