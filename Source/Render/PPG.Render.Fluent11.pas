@@ -619,6 +619,12 @@ begin
         inherited DrawFieldGlyph(Canvas, R, Glyph, Color, PPI);
         Exit;
       end;
+    fgEllipsis:
+      begin
+        // Drei Punkte wie in der Basis (die Symbolschrift hat keine passende Form)
+        inherited DrawFieldGlyph(Canvas, R, Glyph, Color, PPI);
+        Exit;
+      end;
   else
     Exit; // fgNone
   end;

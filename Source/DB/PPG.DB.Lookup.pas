@@ -28,7 +28,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Variants,
-  Vcl.StdCtrls, Vcl.Menus, Data.DB, PPG.Items, PPG.DB.Controls;
+  Vcl.StdCtrls, Vcl.Menus, Data.DB, PPG.Items, PPG.DB.Controls, Vcl.DBCtrls;
 
 type
   TPPGDBLookupComboBox = class;
@@ -50,6 +50,7 @@ type
     FListLink: TPPGLookupListLink;
     FKeyField: string;
     FListField: string;
+    FListFieldIndex: Integer;
     FKeys: array of Variant;
     FBuilding: Boolean;
     FDataFieldName: string;
@@ -68,6 +69,11 @@ type
     procedure SetListSource(Value: TDataSource);
     procedure SetKeyField(const Value: string);
     procedure SetListField(const Value: string);
+    procedure SetListFieldIndex(const Value: Integer);
+    function GetDropDownRows: Integer;
+    procedure SetDropDownRows(const Value: Integer);
+    function GetDropDownAlign: TDropDownAlign;
+    procedure SetDropDownAlign(const Value: TDropDownAlign);
     function GetKeyValue: Variant;
     procedure SetKeyValue(const Value: Variant);
   protected
@@ -98,6 +104,13 @@ type
   published
     property KeyField: string read FKeyField write SetKeyField;
     property ListField: string read FListField write SetListField;
+    /// Welches Feld aus ListField im Feld steht (0 = das erste); die uebrigen
+    /// bilden die Detailzeile (wie TDBLookupComboBox.ListFieldIndex).
+    property ListFieldIndex: Integer read FListFieldIndex write SetListFieldIndex default 0;
+    /// Wie TDBLookupComboBox: gleichbedeutend mit DropDownCount (nicht eigens gespeichert).
+    property DropDownRows: Integer read GetDropDownRows write SetDropDownRows stored False;
+    /// Lage einer Liste, die breiter als das Feld ist.
+    property DropDownAlign: TDropDownAlign read GetDropDownAlign write SetDropDownAlign default daLeft;
     property ListSource: TDataSource read GetListSource write SetListSource stored IsListSourceStored;
     /// Taste, die den Wert leert (z.B. Entf oder Strg+Entf), 0 = keine.
     property NullValueKey: TShortCut read FNullValueKey write FNullValueKey default 0;
@@ -110,7 +123,7 @@ implementation
 
 uses
   // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
-  PPG.DB.Validator, PPG.ErrorHandler, PPG.Lang, PPG.Consts;
+  PPG.DB.Validator, PPG.ErrorHandler, PPG.Lang, PPG.Consts, PPG.Types;
 
 var
   GMsgRebuild: Cardinal = 0;
@@ -356,6 +369,45 @@ begin
   end;
 end;
 
+procedure TPPGDBLookupComboBox.SetListFieldIndex(const Value: Integer);
+begin
+  if FListFieldIndex <> Value then
+  begin
+    FListFieldIndex := PPGCheckRange(Self, 'ListFieldIndex', Value, 0, MaxInt);
+    BuildList;
+  end;
+end;
+
+function TPPGDBLookupComboBox.GetDropDownRows: Integer;
+begin
+  Result := DropDownCount;
+end;
+
+procedure TPPGDBLookupComboBox.SetDropDownRows(const Value: Integer);
+begin
+  DropDownCount := Value;
+end;
+
+function TPPGDBLookupComboBox.GetDropDownAlign: TDropDownAlign;
+begin
+  case PopupAlign of
+    taRightJustify: Result := daRight;
+    taCenter: Result := daCenter;
+  else
+    Result := daLeft;
+  end;
+end;
+
+procedure TPPGDBLookupComboBox.SetDropDownAlign(const Value: TDropDownAlign);
+begin
+  case Value of
+    daRight: PopupAlign := taRightJustify;
+    daCenter: PopupAlign := taCenter;
+  else
+    PopupAlign := taLeftJustify;
+  end;
+end;
+
 function TPPGDBLookupComboBox.KeyCount: Integer;
 begin
   EnsureList;
@@ -385,6 +437,7 @@ var
   I, N: Integer;
   Detail: string;
   It: Integer;
+  Main: Integer;
   Item: TPPGItem;
 begin
   if FBuilding or (csLoading in ComponentState) or (FListLink = nil) then
@@ -422,6 +475,10 @@ begin
           Fields.Add(DS.FindField(Trim(Names[I])));
       if Fields.Count = 0 then
         Exit;
+      // ListFieldIndex ausserhalb der Felder: das erste (wie die VCL)
+      Main := FListFieldIndex;
+      if Main >= Fields.Count then
+        Main := 0;
       PPGDBBeginRead;
       DS.DisableControls;
       try
@@ -434,14 +491,15 @@ begin
             SetLength(FKeys, N + 1);
             FKeys[N] := KeyF.Value;
             Detail := '';
-            for It := 1 to Fields.Count - 1 do
-            begin
-              if Detail <> '' then
-                Detail := Detail + ' - ';
-              Detail := Detail + TField(Fields[It]).DisplayText;
-            end;
+            for It := 0 to Fields.Count - 1 do
+              if It <> Main then
+              begin
+                if Detail <> '' then
+                  Detail := Detail + ' - ';
+                Detail := Detail + TField(Fields[It]).DisplayText;
+              end;
             Item := ItemsEx.Add;
-            Item.Text := TField(Fields[0]).DisplayText;
+            Item.Text := TField(Fields[Main]).DisplayText;
             Item.Detail := Detail;
             Inc(N);
             DS.Next;

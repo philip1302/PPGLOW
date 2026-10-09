@@ -53,6 +53,8 @@
 <tr><td><code>BorderStyle</code></td><td><code>TBorderStyle</code></td><td><code>bsSingle</code></td><td>bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Fl&#228;chen).</td></tr>
 <tr><td><code>ReadOnlyStyle</code></td><td><a href="types/TPPGElementStyle.html">TPPGElementStyle</a></td><td></td><td>Eigene Optik bei ReadOnly: Fl&#228;che, Text- und Randfarbe (je auch f&#252;r Dunkel). clDefault = wie im bearbeitbaren Zustand. Nutzung: <code>Edit1.ReadOnlyStyle.Color := $00F0F0F0; Edit1.ReadOnlyStyle.TextColor := clGrayText;</code></td></tr>
 <tr><td><code>TabStop</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Das Feld ist mit Tab erreichbar.</td></tr>
+<tr><td><code>ShowClearButton</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Ein „&#215;&quot;-Knopf im Feld l&#246;scht den Text (nur sichtbar, wenn Text vorhanden und das Feld bearbeitbar ist).</td></tr>
+<tr><td><code>TextHintVisibleOnFocus</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus.</td></tr>
 </table>
 <h2>Eigenschaften wie in der VCL</h2>
 <table>

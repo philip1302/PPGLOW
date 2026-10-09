@@ -53,6 +53,7 @@ type
     FFieldName: string;
     FFooterField: string;
     FAlignmentSet: Boolean;
+    FButtonStyle: TColumnButtonStyle;
     procedure SetFieldName(const Value: string);
     procedure SetFooterField(const Value: string);
     function GetAlignment: TAlignment;
@@ -61,6 +62,7 @@ type
     function GetDisplayName: string; override;
   public
     procedure Assign(Source: TPersistent); override;
+    function ShowsEllipsis: Boolean; override;
     /// Ausrichtung aus dem Feld, solange die Spalte keine eigene hat.
     procedure ApplyFieldAlignment(F: TField);
   published
@@ -69,6 +71,9 @@ type
     property FooterField: string read FFooterField write SetFooterField;
     /// Ohne eigenen Wert die Ausrichtung des Felds (wie TColumn.Alignment).
     property Alignment: TAlignment read GetAlignment write SetAlignment stored FAlignmentSet;
+    /// Wie TColumn.ButtonStyle: cbsAuto (Auswahlliste bei PickList bzw. Nachschlagefeld),
+    /// cbsEllipsis (Textfeld mit "..."-Knopf: OnEditButtonClick), cbsNone (nur Text).
+    property ButtonStyle: TColumnButtonStyle read FButtonStyle write FButtonStyle default cbsAuto;
   end;
 
   /// Verbindung des Grids zur Datenmenge.
@@ -305,6 +310,10 @@ type
     // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
     property DoubleBuffered;
     property ParentDoubleBuffered;
+    // Audit 5d Stufe 3: wie TDBGrid
+    property OnColEnter;
+    property OnColExit;
+    property OnEditButtonClick;
   end;
 
 implementation
@@ -331,10 +340,16 @@ begin
   begin
     FFieldName := TPPGDBGridColumn(Source).FFieldName;
     FFooterField := TPPGDBGridColumn(Source).FFooterField;
+    FButtonStyle := TPPGDBGridColumn(Source).FButtonStyle;
   end;
   inherited Assign(Source);
   if Source is TPPGDBGridColumn then
     FAlignmentSet := TPPGDBGridColumn(Source).FAlignmentSet;
+end;
+
+function TPPGDBGridColumn.ShowsEllipsis: Boolean;
+begin
+  Result := FButtonStyle = cbsEllipsis;
 end;
 
 function TPPGDBGridColumn.GetAlignment: TAlignment;
@@ -1349,8 +1364,17 @@ end;
 function TPPGCustomDBGrid.CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind;
 var
   F: TField;
+  C: TPPGGridColumn;
 begin
   Result := inherited CellEditorKind(ACol, ARow);
+  // ButtonStyle cbsEllipsis/cbsNone: Textfeld statt Auswahlliste
+  C := ColumnOf(ACol);
+  if (C is TPPGDBGridColumn) and (TPPGDBGridColumn(C).ButtonStyle <> cbsAuto) then
+  begin
+    if Result = gekCombo then
+      Result := gekText;
+    Exit;
+  end;
   F := FieldOfCol(ACol);
   // Nachschlagefeld: Auswahl aus der Nachschlage-Datenmenge statt Freitext
   if (Result = gekText) and (LookupKeyField(F) <> nil) then

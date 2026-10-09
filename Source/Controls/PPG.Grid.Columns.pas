@@ -88,6 +88,8 @@ type
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
+    /// Zeigt der Text-Editor einen "..."-Knopf (DB-Grid: ButtonStyle = cbsEllipsis)?
+    function ShowsEllipsis: Boolean; virtual;
     /// Ausrichtung des Titels (gtaColumn aufgeloest).
     function EffectiveTitleAlignment: TAlignment;
   published
@@ -275,6 +277,11 @@ begin
     FTitleAlignment := Value;
     Changed(False);
   end;
+end;
+
+function TPPGGridColumn.ShowsEllipsis: Boolean;
+begin
+  Result := False;
 end;
 
 function TPPGGridColumn.EffectiveTitleAlignment: TAlignment;

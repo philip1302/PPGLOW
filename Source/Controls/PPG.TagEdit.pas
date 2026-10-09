@@ -138,6 +138,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    /// Leert Eingabe und alle Tags (Loesch-Knopf, OnChange).
+    procedure Clear; override;
     /// Anwender fuegt hinzu (OnTagAdding, OnChange). False = abgelehnt.
     function AddTag(const S: string): Boolean;
     /// Anwender entfernt (OnTagRemoved, OnChange).
@@ -228,6 +230,9 @@ type
     // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
     property DoubleBuffered;
     property ParentDoubleBuffered;
+    // Audit 5d Stufe 3: wie VCL
+    property ShowClearButton;
+    property TextHintVisibleOnFocus;
   end;
 
 implementation
@@ -604,8 +609,25 @@ begin
   // Kein Aufklapp-Pfeil: Vorschlaege erscheinen beim Tippen
   if Id = PPGDropButton then
     Result := False
+  else if Id = PPGFieldButtonClear then
+    // Audit 5d: auch bei Tags ohne getippten Text
+    Result := ((FTags.Count > 0) or HasText) and Enabled and not ReadOnly and
+      (IsHot or FieldFocused)
   else
     Result := inherited ButtonVisible(Id);
+end;
+
+procedure TPPGTagEdit.Clear;
+var
+  HadTags: Boolean;
+begin
+  HadTags := FTags.Count > 0;
+  inherited Clear;
+  if HadTags then
+  begin
+    FTags.Clear;
+    DoTagsChange;
+  end;
 end;
 
 function TPPGTagEdit.ChipHeight: Integer;

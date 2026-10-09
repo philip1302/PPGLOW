@@ -45,6 +45,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ReadOnlyStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Eigene Optik bei ReadOnly: Fläche, Text- und Randfarbe (je auch für Dunkel). clDefault = wie im bearbeitbaren Zustand. Nutzung: `Edit1.ReadOnlyStyle.Color := $00F0F0F0; Edit1.ReadOnlyStyle.TextColor := clGrayText;` |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
 | `Value` | `Integer` |  | Aktueller Wert; wird still auf Min..Max begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt. |
+| `TextHintVisibleOnFocus` | `Boolean` | `False` | True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus. |
 
 ## Eigenschaften wie in der VCL
 

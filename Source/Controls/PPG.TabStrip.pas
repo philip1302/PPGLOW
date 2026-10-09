@@ -41,6 +41,7 @@ type
     Color: TColor;
     TextColor: TColor;
     FontStyle: TFontStyles;
+    Highlighted: Boolean; // TTabSheet.Highlighted: wie unter der Maus
   end;
 
   /// Darstellung der Reiter (wie Vcl.ComCtrls.TTabStyle).
@@ -152,6 +153,7 @@ type
       OwnerIndex: Integer);
     /// Eigene Farben/Schrift des zuletzt bzw. an Pos eingetragenen Reiters.
     procedure SetTabStyle(Pos: Integer; AColor, ATextColor: TColor; AFontStyle: TFontStyles);
+    procedure SetTabHighlighted(Pos: Integer; Value: Boolean);
     /// Anzahl Reihen nach dem letzten Layout (1 ohne MultiLine).
     property RowCount: Integer read FRowCount;
     function Count: Integer;
@@ -311,6 +313,13 @@ begin
   FTabs[N].Color := clDefault;
   FTabs[N].TextColor := clDefault;
   FTabs[N].FontStyle := [];
+  FTabs[N].Highlighted := False;
+end;
+
+procedure TPPGTabStrip.SetTabHighlighted(Pos: Integer; Value: Boolean);
+begin
+  if (Pos >= 0) and (Pos <= High(FTabs)) then
+    FTabs[Pos].Highlighted := Value;
 end;
 
 procedure TPPGTabStrip.SetTabStyle(Pos: Integer; AColor, ATextColor: TColor;
@@ -1262,7 +1271,8 @@ begin
         for I := 0 to High(FRects) do
           if not IsRectEmpty(FRects[I]) then
             PaintButton(I, FRects[I], I = FSelected,
-              Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot));
+              (Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot)) or
+              FTabs[I].Highlighted);
         // Senkrechte Reiter: Indikator an der Kante zur Seite
         if FVertical and (FButtonStyle = tbsTabs) then
         begin
@@ -1295,7 +1305,8 @@ begin
           R := FRects[I];
           if IsRectEmpty(R) or (I = FSelected) then
             Continue;
-          Hot := Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot);
+          Hot := (Info.HotTrack and Info.Enabled and FTabs[I].Enabled and (I = FHot)) or
+            FTabs[I].Highlighted;
           if not RunDraw(I, R, False, DS) then
             Continue;
           E := TabElement(False, Hot);

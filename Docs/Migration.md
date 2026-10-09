@@ -87,6 +87,7 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TDBGrid-Spalten | `Title.Font.*`, `Title.Color` | `TitleStyle.Font.*` (mit `TitleStyle.ParentFont = False`), `TitleStyle.Color` |
 | TDBGrid-Spalten | `Font.*`, `Color` | `Style.Font.*` (mit `Style.ParentFont = False`), `Style.Color` |
 | TDBGrid-Spalten | `Expanded` … | entfernt |
+| TDBGrid-Spalten | `ButtonStyle` | bleibt (`cbsEllipsis`: „…“-Knopf, `OnEditButtonClick`) |
 | TDBGrid | `TitleFont`, `FixedColor` | bleiben (gleichnamig bei `TPPGDBGrid`) |
 | TBitBtn | `Kind`, `Glyph`, `NumGlyphs`, `Layout` | entfernt (Bilder über `Images`/`ImageIndex`) |
 | TSpeedButton | `Glyph`, `NumGlyphs`, `Flat`, `Layout` | entfernt |

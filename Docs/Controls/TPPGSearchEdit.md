@@ -26,6 +26,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
+| `AutoSelect` | `Boolean` | `True` | True: Beim Fokuserhalt wird der Text markiert, Tippen ersetzt die alte Suche (wie TSearchBox). |
 | `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
@@ -52,6 +53,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Sorted` | `Boolean` | `False` | True: Die Einträge werden alphabetisch sortiert gehalten. |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
 | `Text` | `string` |  | Der angezeigte bzw. eingegebene Text. Bei csDropDownList der Text des gewählten Eintrags. |
+| `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. |
+| `Alignment` | `TAlignment` | `taLeftJustify` | Ausrichtung des Textes im Feld (links, rechts, zentriert). |
 
 ## Eigenschaften wie in der VCL
 

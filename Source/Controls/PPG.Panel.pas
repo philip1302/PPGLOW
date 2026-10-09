@@ -147,7 +147,14 @@ type
   end;
 
   TPPGPanel = class(TPPGCustomPanel)
+  private
+    FBorderStyle: TBorderStyle;
+    procedure SetBorderStyle(const Value: TBorderStyle);
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
   published
+    /// bsSingle: Rahmen des Fensters wie TPanel (mit Ctl3D vertieft).
+    property BorderStyle: TBorderStyle read FBorderStyle write SetBorderStyle default bsNone;
     property Preset;
     property StyleManager;
     property Appearance;
@@ -228,6 +235,8 @@ type
     property DoubleBuffered;
     property ParentDoubleBuffered;
     property Action;
+    // Audit 5d Stufe 3: wie VCL
+    property OnCanResize;
   end;
 
   /// Wie TScrollBox: AutoScroll = True, ohne Beschriftung; BorderStyle bsNone
@@ -1148,6 +1157,28 @@ begin
   Height := 105;
   ShowCaption := False;
   AutoScroll := True;
+end;
+
+{ TPPGPanel }
+
+procedure TPPGPanel.SetBorderStyle(const Value: TBorderStyle);
+begin
+  if FBorderStyle <> Value then
+  begin
+    FBorderStyle := Value;
+    RecreateWnd;
+  end;
+end;
+
+procedure TPPGPanel.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  // Wie TCustomPanel.CreateParams
+  if FBorderStyle = bsSingle then
+    if NewStyleControls and Ctl3D then
+      Params.ExStyle := Params.ExStyle or WS_EX_CLIENTEDGE
+    else
+      Params.Style := Params.Style or WS_BORDER;
 end;
 
 function TPPGScrollBox.GetBorderStyle: TBorderStyle;

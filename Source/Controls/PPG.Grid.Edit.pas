@@ -17,7 +17,8 @@ interface
 
 uses
   Winapi.Windows, System.Classes, System.SysUtils, System.Variants, Vcl.Controls,
-  PPG.Controls.Base, PPG.Edit, PPG.ComboBox, PPG.SpinEdit, PPG.Grid.Columns;
+  PPG.Controls.Base, PPG.Edit, PPG.ComboBox, PPG.SpinEdit, PPG.Grid.Columns,
+  PPG.Controls.Field, PPG.Render.Intf;
 
 type
   IPPGGridCellEditor = interface
@@ -32,9 +33,17 @@ type
   end;
 
   TPPGGridEdit = class(TPPGEdit, IPPGGridCellEditor)
+  private
+    FEllipsis: Boolean;
+    FOnEllipsisClick: TNotifyEvent;
   protected
     function WantSpecialKey(Key: Word): Boolean; override;
+    procedure GetButtons(var Buttons: TPPGFieldButtons); override;
+    procedure ButtonClick(Id: Integer); override;
   public
+    /// "..."-Knopf der Spalte sichtbar (Klick und Strg+Enter: OnEllipsisClick).
+    property Ellipsis: Boolean read FEllipsis;
+    property OnEllipsisClick: TNotifyEvent read FOnEllipsisClick write FOnEllipsisClick;
     procedure CellEditorBegin(const Text: string; Column: TPPGGridColumn);
     function CellEditorText: string;
     procedure CellEditorTypeChar(C: Char);
@@ -78,9 +87,6 @@ procedure PPGGridEditorTypeChar(Editor: TPPGCustomControl; C: Char);
 function PPGGridEditorArrowsLeave(Editor: TObject): Boolean;
 
 implementation
-
-uses
-  PPG.Controls.Field;
 
 type
   TCtrlAccess = class(TPPGCustomControl);
@@ -178,10 +184,47 @@ begin
   Result := GridWantsKey(Key) or inherited WantSpecialKey(Key);
 end;
 
+const
+  PPGGridEditEllipsis = 70;
+
 procedure TPPGGridEdit.CellEditorBegin(const Text: string; Column: TPPGGridColumn);
+var
+  E: Boolean;
 begin
+  E := (Column <> nil) and Column.ShowsEllipsis;
+  if E <> FEllipsis then
+  begin
+    FEllipsis := E;
+    UpdateLayout;
+  end;
   Self.Text := Text;
   SelectAll;
+end;
+
+procedure TPPGGridEdit.GetButtons(var Buttons: TPPGFieldButtons);
+var
+  N: Integer;
+begin
+  inherited GetButtons(Buttons);
+  if not FEllipsis then
+    Exit;
+  N := Length(Buttons);
+  SetLength(Buttons, N + 1);
+  Buttons[N].Id := PPGGridEditEllipsis;
+  Buttons[N].Glyph := fgEllipsis;
+  Buttons[N].ImageIndex := -1;
+  Buttons[N].LeftSide := False;
+end;
+
+procedure TPPGGridEdit.ButtonClick(Id: Integer);
+begin
+  if Id = PPGGridEditEllipsis then
+  begin
+    if Assigned(FOnEllipsisClick) then
+      FOnEllipsisClick(Self);
+  end
+  else
+    inherited ButtonClick(Id);
 end;
 
 function TPPGGridEdit.CellEditorText: string;

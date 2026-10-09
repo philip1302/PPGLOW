@@ -65,6 +65,7 @@ type
     FSliderVisible: Boolean;
     FDragging: Boolean;
     FDragOffset: Integer;
+    FOnTracking: TNotifyEvent;
     procedure SetSelStart(const Value: Integer);
     procedure SetSelEnd(const Value: Integer);
     procedure SetShowSelRange(const Value: Boolean);
@@ -140,6 +141,8 @@ type
     /// Zwei Griffe: Position = Anfang, PositionEnd = Ende des Bereichs.
     property RangeMode: Boolean read FRangeMode write SetRangeMode default False;
     property PositionEnd: Integer read FPositionEnd write SetPositionEnd default 0;
+    /// Waehrend der Anwender den Griff zieht, bei jeder Wertaenderung (wie TTrackBar).
+    property OnTracking: TNotifyEvent read FOnTracking write FOnTracking;
   public
     constructor Create(AOwner: TComponent); override;
     /// True waehrend der Benutzer den Griff zieht.
@@ -223,6 +226,8 @@ type
     // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
     property DoubleBuffered;
     property ParentDoubleBuffered;
+    // Audit 5d Stufe 3: wie VCL
+    property OnTracking;
   end;
 
 implementation
@@ -663,9 +668,16 @@ begin
 end;
 
 procedure TPPGCustomTrackBar.MouseMove(Shift: TShiftState; X, Y: Integer);
+var
+  Old: Integer;
 begin
   if FDragging and MousePressed then
+  begin
+    Old := ThumbValue(FActiveThumb);
     SetThumbValue(FActiveThumb, ValueAtPixel(GetGeometry, MainCoord(X, Y) - FDragOffset));
+    if (ThumbValue(FActiveThumb) <> Old) and Assigned(FOnTracking) then
+      FOnTracking(Self);
+  end;
   inherited MouseMove(Shift, X, Y);
 end;
 

@@ -63,6 +63,7 @@ object Form1: TForm1
         Visible = True
       end
       item
+        ButtonStyle = cbsEllipsis
         Expanded = False
         Color = clInfoBk
         FieldName = 'Ort'

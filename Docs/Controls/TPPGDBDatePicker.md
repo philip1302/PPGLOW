@@ -67,6 +67,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ShowCheckbox` | `Boolean` | `False` | True: Links im Feld erscheint ein Kontrollkästchen; ohne Haken (Checked = False) gilt „kein Datum". |
 | `Styles` | [TPPGCalendarStyles](types/TPPGCalendarStyles.md) |  | Bereiche des aufklappenden Kalenders einzeln gestalten (Kopf, Wochentage, Wochenende, Heute, Auswahl, andere Monate, Wochennummern). Nutzung: `DatePicker1.Styles.Weekend.TextColor := clRed;` |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
+| `TextHintVisibleOnFocus` | `Boolean` | `False` | True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus. |
 
 ## Eigenschaften wie in der VCL
 

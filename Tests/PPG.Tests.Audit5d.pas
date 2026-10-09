@@ -19,7 +19,8 @@ uses
   PPG.TileView, PPG.TimePicker, PPG.ToggleSwitch, PPG.ToolBar, PPG.TrackBar, PPG.TreeView,
   PPG.Wizard, PPG.DB.Chart, PPG.DB.Controls, PPG.DB.Fields, PPG.DB.Grid, PPG.DB.Kanban,
   PPG.DB.Lookup, PPG.DB.Navigator, PPG.DB.Planner,
-  PPG.Controls.Field, PPG.Tests.Controls;
+  PPG.Controls.Field, PPG.Controls.Scroll, PPG.Grid.Edit, PPG.Render.Intf, System.UITypes,
+  Data.DB, Datasnap.DBClient, Vcl.DBCtrls, Vcl.DBGrids, Vcl.StdCtrls, Vcl.ComCtrls, PPG.Tests.Controls;
 
 type
   TVclPropsTests = class(TControlTestCase)
@@ -51,6 +52,30 @@ type
     procedure PickersClickOnUserSelection;
     procedure Stage2Published;
     procedure Stage2ActionExecutesOnClick;
+  end;
+
+  /// Stufe 3: kleine, control-spezifische Properties wie in der VCL.
+  TStage3Tests = class(TControlTestCase)
+  private
+    FCount: Integer;
+    FLog: string;
+    procedure Counted(Sender: TObject);
+    procedure ColEntered(Sender: TObject);
+    procedure ColExited(Sender: TObject);
+    procedure GetImage(Sender: TObject; TabIndex: Integer; var ImageIndex: Integer);
+  published
+    procedure Published;
+    procedure TrackBarOnTracking;
+    procedure ProgressBarColors;
+    procedure PanelBorderStyle;
+    procedure ComboAutoDropDownWidth;
+    procedure PageControlImageAndHighlight;
+    procedure GridScrollBars;
+    procedure GridColEnterExit;
+    procedure GridEllipsisEditor;
+    procedure LookupVclProperties;
+    procedure SearchEditAutoSelect;
+    procedure TagEditClearRemovesTags;
   end;
 
 const
@@ -445,7 +470,314 @@ begin
   CheckEquals('', Missing, 'Action nicht ausgefuehrt');
 end;
 
+{ TStage3Tests }
+
+type
+  TProgressCrack = class(TPPGProgressBar);
+  TComboCrack = class(TPPGComboBox);
+  TGridCrack = class(TPPGGrid);
+  TGridEditCrack = class(TPPGGridEdit);
+  TTagCrack = class(TPPGTagEdit);
+  TLookupCrack = class(TPPGDBLookupComboBox);
+  TDBGridCrack = class(TPPGDBGrid);
+
+procedure TStage3Tests.Counted(Sender: TObject);
+begin
+  Inc(FCount);
+end;
+
+procedure TStage3Tests.ColEntered(Sender: TObject);
+begin
+  FLog := FLog + 'e' + IntToStr(TPPGGrid(Sender).Col);
+end;
+
+procedure TStage3Tests.ColExited(Sender: TObject);
+begin
+  FLog := FLog + 'x' + IntToStr(TPPGGrid(Sender).Col);
+end;
+
+procedure TStage3Tests.GetImage(Sender: TObject; TabIndex: Integer; var ImageIndex: Integer);
+begin
+  Inc(FCount);
+  if TabIndex = 1 then
+    ImageIndex := 5;
+end;
+
+procedure TStage3Tests.Published;
+const
+  Props: array[0..20] of string = (
+    'TPPGNumberEdit.ShowClearButton', 'TPPGPasswordEdit.ShowClearButton',
+    'TPPGTagEdit.ShowClearButton', 'TPPGTagEdit.TextHintVisibleOnFocus',
+    'TPPGSpinEdit.TextHintVisibleOnFocus', 'TPPGDatePicker.TextHintVisibleOnFocus',
+    'TPPGTimePicker.TextHintVisibleOnFocus', 'TPPGRibbon.TabStop', 'TPPGStatusBar.Action',
+    'TPPGPanel.OnCanResize', 'TPPGPanel.BorderStyle', 'TPPGSearchEdit.ReadOnly',
+    'TPPGSearchEdit.Alignment', 'TPPGTrackBar.OnTracking', 'TPPGProgressBar.BarColor',
+    'TPPGProgressBar.BackgroundColor', 'TPPGComboBox.AutoDropDownWidth',
+    'TPPGPageControl.OnGetImageIndex', 'TPPGGrid.ScrollBars', 'TPPGDBGrid.OnEditButtonClick',
+    'TPPGDBLookupComboBox.ListFieldIndex');
+  Classes: array[0..13] of TClass = (TPPGNumberEdit, TPPGPasswordEdit, TPPGTagEdit,
+    TPPGSpinEdit, TPPGDatePicker, TPPGTimePicker, TPPGRibbon, TPPGStatusBar, TPPGPanel,
+    TPPGSearchEdit, TPPGTrackBar, TPPGProgressBar, TPPGComboBox, TPPGPageControl);
+var
+  S, Missing: string;
+  P: Integer;
+  C: TClass;
+  Found: Boolean;
+begin
+  Missing := '';
+  for S in Props do
+  begin
+    P := Pos('.', S);
+    Found := False;
+    for C in Classes do
+      if C.ClassName = Copy(S, 1, P - 1) then
+        Found := GetPropInfo(C, Copy(S, P + 1, MaxInt)) <> nil;
+    if Copy(S, 1, P - 1) = 'TPPGGrid' then
+      Found := GetPropInfo(TPPGGrid, 'ScrollBars') <> nil;
+    if Copy(S, 1, P - 1) = 'TPPGDBGrid' then
+      Found := (GetPropInfo(TPPGDBGrid, 'OnEditButtonClick') <> nil) and
+        (GetPropInfo(TPPGDBGrid, 'OnColEnter') <> nil) and (GetPropInfo(TPPGDBGrid, 'OnColExit') <> nil);
+    if Copy(S, 1, P - 1) = 'TPPGDBLookupComboBox' then
+      Found := (GetPropInfo(TPPGDBLookupComboBox, 'ListFieldIndex') <> nil) and
+        (GetPropInfo(TPPGDBLookupComboBox, 'DropDownRows') <> nil) and
+        (GetPropInfo(TPPGDBLookupComboBox, 'DropDownAlign') <> nil);
+    if not Found then
+      Missing := Missing + ' ' + S;
+  end;
+  CheckTrue(GetPropInfo(TPPGTabSheet, 'Highlighted') <> nil, 'TabSheet.Highlighted');
+  CheckTrue(GetPropInfo(TPPGDBGridColumn, 'ButtonStyle') <> nil, 'DBGridColumn.ButtonStyle');
+  CheckEquals('', Missing, 'nicht veroeffentlicht');
+end;
+
+procedure TStage3Tests.TrackBarOnTracking;
+var
+  T: TPPGTrackBar;
+  Y: Integer;
+begin
+  FForm.Show;
+  T := TPPGTrackBar.Create(FForm);
+  T.Parent := FForm;
+  T.SetBounds(10, 10, 300, 40);
+  T.Max := 100;
+  T.OnTracking := Counted;
+  Y := T.Height div 2;
+  T.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(10, Y));
+  FCount := 0;
+  T.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(150, Y));
+  T.Perform(WM_MOUSEMOVE, MK_LBUTTON, MakeLParam(250, Y));
+  T.Perform(WM_LBUTTONUP, 0, MakeLParam(250, Y));
+  if GetCapture <> 0 then
+    ReleaseCapture;
+  CheckEquals(2, FCount, 'je Wertaenderung beim Ziehen');
+  T.Position := 10;
+  CheckEquals(2, FCount, 'nicht beim Setzen im Code');
+end;
+
+procedure TStage3Tests.ProgressBarColors;
+var
+  P: TPPGProgressBar;
+begin
+  P := TPPGProgressBar.Create(FForm);
+  P.Parent := FForm;
+  CheckEquals(Integer(clDefault), Integer(P.BarColor));
+  P.BarColor := clGreen;
+  P.BackgroundColor := clYellow;
+  CheckEquals(ColorToRGB(clGreen), TProgressCrack(P).GetFillStyle.ColorMirror, 'Balken');
+  CheckEquals(ColorToRGB(clYellow), TProgressCrack(P).GetTrackStyle.Color, 'Spur');
+  P.State := pbsError;
+  CheckTrue(TProgressCrack(P).GetFillStyle.ColorMirror <> ColorToRGB(clGreen),
+    'Fehlerzustand behaelt die Signalfarbe');
+end;
+
+procedure TStage3Tests.PanelBorderStyle;
+var
+  P: TPPGPanel;
+begin
+  P := TPPGPanel.Create(FForm);
+  P.Parent := FForm;
+  P.HandleNeeded;
+  CheckEquals(0, GetWindowLong(P.Handle, GWL_EXSTYLE) and WS_EX_CLIENTEDGE, 'Vorgabe bsNone');
+  P.BorderStyle := bsSingle;
+  P.HandleNeeded;
+  CheckTrue(GetWindowLong(P.Handle, GWL_EXSTYLE) and WS_EX_CLIENTEDGE <> 0, 'bsSingle mit Ctl3D');
+end;
+
+procedure TStage3Tests.ComboAutoDropDownWidth;
+var
+  C: TPPGComboBox;
+begin
+  C := TPPGComboBox.Create(FForm);
+  C.Parent := FForm;
+  C.Width := 80;
+  C.Items.Add('kurz');
+  C.Items.Add('ein sehr langer Eintrag, der nicht in das schmale Feld passt');
+  C.HandleNeeded;
+  CheckTrue(TComboCrack(C).AutoListWidth > C.Width, 'breitester Eintrag');
+end;
+
+procedure TStage3Tests.PageControlImageAndHighlight;
+var
+  PC: TPPGPageControl;
+  S1, S2: TPPGTabSheet;
+begin
+  PC := TPPGPageControl.Create(FForm);
+  PC.Parent := FForm;
+  S1 := TPPGTabSheet.Create(FForm);
+  S1.PageControl := PC;
+  S2 := TPPGTabSheet.Create(FForm);
+  S2.PageControl := PC;
+  S2.ImageIndex := 2;
+  FCount := 0;
+  PC.OnGetImageIndex := GetImage;
+  S2.Highlighted := True;
+  CheckTrue(FCount > 0, 'OnGetImageIndex gefragt');
+  CheckEquals(5, PC.Strip.Tab(1).ImageIndex, 'Bild aus dem Ereignis');
+  CheckEquals(-1, PC.Strip.Tab(0).ImageIndex);
+  CheckTrue(PC.Strip.Tab(1).Highlighted, 'hervorgehoben');
+  CheckFalse(PC.Strip.Tab(0).Highlighted);
+end;
+
+procedure TStage3Tests.GridScrollBars;
+var
+  G: TPPGGrid;
+begin
+  FForm.Show;
+  G := TPPGGrid.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(0, 0, 120, 100);
+  G.ColCount := 20;
+  G.RowCount := 200;
+  Application.ProcessMessages;
+  CheckTrue(G.ScrollBarVisible(saVert) and G.ScrollBarVisible(saHorz), 'ssBoth');
+  G.ScrollBars := System.UITypes.TScrollStyle.ssVertical;
+  CheckTrue(G.ScrollBarVisible(saVert));
+  CheckFalse(G.ScrollBarVisible(saHorz), 'keine waagerechte');
+  G.ScrollBars := System.UITypes.TScrollStyle.ssNone;
+  CheckFalse(G.ScrollBarVisible(saVert), 'keine');
+end;
+
+procedure TStage3Tests.GridColEnterExit;
+var
+  G: TPPGGrid;
+begin
+  FForm.Show;
+  G := TPPGGrid.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(0, 0, 300, 200);
+  G.ColCount := 4;
+  G.RowCount := 5;
+  G.SetFocus;
+  FLog := '';
+  TGridCrack(G).OnColExit := ColExited;
+  TGridCrack(G).OnColEnter := ColEntered;
+  G.Perform(WM_KEYDOWN, VK_RIGHT, 0);
+  CheckEquals('x1e2', FLog, 'erst verlassen, dann betreten');
+  FLog := '';
+  G.Perform(WM_KEYDOWN, VK_DOWN, 0);
+  CheckEquals('', FLog, 'Zeilenwechsel ist kein Spaltenwechsel');
+end;
+
+procedure TStage3Tests.GridEllipsisEditor;
+var
+  Col: TPPGDBGridColumn;
+  E: TPPGGridEdit;
+  B: TPPGFieldButtons;
+  I: Integer;
+  Has: Boolean;
+begin
+  Col := TPPGDBGridColumn.Create(nil);
+  E := TPPGGridEdit.Create(FForm);
+  try
+    E.Parent := FForm;
+    CheckFalse(Col.ShowsEllipsis, 'Vorgabe cbsAuto');
+    Col.ButtonStyle := cbsEllipsis;
+    CheckTrue(Col.ShowsEllipsis);
+    (E as IPPGGridCellEditor).CellEditorBegin('Wert', Col);
+    CheckTrue(E.Ellipsis, 'Editor zeigt den Knopf');
+    TGridEditCrack(E).GetButtons(B);
+    Has := False;
+    for I := 0 to High(B) do
+      if B[I].Glyph = fgEllipsis then
+      begin
+        Has := True;
+        FCount := 0;
+        E.OnEllipsisClick := Counted;
+        TGridEditCrack(E).ButtonClick(B[I].Id);
+        CheckEquals(1, FCount, 'Klick meldet sich');
+      end;
+    CheckTrue(Has, '"..."-Knopf in GetButtons');
+    (E as IPPGGridCellEditor).CellEditorBegin('Wert', nil);
+    CheckFalse(E.Ellipsis, 'andere Spalte: kein Knopf');
+  finally
+    E.Free;
+    Col.Free;
+  end;
+end;
+
+procedure TStage3Tests.LookupVclProperties;
+var
+  DS: TClientDataSet;
+  Src: TDataSource;
+  L: TPPGDBLookupComboBox;
+begin
+  DS := TClientDataSet.Create(FForm);
+  DS.FieldDefs.Add('Nr', ftInteger);
+  DS.FieldDefs.Add('Name', ftString, 20);
+  DS.CreateDataSet;
+  DS.AppendRecord([1, 'Albers']);
+  DS.AppendRecord([2, 'Berg']);
+  Src := TDataSource.Create(FForm);
+  Src.DataSet := DS;
+  L := TPPGDBLookupComboBox.Create(FForm);
+  L.Parent := FForm;
+  L.ListSource := Src;
+  L.KeyField := 'Nr';
+  L.ListField := 'Nr;Name';
+  L.ListFieldIndex := 1;
+  CheckTrue(L.KeyCount = 2);
+  CheckEquals('Albers', L.ItemsEx[0].Text, 'ListFieldIndex waehlt das angezeigte Feld');
+  CheckEquals('1', L.ItemsEx[0].Detail, 'die uebrigen Felder als Detail');
+  L.DropDownRows := 12;
+  CheckEquals(12, L.DropDownCount, 'DropDownRows = DropDownCount');
+  L.DropDownAlign := daRight;
+  CheckTrue(TLookupCrack(L).PopupAlign = taRightJustify);
+  CheckTrue(L.DropDownAlign = daRight);
+end;
+
+procedure TStage3Tests.SearchEditAutoSelect;
+var
+  S: TPPGSearchEdit;
+begin
+  S := TPPGSearchEdit.Create(FForm);
+  S.Parent := FForm;
+  CheckTrue(S.AutoSelect, 'Vorgabe wie TSearchBox');
+  S.AutoSelect := False;
+  CheckFalse(S.AutoSelect);
+  S.ReadOnly := True;
+  CheckTrue(S.ReadOnly);
+end;
+
+procedure TStage3Tests.TagEditClearRemovesTags;
+var
+  T: TPPGTagEdit;
+begin
+  FForm.Show;
+  T := TPPGTagEdit.Create(FForm);
+  T.Parent := FForm;
+  T.Tags.CommaText := 'a,b,c';
+  T.ShowClearButton := True;
+  T.SetFocus;
+  CheckTrue(TTagCrack(T).ButtonVisible(PPGFieldButtonClear), 'Knopf auch ohne getippten Text');
+  FCount := 0;
+  T.OnChange := Counted;
+  T.Clear;
+  CheckEquals(0, T.Tags.Count, 'alle Tags weg');
+  CheckTrue(FCount >= 1, 'OnChange');
+  CheckFalse(TTagCrack(T).ButtonVisible(PPGFieldButtonClear), 'leer: kein Knopf');
+end;
+
 initialization
   RegisterTest('Audit45', TVclPropsTests.Suite);
+  RegisterTest('Audit45', TStage3Tests.Suite);
 
 end.

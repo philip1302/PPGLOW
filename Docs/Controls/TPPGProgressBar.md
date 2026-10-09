@@ -40,6 +40,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Smooth` | `Boolean` | `True` | True: durchgehender Balken. False: Balken aus Blöcken mit kleinen Lücken (klassisches TProgressBar), in jedem Preset. Gilt nicht für Marquee. Die Vorgabe ist True, damit bestehende Formulare glatt bleiben. |
 | `ShowText` | `Boolean` | `False` | True: Zeigt Caption bzw. ohne Caption den Fortschritt in Prozent im Balken. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
+| `BarColor` | `TColor` | `clDefault` | Farbe des Balkens im Zustand pbsNormal; clDefault (Vorgabe) = Akzent des Presets. Fehler und Pause behalten ihre Signalfarben, im Hochkontrast gilt die Systemfarbe. Wie TProgressBar.BarColor. Nutzung: `ProgressBar1.BarColor := clGreen;` |
+| `BackgroundColor` | `TColor` | `clDefault` | Farbe der Spur; clDefault (Vorgabe) = Preset. Wie TProgressBar.BackgroundColor. |
 
 ## Eigenschaften wie in der VCL
 

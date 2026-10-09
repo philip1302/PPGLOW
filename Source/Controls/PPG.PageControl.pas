@@ -36,6 +36,7 @@ type
     FTabColor: TColor;
     FTabTextColor: TColor;
     FTabFontStyle: TFontStyles;
+    FHighlighted: Boolean;
     FOnShow: TNotifyEvent;
     FOnHide: TNotifyEvent;
     {$IFDEF PPG_HAS_IMAGENAME}
@@ -51,6 +52,7 @@ type
     procedure SetTabColor(const Value: TColor);
     procedure SetTabTextColor(const Value: TColor);
     procedure SetTabFontStyle(const Value: TFontStyles);
+    procedure SetHighlighted(const Value: Boolean);
     procedure CMTextChanged(var Message: TMessage); message CM_TEXTCHANGED;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
     {$IFDEF PPG_HAS_IMAGENAME}
@@ -83,6 +85,8 @@ type
     property Font;
     property Height stored False;
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex default -1;
+    /// Reiter hervorgehoben (wie TTabSheet.Highlighted; gezeichnet wie unter der Maus).
+    property Highlighted: Boolean read FHighlighted write SetHighlighted default False;
     {$IFDEF PPG_HAS_IMAGENAME}
     /// Bild per Namen (TVirtualImageList, ab 10.4); robust gegen Umsortieren.
     property ImageName: TImageName read FImageName write SetImageName;
@@ -129,6 +133,7 @@ type
     FActivePage: TPPGTabSheet;
     FOnCloseQuery: TPPGPageCloseQueryEvent;
     FOnClose: TPPGPageCloseEvent;
+    FOnGetImageIndex: TTabGetImageEvent;
     function GetPage(Index: Integer): TPPGTabSheet;
     function GetPageCount: Integer;
     function GetActivePageIndex: Integer;
@@ -214,6 +219,8 @@ type
     property OnCustomDrawItem;
     property OnClose: TPPGPageCloseEvent read FOnClose write FOnClose;
     property OnClosing: TPPGPageCloseQueryEvent read FOnCloseQuery write FOnCloseQuery;
+    /// Bild eines Reiters aendern (TabIndex = sichtbarer Reiter; wie TPageControl).
+    property OnGetImageIndex: TTabGetImageEvent read FOnGetImageIndex write FOnGetImageIndex;
     property OnContextPopup;
     property OnDragDrop;
     property OnDragOver;
@@ -335,6 +342,16 @@ begin
   if FImageIndex <> Value then
   begin
     FImageIndex := Value;
+    if PageControl <> nil then
+      PageControl.PageChanged(Self);
+  end;
+end;
+
+procedure TPPGTabSheet.SetHighlighted(const Value: Boolean);
+begin
+  if FHighlighted <> Value then
+  begin
+    FHighlighted := Value;
     if PageControl <> nil then
       PageControl.PageChanged(Self);
   end;
@@ -722,7 +739,7 @@ end;
 
 procedure TPPGPageControl.FillTabs(Strip: TPPGTabStrip);
 var
-  I: Integer;
+  I, Img: Integer;
   P: TPPGTabSheet;
 begin
   for I := 0 to FPages.Count - 1 do
@@ -730,8 +747,12 @@ begin
     P := Pages[I];
     if P.TabVisible then
     begin
-      Strip.Add(P.Caption, P.ImageIndex, P.Enabled, I);
+      Img := P.ImageIndex;
+      if Assigned(FOnGetImageIndex) then
+        FOnGetImageIndex(Self, Strip.Count, Img);
+      Strip.Add(P.Caption, Img, P.Enabled, I);
       Strip.SetTabStyle(Strip.Count - 1, P.TabColor, P.TabTextColor, P.TabFontStyle);
+      Strip.SetTabHighlighted(Strip.Count - 1, P.Highlighted);
     end;
   end;
 end;

@@ -124,6 +124,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ParentColor` | `Boolean` |  | True: Color wird vom Parent übernommen. |
 | `DoubleBuffered` | `Boolean` |  | Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht. |
 | `ParentDoubleBuffered` | `Boolean` |  | True: DoubleBuffered wird vom Parent übernommen. |
+| `TabStop` | `Boolean` |  | True: Das Control ist mit Tab erreichbar. |
 
 ## Ereignisse
 

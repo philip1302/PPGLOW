@@ -41,6 +41,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `KeyField` | `string` |  | Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben. |
 | `ListField` | `string` |  | Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile. Nutzung: `Lookup1.ListSource := dsKunden; Lookup1.KeyField := 'ID'; Lookup1.ListField := 'Name;Ort';` |
+| `ListFieldIndex` | `Integer` | `0` | Welches Feld aus ListField im Feld und als Eintrag steht (0 = das erste); die übrigen bilden die Detailzeile. Wie TDBLookupComboBox.ListFieldIndex. Nutzung: `Lookup1.ListField := 'Nr;Name'; Lookup1.ListFieldIndex := 1;` zeigt den Namen, die Nummer steht darunter. |
+| `DropDownRows` | `Integer` |  | Wie TDBLookupComboBox.DropDownRows: dasselbe wie DropDownCount (sichtbare Zeilen). Wird nicht eigens gespeichert, Formulare aus der VCL laden damit unverändert. |
+| `DropDownAlign` | `TDropDownAlign` | `daLeft` | Lage einer Liste, die breiter als das Feld ist: daLeft (Vorgabe, bündig links), daRight (bündig rechts), daCenter (mittig); wie TDBLookupComboBox. |
 | `ListSource` | `TDataSource` |  | Datenquelle der Nachschlage-Tabelle. Ihre Datenmenge wird beim Öffnen einmal vollständig gelesen; für sehr große Tabellen vorher in der Abfrage filtern. |
 | `NullValueKey` | `TShortCut` | `0` | Tastenkürzel, das den Wert leert und Null ins Feld schreibt (z. B. Entf oder Strg+Entf); 0 = keines. Wie TDBLookupComboBox.NullValueKey. Nutzung: `Lookup1.NullValueKey := ShortCut(VK_DELETE, [ssCtrl]);` |
 | `Items` | `TStrings` |  | Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte. |
@@ -70,6 +73,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `AutoCloseUp` | `Boolean` | `False` | True: Springt die Tippsuche bei offener Liste auf einen Eintrag, wird er sofort übernommen und die Liste geschlossen. |
 | `AutoComplete` | `Boolean` | `True` | True: Bei Style = csDropDown ergänzt das Feld den getippten Anfang zum ersten passenden Eintrag (der Rest ist markiert und wird beim Weitertippen ersetzt). |
 | `AutoDropDown` | `Boolean` | `False` | True: Die Liste klappt beim Tippen automatisch auf. |
+| `AutoDropDownWidth` | `Boolean` | `False` | True: Die Liste wird so breit wie der längste Eintrag, mindestens so breit wie das Feld bzw. DropDownWidth (wie TComboBox.AutoDropDownWidth). |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
 | `CharCase` | `TEditCharCase` | `ecNormal` | Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase). |
 | `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |

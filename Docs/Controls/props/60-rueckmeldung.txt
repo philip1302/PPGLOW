@@ -60,6 +60,9 @@ TPPGCustomProgressBar.ShowText = True: Zeigt Caption bzw. ohne Caption den Forts
 TPPGCustomProgressBar.Smooth = True: durchgehender Balken. False: Balken aus Blöcken mit kleinen Lücken (klassisches TProgressBar), in jedem Preset. Gilt nicht für Marquee. Die Vorgabe ist True, damit bestehende Formulare glatt bleiben.
 TPPGCustomProgressBar.State = pbsNormal, pbsError (Füllung rot) oder pbsPaused (Füllung gelb), wie bei Windows.
 > `ProgressBar1.State := pbsError;` nach einem Abbruch.
+TPPGCustomProgressBar.BackgroundColor = Farbe der Spur; clDefault (Vorgabe) = Preset. Wie TProgressBar.BackgroundColor.
+TPPGCustomProgressBar.BarColor = Farbe des Balkens im Zustand pbsNormal; clDefault (Vorgabe) = Akzent des Presets. Fehler und Pause behalten ihre Signalfarben, im Hochkontrast gilt die Systemfarbe. Wie TProgressBar.BarColor.
+> `ProgressBar1.BarColor := clGreen;`
 TPPGCustomProgressBar.Step = Schrittweite für die Methode StepIt (wie TProgressBar).
 > `ProgressBar1.Step := 1; for I := 1 to N do begin Verarbeite(I); ProgressBar1.StepIt; end;`
 TPPGCustomProgressBar.Style = pbstNormal = Fortschritt nach Position; pbstMarquee = unbestimmter Fortschritt (laufendes Segment), solange die Dauer unbekannt ist.
@@ -103,6 +106,7 @@ TPPGCustomTrackBar.LineSize = Schrittweite für Pfeiltasten und eine Mausrad-Ras
 TPPGCustomTrackBar.Orientation = Waagerecht (trHorizontal) oder senkrecht (trVertical, Min oben wie TTrackBar).
 TPPGCustomTrackBar.PageSize = Schrittweite für Bild auf/ab (≥ 1).
 TPPGCustomTrackBar.ShowSlider = False: Der Griff wird nicht gezeichnet (reine Anzeige wie ein Füllbalken).
+TPPGCustomTrackBar.OnTracking = Während der Anwender den Griff zieht, bei jeder Wertänderung (vor dem Loslassen); OnChange kommt zusätzlich. Wie TTrackBar.OnTracking.
 TPPGCustomTrackBar.ThumbLength = Durchmesser des Griffs in logischen 96-DPI-Pixeln (8..100), wie TTrackBar.
 TPPGCustomTrackBar.TickMarks = Lage der Teilstriche: tmBottomRight, tmTopLeft oder tmBoth.
 TPPGCustomTrackBar.TickStyle = tsAuto = Teilstriche im Abstand Frequency, tsNone = keine, tsManual = nur Anfang und Ende (manuelle Ticks per SetTick werden nicht unterstützt).

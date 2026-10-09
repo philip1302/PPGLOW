@@ -25,7 +25,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
-  Vcl.Controls, Vcl.Graphics,
+  System.UITypes, Vcl.Controls, Vcl.Graphics,
   PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base;
 
 type
@@ -54,6 +54,7 @@ type
     FDragOffset: Integer;
     FBarMouse: Boolean;  // laufende Mausaktion gehoert einer Leiste
     FScrollBarMode: TPPGScrollBarMode;
+    FScrollBars: TScrollStyle;
     FSystemAlways: Boolean;
     FSmoothScrolling: Boolean;
     FKeyboardScrolling: Boolean;
@@ -63,6 +64,7 @@ type
     procedure HoldStep(Sender: TObject);
     procedure AutoStep(Sender: TObject);
     procedure SetScrollBarMode(const Value: TPPGScrollBarMode);
+    procedure SetScrollBars(const Value: TScrollStyle);
     function GetScrollX: Integer;
     function GetScrollY: Integer;
     function GetContentWidth: Integer;
@@ -153,6 +155,9 @@ type
     property ScrollX: Integer read GetScrollX write SetScrollX;
     property ScrollY: Integer read GetScrollY write SetScrollY;
     property ScrollBarMode: TPPGScrollBarMode read FScrollBarMode write SetScrollBarMode default sbmAuto;
+    /// Welche Leisten es gibt (wie TStringGrid.ScrollBars); Rad und Tasten scrollen weiter.
+    property ScrollBars: TScrollStyle read FScrollBars write SetScrollBars
+      default TScrollStyle.ssBoth;
     property SmoothScrolling: Boolean read FSmoothScrolling write FSmoothScrolling default True;
     property OnScroll: TNotifyEvent read FOnScroll write FOnScroll;
   end;
@@ -207,6 +212,7 @@ var
 begin
   inherited Create(AOwner);
   ControlStyle := ControlStyle - [csSetCaption] + [csOpaque];
+  FScrollBars := TScrollStyle.ssBoth;
   Width := 185;
   Height := 105;
   TabStop := True;
@@ -307,6 +313,11 @@ begin
     NeedH := FContent[saHorz] > Width - 2 * I - Ord(NeedV) * B;
     NeedV := FContent[saVert] > Height - 2 * I - Ord(NeedH) * B;
   end;
+  // Audit 5d: abgewaehlte Leisten gibt es nicht (Scrollen per Rad/Tasten bleibt)
+  if not (FScrollBars in [TScrollStyle.ssVertical, TScrollStyle.ssBoth]) then
+    NeedV := False;
+  if not (FScrollBars in [TScrollStyle.ssHorizontal, TScrollStyle.ssBoth]) then
+    NeedH := False;
 end;
 
 function TPPGCustomScrollControl.ViewRect: TRect;
@@ -619,6 +630,16 @@ begin
   begin
     FScrollBarMode := Value;
     ScrollTo(FPos[saHorz], FPos[saVert]); // Ansicht kann schmaler werden
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomScrollControl.SetScrollBars(const Value: TScrollStyle);
+begin
+  if FScrollBars <> Value then
+  begin
+    FScrollBars := Value;
+    ScrollTo(FPos[saHorz], FPos[saVert]);
     Invalidate;
   end;
 end;

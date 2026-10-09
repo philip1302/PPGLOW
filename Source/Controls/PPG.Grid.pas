@@ -230,6 +230,9 @@ type
     FOnGetCellStyle: TPPGGridCellStyleEvent;
     FOnLinkClick: TPPGGridLinkEvent;
     FOnCellButtonClick: TPPGGridCellEvent;
+    FOnColEnter: TNotifyEvent;
+    FOnColExit: TNotifyEvent;
+    FOnEditButtonClick: TNotifyEvent;
     procedure SetDefaultDrawing(const Value: Boolean);
     procedure SetColCount(const Value: Integer);
     procedure SetRowCount(const Value: Integer);
@@ -458,6 +461,10 @@ type
     /// Lage setzen, um eine Zelle sichtbar zu machen (Standard: ScrollTo).
     procedure ScrollCellsTo(X, Y: Integer); virtual;
     function CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind; virtual;
+    procedure ColEnter; virtual;
+    procedure ColExit; virtual;
+    procedure EditButtonClick; virtual;
+    procedure EditorEllipsisClick(Sender: TObject);
     /// ACol = Datenspalte, VRow = sichtbare Zeile.
     function CanEditCell(ACol, VRow: Integer): Boolean; virtual;
     { Zeichnen }
@@ -591,6 +598,11 @@ type
     property OnGetCellStyle: TPPGGridCellStyleEvent read FOnGetCellStyle write FOnGetCellStyle;
     property OnLinkClick: TPPGGridLinkEvent read FOnLinkClick write FOnLinkClick;
     property OnCellButtonClick: TPPGGridCellEvent read FOnCellButtonClick write FOnCellButtonClick;
+    /// Fokusspalte gewechselt bzw. wird verlassen (wie TDBGrid).
+    property OnColEnter: TNotifyEvent read FOnColEnter write FOnColEnter;
+    property OnColExit: TNotifyEvent read FOnColExit write FOnColExit;
+    /// "..."-Knopf im Editor bzw. Strg+Enter (Spalte mit ShowsEllipsis, wie TDBGrid).
+    property OnEditButtonClick: TNotifyEvent read FOnEditButtonClick write FOnEditButtonClick;
     /// Bereiche (Kopf, Auswahl, Zebra, Linien ...): nur gesetzte Werte zaehlen.
     property Styles: TPPGGridStyles read FStyles write SetStyles;
     /// Breite der Gitterlinien in logischen Pixeln (0 = keine Linien; wie TStringGrid).
@@ -715,6 +727,7 @@ type
     property ConditionalFormats;
     property SortOnHeaderClick;
     property ScrollBarMode;
+    property ScrollBars;
     property SmoothScrolling;
     property HighContrastSupport;
     property Styles;
@@ -5265,6 +5278,7 @@ end;
 function TPPGCustomGrid.MoveFocus(ACol, VRow: Integer; Extend, ByUser: Boolean): Boolean;
 var
   D, M0, N0, M1, N1: Integer;
+  ColChanged: Boolean;
 begin
   Result := False;
   ACol := EnsureRangeInt(ACol, FFixedCols, VColCount - 1);
@@ -5281,6 +5295,9 @@ begin
   if ((ACol <> FFocusC) or (VRow <> FFocusV)) and (D >= 0) and not SelectCell(DataCol(ACol), D) then
     Exit;
   HideEditor(True);
+  ColChanged := ACol <> FFocusC;
+  if ColChanged then
+    ColExit;
   FFocusC := ACol;
   FFocusV := VRow;
   if not Extend or not (goRangeSelect in FOptions) then
@@ -5293,9 +5310,34 @@ begin
   if HandleAllocated and Focused and (VRow <> FLastFocusRow) then
     NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, VRow + 1);
   FLastFocusRow := VRow;
+  if ColChanged then
+    ColEnter;
   if ByUser then
     Click;
   Result := True;
+end;
+
+procedure TPPGCustomGrid.ColEnter;
+begin
+  if Assigned(FOnColEnter) then
+    FOnColEnter(Self);
+end;
+
+procedure TPPGCustomGrid.ColExit;
+begin
+  if Assigned(FOnColExit) then
+    FOnColExit(Self);
+end;
+
+procedure TPPGCustomGrid.EditButtonClick;
+begin
+  if Assigned(FOnEditButtonClick) then
+    FOnEditButtonClick(Self);
+end;
+
+procedure TPPGCustomGrid.EditorEllipsisClick(Sender: TObject);
+begin
+  EditButtonClick;
 end;
 
 function TPPGCustomGrid.GetRow: Integer;
@@ -5974,6 +6016,8 @@ begin
   if FEditor is TPPGCustomField then
     TGridEditorFieldAccess(FEditor).OnChange := nil;
   PPGGridEditorBegin(FEditor, S, Col);
+  if FEditor is TPPGGridEdit then
+    TPPGGridEdit(FEditor).OnEllipsisClick := EditorEllipsisClick;
   if FEditor is TPPGCustomField then
     TGridEditorFieldAccess(FEditor).OnChange := EditorChange;
   FEditCanceled := False;
@@ -6082,7 +6126,11 @@ begin
   case Key of
     VK_RETURN:
       begin
-        HideEditor(True);
+        // Strg+Enter: "..."-Knopf der Spalte (wie TDBGrid)
+        if (ssCtrl in Shift) and (Sender is TPPGGridEdit) and TPPGGridEdit(Sender).Ellipsis then
+          EditButtonClick
+        else
+          HideEditor(True);
         Key := 0;
       end;
     VK_ESCAPE:

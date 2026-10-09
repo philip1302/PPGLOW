@@ -64,6 +64,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `AutoCloseUp` | `Boolean` | `False` | True: Springt die Tippsuche bei offener Liste auf einen Eintrag, wird er sofort übernommen und die Liste geschlossen. |
 | `AutoComplete` | `Boolean` | `True` | True: Bei Style = csDropDown ergänzt das Feld den getippten Anfang zum ersten passenden Eintrag (der Rest ist markiert und wird beim Weitertippen ersetzt). |
 | `AutoDropDown` | `Boolean` | `False` | True: Die Liste klappt beim Tippen automatisch auf. |
+| `AutoDropDownWidth` | `Boolean` | `False` | True: Die Liste wird so breit wie der längste Eintrag, mindestens so breit wie das Feld bzw. DropDownWidth (wie TComboBox.AutoDropDownWidth). |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
 | `CharCase` | `TEditCharCase` | `ecNormal` | Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase). |
 | `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |

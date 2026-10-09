@@ -34,6 +34,7 @@ TPPGColorPicker.Style = Abschnitte des Popups wie bei TColorBox: cbStandardColor
 TPPGCustomComboBox.AutoCloseUp = True: Springt die Tippsuche bei offener Liste auf einen Eintrag, wird er sofort übernommen und die Liste geschlossen.
 TPPGCustomComboBox.AutoComplete = True: Bei Style = csDropDown ergänzt das Feld den getippten Anfang zum ersten passenden Eintrag (der Rest ist markiert und wird beim Weitertippen ersetzt).
 TPPGCustomComboBox.AutoDropDown = True: Die Liste klappt beim Tippen automatisch auf.
+TPPGCustomComboBox.AutoDropDownWidth = True: Die Liste wird so breit wie der längste Eintrag, mindestens so breit wie das Feld bzw. DropDownWidth (wie TComboBox.AutoDropDownWidth).
 TPPGCustomComboBox.DropDownCount = Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1).
 TPPGCustomComboBox.DropDownWidth = Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. Nützlich für lange Einträge in schmalen Feldern.
 TPPGCustomComboBox.FilterMode = Filtern beim Tippen (nur Style = csDropDown): fmNone zeigt immer alle Einträge, fmPrefix nur die mit diesem Anfang, fmContains alle, die den Text irgendwo enthalten. Die Liste klappt dabei auf.
@@ -131,6 +132,11 @@ TPPGCustomGrid.GroupFooter = True: Unter jeder Gruppe steht eine Fußzeile mit d
 TPPGCustomGrid.HeaderMenu = True: Rechtsklick auf den Kopf öffnet ein Menü zum Sortieren, Ausblenden, Wählen der Spalten und Anpassen der Breite. Ergänzen lässt es sich in OnHeaderMenu.
 TPPGCustomGrid.OnCellButtonClick = Eine Schaltfläche in einer Zelle mit CellKind = ckButton wurde geklickt (ACol, ARow = Datenspalte und -zeile).
 > `if ACol = 4 then LoescheZeile(ARow);`
+TPPGCustomGrid.OnColEnter = Die Fokusspalte hat gewechselt (Maus, Tastatur oder Code); die neue Spalte ist schon aktiv (wie TDBGrid.OnColEnter).
+TPPGCustomGrid.OnColExit = Die Fokusspalte wird verlassen; die alte Spalte ist noch aktiv (wie TDBGrid.OnColExit).
+TPPGCustomGrid.OnEditButtonClick = Der „…“-Knopf im Editor einer Spalte mit ButtonStyle = cbsEllipsis wurde geklickt oder Strg+Enter gedrückt (wie TDBGrid.OnEditButtonClick). Typisch: Auswahldialog öffnen und den Wert ins Feld schreiben.
+> `procedure TForm1.Grid1EditButtonClick(Sender: TObject); begin if KundeWaehlen(Nr) then Table1.FieldByName('KundeNr').AsInteger := Nr; end;`
+TPPGCustomScrollControl.ScrollBars = Welche Bildlaufleisten es gibt: ssBoth (Vorgabe), ssVertical, ssHorizontal oder ssNone (wie TStringGrid.ScrollBars). Mausrad und Tastatur scrollen auch ohne Leiste.
 TPPGCustomGrid.OnColumnMoved = Der Anwender hat eine Spalte verschoben; FromIndex und ToIndex sind Anzeige-Positionen.
 TPPGCustomGrid.OnCompareCells = Eigener Vergleich beim Sortieren: Compare < 0, = 0 oder > 0 setzen (Zeile ARow1 vor, gleich oder nach ARow2). Ohne Ereignis vergleicht das Grid Zahlen numerisch, sonst als Text.
 > `Compare := CompareDate(StrToDate(Cells[ACol, ARow1]), StrToDate(Cells[ACol, ARow2]));`
@@ -228,11 +234,16 @@ TPPGDBEdit.DataField = Feld, das angezeigt und bearbeitet wird. Mit Fokus ersche
 TPPGDBEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
 TPPGDBEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBGrid.TitleFont = Wie TDBGrid.TitleFont: Schrift der Titelzeile. Ist ein Alias für Styles.Header.Font und wird nicht eigens gespeichert.
+TPPGDBGridColumn.ButtonStyle = Wie TColumn.ButtonStyle: cbsAuto (Auswahlliste bei PickList oder Nachschlagefeld), cbsEllipsis (Textfeld mit „…“-Knopf, löst OnEditButtonClick aus), cbsNone (immer Textfeld).
 TPPGCustomDBGrid.ShowRequired = True: Spalten mit Pflichtfeldern (TField.Required) zeigen im Titel ein Sternchen.
 TPPGDBLookupComboBox.KeyField = Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben.
 TPPGDBLookupComboBox.ListField = Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile.
 > `Lookup1.ListSource := dsKunden; Lookup1.KeyField := 'ID'; Lookup1.ListField := 'Name;Ort';`
 TPPGDBLookupComboBox.ListSource = Datenquelle der Nachschlage-Tabelle. Ihre Datenmenge wird beim Öffnen einmal vollständig gelesen; für sehr große Tabellen vorher in der Abfrage filtern.
+TPPGDBLookupComboBox.DropDownAlign = Lage einer Liste, die breiter als das Feld ist: daLeft (Vorgabe, bündig links), daRight (bündig rechts), daCenter (mittig); wie TDBLookupComboBox.
+TPPGDBLookupComboBox.DropDownRows = Wie TDBLookupComboBox.DropDownRows: dasselbe wie DropDownCount (sichtbare Zeilen). Wird nicht eigens gespeichert, Formulare aus der VCL laden damit unverändert.
+TPPGDBLookupComboBox.ListFieldIndex = Welches Feld aus ListField im Feld und als Eintrag steht (0 = das erste); die übrigen bilden die Detailzeile. Wie TDBLookupComboBox.ListFieldIndex.
+> `Lookup1.ListField := 'Nr;Name'; Lookup1.ListFieldIndex := 1;` zeigt den Namen, die Nummer steht darunter.
 TPPGDBLookupComboBox.NullValueKey = Tastenkürzel, das den Wert leert und Null ins Feld schreibt (z. B. Entf oder Strg+Entf); 0 = keines. Wie TDBLookupComboBox.NullValueKey.
 > `Lookup1.NullValueKey := ShortCut(VK_DELETE, [ssCtrl]);`
 TPPGDBMaskEdit.DataField = Feld, das angezeigt und bearbeitet wird. Hat das Control keine eigene EditMask, wird Field.EditMask übernommen.

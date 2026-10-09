@@ -32,6 +32,7 @@ type
   TPPGCustomDropDownField = class(TPPGCustomField)
   private
     FPopup: TPPGDropPopup;
+    FPopupAlign: TAlignment;
     FDroppedDown: Boolean;
     FMouseInPopup: Boolean;
     FOnDropDown: TNotifyEvent;
@@ -55,6 +56,8 @@ type
     procedure DoCloseUp; virtual;
     /// Darf aufgeklappt werden? Vorgabe: nicht bei ReadOnly.
     function CanDropDown: Boolean; virtual;
+    /// Lage einer Liste, die breiter als das Feld ist: links (Vorgabe), rechts, mittig.
+    property PopupAlign: TAlignment read FPopupAlign write FPopupAlign;
     /// Nach dem Zeigen (Popup offen, Maus gefangen).
     procedure PopupOpened; virtual;
     /// Nach dem Schliessen, vor AcceptPopup und OnCloseUp.
@@ -150,12 +153,25 @@ var
   P: TPoint;
   Sz: TSize;
   Pl: TPPGPlacement;
+  AlignEnd: Boolean;
 begin
   P := ClientToScreen(Point(0, 0));
   Anchor := Rect(P.X, P.Y, P.X + Width, P.Y + Height);
   WA := FPopup.MonitorWorkArea(Anchor);
   Sz := FPopup.PreferredSize(Width);
-  Pl := PPGPlacePopup(Anchor, Sz.cx, Sz.cy, ppsBelow, WA, UseRightToLeftAlignment, True);
+  // Breitere Liste: links, rechts oder mittig zum Feld (TDBLookupComboBox.DropDownAlign)
+  AlignEnd := UseRightToLeftAlignment;
+  case FPopupAlign of
+    taRightJustify:
+      AlignEnd := not AlignEnd;
+    taCenter:
+      begin
+        Anchor.Left := (Anchor.Left + Anchor.Right - Sz.cx) div 2;
+        Anchor.Right := Anchor.Left + Sz.cx;
+        AlignEnd := False;
+      end;
+  end;
+  Pl := PPGPlacePopup(Anchor, Sz.cx, Sz.cy, ppsBelow, WA, AlignEnd, True);
   FPopup.PopupAt(Pl.Bounds, Pl.Side, Duration);
 end;
 

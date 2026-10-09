@@ -54,6 +54,7 @@ type
     FItemHeight: Integer;
     FAutoComplete: Boolean;
     FAutoDropDown: Boolean;
+    FAutoDropDownWidth: Boolean;
     FAutoCloseUp: Boolean;
     FArrowAnim: TPPGAnimation;
     FQuiet: Integer;
@@ -121,6 +122,8 @@ type
     procedure PreparePopup(APopup: TPPGDropPopup); override;
     procedure AcceptPopup(APopup: TPPGDropPopup); override;
     function CanDropDown: Boolean; override;
+    /// Breite fuer AutoDropDownWidth (breitester Eintrag samt Abstand).
+    function AutoListWidth: Integer;
     procedure PopupOpened; override;
     procedure PopupClosed; override;
     /// True bei csDropDown/csSimple (Text frei editierbar).
@@ -139,6 +142,8 @@ type
     property AutoCloseUp: Boolean read FAutoCloseUp write FAutoCloseUp default False;
     property AutoComplete: Boolean read FAutoComplete write FAutoComplete default True;
     property AutoDropDown: Boolean read FAutoDropDown write FAutoDropDown default False;
+    /// Liste so breit wie der laengste Eintrag (mindestens Feld- bzw. DropDownWidth; wie TComboBox).
+    property AutoDropDownWidth: Boolean read FAutoDropDownWidth write FAutoDropDownWidth default False;
     property DropDownCount: Integer read FDropDownCount write SetDropDownCount
       default PPGDefaultDropDownCount;
     property DropDownWidth: Integer read FDropDownWidth write SetDropDownWidth default 0;
@@ -197,6 +202,7 @@ type
     property AutoCloseUp;
     property AutoComplete;
     property AutoDropDown;
+    property AutoDropDownWidth;
     property AutoSize default True;
     property BiDiMode;
     property BorderStyle;
@@ -966,7 +972,29 @@ begin
   L.TwoLineItems := ItemsExHasDetail;
   L.DropDownCount := FDropDownCount;
   L.DropDownWidth := FDropDownWidth;
+  if FAutoDropDownWidth and (AutoListWidth > FDropDownWidth) then
+    L.DropDownWidth := AutoListWidth;
   L.SetHighlight(-1);
+end;
+
+function TPPGCustomComboBox.AutoListWidth: Integer;
+var
+  I, W: Integer;
+begin
+  // Breitester Eintrag plus Innenabstand der Liste und ggf. Bildlaufleiste
+  Result := 0;
+  if not HandleAllocated then
+    Exit;
+  Canvas.Font := Font;
+  for I := 0 to FItems.Count - 1 do
+  begin
+    W := Canvas.TextWidth(FItems[I]);
+    if W > Result then
+      Result := W;
+  end;
+  Inc(Result, PPGScale(24, ScalePPI));
+  if FItems.Count > FDropDownCount then
+    Inc(Result, GetSystemMetrics(SM_CXVSCROLL));
 end;
 
 function TPPGCustomComboBox.CanDropDown: Boolean;

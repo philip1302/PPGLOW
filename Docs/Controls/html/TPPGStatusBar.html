@@ -65,6 +65,7 @@
 <tr><td><code>DragCursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger w&#228;hrend das Control gezogen wird (Drag &amp; Drop).</td></tr>
 <tr><td><code>DoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>Zeichnen &#252;ber einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder &#252;bernimmt sie nicht.</td></tr>
 <tr><td><code>ParentDoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>True: DoubleBuffered wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>Action</code></td><td><code>TBasicAction</code></td><td></td><td>Verkn&#252;pft das Control mit einer Action (TActionList/TActionManager). Beschriftung, Hint, Bild, Enabled, Checked und OnClick kommen dann aus der Action. Nutzung: <code>Button1.Action := actSpeichern;</code></td></tr>
 </table>
 <h2>Ereignisse</h2>
 <table>

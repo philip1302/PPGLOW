@@ -145,6 +145,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. |
 | `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
+| `OnColEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Fokusspalte hat gewechselt (Maus, Tastatur oder Code); die neue Spalte ist schon aktiv (wie TDBGrid.OnColEnter). |
+| `OnColExit` | `TNotifyEvent` `(Sender: TObject)` | Die Fokusspalte wird verlassen; die alte Spalte ist noch aktiv (wie TDBGrid.OnColExit). |
+| `OnEditButtonClick` | `TNotifyEvent` `(Sender: TObject)` | Der „…“-Knopf im Editor einer Spalte mit ButtonStyle = cbsEllipsis wurde geklickt oder Strg+Enter gedrückt (wie TDBGrid.OnEditButtonClick). Typisch: Auswahldialog öffnen und den Wert ins Feld schreiben. Nutzung: `procedure TForm1.Grid1EditButtonClick(Sender: TObject); begin if KundeWaehlen(Nr) then Table1.FieldByName('KundeNr').AsInteger := Nr; end;` |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBGrid.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

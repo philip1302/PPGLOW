@@ -34,6 +34,7 @@ TPPGCustomMenuBar.OnCustomDrawItem = Vor dem Zeichnen jedes Eintrags der Unterme
 > `if Item.Tag = 1 then Style.TextColor := clRed;`
 
 # --- TPPGPanel ---
+TPPGPanel.BorderStyle = bsSingle: Rahmen um das Panel wie bei TPanel (mit Ctl3D vertieft, sonst eine Linie); bsNone (Vorgabe) ohne. Unabhängig von Appearance und Bevels.
 TPPGCustomPanel.Alignment = Waagerechte Lage der Beschriftung (Caption) im Panel: links, zentriert (Standard) oder rechts.
 TPPGCustomPanel.ShowCaption = True: Caption wird im Panel angezeigt (wie TPanel). Für reine Container-Flächen auf False setzen.
 TPPGCustomPanel.VerticalAlignment = Senkrechte Lage der Beschriftung: oben, Mitte oder unten (wie TPanel.VerticalAlignment).
@@ -176,6 +177,8 @@ TPPGPageControl.ActivePage = Die sichtbare Seite (TPPGTabSheet). Setzen im Code 
 > `PPGPageControl1.ActivePage := tsAdresse;`
 TPPGPageControl.OnClose = Eine Seite soll über ihren Schließen-Knopf geschlossen werden (nach OnClosing); Page ist die Seite. Action = caHide (Standard) blendet den Reiter aus, caFree gibt die Seite frei, caNone behält sie.
 TPPGPageControl.OnClosing = Vor dem Schließen einer Seite; CanClose := False bricht ab.
+TPPGPageControl.OnGetImageIndex = Bild eines Reiters bestimmen: TabIndex ist der sichtbare Reiter, ImageIndex kommt mit dem Wert der Seite und kann geändert werden (wie TPageControl.OnGetImageIndex).
+TPPGTabSheet.Highlighted = True: Der Reiter wird hervorgehoben gezeichnet (wie unter der Maus), z. B. für Seiten mit ungespeicherten Änderungen (wie TTabSheet.Highlighted).
 
 # --- TPPGPopupMenu ---
 TPPGPopupMenu.Styles = Aussehen des Menüs in Bereichen (Fläche, Hover, Trennlinien, Tastenkürzel); clDefault = vom Preset.

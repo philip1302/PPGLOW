@@ -235,6 +235,8 @@ type
     // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
     property DoubleBuffered;
     property ParentDoubleBuffered;
+    // Audit 5d Stufe 3: wie VCL
+    property Action;
   end;
 
 implementation

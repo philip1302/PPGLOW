@@ -114,7 +114,8 @@ type
 
   /// Symbole der Feld-Buttons (fgNone = nur Hintergrund, z.B. fuer ein Bild).
   /// fgReveal = Auge (Passwort aufdecken), fgBrowse = Datei/Ordner waehlen (Phase 12).
-  TPPGFieldGlyph = (fgNone, fgClear, fgSpinUp, fgSpinDown, fgDropDown, fgReveal, fgBrowse);
+  TPPGFieldGlyph = (fgNone, fgClear, fgSpinUp, fgSpinDown, fgDropDown, fgReveal, fgBrowse,
+    fgEllipsis); // fgEllipsis = drei Punkte (Grid-Spalte mit ButtonStyle cbsEllipsis)
 
   /// Eingabefelder (Edit, Memo, SpinEdit, ComboBox). Das Innere ist immer
   /// EINFARBIG Style.Color: dort liegt das native Edit, das keinen Verlauf kann.

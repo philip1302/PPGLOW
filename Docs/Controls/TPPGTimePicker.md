@@ -43,6 +43,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
 | `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
 | `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
+| `TextHintVisibleOnFocus` | `Boolean` | `False` | True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus. |
 
 ## Eigenschaften wie in der VCL
 

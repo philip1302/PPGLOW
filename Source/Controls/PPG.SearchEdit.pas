@@ -67,7 +67,12 @@ type
   end;
 
   TPPGSearchEdit = class(TPPGCustomSearchEdit)
+  private
+    function GetAutoSelect: Boolean;
+    procedure SetAutoSelect(const Value: Boolean);
   published
+    /// Text beim Fokuserhalt markieren (wie TSearchBox).
+    property AutoSelect: Boolean read GetAutoSelect write SetAutoSelect default True;
     property Preset;
     property StyleManager;
     property Appearance;
@@ -146,6 +151,9 @@ type
     // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
     property DoubleBuffered;
     property ParentDoubleBuffered;
+    // Audit 5d Stufe 3: wie VCL
+    property ReadOnly;
+    property Alignment;
   end;
 
 const
@@ -157,6 +165,21 @@ implementation
 uses
   System.SysUtils, System.Math, Winapi.oleacc,
   PPG.Appearance, PPG.DpiUtils, PPG.IconFont;
+
+type
+  TEditAccess = class(TCustomEdit);
+
+{ TPPGSearchEdit }
+
+function TPPGSearchEdit.GetAutoSelect: Boolean;
+begin
+  Result := TEditAccess(Inner).AutoSelect;
+end;
+
+procedure TPPGSearchEdit.SetAutoSelect(const Value: Boolean);
+begin
+  TEditAccess(Inner).AutoSelect := Value;
+end;
 
 { TPPGCustomSearchEdit }
 

@@ -366,7 +366,8 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
             $out.Add("${sp}Style.$p =$v")
             continue
           }
-          if ($p -notin @('FieldName', 'Width', 'Alignment', 'ReadOnly', 'PickList.Strings', 'Visible')) {
+          if ($p -notin @('FieldName', 'Width', 'Alignment', 'ReadOnly', 'PickList.Strings', 'Visible',
+            'ButtonStyle')) {
             $report.Add("$File :   $($cur.Name).Columns: '$p' entfernt")
             $i = Get-ValueEnd $lines $i $Matches[2]
             continue

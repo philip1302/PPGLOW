@@ -635,7 +635,7 @@ begin
         Canvas.FillEllipse(Rect(CX - Quarter, CY - Quarter, CX + Quarter + 1, CY + Quarter + 1),
           Color, 255);
       end;
-    fgBrowse:
+    fgBrowse, fgEllipsis:
       begin
         // Drei Punkte ("...")
         Canvas.FillEllipse(Rect(CX - Half - W, CY - W, CX - Half + W, CY + W), Color, 255);

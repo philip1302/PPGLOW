@@ -41,6 +41,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
+| `BorderStyle` | `TBorderStyle` | `bsNone` | bsSingle: Rahmen um das Panel wie bei TPanel (mit Ctl3D vertieft, sonst eine Linie); bsNone (Vorgabe) ohne. Unabhängig von Appearance und Bevels. |
 | `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
 | `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
@@ -126,6 +127,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnUnDock` | `TUnDockEvent` `(Sender: TObject; Client: TControl; NewTarget: TWinControl; var Allow: Boolean)` | Ein angedocktes Control wird gelöst; Allow steuert, ob das erlaubt ist. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
+| `OnCanResize` | `TCanResizeEvent` `(Sender: TObject; var NewWidth, NewHeight: Integer; var Resize: Boolean)` | Vor einer Größenänderung; Resize := False verhindert sie. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPanel.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

@@ -28,6 +28,8 @@ type
     FOrientation: TProgressBarOrientation;
     FStyle: TProgressBarStyle;
     FState: TProgressBarState;
+    FBarColor: TColor;
+    FBackgroundColor: TColor;
     FStep: Integer;
     FMarqueeInterval: Integer;
     FSmooth: Boolean;
@@ -35,6 +37,8 @@ type
     FPosAnim: TPPGAnimation;
     FAnimFrom: Double;
     FMarqueeAnim: TPPGAnimation;
+    procedure SetBarColor(const Value: TColor);
+    procedure SetBackgroundColor(const Value: TColor);
     procedure AnimStep(Sender: TObject);
     procedure SetOrientation(const Value: TProgressBarOrientation);
     procedure SetStyle(const Value: TProgressBarStyle);
@@ -73,6 +77,10 @@ type
     property Orientation: TProgressBarOrientation read FOrientation write SetOrientation default pbHorizontal;
     property Style: TProgressBarStyle read FStyle write SetStyle default pbstNormal;
     property State: TProgressBarState read FState write SetState default pbsNormal;
+    /// Farbe des Balkens im Zustand pbsNormal (clDefault = Akzent des Presets; wie TProgressBar).
+    property BarColor: TColor read FBarColor write SetBarColor default clDefault;
+    /// Farbe der Spur (clDefault = Preset).
+    property BackgroundColor: TColor read FBackgroundColor write SetBackgroundColor default clDefault;
     property Step: Integer read FStep write FStep default 10;
     /// Wie TProgressBar: ms je Animationsschritt; ein Durchlauf hat 150 Schritte.
     property MarqueeInterval: Integer read FMarqueeInterval write SetMarqueeInterval default 10;
@@ -159,13 +167,16 @@ type
     // Audit 5d: wie VCL (PPGlow zeichnet ohnehin gepuffert)
     property DoubleBuffered;
     property ParentDoubleBuffered;
+    // Audit 5d Stufe 3: wie VCL
+    property BarColor;
+    property BackgroundColor;
   end;
 
 implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, System.Math, Winapi.oleacc, PPG.Consts, PPG.Appearance, PPG.DpiUtils;
+  System.SysUtils, System.Math, Winapi.oleacc, PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens;
 
 const
   MarqueeSteps = 150;        // Schritte je Durchlauf (MarqueeInterval * 150 ms)
@@ -181,6 +192,8 @@ begin
   Height := 16;
   TabStop := False;
   FStep := 10;
+  FBarColor := clDefault;
+  FBackgroundColor := clDefault;
   FMarqueeInterval := 10;
   FSmooth := True;
   FPosAnim := TPPGAnimation.Create(Self);
@@ -373,6 +386,24 @@ begin
     Result := Position;
 end;
 
+procedure TPPGCustomProgressBar.SetBarColor(const Value: TColor);
+begin
+  if FBarColor <> Value then
+  begin
+    FBarColor := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGCustomProgressBar.SetBackgroundColor(const Value: TColor);
+begin
+  if FBackgroundColor <> Value then
+  begin
+    FBackgroundColor := Value;
+    Invalidate;
+  end;
+end;
+
 { ---- Zeichnen ---- }
 
 function TPPGCustomProgressBar.GetTrackStyle: TPPGSurfaceStyle;
@@ -382,6 +413,13 @@ begin
   else
     Result := EffectiveAppearance.Resolve(vsDisabled, ScalePPI, False);
   Result.GlowAlpha := 0;
+  if Enabled and PPGColorIsSet(FBackgroundColor) then
+  begin
+    Result.Color := PPGColorToRGB(FBackgroundColor);
+    Result.ColorTo := Result.Color;
+    Result.ColorMirror := Result.Color;
+    Result.ColorMirrorTo := Result.Color;
+  end;
   if HighContrastSupport and PPGIsHighContrast then
   begin
     Result.Color := PPGColorToRGB(clWindow);
@@ -420,6 +458,7 @@ end;
 function TPPGCustomProgressBar.GetFillStyle: TPPGSurfaceStyle;
 var
   A: TPPGAppearance;
+  Bar: TColor;
 begin
   A := EffectiveAppearance;
   Result := A.ResolveStyle(A.Checked, ScalePPI, False);
@@ -430,6 +469,16 @@ begin
     case FState of
       pbsError: TintSurface(Result, PPGColorToRGB(Tokens.Danger), clWhite);
       pbsPaused: TintSurface(Result, PPGColorToRGB(Tokens.Paused), $00202020);
+    else
+      if PPGColorIsSet(FBarColor) then
+      begin
+        Bar := PPGColorToRGB(FBarColor);
+        // Text auf dem Balken (ShowText) in der lesbareren Farbe
+        if PPGContrastRatio(Bar, clWhite) >= PPGContrastRatio(Bar, $00202020) then
+          TintSurface(Result, Bar, clWhite)
+        else
+          TintSurface(Result, Bar, $00202020);
+      end;
     end;
   if HighContrastSupport and PPGIsHighContrast then
   begin
