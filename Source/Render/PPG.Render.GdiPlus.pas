@@ -22,19 +22,29 @@ uses
   PPG.Types, PPG.Render.Intf;
 
 type
-  TPPGGdiPlusCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas, IPPGCornerCanvas)
+  TPPGGdiPlusCanvas = class(TInterfacedObject, IPPGCanvas, IPPGShapeCanvas, IPPGCornerCanvas,
+    IPPGBatchCanvas)
   private
     FSquare: TPPGCorners;
     FDC: HDC;
     FGraphics: TGPGraphics;
     FClipStates: array of GraphicsState;
-    FGdiSaved: Integer; // SaveDC-Index waehrend GdiBegin..GdiEnd
+    FGdiSaved: Integer; // SaveDC-Index, solange der DC ausgeliehen ist
+    FHeldDC: HDC;       // ausgeliehener DC (GetHDC), 0 = Graphics frei
+    FGdiUse: Integer;   // offene GdiBegin (verschachtelbar)
+    FBatch: Integer;    // offene BeginBatch
     procedure Check(Status: TStatus; const Call: string);
     function NewRoundRectPath(X, Y, W, H, Radius: Single): TGPGraphicsPath;
     function GdiBegin: HDC;
     procedure GdiEnd(DC: HDC);
+    procedure AcquireDC;
+    procedure ReleaseHeldDC;
+    /// Vor jedem GDI+-Aufruf: einen im Block gehaltenen DC zurueckgeben.
+    procedure NeedGraphics;
   public
     constructor Create(ADC: HDC);
+    /// Zeichnet in ein GDI+-Bild (z.B. 32 Bit mit Alpha, Schatten-Vorlage).
+    constructor CreateForImage(AImage: TGPImage);
     destructor Destroy; override;
     { IPPGCanvas }
     function IsAntialiased: Boolean;
@@ -64,6 +74,9 @@ type
     procedure FillPolygon(const Points: array of TPoint; Color: TColor; Alpha: Byte);
     procedure DrawDashedPolyline(const Points: array of TPoint; Width, Dash, Gap: Integer;
       Color: TColor; Alpha: Byte);
+    { IPPGBatchCanvas }
+    procedure BeginBatch;
+    procedure EndBatch;
   end;
 
 /// Startet GDI+ bei Bedarf. False = nicht verfuegbar (GDI-Fallback nutzen).
@@ -71,6 +84,17 @@ function PPGGdiPlusAvailable: Boolean;
 /// Speichert ein GDI-Bitmap als PNG ueber den GDI+-Encoder (ohne vclimg/
 /// Vcl.Imaging.pngimage). EPPGRenderError, wenn GDI+ fehlt oder scheitert.
 procedure PPGSaveBitmapAsPng(Bitmap: HBITMAP; const FileName: string);
+/// Audit 8a #7: gestapelter Schatten (Size Ringe FillRoundRect mit Alpha um R,
+/// Radius + I) aus einer zwischengespeicherten Neun-Teile-Vorlage je
+/// (Radius, Size, Farbe, Alpha, eckige Ecken). False = nicht moeglich
+/// (kein Antialiasing, Flaeche zu klein, Cache aus): dann direkt zeichnen.
+function PPGDrawCachedShadow(const Canvas: IPPGCanvas; const R: TRect; Radius, Size: Integer;
+  Color: TColor; Alpha: Byte): Boolean;
+
+var
+  /// Testhaken: False = Schatten immer direkt zeichnen (Vergleich).
+  PPGShadowCacheEnabled: Boolean = True;
+
 /// Fuer DLL-Hosts: GDI+ explizit vor dem Entladen der DLL beenden
 /// (ausserhalb von DllMain aufrufen!).
 procedure PPGGdiPlusShutdown;
@@ -79,7 +103,8 @@ implementation
 
 uses
   PPG.Lang,
-  System.SysUtils, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler, PPG.Render.Gdi;
+  System.SysUtils, System.Generics.Collections, PPG.Consts, PPG.Exceptions, PPG.ErrorHandler,
+  PPG.Render.Gdi;
 
 type
   TPPGGdiplusStartupInput = record
@@ -102,6 +127,9 @@ type
 var
   GState: TGdiPlusState = gpsUnknown;
   GToken: NativeUInt = 0;
+
+var
+  GShadowCache: TDictionary<string, TArray<Cardinal>> = nil;
 
 function PPGGdiPlusAvailable: Boolean;
 var
@@ -181,9 +209,23 @@ begin
   FGraphics.SetPixelOffsetMode(PixelOffsetModeHalf);
 end;
 
+constructor TPPGGdiPlusCanvas.CreateForImage(AImage: TGPImage);
+begin
+  inherited Create;
+  FDC := 0;
+  if not PPGGdiPlusAvailable then
+    raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['GdiplusStartup', -1]);
+  FGraphics := TGPGraphics.Create(AImage);
+  Check(FGraphics.GetLastStatus, 'Graphics.Create');
+  FGraphics.SetSmoothingMode(SmoothingModeAntiAlias);
+  FGraphics.SetPixelOffsetMode(PixelOffsetModeHalf);
+end;
+
 destructor TPPGGdiPlusCanvas.Destroy;
 begin
   // Wirft ein Konstruktor, ist FGraphics evtl. nil -> nil-sicher freigeben
+  if FGraphics <> nil then
+    ReleaseHeldDC; // unausgeglichener Block (z.B. nach Exception)
   if (FGraphics <> nil) and (Length(FClipStates) > 0) then
     FGraphics.Restore(FClipStates[0]);
   FGraphics.Free;
@@ -264,6 +306,19 @@ var
 begin
   if (Alpha = 0) or IsRectEmpty(R) then
     Exit;
+  NeedGraphics;
+  if Radius <= 0 then
+  begin
+    // Audit 8a #5: ohne Rundung kein Pfad (gleiche Pixel wie das Pfad-Rechteck)
+    Brush := TGPSolidBrush.Create(ToARGB(Color, Alpha));
+    try
+      Check(FGraphics.FillRectangle(Brush, MakeRect(R.Left * 1.0, R.Top * 1.0,
+        R.Right - R.Left * 1.0, R.Bottom - R.Top * 1.0)), 'FillRectangle');
+    finally
+      Brush.Free;
+    end;
+    Exit;
+  end;
   Path := NewRoundRectPath(R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top, Radius);
   try
     Brush := TGPSolidBrush.Create(ToARGB(Color, Alpha));
@@ -286,6 +341,7 @@ var
 begin
   if (Alpha = 0) or IsRectEmpty(R) then
     Exit;
+  NeedGraphics;
   if Direction = gdHorizontal then
     Mode := LinearGradientModeHorizontal
   else
@@ -312,6 +368,7 @@ var
 begin
   if (Alpha = 0) or (Width <= 0) or IsRectEmpty(R) then
     Exit;
+  NeedGraphics;
   // Stift liegt mittig auf dem Pfad -> um halbe Breite nach innen versetzen
   Half := Width / 2;
   Path := NewRoundRectPath(R.Left + Half, R.Top + Half, R.Right - R.Left - Width,
@@ -339,6 +396,7 @@ var
 begin
   if (Alpha = 0) or (Size <= 0) or IsRectEmpty(R) then
     Exit;
+  NeedGraphics;
   // Konzentrische Ringe mit quadratisch abnehmender Deckkraft
   for I := 1 to Size do
   begin
@@ -370,6 +428,7 @@ var
 begin
   if (Alpha = 0) or IsRectEmpty(R) then
     Exit;
+  NeedGraphics;
   Path := TGPGraphicsPath.Create;
   try
     Check(Path.AddEllipse(MakeRect(R.Left * 1.0, R.Top * 1.0, R.Right - R.Left * 1.0,
@@ -396,6 +455,7 @@ var
 begin
   if (Alpha = 0) or IsRectEmpty(R) then
     Exit;
+  NeedGraphics;
   Brush := TGPSolidBrush.Create(ToARGB(Color, Alpha));
   try
     Check(FGraphics.FillEllipse(Brush, MakeRect(R.Left * 1.0, R.Top * 1.0,
@@ -413,6 +473,7 @@ var
 begin
   if (Alpha = 0) or (Width <= 0) or IsRectEmpty(R) then
     Exit;
+  NeedGraphics;
   Half := Width / 2;
   Pen := TGPPen.Create(ToARGB(Color, Alpha), Width);
   try
@@ -432,6 +493,7 @@ var
 begin
   if (Alpha = 0) or (Width <= 0) or (Length(Points) < 2) then
     Exit;
+  NeedGraphics;
   SetLength(Pts, Length(Points));
   for I := 0 to High(Points) do
   begin
@@ -458,6 +520,7 @@ var
 begin
   if (Alpha = 0) or (Length(Points) < 3) then
     Exit;
+  NeedGraphics;
   SetLength(Pts, Length(Points));
   for I := 0 to High(Points) do
   begin
@@ -482,6 +545,7 @@ var
 begin
   if (Alpha = 0) or (Width <= 0) or (Length(Points) < 2) then
     Exit;
+  NeedGraphics;
   if Dash < 1 then
     Dash := 1;
   if Gap < 1 then
@@ -509,6 +573,7 @@ var
   Path: TGPGraphicsPath;
   N: Integer;
 begin
+  NeedGraphics;
   N := Length(FClipStates);
   SetLength(FClipStates, N + 1);
   FClipStates[N] := FGraphics.Save;
@@ -524,6 +589,7 @@ procedure TPPGGdiPlusCanvas.PopClip;
 var
   N: Integer;
 begin
+  NeedGraphics;
   N := Length(FClipStates);
   if N = 0 then
     Exit;
@@ -531,10 +597,11 @@ begin
   SetLength(FClipStates, N - 1);
 end;
 
-function TPPGGdiPlusCanvas.GdiBegin: HDC;
+procedure TPPGGdiPlusCanvas.AcquireDC;
 var
   Region: TGPRegion;
-  Rgn: HRGN;
+  Rgn, Old: HRGN;
+  DC: HDC;
 begin
   // GDI+ puffert Operationen: vor GDI-Zugriff auf denselben DC muss der
   // DC ueber GetHDC "ausgeliehen" werden.
@@ -542,7 +609,7 @@ begin
   // Ohne die Uebernahme hier ignorieren Text und Bilder jedes PushClip
   // (z.B. zweifarbiger Text im ProgressBar). Die Region wird deshalb VOR
   // GetHDC gelesen (danach ist das Graphics-Objekt gesperrt) und als
-  // GDI-Clip gesetzt; GdiEnd stellt den DC wieder her.
+  // GDI-Clip gesetzt; ReleaseHeldDC stellt den DC wieder her.
   Rgn := 0;
   if Length(FClipStates) > 0 then
   begin
@@ -555,26 +622,85 @@ begin
     end;
   end;
   try
-    Result := FGraphics.GetHDC;
-    if Result = 0 then
+    DC := FGraphics.GetHDC;
+    if DC = 0 then
       raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['GetHDC', Ord(FGraphics.GetLastStatus)]);
-    FGdiSaved := SaveDC(Result);
+    FHeldDC := DC;
+    FGdiSaved := SaveDC(DC);
     if Rgn <> 0 then
-      SelectClipRgn(Result, Rgn);
+    begin
+      // Audit 8a #1: ein vorhandener Clip des DCs (neu zu zeichnender
+      // Bereich) bleibt bestehen - Schnittmenge statt Ersetzen
+      Old := CreateRectRgn(0, 0, 0, 0);
+      if Old <> 0 then
+      try
+        if GetClipRgn(DC, Old) = 1 then
+          CombineRgn(Rgn, Rgn, Old, RGN_AND);
+      finally
+        DeleteObject(Old);
+      end;
+      SelectClipRgn(DC, Rgn);
+    end;
   finally
     if Rgn <> 0 then
       DeleteObject(Rgn); // SelectClipRgn arbeitet mit einer Kopie
   end;
 end;
 
-procedure TPPGGdiPlusCanvas.GdiEnd(DC: HDC);
+procedure TPPGGdiPlusCanvas.ReleaseHeldDC;
+var
+  DC: HDC;
 begin
+  if FHeldDC = 0 then
+    Exit;
+  DC := FHeldDC;
+  FHeldDC := 0;
+  FGdiUse := 0;
   if FGdiSaved <> 0 then
   begin
     RestoreDC(DC, FGdiSaved);
     FGdiSaved := 0;
   end;
   FGraphics.ReleaseHDC(DC);
+end;
+
+procedure TPPGGdiPlusCanvas.NeedGraphics;
+begin
+  // Im Block (BeginBatch) bleibt der DC zwischen GDI-Ausgaben ausgeliehen;
+  // GDI+ selbst ist so lange gesperrt. Waehrend BeginGdi (FGdiUse > 0) wird
+  // nichts zurueckgegeben (fremder Code haelt den DC).
+  if (FHeldDC <> 0) and (FGdiUse = 0) then
+    ReleaseHeldDC;
+end;
+
+function TPPGGdiPlusCanvas.GdiBegin: HDC;
+begin
+  // Verschachtelbar: solange der DC ausgeliehen ist, denselben weitergeben
+  if FHeldDC = 0 then
+    AcquireDC;
+  Inc(FGdiUse);
+  Result := FHeldDC;
+end;
+
+procedure TPPGGdiPlusCanvas.GdiEnd(DC: HDC);
+begin
+  if FGdiUse > 0 then
+    Dec(FGdiUse);
+  if (FGdiUse = 0) and (FBatch = 0) then
+    ReleaseHeldDC;
+end;
+
+procedure TPPGGdiPlusCanvas.BeginBatch;
+begin
+  Inc(FBatch);
+end;
+
+procedure TPPGGdiPlusCanvas.EndBatch;
+begin
+  if FBatch > 0 then
+    Dec(FBatch);
+  if (FBatch = 0) and (FGdiUse = 0) then
+    ReleaseHeldDC;
 end;
 
 function TPPGGdiPlusCanvas.MeasureText(const Text: string; Font: TFont; MaxWidth: Integer;
@@ -641,9 +767,162 @@ begin
   GdiEnd(DC);
 end;
 
+/// Vorlage: Koerper 2 * Radius + 3 breit/hoch, Ringe wie PaintShadow, als
+/// vormultiplizierte BGRA-Pixel (Breite = Hoehe = 2 * (Size + Radius + 1) + 1).
+function BuildShadowTemplate(Radius, Size: Integer; Color: TColor; Alpha: Byte;
+  Square: TPPGCorners): TArray<Cardinal>;
+var
+  Bmp: TGPBitmap;
+  Cv: TPPGGdiPlusCanvas;
+  CvRef: IPPGCanvas;
+  Data: TBitmapData;
+  T, Wb, I, Y: Integer;
+  Body, SR: TRect;
+  Src: PByte;
+begin
+  Wb := 2 * Radius + 3;
+  T := Wb + 2 * Size;
+  SetLength(Result, T * T);
+  Bmp := TGPBitmap.Create(T, T, PixelFormat32bppPARGB);
+  try
+    if Bmp.GetLastStatus <> Ok then
+      raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['Bitmap.Create', Ord(Bmp.GetLastStatus)]);
+    Cv := TPPGGdiPlusCanvas.CreateForImage(Bmp);
+    CvRef := Cv; // Referenzzaehlung: gibt den Canvas am Ende frei
+    Cv.FGraphics.Clear(0); // durchsichtig
+    Cv.SetSquareCorners(Square);
+    Body := Rect(Size, Size, Size + Wb, Size + Wb);
+    for I := Size downto 1 do
+    begin
+      SR := Body;
+      InflateRect(SR, I, I);
+      Cv.FillRoundRect(SR, Radius + I, Color, Alpha);
+    end;
+    CvRef := nil; // Graphics freigeben, bevor die Pixel gelesen werden
+    if Bmp.LockBits(MakeRect(0, 0, T, T), ImageLockModeRead, PixelFormat32bppPARGB, Data) <> Ok then
+      raise EPPGRenderError.CreateFmt(PPGStr(@SPPGGdiPlusCallFailed), ['LockBits', Ord(Bmp.GetLastStatus)]);
+    try
+      Src := Data.Scan0;
+      for Y := 0 to T - 1 do
+      begin
+        Move(Src^, Result[Y * T], T * 4);
+        Inc(Src, Data.Stride);
+      end;
+    finally
+      Bmp.UnlockBits(Data);
+    end;
+  finally
+    Bmp.Free;
+  end;
+end;
+
+function PPGDrawCachedShadow(const Canvas: IPPGCanvas; const R: TRect; Radius, Size: Integer;
+  Color: TColor; Alpha: Byte): Boolean;
+var
+  CC: IPPGCornerCanvas;
+  Square: TPPGCorners;
+  Key: string;
+  Px: TArray<Cardinal>;
+  K, T, Wb, OW, OH: Integer;
+  O: TRect;
+  DC, MemDC: HDC;
+  Bmp, OldBmp: HBITMAP;
+  BI: TBitmapInfo;
+  Bits: Pointer;
+  BF: TBlendFunction;
+
+  procedure Blit(DX, DY, DW, DH, SX, SY, SW, SH: Integer);
+  begin
+    if (DW > 0) and (DH > 0) then
+      Winapi.Windows.AlphaBlend(DC, DX, DY, DW, DH, MemDC, SX, SY, SW, SH, BF);
+  end;
+
+begin
+  Result := False;
+  if not PPGShadowCacheEnabled or (Canvas = nil) or not Canvas.IsAntialiased or
+    (Size <= 0) or (Alpha = 0) or (GetCurrentThreadId <> MainThreadID) then
+    Exit;
+  if Radius < 0 then
+    Radius := 0;
+  // Gerade Kanten muessen gleichmaessig sein: Koerper mindestens so gross
+  // wie die Vorlage (keine gekappte Rundung)
+  Wb := 2 * Radius + 3;
+  if (R.Right - R.Left < Wb) or (R.Bottom - R.Top < Wb) then
+    Exit;
+  Square := [];
+  if Supports(Canvas, IPPGCornerCanvas, CC) then
+    Square := CC.GetSquareCorners;
+  Key := Format('%d|%d|%d|%d|%d', [Radius, Size, Integer(ColorToRGB(Color)), Alpha,
+    Integer(Byte(Square))]);
+  if GShadowCache = nil then
+    GShadowCache := TDictionary<string, TArray<Cardinal>>.Create;
+  if not GShadowCache.TryGetValue(Key, Px) then
+  begin
+    Px := BuildShadowTemplate(Radius, Size, Color, Alpha, Square);
+    if GShadowCache.Count >= 64 then
+      GShadowCache.Clear;
+    GShadowCache.Add(Key, Px);
+  end;
+  T := Wb + 2 * Size;
+  K := Size + Radius + 1; // Ecke inkl. Rundung, ab dort sind die Kanten gleichmaessig
+  O := R;
+  InflateRect(O, Size, Size);
+  OW := O.Right - O.Left;
+  OH := O.Bottom - O.Top;
+  FillChar(BI, SizeOf(BI), 0);
+  BI.bmiHeader.biSize := SizeOf(BI.bmiHeader);
+  BI.bmiHeader.biWidth := T;
+  BI.bmiHeader.biHeight := -T;
+  BI.bmiHeader.biPlanes := 1;
+  BI.bmiHeader.biBitCount := 32;
+  BI.bmiHeader.biCompression := BI_RGB;
+  BF.BlendOp := AC_SRC_OVER;
+  BF.BlendFlags := 0;
+  BF.SourceConstantAlpha := 255;
+  BF.AlphaFormat := AC_SRC_ALPHA;
+  DC := Canvas.BeginGdi;
+  try
+    MemDC := CreateCompatibleDC(DC);
+    if MemDC = 0 then
+      PPGRaiseLastOSError('CreateCompatibleDC');
+    try
+      Bmp := CreateDIBSection(MemDC, BI, DIB_RGB_COLORS, Bits, 0, 0);
+      if (Bmp = 0) or (Bits = nil) then
+        PPGRaiseLastOSError('CreateDIBSection');
+      try
+        OldBmp := SelectObject(MemDC, Bmp);
+        try
+          Move(Px[0], Bits^, T * T * 4);
+          // Ecken 1:1, Kanten und Mitte aus der mittleren Zeile/Spalte gestreckt
+          Blit(O.Left, O.Top, K, K, 0, 0, K, K);
+          Blit(O.Right - K, O.Top, K, K, T - K, 0, K, K);
+          Blit(O.Left, O.Bottom - K, K, K, 0, T - K, K, K);
+          Blit(O.Right - K, O.Bottom - K, K, K, T - K, T - K, K, K);
+          Blit(O.Left + K, O.Top, OW - 2 * K, K, K, 0, 1, K);
+          Blit(O.Left + K, O.Bottom - K, OW - 2 * K, K, K, T - K, 1, K);
+          Blit(O.Left, O.Top + K, K, OH - 2 * K, 0, K, K, 1);
+          Blit(O.Right - K, O.Top + K, K, OH - 2 * K, T - K, K, K, 1);
+          Blit(O.Left + K, O.Top + K, OW - 2 * K, OH - 2 * K, K, K, 1, 1);
+        finally
+          SelectObject(MemDC, OldBmp);
+        end;
+      finally
+        DeleteObject(Bmp);
+      end;
+    finally
+      DeleteDC(MemDC);
+    end;
+  finally
+    Canvas.EndGdi(DC);
+  end;
+  Result := True;
+end;
+
 initialization
 
 finalization
+  PPGShadowCacheEnabled := False; // beim Beenden ohne Cache
+  FreeAndNil(GShadowCache);
   // In einer reinen DLL laeuft finalization in DllMain -> dort KEIN Shutdown
   // (Microsoft-Vorgabe). Der Host kann PPGGdiPlusShutdown selbst aufrufen.
   if (not IsLibrary) or ModuleIsPackage then

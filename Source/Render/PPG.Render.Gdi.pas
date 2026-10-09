@@ -78,19 +78,120 @@ procedure PPGGdiDrawFocusRect(DC: HDC; const R: TRect);
 procedure PPGGdiDrawImageTinted(DC: HDC; Images: TCustomImageList; Index, X, Y: Integer;
   Color: TColor);
 /// Misst Text ohne vorhandenen Canvas (z.B. fuer AutoSize ausserhalb von Paint).
-/// Legt kurzzeitig einen Speicher-DC an und gibt ihn sofort wieder frei.
+/// Audit 8a #4: im Hauptthread ueber einen gemeinsamen Mess-DC und einen
+/// Cache je (Schrift, Breite, Umbruch, Text); in anderen Threads mit einem
+/// kurzlebigen Speicher-DC wie bisher.
 function PPGMeasureTextNoCanvas(const Text: string; Font: TFont; MaxWidth: Integer;
   WordWrap: Boolean): TSize;
+/// Leert den Mess-Cache (z.B. nach einem Wechsel der Systemschriften).
+procedure PPGClearMeasureCache;
+/// Diagnose/Tests: Anzahl der bisher angelegten Mess-DCs.
+function PPGMeasureDCCount: Integer;
+/// Leert den Cache eingefaerbter Bilder (PPGGdiDrawImageTinted); Controls
+/// rufen das, wenn sich ihre Bilderliste aendert.
+procedure PPGClearTintCache;
 
 implementation
 
 uses
-  System.SysUtils, System.Math, Winapi.CommCtrl, PPG.Exceptions;
+  System.SysUtils, System.Math, System.Classes, System.Generics.Collections,
+  Winapi.CommCtrl, PPG.Exceptions;
+
+type
+  /// Beobachtet die Bilderlisten im Cache eingefaerbter Bilder: Aenderung
+  /// oder Freigabe einer Liste leert den Cache (auch fuer Aufrufer ohne
+  /// eigenes Control, z.B. direkte Aufrufe von PPGGdiDrawImageTinted).
+  TPPGTintWatcher = class(TComponent)
+  private
+    FLinks: TObjectDictionary<TCustomImageList, TChangeLink>;
+    procedure ListChanged(Sender: TObject);
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Watch(Images: TCustomImageList);
+  end;
+
+const
+  MaxMeasureEntries = 4096; // danach wird der Mess-Cache geleert
+  MaxMeasureText = 256;     // laengere Texte werden nicht gecacht
+  MaxTintEntries = 256;
+
+var
+  GMeasureDC: HDC = 0;
+  GMeasureDCCount: Integer = 0;
+  GMeasureCache: TDictionary<string, TSize> = nil;
+  GTintCache: TDictionary<string, TArray<Cardinal>> = nil;
+  GTintWatcher: TPPGTintWatcher = nil;
+  GFinalized: Boolean = False; // nach der Finalisierung: ohne Cache und gemeinsamen DC
 
 { Helfer }
 
-procedure PPGGdiDrawImageTinted(DC: HDC; Images: TCustomImageList; Index, X, Y: Integer;
-  Color: TColor);
+function TintKey(Images: TCustomImageList; Index: Integer; Color: Cardinal;
+  W, H: Integer): string;
+begin
+  Result := Format('%p|%d|%d|%d|%d', [Pointer(Images), Index, Color, W, H]);
+end;
+
+procedure PPGClearTintCache;
+begin
+  if GTintCache <> nil then
+    GTintCache.Clear;
+end;
+
+{ TPPGTintWatcher }
+
+constructor TPPGTintWatcher.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FLinks := TObjectDictionary<TCustomImageList, TChangeLink>.Create([doOwnsValues]);
+end;
+
+destructor TPPGTintWatcher.Destroy;
+begin
+  FreeAndNil(FLinks); // TChangeLink meldet sich bei der Liste ab
+  inherited Destroy;
+end;
+
+procedure TPPGTintWatcher.Watch(Images: TCustomImageList);
+var
+  L: TChangeLink;
+begin
+  if FLinks.ContainsKey(Images) then
+    Exit;
+  L := TChangeLink.Create;
+  try
+    L.OnChange := ListChanged;
+    Images.RegisterChanges(L);
+    FLinks.Add(Images, L);
+  except
+    L.Free;
+    raise;
+  end;
+  Images.FreeNotification(Self);
+end;
+
+procedure TPPGTintWatcher.ListChanged(Sender: TObject);
+begin
+  PPGClearTintCache;
+end;
+
+procedure TPPGTintWatcher.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (FLinks <> nil) and (AComponent is TCustomImageList) and
+    FLinks.ContainsKey(TCustomImageList(AComponent)) then
+  begin
+    // Adresse kann fuer eine neue Liste wiederverwendet werden
+    PPGClearTintCache;
+    FLinks.Remove(TCustomImageList(AComponent));
+  end;
+end;
+
+/// Eingefaerbtes Bild als vormultiplizierte BGRA-Pixel (oben nach unten).
+function BuildTintedBits(DC: HDC; Images: TCustomImageList; Index, W, H: Integer;
+  C: Cardinal): TArray<Cardinal>;
 const
   KeyColor = $00FF00FF; // Magenta als Hintergrund fuer Bilder ohne Alphakanal
 var
@@ -99,19 +200,12 @@ var
   BI: TBitmapInfo;
   Bits: Pointer;
   P: PCardinal;
-  W, H, I, N: Integer;
+  I, N: Integer;
   A, R, G, B: Cardinal;
-  C: Cardinal;
   HasAlpha: Boolean;
-  BF: TBlendFunction;
 begin
-  if (Images = nil) or (Index < 0) or (Index >= Images.Count) then
-    Exit;
-  W := Images.Width;
-  H := Images.Height;
-  if (W <= 0) or (H <= 0) then
-    Exit;
   N := W * H;
+  SetLength(Result, N);
   FillChar(BI, SizeOf(BI), 0);
   BI.bmiHeader.biSize := SizeOf(BI.bmiHeader);
   BI.bmiHeader.biWidth := W;
@@ -167,7 +261,6 @@ begin
           end;
         end;
         // 3. Einfaerben: Farbe vormultipliziert mit dem Alpha (BGRA im Speicher)
-        C := Cardinal(ColorToRGB(Color));
         R := C and $FF;
         G := (C shr 8) and $FF;
         B := (C shr 16) and $FF;
@@ -175,10 +268,82 @@ begin
         for I := 0 to N - 1 do
         begin
           A := P^ shr 24;
-          P^ := (A shl 24) or ((R * A div 255) shl 16) or ((G * A div 255) shl 8) or
+          Result[I] := (A shl 24) or ((R * A div 255) shl 16) or ((G * A div 255) shl 8) or
             (B * A div 255);
           Inc(P);
         end;
+      finally
+        SelectObject(MemDC, OldBmp);
+      end;
+    finally
+      DeleteObject(Bmp);
+    end;
+  finally
+    DeleteDC(MemDC);
+  end;
+end;
+
+procedure PPGGdiDrawImageTinted(DC: HDC; Images: TCustomImageList; Index, X, Y: Integer;
+  Color: TColor);
+var
+  MemDC: HDC;
+  Bmp, OldBmp: HBITMAP;
+  BI: TBitmapInfo;
+  Bits: Pointer;
+  W, H: Integer;
+  C: Cardinal;
+  Px: TArray<Cardinal>;
+  Key: string;
+  Cache: Boolean;
+  BF: TBlendFunction;
+begin
+  if (Images = nil) or (Index < 0) or (Index >= Images.Count) then
+    Exit;
+  W := Images.Width;
+  H := Images.Height;
+  if (W <= 0) or (H <= 0) then
+    Exit;
+  C := Cardinal(ColorToRGB(Color));
+  // Audit 8a #6: eingefaerbte Pixel je (Liste, Bild, Farbe, Groesse) merken;
+  // die Controls leeren den Cache, wenn sich ihre Liste aendert
+  Cache := (GetCurrentThreadId = MainThreadID) and not GFinalized;
+  Key := '';
+  if Cache then
+  begin
+    if GTintCache = nil then
+      GTintCache := TDictionary<string, TArray<Cardinal>>.Create;
+    Key := TintKey(Images, Index, C, W, H);
+    if not GTintCache.TryGetValue(Key, Px) then
+    begin
+      if GTintWatcher = nil then
+        GTintWatcher := TPPGTintWatcher.Create(nil);
+      GTintWatcher.Watch(Images);
+      Px := BuildTintedBits(DC, Images, Index, W, H, C);
+      if GTintCache.Count >= MaxTintEntries then
+        GTintCache.Clear;
+      GTintCache.Add(Key, Px);
+    end;
+  end
+  else
+    Px := BuildTintedBits(DC, Images, Index, W, H, C);
+  FillChar(BI, SizeOf(BI), 0);
+  BI.bmiHeader.biSize := SizeOf(BI.bmiHeader);
+  BI.bmiHeader.biWidth := W;
+  BI.bmiHeader.biHeight := -H; // von oben nach unten
+  BI.bmiHeader.biPlanes := 1;
+  BI.bmiHeader.biBitCount := 32;
+  BI.bmiHeader.biCompression := BI_RGB;
+  MemDC := CreateCompatibleDC(DC);
+  if MemDC = 0 then
+    PPGRaiseLastOSError('CreateCompatibleDC');
+  try
+    Bmp := CreateDIBSection(MemDC, BI, DIB_RGB_COLORS, Bits, 0, 0);
+    if (Bmp = 0) or (Bits = nil) then
+      PPGRaiseLastOSError('CreateDIBSection');
+    try
+      OldBmp := SelectObject(MemDC, Bmp);
+      try
+        Move(Px[0], Bits^, W * H * 4);
         BF.BlendOp := AC_SRC_OVER;
         BF.BlendFlags := 0;
         BF.SourceConstantAlpha := 255;
@@ -281,19 +446,83 @@ begin
   end;
 end;
 
+function MeasureKey(const Text: string; Font: TFont; MaxWidth: Integer;
+  WordWrap: Boolean): string;
+var
+  LF: TLogFont;
+  N: Integer;
+begin
+  // Schluessel: vollstaendige LOGFONT (Name, Hoehe = PPI, Stil, Zeichensatz,
+  // Qualitaet ...), Breite, Umbruch und Text
+  FillChar(LF, SizeOf(LF), 0);
+  GetObject(Font.Handle, SizeOf(LF), @LF);
+  N := (SizeOf(LF) + SizeOf(Char) - 1) div SizeOf(Char);
+  SetLength(Result, N);
+  Move(LF, Pointer(Result)^, SizeOf(LF));
+  Result := Result + IntToStr(MaxWidth) + Char(Ord('0') + Ord(WordWrap)) + Text;
+end;
+
 function PPGMeasureTextNoCanvas(const Text: string; Font: TFont; MaxWidth: Integer;
   WordWrap: Boolean): TSize;
 var
   DC: HDC;
+  Key: string;
 begin
-  DC := CreateCompatibleDC(0);
-  if DC = 0 then
-    PPGRaiseLastOSError('CreateCompatibleDC');
-  try
-    Result := PPGGdiMeasureText(DC, Text, Font, MaxWidth, WordWrap);
-  finally
-    DeleteDC(DC);
+  if Text = '' then
+  begin
+    Result.cx := 0;
+    Result.cy := 0;
+    Exit;
   end;
+  if (GetCurrentThreadId <> MainThreadID) or GFinalized then
+  begin
+    // Ausserhalb des Hauptthreads (bzw. beim Beenden): eigener, kurzlebiger DC, kein Cache
+    DC := CreateCompatibleDC(0);
+    if DC = 0 then
+      PPGRaiseLastOSError('CreateCompatibleDC');
+    try
+      Result := PPGGdiMeasureText(DC, Text, Font, MaxWidth, WordWrap);
+    finally
+      DeleteDC(DC);
+    end;
+    Exit;
+  end;
+  Key := '';
+  if Length(Text) <= MaxMeasureText then
+  begin
+    Key := MeasureKey(Text, Font, MaxWidth, WordWrap);
+    if (GMeasureCache <> nil) and GMeasureCache.TryGetValue(Key, Result) then
+      Exit;
+  end;
+  // Gemeinsamer Mess-DC (lazy, bis zum Programmende; PPGGdiMeasureText
+  // waehlt die Schrift nur innerhalb von SaveDC/RestoreDC)
+  if GMeasureDC = 0 then
+  begin
+    GMeasureDC := CreateCompatibleDC(0);
+    if GMeasureDC = 0 then
+      PPGRaiseLastOSError('CreateCompatibleDC');
+    Inc(GMeasureDCCount);
+  end;
+  Result := PPGGdiMeasureText(GMeasureDC, Text, Font, MaxWidth, WordWrap);
+  if Key <> '' then
+  begin
+    if GMeasureCache = nil then
+      GMeasureCache := TDictionary<string, TSize>.Create;
+    if GMeasureCache.Count >= MaxMeasureEntries then
+      GMeasureCache.Clear;
+    GMeasureCache.AddOrSetValue(Key, Result);
+  end;
+end;
+
+procedure PPGClearMeasureCache;
+begin
+  if GMeasureCache <> nil then
+    GMeasureCache.Clear;
+end;
+
+function PPGMeasureDCCount: Integer;
+begin
+  Result := GMeasureDCCount;
 end;
 
 { TPPGGdiCanvas }
@@ -956,5 +1185,16 @@ procedure TPPGGdiCanvas.EndGdi(DC: HDC);
 begin
   RestoreDC(DC, -1);
 end;
+
+initialization
+
+finalization
+  GFinalized := True;
+  if GMeasureDC <> 0 then
+    DeleteDC(GMeasureDC);
+  GMeasureDC := 0;
+  FreeAndNil(GMeasureCache);
+  FreeAndNil(GTintWatcher);
+  FreeAndNil(GTintCache);
 
 end.
