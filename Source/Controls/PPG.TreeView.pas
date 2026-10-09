@@ -2002,15 +2002,8 @@ begin
     end;
     S.GlowAlpha := 0;
     S.GlowSize := 0;
-    if HighContrastSupport and PPGIsHighContrast then
-    begin
-      S.Color := PPGColorToRGB(clWindow);
-      S.ColorTo := S.Color;
-      S.ColorMirror := S.Color;
-      S.ColorMirrorTo := S.Color;
-      S.BorderColor := PPGColorToRGB(clWindowText);
-      S.TextColor := PPGColorToRGB(clWindowText);
-    end;
+    if UseHighContrast then
+      ApplyHighContrastIndicator(S, Enabled and N.FEnabled, False);
     Ind.DrawCheckIndicator(ACanvas, CheckRect(N, R), S, N.FCheckState, Info.PPI);
   end;
 end;

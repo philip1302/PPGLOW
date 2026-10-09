@@ -10,7 +10,7 @@ uses
   System.Classes, System.SysUtils, System.Types, System.Variants,
   Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.StdCtrls,
   PPG.Types, PPG.Consts, PPG.Render.Intf, PPG.Render.Registry, PPG.Render.Gdi,
-  PPG.Button, PPG.Controls.Field, PPG.Popup, PPG.ComboBox,
+  PPG.Button, PPG.Controls.Base, PPG.Controls.Field, PPG.Popup, PPG.ComboBox,
   PPG.Tests.Controls, PPG.Tests.Gaps, PPG.Tests.Phase4a;
 
 type
@@ -720,7 +720,7 @@ end;
 procedure TComboBoxTests.WheelScrollsOnlyOpenList;
 var
   C: TPPGComboBox;
-  I: Integer;
+  I, Lines: Integer;
 begin
   FForm.Show;
   try
@@ -734,7 +734,16 @@ begin
     C.DroppedDown := True;
     CheckEquals(0, C.PopupList.TopIndex);
     CheckTrue(TComboAccess(C).DoMouseWheel([], -WHEEL_DELTA, Point(0, 0)));
-    CheckEquals(3, C.PopupList.TopIndex, 'offen: drei Zeilen weiter');
+    // Zeilen je Raste aus der Systemeinstellung (Standard 3), seitenweise bzw.
+    // am Ende begrenzt wie in TPPGPopupList.DoWheel
+    Lines := PPGWheelScrollLines;
+    if Lines < 0 then
+      Lines := C.PopupList.VisibleRows - 1;
+    if Lines < 1 then
+      Lines := 1;
+    if Lines > 30 - C.PopupList.VisibleRows then
+      Lines := 30 - C.PopupList.VisibleRows;
+    CheckEquals(Lines, C.PopupList.TopIndex, 'offen: Zeilen je Raste weiter');
     TComboAccess(C).DoMouseWheel([], WHEEL_DELTA, Point(0, 0));
     CheckEquals(0, C.PopupList.TopIndex);
     CheckEquals(0, C.ItemIndex);

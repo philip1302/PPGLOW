@@ -657,7 +657,7 @@ var
 begin
   PPI := ScalePPI;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Active := FDragging or (Focused and FocusVisible);
   Show := Active or (MouseInside and Enabled) or (csDesigning in ComponentState);
   // Linienbreite aus Appearance.BorderWidth (aktiv doppelt)
@@ -672,9 +672,8 @@ begin
     // Ruhend unsichtbar wie in WinUI; mit Beveled eine dezente Linie (Rand in Ruhe)
     if FBeveled then
     begin
-      if HC then
-        LineCol := PPGColorToRGB(clWindowText)
-      else if Enabled then
+      // Hochkontrast: die Appearance liefert die Systemfarben
+      if Enabled then
         LineCol := PPGColorToRGB(A.Normal.BorderColor)
       else
         LineCol := PPGColorToRGB(A.Disabled.BorderColor);
@@ -689,10 +688,11 @@ begin
   end;
   if HC then
   begin
+    // Sonderfall: ohne Zwischenfarben, aktiv immer in der Markierungsfarbe
     if Active then
-      LineCol := PPGColorToRGB(clHighlight)
+      LineCol := Tokens.Accent
     else
-      LineCol := PPGColorToRGB(clWindowText);
+      LineCol := Tokens.Stroke;
     DotCol := LineCol;
   end
   else if FDragging then

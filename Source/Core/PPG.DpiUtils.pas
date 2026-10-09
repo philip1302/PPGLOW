@@ -16,8 +16,19 @@ interface
 uses
   Vcl.Controls;
 
+type
+  /// Ersatz fuer die Systemabfrage des Hochkontrastmodus (Tests).
+  TPPGHighContrastReader = function: Boolean;
+
 function PPGControlPPI(Control: TControl): Integer;
+/// True, wenn Windows im Hochkontrastmodus laeuft (bzw. der Testhaken es meldet).
 function PPGIsHighContrast: Boolean;
+/// Hochkontrast fuer ein Control/eine Komponente: dessen HighContrastSupport
+/// und der Systemmodus. Einheitliche Abfrage fuer alle PPGlow-Teile.
+function PPGUseHighContrast(HighContrastSupport: Boolean): Boolean;
+/// Testhaken: ersetzt die Systemabfrage (nil = System). Danach sollten die
+/// Controls neu zeichnen (z.B. TPPGTheme.Changed).
+procedure PPGSetHighContrastReader(Reader: TPPGHighContrastReader);
 /// Fragt den UI-Zustand (UISF_HIDEFOCUS / UISF_HIDEACCEL) per WM_QUERYUISTATE ab.
 /// ACHTUNG: NIE waehrend Paint aufrufen! Jede Nachricht fuehrt in der VCL zu
 /// FreeMemoryContexts, das den DC einer Ziel-TBitmap (PaintTo, Drucken,
@@ -46,10 +57,25 @@ begin
     Result := 96;
 end;
 
+var
+  GHighContrastReader: TPPGHighContrastReader = nil;
+
+procedure PPGSetHighContrastReader(Reader: TPPGHighContrastReader);
+begin
+  GHighContrastReader := Reader;
+end;
+
+function PPGUseHighContrast(HighContrastSupport: Boolean): Boolean;
+begin
+  Result := HighContrastSupport and PPGIsHighContrast;
+end;
+
 function PPGIsHighContrast: Boolean;
 var
   HC: THighContrast;
 begin
+  if Assigned(GHighContrastReader) then
+    Exit(GHighContrastReader());
   FillChar(HC, SizeOf(HC), 0);
   HC.cbSize := SizeOf(HC);
   Result := SystemParametersInfo(SPI_GETHIGHCONTRAST, SizeOf(HC), @HC, 0) and

@@ -1182,6 +1182,7 @@ var
   A: TPPGAppearance;
   Base: TPPGSurfaceStyle;
   Dark, HC, Sel, Hot, Foc, Usable: Boolean;
+  T: TPPGTokens;
   Fill, Border, Txt, Normal, Secondary, Accent: TColor;
   SymR, TitleR, DetR, PicR, BadgeR, ChkR: TRect;
   Code: Word;
@@ -1239,7 +1240,7 @@ begin
   A := EffectiveAppearance;
   Base := A.Resolve(vsNormal, PPI, False);
   Dark := UseDarkMode;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Sel := FSelection.Selected[Pos];
   Hot := Pos = FHot;
   Foc := Focused and FocusVisible and (Pos = FSelection.Focus);
@@ -1291,17 +1292,19 @@ begin
   end;
   if HC then
   begin
-    Txt := PPGColorToRGB(clWindowText);
+    // Sonderfall: keine Mischfarben, Auswahl als volle Markierung (Tokens)
+    T := Tokens;
+    Txt := T.TextPrimary;
     Secondary := Txt;
     if Sel then
     begin
-      Fill := PPGColorToRGB(clHighlight);
-      Txt := PPGColorToRGB(clHighlightText);
+      Fill := T.Accent;
+      Txt := T.OnAccent;
       Secondary := Txt;
     end
     else
-      Fill := PPGColorToRGB(clWindow);
-    Border := PPGColorToRGB(clWindowText);
+      Fill := T.Surface;
+    Border := T.Stroke;
   end;
   if Fill <> clNone then
     ACanvas.FillRoundRect(R, Rad, Fill, 255);

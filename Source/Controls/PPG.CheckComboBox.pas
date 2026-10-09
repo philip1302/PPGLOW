@@ -321,15 +321,8 @@ begin
     S := A.Resolve(vsNormal, PPI, False);
   S.GlowAlpha := 0;
   S.GlowSize := 0;
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    S.Color := PPGColorToRGB(clWindow);
-    S.ColorTo := S.Color;
-    S.ColorMirror := S.Color;
-    S.ColorMirrorTo := S.Color;
-    S.BorderColor := PPGColorToRGB(clWindowText);
-    S.TextColor := PPGColorToRGB(clWindowText);
-  end;
+  if UseHighContrast then
+    ApplyHighContrastIndicator(S, Enabled, False);
   Sz := PPGScale(18, PPI);
   Box := Rect(R.Left + PPGScale(8, PPI), (R.Top + R.Bottom - Sz) div 2,
     R.Left + PPGScale(8, PPI) + Sz, (R.Top + R.Bottom - Sz) div 2 + Sz);

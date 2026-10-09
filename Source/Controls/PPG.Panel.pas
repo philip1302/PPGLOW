@@ -939,9 +939,8 @@ begin
     Exit;
   A := EffectiveAppearance;
   St := GetContainerStyle(False);
+  // Hochkontrast: Appearance und Container liefern die Systemfarben
   St.TextColor := PPGColorToRGB(A.Normal.TextColor);
-  if HighContrastSupport and PPGIsHighContrast then
-    St.TextColor := PPGColorToRGB(clWindowText);
   for V := False to True do
     if not IsRectEmpty(BarTrack(V)) then
       SR.DrawScrollBar(ACanvas, BarTrack(V), BarThumb(V), St, V, 1, FHotBar = Ord(V),

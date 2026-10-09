@@ -2732,20 +2732,21 @@ var
   T: TPPGTokens;
   A: TPPGAppearance;
 begin
-  Result.HC := HighContrastSupport and PPGIsHighContrast;
+  T := Tokens;
+  Result.HC := UseHighContrast;
   if Result.HC then
   begin
-    Result.Back := PPGColorToRGB(clBtnFace);
-    Result.Panel := PPGColorToRGB(clWindow);
-    Result.Stroke := PPGColorToRGB(clWindowText);
-    Result.Text := PPGColorToRGB(clWindowText);
-    Result.TextSecondary := PPGColorToRGB(clWindowText);
-    Result.TextDisabled := PPGColorToRGB(clGrayText);
-    Result.Accent := PPGColorToRGB(clHighlight);
-    Result.OnAccent := PPGColorToRGB(clHighlightText);
+    // Sonderfall: keine Mischfarben; die Tokens liefern die Systemfarben
+    Result.Back := T.Background;
+    Result.Panel := T.Layer;
+    Result.Stroke := T.Stroke;
+    Result.Text := T.TextPrimary;
+    Result.TextSecondary := T.TextSecondary;
+    Result.TextDisabled := T.TextDisabled;
+    Result.Accent := T.Accent;
+    Result.OnAccent := T.OnAccent;
     Exit;
   end;
-  T := Tokens;
   if UseVclStyle then
   begin
     A := EffectiveAppearance;

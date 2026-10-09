@@ -748,10 +748,11 @@ begin
   Result := A.Resolve(vsNormal, ScalePPI, False);
   Result.Color := PPGColorToRGB(GetBackgroundColor);
   Result.TextColor := PPGColorToRGB(A.Normal.TextColor);
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    Result.Color := PPGColorToRGB(clWindow);
-    Result.TextColor := PPGColorToRGB(clWindowText);
+    // Leisten auf der Fensterflaeche (Tokens: clWindow/clWindowText)
+    Result.Color := Tokens.Surface;
+    Result.TextColor := Tokens.TextPrimary;
   end;
 end;
 

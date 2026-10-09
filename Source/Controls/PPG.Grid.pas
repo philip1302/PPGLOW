@@ -4104,7 +4104,7 @@ procedure TPPGCustomGrid.PrepareStyleColors;
 var
   I: Integer;
 begin
-  FPaint.UseColors := not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle;
+  FPaint.UseColors := UseOwnColors;
   FPaint.Dark := UseDarkMode;
   FPaint.HeaderText := FPaint.Text;
   FPaint.FocusFrame := FPaint.Accent;
@@ -4154,15 +4154,17 @@ var
   SelFill, SelText: TColor;
 begin
   Accent := PPGColorToRGB(EffectiveAppearance.FocusColor);
-  if HighContrastSupport and PPGIsHighContrast then
+  if UseHighContrast then
   begin
-    Fill := PPGColorToRGB(clWindow);
-    Text := PPGColorToRGB(clWindowText);
-    Header := PPGColorToRGB(clBtnFace);
-    Line := PPGColorToRGB(clWindowText);
-    Accent := PPGColorToRGB(clHighlight);
+    // Sonderfall: keine Mischfarben; Linien in Textfarbe (Tokens = Systemfarben)
+    T := Tokens;
+    Fill := T.Surface;
+    Text := T.TextPrimary;
+    Header := T.Layer;
+    Line := T.Stroke;
+    Accent := T.Accent;
     if not Enabled then
-      Text := PPGColorToRGB(clGrayText);
+      Text := T.TextDisabled;
     Exit;
   end;
   if UseVclStyle then
@@ -5197,8 +5199,8 @@ begin
     S.ColorMirror := Fill;
     S.ColorMirrorTo := Fill;
     S.GlowAlpha := 0;
-    if HighContrastSupport and PPGIsHighContrast then
-      S.BorderColor := PPGColorToRGB(clWindowText);
+    if UseHighContrast then
+      S.BorderColor := Tokens.Stroke;
     if S.BorderWidth < 1 then
       S.BorderWidth := 1;
     if not Supports(Renderer, IPPGContainerRenderer, CR) then

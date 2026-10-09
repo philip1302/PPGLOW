@@ -478,23 +478,20 @@ var
   Flags: Cardinal;
   Pts: array[0..2] of TPoint;
   P: Single;
-  HC: Boolean;
 begin
   PPI := ScalePPI;
-  HC := HighContrastSupport and PPGIsHighContrast;
   Style := GetContainerStyle(False);
   ContainerRenderer.DrawContainer(ACanvas, ClientR, Style);
   HH := HeaderHeight;
   HR := Rect(ClientR.Left, ClientR.Top, ClientR.Right, Min(ClientR.Top + HH, ClientR.Bottom));
   TextCol := Style.TextColor;
-  if HC then
-    DetailCol := TextCol
-  else if Enabled then
+  // Hochkontrast: keine Mischfarben (Detailtext in der Textfarbe)
+  if Enabled and not UseHighContrast then
     DetailCol := PPGBlendColor(TextCol, Style.Color, 0.35)
   else
     DetailCol := TextCol;
   // Eigene Flaeche und Textfarbe der Kopfzeile (HeaderStyle)
-  if not (HighContrastSupport and PPGIsHighContrast) and not UseVclStyle then
+  if UseOwnColors then
   begin
     if FHeaderStyle.HasFill(UseDarkMode) then
     begin

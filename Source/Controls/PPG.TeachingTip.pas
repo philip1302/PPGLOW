@@ -557,7 +557,7 @@ begin
     Exit;
   PPI := ScalePPI;
   T := Tokens;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   GetPopupStyles(T.Layer, T.TextPrimary, L, H);
   L.Rounding := PopupRounding;
   if not Supports(Renderer, IPPGHintRenderer, HR) then
@@ -575,8 +575,9 @@ begin
 
   if HC then
   begin
+    // Sonderfall: keine Mischfarbe; Link-Token = clHotLight
     Secondary := L.TextColor;
-    LinkColor := PPGColorToRGB(clHotLight);
+    LinkColor := T.Link;
   end
   else
   begin
@@ -634,7 +635,7 @@ begin
     S.GlowAlpha := 0;
     if S.Rounding > PPGScale(4, PPI) then
       S.Rounding := PPGScale(4, PPI);
-    if (Part = tppAction) and not HC and not UseVclStyle then
+    if (Part = tppAction) and UseOwnColors then
     begin
       // Aktion = Akzent-Button
       if (FDown = Part) and (FHot = Part) then

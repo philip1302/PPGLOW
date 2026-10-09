@@ -843,7 +843,7 @@ begin
   ContainerRenderer.DrawContainer(ACanvas, PageRect, PS);
 
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Info.Strip := PS;
   Info.Strip.Color := clNone; // Hintergrund (Parent) ist schon gezeichnet
   Info.Tab := A.Resolve(vsNormal, PPI, False);
@@ -854,15 +854,14 @@ begin
   Info.DisabledText := PPGColorToRGB(A.Disabled.TextColor);
   if UseVclStyle or HC then
     Info.HotTab.TextColor := PS.TextColor;
-  if UseVclStyle then
+  if UseVclStyle and not HC then
     // Deaktiviert-Farbe des Styles ist auf dunklen Seiten kaum lesbar
     Info.DisabledText := PPGBlendColor(PS.TextColor, PS.Color, 0.55);
   if HC then
   begin
+    // Sonderfall: Reiter mit dem Rahmen der Seite; Farben aus der Appearance
     Info.Tab.BorderColor := PS.BorderColor;
     Info.HotTab.BorderColor := PS.BorderColor;
-    Info.Accent := PPGColorToRGB(clHighlight);
-    Info.DisabledText := PPGColorToRGB(clGrayText);
   end;
   Info.Overlap := PS.BorderWidth;
   Info.HotTrack := FHotTrack and not (csDesigning in ComponentState);
@@ -870,7 +869,7 @@ begin
   Info.ShowAccel := AcceleratorCuesVisible;
   Info.Enabled := Enabled;
   Info.Styles := FTabStyles;
-  Info.UseColors := not HC and not UseVclStyle;
+  Info.UseColors := UseOwnColors;
   Info.Dark := UseDarkMode;
   Info.OnDrawTab := nil;
   Info.OnDrawContent := nil;

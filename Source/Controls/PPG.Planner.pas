@@ -2346,17 +2346,19 @@ var
 begin
   T := P.Tokens;
   A := P.EffectiveAppearance;
-  Result.HC := P.HighContrastSupport and PPGIsHighContrast;
+  Result.HC := P.UseHighContrast;
   if Result.HC then
   begin
-    Result.Fill := PPGColorToRGB(clWindow);
+    // Sonderfall: keine Mischfarben und keine eigenen Farben; die Tokens
+    // liefern die Systemfarben
+    Result.Fill := T.Layer;
     Result.Alt := Result.Fill;
-    Result.Line := PPGColorToRGB(clWindowText);
-    Result.LineSoft := PPGColorToRGB(clGrayText);
-    Result.Text := PPGColorToRGB(clWindowText);
-    Result.Secondary := Result.Text;
-    Result.Accent := PPGColorToRGB(clHighlight);
-    Result.OnAccent := PPGColorToRGB(clHighlightText);
+    Result.Line := T.Stroke;
+    Result.LineSoft := T.StrokeDisabled;
+    Result.Text := T.TextPrimary;
+    Result.Secondary := T.TextSecondary;
+    Result.Accent := T.Accent;
+    Result.OnAccent := T.OnAccent;
     Result.NowCol := Result.Accent;
     Result.Header := Result.Fill;
     Result.HeaderText := Result.Text;
@@ -2431,8 +2433,8 @@ function TPPGCustomPlanner.AppointmentColor(A: TPPGAppointment): TColor;
 var
   R: Integer;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
-    Exit(PPGColorToRGB(clHighlight));
+  if UseHighContrast then
+    Exit(Tokens.Accent); // eigene Farben gelten im Hochkontrast nicht
   if (A.Category >= 0) and (A.Category < FCategories.Count) and
     (FCategories[A.Category].Color <> clDefault) then
     Result := PPGColorToRGB(FCategories[A.Category].Color)

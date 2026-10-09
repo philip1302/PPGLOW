@@ -788,16 +788,16 @@ begin
   MS := FLoop.Styles;
   PPI := ScalePPI;
   T := Tokens;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   RTL := UseRightToLeftAlignment;
   Hot := Index = FHot;
   Col := FCols[Index];
-  UseColors := not HC and not UseVclStyle;
+  UseColors := UseOwnColors;
   Dk := UseDarkMode;
   if It.IsLine then
   begin
     if HC then
-      SepCol := PPGColorToRGB(clGrayText)
+      SepCol := T.StrokeDisabled // Sonderfall: Trennlinie ohne Mischfarbe (clGrayText)
     else
       SepCol := PPGBlendColor(L.Color, L.TextColor, 0.15);
     if (MS <> nil) and UseColors then
@@ -875,16 +875,8 @@ begin
     ACanvas.FillRoundRect(Body, PPGScale(4, PPI), PPGColorToRGB(DS.Fill), 255);
   if Hot then
     MR.DrawMenuItem(ACanvas, Body, L, H, 1, PPI);
-  if HC then
-  begin
-    if not It.Enabled then
-      TextCol := PPGColorToRGB(clGrayText)
-    else if Hot then
-      TextCol := H.TextColor
-    else
-      TextCol := L.TextColor;
-  end
-  else if not It.Enabled then
+  // Hochkontrast: L/H und die Tokens liefern die Systemfarben
+  if not It.Enabled then
     TextCol := T.TextDisabled
   else if Hot then
     TextCol := H.TextColor // wie die Listen (Classic: dunkle Schrift auf Glanz)
@@ -982,7 +974,7 @@ var
   C: TColor;
 begin
   MS := FLoop.Styles;
-  if (MS = nil) or (HighContrastSupport and PPGIsHighContrast) or UseVclStyle then
+  if (MS = nil) or UseHighContrast or UseVclStyle then
     Exit;
   Dk := UseDarkMode;
   if MS.Menu.HasFill(Dk) then

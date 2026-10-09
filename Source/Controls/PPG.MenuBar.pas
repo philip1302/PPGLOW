@@ -804,19 +804,20 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   L := A.Resolve(vsNormal, PPI, False);
   H := A.Resolve(vsHot, PPI, False);
   if HC then
   begin
+    // Sonderfall: Systemfarben der Menueleiste; Markierung aus den Tokens
     L.Color := PPGColorToRGB(clMenuBar);
     L.TextColor := PPGColorToRGB(clMenuText);
-    H.Color := PPGColorToRGB(clHighlight);
+    H.Color := T.Accent;
     H.ColorTo := H.Color;
     H.ColorMirror := H.Color;
     H.ColorMirrorTo := H.Color;
     H.BorderColor := H.Color;
-    H.TextColor := PPGColorToRGB(clHighlightText);
+    H.TextColor := T.OnAccent;
   end
   else
   begin
@@ -855,12 +856,7 @@ begin
       Hot := 1;
     MR.DrawMenuBarItem(ACanvas, R, L, H, Hot, I = FOpen, PPI);
     if not Enabled or not Item(I).Enabled then
-    begin
-      if HC then
-        TextCol := PPGColorToRGB(clGrayText)
-      else
-        TextCol := T.TextDisabled;
-    end
+      TextCol := T.TextDisabled
     else if HC and ((I = FHot) or (I = FOpen)) then
       TextCol := H.TextColor
     else if not HC and ((I = FHot) or (I = FOpen)) and not FMenuStyles.HotItem.IsEmpty then

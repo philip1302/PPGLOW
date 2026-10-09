@@ -962,15 +962,16 @@ begin
     UpdateLayout;
   PPI := ScalePPI;
   T := Tokens;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   Rad := PPGScale(4, PPI);
   for I := 0 to High(FChipRects) do
   begin
     R := FChipRects[I];
     if HC then
     begin
-      Fill := PPGColorToRGB(clBtnFace);
-      Txt := PPGColorToRGB(clBtnText);
+      // Sonderfall: Chips wie Buttons (Appearance: clBtnFace/clBtnText)
+      Fill := PPGColorToRGB(EffectiveAppearance.Normal.Color);
+      Txt := PPGColorToRGB(EffectiveAppearance.Normal.TextColor);
       Border := Txt;
     end
     else
@@ -983,16 +984,9 @@ begin
     end;
     if I = FSelectedTag then
     begin
-      if HC then
-      begin
-        Fill := PPGColorToRGB(clHighlight);
-        Txt := PPGColorToRGB(clHighlightText);
-      end
-      else
-      begin
-        Fill := T.Accent;
-        Txt := T.OnAccent;
-      end;
+      // Hochkontrast: Accent/OnAccent = clHighlight/clHighlightText
+      Fill := T.Accent;
+      Txt := T.OnAccent;
       Border := Fill;
     end;
     ACanvas.FillRoundRect(R, Rad, Fill, 255);

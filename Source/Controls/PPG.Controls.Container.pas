@@ -148,7 +148,13 @@ begin
   Result.GlowAlpha := 0;
   if not Enabled then
     Result.TextColor := PPGColorToRGB(A.Disabled.TextColor);
-  if UseVclStyle then
+  if UseHighContrast then
+  begin
+    // Hochkontrast: Systemfarben aus der Appearance; Rahmen immer sichtbar
+    if Result.BorderWidth < 1 then
+      Result.BorderWidth := 1;
+  end
+  else if UseVclStyle then
   begin
     PPGVclStyleContainerColors(GroupBox, Enabled, Fill, Border, Text);
     Result.Color := Fill;
@@ -157,20 +163,6 @@ begin
     Result.ColorMirrorTo := Fill;
     Result.BorderColor := Border;
     Result.TextColor := Text;
-  end;
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    Result.Color := PPGColorToRGB(clBtnFace);
-    Result.ColorTo := Result.Color;
-    Result.ColorMirror := Result.Color;
-    Result.ColorMirrorTo := Result.Color;
-    Result.BorderColor := PPGColorToRGB(clWindowText);
-    if Enabled then
-      Result.TextColor := PPGColorToRGB(clBtnText)
-    else
-      Result.TextColor := PPGColorToRGB(clGrayText);
-    if Result.BorderWidth < 1 then
-      Result.BorderWidth := 1;
   end;
 end;
 

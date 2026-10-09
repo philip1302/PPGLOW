@@ -869,7 +869,7 @@ begin
   G := GetGeometry;
   A := EffectiveAppearance;
   PPI := ScalePPI;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  HC := UseHighContrast;
   RR := RangeRenderer;
 
   if Enabled then
@@ -886,12 +886,13 @@ begin
   TickColor := TrackStyle.BorderColor;
   if HC then
   begin
-    TrackStyle.BorderColor := PPGColorToRGB(clWindowText);
+    // Sonderfall: Schiene und Striche in Textfarbe, Fuellung Accent (Tokens)
+    TrackStyle.BorderColor := Tokens.Stroke;
     if Enabled then
-      FillStyle.BorderColor := PPGColorToRGB(clHighlight)
+      FillStyle.BorderColor := Tokens.Accent
     else
-      FillStyle.BorderColor := PPGColorToRGB(clGrayText);
-    TickColor := PPGColorToRGB(clWindowText);
+      FillStyle.BorderColor := Tokens.TextDisabled;
+    TickColor := Tokens.Stroke;
   end;
 
   // Schiene ueber den gesamten Weg, Enden halbrund
@@ -975,17 +976,19 @@ begin
   begin
     if HC then
     begin
-      ThumbStyle.Color := PPGColorToRGB(clBtnFace);
+      // Sonderfall: Griff auch beim Ziehen flach, nur der Rand hebt hervor
+      // (Systemfarben aus der Hochkontrast-Appearance)
+      ThumbStyle.Color := PPGColorToRGB(A.Normal.Color);
       ThumbStyle.ColorTo := ThumbStyle.Color;
       ThumbStyle.ColorMirror := ThumbStyle.Color;
       ThumbStyle.ColorMirrorTo := ThumbStyle.Color;
       ThumbStyle.GlowAlpha := 0;
       if Enabled and (IsHot or ThumbStyle.Focused) then
-        ThumbStyle.BorderColor := PPGColorToRGB(clHighlight)
+        ThumbStyle.BorderColor := PPGColorToRGB(A.FocusColor)
       else if Enabled then
-        ThumbStyle.BorderColor := PPGColorToRGB(clBtnText)
+        ThumbStyle.BorderColor := PPGColorToRGB(A.Normal.BorderColor)
       else
-        ThumbStyle.BorderColor := PPGColorToRGB(clGrayText);
+        ThumbStyle.BorderColor := PPGColorToRGB(A.Disabled.BorderColor);
     end;
     if FRangeMode then
     begin

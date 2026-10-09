@@ -166,7 +166,10 @@ function PPGCapRounding(const R: TRect; Rounding: Integer): Integer;
 /// Tokens eines Presets ('' oder unbekannt = Standard-Preset); Renderer ohne
 /// Tokens liefern die neutrale Palette. Fuer Komponenten ohne eigene
 /// Appearance (Label, Hints).
-function PPGPresetTokens(const Preset: string; Dark: Boolean): TPPGTokens;
+function PPGPresetTokens(const Preset: string; Dark: Boolean): TPPGTokens; overload;
+/// Wie oben; mit HighContrast = True (PPGUseHighContrast der Komponente) die
+/// Masse des Presets und die Systemfarben (PPGApplyHighContrastColors).
+function PPGPresetTokens(const Preset: string; Dark, HighContrast: Boolean): TPPGTokens; overload;
 
 /// Prueft einen Preset-Namen fuer Komponenten, die kein TPPGCustomControl sind
 /// ('' = Vorgabe bzw. StyleManager). Unbekannt: zur Laufzeit EPPGPropertyError,
@@ -421,6 +424,17 @@ begin
     Result := TR.Tokens(Dark)
   else
     Result := PPGDefaultTokens(Dark);
+end;
+
+function PPGPresetTokens(const Preset: string; Dark, HighContrast: Boolean): TPPGTokens;
+begin
+  if HighContrast then
+  begin
+    Result := PPGPresetTokens(Preset, False);
+    PPGApplyHighContrastColors(Result);
+  end
+  else
+    Result := PPGPresetTokens(Preset, Dark);
 end;
 
 function PPGCapRounding(const R: TRect; Rounding: Integer): Integer;

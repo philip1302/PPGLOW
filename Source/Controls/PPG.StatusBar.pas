@@ -787,29 +787,23 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
-  if HC then
+  HC := UseHighContrast;
+  Fill := PPGBlendColor(T.Background, T.Layer, 0.5);
+  Border := T.Stroke;
+  TextCol := T.TextSecondary;
+  Accent := PPGColorToRGB(A.FocusColor);
+  if UseVclStyle or HC then
   begin
-    Fill := PPGColorToRGB(clBtnFace);
-    Border := PPGColorToRGB(clBtnText);
-    TextCol := PPGColorToRGB(clBtnText);
-    Accent := PPGColorToRGB(clHighlight);
-  end
-  else
-  begin
-    Fill := PPGBlendColor(T.Background, T.Layer, 0.5);
-    Border := T.Stroke;
-    TextCol := T.TextSecondary;
-    Accent := PPGColorToRGB(A.FocusColor);
-    if UseVclStyle then
-    begin
-      Fill := PPGColorToRGB(A.Normal.Color);
-      TextCol := PPGColorToRGB(A.Normal.TextColor);
-    end;
+    // VCL-Style bzw. Hochkontrast: Flaeche und Text wie Buttons (Appearance;
+    // im Hochkontrast clBtnFace/clBtnText)
+    Fill := PPGColorToRGB(A.Normal.Color);
+    TextCol := PPGColorToRGB(A.Normal.TextColor);
+    if HC then
+      Border := PPGColorToRGB(A.Normal.BorderColor);
   end;
   // Element-Stil der Leiste (Style) und Farben je Feld (nur ohne
   // Hochkontrast/VCL-Style)
-  UseColors := not HC and not UseVclStyle;
+  UseColors := UseOwnColors;
   Dk := UseDarkMode;
   if UseColors then
   begin

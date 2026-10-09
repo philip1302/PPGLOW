@@ -647,7 +647,6 @@ var
   T: TPPGTokens;
   A: TPPGAppearance;
   PPI, Rad, W, RingRad: Integer;
-  HC: Boolean;
   Fill, Border, TextCol, SecCol, Accent, Track: TColor;
   RingR, TitleR, DescR, CancelR, R: TRect;
   C: TPoint;
@@ -659,25 +658,16 @@ begin
   PPI := ScalePPI;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
-  if HC then
-  begin
-    Fill := PPGColorToRGB(clWindow);
-    Border := PPGColorToRGB(clWindowText);
-    TextCol := PPGColorToRGB(clWindowText);
-    SecCol := TextCol;
-    Accent := PPGColorToRGB(clHighlight);
-    Track := PPGColorToRGB(clBtnShadow);
-  end
+  // Hochkontrast: Tokens und Appearance liefern die Systemfarben
+  Fill := T.Layer;
+  Border := T.Stroke;
+  TextCol := T.TextPrimary;
+  SecCol := T.TextSecondary;
+  Accent := PPGColorToRGB(A.FocusColor);
+  if UseHighContrast then
+    Track := T.StrokeDisabled // Sonderfall: Spur deutlich sichtbar
   else
-  begin
-    Fill := T.Layer;
-    Border := T.Stroke;
-    TextCol := T.TextPrimary;
-    SecCol := T.TextSecondary;
-    Accent := PPGColorToRGB(A.FocusColor);
     Track := PPGBlendColor(Fill, TextCol, 0.15);
-  end;
   Rad := PPGScale(T.RadiusLarge, PPI);
   ACanvas.FillRoundRect(ClientR, 0, Fill, 255);
   if not FCompact then

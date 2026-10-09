@@ -1398,37 +1398,28 @@ begin
     Link := nil;
   T := Tokens;
   A := EffectiveAppearance;
-  HC := HighContrastSupport and PPGIsHighContrast;
+  // Hochkontrast: Tokens und Appearance liefern die Systemfarben
+  HC := UseHighContrast;
+  Fill := T.Layer;
+  Border := T.Stroke;
+  TextCol := T.TextPrimary;
+  Secondary := T.TextSecondary;
+  Accent := PPGColorToRGB(A.FocusColor);
   if HC then
-  begin
-    Fill := PPGColorToRGB(clWindow);
-    Border := PPGColorToRGB(clWindowText);
-    TextCol := PPGColorToRGB(clWindowText);
-    Secondary := TextCol;
-    Accent := PPGColorToRGB(clHighlight);
-    OnAccent := PPGColorToRGB(clHighlightText);
-    DisabledCol := PPGColorToRGB(clGrayText);
-  end
+    OnAccent := T.OnAccent
   else
-  begin
-    Fill := T.Layer;
-    Border := T.Stroke;
-    TextCol := T.TextPrimary;
-    Secondary := T.TextSecondary;
-    Accent := PPGColorToRGB(A.FocusColor);
     OnAccent := PPGContrastTextColor(Accent);
-    DisabledCol := T.TextDisabled;
-    if UseVclStyle then
-    begin
-      Fill := PPGColorToRGB(A.Normal.Color);
-      TextCol := PPGColorToRGB(A.Normal.TextColor);
-      Secondary := PPGBlendColor(TextCol, Fill, 0.4);
-      DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
-    end;
+  DisabledCol := T.TextDisabled;
+  if UseVclStyle and not HC then
+  begin
+    Fill := PPGColorToRGB(A.Normal.Color);
+    TextCol := PPGColorToRGB(A.Normal.TextColor);
+    Secondary := PPGBlendColor(TextCol, Fill, 0.4);
+    DisabledCol := PPGBlendColor(TextCol, Fill, 0.6);
   end;
   // Element-Stile (Styles): Farben nur ohne Hochkontrast/VCL-Style
   CS := FCalendarStyles;
-  UseColors := not HC and not UseVclStyle;
+  UseColors := UseOwnColors;
   Dk := UseDarkMode;
   FFonts.Clear;
   if UseColors then

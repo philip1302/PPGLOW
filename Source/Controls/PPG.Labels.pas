@@ -31,9 +31,11 @@ type
   private
     FAllowMarkup: Boolean;
     FSecondary: Boolean;
+    FHighContrastSupport: Boolean;
     FMarkup: TPPGMarkupLayout;
     procedure SetAllowMarkup(const Value: Boolean);
     procedure SetSecondary(const Value: Boolean);
+    procedure SetHighContrastSupport(const Value: Boolean);
   protected
     procedure WndProc(var Message: TMessage); override;
     procedure DoDrawText(var Rect: TRect; Flags: Longint); override;
@@ -47,6 +49,8 @@ type
   published
     property AllowMarkup: Boolean read FAllowMarkup write SetAllowMarkup default False;
     property Secondary: Boolean read FSecondary write SetSecondary default False;
+    /// Im Hochkontrastmodus Systemfarben (wie bei allen PPGlow-Controls).
+    property HighContrastSupport: Boolean read FHighContrastSupport write SetHighContrastSupport default True;
     { wie TLabel }
     property Align;
     property Alignment;
@@ -252,6 +256,7 @@ end;
 constructor TPPGLabel.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FHighContrastSupport := True;
   FMarkup := TPPGMarkupLayout.Create;
   TPPGTheme.AddClient(Self);
 end;
@@ -292,40 +297,44 @@ begin
   end;
 end;
 
+procedure TPPGLabel.SetHighContrastSupport(const Value: Boolean);
+begin
+  if FHighContrastSupport <> Value then
+  begin
+    FHighContrastSupport := Value;
+    Invalidate;
+  end;
+end;
+
 function TPPGLabel.TextColor: TColor;
 var
   T: TPPGTokens;
-  Dark: Boolean;
+  Dark, HC: Boolean;
 begin
-  if PPGIsHighContrast then
-  begin
-    if Enabled then
-      Result := clWindowText
-    else
-      Result := clGrayText;
-    Exit;
-  end;
-  Dark := TPPGTheme.IsDark and not PPGVclStyleActive;
-  // Tokens des Standard-Presets (ein Label hat keine eigene Appearance)
-  T := PPGPresetTokens('', Dark);
+  HC := PPGUseHighContrast(FHighContrastSupport);
+  Dark := TPPGTheme.IsDark and not PPGVclStyleActive and not HC;
+  // Tokens des Standard-Presets (ein Label hat keine eigene Appearance);
+  // im Hochkontrast die Systemfarben, eigene Schriftfarben gelten dort nicht
+  T := PPGPresetTokens('', Dark, HC);
   if not Enabled then
     Result := T.TextDisabled
   else if FSecondary then
     Result := T.TextSecondary
-  else if Dark and IsDefaultTextColor(Font.Color) then
+  else if HC or (Dark and IsDefaultTextColor(Font.Color)) then
     Result := T.TextPrimary
   else
     Result := Font.Color;
 end;
 
 function TPPGLabel.LinkColor: TColor;
+var
+  HC: Boolean;
 begin
-  if PPGIsHighContrast then
-    Result := PPGColorToRGB(clHotLight)
-  else if PPGVclStyleActive then
+  HC := PPGUseHighContrast(FHighContrastSupport);
+  if not HC and PPGVclStyleActive then
     Result := PPGColorToRGB(StyleServices.GetSystemColor(clHotLight))
   else
-    Result := PPGPresetTokens('', TPPGTheme.IsDark).Link;
+    Result := PPGPresetTokens('', TPPGTheme.IsDark and not HC, HC).Link;
 end;
 
 procedure TPPGLabel.DoDrawText(var Rect: TRect; Flags: Longint);
@@ -546,15 +555,11 @@ var
   A: TPPGAppearance;
 begin
   A := EffectiveAppearance;
-  if HighContrastSupport and PPGIsHighContrast then
-  begin
-    if Enabled then
-      Result := PPGColorToRGB(clWindowText)
-    else
-      Result := PPGColorToRGB(clGrayText);
-  end
-  else if not Enabled then
+  // Hochkontrast: deaktiviert clGrayText aus der Appearance, sonst Token
+  if not Enabled then
     Result := PPGColorToRGB(A.Disabled.TextColor)
+  else if UseHighContrast then
+    Result := Tokens.TextPrimary
   else if UseDarkMode or UseVclStyle then
     Result := PPGColorToRGB(A.Normal.TextColor)
   else
@@ -562,19 +567,8 @@ begin
 end;
 
 function TPPGCustomLinkLabel.LinkColor: TColor;
-var
-  T: TPPGTokens;
-  F: TColor;
 begin
-  if HighContrastSupport and PPGIsHighContrast then
-    Exit(PPGColorToRGB(clHotLight));
-  F := PPGColorToRGB(EffectiveAppearance.FocusColor);
-  T := Tokens;
-  // VCL-Style und eigene FocusColor bleiben; sonst das Link-Token (4,5:1)
-  if UseVclStyle or (F <> T.Accent) then
-    Result := F
-  else
-    Result := T.Link;
+  Result := TextLinkColor;
 end;
 
 procedure TPPGCustomLinkLabel.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);

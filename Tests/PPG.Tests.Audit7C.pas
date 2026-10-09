@@ -2,7 +2,8 @@ unit PPG.Tests.Audit7C;
 
 { Audit-Paket 7C (Docs\Audit-Paket7-Plan.md): Regressionstests fuer
   7e #1-#6 (Farben), 7g (Appearance bei Badge, ProgressRing, Rating,
-  Splitter) und 7f #5 (Hints von rechts nach links). }
+  Splitter), 7f #5 (Hints von rechts nach links) und 7e #7 (Hochkontrast
+  als Token-Satz, simuliert ueber PPGSetHighContrastReader). }
 
 interface
 
@@ -12,7 +13,8 @@ uses
   PPG.Types, PPG.Tokens, PPG.Appearance, PPG.Theme, PPG.Render.Intf, PPG.Render.Registry,
   PPG.StyleManager, PPG.Controls.Base, PPG.Feedback, PPG.Rating, PPG.Splitter, PPG.Labels,
   PPG.Hints, PPG.Kanban, PPG.Kanban.Items, PPG.Planner, PPG.Planner.Model, PPG.Grid,
-  PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Export, PPG.Tests.Controls;
+  PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Export, PPG.DpiUtils, PPG.Dialogs, PPG.Button,
+  PPG.Tests.Controls;
 
 type
   TAudit7CTests = class(TControlTestCase)
@@ -52,7 +54,30 @@ type
     procedure HintContentRightToLeft;
   end;
 
+  /// Audit 7e #7: Hochkontrast als Token-Satz (simuliert, Systemfarben des
+  /// Testrechners).
+  THighContrastTokenTests = class(TControlTestCase)
+  private
+    FOldMode: TPPGThemeMode;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure HighContrastTokensAreSystemColors;
+    procedure ControlTokensAndAppearanceFollowHighContrast;
+    procedure HighContrastSupportOffKeepsPresetColors;
+    procedure SwitchingHighContrastRebuildsAppearance;
+    procedure LabelHonorsHighContrastSupport;
+    procedure HintsHonorHighContrastSupport;
+    procedure DialogPassesHighContrastSupportOn;
+    procedure InfoBarLinksUseLinkToken;
+    procedure PaletteControlsPaintAndAreReadable;
+  end;
+
 implementation
+
+uses
+  PPG.Tests.Audit5d;
 
 type
   TCCV = class(TPPGCustomControl);
@@ -698,7 +723,301 @@ begin
   end;
 end;
 
+{ ---- 7e #7: Hochkontrast als Token-Satz ---- }
+
+function SimulatedHighContrast: Boolean;
+begin
+  Result := True;
+end;
+
+function NoHighContrast: Boolean;
+begin
+  Result := False;
+end;
+
+function RGBOf(C: TColor): TColor;
+begin
+  Result := TColor(ColorToRGB(C));
+end;
+
+procedure THighContrastTokenTests.SetUp;
+begin
+  inherited;
+  FOldMode := TPPGTheme.Mode;
+  TPPGTheme.Mode := tmLight;
+  TPPGTokenOverrides.Clear;
+  PPGSetHighContrastReader(SimulatedHighContrast);
+end;
+
+procedure THighContrastTokenTests.TearDown;
+begin
+  PPGSetHighContrastReader(nil);
+  TPPGTokenOverrides.Clear;
+  TPPGTheme.Mode := FOldMode;
+  inherited;
+end;
+
+procedure THighContrastTokenTests.HighContrastTokensAreSystemColors;
+var
+  T, B: TPPGTokens;
+begin
+  T := PPGHighContrastTokens;
+  B := PPGBaseTokens(False);
+  CheckEquals(RGBOf(clHighlight), T.Accent, 'Accent');
+  CheckEquals(RGBOf(clHighlight), T.AccentHover, 'AccentHover');
+  CheckEquals(RGBOf(clHighlightText), T.OnAccent, 'OnAccent');
+  CheckEquals(RGBOf(clWindow), T.Background, 'Background');
+  CheckEquals(RGBOf(clWindow), T.Layer, 'Layer');
+  CheckEquals(RGBOf(clWindow), T.Surface, 'Surface');
+  CheckEquals(RGBOf(clWindow), T.SurfaceDisabled, 'SurfaceDisabled');
+  CheckEquals(RGBOf(clWindowText), T.Stroke, 'Stroke');
+  CheckEquals(RGBOf(clWindowText), T.TextPrimary, 'TextPrimary');
+  CheckEquals(RGBOf(clWindowText), T.TextSecondary, 'TextSecondary');
+  CheckEquals(RGBOf(clGrayText), T.TextDisabled, 'TextDisabled');
+  CheckEquals(RGBOf(clGrayText), T.StrokeDisabled, 'StrokeDisabled');
+  CheckEquals(RGBOf(clHotLight), T.Link, 'Link');
+  CheckEquals(RGBOf(clHighlight), T.Danger, 'Danger');
+  CheckEquals(RGBOf(clHighlight), T.Warning, 'Warning');
+  CheckEquals(RGBOf(clHighlight), T.Success, 'Success');
+  CheckEquals(B.RadiusMedium, T.RadiusMedium, 'Masse bleiben');
+  CheckEquals(B.DurationNormal, T.DurationNormal, 'Dauern bleiben');
+  // Ueberschreibungen des StyleManagers gelten im Hochkontrast nicht
+  TPPGTokenOverrides.AccentBase := clRed;
+  CheckEquals(RGBOf(clHighlight), PPGHighContrastTokens.Accent, 'ohne Ueberschreibungen');
+end;
+
+procedure THighContrastTokenTests.ControlTokensAndAppearanceFollowHighContrast;
+var
+  B: TPPGButton;
+  T: TPPGTokens;
+  A: TPPGAppearance;
+begin
+  B := NewButton('Los');
+  B.Preset := 'Fluent11';
+  CheckTrue(B.UseHighContrast);
+  CheckFalse(B.UseOwnColors, 'eigene Farben gelten nicht');
+  T := B.Tokens;
+  CheckEquals(RGBOf(clHighlight), T.Accent, 'Accent');
+  CheckEquals(RGBOf(clWindow), T.Surface, 'Surface');
+  CheckEquals(RGBOf(clWindowText), T.TextPrimary, 'TextPrimary');
+  CheckEquals(RGBOf(clHotLight), T.Link, 'Link');
+  CheckEquals(PPGPresetTokens('Fluent11', False).RadiusLarge, T.RadiusLarge, 'Masse des Presets');
+  A := B.EffectiveAppearance;
+  CheckTrue(A <> B.Appearance, 'Kopie, die gespeicherte Appearance bleibt');
+  CheckEquals(RGBOf(clBtnFace), RGBOf(A.Normal.Color), 'Normal.Color');
+  CheckEquals(RGBOf(clBtnText), RGBOf(A.Normal.TextColor), 'Normal.TextColor');
+  CheckEquals(RGBOf(clHighlight), RGBOf(A.Down.Color), 'Down.Color');
+  CheckEquals(RGBOf(clHighlightText), RGBOf(A.Checked.TextColor), 'Checked.TextColor');
+  CheckEquals(RGBOf(clHighlight), RGBOf(A.FocusColor), 'FocusColor');
+  CheckEquals(B.Appearance.Rounding, A.Rounding, 'Formen bleiben');
+  CheckEquals(RGBOf(clHighlight), RGBOf(B.EffectiveAppearance.FocusColor), 'zwischengespeichert');
+  // Dark Mode gilt im Hochkontrast nicht
+  TPPGTheme.Mode := tmDark;
+  CheckFalse(B.UseDarkMode, 'kein Dark Mode im Hochkontrast');
+  CheckEquals(RGBOf(clWindow), B.Tokens.Surface, 'Hochkontrast vor Dark Mode');
+end;
+
+procedure THighContrastTokenTests.HighContrastSupportOffKeepsPresetColors;
+var
+  B: TPPGButton;
+begin
+  B := NewButton('Los');
+  B.HighContrastSupport := False;
+  CheckFalse(B.UseHighContrast);
+  CheckTrue(B.EffectiveAppearance = B.Appearance, 'Appearance unveraendert');
+  CheckEquals(PPGPresetTokens(B.Preset, False).Accent, B.Tokens.Accent, 'Tokens des Presets');
+  // Ohne Hochkontrast (Normalbetrieb) ebenso
+  B.HighContrastSupport := True;
+  PPGSetHighContrastReader(NoHighContrast);
+  CheckTrue(B.EffectiveAppearance = B.Appearance, 'Normalbetrieb: Appearance selbst');
+  CheckEquals(PPGPresetTokens(B.Preset, False).Accent, B.Tokens.Accent, 'Normalbetrieb: Preset');
+  CheckTrue(B.UseOwnColors);
+end;
+
+procedure THighContrastTokenTests.SwitchingHighContrastRebuildsAppearance;
+var
+  B: TPPGButton;
+begin
+  B := NewButton('Los');
+  CheckEquals(RGBOf(clHighlight), RGBOf(B.EffectiveAppearance.FocusColor), 'an');
+  PPGSetHighContrastReader(NoHighContrast);
+  CheckTrue(B.EffectiveAppearance = B.Appearance, 'aus: wieder die eigene Appearance');
+  PPGSetHighContrastReader(SimulatedHighContrast);
+  CheckEquals(RGBOf(clBtnFace), RGBOf(B.EffectiveAppearance.Normal.Color), 'wieder an');
+  // Systemfarben geaendert (CM_SYSCOLORCHANGE): Kopie wird neu aufgebaut
+  B.Perform(CM_SYSCOLORCHANGE, 0, 0);
+  CheckEquals(RGBOf(clBtnFace), RGBOf(B.EffectiveAppearance.Normal.Color), 'nach Systemfarben');
+end;
+
+procedure THighContrastTokenTests.LabelHonorsHighContrastSupport;
+var
+  L: TPPGLabel;
+  LL: TPPGLinkLabel;
+begin
+  L := TPPGLabel.Create(FForm);
+  L.Parent := FForm;
+  L.Font.Color := clRed;
+  CheckTrue(L.HighContrastSupport, 'Vorgabe True');
+  CheckEquals(RGBOf(clWindowText), RGBOf(L.TextColor), 'Text clWindowText');
+  CheckEquals(RGBOf(clHotLight), RGBOf(L.LinkColor), 'Link clHotLight');
+  L.Enabled := False;
+  CheckEquals(RGBOf(clGrayText), RGBOf(L.TextColor), 'deaktiviert clGrayText');
+  L.Enabled := True;
+  L.HighContrastSupport := False;
+  CheckEquals(RGBOf(clRed), RGBOf(L.TextColor), 'ohne HighContrastSupport: eigene Farbe');
+  CheckEquals(PPGPresetTokens('', False).Link, RGBOf(L.LinkColor), 'ohne: Link-Token');
+  LL := TPPGLinkLabel.Create(FForm);
+  LL.Parent := FForm;
+  CheckEquals(RGBOf(clHotLight), RGBOf(TLinkAccess(LL).LinkColor), 'LinkLabel: clHotLight');
+  CheckEquals(RGBOf(clWindowText), RGBOf(TLinkAccess(LL).TextColor), 'LinkLabel: Text');
+end;
+
+procedure THighContrastTokenTests.HintsHonorHighContrastSupport;
+var
+  Fill, Border, Txt: TColor;
+  M: TPPGHintManager;
+  H: TPPGCustomHint;
+begin
+  PPGHintColors('', Fill, Border, Txt);
+  CheckEquals(RGBOf(clInfoBk), RGBOf(Fill), 'Hint: clInfoBk');
+  CheckEquals(RGBOf(clInfoText), RGBOf(Txt), 'Hint: clInfoText');
+  PPGHintColors('', Fill, Border, Txt, False);
+  CheckEquals(PPGPresetTokens('', False).Layer, RGBOf(Fill), 'ohne HighContrastSupport: Preset');
+  M := TPPGHintManager.Create(nil);
+  H := TPPGCustomHint.Create(nil);
+  try
+    CheckTrue(M.HighContrastSupport, 'Manager: Vorgabe True');
+    CheckTrue(H.HighContrastSupport, 'CustomHint: Vorgabe True');
+    CheckEquals(RGBOf(clHighlight), M.Tokens.Accent, 'Manager-Tokens im Hochkontrast');
+    M.HighContrastSupport := False;
+    CheckEquals(PPGPresetTokens('', False).Accent, M.Tokens.Accent, 'Manager ohne');
+  finally
+    H.Free;
+    M.Free;
+  end;
+end;
+
+procedure THighContrastTokenTests.DialogPassesHighContrastSupportOn;
+var
+  D: TPPGTaskDialog;
+  F: TPPGDialogForm;
+  I: Integer;
+begin
+  D := TPPGTaskDialog.Create(nil);
+  try
+    D.Title := 'Titel';
+    D.Text := 'Inhalt';
+    CheckTrue(D.HighContrastSupport, 'Vorgabe True');
+    F := TPPGDialogForm.CreateFor(D, 0);
+    try
+      CheckTrue(F.UseHighContrast);
+      CheckEquals(RGBOf(clWindowText), RGBOf(F.TitleLabel.TextColor), 'Titel in clWindowText');
+    finally
+      F.Free;
+    end;
+    D.HighContrastSupport := False;
+    F := TPPGDialogForm.CreateFor(D, 0);
+    try
+      CheckFalse(F.UseHighContrast);
+      CheckFalse(F.TitleLabel.HighContrastSupport, 'an den Titel weitergegeben');
+      CheckTrue(F.ButtonCount > 0);
+      for I := 0 to F.ButtonCount - 1 do
+        if F.ButtonAt(I) is TPPGButton then
+          CheckFalse(TPPGButton(F.ButtonAt(I)).HighContrastSupport, 'an die Buttons weitergegeben');
+    finally
+      F.Free;
+    end;
+  finally
+    D.Free;
+  end;
+end;
+
+procedure THighContrastTokenTests.InfoBarLinksUseLinkToken;
+var
+  IB: TPPGInfoBar;
+begin
+  IB := TPPGInfoBar.Create(FForm);
+  IB.Parent := FForm;
+  IB.Message := 'Mehr <a href="x">Details</a>';
+  CheckEquals(RGBOf(clHotLight), IB.TextLinkColor, 'Hochkontrast: clHotLight');
+  PPGSetHighContrastReader(NoHighContrast);
+  CheckEquals(IB.Tokens.Link, IB.TextLinkColor, 'sonst das Link-Token');
+  TPPGTheme.Mode := tmDark;
+  CheckEquals(IB.Tokens.Link, IB.TextLinkColor, 'dunkel: Link-Token');
+  CheckTrue(PPGContrastRatio(IB.TextLinkColor, IB.Tokens.Background) >= 4.5, 'dunkel lesbar');
+end;
+
+procedure THighContrastTokenTests.PaletteControlsPaintAndAreReadable;
+var
+  CC: TControlClass;
+  C: TControl;
+  T: TPPGTokens;
+  A: TPPGAppearance;
+  Bmp: TBitmap;
+  Bad: string;
+
+  procedure Pair(const What: string; Fore, Back: TColor; MinRatio: Double);
+  var
+    R: Double;
+  begin
+    R := PPGContrastRatio(RGBOf(Fore), RGBOf(Back));
+    // wie MeetsTextContrast: auf eine Stelle gerundet (#0078D7/Weiss = 4,5)
+    if Round(R * 10) < Round(MinRatio * 10) then
+      Bad := Bad + #13#10 + CC.ClassName + ': ' + What + ' ' + FormatFloat('0.00', R);
+  end;
+
+begin
+  FForm.SetBounds(0, 0, 900, 700);
+  FForm.Show;
+  Bad := '';
+  try
+    for CC in VisualClasses do
+    begin
+      C := CC.Create(FForm);
+      try
+        C.Parent := FForm;
+        C.SetBounds(10, 10, 300, 200);
+        if C is TWinControl then
+        begin
+          TWinControl(C).HandleNeeded;
+          Bmp := RenderToBitmap(TWinControl(C));
+          Bmp.Free;
+        end
+        else
+          FForm.Repaint;
+        if C is TPPGCustomControl then
+        begin
+          CheckTrue(TCCV(C).UseHighContrast, CC.ClassName + ': Hochkontrast');
+          T := TCCV(C).Tokens;
+          CheckEquals(RGBOf(clWindowText), T.TextPrimary, CC.ClassName + ': TextPrimary');
+          CheckEquals(RGBOf(clHighlight), T.Accent, CC.ClassName + ': Accent');
+          Pair('TextPrimary/Surface', T.TextPrimary, T.Surface, 4.5);
+          Pair('TextPrimary/Background', T.TextPrimary, T.Background, 4.5);
+          Pair('TextDisabled/Surface', T.TextDisabled, T.Surface, 3.0);
+          Pair('OnAccent/Accent', T.OnAccent, T.Accent, 4.5);
+          Pair('Link/Background', T.Link, T.Background, 4.5);
+          A := TCCV(C).EffectiveAppearance;
+          Pair('Normal', A.Normal.TextColor, A.Normal.Color, 4.5);
+          Pair('Hot', A.Hot.TextColor, A.Hot.Color, 4.5);
+          Pair('Down', A.Down.TextColor, A.Down.Color, 4.5);
+          Pair('Checked', A.Checked.TextColor, A.Checked.Color, 4.5);
+          Pair('Disabled', A.Disabled.TextColor, A.Disabled.Color, 3.0);
+        end;
+      finally
+        C.Free;
+      end;
+      Application.ProcessMessages;
+    end;
+  finally
+    FForm.Hide;
+  end;
+  CheckEquals('', Bad, 'Kontrast im Hochkontrast');
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+  CheckEquals(0, FAppExceptions, 'keine Exceptions');
+end;
+
 initialization
   RegisterTest('Audit7C', TAudit7CTests.Suite);
+  RegisterTest('Audit7C', THighContrastTokenTests.Suite);
 
 end.
