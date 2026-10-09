@@ -3,8 +3,9 @@ unit PPG.Feedback;
 { Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar.
 
   - TPPGBadge: Punkt, Zahl (99+) oder kurzer Text auf Akzent- bzw.
-    Signalfarbe (Tokens; Dark Mode automatisch). Zeichnet ueber
-    IPPGItemRenderer.DrawBadge wie die Plaketten in Listen.
+    Signalfarbe (Tokens; Dark Mode automatisch). Die Akzent-Plakette liest
+    Appearance.Checked (Flaeche/Verlauf, Rahmen, Text, Schriftstil),
+    BorderWidth und Rounding (Pille als Obergrenze).
   - TPPGProgressRing: bestimmt (Bogen 0-100 %) oder unbestimmt (rotierender
     Bogen mit wechselnder Laenge). Die Endlosschleife laeuft ueber den
     gemeinsamen Animator und nur, solange das Control sichtbar ist; ohne
@@ -58,6 +59,8 @@ type
     /// Angezeigter Text ("" beim Punkt).
     function DisplayText: string;
     function FillColor: TColor;
+    /// True, wenn Flaeche, Rahmen, Text und Schriftstil aus Appearance.Checked kommen.
+    function UsesChecked: Boolean;
   end;
 
   TPPGBadge = class(TPPGCustomBadge)
@@ -381,14 +384,6 @@ begin
   PPGShapeArcPoints(Center, Radius, StartDeg, SweepDeg, Points);
 end;
 
-function ContrastText(Fill: TColor): TColor;
-begin
-  if PPGRelativeLuminance(Fill) < 0.4 then
-    Result := clWhite
-  else
-    Result := clBlack;
-end;
-
 { TPPGCustomBadge }
 
 constructor TPPGCustomBadge.Create(AOwner: TComponent);
@@ -424,6 +419,15 @@ begin
   end;
 end;
 
+function TPPGCustomBadge.UsesChecked: Boolean;
+begin
+  // Akzent-Plakette in einem flachen Preset: Flaeche, Rahmen, Text und
+  // Schriftstil aus Appearance.Checked (wie die ProgressBar)
+  Result := (FBadgeColor = bsvAccent) and Enabled and
+    not (HighContrastSupport and PPGIsHighContrast) and
+    PPGCheckedIsAccent(EffectiveAppearance);
+end;
+
 function TPPGCustomBadge.FillColor: TColor;
 var
   T: TPPGTokens;
@@ -437,13 +441,17 @@ begin
     bsvError: Result := T.Danger;
     bsvNeutral: Result := T.TextSecondary;
   else
-    Result := PPGColorToRGB(EffectiveAppearance.FocusColor);
+    Result := PPGAccentColor(EffectiveAppearance);
   end;
+  // Deaktiviert: entsaettigt und abgeblendet (gemeinsamer Helfer, Audit 7e)
+  if not Enabled then
+    Result := PPGDisabledColor(Result, PPGColorToRGB(GetBackgroundColor));
 end;
 
 function TPPGCustomBadge.CalcAutoSize(out AWidth, AHeight: Integer): Boolean;
 var
   S: TSize;
+  F, Temp: TFont;
 begin
   if FKind = bkDot then
   begin
@@ -452,7 +460,16 @@ begin
   end
   else
   begin
-    S := PPGMeasureTextNoCanvas(DisplayText, Font, 0, False);
+    Temp := nil;
+    try
+      if UsesChecked then
+        F := PPGStyledFont(Font, EffectiveAppearance.Checked.FontStyle, Temp)
+      else
+        F := Font;
+      S := PPGMeasureTextNoCanvas(DisplayText, F, 0, False);
+    finally
+      Temp.Free;
+    end;
     AHeight := S.cy + 2 * PPGScale(1, ScalePPI);
     AWidth := S.cx + 2 * PPGScale(6, ScalePPI);
     if AWidth < AHeight then
@@ -463,14 +480,28 @@ end;
 
 procedure TPPGCustomBadge.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
-  IR: IPPGItemRenderer;
+  A: TPPGAppearance;
   R: TRect;
-  D: Integer;
-  F: TColor;
+  D, Rad, BW: Integer;
+  F, F2, Border, Txt: TColor;
+  Styled: Boolean;
+  Fnt, Temp: TFont;
 begin
+  A := EffectiveAppearance;
+  Styled := UsesChecked;
   F := FillColor;
-  if not Enabled then
-    F := PPGBlendColor(F, PPGColorToRGB(GetBackgroundColor), 0.5);
+  F2 := F;
+  Border := F;
+  Txt := PPGContrastTextColor(F);
+  if Styled then
+  begin
+    F2 := PPGColorToRGB(A.Checked.ColorTo);
+    Border := PPGColorToRGB(A.Checked.BorderColor);
+    Txt := PPGReadableTextColor(PPGColorToRGB(A.Checked.TextColor), F);
+  end
+  else if not Enabled then
+    Txt := PPGBlendColor(Txt, F, 0.3);
+  R := ClientR;
   if FKind = bkDot then
   begin
     D := ClientR.Right - ClientR.Left;
@@ -478,11 +509,40 @@ begin
       D := ClientR.Bottom - ClientR.Top;
     R := Rect((ClientR.Left + ClientR.Right - D) div 2, (ClientR.Top + ClientR.Bottom - D) div 2,
       (ClientR.Left + ClientR.Right + D) div 2, (ClientR.Top + ClientR.Bottom + D) div 2);
-    ACanvas.FillEllipse(R, F, 255);
-    Exit;
   end;
-  IR := PPGItemRendererOf(Renderer);
-  IR.DrawBadge(ACanvas, ClientR, DisplayText, Font, F, ContrastText(F), ScalePPI);
+  if IsRectEmpty(R) then
+    Exit;
+  // Rundung: Appearance.Rounding dreifach (Plaketten sind etwa halb so hoch
+  // wie Buttons), gedeckelt auf die Pillenform; so bleiben die Presets
+  // (Rounding 3..6) Pillen, 0 ergibt eckige Plaketten
+  Rad := PPGCapRounding(R, PPGScale(A.Rounding, ScalePPI) * 3);
+  if F2 = F then
+    ACanvas.FillRoundRect(R, Rad, F, 255)
+  else
+  begin
+    ACanvas.PushClipRoundRect(R, Rad);
+    try
+      ACanvas.FillGradientRect(R, F, F2, A.Checked.GradientDirection, 255);
+    finally
+      ACanvas.PopClip;
+    end;
+  end;
+  BW := PPGScale(A.BorderWidth, ScalePPI);
+  if (BW > 0) and (Border <> F) then
+    ACanvas.FrameRoundRect(R, Rad, BW, Border, 255);
+  if FKind = bkDot then
+    Exit;
+  Temp := nil;
+  try
+    if Styled then
+      Fnt := PPGStyledFont(Font, A.Checked.FontStyle, Temp)
+    else
+      Fnt := Font;
+    ACanvas.DrawText(R, DisplayText, Fnt, Txt, DT_SINGLELINE or DT_CENTER or DT_VCENTER or
+      DT_NOPREFIX);
+  finally
+    Temp.Free;
+  end;
 end;
 
 procedure TPPGCustomBadge.SetKind(const Value: TPPGBadgeKind);
@@ -730,6 +790,7 @@ end;
 procedure TPPGCustomProgressRing.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   D, W, Rad: Integer;
+  A: TPPGAppearance;
   C: TPoint;
   Accent, Track: TColor;
   Pts: TArray<TPoint>;
@@ -741,10 +802,12 @@ begin
     D := ClientR.Bottom - ClientR.Top;
   if D < 4 then
     Exit;
+  A := EffectiveAppearance;
   if FThickness > 0 then
     W := PPGScale(FThickness, ScalePPI)
   else
-    W := D div 10;
+    // Automatisch: ein Zehntel, Appearance.BorderWidth als Mindeststaerke
+    W := System.Math.Max(D div 10, PPGScale(A.BorderWidth, ScalePPI));
   if W < 2 then
     W := 2;
   C := Point((ClientR.Left + ClientR.Right) div 2, (ClientR.Top + ClientR.Bottom) div 2);
@@ -754,13 +817,18 @@ begin
     Accent := PPGColorToRGB(clHighlight);
     Track := PPGColorToRGB(clBtnShadow);
   end
+  else if not Enabled then
+  begin
+    // Deaktiviert: grauer Bogen auf der Spur des Disabled-Zustands
+    Accent := PPGColorToRGB(A.Disabled.TextColor);
+    Track := PPGColorToRGB(A.Disabled.BorderColor);
+  end
   else
   begin
-    Accent := PPGColorToRGB(EffectiveAppearance.FocusColor);
-    Track := PPGBlendColor(PPGColorToRGB(GetBackgroundColor), Tokens.TextPrimary, 0.15);
+    // Bogen = Akzentrolle (Checked bzw. FocusColor), Spur = Rand in Ruhe
+    Accent := PPGAccentColor(A);
+    Track := PPGColorToRGB(A.Normal.BorderColor);
   end;
-  if not Enabled then
-    Accent := PPGBlendColor(Accent, PPGColorToRGB(GetBackgroundColor), 0.6);
   if FShowTrack and not FIndeterminate then
   begin
     Ring := Rect(C.X - Rad - W div 2, C.Y - Rad - W div 2, C.X + Rad + (W + 1) div 2,
@@ -1095,14 +1163,14 @@ begin
       Pts[0] := Point(IR.Left + (IR.Right - IR.Left) * 3 div 10, (IR.Top + IR.Bottom) div 2);
       Pts[1] := Point(IR.Left + (IR.Right - IR.Left) * 45 div 100, IR.Top + (IR.Bottom - IR.Top) * 68 div 100);
       Pts[2] := Point(IR.Left + (IR.Right - IR.Left) * 72 div 100, IR.Top + (IR.Bottom - IR.Top) * 32 div 100);
-      ACanvas.DrawPolyline(Pts, PPGScale(2, PPI), ContrastText(Sev), 255);
+      ACanvas.DrawPolyline(Pts, PPGScale(2, PPI), PPGContrastTextColor(Sev), 255);
     end
     else if FSeverity = psError then
-      ACanvas.DrawText(IR, 'x', Font, ContrastText(Sev), DT_CENTER or DT_VCENTER or DT_SINGLELINE)
+      ACanvas.DrawText(IR, 'x', Font, PPGContrastTextColor(Sev), DT_CENTER or DT_VCENTER or DT_SINGLELINE)
     else if FSeverity = psWarning then
-      ACanvas.DrawText(IR, '!', Font, ContrastText(Sev), DT_CENTER or DT_VCENTER or DT_SINGLELINE)
+      ACanvas.DrawText(IR, '!', Font, PPGContrastTextColor(Sev), DT_CENTER or DT_VCENTER or DT_SINGLELINE)
     else
-      ACanvas.DrawText(IR, 'i', Font, ContrastText(Sev), DT_CENTER or DT_VCENTER or DT_SINGLELINE);
+      ACanvas.DrawText(IR, 'i', Font, PPGContrastTextColor(Sev), DT_CENTER or DT_VCENTER or DT_SINGLELINE);
   end;
   // Titel und Text
   Temp := nil;

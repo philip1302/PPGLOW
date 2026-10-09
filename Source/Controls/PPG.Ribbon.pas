@@ -2754,7 +2754,7 @@ begin
     Result.TextSecondary := PPGBlendColor(Result.Panel, Result.Text, 0.7);
     Result.TextDisabled := PPGBlendColor(Result.Panel, Result.Text, 0.45);
     Result.Accent := PPGColorToRGB(A.FocusColor);
-    Result.OnAccent := clWhite;
+    Result.OnAccent := PPGReadableTextColor(PPGColorToRGB(A.Checked.TextColor), Result.Accent);
     Exit;
   end;
   Result.Back := T.Background;

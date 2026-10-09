@@ -409,7 +409,7 @@ Position, Kind-Fenster, Navigation und Hit-Test liefert der Windows-Standard-Pro
 
 Jedes Preset beschreibt seine Farben, Maße und Bewegungsdauern als **Design-Tokens** (`TPPGTokens` in `Source\Core\PPG.Tokens.pas`), je einmal für Hell und Dunkel.
 
-- **Farben:** Accent, AccentHover, AccentPressed, OnAccent, Background, Layer, Surface (+ Hover/Pressed/Disabled), Stroke, StrokeStrong, StrokeDisabled, TextPrimary/Secondary/Disabled, Danger, Warning, Success, Paused.
+- **Farben:** Accent, AccentHover, AccentPressed, OnAccent, Background, Layer, Surface (+ Hover/Pressed/Disabled), Stroke, StrokeStrong, StrokeDisabled, TextPrimary/Secondary/Disabled, Danger, Warning, Success, Paused, Link (Links im Text: der Akzent, so weit abgedunkelt bzw. aufgehellt, dass er 4,5:1 zum Background erreicht; folgt AccentBase und Akzent-Überschreibungen, eigene Farbe über `TPPGTokenColorSet.Link`).
 - **Maße:** RadiusSmall/Medium/Large, StrokeWidth.
 - **Bewegung:** DurationFast/Normal/Slow.
 
@@ -423,6 +423,10 @@ Jedes Preset beschreibt seine Farben, Maße und Bewegungsdauern als **Design-Tok
 **Nutzung in Controls:** `TPPGCustomControl.Tokens` liefert die Tokens des aktuellen Presets. Signalfarben kommen daraus: Validierung im Feld aus Danger/Warning/Success, ProgressBar-Fehler und -Pause aus Danger/Paused. Im Dark Mode liefert `Tokens` die dunklen Werte; Felder und Scroll-Controls holen dann auch Flächen- und Textfarben von hier statt aus `clWindow`/`clWindowText`.
 
 **Qualität:** Der Test `TextContrastMeetsWcag` prüft für jedes registrierte Preset in Hell und Dunkel die Kontraste nach WCAG 2.x (`PPGContrastRatio`). Text auf Surface/Layer/Background/Hover muss mindestens 4,5:1 erreichen, Akzent und Signalfarben mindestens 3:1. Ein neues Preset mit zu schwachem Kontrast fällt also im Test durch.
+
+**Gemeinsame Farbhelfer (Audit 7e):** `PPGContrastTextColor(Fill, Light, Dark)` wählt die Textfarbe mit dem höheren Kontrast (Light bleibt, wenn es auf eine Stelle gerundet 4,5:1 erreicht, also Weiß auf #0078D7); `PPGReadableTextColor` behält eine gewünschte Textfarbe, solange sie lesbar ist. Es gibt keine eigenen Helligkeitsschwellen mehr in den Controls (auch nicht im Export). `PPGDisabledColor`/`PPGDisabledTokens` blenden Akzent- und Signalfarben im deaktivierten Zustand ab (entsättigt, halb zur Fläche); Kanban und Planner nutzen sie. Label und Hints nehmen die Tokens des Presets über `PPGPresetTokens` (`PPG.Render.Registry`). `PPGPlainTableLook` (`PPG.Grid.Data`) ist der einzige schlichte Tabellensatz für Druck und HTML (eine Linienfarbe).
+
+**Akzentrolle der Anzeige-Controls (Audit 7g):** Badge, ProgressRing und Rating nehmen den Akzent wie die ProgressBar aus `Appearance.Checked` (`PPGAccentColor` in `PPG.Appearance`). In Glanz-Presets (Normal mit Verlauf, Classic) ist Checked der goldene An-Zustand; dort gilt `FocusColor`, damit die Standardoptik bleibt. Badge: Fläche/Verlauf, Rahmen, Text und Schriftstil aus Checked, `BorderWidth`, `Rounding` (dreifach, Pille als Obergrenze). ProgressRing: Spur `Normal.BorderColor`, `BorderWidth` als Mindeststärke. Rating: leere Sterne `Normal.BorderColor` (mindestens 3:1), Vorschau zur `Hot.Color` hin, Fokusrahmen mit `Rounding` und `Focused.BorderColor`. Splitter: ruhend `Normal.BorderColor`, Hover `Hot.BorderColor`/`Hot.TextColor`, Ziehen `Down.BorderColor`, Fokus `Focused.BorderColor` bzw. `FocusColor`, Linienbreite `BorderWidth`.
 
 ## Preset Fluent11 (Phase 8.2)
 

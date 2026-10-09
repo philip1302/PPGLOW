@@ -187,6 +187,11 @@ type
 /// Wert aus Text: Zahl (aktuelles Format), sonst Text; '' = Null.
 function PPGTableValueOf(const S: string): Variant;
 
+/// Schlichte Tabelle ohne Optik der Quelle (Druck und HTML wie vor Phase 17):
+/// grauer, fetter Kopf, schwarzer Text, eine graue Linienfarbe. Der einzige
+/// Satz dafuer; Schrift (FontName/FontSize) setzt der Aufrufer.
+function PPGPlainTableLook: TPPGTableLook;
+
 implementation
 
 uses
@@ -265,6 +270,17 @@ begin
     Result := D
   else
     Result := S;
+end;
+
+function PPGPlainTableLook: TPPGTableLook;
+begin
+  Result.Reset;
+  Result.HeaderFill := $00F0F0F0;
+  Result.HeaderText := clBlack;
+  Result.HeaderFontStyle := [fsBold];
+  Result.Text := clBlack;
+  Result.HeaderLine := $00A0A0A0;
+  Result.Line := $00A0A0A0;
 end;
 
 { TPPGTableLook }

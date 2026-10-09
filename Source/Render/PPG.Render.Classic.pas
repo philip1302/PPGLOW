@@ -105,6 +105,7 @@ begin
   Result.RadiusLarge := 4;
   Result.StrokeWidth := 1;
   Result.DurationNormal := 150;
+  Result.Link := PPGLinkColor(Result.Accent, Result.Background);
 end;
 
 procedure TPPGClassicRenderer.ApplyThemeColors(Appearance: TPPGAppearance; Dark: Boolean);

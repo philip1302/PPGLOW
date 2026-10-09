@@ -213,6 +213,14 @@ function PPGScale(Value, PPI: Integer): Integer;
 /// dunkel eingefaerbte Appearance (Zustaende, Fokus, Fokusfarbe).
 procedure PPGApplyDarkColors(Target: TPPGAppearance; Dark: TPPGDarkColors);
 
+/// Akzentrolle der Anzeige-Controls (Badge, ProgressRing, Rating; wie die
+/// ProgressBar): True, wenn Appearance.Checked sie traegt. Bei Glanz-Presets
+/// (Normal mit Verlauf, Classic) ist Checked der goldene An-Zustand der
+/// Office-Optik; dort und ohne gesetzte Checked.Color gilt FocusColor.
+function PPGCheckedIsAccent(A: TPPGAppearance): Boolean;
+/// Akzentfarbe: Checked.Color bzw. (siehe PPGCheckedIsAccent) FocusColor, als RGB.
+function PPGAccentColor(A: TPPGAppearance): TColor;
+
 implementation
 
 uses
@@ -224,6 +232,22 @@ begin
     Result := Value
   else
     Result := MulDiv(Value, PPI, 96);
+end;
+
+function PPGCheckedIsAccent(A: TPPGAppearance): Boolean;
+begin
+  Result := (A <> nil) and PPGColorIsSet(A.Checked.Color) and
+    (A.Normal.Color = A.Normal.ColorTo);
+end;
+
+function PPGAccentColor(A: TPPGAppearance): TColor;
+begin
+  if PPGCheckedIsAccent(A) then
+    Result := PPGColorToRGB(A.Checked.Color)
+  else if A <> nil then
+    Result := PPGColorToRGB(A.FocusColor)
+  else
+    Result := PPGColorToRGB(clHighlight);
 end;
 
 procedure PPGApplyDarkColors(Target: TPPGAppearance; Dark: TPPGDarkColors);

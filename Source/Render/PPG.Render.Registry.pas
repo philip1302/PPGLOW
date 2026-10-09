@@ -163,6 +163,11 @@ type
 /// Begrenzt die Rundung auf die halbe kurze Seite (Pillenform als Maximum).
 function PPGCapRounding(const R: TRect; Rounding: Integer): Integer;
 
+/// Tokens eines Presets ('' oder unbekannt = Standard-Preset); Renderer ohne
+/// Tokens liefern die neutrale Palette. Fuer Komponenten ohne eigene
+/// Appearance (Label, Hints).
+function PPGPresetTokens(const Preset: string; Dark: Boolean): TPPGTokens;
+
 /// Prueft einen Preset-Namen fuer Komponenten, die kein TPPGCustomControl sind
 /// ('' = Vorgabe bzw. StyleManager). Unbekannt: zur Laufzeit EPPGPropertyError,
 /// beim DFM-Laden Warnung und ''.
@@ -402,6 +407,20 @@ begin
   // Die Spur ist (an wie aus) eine Flaeche: Fokus als Ring aussen
   if S.Focused then
     DrawOuterFocusRing(Canvas, Track, S.Rounding, S.BorderColor, PPI);
+end;
+
+function PPGPresetTokens(const Preset: string; Dark: Boolean): TPPGTokens;
+var
+  Name: string;
+  TR: IPPGThemeRenderer;
+begin
+  Name := Preset;
+  if (Name = '') or not TPPGRendererRegistry.IsRegistered(Name) then
+    Name := TPPGRendererRegistry.DefaultName;
+  if Supports(TPPGRendererRegistry.Get(Name), IPPGThemeRenderer, TR) then
+    Result := TR.Tokens(Dark)
+  else
+    Result := PPGDefaultTokens(Dark);
 end;
 
 function PPGCapRounding(const R: TRect; Rounding: Integer): Integer;

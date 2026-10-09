@@ -783,14 +783,6 @@ begin
   FN := 0;
 end;
 
-function ContrastOn(Fill: TColor): TColor;
-begin
-  if PPGRelativeLuminance(Fill) < 0.4 then
-    Result := clWhite
-  else
-    Result := clBlack;
-end;
-
 function TimeText(T: TDateTime): string;
 begin
   Result := FormatDateTime(FormatSettings.ShortTimeFormat, T);
@@ -2396,7 +2388,7 @@ begin
   Result.Line := PPGBlendColor(Result.Fill, Result.Text, 0.18);
   Result.LineSoft := PPGBlendColor(Result.Fill, Result.Text, 0.08);
   Result.Accent := PPGColorToRGB(A.FocusColor);
-  Result.OnAccent := ContrastOn(Result.Accent);
+  Result.OnAccent := PPGContrastTextColor(Result.Accent);
   Result.NowCol := T.Danger;
   Result.Header := Result.Fill;
   Result.HeaderText := Result.Text;
@@ -2425,6 +2417,13 @@ begin
     Result.HeaderText := T.TextDisabled;
     Result.RulerText := T.TextDisabled;
     Result.AppText := T.TextDisabled;
+    // Audit 7e: auch Akzent, Heute-, Jetzt- und Auswahlfarben abblenden
+    Result.Accent := PPGDisabledColor(Result.Accent, Result.Fill);
+    Result.OnAccent := PPGContrastTextColor(Result.Accent);
+    Result.NowCol := PPGDisabledColor(Result.NowCol, Result.Fill);
+    Result.TodayText := T.TextDisabled;
+    Result.TodayBar := PPGDisabledColor(Result.TodayBar, Result.Fill);
+    Result.SelSlot := PPGDisabledColor(Result.SelSlot, Result.Fill);
   end;
 end;
 
@@ -2565,6 +2564,9 @@ begin
           Continue;
         if (DS.Fill <> clNone) and not Col.HC then
           C := PPGColorToRGB(DS.Fill);
+        // Deaktiviert: Terminfarben abgeblendet wie Text und Akzent
+        if not Enabled and not Col.HC then
+          C := PPGDisabledColor(C, Col.Fill);
         Rad := S(4);
         Short := (FView = pvMonth) and not P.Band;
         if Col.HC then
@@ -2590,7 +2592,7 @@ begin
         else
           Fill := PPGBlendColor(Col.Fill, C, 0.18);
         if Sel then
-          TextC := ContrastOn(Fill)
+          TextC := PPGContrastTextColor(Fill)
         else
           TextC := Col.AppText;
         if (DS.TextColor <> clNone) and not Col.HC then
@@ -3098,7 +3100,7 @@ begin
       begin
         ACanvas.FillRoundRect(Rect(R.Left - S(4), R.Top, R.Left + ACanvas.MeasureText(S_, FBoldFont, 0, False).cx + S(4),
           R.Bottom), S(4), Col.TodayBar, 255);
-        Batch.Add(R, S_, ContrastOn(Col.TodayBar), True, DT_SINGLELINE or DT_VCENTER or DT_LEFT);
+        Batch.Add(R, S_, PPGContrastTextColor(Col.TodayBar), True, DT_SINGLELINE or DT_VCENTER or DT_LEFT);
       end
       else if Other then
         Batch.Add(R, S_, Col.Secondary, False,

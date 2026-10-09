@@ -479,7 +479,7 @@ begin
     Canvas.Font.Assign(Font);
     Canvas.Font.Style := [fsBold];
     Canvas.Font.Height := -Height * 2 div 3;
-    C.DrawText(R, Fallback, Canvas.Font, clWhite, DT_CENTER or DT_VCENTER or DT_SINGLELINE);
+    C.DrawText(R, Fallback, Canvas.Font, PPGContrastTextColor(Col), DT_CENTER or DT_VCENTER or DT_SINGLELINE);
   finally
     C := nil;
   end;

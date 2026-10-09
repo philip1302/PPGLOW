@@ -250,14 +250,6 @@ const
   PanelPad = 8;
   GripSize = 16;
 
-function ContrastOn(Fill: TColor): TColor;
-begin
-  if PPGRelativeLuminance(Fill) < 0.4 then
-    Result := clWhite
-  else
-    Result := clBlack;
-end;
-
 { TPPGStatusPanel }
 
 {$IFDEF PPG_HAS_IMAGENAME}
@@ -927,7 +919,7 @@ begin
                 X := TR.Left;
               end;
               BR := Rect(X, (TR.Top + TR.Bottom - Sz.cy) div 2, X + Sz.cx, (TR.Top + TR.Bottom + Sz.cy) div 2);
-              IR.DrawBadge(ACanvas, BR, S, Font, Accent, ContrastOn(Accent), PPI);
+              IR.DrawBadge(ACanvas, BR, S, Font, Accent, PPGContrastTextColor(Accent), PPI);
             end;
           end;
       else

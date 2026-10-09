@@ -134,11 +134,6 @@ uses
   System.Math, System.UITypes, PPG.Lang, PPG.Consts, PPG.Exceptions,
   PPG.Render.Gdi, PPG.Render.Registry;
 
-const
-  // Ohne Optik der Quelle (wie vor Phase 17)
-  PlainHeadFill = $00F0F0F0;
-  PlainLineColor = $00A0A0A0;
-
 { TPPGGridPrinter }
 
 constructor TPPGGridPrinter.Create(AOwner: TComponent);
@@ -318,13 +313,7 @@ begin
   else
   begin
     // Wie vor Phase 17: grauer, fetter Kopf, schwarzer Text, graue Linien
-    FLook.Reset;
-    FLook.HeaderFill := PlainHeadFill;
-    FLook.HeaderText := clBlack;
-    FLook.HeaderFontStyle := [fsBold];
-    FLook.HeaderLine := PlainLineColor;
-    FLook.Line := PlainLineColor;
-    FLook.Text := clBlack;
+    FLook := PPGPlainTableLook;
     FLook.FontName := FFont.Name;
     FLook.FontSize := FFont.Size;
     for C := 0 to N - 1 do
@@ -861,7 +850,7 @@ begin
           KindCtx[C].Font := FFont;
           KindCtx[C].TextColor := clBlack;
           KindCtx[C].FillColor := clWhite;
-          KindCtx[C].LineColor := PlainLineColor;
+          KindCtx[C].LineColor := PPGPlainTableLook.Line;
           KindCtx[C].HintColor := $00808080;
           KindCtx[C].RightToLeft := False;
           if HasLook then

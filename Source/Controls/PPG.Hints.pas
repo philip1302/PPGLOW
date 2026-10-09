@@ -44,7 +44,8 @@ type
   TPPGHintInfo = Vcl.Forms.THintInfo;
   {$ENDIF}
 
-  /// Inhalt eines Hints: Titel fett, Text (Markup) darunter, Bild links.
+  /// Inhalt eines Hints: Titel fett, Text (Markup) darunter, Bild links
+  /// (RightToLeft: rechts).
   TPPGHintContent = class
   private
     FPPI: Integer;
@@ -57,12 +58,15 @@ type
     FImages: TCustomImageList;
     FImageIndex: Integer;
     FRounding: Integer;
+    FRightToLeft: Boolean;
     function Pad: Integer;
     function Gap: Integer;
     function HasImage: Boolean;
   public
     /// Rundung in logischen px (Standard 4, Balloon 12).
     property Rounding: Integer read FRounding write FRounding;
+    /// Rechts-nach-links: Bild rechts, Titel und Text rechtsbuendig.
+    property RightToLeft: Boolean read FRightToLeft write FRightToLeft;
     constructor Create;
     destructor Destroy; override;
     /// Text ohne Markup wird maskiert (< und & bleiben sichtbar).
@@ -237,13 +241,20 @@ begin
 end;
 
 function PresetTokens(const Preset: string): TPPGTokens;
-var
-  TR: IPPGThemeRenderer;
 begin
-  if Supports(TPPGRendererRegistry.Get(Preset), IPPGThemeRenderer, TR) then
-    Result := TR.Tokens(TPPGTheme.IsDark)
+  Result := PPGPresetTokens(Preset, TPPGTheme.IsDark);
+end;
+
+/// Farbe der Links im Hint-Text: Link-Token, im Hochkontrast bzw. mit
+/// VCL-Style die Systemfarbe fuer Links.
+function HintLinkColor(const Preset: string): TColor;
+begin
+  if PPGIsHighContrast then
+    Result := PPGColorToRGB(clHotLight)
+  else if not StyleServices.IsSystemStyle then
+    Result := PPGColorToRGB(StyleServices.GetSystemColor(clHotLight))
   else
-    Result := PPGDefaultTokens(TPPGTheme.IsDark);
+    Result := PresetTokens(PPGHintPreset(nil, Preset)).Link;
 end;
 
 procedure PPGHintColors(const Preset: string; out Fill, Border, Text: TColor);
@@ -374,7 +385,8 @@ var
   HR: IPPGHintRenderer;
   Style: TPPGSurfaceStyle;
   Fill, Border, TextColor: TColor;
-  X, Y: Integer;
+  X, Y, L, Rt, IX: Integer;
+  Flags: Cardinal;
 begin
   PPGHintColors(Preset, Fill, Border, TextColor);
   FillChar(Style, SizeOf(Style), 0);
@@ -388,26 +400,42 @@ begin
   Canvas.Brush.Style := bsSolid;
   Canvas.Brush.Color := Fill;
   Canvas.FillRect(R);
-  X := R.Left + Pad;
+  // Textspalte; bei RTL steht das Bild rechts und der Text rechtsbuendig
+  L := R.Left + Pad;
+  Rt := R.Right - Pad;
+  IX := L;
   if HasImage then
-    Inc(X, FImages.Width + Pad);
+    if FRightToLeft then
+    begin
+      IX := Rt - FImages.Width;
+      Dec(Rt, FImages.Width + Pad);
+    end
+    else
+      Inc(L, FImages.Width + Pad);
+  Flags := DT_WORDBREAK or DT_NOPREFIX;
+  if FRightToLeft then
+    Flags := Flags or DT_RIGHT or DT_RTLREADING;
   C := TPPGRendererRegistry.CreateCanvas(Canvas.Handle);
   try
     HR.DrawHint(C, R, Style, FPPI);
     Y := R.Top + Pad - MulDiv(1, FPPI, 96) div 2;
     if FTitle <> '' then
     begin
-      C.DrawText(Rect(X, Y, R.Right - Pad, Y + FTitleSize.cy), FTitle, FTitleFont, TextColor,
-        DT_WORDBREAK or DT_NOPREFIX);
+      C.DrawText(Rect(L, Y, Rt, Y + FTitleSize.cy), FTitle, FTitleFont, TextColor, Flags);
       Inc(Y, FTitleSize.cy + Gap);
     end;
     if FText <> '' then
-      FLayout.Draw(C, X, Y, TextColor, PPGColorToRGB(clHotLight));
+    begin
+      X := L;
+      if FRightToLeft then
+        X := Rt - FLayout.Size.cx;
+      FLayout.Draw(C, X, Y, TextColor, HintLinkColor(Preset));
+    end;
   finally
     C := nil;
   end;
   if HasImage then
-    FImages.Draw(Canvas, R.Left + Pad, R.Top + Pad, FImageIndex);
+    FImages.Draw(Canvas, IX, R.Top + Pad, FImageIndex);
 end;
 
 { TPPGHintWindow }
@@ -519,6 +547,7 @@ end;
 procedure TPPGHintWindow.Paint;
 begin
   try
+    FContent.RightToLeft := UseRightToLeftReading;
     if GManager <> nil then
       FContent.Paint(Canvas, ClientRect, GManager.EffectivePreset)
     else
@@ -766,6 +795,10 @@ begin
       FContent.Rounding := 12
     else
       FContent.Rounding := 4;
+    // TCustomHint kennt das ausloesende Control nicht oeffentlich: BiDiMode des
+    // Fensters bzw. der Anwendung
+    FContent.RightToLeft := HintWindow.UseRightToLeftReading or
+      (Application.BiDiMode <> bdLeftToRight);
     FContent.Paint(TCustomHintWindowAccess(HintWindow).Canvas, HintWindow.ClientRect, EffectivePreset);
     FPaintErrorReported := False;
   except

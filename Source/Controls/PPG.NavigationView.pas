@@ -476,14 +476,6 @@ begin
   Result := nil;
 end;
 
-function ContrastOn(Fill: TColor): TColor;
-begin
-  if PPGRelativeLuminance(Fill) < 0.4 then
-    Result := clWhite
-  else
-    Result := clBlack;
-end;
-
 { TPPGNavItem }
 
 {$IFDEF PPG_HAS_IMAGENAME}
@@ -2127,7 +2119,7 @@ begin
                   BR := Rect((IconR.Left + IconR.Right) div 2 + PPGScale(2, PPI), R.Top + PPGScale(3, PPI),
                     (IconR.Left + IconR.Right) div 2 + PPGScale(2, PPI) + Max(Sz.cx + PPGScale(6, PPI), Sz.cy),
                     R.Top + PPGScale(3, PPI) + Sz.cy);
-                  IR.DrawBadge(ACanvas, BR, S, Font, Accent, ContrastOn(Accent), PPI);
+                  IR.DrawBadge(ACanvas, BR, S, Font, Accent, PPGContrastTextColor(Accent), PPI);
                 end;
               end;
             end;
@@ -2179,7 +2171,7 @@ begin
                     (R.Top + R.Bottom + Sz.cy) div 2);
                   TextR.Right := BR.Left - PPGScale(6, PPI);
                 end;
-                IR.DrawBadge(ACanvas, BR, S, Font, Accent, ContrastOn(Accent), PPI);
+                IR.DrawBadge(ACanvas, BR, S, Font, Accent, PPGContrastTextColor(Accent), PPI);
               end;
               ACanvas.DrawText(TextR, It.Caption, F, C,
                 DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX));

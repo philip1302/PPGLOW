@@ -489,6 +489,15 @@ uses
 var
   GMsgKanbanAction: Cardinal = 0;
 
+/// Audit 7e: deaktiviert werden Karten-, Spalten- und Akzentfarben abgeblendet.
+function DimIf(Dim: Boolean; C, Back: TColor): TColor;
+begin
+  if Dim then
+    Result := PPGDisabledColor(C, Back)
+  else
+    Result := C;
+end;
+
 function NoHit: TPPGKanbanHit;
 begin
   Result.Part := kpNone;
@@ -1901,10 +1910,13 @@ var
   Labels: TArray<string>;
   I, X, W, Lh, TH, Av, Rad, FP, FX, FW: Integer;
   S: string;
-  Overdue: Boolean;
+  Overdue, Dim: Boolean;
 begin
   T := Tokens;
   HC := HighContrastSupport and PPGIsHighContrast;
+  Dim := not Enabled and not HC;
+  if Dim then
+    T := PPGDisabledTokens(T);
   Dark := UseDarkMode;
   RTL := UseRightToLeftAlignment;
   Rad := Sc(6);
@@ -1939,10 +1951,17 @@ begin
       if DS.TextColor <> clNone then
         TextCol := PPGColorToRGB(DS.TextColor);
     end;
+    if Dim then
+    begin
+      Fill := PPGDisabledColor(Fill, T.Background);
+      Stroke := T.StrokeDisabled;
+      TextCol := T.TextDisabled;
+    end;
   end;
   SelCol := PPGColorToRGB(EffectiveAppearance.FocusColor);
   if not HC and not UseVclStyle then
     SelCol := FKanbanStyles.SelectedCard.BorderFor(Dark, SelCol);
+  SelCol := DimIf(Dim, SelCol, Fill);
   if Ghost then
     ACanvas.DrawOuterGlow(R, Rad, Sc(8), PPGColorToRGB(clBlack), 60);
   ACanvas.FillRoundRect(R, Rad, Fill, 255);
@@ -1958,13 +1977,13 @@ begin
     if RTL then
     begin
       ACanvas.FillRoundRect(Rect(R.Right - Sc(5), R.Top + Sc(6), R.Right - Sc(2), R.Bottom - Sc(6)), Sc(2),
-        PPGColorToRGB(D.Color), 255);
+        DimIf(Dim, PPGColorToRGB(D.Color), Fill), 255);
       Dec(Inner.Right, Sc(4));
     end
     else
     begin
       ACanvas.FillRoundRect(Rect(R.Left + Sc(2), R.Top + Sc(6), R.Left + Sc(5), R.Bottom - Sc(6)), Sc(2),
-        PPGColorToRGB(D.Color), 255);
+        DimIf(Dim, PPGColorToRGB(D.Color), Fill), 255);
       Inc(Inner.Left, Sc(4));
     end;
   end;
@@ -2000,7 +2019,7 @@ begin
       end
       else
       begin
-        Col := PPGChartColor(T, Dark, PPGKanbanHashIndex(Labels[I], 8));
+        Col := DimIf(Dim, PPGChartColor(T, Dark, PPGKanbanHashIndex(Labels[I], 8)), Fill);
         ACanvas.FillRoundRect(LR, Lh div 2, Col, 40);
         ACanvas.DrawText(LR, Labels[I], FSmall, PPGBlendColor(Col, TextCol, 0.45),
           DT_SINGLELINE or DT_CENTER or DT_VCENTER or DT_NOPREFIX);
@@ -2048,9 +2067,10 @@ begin
     ACanvas.PushClipRoundRect(TR, 0);
     try
       if RTL then
-        FMarkup.Draw(ACanvas, TR.Right - FMarkup.Size.cx, TR.Top, Sec, PPGColorToRGB(EffectiveAppearance.FocusColor))
+        FMarkup.Draw(ACanvas, TR.Right - FMarkup.Size.cx, TR.Top, Sec,
+          DimIf(Dim, PPGColorToRGB(EffectiveAppearance.FocusColor), Fill))
       else
-        FMarkup.Draw(ACanvas, TR.Left, TR.Top, Sec, PPGColorToRGB(EffectiveAppearance.FocusColor));
+        FMarkup.Draw(ACanvas, TR.Left, TR.Top, Sec, DimIf(Dim, PPGColorToRGB(EffectiveAppearance.FocusColor), Fill));
     finally
       ACanvas.PopClip;
     end;
@@ -2097,11 +2117,9 @@ begin
       end
       else
       begin
-        Col := PPGChartColor(T, Dark, PPGKanbanHashIndex(D.Assignee, 8));
+        Col := DimIf(Dim, PPGChartColor(T, Dark, PPGKanbanHashIndex(D.Assignee, 8)), Fill);
         ACanvas.FillEllipse(LR, Col, 255);
-        Col := clWhite;
-        if PPGContrastRatio(Col, PPGChartColor(T, Dark, PPGKanbanHashIndex(D.Assignee, 8))) < 3 then
-          Col := clBlack;
+        Col := PPGContrastTextColor(Col);
       end;
       ACanvas.DrawText(LR, PPGKanbanInitials(D.Assignee), FSmall, Col,
         DT_SINGLELINE or DT_CENTER or DT_VCENTER or DT_NOPREFIX);
@@ -2141,10 +2159,13 @@ var
   TitleF, Temp: TFont;
   DS: TPPGDrawStyle;
   St: TPPGItemDrawState;
-  DrawIt, CardSel, CardHot: Boolean;
+  DrawIt, CardSel, CardHot, Dim: Boolean;
 begin
   T := Tokens;
   HC := HighContrastSupport and PPGIsHighContrast;
+  Dim := not Enabled and not HC;
+  if Dim then
+    T := PPGDisabledTokens(T);
   if HC then
   begin
     Back := PPGColorToRGB(clBtnFace);
@@ -2163,6 +2184,8 @@ begin
       Back := FKanbanStyles.Column.FillFor(UseDarkMode, Back);
       TextCol := FKanbanStyles.Column.TextFor(UseDarkMode, TextCol);
     end;
+    if Dim then
+      TextCol := T.TextDisabled;
   end;
   R := ColClientRect(C);
   if (R.Right < View.Left) or (R.Left > View.Right) then
@@ -2171,7 +2194,7 @@ begin
   if not PPGColorIsSet(Col) or HC then
     Col := Accent
   else
-    Col := PPGColorToRGB(Col);
+    Col := DimIf(Dim, PPGColorToRGB(Col), Back);
   W := WipState(C);
   Cnt := ColumnCardCount(C);
   ACanvas.FillRoundRect(R, Sc(8), Back, 255);
@@ -2361,6 +2384,8 @@ begin
   EnsureLayout;
   T := Tokens;
   HC := HighContrastSupport and PPGIsHighContrast;
+  if not Enabled and not HC then
+    T := PPGDisabledTokens(T);
   if HC then
   begin
     TextCol := PPGColorToRGB(clWindowText);

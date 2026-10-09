@@ -279,6 +279,7 @@ begin
     Result.Accent := A;
     Result.AccentHover := PPGBlendColor(A, Under, 0.10);
     Result.AccentPressed := PPGBlendColor(A, Under, 0.20);
+    Result.Link := PPGLinkColor(A, Result.Background);
   end;
 end;
 

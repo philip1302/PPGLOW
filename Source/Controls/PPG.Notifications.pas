@@ -210,14 +210,6 @@ var
   GQueryState: TSHQueryUserNotificationState = nil;
   GQueryResolved: Boolean = False;
 
-function ContrastOn(Fill: TColor): TColor;
-begin
-  if PPGRelativeLuminance(Fill) < 0.4 then
-    Result := clWhite
-  else
-    Result := clBlack;
-end;
-
 { TPPGToast }
 
 constructor TPPGToast.Create(AOwner: TComponent);
