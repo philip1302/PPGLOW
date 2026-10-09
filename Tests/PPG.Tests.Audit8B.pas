@@ -59,6 +59,7 @@ type
     procedure CondFormatsTopBottomScale;
     { #2 Spaltenbreite }
     procedure ColumnWidthKeepsFooterAndStyles;
+    procedure ColumnWidthDoesNotRecalc;
     { #5 Zeilenhoehen }
     procedure RowHeightsFollowDataRows;
     procedure RowHeightsStreaming;
@@ -889,6 +890,49 @@ begin
   // Aggregat geaendert: Summen neu
   G.Columns[3].Aggregate := agMax;
   CheckEquals('30', G.FooterText(3));
+end;
+
+procedure TAudit8BTests.ColumnWidthDoesNotRecalc;
+var
+  G: TPPGGrid;
+  Rule: TPPGGridConditionalFormat;
+  N, RG, I: Integer;
+begin
+  G := AggGrid;
+  G.RowHeights[0] := 30;
+  Rule := G.ConditionalFormats.Add;
+  Rule.Column := 3;
+  Rule.Rule := crColorScale;
+  Application.ProcessMessages;
+  N := TGridAccess(G).AggRecalcCount;
+  RG := TGridAccess(G).RowGeomCount;
+  for I := 0 to 9 do
+  begin
+    G.ColWidths[3] := 50 + I;
+    G.Columns[2].Width := 80 + I;
+    G.Columns[1].Title := 'Titel ' + IntToStr(I);
+    G.Columns[4].Visible := Odd(I);
+    Application.ProcessMessages;
+  end;
+  CheckEquals(N, TGridAccess(G).AggRecalcCount, 'Spaltenbreite rechnet keine Summen');
+  CheckEquals(RG, TGridAccess(G).RowGeomCount, 'Spaltenbreite baut die Zeilen nicht neu auf');
+  G.Columns[3].Aggregate := agAvg;
+  Application.ProcessMessages;
+  CheckEquals(N + 1, TGridAccess(G).AggRecalcCount, 'Aggregat geaendert: einmal neu');
+  CheckEquals('8,25', TGridAccess(G).CachedFooterText(3));
+  // Ohne Spalten (ColWidths direkt)
+  G := NewGrid;
+  G.ColCount := 4;
+  G.RowCount := 10;
+  N := TGridAccess(G).AggRecalcCount;
+  RG := TGridAccess(G).RowGeomCount;
+  for I := 0 to 9 do
+    G.ColWidths[2] := 40 + I;
+  Application.ProcessMessages;
+  CheckEquals(N, TGridAccess(G).AggRecalcCount);
+  CheckEquals(RG, TGridAccess(G).RowGeomCount);
+  CheckEquals(49, G.ColWidths[2]);
+  CheckEquals(49, TGridAccess(G).RawCellRect(2, 1).Right - TGridAccess(G).RawCellRect(2, 1).Left);
 end;
 
 { ---- Zeilenhoehen ---- }

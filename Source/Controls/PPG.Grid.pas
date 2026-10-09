@@ -185,8 +185,14 @@ type
     FGradientEndColor: TColor;
     FLayout: TPPGRowLayout;
     FColX: array of Integer;        // Pixel-Anfang je Spalte (+ Ende)
-    FGeomValid: Boolean;
+    // Audit 8c #2/#5: Spalten- und Zeilengeometrie getrennt (Spaltenbreite
+    // ziehen baut die Zeilen nicht neu auf)
+    FColGeomValid: Boolean;
+    FRowGeomValid: Boolean;
     FGeomPPI: Integer;
+    FAggSig: string;            // Aggregate der Spalten bei der letzten Rechnung
+    FAggRecalcCount: Integer;   // volle Neuberechnungen (Tests)
+    FRowGeomCount: Integer;     // Neuaufbau der Zeilengeometrie (Tests)
     FView: TPPGGridView;           // Filter -> Sortieren (PPG.Grid.View)
     FSortCol: Integer;
     FSortAscending: Boolean;
@@ -304,7 +310,15 @@ type
     procedure Scrolled; override;
     { Geometrie }
     procedure InvalidateGeometry;
+    /// Nur die Spalten (Breite, Reihenfolge, Sichtbarkeit) neu.
+    procedure InvalidateColGeometry;
     procedure EnsureGeometry;
+    procedure BuildRowGeometry(PPI: Integer);
+    /// Aggregate der Spalten als Text (aendert er sich, wird neu gerechnet).
+    function AggSignature: string;
+    /// Zaehler fuer Tests: volle Summen-Rechnungen, Neuaufbau der Zeilen.
+    property AggRecalcCount: Integer read FAggRecalcCount;
+    property RowGeomCount: Integer read FRowGeomCount;
     function VFixedRows: Integer;
     function VRowCount: Integer;
     function FixedWidth: Integer;
@@ -995,12 +1009,14 @@ begin
   else
   begin
     RebuildColumnMap;
-    InvalidateGeometry;
+    // Spalten aendern nur die Spaltengeometrie (Audit 8c #2)
+    InvalidateColGeometry;
     Invalidate;
   end;
   if csLoading in ComponentState then
     Exit;
-  // GroupIndex geaendert: neu gruppieren; sonst nur Summen (Aggregate)
+  // GroupIndex geaendert: neu gruppieren; sonst Summen nur bei geaenderten
+  // Aggregaten (Breite, Titel, Stil ... rechnen nicht neu, Audit 8c #2)
   if CanGroup then
     G := CurrentGroupColumns
   else
@@ -1012,8 +1028,24 @@ begin
         Same := False;
   if not Same then
     RebuildMap
-  else
+  else if AggSignature <> FAggSig then
     AggregatesChanged;
+end;
+
+function TPPGCustomGrid.AggSignature: string;
+var
+  I: Integer;
+  C: TPPGGridColumn;
+begin
+  SetLength(Result, FColCount);
+  for I := 0 to FColCount - 1 do
+  begin
+    C := ColumnOf(I);
+    if C = nil then
+      Result[I + 1] := '-'
+    else
+      Result[I + 1] := Chr(Ord('A') + Ord(C.Aggregate));
+  end;
 end;
 
 function TPPGCustomGrid.RowScrollY: Integer;
@@ -1279,11 +1311,15 @@ begin
     raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FColCount - 1]);
   V := PPGCheckRange(Self, 'ColWidths', Value, 0, 10000);
   C := ColumnOf(Index);
+  // Mit Spalte meldet die Spalte selbst (ColumnsChanged); kein zweites
+  // InvalidateGeometry (Audit 8c #2)
   if C <> nil then
     C.Width := V
-  else
+  else if FColWidths[Index] <> V then
+  begin
     FColWidths[Index] := V;
-  InvalidateGeometry;
+    InvalidateColGeometry;
+  end;
 end;
 
 function TPPGCustomGrid.GetRowHeights(Index: Integer): Integer;
@@ -2006,7 +2042,7 @@ begin
       I := FFocusC;
     FAnchorC := EnsureRangeInt(I, FFixedCols, K - 1);
   end;
-  FGeomValid := False;
+  FColGeomValid := False;
 end;
 
 function TPPGCustomGrid.VColCount: Integer;
@@ -2990,6 +3026,8 @@ var
   S: string;
 begin
   FAggDirty := False;
+  Inc(FAggRecalcCount);
+  FAggSig := AggSignature;
   // Spalten mit Zusammenfassung
   SetLength(FAggCols, FColCount);
   NAgg := 0;
@@ -3816,7 +3854,16 @@ end;
 
 procedure TPPGCustomGrid.InvalidateGeometry;
 begin
-  FGeomValid := False;
+  FColGeomValid := False;
+  FRowGeomValid := False;
+  Invalidate;
+  if HandleAllocated and not (csLoading in ComponentState) then
+    EnsureGeometry;
+end;
+
+procedure TPPGCustomGrid.InvalidateColGeometry;
+begin
+  FColGeomValid := False;
   Invalidate;
   if HandleAllocated and not (csLoading in ComponentState) then
     EnsureGeometry;
@@ -3831,24 +3878,49 @@ end;
 
 procedure TPPGCustomGrid.EnsureGeometry;
 var
-  I, N, X, V, D, H, Def, BH: Integer;
+  I, N, X, H, BH: Integer;
   PPI: Integer;
 begin
   PPI := ScalePPI;
-  if FGeomValid and (FGeomPPI = PPI) then
+  if FColGeomValid and FRowGeomValid and (FGeomPPI = PPI) then
     Exit;
-  FGeomValid := True;
+  if FGeomPPI <> PPI then
+  begin
+    FColGeomValid := False;
+    FRowGeomValid := False;
+  end;
   FGeomPPI := PPI;
   // Spalten in Anzeige-Reihenfolge (ausgeblendete fehlen)
   N := VColCount;
-  SetLength(FColX, N + 1);
-  X := 0;
-  for I := 0 to N - 1 do
+  if not FColGeomValid or (Length(FColX) <> N + 1) then
   begin
-    FColX[I] := X;
-    Inc(X, ColPixelWidth(FVisCols[I]));
+    FColGeomValid := True;
+    SetLength(FColX, N + 1);
+    X := 0;
+    for I := 0 to N - 1 do
+    begin
+      FColX[I] := X;
+      Inc(X, ColPixelWidth(FVisCols[I]));
+    end;
+    FColX[N] := X;
   end;
-  FColX[N] := X;
+  X := FColX[N];
+  if not FRowGeomValid then
+    BuildRowGeometry(PPI);
+  // Baender liegen ueber dem Kopf und gehoeren zur Inhaltshoehe
+  BH := BandHeight + GroupPanelHeight + FooterHeight;
+  H := RowsContentHeight;
+  if H > MaxInt - BH then
+    H := MaxInt - BH;
+  SetContentSize(X, H + BH);
+end;
+
+procedure TPPGCustomGrid.BuildRowGeometry(PPI: Integer);
+var
+  V, D, H, Def: Integer;
+begin
+  FRowGeomValid := True;
+  Inc(FRowGeomCount);
   Def := PPGScale(FDefaultRowHeight, PPI);
   FLayout.Count := 0;
   FLayout.DefaultHeight := Def;
@@ -3864,12 +3936,6 @@ begin
           FLayout.SetRowHeight(V, H);
       end;
     end;
-  // Baender liegen ueber dem Kopf und gehoeren zur Inhaltshoehe
-  BH := BandHeight + GroupPanelHeight + FooterHeight;
-  H := RowsContentHeight;
-  if H > MaxInt - BH then
-    H := MaxInt - BH;
-  SetContentSize(X, H + BH);
 end;
 
 function TPPGCustomGrid.FixedWidth: Integer;
