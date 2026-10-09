@@ -427,9 +427,18 @@ end;
 { TPPGCellStore }
 
 procedure TPPGCellStore.EnsureRow(ARow: Integer);
+var
+  N: Integer;
 begin
+  // Geometrisch wachsen (Audit 8c #11): Zeile fuer Zeile fuellen kopiert das
+  // Zeilen-Array sonst bei jeder neuen Zeile. Leere Zeilen dahinter sind nil.
   if Length(FRows) <= ARow then
-    SetLength(FRows, ARow + 1);
+  begin
+    N := Length(FRows) + Length(FRows) div 2 + 16;
+    if N <= ARow then
+      N := ARow + 1;
+    SetLength(FRows, N);
+  end;
   if Length(FRows[ARow]) < FColCount then
     SetLength(FRows[ARow], FColCount);
 end;

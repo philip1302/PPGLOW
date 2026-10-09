@@ -198,6 +198,7 @@ type
     FSortAscending: Boolean;
     FSortOnHeaderClick: Boolean;
     FFilters: array of string;
+    FFilterUpper: array of string;  // Filter in Grossbuchstaben (je Lauf, Audit 8c #3)
     FShowFilterRow: Boolean;
     FFocusC: Integer;
     FFocusV: Integer;
@@ -418,6 +419,8 @@ type
     procedure RebuildMap;
     function CompareDataRows(ACol, R1, R2: Integer): Integer; virtual;
     function RowPassesFilter(ARow: Integer): Boolean; virtual;
+    /// Filtertexte in Grossbuchstaben vorbereiten (vor jedem Filterlauf).
+    procedure PrepareFilters;
     { IPPGGridViewHost }
     function ViewRowPasses(ARow: Integer): Boolean;
     function ViewCompareRows(ACol, R1, R2: Integer): Integer;
@@ -1495,14 +1498,26 @@ begin
   end;
 end;
 
+procedure TPPGCustomGrid.PrepareFilters;
+var
+  C: Integer;
+begin
+  SetLength(FFilterUpper, Length(FFilters));
+  for C := 0 to High(FFilters) do
+    FFilterUpper[C] := AnsiUpperCase(FFilters[C]);
+end;
+
 function TPPGCustomGrid.RowPassesFilter(ARow: Integer): Boolean;
 var
   C: Integer;
 begin
+  // Filtertexte stehen schon in Grossbuchstaben (PrepareFilters, einmal je Lauf)
+  if Length(FFilterUpper) <> Length(FFilters) then
+    PrepareFilters;
   Result := True;
   for C := 0 to High(FFilters) do
     if (FFilters[C] <> '') and
-      (Pos(AnsiUpperCase(FFilters[C]), AnsiUpperCase(GetCellText(C, ARow))) = 0) then
+      (Pos(FFilterUpper[C], AnsiUpperCase(GetCellText(C, ARow))) = 0) then
       Exit(False);
 end;
 
@@ -1542,6 +1557,7 @@ begin
     Exit;
   EndEditorForRebuild;
   FocusData := DataRow(FFocusV);
+  PrepareFilters;
   Filtered := False;
   for I := 0 to High(FFilters) do
     if FFilters[I] <> '' then
@@ -3855,16 +3871,18 @@ end;
 
 procedure TPPGCustomGrid.ComputeCondStats;
 var
-  I, R, Col, N: Integer;
+  I, J, R, Col, N: Integer;
   Rule: TPPGGridConditionalFormat;
   Vals: TArray<Double>;
+  Done: array of Boolean;
   V: Double;
   S: string;
 begin
+  SetLength(Done, FCondFormats.Count);
   for I := 0 to FCondFormats.Count - 1 do
   begin
     Rule := FCondFormats[I];
-    if not Rule.NeedsStats or (Rule.Column >= FColCount) then
+    if Done[I] or not Rule.NeedsStats or (Rule.Column >= FColCount) then
       Continue;
     Col := Rule.Column;
     SetLength(Vals, FView.AllRowCount);
@@ -3879,7 +3897,13 @@ begin
       end;
     end;
     SetLength(Vals, N);
-    Rule.ComputeStats(Vals);
+    // Alle Regeln dieser Spalte mit denselben Werten (Spalte nur einmal lesen)
+    for J := I to FCondFormats.Count - 1 do
+      if not Done[J] and FCondFormats[J].NeedsStats and (FCondFormats[J].Column = Col) then
+      begin
+        FCondFormats[J].ComputeStats(Vals);
+        Done[J] := True;
+      end;
   end;
 end;
 
