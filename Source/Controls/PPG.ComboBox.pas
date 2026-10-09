@@ -91,6 +91,7 @@ type
     procedure SetComboText(const Value: string);
     procedure SetTextQuiet(const Value: string);
     procedure ItemsChanged(Sender: TObject);
+    procedure UpdatePopupItems;
     procedure ArrowAnimStep(Sender: TObject);
     procedure PopupItemClick(Sender: TObject; Index: Integer);
     procedure TypeAhead(Key: Char);
@@ -98,6 +99,7 @@ type
     procedure SyncPopupToText;
     procedure SetItemsEx(const Value: TPPGItems);
     procedure ItemsExChange(Sender: TObject; Index: Integer);
+    procedure ItemsExAdded(Sender: TObject; Index: Integer);
     procedure SyncItemsFromEx;
     procedure SortItemsEx;
     procedure ApplySorted;
@@ -344,6 +346,7 @@ begin
   FAutoComplete := True;
   FItemsEx := TPPGItems.Create(Self);
   FItemsEx.OnChange := ItemsExChange;
+  FItemsEx.OnAdded := ItemsExAdded;
   FListStyles := TPPGListStyles.Create(Self);
   FItemsExSource := TComboExSource.Create;
   TComboExSource(FItemsExSource as TObject).FOwner := Self;
@@ -362,7 +365,10 @@ begin
     FArrowAnim.OnStep := nil;
   FreeAndNil(FArrowAnim); // meldet sich selbst beim Animator ab
   if FItemsEx <> nil then
+  begin
     FItemsEx.OnChange := nil;
+    FItemsEx.OnAdded := nil;
+  end;
   if FItemsExSource <> nil then
     TComboExSource(FItemsExSource as TObject).FOwner := nil;
   FItemsExSource := nil;
@@ -616,6 +622,11 @@ begin
       SetTextQuiet('');
     NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
   end;
+  UpdatePopupItems; // zeichnet auch neu
+end;
+
+procedure TPPGCustomComboBox.UpdatePopupItems;
+begin
   if PopupList <> nil then
   begin
     // Audit 08.10.2026: Die Filter-Zuordnung (Zeile -> Eintrag) zeigt nach
@@ -695,6 +706,72 @@ begin
   if PopupList <> nil then
     PopupList.Invalidate;
   Invalidate;
+end;
+
+procedure TPPGCustomComboBox.ItemsExAdded(Sender: TObject; Index: Integer);
+var
+  Key: string;
+  P, Lo, Hi, Mid: Integer;
+  OldChange: TNotifyEvent;
+begin
+  if (csLoading in ComponentState) or (csDestroying in ComponentState) then
+    Exit; // Loaded gleicht ab
+  if FSortingEx then
+    Exit;
+  // Audit 8d #10: Ein angehaengter Eintrag wird nur eingefuegt (unsortiert am
+  // Ende, sortiert an seiner Stelle) statt Items neu aufzubauen bzw. alles neu
+  // zu sortieren. Sonst wie bisher.
+  if (Index <> FItemsEx.Count - 1) or (FItems.Count <> Index) or FItems.Sorted then
+  begin
+    ItemsExChange(Sender, -1);
+    Exit;
+  end;
+  Key := PPGStripMarkup(FItemsEx[Index].Text);
+  P := Index;
+  if FSorted then
+  begin
+    // Hinter alle gleichen Texte (stabil wie SortItemsEx)
+    Lo := 0;
+    Hi := Index;
+    while Lo < Hi do
+    begin
+      Mid := (Lo + Hi) div 2;
+      if AnsiCompareText(FItems[Mid], Key) > 0 then
+        Hi := Mid
+      else
+        Lo := Mid + 1;
+    end;
+    P := Lo;
+    if P < Index then
+    begin
+      FSortingEx := True;
+      try
+        FItemsEx[Index].Index := P;
+      finally
+        FSortingEx := False;
+      end;
+    end;
+  end;
+  // Items ohne ItemsChanged (das sucht bei ItemIndex = -1 jedes Mal alle
+  // Eintraege durch); die Auswahl wird unten nachgefuehrt
+  FSyncingItems := True;
+  OldChange := FItems.OnChange;
+  FItems.OnChange := nil;
+  try
+    FItems.Insert(P, Key);
+  finally
+    FItems.OnChange := OldChange;
+    FSyncingItems := False;
+  end;
+  if FItemIndex >= P then
+    Inc(FItemIndex)
+  else if (FItemIndex < 0) and AnsiSameText(Key, FDisplayText) then
+  begin
+    // Wie ItemsChanged: der Text passt jetzt zu einem Eintrag
+    FItemIndex := P;
+    NotifyAccessibility(EVENT_OBJECT_VALUECHANGE);
+  end;
+  UpdatePopupItems;
 end;
 
 procedure TPPGCustomComboBox.ApplyFilter;
