@@ -16,7 +16,8 @@ uses
   PPG.Types, PPG.Appearance, PPG.Render.Gdi, PPG.AppHooks, PPG.MenuBar, PPG.Chart.Series,
   PPG.Chart, PPG.Kanban.Items, PPG.Kanban, PPG.DB.Kanban, PPG.Planner.Model, PPG.Planner,
   PPG.Ribbon.Layout, PPG.Ribbon.Items, PPG.Ribbon, PPG.TabStrip, PPG.TabControl, PPG.PageControl, PPG.Feedback,
-  PPG.TeachingTip, PPG.TagEdit, PPG.Exceptions, PPG.Tests.Controls;
+  PPG.TeachingTip, PPG.TagEdit, PPG.Exceptions, PPG.Tests.Controls, PPG.CustomDraw,
+  PPG.Tests.Audit8A;
 
 type
   TAudit8DTests = class(TControlTestCase)
@@ -94,6 +95,31 @@ type
     procedure SetUp; override;
   published
     procedure SortedDataSetRenumbersInOrder;
+  end;
+
+  /// Audit 8E: Kanban und Planer zeichnen nur Karten bzw. Termine und Zeilen
+  /// im neu zu zeichnenden Bereich (pixelgleich zum Voll-Paint).
+  TAudit8EBoardTests = class(TAudit8PartialTestCase)
+  private
+    FDrawn: Integer;
+    procedure CountCard(Sender: TObject; Canvas: TCanvas; const Card: TPPGKanbanCardData;
+      const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle;
+      var DefaultDraw: Boolean);
+    procedure CountAppointment(Sender: TObject; Canvas: TCanvas; Appointment: TPPGAppointment;
+      const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle;
+      var DefaultDraw: Boolean);
+    function NewBoard(Cards: Integer; Lanes: Boolean): TPPGKanban;
+    function NewPlanner(AView: TPPGPlannerView): TPPGPlanner;
+  protected
+    procedure SetUp; override;
+  published
+    procedure KanbanPartialRepaint;
+    procedure KanbanPartialRepaintLanes;
+    procedure KanbanHoverMatchesFullPaint;
+    procedure KanbanPartialPaintDrawsOnlyCardsInClip;
+    procedure PlannerPartialRepaintViews;
+    procedure PlannerHoverMatchesFullPaint;
+    procedure PlannerPartialPaintDrawsOnlyItemsInClip;
   end;
 
 implementation
@@ -1595,9 +1621,289 @@ begin
   K.Free;
 end;
 
+{ TAudit8EBoardTests }
+
+procedure TAudit8EBoardTests.SetUp;
+begin
+  inherited;
+  FForm.SetBounds(0, 0, 960, 680);
+  FForm.Show;
+end;
+
+procedure TAudit8EBoardTests.CountCard(Sender: TObject; Canvas: TCanvas;
+  const Card: TPPGKanbanCardData; const ARect: TRect; State: TPPGItemDrawState;
+  var Style: TPPGDrawStyle; var DefaultDraw: Boolean);
+begin
+  Inc(FDrawn);
+end;
+
+procedure TAudit8EBoardTests.CountAppointment(Sender: TObject; Canvas: TCanvas;
+  Appointment: TPPGAppointment; const ARect: TRect; State: TPPGItemDrawState;
+  var Style: TPPGDrawStyle; var DefaultDraw: Boolean);
+begin
+  Inc(FDrawn);
+end;
+
+function TAudit8EBoardTests.NewBoard(Cards: Integer; Lanes: Boolean): TPPGKanban;
+var
+  I: Integer;
+  Col: array[0..2] of TPPGKanbanColumn;
+  Card: TPPGKanbanCard;
+begin
+  Result := TPPGKanban.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 900, 600);
+  Result.Animation.Enabled := False;
+  for I := 0 to 2 do
+    Col[I] := Result.Columns.AddColumn('Spalte ' + IntToStr(I));
+  Col[1].WipLimit := 3;
+  if Lanes then
+  begin
+    Result.Lanes.AddLane('Anna');
+    Result.Lanes.AddLane('Ben');
+  end;
+  Result.Cards.BeginUpdate;
+  try
+    for I := 0 to Cards - 1 do
+    begin
+      Card := Result.Cards.AddCard(Col[I mod 3].Id, 'Aufgabe ' + IntToStr(I),
+        'Text <b>' + IntToStr(I) + '</b>');
+      if I mod 2 = 0 then
+        Card.Labels := 'Bug, UI';
+      if I mod 3 = 0 then
+        Card.Assignee := 'Anna Berg';
+      if I mod 4 = 0 then
+        Card.Progress := 40;
+      if I mod 5 = 0 then
+        Card.Color := clRed;
+      if I mod 7 = 0 then
+        Card.Due := EncodeDate(2030, 1, 1 + I mod 20);
+      if Lanes then
+        Card.LaneId := 1 + I mod 2;
+    end;
+  finally
+    Result.Cards.EndUpdate;
+  end;
+  Result.HandleNeeded;
+  Result.Update;
+end;
+
+procedure TAudit8EBoardTests.KanbanPartialRepaint;
+var
+  K: TPPGKanban;
+  R: TRect;
+begin
+  K := NewBoard(40, False);
+  K.Select(0, 0, 2);
+  K.SetFocus;
+  K.Update;
+  // quer durch Karten zweier Spalten, halbe Karte, Luecke
+  R := K.CardRect(0, 0, 2);
+  CheckPartial(K, Rect(R.Left + 20, R.Top + 7, R.Right + 90, R.Bottom + 13), 'Karten');
+  // Fokusrahmen am Rand der Karte
+  CheckPartial(K, Rect(R.Left - 3, R.Top - 3, R.Left + 6, R.Bottom + 3), 'Fokusrand');
+  // Kopf mit Anzahl/Limit und Einklappen
+  CheckPartial(K, Rect(0, 0, 900, 40), 'Koepfe');
+  // unten: Spaltenkoerper und Leisten
+  CheckPartial(K, Rect(200, 480, 900, 600), 'unten');
+  // gescrollte Spalte (erste Karte halb verdeckt)
+  K.ScrollColumn(0, 37);
+  K.Update;
+  CheckPartial(K, Rect(0, 60, 300, 140), 'Spalte gescrollt');
+end;
+
+procedure TAudit8EBoardTests.KanbanPartialRepaintLanes;
+var
+  K: TPPGKanban;
+  R: TRect;
+begin
+  K := NewBoard(30, True);
+  K.Update;
+  R := K.LaneHeaderRect(1);
+  CheckPartial(K, Rect(0, R.Top - 10, 900, R.Bottom + 10), 'Swimlane-Kopf');
+  R := K.CardRect(1, 1, 0);
+  CheckPartial(K, Rect(R.Left - 5, R.Top - 5, R.Right + 5, R.Top + 30), 'Karte in Swimlane');
+  K.ScrollTo(0, 60);
+  K.Update;
+  CheckPartial(K, Rect(0, 30, 900, 120), 'gescrollt');
+end;
+
+procedure TAudit8EBoardTests.KanbanHoverMatchesFullPaint;
+var
+  K: TPPGKanban;
+  I: Integer;
+  R: TRect;
+begin
+  K := NewBoard(30, False);
+  K.Select(1, 0, 1);
+  K.Update;
+  for I := 0 to 5 do
+  begin
+    R := K.CardRect(I mod 3, 0, I div 3);
+    K.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+    CheckWindowMatches(K, 'Karte ' + IntToStr(I));
+  end;
+  // Einklapp-Knopf und Spaltenkopf
+  R := K.HeaderRect(2);
+  K.Perform(WM_MOUSEMOVE, 0, MouseLParam(R.Right - 15, (R.Top + R.Bottom) div 2));
+  CheckWindowMatches(K, 'Einklappen');
+  K.Perform(CM_MOUSELEAVE, 0, 0);
+  CheckWindowMatches(K, 'Maus raus');
+end;
+
+procedure TAudit8EBoardTests.KanbanPartialPaintDrawsOnlyCardsInClip;
+var
+  K: TPPGKanban;
+  R: TRect;
+  Full: Integer;
+begin
+  K := NewBoard(60, False);
+  K.OnCustomDrawCard := CountCard;
+  FDrawn := 0;
+  K.Invalidate;
+  K.Update;
+  Full := FDrawn;
+  CheckTrue(Full >= 9, Format('Voll-Paint: alle sichtbaren Karten (%d)', [Full]));
+  R := K.CardRect(1, 0, 2);
+  FDrawn := 0;
+  InvalidateRect(K.Handle, @R, False);
+  K.Update;
+  CheckEquals(1, FDrawn, Format('nur die Karte im Bereich (Voll-Paint %d)', [Full]));
+  // Spalte ausserhalb: keine Karte
+  R := Rect(0, 0, 4, 4);
+  FDrawn := 0;
+  InvalidateRect(K.Handle, @R, False);
+  K.Update;
+  CheckEquals(0, FDrawn, 'Ecke ohne Karte');
+end;
+
+function TAudit8EBoardTests.NewPlanner(AView: TPPGPlannerView): TPPGPlanner;
+var
+  I: Integer;
+  A: TPPGAppointment;
+  D: TDateTime;
+begin
+  Result := TPPGPlanner.Create(FForm);
+  Result.Parent := FForm;
+  Result.SetBounds(0, 0, 900, 600);
+  Result.ShowNowLine := False;
+  Result.Animation.Enabled := False;
+  Result.Resources.AddResource(1, 'Anna');
+  Result.Resources.AddResource(2, 'Ben');
+  Result.Resources.AddResource(3, 'Cleo');
+  D := EncodeDate(2025, 3, 3);
+  Result.Appointments.BeginUpdate;
+  try
+    for I := 0 to 89 do
+    begin
+      A := Result.Appointments.AddAppointment(D + (I mod 9) + (7 + (I * 5) mod 11) / 24 + (I mod 4) / 96,
+        D + (I mod 9) + (8 + (I * 5) mod 11) / 24 + (I mod 3) / 48, 'Termin ' + IntToStr(I));
+      A.ResourceId := 1 + I mod 3;
+      if I mod 4 = 0 then
+        A.Location := 'Raum ' + IntToStr(I);
+      if I mod 17 = 0 then
+        A.AllDay := True;
+      if I mod 23 = 0 then
+        A.FinishTime := A.StartTime + 2.5;
+    end;
+  finally
+    Result.Appointments.EndUpdate;
+  end;
+  Result.View := AView;
+  if AView = pvTimeline then
+    Result.TimelineDays := 14;
+  Result.Date := D + 2;
+  Result.HandleNeeded;
+  Result.EnsureLayout;
+  Result.Update;
+end;
+
+procedure TAudit8EBoardTests.PlannerPartialRepaintViews;
+const
+  Views: array[0..5] of TPPGPlannerView = (pvDay, pvWorkWeek, pvWeek, pvMonth, pvTimeline, pvAgenda);
+var
+  P: TPPGPlanner;
+  V: Integer;
+  R: TRect;
+  Ctx: string;
+begin
+  for V := 0 to High(Views) do
+  begin
+    P := NewPlanner(Views[V]);
+    try
+      Ctx := 'Ansicht ' + IntToStr(V);
+      if Views[V] = pvWeek then
+        P.GroupByResource := True;
+      if Views[V] = pvTimeline then
+        P.ScrollTo(130, 0);
+      if Views[V] in [pvDay, pvWorkWeek, pvWeek] then
+        P.ScrollTo(0, 7 * 40);
+      P.SelectAppointment(P.Appointments[4]);
+      P.SetFocus;
+      P.Update;
+      // Termin (mit Rand), Band quer, Kopf, linker Rand, Ausschnitt unten
+      R := P.ItemRect(0);
+      if not IsRectEmpty(R) then
+        CheckPartial(P, Rect(R.Left - 3, R.Top - 3, R.Right - 10, R.Top + 12), Ctx + ' Termin');
+      CheckPartial(P, Rect(0, 150, 900, 175), Ctx + ' Band');
+      CheckPartial(P, Rect(0, 0, 900, 45), Ctx + ' Kopf');
+      CheckPartial(P, Rect(0, 60, 90, 400), Ctx + ' links');
+      CheckPartial(P, Rect(310, 230, 620, 420), Ctx + ' Mitte');
+      CheckPartial(P, Rect(500, 500, 900, 600), Ctx + ' unten');
+    finally
+      P.Free;
+    end;
+  end;
+end;
+
+procedure TAudit8EBoardTests.PlannerHoverMatchesFullPaint;
+var
+  P: TPPGPlanner;
+  I: Integer;
+  R: TRect;
+begin
+  P := NewPlanner(pvWeek);
+  P.SelectAppointment(P.Appointments[2]);
+  P.Update;
+  for I := 0 to 7 do
+  begin
+    R := P.ItemRect(I * 3);
+    if IsRectEmpty(R) then
+      Continue;
+    P.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+    CheckWindowMatches(P, 'Termin ' + IntToStr(I));
+  end;
+  P.Perform(CM_MOUSELEAVE, 0, 0);
+  CheckWindowMatches(P, 'Maus raus');
+end;
+
+procedure TAudit8EBoardTests.PlannerPartialPaintDrawsOnlyItemsInClip;
+var
+  P: TPPGPlanner;
+  R: TRect;
+  Full: Integer;
+begin
+  P := NewPlanner(pvWeek);
+  P.OnCustomDrawAppointment := CountAppointment;
+  FDrawn := 0;
+  P.Invalidate;
+  P.Update;
+  Full := FDrawn;
+  CheckTrue(Full >= 10, Format('Voll-Paint: alle sichtbaren Termine (%d)', [Full]));
+  R := P.ItemRect(0);
+  CheckFalse(IsRectEmpty(R), 'Termin sichtbar');
+  R.Right := R.Left + 4;
+  R.Bottom := R.Top + 4;
+  FDrawn := 0;
+  InvalidateRect(P.Handle, @R, False);
+  P.Update;
+  CheckTrue((FDrawn >= 1) and (FDrawn <= 3), Format('nur Termine im Bereich: %d von %d', [FDrawn, Full]));
+end;
+
 initialization
   RegisterTest('Audit8D', TAudit8DTests.Suite);
   RegisterTest('Audit8D', TAudit8DCountTests.Suite);
   RegisterTest('Audit8D', TAudit8DDBTests.Suite);
+  RegisterTest('Audit8E', TAudit8EBoardTests.Suite);
 
 end.

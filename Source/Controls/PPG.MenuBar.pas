@@ -494,15 +494,11 @@ begin
 end;
 
 procedure TPPGCustomMenuBar.InvalidateItem(Index: Integer);
-var
-  R: TRect;
 begin
   // Audit 8D: nur den Eintrag neu zeichnen (Hover)
   if not HandleAllocated or (Index < 0) then
     Exit;
-  R := ItemRect(Index);
-  if not IsRectEmpty(R) then
-    Winapi.Windows.InvalidateRect(Handle, @R, False);
+  InvalidateArea(ItemRect(Index));
 end;
 
 procedure TPPGCustomMenuBar.SetHot(Index: Integer);

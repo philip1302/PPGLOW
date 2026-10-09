@@ -15,7 +15,7 @@ uses
   System.Types, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.Grids,
   Vcl.Imaging.pngimage,
   PPG.Types, PPG.Tokens, PPG.RowLayout, PPG.Render.Registry, PPG.Grid,
-  PPG.Grid.Columns, PPG.Grid.Styles, PPG.Grid.CellKinds, PPG.Tests.Controls;
+  PPG.Grid.Columns, PPG.Grid.Styles, PPG.Grid.CellKinds, PPG.Tests.Controls, PPG.Tests.Audit8A;
 
 type
   TAudit8BTests = class(TControlTestCase)
@@ -79,6 +79,24 @@ type
     procedure HoverAndFocusInvalidateOnlyRows;
     procedure FontCacheFollowsChanges;
     procedure PaintUnchanged;
+  end;
+
+  /// Audit 8E: das Grid zeichnet nur Zeilen im neu zu zeichnenden Bereich
+  /// (pixelgleich zum Voll-Paint, ausserhalb unveraendert).
+  TAudit8EGridTests = class(TAudit8PartialTestCase)
+  private
+    FDrawn: Integer;
+    procedure CountCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect;
+      State: TGridDrawState);
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure PartialRepaintConfigs;
+    procedure PartialRepaintGradientAndFixedRows;
+    procedure PartialRepaintScrolled;
+    procedure HoverAndFocusMatchFullPaint;
+    procedure PartialPaintDrawsOnlyRowsInClip;
   end;
 
 implementation
@@ -1495,15 +1513,21 @@ end;
 
 { ---- Zeichnen ---- }
 
-function TAudit8BTests.RenderConfig(Index: Integer): TBitmap;
+{ Grid 520 x 320 in einer der Einstellungen 0..6 (auch fuer Audit 8E). }
+function Audit8BConfigGrid(Form: TForm; Index: Integer): TPPGGrid;
 var
   G: TPPGGrid;
   R, C: Integer;
   Rule: TPPGGridConditionalFormat;
   Sel: TGridRect;
 begin
-  G := NewGrid(520, 320);
+  G := TPPGGrid.Create(Form);
   try
+    G.Parent := Form;
+    G.SetBounds(0, 0, 520, 320);
+    G.Animation.Enabled := False;
+    G.SmoothScrolling := False;
+    G.HandleNeeded;
     G.Columns.Add.Title := '#';
     for C := 1 to 6 do
       G.Columns.Add.Title := 'Spalte ' + IntToStr(C);
@@ -1603,6 +1627,20 @@ begin
           G.Row := 9;
         end;
     end;
+  except
+    TPPGRendererRegistry.ForceGdiFallback := False;
+    G.Free;
+    raise;
+  end;
+  Result := G;
+end;
+
+function TAudit8BTests.RenderConfig(Index: Integer): TBitmap;
+var
+  G: TPPGGrid;
+begin
+  G := Audit8BConfigGrid(FForm, Index);
+  try
     Application.ProcessMessages;
     // Hover-Zeile erst direkt vor dem Zeichnen (keine Nachricht dazwischen)
     if Index = 0 then
@@ -1670,7 +1708,172 @@ begin
   end;
 end;
 
+{ TAudit8EGridTests }
+
+procedure TAudit8EGridTests.SetUp;
+begin
+  inherited;
+  FForm.SetBounds(0, 0, 600, 420);
+  FForm.Show;
+end;
+
+procedure TAudit8EGridTests.TearDown;
+begin
+  TPPGRendererRegistry.ForceGdiFallback := False;
+  inherited;
+end;
+
+procedure TAudit8EGridTests.CountCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect;
+  State: TGridDrawState);
+begin
+  Inc(FDrawn);
+end;
+
+procedure TAudit8EGridTests.PartialRepaintConfigs;
+var
+  I: Integer;
+  G: TPPGGrid;
+  Ctx: string;
+begin
+  // Einstellungen wie PaintUnchanged: Stile/Auswahl, bedingte Formate,
+  // Zellarten, Gruppen mit Fuss und Filterzeile, Baender/Verbindungen/
+  // Zeilenhoehen/Zeilenauswahl, RTL, GDI-Fallback
+  for I := 0 to 6 do
+  begin
+    G := Audit8BConfigGrid(FForm, I);
+    try
+      Application.ProcessMessages;
+      if I = 0 then
+        G.Perform(WM_MOUSEMOVE, 0, MakeLParam(200, 24 * 8 + 10));
+      G.Update;
+      Ctx := 'Einstellung ' + IntToStr(I);
+      // Zeilenband ueber feste und scrollbare Spalten, halbe Zeilen
+      CheckPartial(G, Rect(0, 61, 520, 83), Ctx + ' Band');
+      // Ausschnitt mitten in Zellen
+      CheckPartial(G, Rect(90, 37, 310, 141), Ctx + ' Mitte');
+      // Kopf, Bandzeilen bzw. Gruppenfeld
+      CheckPartial(G, Rect(0, 0, 520, 30), Ctx + ' Kopf');
+      // unten rechts: Summenzeile, Leiste, Flaeche unter den Zeilen
+      CheckPartial(G, Rect(340, 210, 520, 320), Ctx + ' unten');
+      // eine Pixelzeile auf einer Gitterlinie
+      CheckPartial(G, Rect(0, 47, 520, 48), Ctx + ' Linie');
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+      G.Free;
+    end;
+  end;
+end;
+
+procedure TAudit8EGridTests.PartialRepaintGradientAndFixedRows;
+var
+  G: TPPGGrid;
+  R, C: Integer;
+begin
+  // Verlauf ueber die feste Spalte haengt an ihrer ganzen Hoehe; zwei feste
+  // Zeilen, Fokusrahmen
+  G := Audit8BConfigGrid(FForm, -1);
+  try
+    G.FixedRows := 2;
+    G.DrawingStyle := gdsGradient;
+    for R := 2 to 39 do
+      for C := 1 to 6 do
+        if (R + C) mod 5 = 0 then
+          G.Cells[C, R] := 'X' + IntToStr(R);
+    G.Row := 6;
+    G.Col := 3;
+    G.SetFocus;
+    Application.ProcessMessages;
+    G.Update;
+    CheckPartial(G, Rect(0, 100, 520, 140), 'Verlauf Mitte');
+    CheckPartial(G, Rect(0, 20, 60, 70), 'Verlauf feste Zeilen');
+    CheckPartial(G, Rect(100, 120, 330, 175), 'Fokuszelle');
+  finally
+    G.Free;
+  end;
+end;
+
+procedure TAudit8EGridTests.PartialRepaintScrolled;
+var
+  G: TPPGGrid;
+begin
+  // Gescrollt (erste sichtbare Zeile halb verdeckt), rechts fixierte Spalte
+  G := Audit8BConfigGrid(FForm, 0);
+  try
+    G.FixedColsRight := 1;
+    G.Styles.HotRow.Color := clNone;
+    Application.ProcessMessages;
+    G.ScrollTo(37, 131);
+    G.Update;
+    CheckPartial(G, Rect(0, 40, 520, 75), 'gescrollt Band');
+    CheckPartial(G, Rect(400, 90, 520, 200), 'rechts fixiert');
+  finally
+    G.Free;
+  end;
+end;
+
+procedure TAudit8EGridTests.HoverAndFocusMatchFullPaint;
+var
+  G: TPPGGrid;
+  I: Integer;
+begin
+  G := Audit8BConfigGrid(FForm, 0);
+  try
+    G.Styles.HotRow.Color := $00C0FFFF;
+    G.Styles.HotRow.TextColor := clMaroon;
+    G.SetFocus;
+    Application.ProcessMessages;
+    G.Update;
+    for I := 0 to 7 do
+    begin
+      G.Perform(WM_MOUSEMOVE, 0, MakeLParam(150, 30 + I * 23));
+      CheckWindowMatches(G, 'Hover ' + IntToStr(I));
+    end;
+    for I := 1 to 6 do
+    begin
+      G.Row := 2 + I * 2;
+      CheckWindowMatches(G, 'Fokus ' + IntToStr(I));
+    end;
+    G.Perform(CM_MOUSELEAVE, 0, 0);
+    CheckWindowMatches(G, 'Maus raus');
+  finally
+    G.Free;
+  end;
+end;
+
+procedure TAudit8EGridTests.PartialPaintDrawsOnlyRowsInClip;
+var
+  G: TPPGGrid;
+  R: TRect;
+  Full, Part: Integer;
+begin
+  G := Audit8BConfigGrid(FForm, -1);
+  try
+    G.OnDrawCell := CountCell;
+    Application.ProcessMessages;
+    G.Update;
+    FDrawn := 0;
+    G.Invalidate;
+    G.Update;
+    Full := FDrawn;
+    CheckTrue(Full > 7 * 10, Format('Voll-Paint zeichnet alle Zellen: %d', [Full]));
+    // Eine Datenzeile: gezeichnet werden nur ihre Zellen und die Nachbarn
+    // im Rand (Glow/Fokus), nicht das ganze Bild
+    R := G.CellRect(1, 6);
+    R.Left := 0;
+    R.Right := G.ClientWidth;
+    FDrawn := 0;
+    InvalidateRect(G.Handle, @R, False);
+    G.Update;
+    Part := FDrawn;
+    CheckTrue(Part > 0, 'Zeile gezeichnet');
+    CheckTrue(Part <= 7 * 4, Format('nur Zeilen im Bereich: %d von %d', [Part, Full]));
+  finally
+    G.Free;
+  end;
+end;
+
 initialization
   RegisterTest('Audit8B', TAudit8BTests.Suite);
+  RegisterTest('Audit8E', TAudit8EGridTests.Suite);
 
 end.

@@ -1519,7 +1519,7 @@ begin
     System.Math.Max(A.Right, B.Right), System.Math.Max(A.Bottom, B.Bottom));
   // Rand fuer Schatten und Rahmen
   InflateRect(A, PPGScale(12, ScalePPI), PPGScale(12, ScalePPI));
-  Winapi.Windows.InvalidateRect(Handle, @A, False);
+  InvalidateArea(A);
 end;
 
 procedure TPPGCustomChart.NotifyReorder;

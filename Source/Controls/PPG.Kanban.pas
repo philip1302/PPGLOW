@@ -2301,6 +2301,8 @@ var
   DS: TPPGDrawStyle;
   St: TPPGItemDrawState;
   DrawIt, CardSel, CardHot, Dim: Boolean;
+  M, PTop, PBottom: Integer;
+  VC: TRect;
 begin
   T := Tokens;
   HC := UseHighContrast;
@@ -2324,6 +2326,10 @@ begin
     TextCol := T.TextDisabled;
   R := ColClientRect(C);
   if (R.Right < View.Left) or (R.Left > View.Right) then
+    Exit;
+  // Audit 8E: Spalte ausserhalb des neu zu zeichnenden Bereichs
+  M := Sc(4);
+  if not NeedsPaint(R, M) then
     Exit;
   Col := FCols[C].Column.Color;
   if not PPGColorIsSet(Col) or HC then
@@ -2428,6 +2434,10 @@ begin
   Clip := B;
   if Clip.Top >= Clip.Bottom then
     Exit;
+  // Audit 8E: Karten nur im neu zu zeichnenden Bereich (Rand M fuer Rahmen)
+  VC := ViewportClip;
+  PTop := Max(Clip.Top, VC.Top - M);
+  PBottom := Min(Clip.Bottom, VC.Bottom + M);
   ACanvas.PushClipRoundRect(Clip, 0);
   try
     for L := 0 to High(FCols[C].Cells) do
@@ -2446,20 +2456,20 @@ begin
         Continue;
       // erste sichtbare Karte suchen (nur sichtbare zeichnen)
       if FCols[C].Cells[L].Virtual then
-        First := Max(0, (Clip.Top - (CardOffsetY(C, L) + FCols[C].Cells[L].Top)) div
+        First := Max(0, (PTop - (CardOffsetY(C, L) + FCols[C].Cells[L].Top)) div
           (VirtualHeight + Sc(FCardGap)) - 1)
       else
         First := Max(0, PPGKanbanFirstBelow(FCols[C].Cells[L].Tops, FCols[C].Cells[L].Heights,
-          Clip.Top - CardOffsetY(C, L) - FCols[C].Cells[L].Top - VirtualHeight * 2) - 1);
+          PTop - CardOffsetY(C, L) - FCols[C].Cells[L].Top - VirtualHeight * 2) - 1);
       for I := First to N - 1 do
       begin
         if FDragging and (FDragSrc.Col = C) and (FDragSrc.Lane = L) and (FDragSrc.Index = I) then
           Continue;
         CR := RawCardRect(C, L, I);
         OffsetRect(CR, 0, CurrentShift(C, L, I));
-        if CR.Top > Clip.Bottom + VirtualHeight * 2 then
+        if CR.Top > PBottom + VirtualHeight * 2 then
           Break;
-        if CR.Bottom < Clip.Top then
+        if (CR.Bottom < Clip.Top) or not NeedsPaint(CR, M) then
           Continue;
         D := CardData(C, L, I);
         CardSel := (FFocus.Part = kpCard) and (FFocus.Col = C) and (FFocus.Lane = L) and
@@ -2493,7 +2503,15 @@ begin
           end;
         end;
         if DrawIt then
-          PaintCard(ACanvas, CR, D, DS, CardSel, CardHot, False, CardAt(C, L, I));
+        begin
+          // Audit 8E (8a #5): Texte und Bilder der Karte in einem GDI+-Block
+          PPGBeginBatch(ACanvas);
+          try
+            PaintCard(ACanvas, CR, D, DS, CardSel, CardHot, False, CardAt(C, L, I));
+          finally
+            PPGEndBatch(ACanvas);
+          end;
+        end;
       end;
     end;
   finally
@@ -2552,6 +2570,9 @@ begin
       R := LaneHeaderRect(L);
       if (R.Bottom < View.Top + FHeaderH) or (R.Top > View.Bottom) then
         Continue;
+      // Audit 8E: nur Koepfe im neu zu zeichnenden Bereich
+      if not NeedsPaint(Rect(R.Left - BoardPad, R.Top, R.Right + BoardPad, R.Bottom), Sc(4)) then
+        Continue;
       ACanvas.FillRoundRect(Rect(R.Left - BoardPad, R.Top + Sc(2), R.Right + BoardPad, R.Bottom - Sc(2)), 0,
         PPGColorToRGB(GetBackgroundColor), 255);
       Cnt := 0;
@@ -2587,7 +2608,12 @@ begin
     R := Rect(FMousePt.X - FGrab.X, FMousePt.Y - FGrab.Y, FMousePt.X - FGrab.X + DragWidth,
       FMousePt.Y - FGrab.Y + FDragH);
     DS.Reset;
-    PaintCard(ACanvas, R, FDragData, DS, True, False, True);
+    PPGBeginBatch(ACanvas);
+    try
+      PaintCard(ACanvas, R, FDragData, DS, True, False, True);
+    finally
+      PPGEndBatch(ACanvas);
+    end;
   end;
   if Focused and (FFocus.Part = kpHeader) then
     ACanvas.FrameRoundRect(HeaderRect(FFocus.Col), Sc(8), Sc(2), PPGColorToRGB(EffectiveAppearance.FocusColor), 255);
@@ -2766,7 +2792,7 @@ begin
   if FGhostShown and HandleAllocated and not FShiftAnim.Running then
   begin
     UnionRect(U, FGhostR, R);
-    Winapi.Windows.InvalidateRect(Handle, @U, False);
+    InvalidateArea(U);
   end
   else
     Invalidate;
@@ -2812,8 +2838,7 @@ begin
     Exit;
   end;
   R := HitRect(H);
-  if not IsRectEmpty(R) then
-    Winapi.Windows.InvalidateRect(Handle, @R, False);
+  InvalidateArea(R);
 end;
 
 procedure TPPGCustomKanban.ColumnAutoScroll(X, Y: Integer);

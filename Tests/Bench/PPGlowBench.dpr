@@ -615,6 +615,20 @@ begin
           PaintToBitmap(G);
         end;
       end);
+    // Audit 8E: im Fenster zeichnet der Hover nur die alte und neue Zeile
+    Measure('8E Grid 1 Mio.: Hover 300 x im Fenster (Teil-Neuzeichnen)', 800,
+      procedure
+      var
+        I: Integer;
+      begin
+        G.Invalidate;
+        UpdateWindow(G.Handle);
+        for I := 0 to 299 do
+        begin
+          G.Perform(WM_MOUSEMOVE, 0, MakeLParam(200, 40 + (I mod 20) * 24));
+          UpdateWindow(G.Handle);
+        end;
+      end);
     Measure('8B Grid 1 Mio.: 100 x zeichnen mit Zellarten (Fortschritt, Link)', 1200,
       procedure
       var
@@ -865,6 +879,87 @@ begin
 end;
 
 /// Audit-Paket 8D (DocsAudit-Paket8-Plan.md): eigene Messungen dieses Teils.
+/// Audit 8E: Hover im Fenster (nur die betroffenen Karten bzw. Termine neu
+/// zeichnen), ohne den Aufbau der Daten.
+procedure Bench8EHover;
+var
+  K: TPPGKanban;
+  C: array[0..3] of TPPGKanbanColumn;
+  P: TPPGPlanner;
+  A: TPPGAppointment;
+  I: Integer;
+begin
+  K := TPPGKanban.Create(Form);
+  try
+    K.Parent := Form;
+    K.SetBounds(0, 0, 1000, 700);
+    for I := 0 to 3 do
+      C[I] := K.Columns.AddColumn('Spalte ' + IntToStr(I));
+    K.Cards.BeginUpdate;
+    try
+      for I := 0 to 9999 do
+        with K.Cards.AddCard(C[I mod 4].Id, 'Aufgabe ' + IntToStr(I), 'Text <b>' + IntToStr(I mod 97) + '</b>') do
+        begin
+          Labels := 'L' + IntToStr(I mod 7);
+          if I mod 3 = 0 then
+            Assignee := 'Anna Berg';
+        end;
+    finally
+      K.Cards.EndUpdate;
+    end;
+    K.Update;
+    Measure('8E Kanban 10 000 Karten: 300 Mausbewegungen im Fenster (ohne Aufbau)', 450,
+      procedure
+      var
+        J: Integer;
+      begin
+        for J := 0 to 299 do
+        begin
+          K.Perform(WM_MOUSEMOVE, 0, MakeLParam(Word(30 + (J * 17) mod 900), Word(80 + (J * 29) mod 560)));
+          UpdateWindow(K.Handle);
+        end;
+      end);
+  finally
+    K.Free;
+  end;
+  P := TPPGPlanner.Create(Form);
+  try
+    P.Parent := Form;
+    P.SetBounds(0, 0, 1000, 700);
+    P.ShowNowLine := False;
+    P.View := pvWeek;
+    P.GroupByResource := False;
+    P.Appointments.BeginUpdate;
+    try
+      for I := 0 to 1999 do
+      begin
+        A := P.Appointments.AddAppointment(EncodeDate(2026, 3, 2) + (I mod 7) + (8 + I mod 9) / 24,
+          EncodeDate(2026, 3, 2) + (I mod 7) + (9 + I mod 9) / 24, 'Termin ' + IntToStr(I));
+        if I mod 5 = 0 then
+          A.Location := 'Raum ' + IntToStr(I mod 13);
+      end;
+    finally
+      P.Appointments.EndUpdate;
+    end;
+    P.Date := EncodeDate(2026, 3, 4);
+    P.ScrollTo(0, 8 * 40);
+    P.Update;
+    Measure('8E Planer Woche 2000 Termine: 300 Mausbewegungen im Fenster', 300,
+      procedure
+      var
+        J: Integer;
+      begin
+        for J := 0 to 299 do
+        begin
+          P.Perform(WM_MOUSEMOVE, 0, MakeLParam(Word(80 + (J * 37) mod 900), Word(60 + (J * 23) mod 600)));
+          UpdateWindow(P.Handle);
+        end;
+      end);
+  finally
+    P.Free;
+  end;
+end;
+
 procedure Bench8D;
 begin
   Measure('MenuBar 10 Menues: 300 Mausbewegungen + zeichnen', 400,
@@ -1054,6 +1149,9 @@ begin
         K.Free;
       end;
     end);
+
+  // Audit 8E: Hover ohne Aufbau gemessen (Board und Planer vorher angelegt)
+  Bench8EHover;
 
   Measure('Kanban 10 000 Karten: 100 x eine Karte aendern + zeichnen', 4500,
     procedure

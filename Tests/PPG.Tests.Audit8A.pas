@@ -30,15 +30,23 @@ type
     LastClip: TRect;
   end;
 
-  TAudit8APaintTests = class(TControlTestCase)
-  private
+  /// Hilfen fuer Teil-Neuzeichnen-Tests (auch Audit 8E in Audit8B/Audit8D):
+  /// Fensterinhalt festhalten, mit Magenta ueberschreiben, vergleichen.
+  TAudit8PartialTestCase = class(TControlTestCase)
+  protected
     function Snapshot(C: TWinControl): TBitmap;
     procedure Scribble(C: TWinControl);
     function DiffIn(A, B: TBitmap; const R: TRect; Outside: Boolean): Integer;
     function MagentaOutside(B: TBitmap; const R: TRect): Integer;
-    function NewList(Count: Integer): TClipRecListBox;
+    /// Nach InvalidateRect(R) ist R pixelgleich zum Voll-Paint, der Rest unveraendert.
     procedure CheckPartial(C: TWinControl; const R: TRect; const Msg: string);
+    /// Das Fenster zeigt nach der letzten Aktion denselben Stand wie ein Voll-Paint.
     procedure CheckWindowMatches(C: TWinControl; const Msg: string);
+  end;
+
+  TAudit8APaintTests = class(TAudit8PartialTestCase)
+  private
+    function NewList(Count: Integer): TClipRecListBox;
     procedure TileItem(Sender: TObject; Index: Integer; var Data: TPPGItemData);
   protected
     procedure SetUp; override;
@@ -165,7 +173,7 @@ begin
   FForm.Show;
 end;
 
-function TAudit8APaintTests.Snapshot(C: TWinControl): TBitmap;
+function TAudit8PartialTestCase.Snapshot(C: TWinControl): TBitmap;
 var
   DC: HDC;
 begin
@@ -185,7 +193,7 @@ begin
   end;
 end;
 
-procedure TAudit8APaintTests.Scribble(C: TWinControl);
+procedure TAudit8PartialTestCase.Scribble(C: TWinControl);
 var
   DC: HDC;
   Brush: HBRUSH;
@@ -207,7 +215,7 @@ begin
   end;
 end;
 
-function TAudit8APaintTests.DiffIn(A, B: TBitmap; const R: TRect; Outside: Boolean): Integer;
+function TAudit8PartialTestCase.DiffIn(A, B: TBitmap; const R: TRect; Outside: Boolean): Integer;
 var
   X, Y: Integer;
   PA, PB: PByteArray;
@@ -230,7 +238,7 @@ begin
   end;
 end;
 
-function TAudit8APaintTests.MagentaOutside(B: TBitmap; const R: TRect): Integer;
+function TAudit8PartialTestCase.MagentaOutside(B: TBitmap; const R: TRect): Integer;
 var
   X, Y: Integer;
   P: PByteArray;
@@ -269,7 +277,7 @@ begin
   Result.Update;
 end;
 
-procedure TAudit8APaintTests.CheckWindowMatches(C: TWinControl; const Msg: string);
+procedure TAudit8PartialTestCase.CheckWindowMatches(C: TWinControl; const Msg: string);
 var
   Ref, Snap: TBitmap;
 begin
@@ -290,7 +298,7 @@ begin
   C.Update; // was PaintTo nachtraeglich invalidiert hat, vor der naechsten Aktion
 end;
 
-procedure TAudit8APaintTests.CheckPartial(C: TWinControl; const R: TRect; const Msg: string);
+procedure TAudit8PartialTestCase.CheckPartial(C: TWinControl; const R: TRect; const Msg: string);
 var
   Ref, Snap: TBitmap;
 begin

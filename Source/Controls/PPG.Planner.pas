@@ -2677,8 +2677,12 @@ var
   DrawIt: Boolean;
   DC: HDC;
   AF: TFont;
+  M: Integer;
 begin
   Col := GetColors(Self);
+  // Audit 8E: nur Termine im neu zu zeichnenden Bereich (Rand fuer den
+  // Fokusrahmen)
+  M := S(4);
   Batch := TTextBatch.Create;
   try
     ACanvas.PushClipRoundRect(Clip, 0);
@@ -2693,7 +2697,7 @@ begin
         if not Match then
           Continue;
         R := Mirror(LogicalRect(P.R, P.Area));
-        if not IntersectRect(TR, R, Clip) then
+        if not IntersectRect(TR, R, Clip) or not NeedsPaint(R, M) then
           Continue;
         A := FItems[P.Item].Appointment;
         C := AppointmentColor(A);
@@ -3032,6 +3036,7 @@ procedure TPPGCustomPlanner.PaintTimeGrid(const ACanvas: IPPGCanvas);
 var
   Col: TPlannerColors;
   N, G, C, D, I, Y, YT, X0, X1, Slots, M, Gi, H, Wd: Integer;
+  PM, LH, I0: Integer;
   Body, Ruler, R, Head: TRect;
   Batch: TTextBatch;
   NowT: TDateTime;
@@ -3045,6 +3050,7 @@ begin
   Slots := SlotCount;
   Body := Rect(FV.Left, FV.Top + FHeaderH, FV.Right, FV.Bottom);
   Ruler := Mirror(Rect(FV.Left, Body.Top, FV.Left + S(RulerW), FV.Bottom));
+  PM := S(4); // Rand fuer Fokusrahmen und Jetzt-Punkt (Audit 8E)
   Batch := TTextBatch.Create;
   try
     // ---- Raster ----
@@ -3058,6 +3064,9 @@ begin
         Work := TPPGWeekDay(Wd - 1) in FWorkDays;
         X0 := FV.Left + FColX[C];
         X1 := FV.Left + FColX[C + 1];
+        // Audit 8E: nur Tage im neu zu zeichnenden Bereich
+        if not NeedsPaint(Mirror(Rect(X0, Body.Top, X1, Body.Bottom)), PM) then
+          Continue;
         if not Work then
           ACanvas.FillRoundRect(Mirror(Rect(X0, Y, X1, Y + FBodyH)), 0, Col.Alt, 255)
         else
@@ -3084,12 +3093,23 @@ begin
               ACanvas.FillRoundRect(Mirror(R), 0, Col.SelSlot, 60);
             end;
       end;
-      // Linien: volle Stunde kraeftig, Zwischenfelder schwach
-      for I := 0 to Slots do
+      // Linien: volle Stunde kraeftig, Zwischenfelder schwach. Audit 8E: ab
+      // der ersten Linie, deren Beschriftung (LH hoch) den Bereich erreicht
+      LH := Max(2, 2 + Font.Height * -2);
+      I0 := 0;
+      if SlotH > 0 then
+        I0 := Max(0, (Max(Body.Top, ViewportClip.Top) - PM - LH - Y) div SlotH - 1);
+      for I := I0 to Slots do
       begin
         YT := Y + I * SlotH;
         if (YT < Body.Top - 1) or (YT > Body.Bottom) then
           Continue;
+        if not NeedsPaint(Rect(FV.Left, YT, FV.Right, YT + LH), PM) then
+        begin
+          if YT > ViewportClip.Bottom + PM then
+            Break;
+          Continue;
+        end;
         M := FDayStartHour * 60 + I * FSlotMinutes;
         if M mod 60 = 0 then
           ACanvas.FillRoundRect(Mirror(Rect(FV.Left + S(RulerW) - S(6), YT, FV.Right, YT + 1)), 0,
@@ -3108,8 +3128,9 @@ begin
           H := 2
         else
           H := 1;
-        ACanvas.FillRoundRect(Mirror(Rect(FV.Left + FColX[C], Body.Top, FV.Left + FColX[C] + H,
-          Body.Bottom)), 0, Col.Line, 255);
+        R := Mirror(Rect(FV.Left + FColX[C], Body.Top, FV.Left + FColX[C] + H, Body.Bottom));
+        if NeedsPaint(R, PM) then
+          ACanvas.FillRoundRect(R, 0, Col.Line, 255);
       end;
     finally
       ACanvas.PopClip;
@@ -3130,6 +3151,9 @@ begin
             for Gi := 0 to G - 1 do
             begin
               C := Gi * N + D;
+              if not NeedsPaint(Mirror(Rect(FV.Left + FColX[C] - S(4), YT - S(4), FV.Left + FColX[C + 1],
+                YT + S(4))), PM) then
+                Continue;
               ACanvas.FillRoundRect(Mirror(Rect(FV.Left + FColX[C], YT - S(1), FV.Left + FColX[C + 1],
                 YT + S(1))), 0, Col.NowCol, 255);
               R := Mirror(Rect(FV.Left + FColX[C] - S(4), YT - S(4), FV.Left + FColX[C] + S(4), YT + S(4)));
@@ -3160,11 +3184,17 @@ begin
       if FGrouped and (D = 0) then
       begin
         R := Rect(X0, FV.Top, FV.Left + FColX[C + N], FV.Top + S(ResHeadH));
-        S_ := FResources[Gi].Caption;
-        Batch.Add(Mirror(Rect(R.Left + S(6), R.Top, R.Right - S(6), R.Bottom)), S_, Col.HeaderText, True,
-          DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_CENTER or DT_END_ELLIPSIS));
-        ACanvas.FillRoundRect(Mirror(Rect(R.Left, R.Bottom - 1, R.Right, R.Bottom)), 0, Col.Line, 255);
+        if NeedsPaint(Mirror(R), PM) then
+        begin
+          S_ := FResources[Gi].Caption;
+          Batch.Add(Mirror(Rect(R.Left + S(6), R.Top, R.Right - S(6), R.Bottom)), S_, Col.HeaderText, True,
+            DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_CENTER or DT_END_ELLIPSIS));
+          ACanvas.FillRoundRect(Mirror(Rect(R.Left, R.Bottom - 1, R.Right, R.Bottom)), 0, Col.Line, 255);
+        end;
       end;
+      // Audit 8E: nur Tageskoepfe im neu zu zeichnenden Bereich
+      if not NeedsPaint(Mirror(Rect(X0, FV.Top, X1 + 1, FV.Top + FHeaderH)), PM) then
+        Continue;
       if FGrouped then
         R := Rect(X0, FV.Top + S(ResHeadH), X1, FV.Top + FHeadH)
       else
@@ -3246,6 +3276,9 @@ begin
       Dt := FDays[D];
       CellR := Mirror(Rect(FV.Left + FColX[Cc], FV.Top + FRowY[Rw], FV.Left + FColX[Cc + 1],
         FV.Top + FRowY[Rw + 1]));
+      // Audit 8E: nur Tage im neu zu zeichnenden Bereich
+      if not NeedsPaint(CellR, S(4)) then
+        Continue;
       Other := MonthOf(Dt) <> M;
       Work := TPPGWeekDay(PPGIsoDayOfWeek(Dt) - 1) in FWorkDays;
       if Other or not Work then
@@ -3298,6 +3331,7 @@ procedure TPPGCustomPlanner.PaintTimeline(const ACanvas: IPPGCanvas);
 var
   Col: TPlannerColors;
   I, D, K, X, Y0, DayW, Slots, M, NR, Wd, D0, D1, K0, K1: Integer;
+  PM: Integer;
   Body, Res, Head, R: TRect;
   Batch: TTextBatch;
   NowT: TDateTime;
@@ -3334,12 +3368,16 @@ begin
     D0 := Max(0, (Body.Left - X) div DayW - 1);
     D1 := Min(High(FDays), (Body.Right - X) div DayW + 1);
   end;
+  PM := S(4); // Audit 8E: Rand um neu zu zeichnende Teile
   Batch := TTextBatch.Create;
   try
     ACanvas.PushClipRoundRect(Mirror(Body), 0);
     try
       for D := D0 to D1 do
       begin
+        // Audit 8E: nur Tage im neu zu zeichnenden Bereich (mit Trennlinie)
+        if not NeedsPaint(Mirror(Rect(X + D * DayW, Body.Top, X + (D + 1) * DayW + 1, Body.Bottom)), PM) then
+          Continue;
         Wd := PPGIsoDayOfWeek(FDays[D]);
         if not (TPPGWeekDay(Wd - 1) in FWorkDays) then
           ACanvas.FillRoundRect(Mirror(Rect(X + D * DayW, Body.Top, X + (D + 1) * DayW, Body.Bottom)), 0,
@@ -3347,6 +3385,9 @@ begin
         SlotRange(D, K0, K1);
         for K := K0 to K1 do
         begin
+          if not NeedsPaint(Mirror(Rect(X + D * DayW + K * SlotW, Body.Top, X + D * DayW + (K + 1) * SlotW,
+            Body.Bottom)), PM) then
+            Continue;
           M := FDayStartHour * 60 + K * FSlotMinutes;
           if (M < FWorkStart) or (M >= FWorkEnd) then
             ACanvas.FillRoundRect(Mirror(Rect(X + D * DayW + K * SlotW, Body.Top,
@@ -3358,7 +3399,8 @@ begin
           Col.Line, 255);
       end;
       for I := 0 to NR do
-        if (Y0 + FTLRowTop[I] >= Body.Top - 1) and (Y0 + FTLRowTop[I] <= Body.Bottom) then
+        if (Y0 + FTLRowTop[I] >= Body.Top - 1) and (Y0 + FTLRowTop[I] <= Body.Bottom) and
+          NeedsPaint(Rect(Body.Left, Y0 + FTLRowTop[I], Body.Right, Y0 + FTLRowTop[I] + 1), PM) then
           ACanvas.FillRoundRect(Mirror(Rect(Body.Left, Y0 + FTLRowTop[I], Body.Right, Y0 + FTLRowTop[I] + 1)),
             0, Col.Line, 255);
       if (FSelItem < 0) and (FSelTo > FSelFrom) then
@@ -3393,6 +3435,9 @@ begin
     ACanvas.FillRoundRect(Mirror(Head), 0, Col.Header, 255);
     for D := D0 to D1 do
     begin
+      // Audit 8E: Tageskopf mit Uhrzeiten (die letzte reicht ein Feld weiter)
+      if not NeedsPaint(Mirror(Rect(X + D * DayW, FV.Top, X + (D + 1) * DayW + SlotW, FV.Top + FHeaderH)), PM) then
+        Continue;
       R := Rect(X + D * DayW + S(6), FV.Top, X + (D + 1) * DayW - S(4), FV.Top + FHeaderH div 2);
       // Tagesname bleibt sichtbar, solange der Tag es ist
       if R.Left < Head.Left + S(6) then
@@ -3423,7 +3468,8 @@ begin
     for I := 0 to NR - 1 do
     begin
       // Nur Zeilen im Bild (Trennlinie unten darf in den Kopf ragen)
-      if (Y0 + FTLRowTop[I + 1] < FV.Top - 1) or (Y0 + FTLRowTop[I] > FV.Bottom) then
+      if (Y0 + FTLRowTop[I + 1] < FV.Top - 1) or (Y0 + FTLRowTop[I] > FV.Bottom) or
+        not NeedsPaint(Mirror(Rect(FV.Left, Y0 + FTLRowTop[I], FV.Left + FBodyLeft, Y0 + FTLRowTop[I + 1] + 1)), PM) then
         Continue;
       if FResources.Count > 0 then
         S_ := FResources[I].Caption
@@ -3464,7 +3510,7 @@ begin
         if FAgenda[I].Item < 0 then
         begin
           R := Rect(FV.Left + S(8), Y0 + FAgenda[I].Top, FV.Right - S(8), Y0 + FAgenda[I].Top + FAgenda[I].Height);
-          if (R.Bottom < FV.Top) or (R.Top > FV.Bottom) then
+          if (R.Bottom < FV.Top) or (R.Top > FV.Bottom) or not NeedsPaint(Mirror(R), S(4)) then
             Continue;
           S_ := FormatDateTime(FormatSettings.LongDateFormat, FAgenda[I].Day);
           if FAgenda[I].Day = Trunc(Now_) then
@@ -4475,8 +4521,7 @@ begin
     begin
       R := PieceRect(I);
       InflateRect(R, S(3), S(3));
-      if not IsRectEmpty(R) then
-        Winapi.Windows.InvalidateRect(Handle, @R, False);
+      InvalidateArea(R);
     end;
 end;
 
