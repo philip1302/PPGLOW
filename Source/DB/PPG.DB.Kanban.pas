@@ -121,7 +121,10 @@ type
     property WipMode;
     property ShowCardCount;
     property KanbanStyles;
+    property VirtualCardHeight;
     property OnCustomDrawCard;
+    property OnKeyDown;
+    property OnScroll;
     property Preset;
     property StyleManager;
     property Appearance;

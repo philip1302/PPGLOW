@@ -123,6 +123,7 @@ type
   TPPGDBEdit = class(TPPGEdit)
   private
     FBinding: TPPGDBBinding;
+    FMaxLengthFromField: Boolean;
     procedure ShowField(Sender: TObject);
     procedure WriteField(Sender: TObject);
     function GetDataField: string;
@@ -263,7 +264,10 @@ type
     procedure Change; override;
     procedure DoSelect; override;
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure FieldKeyPress(var Key: Char); override;
+    procedure ClosedKeyDown(var Key: Word; Shift: TShiftState); override;
     function WantSpecialKey(Key: Word): Boolean; override;
+    function CanDropDown: Boolean; override;
     /// Wert in den Bearbeiten-Modus bringen; False = nicht aenderbar.
     function BeginUserChange: Boolean;
     /// Feldwert anzeigen (Lookup: Schluessel suchen). Laeuft mit Setting = True.
@@ -310,6 +314,7 @@ type
     procedure UserChange; override;
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
     procedure FieldKeyPress(var Key: Char); override;
+    function WantSpecialKey(Key: Word): Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -688,6 +693,25 @@ var
   F: TField;
 begin
   F := FBinding.Field;
+  // Laenge aus dem Textfeld (Audit 4b), solange das Control keine eigene hat;
+  // nur zur Laufzeit, sonst landete sie in der DFM
+  if not (csDesigning in ComponentState) then
+  begin
+    if (F <> nil) and (F.DataType in [ftString, ftWideString, ftFixedChar, ftFixedWideChar]) and
+      (F.Size > 0) then
+    begin
+      if (MaxLength = 0) or FMaxLengthFromField then
+      begin
+        MaxLength := F.Size;
+        FMaxLengthFromField := True;
+      end;
+    end
+    else if FMaxLengthFromField then
+    begin
+      MaxLength := 0;
+      FMaxLengthFromField := False;
+    end;
+  end;
   if F <> nil then
   begin
     Alignment := F.Alignment;
@@ -1339,6 +1363,33 @@ begin
   inherited FieldKeyDown(Key, Shift);
 end;
 
+function TPPGDBComboBox.CanDropDown: Boolean;
+begin
+  // Audit 4b: Nicht aenderbares Feld klappt nicht auf (sonst sprang die
+  // Auswahl nach dem Klick zurueck)
+  Result := (FBinding = nil) or FBinding.CanModify;
+end;
+
+procedure TPPGDBComboBox.ClosedKeyDown(var Key: Word; Shift: TShiftState);
+begin
+  // Pfeile/Bild/Pos1/Ende waehlen geschlossen direkt - nur wenn aenderbar
+  if (FBinding <> nil) and not FBinding.CanModify then
+    Exit;
+  inherited ClosedKeyDown(Key, Shift);
+end;
+
+procedure TPPGDBComboBox.FieldKeyPress(var Key: Char);
+begin
+  // Tippsuche (Liste) waehlt einen Eintrag - nur wenn aenderbar
+  if (Key >= #32) and (Style in [csDropDownList, csOwnerDrawFixed, csOwnerDrawVariable]) and
+    (FBinding <> nil) and not FBinding.CanModify then
+  begin
+    Key := #0;
+    Exit;
+  end;
+  inherited FieldKeyPress(Key);
+end;
+
 function TPPGDBComboBox.WantSpecialKey(Key: Word): Boolean;
 begin
   Result := ((Key = VK_ESCAPE) and FBinding.WantsEscape) or inherited WantSpecialKey(Key);
@@ -1438,9 +1489,12 @@ begin
   F := FBinding.Field;
   if (F = nil) or F.IsNull then
   begin
-    // Leerer Wert: nur mit Kontrollkaestchen darstellbar (wie TDateTimePicker)
+    // Leerer Wert: mit Kontrollkaestchen abgehakt, sonst leeres Feld
+    // (Audit 4b: vorher blieb das alte Datum stehen)
     if ShowCheckbox then
-      Checked := False;
+      Checked := False
+    else
+      DateTime := 0;
   end
   else
   begin
@@ -1459,7 +1513,7 @@ var
   T: Double;
 begin
   F := FBinding.Field;
-  if ShowCheckbox and not Checked then
+  if (ShowCheckbox and not Checked) or (DateTime = 0) then
     F.Clear
   else
   begin
@@ -1485,6 +1539,8 @@ end;
 
 procedure TPPGDBDatePicker.FieldKeyDown(var Key: Word; Shift: TShiftState);
 begin
+  if not DroppedDown and FBinding.HandleEscape(Key) then
+    Exit;
   // Nicht aenderbar: keine Eingabe (Pfeile aendern sonst das Datum)
   if not FBinding.CanModify and ((Key = VK_UP) or (Key = VK_DOWN) or (Key = VK_DELETE)) then
   begin
@@ -1492,6 +1548,12 @@ begin
     Exit;
   end;
   inherited FieldKeyDown(Key, Shift);
+end;
+
+function TPPGDBDatePicker.WantSpecialKey(Key: Word): Boolean;
+begin
+  Result := ((Key = VK_ESCAPE) and not DroppedDown and FBinding.WantsEscape) or
+    inherited WantSpecialKey(Key);
 end;
 
 procedure TPPGDBDatePicker.FieldKeyPress(var Key: Char);

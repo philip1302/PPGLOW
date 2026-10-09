@@ -12,7 +12,7 @@ uses
   System.Variants, System.TypInfo, System.Generics.Collections, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Graphics,
   Vcl.DBActns, Vcl.DBCtrls, Data.DB, Data.DBConsts, Datasnap.DBClient, MidasLib,
   PPG.Types, PPG.Controls.Field, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Fields,
-  PPG.DB.Navigator, PPG.Tests.Controls;
+  PPG.DB.Navigator, PPG.DB.Kanban, PPG.DB.Grid, PPG.Exceptions, PPG.Tests.Controls;
 
 type
   TDBBindSpec = record
@@ -64,14 +64,38 @@ type
     procedure DBLookupComboBox;
   end;
 
+  /// Audit 09.10.2026, Paket 4b: Fehler und Luecken der DB-Controls.
+  TDBFixTests = class(TControlTestCase)
+  private
+    FData: TClientDataSet;
+    FSource: TDataSource;
+  protected
+    procedure SetUp; override;
+  published
+    procedure EditTakesMaxLengthFromField;
+    procedure DatePickerNullIsEmpty;
+    procedure ComboLockedWhenFieldReadOnly;
+    procedure LookupEditableAfterBinding;
+    procedure DBKanbanPublishesMissingMembers;
+    procedure ExportMaxRecordsChecked;
+  end;
+
 implementation
 
 type
   TFieldCrack = class(TPPGCustomField);
   TWinCrack = class(TWinControl);
-  TComboCrack = class(TPPGDBComboBox);
+  TComboCrack = class(TPPGDBComboBox)
+  public
+    function ReadOnlyOfField: Boolean;
+  end;
   TDateCrack = class(TPPGDBDatePicker);
   TRadioCrack = class(TPPGDBRadioGroup);
+
+function TComboCrack.ReadOnlyOfField: Boolean;
+begin
+  Result := TFieldCrack(Self).ReadOnly;
+end;
 
 { TDBBindingHoldTests }
 
@@ -205,6 +229,7 @@ begin
     S.Make := function: TControl begin Result := TPPGDBDatePicker.Create(Self_.FForm) end;
     S.Shown := function(C: TControl): string begin Result := DateToStr(TPPGDBDatePicker(C).Date) end;
     S.UserEdit := procedure(C: TControl) begin TDateCrack(C).UserSetDate(EncodeDate(2024, 2, 29)) end;
+    S.Escape := FieldEsc;
     S.Rec1 := DateToStr(EncodeDate(2000, 1, 2)); S.Rec2 := DateToStr(EncodeDate(2000, 1, 3));
     S.Written := DateToStr(EncodeDate(2024, 2, 29)); S.HasActions := True;
     L.Add(S);
@@ -215,7 +240,7 @@ begin
     S.Shown := function(C: TControl): string begin Result := TPPGDBMaskEdit(C).Text end;
     S.UserEdit := procedure(C: TControl) begin TPPGDBMaskEdit(C).Text := 'Neu' end;
     S.Escape := FieldEsc;
-    S.Rec1 := 'Name1'; S.Rec2 := 'Name2'; S.Written := 'Neu';
+    S.Rec1 := 'Name1'; S.Rec2 := 'Name2'; S.Written := 'Neu'; S.HasActions := True;
     L.Add(S);
 
     S := Default(TDBBindSpec);
@@ -230,7 +255,7 @@ begin
         TPPGDBNumberEdit(C).SelText := '';
         TWinControl(C).Controls[0].Perform(WM_CHAR, Ord('7'), 0);
       end;
-    S.Rec1 := FloatToStr(1.5); S.Rec2 := FloatToStr(3.0); S.Written := FloatToStr(7);
+    S.Rec1 := FloatToStr(1.5); S.Rec2 := FloatToStr(3.0); S.Written := FloatToStr(7); S.HasActions := True;
     L.Add(S);
 
     S := Default(TDBBindSpec);
@@ -238,7 +263,8 @@ begin
     S.Make := function: TControl begin Result := TPPGDBColorPicker.Create(Self_.FForm) end;
     S.Shown := function(C: TControl): string begin Result := IntToStr(TPPGDBColorPicker(C).Selected) end;
     S.UserEdit := procedure(C: TControl) begin TPPGDBColorPicker(C).SelectColor(clGreen) end;
-    S.Rec1 := IntToStr(clRed); S.Rec2 := IntToStr(clBlue); S.Written := IntToStr(clGreen);
+    S.Escape := FieldEsc;
+    S.Rec1 := IntToStr(clRed); S.Rec2 := IntToStr(clBlue); S.Written := IntToStr(clGreen); S.HasActions := True;
     L.Add(S);
 
     S := Default(TDBBindSpec);
@@ -253,7 +279,8 @@ begin
       end;
     S.Shown := function(C: TControl): string begin Result := TPPGDBCheckComboBox(C).CheckedText end;
     S.UserEdit := procedure(C: TControl) begin TPPGDBCheckComboBox(C).ToggleItem(1) end;
-    S.Rec1 := 'Rot;Blau'; S.Rec2 := 'Gruen'; S.Written := 'Rot;Gruen;Blau';
+    S.Escape := FieldEsc;
+    S.Rec1 := 'Rot;Blau'; S.Rec2 := 'Gruen'; S.Written := 'Rot;Gruen;Blau'; S.HasActions := True;
     L.Add(S);
 
     S := Default(TDBBindSpec);
@@ -261,7 +288,8 @@ begin
     S.Make := function: TControl begin Result := TPPGDBTagEdit.Create(Self_.FForm) end;
     S.Shown := function(C: TControl): string begin Result := TPPGDBTagEdit(C).TagsText end;
     S.UserEdit := procedure(C: TControl) begin TPPGDBTagEdit(C).AddTag('z') end;
-    S.Rec1 := 'a;b'; S.Rec2 := 'c'; S.Written := 'a;b;z';
+    S.Escape := FieldEsc;
+    S.Rec1 := 'a;b'; S.Rec2 := 'c'; S.Written := 'a;b;z'; S.HasActions := True;
     L.Add(S);
 
     S := Default(TDBBindSpec);
@@ -486,7 +514,155 @@ procedure TDBBindingHoldTests.DBTagEdit; begin RunAll('TagEdit'); end;
 procedure TDBBindingHoldTests.DBRadioGroup; begin RunAll('RadioGroup'); end;
 procedure TDBBindingHoldTests.DBLookupComboBox; begin RunAll('LookupComboBox'); end;
 
+{ TDBFixTests }
+
+procedure TDBFixTests.SetUp;
+begin
+  inherited SetUp;
+  FData := TClientDataSet.Create(FForm);
+  FData.FieldDefs.Add('ID', ftInteger);
+  FData.FieldDefs.Add('Name', ftString, 12);
+  FData.FieldDefs.Add('Geboren', ftDate);
+  FData.FieldDefs.Add('OrtID', ftInteger);
+  FData.CreateDataSet;
+  FData.AppendRecord([1, 'Name1', EncodeDate(2000, 1, 2), 2]);
+  FData.AppendRecord([2, 'Name2', Null, 3]);
+  FData.First;
+  FSource := TDataSource.Create(FForm);
+  FSource.DataSet := FData;
+  FForm.Show;
+end;
+
+procedure TDBFixTests.EditTakesMaxLengthFromField;
+var
+  E: TPPGDBEdit;
+begin
+  E := TPPGDBEdit.Create(FForm);
+  E.Parent := FForm;
+  E.DataSource := FSource;
+  E.DataField := 'Name';
+  CheckEquals(12, E.MaxLength, 'Laenge des Textfelds');
+  E.DataField := 'ID';
+  CheckEquals(0, E.MaxLength, 'Zahlfeld: keine Grenze');
+  E.MaxLength := 5;
+  E.DataField := 'Name';
+  CheckEquals(5, E.MaxLength, 'eigene Laenge hat Vorrang');
+end;
+
+procedure TDBFixTests.DatePickerNullIsEmpty;
+var
+  D: TPPGDBDatePicker;
+begin
+  D := TPPGDBDatePicker.Create(FForm);
+  D.Parent := FForm;
+  D.DataSource := FSource;
+  D.DataField := 'Geboren';
+  CheckEquals(EncodeDate(2000, 1, 2), D.Date);
+  FData.Next;
+  CheckEquals(0, D.DateTime, 'Null ohne Kaestchen: leer statt altem Datum');
+  CheckEquals('', D.Text);
+  FData.Edit;
+  FData.FieldByName('Geboren').AsDateTime := EncodeDate(2001, 5, 6);
+  FData.Post;
+  D.Perform(CM_EXIT, 0, 0);
+  FData.Edit;
+  FData.FieldByName('Geboren').Clear;
+  FData.Post;
+  CheckEquals(0, D.DateTime);
+  // Leeres Feld schreibt Null
+  FData.Edit;
+  D.Perform(CM_EXIT, 0, 0);
+  CheckTrue(FData.FieldByName('Geboren').IsNull, 'leer bleibt Null');
+  FData.Cancel;
+end;
+
+procedure TDBFixTests.ComboLockedWhenFieldReadOnly;
+var
+  C: TPPGDBComboBox;
+  K: Word;
+  Ch: Char;
+begin
+  C := TPPGDBComboBox.Create(FForm);
+  C.Parent := FForm;
+  C.Style := csDropDownList;
+  C.Items.CommaText := 'Name1,Name2,Anders';
+  C.DataSource := FSource;
+  C.DataField := 'Name';
+  FData.FieldByName('Name').ReadOnly := True;
+  try
+    FData.Next;
+    FData.Prior;
+    C.DropDown;
+    CheckFalse(C.DroppedDown, 'nicht aenderbar: klappt nicht auf');
+    K := VK_DOWN;
+    TComboCrack(C).FieldKeyDown(K, []);
+    CheckEquals(0, C.ItemIndex, 'Pfeil waehlt nicht');
+    Ch := 'A';
+    TComboCrack(C).FieldKeyPress(Ch);
+    CheckEquals(0, C.ItemIndex, 'Tippsuche waehlt nicht');
+    CheckTrue(FData.State = dsBrowse);
+  finally
+    FData.FieldByName('Name').ReadOnly := False;
+  end;
+  C.DropDown;
+  CheckTrue(C.DroppedDown, 'aenderbar: klappt auf');
+  C.CloseUp(False);
+end;
+
+procedure TDBFixTests.LookupEditableAfterBinding;
+var
+  Orte: TClientDataSet;
+  OrtSrc: TDataSource;
+  L: TPPGDBLookupComboBox;
+begin
+  Orte := TClientDataSet.Create(FForm);
+  Orte.FieldDefs.Add('ID', ftInteger);
+  Orte.FieldDefs.Add('Ort', ftString, 20);
+  Orte.CreateDataSet;
+  Orte.AppendRecord([2, 'Hamburg']);
+  Orte.AppendRecord([3, 'Koeln']);
+  OrtSrc := TDataSource.Create(FForm);
+  OrtSrc.DataSet := Orte;
+  L := TPPGDBLookupComboBox.Create(FForm);
+  L.Parent := FForm;
+  L.ListSource := OrtSrc;
+  L.KeyField := 'ID';
+  L.ListField := 'Ort';
+  L.DataSource := FSource;
+  L.DataField := 'OrtID';
+  // Audit 4b: ReadOnly blieb bis zum ersten Bearbeiten True
+  CheckFalse(TComboCrack(L).ReadOnlyOfField, 'aenderbar gleich nach dem Binden');
+  CheckEquals('Hamburg', L.Text);
+end;
+
+procedure TDBFixTests.DBKanbanPublishesMissingMembers;
+begin
+  CheckTrue(IsPublishedProp(TPPGDBKanban, 'VirtualCardHeight'));
+  CheckTrue(IsPublishedProp(TPPGDBKanban, 'OnKeyDown'));
+  CheckTrue(IsPublishedProp(TPPGDBKanban, 'OnScroll'));
+end;
+
+procedure TDBFixTests.ExportMaxRecordsChecked;
+var
+  G: TPPGDBGrid;
+  Raised: Boolean;
+begin
+  G := TPPGDBGrid.Create(FForm);
+  Raised := False;
+  try
+    G.ExportMaxRecords := 0;
+  except
+    on EPPGPropertyError do
+      Raised := True;
+  end;
+  CheckTrue(Raised, '0 Saetze ist kein gueltiger Wert');
+  CheckEquals(100000, G.ExportMaxRecords, 'unveraendert');
+  G.ExportMaxRecords := 50;
+  CheckEquals(50, G.ExportMaxRecords);
+end;
+
 initialization
   RegisterTest('Audit45', TDBBindingHoldTests.Suite);
+  RegisterTest('Audit45', TDBFixTests.Suite);
 
 end.

@@ -114,6 +114,7 @@ type
     function GetField(Index: Integer): TField;
     procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
+    procedure SetExportMaxRecords(const Value: Integer);
   protected
     { Ereignisse des DataLinks }
     procedure LinkActive(Value: Boolean); virtual;
@@ -183,7 +184,7 @@ type
     property OnCellClick: TPPGDBGridColumnEvent read FOnCellClick write FOnCellClick;
     property OnGetFooterText: TPPGDBGridFooterEvent read FOnGetFooterText write FOnGetFooterText;
     /// Druck/Export lesen hoechstens so viele Saetze.
-    property ExportMaxRecords: Integer read FExportMaxRecords write FExportMaxRecords default 100000;
+    property ExportMaxRecords: Integer read FExportMaxRecords write SetExportMaxRecords default 100000;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -425,6 +426,11 @@ begin
   FreeAndNil(FAutoColumns);
   FreeAndNil(FAutoState);
   inherited Destroy;
+end;
+
+procedure TPPGCustomDBGrid.SetExportMaxRecords(const Value: Integer);
+begin
+  FExportMaxRecords := PPGCheckRange(Self, 'ExportMaxRecords', Value, 1, MaxInt);
 end;
 
 function TPPGCustomDBGrid.CreateColumns: TPPGGridColumns;

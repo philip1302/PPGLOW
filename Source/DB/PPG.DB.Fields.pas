@@ -71,6 +71,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
     property DataField: string read GetDataField write SetDataField;
@@ -100,6 +102,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
     property AllowNull default True;
@@ -122,12 +126,16 @@ type
     procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
   protected
+    procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
+    function WantSpecialKey(Key: Word): Boolean; override;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Change; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
     property DataField: string read GetDataField write SetDataField;
@@ -149,12 +157,16 @@ type
     procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
   protected
+    procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
+    function WantSpecialKey(Key: Word): Boolean; override;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Change; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
     property DataField: string read GetDataField write SetDataField;
@@ -177,12 +189,16 @@ type
     procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
   protected
+    procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
+    function WantSpecialKey(Key: Word): Boolean; override;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure DoTagsChange; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
     property DataField: string read GetDataField write SetDataField;
@@ -367,6 +383,16 @@ begin
   Message.Result := LRESULT(FBinding.Link);
 end;
 
+function TPPGDBMaskEdit.ExecuteAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited ExecuteAction(Action) or ((FBinding <> nil) and FBinding.ExecuteAction(Action));
+end;
+
+function TPPGDBMaskEdit.UpdateAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
+end;
+
 procedure TPPGDBMaskEdit.CMExit(var Message: TCMExit);
 begin
   // Ungueltige Maske: nicht schreiben, Fehler bleibt am Feld (wie TDBEdit)
@@ -475,6 +501,16 @@ begin
   Message.Result := LRESULT(FBinding.Link);
 end;
 
+function TPPGDBNumberEdit.ExecuteAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited ExecuteAction(Action) or ((FBinding <> nil) and FBinding.ExecuteAction(Action));
+end;
+
+function TPPGDBNumberEdit.UpdateAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
+end;
+
 procedure TPPGDBNumberEdit.CMExit(var Message: TCMExit);
 begin
   FBinding.Commit;
@@ -551,9 +587,33 @@ begin
     inherited Change;
 end;
 
+procedure TPPGDBColorPicker.FieldKeyDown(var Key: Word; Shift: TShiftState);
+begin
+  // Audit 4b: Esc setzt die Bearbeitung zurueck (offenes Popup zuerst zu)
+  if not DroppedDown and FBinding.HandleEscape(Key) then
+    Exit;
+  inherited FieldKeyDown(Key, Shift);
+end;
+
+function TPPGDBColorPicker.WantSpecialKey(Key: Word): Boolean;
+begin
+  Result := ((Key = VK_ESCAPE) and not DroppedDown and FBinding.WantsEscape) or
+    inherited WantSpecialKey(Key);
+end;
+
 procedure TPPGDBColorPicker.CMGetDataLink(var Message: TMessage);
 begin
   Message.Result := LRESULT(FBinding.Link);
+end;
+
+function TPPGDBColorPicker.ExecuteAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited ExecuteAction(Action) or ((FBinding <> nil) and FBinding.ExecuteAction(Action));
+end;
+
+function TPPGDBColorPicker.UpdateAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
 end;
 
 procedure TPPGDBColorPicker.CMExit(var Message: TCMExit);
@@ -632,9 +692,33 @@ begin
     inherited Change;
 end;
 
+procedure TPPGDBCheckComboBox.FieldKeyDown(var Key: Word; Shift: TShiftState);
+begin
+  // Audit 4b: Esc setzt die Bearbeitung zurueck (offenes Popup zuerst zu)
+  if not DroppedDown and FBinding.HandleEscape(Key) then
+    Exit;
+  inherited FieldKeyDown(Key, Shift);
+end;
+
+function TPPGDBCheckComboBox.WantSpecialKey(Key: Word): Boolean;
+begin
+  Result := ((Key = VK_ESCAPE) and not DroppedDown and FBinding.WantsEscape) or
+    inherited WantSpecialKey(Key);
+end;
+
 procedure TPPGDBCheckComboBox.CMGetDataLink(var Message: TMessage);
 begin
   Message.Result := LRESULT(FBinding.Link);
+end;
+
+function TPPGDBCheckComboBox.ExecuteAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited ExecuteAction(Action) or ((FBinding <> nil) and FBinding.ExecuteAction(Action));
+end;
+
+function TPPGDBCheckComboBox.UpdateAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
 end;
 
 procedure TPPGDBCheckComboBox.CMExit(var Message: TCMExit);
@@ -721,9 +805,33 @@ begin
   FBinding.UpdateEditable;
 end;
 
+procedure TPPGDBTagEdit.FieldKeyDown(var Key: Word; Shift: TShiftState);
+begin
+  // Audit 4b: Esc setzt die Bearbeitung zurueck (offenes Popup zuerst zu)
+  if not DroppedDown and FBinding.HandleEscape(Key) then
+    Exit;
+  inherited FieldKeyDown(Key, Shift);
+end;
+
+function TPPGDBTagEdit.WantSpecialKey(Key: Word): Boolean;
+begin
+  Result := ((Key = VK_ESCAPE) and not DroppedDown and FBinding.WantsEscape) or
+    inherited WantSpecialKey(Key);
+end;
+
 procedure TPPGDBTagEdit.CMGetDataLink(var Message: TMessage);
 begin
   Message.Result := LRESULT(FBinding.Link);
+end;
+
+function TPPGDBTagEdit.ExecuteAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited ExecuteAction(Action) or ((FBinding <> nil) and FBinding.ExecuteAction(Action));
+end;
+
+function TPPGDBTagEdit.UpdateAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
 end;
 
 procedure TPPGDBTagEdit.CMExit(var Message: TCMExit);
