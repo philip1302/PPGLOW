@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 258;
+  PPGLangDeCount = 259;
 
 implementation
 
@@ -82,6 +82,8 @@ begin
     'Datensatz l'#$00F6'schen?');
   PPGAddTranslation(PPGLangDeCode, @SPPGDBEditPending,
     'Die Datenmenge wird gerade an anderer Stelle bearbeitet. Diese Bearbeitung zuerst speichern oder verwerfen.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDBLookupMultiKey,
+    'Nachschlagen mit mehreren Schl'#$00FC'sselfeldern (%s) wird nicht unterst'#$00FC'tzt.');
   PPGAddTranslation(PPGLangDeCode, @SPPGAccJump,
     'Springen');
   PPGAddTranslation(PPGLangDeCode, @SPPGAccExpand,

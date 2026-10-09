@@ -1026,7 +1026,12 @@ begin
   if NeedItems then
     Proc('PPG.Items');
   if NeedGrids then
+  begin
+    // TGridDrawState, TPPGGridCellStyle (OnGetCellStyle), TPopupMenu (OnHeaderMenu)
     Proc('Vcl.Grids');
+    Proc('PPG.Grid.Styles');
+    Proc('Vcl.Menus');
+  end;
   if NeedComCtrls then
     Proc('Vcl.ComCtrls');
   if NeedExtCtrls then

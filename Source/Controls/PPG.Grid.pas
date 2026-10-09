@@ -280,6 +280,7 @@ type
     procedure WriteRowHeights(Writer: TWriter);
     procedure CheckCell(ACol, ARow: Integer);
     procedure EditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure EditorChange(Sender: TObject);
     procedure EditorExit(Sender: TObject);
     function EditorText: string;
     procedure WMSetCursor(var Message: TWMSetCursor); message WM_SETCURSOR;
@@ -433,6 +434,9 @@ type
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); virtual;
     /// Editor ist sichtbar geworden (ARow = Datenzeile, FilterRowMark = Filter).
     procedure EditorOpened(ACol, ARow: Integer); virtual;
+    /// Der Anwender hat den Text im Editor einer Datenzeile geaendert (DB-Grid:
+    /// Bearbeiten-Modus beim ersten Tastendruck).
+    procedure EditorEdited; virtual;
     /// Vor einem Umbau der Ansicht: offenen Editor uebernehmen, bei
     /// abgelehnter Validierung verwerfen (sonst zeigt er auf eine andere Zeile).
     procedure EndEditorForRebuild;
@@ -452,7 +456,7 @@ type
     function RowsContentHeight: Integer; virtual;
     /// Lage setzen, um eine Zelle sichtbar zu machen (Standard: ScrollTo).
     procedure ScrollCellsTo(X, Y: Integer); virtual;
-    function CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind;
+    function CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind; virtual;
     /// ACol = Datenspalte, VRow = sichtbare Zeile.
     function CanEditCell(ACol, VRow: Integer): Boolean; virtual;
     { Zeichnen }
@@ -798,7 +802,12 @@ uses
   PPG.Lang,
   System.SysUtils, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
-  PPG.Render.Registry, PPG.Render.Gdi, PPG.Menus, PPG.Render.Shapes, System.UITypes;
+  PPG.Render.Registry, PPG.Render.Gdi, PPG.Menus, PPG.Render.Shapes, System.UITypes,
+  PPG.Controls.Field;
+
+type
+  /// OnChange der Feld-Editoren (geschuetzt in der Feld-Basis).
+  TGridEditorFieldAccess = class(TPPGCustomField);
 
 const
   CellPadX = 6;      // logische px Text-Abstand links/rechts
@@ -5946,7 +5955,12 @@ begin
   end;
   TCtrlAccess(FEditor).Font := Font;
   FEditor.BoundsRect := R;
+  // Text setzen ist keine Anwender-Aenderung: OnChange erst danach
+  if FEditor is TPPGCustomField then
+    TGridEditorFieldAccess(FEditor).OnChange := nil;
   PPGGridEditorBegin(FEditor, S, Col);
+  if FEditor is TPPGCustomField then
+    TGridEditorFieldAccess(FEditor).OnChange := EditorChange;
   FEditCanceled := False;
   FEditor.Visible := True;
   if FEditor.CanFocus then
@@ -5957,6 +5971,18 @@ end;
 procedure TPPGCustomGrid.EditorOpened(ACol, ARow: Integer);
 begin
   // Erweiterungspunkt (DB-Grid merkt sich den Datensatz)
+end;
+
+procedure TPPGCustomGrid.EditorEdited;
+begin
+  // Erweiterungspunkt (DB-Grid: Datensatz in Bearbeitung)
+end;
+
+procedure TPPGCustomGrid.EditorChange(Sender: TObject);
+begin
+  if (FEditor <> nil) and FEditor.Visible and (FEditV >= 0) and
+    (DataRow(FEditV) <> FilterRowMark) then
+    EditorEdited;
 end;
 
 procedure TPPGCustomGrid.EndEditorForRebuild;

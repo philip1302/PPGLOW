@@ -721,7 +721,7 @@ begin
   C := Style.TextColor;
   if S = '' then
   begin
-    S := TextHint;
+    S := DisplayTextHint;
     C := HintColor;
   end;
   ACanvas.DrawText(R, S, Font, C,

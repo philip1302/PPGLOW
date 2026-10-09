@@ -13,16 +13,22 @@ unit PPG.DB.Lookup;
     Fuer sehr grosse Nachschlage-Tabellen ist ein Filter in der Abfrage der
     bessere Weg.
   - Immer csDropDownList: Tippen sucht wie bei der ComboBox (Tippsuche).
-  - Nicht unterstuetzt: Nachschlagefelder (TField.FieldKind = fkLookup) als
-    DataField - dafuer ListSource/KeyField/ListField direkt setzen. }
+  - Nachschlagefeld (TField.FieldKind = fkLookup) als DataField (Audit 4b):
+    geschrieben wird sein Schluesselfeld, Liste, KeyField und ListField
+    kommen aus dem Feld, solange sie nicht gesetzt sind. Mehrfachschluessel
+    ('A;B') werden nicht unterstuetzt und als Warnung gemeldet.
+  - NullValueKey (wie TDBLookupComboBox): diese Taste leert den Wert.
+  - Aendert sich die Listen-Datenmenge, wird die Liste gebuendelt neu gelesen
+    (eine gepostete Nachricht fuer mehrere Aenderungen) bzw. spaetestens,
+    wenn sie gebraucht wird. }
 
 {$I ..\PPG.inc}
 
 interface
 
 uses
-  System.Classes, System.SysUtils, System.Variants, Vcl.StdCtrls, Data.DB,
-  PPG.Items, PPG.DB.Controls;
+  Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Variants,
+  Vcl.StdCtrls, Vcl.Menus, Data.DB, PPG.Items, PPG.DB.Controls;
 
 type
   TPPGDBLookupComboBox = class;
@@ -46,6 +52,18 @@ type
     FListField: string;
     FKeys: array of Variant;
     FBuilding: Boolean;
+    FDataFieldName: string;
+    FLookupField: TField;
+    FOwnListSource: TDataSource;
+    FResolving: Boolean;
+    FListDirty: Boolean;
+    FRebuildPosted: Boolean;
+    FNullValueKey: TShortCut;
+    procedure ResolveDataField;
+    function EffectiveKeyField: string;
+    function EffectiveListField: string;
+    function IsListSourceStored: Boolean;
+    procedure EnsureList;
     function GetListSource: TDataSource;
     procedure SetListSource(Value: TDataSource);
     procedure SetKeyField(const Value: string);
@@ -55,8 +73,16 @@ type
   protected
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure WndProc(var Message: TMessage); override;
+    function GetDataField: string; override;
+    procedure SetDataField(const Value: string); override;
+    procedure SetDataSource(Value: TDataSource); override;
     procedure ShowField; override;
     procedure WriteField; override;
+    procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure DoDropDown; override;
+    /// Listen-Datenmenge geaendert: gebuendelt neu lesen.
+    procedure ListChanged;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -72,7 +98,9 @@ type
   published
     property KeyField: string read FKeyField write SetKeyField;
     property ListField: string read FListField write SetListField;
-    property ListSource: TDataSource read GetListSource write SetListSource;
+    property ListSource: TDataSource read GetListSource write SetListSource stored IsListSourceStored;
+    /// Taste, die den Wert leert (z.B. Entf oder Strg+Entf), 0 = keine.
+    property NullValueKey: TShortCut read FNullValueKey write FNullValueKey default 0;
     property Items stored False;
     property ItemsEx stored False;
     property Style default csDropDownList;
@@ -82,7 +110,10 @@ implementation
 
 uses
   // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
-  PPG.DB.Validator;
+  PPG.DB.Validator, PPG.ErrorHandler, PPG.Lang, PPG.Consts;
+
+var
+  GMsgRebuild: Cardinal = 0;
 
 { TPPGLookupListLink }
 
@@ -101,7 +132,7 @@ end;
 procedure TPPGLookupListLink.DataSetChanged;
 begin
   if (FOwner <> nil) and not PPGDBReading then
-    FOwner.BuildList;
+    FOwner.ListChanged;
 end;
 
 procedure TPPGLookupListLink.LayoutChanged;
@@ -121,6 +152,7 @@ end;
 
 destructor TPPGDBLookupComboBox.Destroy;
 begin
+  FLookupField := nil;
   if FListLink <> nil then
     FListLink.FOwner := nil;
   FreeAndNil(FListLink);
@@ -130,14 +162,168 @@ end;
 procedure TPPGDBLookupComboBox.Loaded;
 begin
   inherited Loaded;
+  ResolveDataField;
   BuildList;
 end;
 
 procedure TPPGDBLookupComboBox.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
-  if (Operation = opRemove) and (FListLink <> nil) and (AComponent = ListSource) then
+  if Operation <> opRemove then
+    Exit;
+  if (FListLink <> nil) and (AComponent = ListSource) then
     ListSource := nil;
+  if (FLookupField <> nil) and ((AComponent = FLookupField) or
+    (AComponent = FLookupField.LookupDataSet)) then
+  begin
+    FLookupField := nil;
+    if FOwnListSource <> nil then
+      FOwnListSource.DataSet := nil;
+  end;
+end;
+
+procedure TPPGDBLookupComboBox.WndProc(var Message: TMessage);
+begin
+  if (GMsgRebuild <> 0) and (Message.Msg = GMsgRebuild) then
+  begin
+    FRebuildPosted := False;
+    if FListDirty then
+      BuildList;
+    Exit;
+  end;
+  inherited WndProc(Message);
+end;
+
+function TPPGDBLookupComboBox.GetDataField: string;
+begin
+  Result := FDataFieldName;
+end;
+
+procedure TPPGDBLookupComboBox.SetDataField(const Value: string);
+begin
+  FDataFieldName := Value;
+  ResolveDataField;
+end;
+
+procedure TPPGDBLookupComboBox.SetDataSource(Value: TDataSource);
+begin
+  inherited SetDataSource(Value);
+  ResolveDataField;
+end;
+
+procedure TPPGDBLookupComboBox.ResolveDataField;
+var
+  DS: TDataSet;
+  F: TField;
+  Name: string;
+begin
+  if FResolving then
+    Exit;
+  FResolving := True;
+  try
+    Name := FDataFieldName;
+    FLookupField := nil;
+    DS := nil;
+    if GetDataSource <> nil then
+      DS := GetDataSource.DataSet;
+    if (DS <> nil) and (Name <> '') then
+    begin
+      F := DS.FindField(Name);
+      if (F <> nil) and (F.FieldKind = fkLookup) then
+      begin
+        if Pos(';', F.KeyFields) > 0 then
+          TPPGErrorHandler.LogWarning(Self, Format(PPGStr(@SPPGDBLookupMultiKey), [F.FieldName]))
+        else
+        begin
+          // Geschrieben wird das Schluesselfeld; die Liste kommt aus dem Feld
+          FLookupField := F;
+          F.FreeNotification(Self);
+          Name := F.KeyFields;
+          if (FListLink.DataSource = nil) or (FListLink.DataSource = FOwnListSource) then
+          begin
+            if FOwnListSource = nil then
+              FOwnListSource := TDataSource.Create(Self);
+            FOwnListSource.DataSet := F.LookupDataSet;
+            if F.LookupDataSet <> nil then
+              F.LookupDataSet.FreeNotification(Self);
+            FListLink.DataSource := FOwnListSource;
+          end;
+        end;
+      end;
+    end;
+    if not SameText(inherited GetDataField, Name) then
+      inherited SetDataField(Name);
+  finally
+    FResolving := False;
+  end;
+  BuildList;
+end;
+
+function TPPGDBLookupComboBox.EffectiveKeyField: string;
+begin
+  Result := FKeyField;
+  if (Result = '') and (FLookupField <> nil) then
+    Result := FLookupField.LookupKeyFields;
+end;
+
+function TPPGDBLookupComboBox.EffectiveListField: string;
+begin
+  Result := FListField;
+  if (Result = '') and (FLookupField <> nil) then
+    Result := FLookupField.LookupResultField;
+end;
+
+function TPPGDBLookupComboBox.IsListSourceStored: Boolean;
+begin
+  Result := (FListLink.DataSource <> nil) and (FListLink.DataSource <> FOwnListSource);
+end;
+
+procedure TPPGDBLookupComboBox.ListChanged;
+begin
+  FListDirty := True;
+  if HandleAllocated and (GMsgRebuild <> 0) then
+  begin
+    if not FRebuildPosted then
+    begin
+      FRebuildPosted := True;
+      PostMessage(Handle, GMsgRebuild, 0, 0);
+    end;
+  end
+  else
+    BuildList;
+end;
+
+procedure TPPGDBLookupComboBox.EnsureList;
+begin
+  if FListDirty then
+    BuildList;
+end;
+
+procedure TPPGDBLookupComboBox.DoDropDown;
+begin
+  EnsureList;
+  inherited DoDropDown;
+end;
+
+procedure TPPGDBLookupComboBox.FieldKeyDown(var Key: Word; Shift: TShiftState);
+begin
+  // NullValueKey leert den Wert (wie TDBLookupComboBox)
+  if (FNullValueKey <> 0) and (ShortCut(Key, Shift) = FNullValueKey) and not DroppedDown and
+    (ItemIndex >= 0) and Binding.CanModify then
+  begin
+    Key := 0;
+    if not BeginUserChange then
+      Exit;
+    Setting := True;
+    try
+      ItemIndex := -1;
+    finally
+      Setting := False;
+    end;
+    DataLink.Modified;
+    Exit;
+  end;
+  inherited FieldKeyDown(Key, Shift);
 end;
 
 function TPPGDBLookupComboBox.GetListSource: TDataSource;
@@ -148,6 +334,8 @@ end;
 procedure TPPGDBLookupComboBox.SetListSource(Value: TDataSource);
 begin
   PPGDBSetDataSource(Self, FListLink, Value);
+  if (Value = nil) and (FLookupField <> nil) then
+    ResolveDataField; // zurueck zur Liste des Nachschlagefelds
 end;
 
 procedure TPPGDBLookupComboBox.SetKeyField(const Value: string);
@@ -170,6 +358,7 @@ end;
 
 function TPPGDBLookupComboBox.KeyCount: Integer;
 begin
+  EnsureList;
   Result := Length(FKeys);
 end;
 
@@ -178,6 +367,7 @@ var
   I: Integer;
 begin
   Result := -1;
+  EnsureList;
   if VarIsNull(Key) or VarIsEmpty(Key) then
     Exit;
   for I := 0 to High(FKeys) do
@@ -204,14 +394,21 @@ begin
   if FListLink.Active and (FListLink.DataSet.State in dsEditModes) then
     Exit;
   FBuilding := True;
+  FListDirty := False;
   try
     SetLength(FKeys, 0);
     ItemsEx.Clear;
     Items.Clear;
-    if not FListLink.Active or (FKeyField = '') or (FListField = '') then
+    if not FListLink.Active or (EffectiveKeyField = '') or (EffectiveListField = '') then
       Exit;
     DS := FListLink.DataSet;
-    KeyF := DS.FindField(FKeyField);
+    if Pos(';', EffectiveKeyField) > 0 then
+    begin
+      // Vorher blieb die Liste still leer
+      TPPGErrorHandler.LogWarning(Self, Format(PPGStr(@SPPGDBLookupMultiKey), [EffectiveKeyField]));
+      Exit;
+    end;
+    KeyF := DS.FindField(EffectiveKeyField);
     if KeyF = nil then
       Exit;
     Fields := TList.Create;
@@ -219,7 +416,7 @@ begin
     try
       Names.Delimiter := ';';
       Names.StrictDelimiter := True;
-      Names.DelimitedText := FListField;
+      Names.DelimitedText := EffectiveListField;
       for I := 0 to Names.Count - 1 do
         if DS.FindField(Trim(Names[I])) <> nil then
           Fields.Add(DS.FindField(Trim(Names[I])));
@@ -305,5 +502,8 @@ begin
     Setting := False;
   end;
 end;
+
+initialization
+  GMsgRebuild := RegisterWindowMessage('PPGlow.LookupRebuild');
 
 end.

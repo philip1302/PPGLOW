@@ -52,6 +52,8 @@ type
   private
     FBinding: TPPGDBValueBinding;
     FMaskFromField: Boolean;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     function GetDataField: string;
     procedure SetDataField(const Value: string);
     function GetDataSource: TDataSource;
@@ -75,6 +77,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
@@ -84,6 +88,10 @@ type
   TPPGDBNumberEdit = class(TPPGNumberEdit)
   private
     FBinding: TPPGDBValueBinding;
+    FFormatFromField: Boolean;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
+    procedure FieldChanged(Sender: TObject);
     function GetDataField: string;
     procedure SetDataField(const Value: string);
     function GetDataSource: TDataSource;
@@ -106,6 +114,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property AllowNull default True;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
@@ -116,6 +126,8 @@ type
   TPPGDBColorPicker = class(TPPGColorPicker)
   private
     FBinding: TPPGDBValueBinding;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     function GetDataField: string;
     procedure SetDataField(const Value: string);
     function GetDataSource: TDataSource;
@@ -138,6 +150,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
@@ -147,6 +161,8 @@ type
   TPPGDBCheckComboBox = class(TPPGCheckComboBox)
   private
     FBinding: TPPGDBValueBinding;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     function GetDataField: string;
     procedure SetDataField(const Value: string);
     function GetDataSource: TDataSource;
@@ -169,6 +185,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
@@ -178,6 +196,8 @@ type
   TPPGDBTagEdit = class(TPPGTagEdit)
   private
     FBinding: TPPGDBValueBinding;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     function GetDataField: string;
     procedure SetDataField(const Value: string);
     function GetDataSource: TDataSource;
@@ -201,6 +221,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
@@ -211,7 +233,7 @@ implementation
 
 uses
   // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
-  PPG.DB.Validator;
+  PPG.DB.Validator, PPG.NumberFormat;
 
 { TPPGDBValueBinding }
 
@@ -319,6 +341,16 @@ begin
     DataSource := nil;
 end;
 
+function TPPGDBMaskEdit.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBMaskEdit.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
+end;
+
 function TPPGDBMaskEdit.GetDataField: string;
 begin
   Result := FBinding.Link.FieldName;
@@ -413,7 +445,48 @@ begin
   AllowNull := True;
   FBinding := TPPGDBValueBinding.Create(Self, dvmVariant);
   FBinding.OnBeforeUpdate := BeforeUpdate;
+  FBinding.OnFieldChanged := FieldChanged;
   FBinding.UpdateEditable;
+end;
+
+procedure TPPGDBNumberEdit.FieldChanged(Sender: TObject);
+var
+  F: TField;
+  K: TPPGNumberKind;
+  D: Integer;
+begin
+  // Audit 4b: Art und Nachkommastellen aus dem Feldtyp, solange das Control
+  // die Vorgaben hat (nkFloat, 2) - nur zur Laufzeit, sonst landeten sie in
+  // der DFM. Ganzzahl ohne ",00", BCD/Currency exakt ueber Currency.
+  if csDesigning in ComponentState then
+    Exit;
+  if not FFormatFromField and ((NumberKind <> nkFloat) or (Decimals <> 2)) then
+    Exit;
+  F := FBinding.Field;
+  K := nkFloat;
+  D := 2;
+  if F <> nil then
+    case F.DataType of
+      ftSmallint, ftInteger, ftWord, ftLargeint, ftAutoInc, ftShortint, ftByte, ftLongWord:
+        begin
+          K := nkInteger;
+          D := 0;
+        end;
+      ftCurrency:
+        K := nkCurrency;
+      ftBCD, ftFMTBcd:
+        begin
+          // Size = Nachkommastellen; Currency traegt 4 exakt
+          D := F.Size;
+          if D > 10 then
+            D := 10;
+          if D <= 4 then
+            K := nkCurrency;
+        end;
+    end;
+  NumberKind := K;
+  Decimals := D;
+  FFormatFromField := (K <> nkFloat) or (D <> 2);
 end;
 
 destructor TPPGDBNumberEdit.Destroy;
@@ -440,6 +513,16 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (FBinding <> nil) and (AComponent = DataSource) then
     DataSource := nil;
+end;
+
+function TPPGDBNumberEdit.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBNumberEdit.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
 end;
 
 function TPPGDBNumberEdit.GetDataField: string;
@@ -545,6 +628,16 @@ begin
     DataSource := nil;
 end;
 
+function TPPGDBColorPicker.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBColorPicker.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
+end;
+
 function TPPGDBColorPicker.GetDataField: string;
 begin
   Result := FBinding.Link.FieldName;
@@ -648,6 +741,16 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (FBinding <> nil) and (AComponent = DataSource) then
     DataSource := nil;
+end;
+
+function TPPGDBCheckComboBox.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBCheckComboBox.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
 end;
 
 function TPPGDBCheckComboBox.GetDataField: string;
@@ -767,6 +870,16 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (FBinding <> nil) and (AComponent = DataSource) then
     DataSource := nil;
+end;
+
+function TPPGDBTagEdit.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBTagEdit.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
 end;
 
 function TPPGDBTagEdit.GetDataField: string;

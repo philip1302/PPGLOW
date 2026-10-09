@@ -308,10 +308,11 @@ begin
   FData.FieldByName('Kosten').Clear;
   FData.Post;
   C := NewChart;
-  CheckEquals(0, C.Series[1].Y[0], 1E-9, 'NULL = 0');
+  // Audit 4b: NULL ist kein Wert 0 - der Punkt entfaellt
+  CheckEquals(3, C.Series[1].Count, 'NULL: kein Punkt');
+  CheckEquals(4, C.Series[0].Count, 'andere Serie vollstaendig');
   C.ValueFields := 'Umsatz;GibtsNicht';
-  CheckEquals(4, C.Series[1].Count, 'fehlendes Feld: Nullen statt Fehler');
-  CheckEquals(0, C.Series[1].Y[2], 1E-9);
+  CheckEquals(0, C.Series[1].Count, 'fehlendes Feld: leere Serie statt Fehler');
   C.LabelField := 'GibtsAuchNicht';
   CheckEquals(4, C.Series[0].Count);
   CheckEquals(0, FErrors.Count, FErrors.Text);

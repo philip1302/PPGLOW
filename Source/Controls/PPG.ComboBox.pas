@@ -1175,7 +1175,7 @@ begin
   end
   else if TextHintShowing then
   begin
-    S := TextHint;
+    S := DisplayTextHint;
     C := HintColor;
   end
   else

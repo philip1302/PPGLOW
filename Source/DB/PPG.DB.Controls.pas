@@ -60,6 +60,7 @@ type
     FLink: TPPGFieldDataLink;
     FSetting: Boolean;
     FAutoReadOnly: Boolean;
+    FShowRequired: Boolean;
     FOnShow: TNotifyEvent;
     FOnWrite: TNotifyEvent;
     FOnEditable: TNotifyEvent;
@@ -73,6 +74,8 @@ type
     function GetField: TField;
     function GetReadOnly: Boolean;
     procedure SetReadOnly(const Value: Boolean);
+    procedure SetShowRequired(const Value: Boolean);
+    procedure UpdateRequiredMark;
   protected
     /// Feldwert anzeigen (Vorgabe: OnShow). Laeuft mit Setting = True.
     procedure ShowValue; virtual;
@@ -113,6 +116,8 @@ type
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property Field: TField read GetField;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly;
+    /// Pflichtfelder (TField.Required) mit einem Sternchen im Platzhalter.
+    property ShowRequired: Boolean read FShowRequired write SetShowRequired;
     property OnShow: TNotifyEvent read FOnShow write FOnShow;
     property OnWrite: TNotifyEvent read FOnWrite write FOnWrite;
     property OnEditable: TNotifyEvent read FOnEditable write FOnEditable;
@@ -124,6 +129,8 @@ type
   private
     FBinding: TPPGDBBinding;
     FMaxLengthFromField: Boolean;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     procedure ShowField(Sender: TObject);
     procedure WriteField(Sender: TObject);
     function GetDataField: string;
@@ -150,6 +157,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
@@ -161,6 +170,8 @@ type
     FBinding: TPPGDBBinding;
     FAutoDisplay: Boolean;
     FMemoLoaded: Boolean;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     procedure ShowField(Sender: TObject);
     procedure WriteField(Sender: TObject);
     procedure MemoEditable(Sender: TObject);
@@ -190,6 +201,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     /// False: BLOB-Memos erst bei Doppelklick bzw. Enter laden (wie TDBMemo).
     property AutoDisplay: Boolean read FAutoDisplay write SetAutoDisplay default True;
     property DataField: string read GetDataField write SetDataField;
@@ -244,12 +257,10 @@ type
   TPPGDBComboBox = class(TPPGComboBox)
   private
     FBinding: TPPGDBBinding;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     procedure DoShowField(Sender: TObject);
     procedure DoWriteField(Sender: TObject);
-    function GetDataField: string;
-    procedure SetDataField(const Value: string);
-    function GetDataSource: TDataSource;
-    procedure SetDataSource(Value: TDataSource);
     function GetField: TField;
     function GetReadOnly: Boolean;
     procedure SetReadOnly(const Value: Boolean);
@@ -261,6 +272,10 @@ type
   protected
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    function GetDataField: string; virtual;
+    procedure SetDataField(const Value: string); virtual;
+    function GetDataSource: TDataSource;
+    procedure SetDataSource(Value: TDataSource); virtual;
     procedure Change; override;
     procedure DoSelect; override;
     procedure FieldKeyDown(var Key: Word; Shift: TShiftState); override;
@@ -287,6 +302,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
@@ -297,6 +314,8 @@ type
   TPPGDBDatePicker = class(TPPGDatePicker)
   private
     FBinding: TPPGDBBinding;
+    function GetShowRequired: Boolean;
+    procedure SetShowRequired(const Value: Boolean);
     procedure ShowField(Sender: TObject);
     procedure WriteField(Sender: TObject);
     function GetDataField: string;
@@ -322,6 +341,8 @@ type
     function UpdateAction(Action: TBasicAction): Boolean; override;
     property Field: TField read GetField;
   published
+    /// Pflichtfelder mit einem Sternchen im Platzhalter kennzeichnen.
+    property ShowRequired: Boolean read GetShowRequired write SetShowRequired default False;
     property DataField: string read GetDataField write SetDataField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
@@ -495,7 +516,22 @@ begin
     TFieldAccess(FCtrl).ValidationState := pvsNone;
     TFieldAccess(FCtrl).ValidationHint := '';
   end;
+  UpdateRequiredMark;
   UpdateEditable;
+end;
+
+procedure TPPGDBBinding.SetShowRequired(const Value: Boolean);
+begin
+  FShowRequired := Value;
+  UpdateRequiredMark;
+end;
+
+procedure TPPGDBBinding.UpdateRequiredMark;
+begin
+  // Audit 4b: Pflichtfeld sichtbar machen, bevor der Validator meldet
+  if FCtrl is TPPGCustomField then
+    TFieldAccess(FCtrl).RequiredMark := FShowRequired and (FLink.Field <> nil) and
+      FLink.Field.Required;
 end;
 
 procedure TPPGDBBinding.LinkEditingChange(Sender: TObject);
@@ -651,6 +687,16 @@ begin
   inherited Notification(AComponent, Operation);
   if FBinding <> nil then
     FBinding.Notify(AComponent, Operation);
+end;
+
+function TPPGDBEdit.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBEdit.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
 end;
 
 function TPPGDBEdit.GetDataField: string;
@@ -827,6 +873,16 @@ begin
   inherited Notification(AComponent, Operation);
   if FBinding <> nil then
     FBinding.Notify(AComponent, Operation);
+end;
+
+function TPPGDBMemo.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBMemo.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
 end;
 
 function TPPGDBMemo.GetDataField: string;
@@ -1228,6 +1284,16 @@ begin
     FBinding.Notify(AComponent, Operation);
 end;
 
+function TPPGDBComboBox.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBComboBox.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
+end;
+
 function TPPGDBComboBox.GetDataField: string;
 begin
   Result := FBinding.DataField;
@@ -1445,6 +1511,16 @@ begin
   inherited Notification(AComponent, Operation);
   if FBinding <> nil then
     FBinding.Notify(AComponent, Operation);
+end;
+
+function TPPGDBDatePicker.GetShowRequired: Boolean;
+begin
+  Result := FBinding.ShowRequired;
+end;
+
+procedure TPPGDBDatePicker.SetShowRequired(const Value: Boolean);
+begin
+  FBinding.ShowRequired := Value;
 end;
 
 function TPPGDBDatePicker.GetDataField: string;

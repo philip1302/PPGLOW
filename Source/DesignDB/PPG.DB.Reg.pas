@@ -44,6 +44,14 @@ type
     function DataSourceOf(Instance: TPersistent): TObject; override;
   end;
 
+  /// Feldliste mit Semikolon (TPPGDBChart.ValueFields): Auswahl einzelner
+  /// Felder aus der Liste oder mehrerer im Dialog (Haken).
+  TPPGDataFieldListProperty = class(TPPGDataFieldProperty)
+  public
+    function GetAttributes: TPropertyAttributes; override;
+    procedure Edit; override;
+  end;
+
   TPPGDBGridEditor = class(TPPGComponentEditor)
   protected
     function OwnVerbCount: Integer; override;
@@ -60,7 +68,8 @@ implementation
 {$R PPGlowDB.dcr}
 
 uses
-  System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, Data.DB, ColnEdit,
+  System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, Vcl.Forms,
+  Vcl.StdCtrls, Vcl.CheckLst, Vcl.Consts, Data.DB, ColnEdit,
   PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Fields,
   PPG.DB.Planner, PPG.DB.Kanban, PPG.DB.Navigator;
 
@@ -69,6 +78,7 @@ resourcestring
   SVerbDBColumns = 'Edit columns...';
   SVerbAddAllFields = 'Add all fields';
   SAddAllFieldsReplace = 'Replace the existing %d columns?';
+  SSelectFields = 'Select fields';
 
 { TPPGDataFieldProperty }
 
@@ -133,6 +143,73 @@ begin
     Owner := TCollectionItem(Instance).Collection.Owner;
     if Owner is TPPGCustomDBGrid then
       Result := TPPGCustomDBGrid(Owner).DataSource;
+  end;
+end;
+
+{ TPPGDataFieldListProperty }
+
+function TPPGDataFieldListProperty.GetAttributes: TPropertyAttributes;
+begin
+  Result := [paValueList, paSortList, paDialog, paMultiSelect];
+end;
+
+procedure TPPGDataFieldListProperty.Edit;
+var
+  Dlg: TForm;
+  List: TCheckListBox;
+  Ok, Cancel: TButton;
+  Cur, Names: TStringList;
+  I: Integer;
+  S: string;
+begin
+  Names := TStringList.Create;
+  Cur := TStringList.Create;
+  Dlg := TForm.Create(nil);
+  try
+    GetValues(Names.Append);
+    Cur.Delimiter := ';';
+    Cur.StrictDelimiter := True;
+    Cur.DelimitedText := GetValue;
+    Dlg.Caption := SSelectFields;
+    Dlg.BorderStyle := bsDialog;
+    Dlg.Position := poScreenCenter;
+    Dlg.ClientWidth := 280;
+    Dlg.ClientHeight := 320;
+    List := TCheckListBox.Create(Dlg);
+    List.Parent := Dlg;
+    List.SetBounds(8, 8, 264, 268);
+    for I := 0 to Names.Count - 1 do
+    begin
+      List.Items.Add(Names[I]);
+      List.Checked[I] := Cur.IndexOf(Names[I]) >= 0;
+    end;
+    Ok := TButton.Create(Dlg);
+    Ok.Parent := Dlg;
+    Ok.SetBounds(116, 286, 75, 25);
+    Ok.Caption := SMsgDlgOK;
+    Ok.ModalResult := mrOk;
+    Ok.Default := True;
+    Cancel := TButton.Create(Dlg);
+    Cancel.Parent := Dlg;
+    Cancel.SetBounds(197, 286, 75, 25);
+    Cancel.Caption := SMsgDlgCancel;
+    Cancel.ModalResult := mrCancel;
+    Cancel.Cancel := True;
+    if Dlg.ShowModal <> mrOk then
+      Exit;
+    S := '';
+    for I := 0 to List.Items.Count - 1 do
+      if List.Checked[I] then
+      begin
+        if S <> '' then
+          S := S + ';';
+        S := S + List.Items[I];
+      end;
+    SetValue(S);
+  finally
+    Dlg.Free;
+    Cur.Free;
+    Names.Free;
   end;
 end;
 
@@ -226,8 +303,12 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TPPGDBLookupComboBox, 'KeyField', TPPGListFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBLookupComboBox, 'ListField', TPPGListFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBGridColumn, 'FieldName', TPPGColumnFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBGridColumn, 'FooterField', TPPGColumnFieldProperty);
+  // Gruppieren kann das DB-Grid nicht (CanGroup = False): nicht anbieten
+  UnlistPublishedProperty(TPPGDBGridColumn, 'GroupIndex');
   RegisterPropertyEditor(TypeInfo(string), TPPGDBChart, 'LabelField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBChart, 'XField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBChart, 'ValueFields', TPPGDataFieldListProperty);
   RegisterComponentEditor(TPPGDBGrid, TPPGDBGridEditor);
   for I := Low(PlannerFields) to High(PlannerFields) do
     RegisterPropertyEditor(TypeInfo(string), TPPGDBPlanner, PlannerFields[I], TPPGDataFieldProperty);

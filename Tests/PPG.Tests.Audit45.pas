@@ -12,7 +12,8 @@ uses
   System.Variants, System.TypInfo, System.Generics.Collections, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Graphics,
   Vcl.DBActns, Vcl.DBCtrls, Data.DB, Data.DBConsts, Datasnap.DBClient, MidasLib,
   PPG.Types, PPG.Controls.Field, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Fields,
-  PPG.DB.Navigator, PPG.DB.Kanban, PPG.DB.Grid, PPG.Exceptions, PPG.Tests.Controls;
+  PPG.DB.Navigator, PPG.DB.Kanban, PPG.DB.Grid, PPG.DB.Chart, PPG.Exceptions, PPG.ErrorHandler,
+  PPG.NumberFormat, PPG.Grid, Vcl.Menus, PPG.Tests.Controls;
 
 type
   TDBBindSpec = record
@@ -80,10 +81,39 @@ type
     procedure ExportMaxRecordsChecked;
   end;
 
+  /// Audit 09.10.2026, Paket 4b/4c: Nachschlagen, Zahlen, Grid, Diagramm.
+  TDBFix2Tests = class(TControlTestCase)
+  private
+    FData: TClientDataSet;
+    FSource: TDataSource;
+    FOrte: TClientDataSet;
+    FWarnings: TStringList;
+    procedure Build(WithLookupField: Boolean);
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure NumberEditKindFromField;
+    procedure LookupFieldAsDataField;
+    procedure LookupMultiKeyWarns;
+    procedure LookupNullValueKey;
+    procedure LookupListFollowsChanges;
+    procedure GridLookupColumnPicksKey;
+    procedure GridEditsOnFirstKey;
+    procedure GridPersistentColumnTakesFieldAlignment;
+    procedure ChartSkipsNullAndJumpsByBookmark;
+    procedure ChartDoesNotStoreBoundData;
+    procedure ShowRequiredMarksFieldAndTitle;
+  end;
+
 implementation
 
 type
   TFieldCrack = class(TPPGCustomField);
+  TPPGEditCrack = class(TPPGCustomField)
+  public
+    function HintShown: string;
+  end;
   TWinCrack = class(TWinControl);
   TComboCrack = class(TPPGDBComboBox)
   public
@@ -91,10 +121,29 @@ type
   end;
   TDateCrack = class(TPPGDBDatePicker);
   TRadioCrack = class(TPPGDBRadioGroup);
+  TGridCrack = class(TPPGDBGrid);
+  TChartCrack = class(TPPGDBChart);
+
+  TCaptureLogger = class(TInterfacedObject, IPPGLogger)
+  private
+    FList: TStringList;
+  public
+    procedure Log(Level: TPPGLogLevel; const Msg: string);
+  end;
+
+procedure TCaptureLogger.Log(Level: TPPGLogLevel; const Msg: string);
+begin
+  FList.Add(Msg);
+end;
 
 function TComboCrack.ReadOnlyOfField: Boolean;
 begin
   Result := TFieldCrack(Self).ReadOnly;
+end;
+
+function TPPGEditCrack.HintShown: string;
+begin
+  Result := DisplayTextHint;
 end;
 
 { TDBBindingHoldTests }
@@ -661,8 +710,341 @@ begin
   CheckEquals(50, G.ExportMaxRecords);
 end;
 
+{ TDBFix2Tests }
+
+procedure TDBFix2Tests.SetUp;
+begin
+  inherited SetUp;
+  FWarnings := TStringList.Create;
+  FOrte := TClientDataSet.Create(FForm);
+  FOrte.FieldDefs.Add('ID', ftInteger);
+  FOrte.FieldDefs.Add('Ort', ftString, 20);
+  FOrte.CreateDataSet;
+  FOrte.AppendRecord([1, 'Berlin']);
+  FOrte.AppendRecord([2, 'Hamburg']);
+  FOrte.AppendRecord([3, 'Koeln']);
+  FOrte.First;
+  FData := TClientDataSet.Create(FForm);
+  FSource := TDataSource.Create(FForm);
+  FSource.DataSet := FData;
+  FForm.Show;
+end;
+
+procedure TDBFix2Tests.TearDown;
+begin
+  FreeAndNil(FWarnings);
+  inherited TearDown;
+end;
+
+procedure TDBFix2Tests.Build(WithLookupField: Boolean);
+var
+  F: TField;
+begin
+  // Persistente Felder (fuer das Nachschlagefeld noetig)
+  F := TIntegerField.Create(FData);
+  F.FieldName := 'ID';
+  F.DataSet := FData;
+  F := TStringField.Create(FData);
+  F.FieldName := 'Name';
+  F.Size := 20;
+  F.DataSet := FData;
+  F := TIntegerField.Create(FData);
+  F.FieldName := 'OrtID';
+  F.DataSet := FData;
+  F := TBCDField.Create(FData);
+  F.FieldName := 'Betrag';
+  TBCDField(F).Size := 2;
+  TBCDField(F).Precision := 12;
+  F.DataSet := FData;
+  F := TFloatField.Create(FData);
+  F.FieldName := 'Preis';
+  F.DataSet := FData;
+  if WithLookupField then
+  begin
+    F := TStringField.Create(FData);
+    F.FieldName := 'OrtName';
+    F.Size := 20;
+    F.FieldKind := fkLookup;
+    F.KeyFields := 'OrtID';
+    F.LookupDataSet := FOrte;
+    F.LookupKeyFields := 'ID';
+    F.LookupResultField := 'Ort';
+    F.DataSet := FData;
+  end;
+  FData.CreateDataSet;
+  FData.AppendRecord([1, 'Eins', 2, 12.34, 1.5]);
+  FData.AppendRecord([2, 'Zwei', Null, Null, Null]);
+  FData.AppendRecord([3, 'Drei', 3, 7.5, 4.5]);
+  FData.First;
+end;
+
+procedure TDBFix2Tests.NumberEditKindFromField;
+var
+  E: TPPGDBNumberEdit;
+begin
+  Build(False);
+  E := TPPGDBNumberEdit.Create(FForm);
+  E.Parent := FForm;
+  E.DataSource := FSource;
+  E.DataField := 'ID';
+  CheckTrue(E.NumberKind = nkInteger, 'Ganzzahlfeld');
+  CheckEquals(0, E.Decimals);
+  CheckEquals('1', E.Text, 'kein ",00"');
+  E.DataField := 'Betrag';
+  CheckTrue(E.NumberKind = nkCurrency, 'BCD mit 2 Stellen: exakt ueber Currency');
+  CheckEquals(2, E.Decimals);
+  CheckTrue(E.AsCurrency = 12.34);
+  E.DataField := 'Preis';
+  CheckTrue(E.NumberKind = nkFloat, 'Gleitkomma: Vorgaben');
+  CheckEquals(2, E.Decimals);
+  // Eigene Art hat Vorrang
+  E.NumberKind := nkPercent;
+  E.DataField := 'ID';
+  CheckTrue(E.NumberKind = nkPercent);
+end;
+
+procedure TDBFix2Tests.LookupFieldAsDataField;
+var
+  L: TPPGDBLookupComboBox;
+begin
+  Build(True);
+  L := TPPGDBLookupComboBox.Create(FForm);
+  L.Parent := FForm;
+  L.DataSource := FSource;
+  L.DataField := 'OrtName';
+  CheckEquals('OrtName', L.DataField, 'DataField bleibt der Name des Nachschlagefelds');
+  CheckEquals(3, L.KeyCount, 'Liste aus LookupDataSet');
+  CheckEquals('Hamburg', L.Text);
+  TComboCrack(L).SelectIndex(2);
+  CheckTrue(FData.State = dsEdit);
+  FData.Post;
+  CheckEquals(3, FData.FieldByName('OrtID').AsInteger, 'Schluesselfeld geschrieben');
+  CheckEquals('Koeln', FData.FieldByName('OrtName').AsString);
+end;
+
+procedure TDBFix2Tests.LookupMultiKeyWarns;
+var
+  L: TPPGDBLookupComboBox;
+  Log: TCaptureLogger;
+  Old: IPPGLogger;
+  OrtSrc: TDataSource;
+begin
+  Build(False);
+  OrtSrc := TDataSource.Create(FForm);
+  OrtSrc.DataSet := FOrte;
+  Log := TCaptureLogger.Create;
+  Log.FList := FWarnings;
+  Old := TPPGErrorHandler.Logger;
+  TPPGErrorHandler.Logger := Log;
+  try
+    L := TPPGDBLookupComboBox.Create(FForm);
+    L.Parent := FForm;
+    L.ListSource := OrtSrc;
+    L.ListField := 'Ort';
+    L.KeyField := 'ID;Ort';
+    L.DataSource := FSource;
+    L.DataField := 'OrtID';
+    CheckEquals(0, L.KeyCount);
+  finally
+    TPPGErrorHandler.Logger := Old;
+  end;
+  CheckTrue(Pos('ID;Ort', FWarnings.Text) > 0, 'Mehrfachschluessel gemeldet statt still leer');
+end;
+
+procedure TDBFix2Tests.LookupNullValueKey;
+var
+  L: TPPGDBLookupComboBox;
+  OrtSrc: TDataSource;
+  K: Word;
+begin
+  Build(False);
+  OrtSrc := TDataSource.Create(FForm);
+  OrtSrc.DataSet := FOrte;
+  L := TPPGDBLookupComboBox.Create(FForm);
+  L.Parent := FForm;
+  L.ListSource := OrtSrc;
+  L.KeyField := 'ID';
+  L.ListField := 'Ort';
+  L.DataSource := FSource;
+  L.DataField := 'OrtID';
+  L.NullValueKey := ShortCut(VK_DELETE, []);
+  CheckEquals(1, L.ItemIndex);
+  K := VK_DELETE;
+  TComboCrack(L).FieldKeyDown(K, []);
+  CheckEquals(0, K);
+  CheckEquals(-1, L.ItemIndex);
+  CheckTrue(FData.State = dsEdit);
+  FData.Post;
+  CheckTrue(FData.FieldByName('OrtID').IsNull, 'NullValueKey leert das Feld');
+end;
+
+procedure TDBFix2Tests.LookupListFollowsChanges;
+var
+  L: TPPGDBLookupComboBox;
+  OrtSrc: TDataSource;
+begin
+  Build(False);
+  OrtSrc := TDataSource.Create(FForm);
+  OrtSrc.DataSet := FOrte;
+  L := TPPGDBLookupComboBox.Create(FForm);
+  L.Parent := FForm;
+  L.ListSource := OrtSrc;
+  L.KeyField := 'ID';
+  L.ListField := 'Ort';
+  L.DataSource := FSource;
+  L.DataField := 'OrtID';
+  FOrte.AppendRecord([4, 'Muenchen']);
+  FOrte.AppendRecord([5, 'Bremen']);
+  // Neu gelesen wird gebuendelt, spaetestens beim Zugriff
+  CheckEquals(5, L.KeyCount);
+  Application.ProcessMessages;
+  CheckEquals(5, L.KeyCount);
+  CheckEquals(4, L.IndexOfKey(5));
+end;
+
+procedure TDBFix2Tests.GridLookupColumnPicksKey;
+var
+  G: TPPGDBGrid;
+  C: Integer;
+begin
+  Build(True);
+  G := TPPGDBGrid.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(0, 0, 500, 160);
+  G.Animation.Enabled := False;
+  G.DataSource := FSource;
+  C := TGridCrack(G).FixedCols + FData.FieldByName('OrtName').Index;
+  CheckTrue(TGridCrack(G).CanEditCell(C, TGridCrack(G).VisualRow(1)),
+    'Nachschlagefeld aenderbar ueber das Schluesselfeld');
+  CheckTrue(TGridCrack(G).CellEditorKind(C, 1) = gekCombo, 'Auswahlliste statt Freitext');
+  TGridCrack(G).SetCellByUser(C, 1, 'Xyz');
+  CheckTrue(FData.State = dsBrowse, 'unbekannter Text aendert nichts');
+  CheckEquals(2, FData.FieldByName('OrtID').AsInteger);
+  TGridCrack(G).SetCellByUser(C, 1, 'Berlin');
+  CheckTrue(FData.State = dsEdit);
+  CheckEquals(1, FData.FieldByName('OrtID').AsInteger, 'Schluessel aus der Nachschlage-Datenmenge');
+  FData.Cancel;
+end;
+
+procedure TDBFix2Tests.GridEditsOnFirstKey;
+var
+  G: TPPGDBGrid;
+begin
+  Build(False);
+  G := TPPGDBGrid.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(0, 0, 500, 160);
+  G.Animation.Enabled := False;
+  G.DataSource := FSource;
+  G.SetFocus;
+  G.Col := TGridCrack(G).FixedCols + FData.FieldByName('Name').Index;
+  G.Row := 1;
+  G.EditorMode := True;
+  CheckTrue(G.EditorMode, 'Editor offen');
+  CheckTrue(FData.State = dsBrowse, 'Oeffnen allein bearbeitet nicht');
+  TPPGEditCrack(G.InplaceEditor).Text := 'Neu';
+  CheckTrue(FData.State = dsEdit, 'Bearbeiten-Modus beim ersten Tastendruck (wie TDBGrid)');
+  G.EditorMode := False;
+  FData.Cancel;
+end;
+
+procedure TDBFix2Tests.GridPersistentColumnTakesFieldAlignment;
+var
+  G: TPPGDBGrid;
+  C: TPPGDBGridColumn;
+begin
+  Build(False);
+  G := TPPGDBGrid.Create(FForm);
+  G.Parent := FForm;
+  C := TPPGDBGridColumn(G.Columns.Add);
+  C.FieldName := 'Preis';
+  C := TPPGDBGridColumn(G.Columns.Add);
+  C.FieldName := 'ID';
+  C.Alignment := taCenter;
+  G.DataSource := FSource;
+  CheckTrue(TPPGDBGridColumn(G.Columns[0]).Alignment = FData.FieldByName('Preis').Alignment,
+    'ohne eigenen Wert: Ausrichtung des Felds');
+  CheckTrue(TPPGDBGridColumn(G.Columns[1]).Alignment = taCenter, 'eigener Wert bleibt');
+end;
+
+procedure TDBFix2Tests.ChartSkipsNullAndJumpsByBookmark;
+var
+  C: TPPGDBChart;
+begin
+  Build(False);
+  C := TPPGDBChart.Create(FForm);
+  C.Parent := FForm;
+  C.SetBounds(0, 0, 300, 200);
+  C.Animation.Enabled := False;
+  C.ReloadDelay := 0;
+  C.ValueFields := 'Preis';
+  C.DataSource := FSource;
+  CheckEquals(2, C.Series[0].Count, 'Null: kein Punkt');
+  TChartCrack(C).DoPointClick(0, 1);
+  CheckEquals(3, FData.FieldByName('ID').AsInteger, 'Punkt 2 gehoert zu Datensatz 3');
+  CheckEquals(1, TChartCrack(C).MarkedIndex, 'Markierung ueber Lesezeichen');
+  FData.Prior;
+  CheckEquals(-1, TChartCrack(C).MarkedIndex, 'Datensatz ohne Punkt');
+end;
+
+procedure TDBFix2Tests.ChartDoesNotStoreBoundData;
+var
+  C: TPPGDBChart;
+  M: TMemoryStream;
+  S: TStringStream;
+begin
+  Build(False);
+  C := TPPGDBChart.Create(FForm);
+  C.Parent := FForm;
+  C.ReloadDelay := 0;
+  C.ValueFields := 'Preis';
+  C.DataSource := FSource;
+  CheckEquals(2, C.Series[0].Count);
+  M := TMemoryStream.Create;
+  S := TStringStream.Create('');
+  try
+    M.WriteComponent(C);
+    M.Position := 0;
+    ObjectBinaryToText(M, S);
+    CheckEquals(0, Pos('ValuesText', S.DataString), 'Werte der Datenmenge nicht in der DFM');
+    CheckEquals(0, Pos('Title', S.DataString), 'Titel aus DisplayLabel nicht in der DFM');
+  finally
+    S.Free;
+    M.Free;
+  end;
+end;
+
+procedure TDBFix2Tests.ShowRequiredMarksFieldAndTitle;
+var
+  E: TPPGDBEdit;
+  G: TPPGDBGrid;
+  C: Integer;
+begin
+  Build(False);
+  FData.FieldByName('Name').Required := True;
+  E := TPPGDBEdit.Create(FForm);
+  E.Parent := FForm;
+  E.DataSource := FSource;
+  E.DataField := 'Name';
+  CheckEquals('', TPPGEditCrack(E).HintShown, 'Vorgabe aus');
+  E.ShowRequired := True;
+  CheckEquals('*', TPPGEditCrack(E).HintShown, 'Pflichtfeld: Sternchen');
+  E.TextHint := 'Name';
+  CheckEquals('Name *', TPPGEditCrack(E).HintShown);
+  CheckEquals('Name', E.TextHint, 'TextHint selbst bleibt unveraendert');
+  E.DataField := 'ID';
+  CheckEquals('Name', TPPGEditCrack(E).HintShown, 'kein Pflichtfeld');
+  G := TPPGDBGrid.Create(FForm);
+  G.Parent := FForm;
+  G.ShowRequired := True;
+  G.DataSource := FSource;
+  C := TGridCrack(G).FixedCols + FData.FieldByName('Name').Index;
+  CheckEquals('Name *', TGridCrack(G).GetCellText(C, 0), 'Spaltentitel');
+end;
+
 initialization
   RegisterTest('Audit45', TDBBindingHoldTests.Suite);
   RegisterTest('Audit45', TDBFixTests.Suite);
+  RegisterTest('Audit45', TDBFix2Tests.Suite);
 
 end.

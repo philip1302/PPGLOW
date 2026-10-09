@@ -122,6 +122,7 @@ type
     FHasText: Boolean;
     FFocusAnim: TPPGAnimation;
     FTextHint: string;
+    FRequiredMark: Boolean;
     FTextHintVisibleOnFocus: Boolean;
     FValidationState: TPPGValidationState;
     FValidationHint: string;
@@ -283,11 +284,16 @@ type
     function FocusProgress: Single;
     function IsMultiLine: Boolean;
     function TextHintShowing: Boolean;
+    /// Angezeigter Platzhalter: TextHint, mit RequiredMark ein Sternchen dazu.
+    function DisplayTextHint: string;
+    procedure SetRequiredMark(const Value: Boolean);
     /// Hoehe einer Textzeile in der aktuellen Schrift.
     function LineHeight: Integer;
     procedure InvalidateInner;
 
     property Inner: TCustomEdit read FInner;
+    /// Pflichtfeld kennzeichnen: Sternchen im Platzhalter (DB-Felder: ShowRequired).
+    property RequiredMark: Boolean read FRequiredMark write SetRequiredMark;
     property HasText: Boolean read FHasText;
     property HotButton: Integer read FHotButton;
     property PressedButton: Integer read FPressedButton;
@@ -701,7 +707,7 @@ begin
   try
     // Gleiche Stelle wie der Text des Edits (Formatierungsrechteck)
     SendMessage(Wnd, EM_GETRECT, 0, LPARAM(@R));
-    S := FTextHint;
+    S := DisplayTextHint;
     if IsMultiLine then
       Flags := DT_NOPREFIX or DT_WORDBREAK or DT_EDITCONTROL
     else
@@ -733,8 +739,30 @@ end;
 
 function TPPGCustomField.TextHintShowing: Boolean;
 begin
-  Result := (FTextHint <> '') and not FHasText and
+  Result := (DisplayTextHint <> '') and not FHasText and
     (FTextHintVisibleOnFocus or not FieldFocused);
+end;
+
+function TPPGCustomField.DisplayTextHint: string;
+begin
+  Result := FTextHint;
+  if FRequiredMark then
+  begin
+    if Result = '' then
+      Result := '*'
+    else
+      Result := Result + ' *';
+  end;
+end;
+
+procedure TPPGCustomField.SetRequiredMark(const Value: Boolean);
+begin
+  if FRequiredMark <> Value then
+  begin
+    FRequiredMark := Value;
+    InvalidateInner;
+    Invalidate;
+  end;
 end;
 
 procedure TPPGCustomField.InvalidateInner;
@@ -896,7 +924,7 @@ begin
     FFocusAnim.AnimateTo(Target, Animation.Duration, ekDecelerate)
   else
     FFocusAnim.Jump(Target);
-  if FTextHint <> '' then
+  if DisplayTextHint <> '' then
     InvalidateInner;
   Invalidate;
   NotifyAccessibility(EVENT_OBJECT_STATECHANGE);

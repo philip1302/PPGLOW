@@ -55,6 +55,9 @@ type
     FReloadPending: Boolean;
     FReading: Integer;
     FLoadedCount: Integer;
+    FRowMarks: array of TBookmark;      // Lesezeichen je gelesenem Datensatz
+    FPointRows: array of TArray<Integer>; // je Serie: Punkt -> Datensatz
+    function RowOfRecord: Integer;
     function GetDataSource: TDataSource;
     procedure SetDataSource(Value: TDataSource);
     procedure SetValueFields(const Value: string);
@@ -340,6 +343,8 @@ begin
       for I := 0 to System.Math.Min(Length(Names), Series.Count) - 1 do
         Series[I].Clear;
       FLoadedCount := 0;
+      SetLength(FRowMarks, 0);
+      SetLength(FPointRows, 0);
       MarkedIndex := -1;
       Exit;
     end;
@@ -367,10 +372,15 @@ begin
     for I := 0 to High(Names) do
     begin
       S := Series[I];
+      S.DataBound := True;
       if (S.Title = '') and (Fields[I] <> nil) then
-        S.Title := Fields[I].DisplayLabel;
+        S.SetDataTitle(Fields[I].DisplayLabel);
       S.Clear;
     end;
+    SetLength(FRowMarks, 0);
+    SetLength(FPointRows, Length(Names));
+    for I := 0 to High(FPointRows) do
+      SetLength(FPointRows[I], 0);
     Inc(FReading);
     PPGDBBeginRead;
     try
@@ -389,11 +399,17 @@ begin
             Txt := LabelF.DisplayText
           else
             Txt := '';
+          SetLength(FRowMarks, N + 1);
+          FRowMarks[N] := DS.Bookmark;
+          // Audit 4b: Null ist kein Wert 0 - der Punkt entfaellt (die Serie
+          // merkt sich, zu welchem Datensatz jeder Punkt gehoert)
           for I := 0 to High(Names) do
             if (Fields[I] <> nil) and not Fields[I].IsNull then
-              Series[I].AddXY(XV, Fields[I].AsFloat, Txt)
-            else
-              Series[I].AddXY(XV, 0, Txt);
+            begin
+              Series[I].AddXY(XV, Fields[I].AsFloat, Txt);
+              SetLength(FPointRows[I], Length(FPointRows[I]) + 1);
+              FPointRows[I][High(FPointRows[I])] := N;
+            end;
           Inc(N);
           DS.Next;
         end;
@@ -415,25 +431,59 @@ end;
 
 procedure TPPGCustomDBChart.UpdateCurrentRecord;
 var
-  Rec: Integer;
+  Rec, I: Integer;
 begin
   if not FShowCurrentRecord or not FDataLink.Active or (FDataLink.DataSet = nil) then
   begin
     MarkedIndex := -1;
     Exit;
   end;
-  Rec := FDataLink.DataSet.RecNo;
-  if (Rec >= 1) and (Rec <= FLoadedCount) then
-    MarkedIndex := Rec - 1
-  else
-    MarkedIndex := -1;
+  // Punkt der ersten Serie zum aktuellen Datensatz (ueber Lesezeichen, auch
+  // bei Datenmengen ohne fortlaufende RecNo)
+  MarkedIndex := -1;
+  Rec := RowOfRecord;
+  if (Rec < 0) or (Length(FPointRows) = 0) then
+    Exit;
+  for I := 0 to High(FPointRows[0]) do
+    if FPointRows[0][I] = Rec then
+    begin
+      MarkedIndex := I;
+      Exit;
+    end;
+end;
+
+function TPPGCustomDBChart.RowOfRecord: Integer;
+var
+  DS: TDataSet;
+  B: TBookmark;
+  I: Integer;
+begin
+  Result := -1;
+  DS := FDataLink.DataSet;
+  if (DS = nil) or not DS.Active or DS.IsEmpty then
+    Exit;
+  B := DS.Bookmark;
+  if Length(B) = 0 then
+    Exit;
+  for I := 0 to High(FRowMarks) do
+    if DS.CompareBookmarks(B, FRowMarks[I]) = 0 then
+      Exit(I);
 end;
 
 procedure TPPGCustomDBChart.DoPointClick(SeriesIndex, PointIndex: Integer);
+var
+  Row: Integer;
+  DS: TDataSet;
 begin
   if FJumpToRecord and FDataLink.Active and (FDataLink.DataSet <> nil) and
-    (PointIndex >= 0) and (PointIndex < FLoadedCount) then
-    FDataLink.DataSet.RecNo := PointIndex + 1;
+    (SeriesIndex >= 0) and (SeriesIndex <= High(FPointRows)) and (PointIndex >= 0) and
+    (PointIndex <= High(FPointRows[SeriesIndex])) then
+  begin
+    Row := FPointRows[SeriesIndex][PointIndex];
+    DS := FDataLink.DataSet;
+    if (Row <= High(FRowMarks)) and DS.BookmarkValid(FRowMarks[Row]) then
+      DS.Bookmark := FRowMarks[Row];
+  end;
   inherited DoPointClick(SeriesIndex, PointIndex);
 end;
 

@@ -52,15 +52,23 @@ type
   private
     FFieldName: string;
     FFooterField: string;
+    FAlignmentSet: Boolean;
     procedure SetFieldName(const Value: string);
+    procedure SetFooterField(const Value: string);
+    function GetAlignment: TAlignment;
+    procedure SetAlignment(const Value: TAlignment);
   protected
     function GetDisplayName: string; override;
   public
     procedure Assign(Source: TPersistent); override;
+    /// Ausrichtung aus dem Feld, solange die Spalte keine eigene hat.
+    procedure ApplyFieldAlignment(F: TField);
   published
     property FieldName: string read FFieldName write SetFieldName;
     /// Feld fuer die Summenzeile (z.B. TAggregateField der Datenmenge).
-    property FooterField: string read FFooterField write FFooterField;
+    property FooterField: string read FFooterField write SetFooterField;
+    /// Ohne eigenen Wert die Ausrichtung des Felds (wie TColumn.Alignment).
+    property Alignment: TAlignment read GetAlignment write SetAlignment stored FAlignmentSet;
   end;
 
   /// Verbindung des Grids zur Datenmenge.
@@ -101,6 +109,7 @@ type
     FOnCellClick: TPPGDBGridColumnEvent;
     FOnGetFooterText: TPPGDBGridFooterEvent;
     FExportMaxRecords: Integer;
+    FShowRequired: Boolean;
     FSnap: array of array of Variant;   // Export: Werte [Satz][Feld]
     FSnapText: array of array of string;
     FSnapValid: Boolean;
@@ -115,6 +124,10 @@ type
     procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
     procedure SetExportMaxRecords(const Value: Integer);
+    procedure SetShowRequired(const Value: Boolean);
+    function FieldEditable(F: TField): Boolean;
+    procedure FillLookupEditor(F: TField);
+    procedure SetLookupByUser(F: TField; const Value: string);
   protected
     { Ereignisse des DataLinks }
     procedure LinkActive(Value: Boolean); virtual;
@@ -163,7 +176,9 @@ type
     function GetEditText(ACol, ARow: Integer): string; override;
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); override;
     procedure EditorOpened(ACol, ARow: Integer); override;
+    procedure EditorEdited; override;
     function CanEditCell(ACol, VRow: Integer): Boolean; override;
+    function CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind; override;
     function SelectCell(ACol, ARow: Integer): Boolean; override;
     procedure HeaderClicked(ACol, VRow: Integer); override;
     procedure Scrolled; override;
@@ -185,6 +200,8 @@ type
     property OnGetFooterText: TPPGDBGridFooterEvent read FOnGetFooterText write FOnGetFooterText;
     /// Druck/Export lesen hoechstens so viele Saetze.
     property ExportMaxRecords: Integer read FExportMaxRecords write SetExportMaxRecords default 100000;
+    /// Pflichtfelder (TField.Required) mit einem Sternchen im Spaltentitel.
+    property ShowRequired: Boolean read FShowRequired write SetShowRequired default False;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -211,6 +228,7 @@ type
     property Bands;
     property ConditionalFormats;
     property ExportMaxRecords;
+    property ShowRequired;
     property FixedColsRight;
     property HeaderMenu;
     property ShowFooter;
@@ -286,7 +304,8 @@ implementation
 
 uses
   PPG.Lang,
-  System.Math, System.UITypes, System.Variants, Vcl.Dialogs, PPG.Consts, PPG.Appearance,
+  Vcl.StdCtrls, PPG.ComboBox, System.Math, System.UITypes, System.Variants, Vcl.Dialogs,
+  PPG.Consts, PPG.Appearance,
   PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls;
 
 const
@@ -307,6 +326,34 @@ begin
     FFooterField := TPPGDBGridColumn(Source).FFooterField;
   end;
   inherited Assign(Source);
+  if Source is TPPGDBGridColumn then
+    FAlignmentSet := TPPGDBGridColumn(Source).FAlignmentSet;
+end;
+
+function TPPGDBGridColumn.GetAlignment: TAlignment;
+begin
+  Result := inherited Alignment;
+end;
+
+procedure TPPGDBGridColumn.SetAlignment(const Value: TAlignment);
+begin
+  FAlignmentSet := True;
+  inherited Alignment := Value;
+end;
+
+procedure TPPGDBGridColumn.ApplyFieldAlignment(F: TField);
+begin
+  if not FAlignmentSet and (F <> nil) then
+    inherited Alignment := F.Alignment;
+end;
+
+procedure TPPGDBGridColumn.SetFooterField(const Value: string);
+begin
+  if FFooterField <> Value then
+  begin
+    FFooterField := Value;
+    Changed(False);
+  end;
 end;
 
 function TPPGDBGridColumn.GetDisplayName: string;
@@ -426,6 +473,15 @@ begin
   FreeAndNil(FAutoColumns);
   FreeAndNil(FAutoState);
   inherited Destroy;
+end;
+
+procedure TPPGCustomDBGrid.SetShowRequired(const Value: Boolean);
+begin
+  if FShowRequired <> Value then
+  begin
+    FShowRequired := Value;
+    Invalidate;
+  end;
 end;
 
 procedure TPPGCustomDBGrid.SetExportMaxRecords(const Value: Integer);
@@ -603,10 +659,15 @@ begin
     begin
       SetLength(FFields, Columns.Count);
       for I := 0 to Columns.Count - 1 do
+      begin
         if DS <> nil then
           FFields[I] := DS.FindField(TPPGDBGridColumn(Columns[I]).FieldName)
         else
           FFields[I] := nil;
+        // Audit 4b: wie TDBGrid die Ausrichtung des Felds (nur zur Laufzeit)
+        if not (csDesigning in ComponentState) then
+          TPPGDBGridColumn(Columns[I]).ApplyFieldAlignment(FFields[I]);
+      end;
     end
     else
     begin
@@ -635,7 +696,7 @@ begin
             C := TPPGDBGridColumn(FAutoColumns.Add);
             C.FieldName := F.FieldName;
             C.Title := F.DisplayLabel;
-            C.Alignment := F.Alignment;
+            C.ApplyFieldAlignment(F);
             C.ReadOnly := F.ReadOnly;
             W := F.DisplayWidth * CharW + 12;
             if W < 32 then
@@ -1209,6 +1270,8 @@ begin
       Result := C.Title
     else if F <> nil then
       Result := F.DisplayLabel;
+    if FShowRequired and (F <> nil) and F.Required then
+      Result := Result + ' *';
     Exit;
   end;
   R := ARow - FixedRows;
@@ -1248,8 +1311,102 @@ begin
   F := FieldOfCol(ACol);
   Result := not FReadOnly and (dgEditing in FDBOptions) and FDataLink.Active and
     not FDataLink.ReadOnly and FDataLink.DataSet.CanModify and (F <> nil) and
-    F.CanModify and (VRow - VisualRow(FixedRows) < Length(FCache)) and
+    FieldEditable(F) and (VRow - VisualRow(FixedRows) < Length(FCache)) and
     inherited CanEditCell(ACol, VRow);
+end;
+
+/// Nachschlagefeld mit einem Schluesselfeld (Mehrfachschluessel: nur lesen).
+function LookupKeyField(F: TField): TField;
+begin
+  Result := nil;
+  if (F = nil) or (F.FieldKind <> fkLookup) or (Pos(';', F.KeyFields) > 0) or
+    (F.LookupDataSet = nil) or (F.DataSet = nil) then
+    Exit;
+  Result := F.DataSet.FindField(F.KeyFields);
+end;
+
+function TPPGCustomDBGrid.FieldEditable(F: TField): Boolean;
+var
+  K: TField;
+begin
+  // Nachschlagefeld: aenderbar ueber sein Schluesselfeld (wie TDBGrid)
+  if F.FieldKind = fkLookup then
+  begin
+    K := LookupKeyField(F);
+    Result := (K <> nil) and K.CanModify and F.LookupDataSet.Active;
+  end
+  else
+    Result := F.CanModify;
+end;
+
+function TPPGCustomDBGrid.CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind;
+var
+  F: TField;
+begin
+  Result := inherited CellEditorKind(ACol, ARow);
+  F := FieldOfCol(ACol);
+  // Nachschlagefeld: Auswahl aus der Nachschlage-Datenmenge statt Freitext
+  if (Result = gekText) and (LookupKeyField(F) <> nil) then
+    Result := gekCombo;
+end;
+
+procedure TPPGCustomDBGrid.FillLookupEditor(F: TField);
+var
+  C: TPPGComboBox;
+  DS: TDataSet;
+  RF: TField;
+  B: TBookmark;
+  S: string;
+begin
+  if not (InplaceEditor is TPPGComboBox) then
+    Exit;
+  C := TPPGComboBox(InplaceEditor);
+  if LookupKeyField(F) = nil then
+  begin
+    C.Style := csDropDown;
+    Exit;
+  end;
+  S := F.DisplayText;
+  C.Items.BeginUpdate;
+  try
+    C.Items.Clear;
+    DS := F.LookupDataSet;
+    RF := DS.FindField(F.LookupResultField);
+    if (RF <> nil) and DS.Active then
+    begin
+      PPGDBBeginRead;
+      DS.DisableControls;
+      try
+        B := DS.Bookmark;
+        try
+          DS.First;
+          while not DS.Eof do
+          begin
+            C.Items.Add(RF.DisplayText);
+            DS.Next;
+          end;
+        finally
+          if (Length(B) > 0) and DS.BookmarkValid(B) then
+            DS.Bookmark := B;
+        end;
+      finally
+        DS.EnableControls;
+        PPGDBEndRead;
+      end;
+    end;
+  finally
+    C.Items.EndUpdate;
+  end;
+  C.Style := csDropDownList;
+  C.ItemIndex := C.Items.IndexOf(S);
+end;
+
+procedure TPPGCustomDBGrid.EditorEdited;
+begin
+  // Wie TDBGrid: Bearbeiten-Modus beim ersten Tastendruck, nicht erst beim
+  // Uebernehmen (Navigator und Datensatz-Anzeige sehen sofort dsEdit)
+  if FDataLink.Active and not FDataLink.Editing and not FReadOnly then
+    FDataLink.Edit;
 end;
 
 procedure TPPGCustomDBGrid.SetCellByUser(ACol, ARow: Integer; const Value: string);
@@ -1259,6 +1416,11 @@ begin
   F := FieldOfCol(ACol);
   if (F = nil) or not FDataLink.Active or (ARow - FixedRows <> FDataLink.ActiveRecord) then
     Exit;
+  if F.FieldKind = fkLookup then
+  begin
+    SetLookupByUser(F, Value);
+    Exit;
+  end;
   if F.DataType = ftBoolean then
   begin
     if not F.IsNull and (F.AsBoolean = (Value = '1')) then
@@ -1274,9 +1436,32 @@ begin
     F.Text := Value;
 end;
 
+procedure TPPGCustomDBGrid.SetLookupByUser(F: TField; const Value: string);
+var
+  K: TField;
+  Key: Variant;
+begin
+  K := LookupKeyField(F);
+  if (K = nil) or (F.DisplayText = Value) then
+    Exit;
+  if Value = '' then
+    Key := Null
+  else
+  begin
+    Key := F.LookupDataSet.Lookup(F.LookupResultField, Value, F.LookupKeyFields);
+    // Unbekannter Text: nichts aendern (vorher wurde der Schluessel still Null)
+    if VarIsNull(Key) or VarIsEmpty(Key) then
+      Exit;
+  end;
+  if not FDataLink.Editing and not FDataLink.Edit then
+    Exit;
+  K.Value := Key;
+end;
+
 procedure TPPGCustomDBGrid.EditorOpened(ACol, ARow: Integer);
 begin
   inherited EditorOpened(ACol, ARow);
+  FillLookupEditor(FieldOfCol(ACol));
   FEditBm := nil;
   if FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
     FEditBm := FDataLink.DataSet.Bookmark;

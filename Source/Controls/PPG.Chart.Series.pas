@@ -51,6 +51,8 @@ type
   TPPGChartSeries = class(TCollectionItem)
   private
     FTitle: string;
+    FAutoTitle: Boolean;
+    FDataBound: Boolean;
     FKind: TPPGChartSeriesKind;
     FColor: TColor;
     FVisible: Boolean;
@@ -95,6 +97,7 @@ type
     procedure SetY(Index: Integer; const Value: Double);
     procedure VisStep(Sender: TObject);
     function IsValuesTextStored: Boolean;
+    function IsTitleStored: Boolean;
   protected
     function GetDisplayName: string; override;
   public
@@ -127,8 +130,12 @@ type
     function YAt(Index: Integer): Double;
     property Y[Index: Integer]: Double read GetY write SetY;
     property Tag: NativeInt read FTag write FTag;
+    /// Werte kommen aus einer Datenquelle (DB-Diagramm): nicht in die DFM.
+    property DataBound: Boolean read FDataBound write FDataBound;
+    /// Titel aus der Datenquelle setzen (wird nicht gespeichert).
+    procedure SetDataTitle(const Value: string);
   published
-    property Title: string read FTitle write SetTitle;
+    property Title: string read FTitle write SetTitle stored IsTitleStored;
     property Kind: TPPGChartSeriesKind read FKind write SetKind default cskLine;
     /// clDefault = Palette (Akzent zuerst).
     property Color: TColor read FColor write SetColor default clDefault;
@@ -668,11 +675,24 @@ end;
 
 function TPPGChartSeries.IsValuesTextStored: Boolean;
 begin
-  Result := (FVirtualCount = 0) and (FCount > 0);
+  // Audit 4c: Daten einer gebundenen Serie gehoeren nicht in die DFM
+  Result := not FDataBound and (FVirtualCount = 0) and (FCount > 0);
+end;
+
+function TPPGChartSeries.IsTitleStored: Boolean;
+begin
+  Result := not FAutoTitle and (FTitle <> '');
+end;
+
+procedure TPPGChartSeries.SetDataTitle(const Value: string);
+begin
+  SetTitle(Value);
+  FAutoTitle := True;
 end;
 
 procedure TPPGChartSeries.SetTitle(const Value: string);
 begin
+  FAutoTitle := False;
   if FTitle <> Value then
   begin
     FTitle := Value;
