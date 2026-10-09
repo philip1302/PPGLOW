@@ -3,7 +3,8 @@ unit PPG.Tests.Phase20;
 { Tests fuer Phase 20: Fertigstellen bestehender Controls.
   20a: Planer - Serienabfrage (nur Vorkommen / ganze Serie), Ort direkt
   bearbeiten, Termin-Dialog (Laden, Speichern, Pruefen, Haken).
-  20b: Kanban - Filter (Text, Labels, Person, Ereignis), Spalten ziehen. }
+  20b: Kanban - Filter (Text, Labels, Person, Ereignis), Spalten ziehen.
+  20c: Ribbon - Tastatur in Gruppen- und Band-Popups, Galerie-Kategorien. }
 
 interface
 
@@ -11,7 +12,8 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.DateUtils, Vcl.Forms, Vcl.Controls,
   PPG.Calendar, PPG.Planner.Model, PPG.Planner.Recurrence, PPG.Planner, PPG.Planner.Dialog,
-  Vcl.Graphics, PPG.Kanban.Items, PPG.Kanban.Layout, PPG.Kanban, PPG.Tests.Controls;
+  Vcl.Graphics, PPG.Kanban.Items, PPG.Kanban.Layout, PPG.Kanban, PPG.Items, PPG.Ribbon.Items, PPG.Ribbon.Layout, PPG.Ribbon,
+  PPG.Tests.Controls;
 
 type
   TPlannerSeriesTests = class(TControlTestCase)
@@ -71,6 +73,30 @@ type
     procedure LayoutKeepsOrderAndFilter;
     procedure PaintsFilteredAndDragging;
     procedure StreamsFilterProperties;
+  end;
+
+
+  TRibbonPopupKeyTests = class(TControlTestCase)
+  private
+    FLog: string;
+    FGallery: TPPGRibbonItem;
+    function NewRibbon: TPPGRibbon;
+    procedure NavTo(R: TPPGRibbon; Part: TPPGRibbonPart);
+    function CollapsedGroup(R: TPPGRibbon): Integer;
+    procedure ItemClick(Sender: TObject; Item: TPPGRibbonItem);
+    procedure GalleryClick(Sender: TObject; Item: TPPGRibbonItem; Index: Integer);
+    procedure GroupFromEvent(Sender: TObject; Item: TPPGRibbonItem; Index: Integer;
+      var Data: TPPGItemData; var AColor: TColor);
+  protected
+    procedure SetUp; override;
+  published
+    procedure EnterOpensCollapsedGroupAndNavigates;
+    procedure EscapeReturnsToGroup;
+    procedure ArrowsAfterMouseOpen;
+    procedure MinimizedTabPopupByKeyboard;
+    procedure GalleryCategoriesRowsAndKeys;
+    procedure GalleryCategoriesFromEvent;
+    procedure PaintsPopupsWithFocusAndCategories;
   end;
 
 
@@ -933,8 +959,273 @@ begin
 end;
 
 
+{ TRibbonPopupKeyTests }
+
+procedure TRibbonPopupKeyTests.SetUp;
+begin
+  inherited SetUp;
+  FLog := '';
+end;
+
+procedure TRibbonPopupKeyTests.ItemClick(Sender: TObject; Item: TPPGRibbonItem);
+begin
+  FLog := FLog + 'click:' + Item.Caption + ';';
+end;
+
+procedure TRibbonPopupKeyTests.GalleryClick(Sender: TObject; Item: TPPGRibbonItem; Index: Integer);
+begin
+  FLog := FLog + 'gallery:' + IntToStr(Index) + ';';
+end;
+
+procedure TRibbonPopupKeyTests.GroupFromEvent(Sender: TObject; Item: TPPGRibbonItem; Index: Integer;
+  var Data: TPPGItemData; var AColor: TColor);
+begin
+  if Index < 2 then
+    Data.Group := 'Oben'
+  else
+    Data.Group := 'Unten';
+end;
+
+function TRibbonPopupKeyTests.NewRibbon: TPPGRibbon;
+var
+  T: TPPGRibbonTab;
+  G: TPPGRibbonGroup;
+begin
+  Result := TPPGRibbon.Create(FForm);
+  Result.Parent := FForm;
+  Result.Animation.Enabled := False;
+  Result.Align := alNone;
+  Result.SetBounds(0, 0, 900, 140);
+  Result.OnItemClick := ItemClick;
+  Result.OnGalleryClick := GalleryClick;
+  T := Result.Tabs.AddTab('Start');
+  // kurzer Titel, viele Befehle: als Dropdown schmaler als klein
+  G := T.Groups.AddGroup('Ab');
+  G.Items.AddButton('Einfuegen', $E77F, rsLarge);
+  G.Items.AddButton('Ausschneiden', $E8C6, rsMedium);
+  G.Items.AddButton('Kopieren', $E8C8, rsMedium);
+  G.Items.AddButton('Format', $E8DC, rsMedium);
+  G.Items.AddButton('Loeschen', $E74D, rsMedium);
+  G.Items.AddButton('Alles', $E8B3, rsMedium);
+  G.Items.AddButton('Leeren', $E894, rsMedium);
+  G := T.Groups.AddGroup('Bearbeiten');
+  G.Items.AddButton('Suchen', $E721, rsMedium);
+  G.Items.AddButton('Ersetzen', $E8AB, rsMedium);
+  G := T.Groups.AddGroup('Vorlagen');
+  FGallery := G.Items.Add;
+  FGallery.Kind := rikGallery;
+  FGallery.Caption := 'Vorlagen';
+  FGallery.GalleryColumns := 2;
+  FGallery.GalleryPopupColumns := 3;
+  FGallery.GalleryItems.Add('Titel|Ueberschrift 1');
+  FGallery.GalleryItems.Add('Titel|Ueberschrift 2');
+  FGallery.GalleryItems.Add('Text|Standard');
+  FGallery.GalleryItems.Add('Text|Zitat');
+  FGallery.GalleryItems.Add('Text|Code');
+  Result.Tabs.AddTab('Einfuegen').Groups.AddGroup('Tabellen').Items.AddButton('Tabelle', $E80A, rsLarge);
+  FForm.ClientWidth := 900;
+  FForm.Show;
+  Result.UpdateLayout;
+end;
+
+function TRibbonPopupKeyTests.CollapsedGroup(R: TPPGRibbon): Integer;
+var
+  I: Integer;
+begin
+  for I := 0 to R.GroupCount - 1 do
+    if R.GroupState(I) = rgsCollapsed then
+      Exit(I);
+  Result := -1;
+end;
+
+procedure TRibbonPopupKeyTests.NavTo(R: TPPGRibbon; Part: TPPGRibbonPart);
+var
+  I: Integer;
+begin
+  for I := 0 to R.ElementCount do
+  begin
+    if R.NavHit.Part = Part then
+      Exit;
+    R.HandleNavKey(VK_TAB, []);
+  end;
+  Fail('Element nicht gefunden');
+end;
+
+procedure TRibbonPopupKeyTests.EnterOpensCollapsedGroupAndNavigates;
+var
+  R: TPPGRibbon;
+  H: TPPGRibbonHit;
+begin
+  R := NewRibbon;
+  R.Width := 90;
+  R.UpdateLayout;
+  CheckTrue(CollapsedGroup(R) >= 0, 'eine Gruppe als Dropdown: ' + IntToStr(R.GroupCount) + ' Breite ' + IntToStr(R.Width) + ' Zustand ' + IntToStr(Ord(R.GroupState(0))) + IntToStr(Ord(R.GroupState(R.GroupCount - 1))));
+  R.EnterKeyboardNavigation;
+  NavTo(R, rpGroup);
+  R.HandleNavKey(VK_RETURN, []);
+  CheckTrue((R.GroupPopup <> nil) and R.GroupPopup.IsOpen, 'Popup offen');
+  CheckTrue(R.KeyboardNavigation, 'Tastatur bleibt aktiv');
+  H := R.NavHit;
+  CheckTrue(H.View = R.GroupPopup.View, 'Fokus im Popup');
+  CheckTrue(H.Part = rpItem);
+  CheckEquals(7, R.ElementCount, 'nur die Befehle des Popups');
+  R.HandleNavKey(VK_TAB, []);
+  R.HandleNavKey(VK_TAB, []);
+  CheckTrue(R.NavHit.View = R.GroupPopup.View, 'Tab bleibt im Popup');
+  R.HandleNavKey(VK_RETURN, []);
+  CheckEquals('click:Kopieren;', FLog, 'Enter loest aus');
+  CheckFalse(R.GroupPopup.IsOpen, 'Popup zu');
+  CheckFalse(R.KeyboardNavigation);
+end;
+
+procedure TRibbonPopupKeyTests.EscapeReturnsToGroup;
+var
+  R: TPPGRibbon;
+begin
+  R := NewRibbon;
+  R.Width := 90;
+  R.UpdateLayout;
+  R.EnterKeyboardNavigation;
+  NavTo(R, rpGroup);
+  R.HandleNavKey(VK_RETURN, []);
+  CheckTrue(R.GroupPopup.IsOpen);
+  R.HandleNavKey(VK_ESCAPE, []);
+  CheckFalse(R.GroupPopup.IsOpen, 'Esc schliesst das Popup');
+  CheckTrue(R.KeyboardNavigation, 'eine Ebene zurueck');
+  CheckTrue(R.NavHit.Part = rpGroup, 'Fokus wieder auf der Gruppe');
+  R.HandleNavKey(VK_ESCAPE, []);
+  CheckFalse(R.KeyboardNavigation, 'zweites Esc verlaesst die Tastatur');
+end;
+
+procedure TRibbonPopupKeyTests.ArrowsAfterMouseOpen;
+var
+  R: TPPGRibbon;
+  P: TPoint;
+begin
+  R := NewRibbon;
+  R.Width := 90;
+  R.UpdateLayout;
+  P := Point((R.GroupRect(CollapsedGroup(R)).Left + R.GroupRect(CollapsedGroup(R)).Right) div 2,
+    (R.GroupRect(CollapsedGroup(R)).Top + R.GroupRect(CollapsedGroup(R)).Bottom) div 2);
+  R.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(P.X, P.Y));
+  R.Perform(WM_LBUTTONUP, 0, MakeLParam(P.X, P.Y));
+  CheckTrue(R.GroupPopup.IsOpen, 'mit der Maus geoeffnet');
+  CheckFalse(R.KeyboardNavigation);
+  PostMessage(FForm.Handle, WM_KEYDOWN, VK_DOWN, 0);
+  Application.ProcessMessages;
+  CheckTrue(R.KeyboardNavigation, 'Pfeil fuehrt ins Popup');
+  CheckTrue(R.NavHit.View = R.GroupPopup.View);
+  R.HandleNavKey(VK_ESCAPE, []);
+  CheckFalse(R.GroupPopup.IsOpen);
+end;
+
+procedure TRibbonPopupKeyTests.MinimizedTabPopupByKeyboard;
+var
+  R: TPPGRibbon;
+begin
+  R := NewRibbon;
+  R.Minimized := True;
+  R.UpdateLayout;
+  R.EnterKeyboardNavigation;
+  CheckTrue(R.NavHit.Part = rpTab, 'Start auf der Registerkarte');
+  R.HandleNavKey(VK_RETURN, []);
+  CheckTrue((R.PanelPopup <> nil) and R.PanelPopup.IsOpen, 'Karte als Popup');
+  CheckTrue(R.KeyboardNavigation);
+  CheckTrue(R.NavHit.View = R.PanelPopup.View, 'Fokus im Popup der Karte');
+  R.HandleNavKey(VK_ESCAPE, []);
+  CheckFalse(R.PanelPopup.IsOpen);
+  CheckTrue(R.NavHit.Part = rpTab, 'zurueck zur Registerkarte');
+  R.LeaveKeyboardNavigation;
+end;
+
+procedure TRibbonPopupKeyTests.GalleryCategoriesRowsAndKeys;
+var
+  R: TPPGRibbon;
+  G: TPPGRibbonGalleryPopup;
+begin
+  R := NewRibbon;
+  R.OpenGallery(FGallery);
+  G := R.GalleryPopup;
+  CheckTrue((G <> nil) and G.IsOpen);
+  CheckTrue(G.Grouped, 'Kategorien aus "Kategorie|Text"');
+  CheckEquals(4, G.RowCount, 'Titel, 2 Kacheln, Text, 3 Kacheln');
+  CheckTrue(G.TileRect(2).Top > G.TileRect(1).Bottom, 'neue Kategorie in neuer Zeile');
+  CheckEquals(G.TileRect(0).Left, G.TileRect(2).Left, 'beginnt links');
+  CheckEquals(G.TileRect(2).Top, G.TileRect(4).Top, 'Text: eine Zeile mit drei Kacheln');
+  // Tastatur: Spalte halten, Ueberschriften ueberspringen
+  G.HandleKey(VK_HOME);
+  CheckEquals(0, G.FocusIndex);
+  G.HandleKey(VK_DOWN);
+  CheckEquals(2, G.FocusIndex, 'erste Kachel der naechsten Kategorie');
+  G.HandleKey(VK_RIGHT);
+  G.HandleKey(VK_RIGHT);
+  CheckEquals(4, G.FocusIndex);
+  G.HandleKey(VK_UP);
+  CheckEquals(1, G.FocusIndex, 'Spalte begrenzt auf die kuerzere Zeile');
+  G.HandleKey(VK_DOWN);
+  G.HandleKey(VK_RETURN);
+  CheckEquals('gallery:3;', FLog);
+  CheckFalse(G.IsOpen);
+end;
+
+procedure TRibbonPopupKeyTests.GalleryCategoriesFromEvent;
+var
+  R: TPPGRibbon;
+  G: TPPGRibbonGalleryPopup;
+  I: Integer;
+begin
+  R := NewRibbon;
+  for I := 0 to FGallery.GalleryItems.Count - 1 do
+    FGallery.GalleryItems[I] := 'Eintrag ' + IntToStr(I);
+  R.OpenGallery(FGallery);
+  CheckFalse(R.GalleryPopup.Grouped, 'ohne Kategorie: einfaches Raster');
+  CheckEquals(2, R.GalleryPopup.RowCount);
+  R.ClosePopups;
+  R.OnGetGalleryItem := GroupFromEvent;
+  R.OpenGallery(FGallery);
+  G := R.GalleryPopup;
+  CheckTrue(G.Grouped, 'Data.Group aus OnGetGalleryItem');
+  CheckEquals(4, G.RowCount);
+end;
+
+procedure TRibbonPopupKeyTests.PaintsPopupsWithFocusAndCategories;
+var
+  R: TPPGRibbon;
+  B: TBitmap;
+  Gdi: Boolean;
+begin
+  R := NewRibbon;
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      R.Width := 90;
+      R.UpdateLayout;
+      R.EnterKeyboardNavigation;
+      NavTo(R, rpGroup);
+      R.HandleNavKey(VK_RETURN, []);
+      B := RenderToBitmap(R.GroupPopup);
+      B.Free;
+      R.HandleNavKey(VK_ESCAPE, []);
+      R.LeaveKeyboardNavigation;
+      R.Width := 900;
+      R.UpdateLayout;
+      R.OpenGallery(FGallery);
+      R.GalleryPopup.HandleKey(VK_DOWN);
+      B := RenderToBitmap(R.GalleryPopup);
+      B.Free;
+      R.ClosePopups;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+
 initialization
   RegisterTest('Phase20', TPlannerSeriesTests.Suite);
   RegisterTest('Phase20', TKanbanFilterTests.Suite);
+  RegisterTest('Phase20', TRibbonPopupKeyTests.Suite);
 
 end.

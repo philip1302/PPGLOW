@@ -126,6 +126,14 @@ type
   end;
 
   /// Aufgeklappte Galerie (virtuell: nur sichtbare Eintraege werden gezeichnet).
+  /// Zeile der Galerie mit Kategorien: Ueberschrift oder Kacheln First..First+Count-1.
+  TPPGGalleryRow = record
+    Header: Boolean;
+    Caption: string;
+    First: Integer;
+    Count: Integer;
+  end;
+
   TPPGRibbonGalleryPopup = class(TPPGPopupWindow)
   private
     FRibbon: TPPGCustomRibbon;
@@ -135,6 +143,14 @@ type
     FHot: Integer;
     FFocus: Integer;
     FPressed: Integer;
+    // Kategorien (Phase 20c): leer = einfaches Raster
+    FRows: array of TPPGGalleryRow;
+    FTileRow: TArray<Integer>;
+    function HeaderHeight: Integer;
+    function RowH(R: Integer): Integer;
+    function RowTop(R: Integer): Integer;
+    function MaxTopRow: Integer;
+    function NextTileRow(R, Dir: Integer): Integer;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
   protected
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
@@ -154,6 +170,12 @@ type
     procedure MakeVisible(Index: Integer);
     /// Tasten bei offener Galerie (True = verarbeitet).
     function HandleKey(Key: Word): Boolean;
+    /// Zeilen neu aufbauen (Kategorien aus den Eintraegen).
+    procedure BuildRows;
+    /// Mit Kategorien (Ueberschriften)?
+    function Grouped: Boolean;
+    /// Hoehe aller Zeilen bis hoechstens MaxRows Kachelzeilen (Groesse beim Oeffnen).
+    function PreferredHeight(MaxTileRows: Integer): Integer;
     property Item: TPPGRibbonItem read FItem;
     property Columns: Integer read FCols;
     property TopRow: Integer read FTopRow;
@@ -247,6 +269,9 @@ type
     FOverlays: TObjectList<TPPGKeyTipOverlay>;
     FNavMode: Boolean;
     FNavIndex: Integer;
+    // Tastatur in Popups (Phase 20c): Ruecksprung beim Schliessen
+    FNavReturnGroup: Integer;
+    FNavReturnTab: Integer;
     { Backstage }
     FBackstageVisible: Boolean;
     FBackstageAlign: TAlign;
@@ -322,11 +347,19 @@ type
     procedure PaintArrow(const ACanvas: IPPGCanvas; const R: TRect; Color: TColor);
     procedure PaintItem(const ACanvas: IPPGCanvas; View: TPPGRibbonView; G, I: Integer;
       const C: TPPGRibbonColors);
+    procedure PaintGalleryTile(const ACanvas: IPPGCanvas; Item: TPPGRibbonItem; Index: Integer;
+      const R: TRect; HotTile, FocusTile: Integer; const C: TPPGRibbonColors);
     procedure PaintGalleryTiles(const ACanvas: IPPGCanvas; Item: TPPGRibbonItem; const Tiles: TRect;
       Cols, TopRow, Rows, TileW, TileH, HotTile, FocusTile: Integer; const C: TPPGRibbonColors);
     procedure PaintGroup(const ACanvas: IPPGCanvas; View: TPPGRibbonView; G: Integer;
       const C: TPPGRibbonColors);
-    procedure PaintKeyboardFocus(const ACanvas: IPPGCanvas; const C: TPPGRibbonColors);
+    procedure PaintKeyboardFocus(const ACanvas: IPPGCanvas; const C: TPPGRibbonColors;
+      View: TPPGRibbonView = nil);
+    /// Ansicht, in der die Tastatur gerade wandert: offenes Gruppen- bzw.
+    /// Band-Popup, sonst nil (Kopf und Band).
+    function NavView: TPPGRibbonView;
+    procedure InvalidateNav;
+    procedure EnterPopupNavigation;
     { Bedienung }
     procedure SetHot(const Hit: TPPGRibbonHit);
     procedure HitMouseDown(const Hit: TPPGRibbonHit; Shift: TShiftState);
@@ -489,6 +522,8 @@ type
     /// Einklappen), ohne es zu zeigen.
     function PrepareContextMenu(const Hit: TPPGRibbonHit): TPopupMenu;
     function ElementCount: Integer;
+    /// Element unter dem Tastaturfokus (rpNone = keins); im offenen Popup dessen Befehl.
+    function NavHit: TPPGRibbonHit;
     property ActiveTab: TPPGRibbonTab read GetActiveTab;
     property MainView: TPPGRibbonView read FMainView;
     property PanelPopup: TPPGRibbonPanelPopup read FPanelPopup;
@@ -685,6 +720,7 @@ begin
   ACanvas.FillRoundRect(ClientR, 0, C.Panel, 255);
   FRibbon.EnsureView(FView);
   FRibbon.PaintView(ACanvas, FView, C);
+  FRibbon.PaintKeyboardFocus(ACanvas, C, FView);
   ACanvas.FrameRoundRect(ClientR, PopupRounding, 1, PPGBlendColor(C.Panel, C.Text, 0.25), 255);
 end;
 
@@ -771,7 +807,9 @@ end;
 
 function TPPGRibbonGalleryPopup.RowCount: Integer;
 begin
-  if (FItem = nil) or (FCols < 1) then
+  if Grouped then
+    Result := Length(FRows)
+  else if (FItem = nil) or (FCols < 1) then
     Result := 0
   else
     Result := (FItem.GalleryTotal + FCols - 1) div FCols;
@@ -779,10 +817,22 @@ end;
 
 function TPPGRibbonGalleryPopup.VisibleRows: Integer;
 var
-  P: Integer;
+  P, Y, R: Integer;
 begin
   P := PPGScale(4, ScalePPI);
-  Result := Max(1, (FullHeight - 2 * P) div Max(1, TileHeight));
+  if not Grouped then
+    Exit(Max(1, (FullHeight - 2 * P) div Max(1, TileHeight)));
+  // Zeilen ab FTopRow, die ganz hineinpassen
+  Result := 0;
+  Y := 0;
+  R := FTopRow;
+  while (R <= High(FRows)) and (Y + RowH(R) <= FullHeight - 2 * P) do
+  begin
+    Inc(Y, RowH(R));
+    Inc(Result);
+    Inc(R);
+  end;
+  Result := Max(1, Result);
 end;
 
 function TPPGRibbonGalleryPopup.TileRect(Index: Integer): TRect;
@@ -793,12 +843,26 @@ begin
   if (FCols < 1) or (Index < 0) then
     Exit;
   P := PPGScale(4, ScalePPI);
-  Row := Index div FCols - FTopRow;
-  Col := Index mod FCols;
-  if (Row < 0) or (Row >= VisibleRows) then
-    Exit;
-  Result := Rect(P + Col * TileWidth, P + Row * TileHeight, P + (Col + 1) * TileWidth,
-    P + (Row + 1) * TileHeight);
+  if Grouped then
+  begin
+    if Index > High(FTileRow) then
+      Exit;
+    Row := FTileRow[Index];
+    if (Row < FTopRow) or (Row >= FTopRow + VisibleRows) then
+      Exit;
+    Col := Index - FRows[Row].First;
+    Result := Rect(P + Col * TileWidth, P + RowTop(Row), P + (Col + 1) * TileWidth,
+      P + RowTop(Row) + TileHeight);
+  end
+  else
+  begin
+    Row := Index div FCols - FTopRow;
+    Col := Index mod FCols;
+    if (Row < 0) or (Row >= VisibleRows) then
+      Exit;
+    Result := Rect(P + Col * TileWidth, P + Row * TileHeight, P + (Col + 1) * TileWidth,
+      P + (Row + 1) * TileHeight);
+  end;
   OffsetRect(Result, 0, ContentOffset);
   if UseRightToLeftAlignment then
     Result := Rect(Width - Result.Right, Result.Top, Width - Result.Left, Result.Bottom);
@@ -806,11 +870,20 @@ end;
 
 function TPPGRibbonGalleryPopup.TileAt(X, Y: Integer): Integer;
 var
-  I, First, Last: Integer;
+  I, R, First, Last: Integer;
 begin
   Result := -1;
   if FItem = nil then
     Exit;
+  if Grouped then
+  begin
+    for R := FTopRow to Min(High(FRows), FTopRow + VisibleRows - 1) do
+      if not FRows[R].Header then
+        for I := FRows[R].First to FRows[R].First + FRows[R].Count - 1 do
+          if PtInRect(TileRect(I), Point(X, Y)) then
+            Exit(I);
+    Exit;
+  end;
   First := FTopRow * FCols;
   Last := Min(FItem.GalleryTotal, (FTopRow + VisibleRows) * FCols) - 1;
   for I := First to Last do
@@ -822,7 +895,10 @@ procedure TPPGRibbonGalleryPopup.ScrollRows(Delta: Integer);
 var
   N: Integer;
 begin
-  N := Max(0, Min(FTopRow + Delta, RowCount - VisibleRows));
+  if Grouped then
+    N := Max(0, Min(FTopRow + Delta, MaxTopRow))
+  else
+    N := Max(0, Min(FTopRow + Delta, RowCount - VisibleRows));
   if N <> FTopRow then
   begin
     FTopRow := N;
@@ -837,6 +913,21 @@ var
 begin
   if (FCols < 1) or (Index < 0) then
     Exit;
+  if Grouped then
+  begin
+    if Index > High(FTileRow) then
+      Exit;
+    Row := FTileRow[Index];
+    // Ueberschrift der Kategorie mit ins Bild holen
+    if (Row > 0) and FRows[Row - 1].Header then
+      Dec(Row);
+    if Row < FTopRow then
+      ScrollRows(Row - FTopRow)
+    else
+      while (FTileRow[Index] >= FTopRow + VisibleRows) and (FTopRow < MaxTopRow) do
+        ScrollRows(1);
+    Exit;
+  end;
   Row := Index div FCols;
   if Row < FTopRow then
     ScrollRows(Row - FTopRow)
@@ -844,9 +935,154 @@ begin
     ScrollRows(Row - (FTopRow + VisibleRows) + 1);
 end;
 
+function TPPGRibbonGalleryPopup.Grouped: Boolean;
+begin
+  Result := Length(FRows) > 0;
+end;
+
+function TPPGRibbonGalleryPopup.HeaderHeight: Integer;
+begin
+  Result := FRibbon.TextHeight + PPGScale(10, ScalePPI);
+end;
+
+function TPPGRibbonGalleryPopup.RowH(R: Integer): Integer;
+begin
+  if FRows[R].Header then
+    Result := HeaderHeight
+  else
+    Result := TileHeight;
+end;
+
+function TPPGRibbonGalleryPopup.RowTop(R: Integer): Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := FTopRow to R - 1 do
+    Inc(Result, RowH(I));
+end;
+
+function TPPGRibbonGalleryPopup.MaxTopRow: Integer;
+var
+  P, Y: Integer;
+begin
+  // Kleinste oberste Zeile, ab der der Rest ganz hineinpasst
+  P := PPGScale(4, ScalePPI);
+  Result := High(FRows);
+  Y := 0;
+  while (Result >= 0) and (Y + RowH(Result) <= FullHeight - 2 * P) do
+  begin
+    Inc(Y, RowH(Result));
+    Dec(Result);
+  end;
+  Result := Max(0, Result + 1);
+end;
+
+function TPPGRibbonGalleryPopup.NextTileRow(R, Dir: Integer): Integer;
+begin
+  Result := R + Dir;
+  while (Result >= 0) and (Result <= High(FRows)) and FRows[Result].Header do
+    Inc(Result, Dir);
+  if (Result < 0) or (Result > High(FRows)) then
+    Result := R;
+end;
+
+procedure TPPGRibbonGalleryPopup.BuildRows;
+var
+  I, N: Integer;
+  Data: TPPGItemData;
+  Col: TColor;
+  Groups: array of string;
+  Any: Boolean;
+  Cur: string;
+begin
+  SetLength(FRows, 0);
+  FTileRow := nil;
+  if (FItem = nil) or (FCols < 1) then
+    Exit;
+  N := FItem.GalleryTotal;
+  SetLength(Groups, N);
+  Any := False;
+  for I := 0 to N - 1 do
+  begin
+    PPGInitItemData(Data);
+    Col := clNone;
+    FRibbon.GetGalleryData(FItem, I, Data, Col);
+    Groups[I] := Data.Group;
+    if Data.Group <> '' then
+      Any := True;
+  end;
+  if not Any then
+    Exit;
+  SetLength(FTileRow, N);
+  Cur := #0;
+  for I := 0 to N - 1 do
+  begin
+    // neue Kategorie: Ueberschrift, dann eine neue Kachelzeile
+    if Groups[I] <> Cur then
+    begin
+      Cur := Groups[I];
+      if Cur <> '' then
+      begin
+        SetLength(FRows, Length(FRows) + 1);
+        FRows[High(FRows)].Header := True;
+        FRows[High(FRows)].Caption := Cur;
+        FRows[High(FRows)].First := I;
+        FRows[High(FRows)].Count := 0;
+      end;
+      SetLength(FRows, Length(FRows) + 1);
+      FRows[High(FRows)].Header := False;
+      FRows[High(FRows)].First := I;
+      FRows[High(FRows)].Count := 0;
+    end
+    else if FRows[High(FRows)].Count >= FCols then
+    begin
+      SetLength(FRows, Length(FRows) + 1);
+      FRows[High(FRows)].Header := False;
+      FRows[High(FRows)].First := I;
+      FRows[High(FRows)].Count := 0;
+    end;
+    Inc(FRows[High(FRows)].Count);
+    FTileRow[I] := High(FRows);
+  end;
+end;
+
+function TPPGRibbonGalleryPopup.PreferredHeight(MaxTileRows: Integer): Integer;
+var
+  R, Tiles: Integer;
+begin
+  if not Grouped then
+    Exit(Max(1, Min(MaxTileRows, RowCount)) * TileHeight);
+  Result := 0;
+  Tiles := 0;
+  for R := 0 to High(FRows) do
+  begin
+    if not FRows[R].Header then
+    begin
+      if Tiles = MaxTileRows then
+        Break;
+      Inc(Tiles);
+    end;
+    Inc(Result, RowH(R));
+  end;
+end;
+
 function TPPGRibbonGalleryPopup.HandleKey(Key: Word): Boolean;
 var
   N, F: Integer;
+
+  function MoveRows(Dir, Steps: Integer): Integer;
+  var
+    Row, Col, S: Integer;
+  begin
+    // In Kategorien: Zeile wechseln, Spalte halten (Ueberschriften ueberspringen)
+    Row := FTileRow[F];
+    Col := F - FRows[Row].First;
+    for S := 1 to Steps do
+      Row := NextTileRow(Row, Dir);
+    Result := FRows[Row].First + Min(Col, FRows[Row].Count - 1);
+  end;
+
 begin
   Result := True;
   if FItem = nil then
@@ -855,6 +1091,8 @@ begin
   F := FFocus;
   if F < 0 then
     F := Max(0, FItem.GalleryIndex);
+  if N = 0 then
+    F := -1;
   if UseRightToLeftAlignment then
     if Key = VK_LEFT then
       Key := VK_RIGHT
@@ -863,10 +1101,26 @@ begin
   case Key of
     VK_LEFT: Dec(F);
     VK_RIGHT: Inc(F);
-    VK_UP: Dec(F, FCols);
-    VK_DOWN: Inc(F, FCols);
-    VK_PRIOR: Dec(F, FCols * VisibleRows);
-    VK_NEXT: Inc(F, FCols * VisibleRows);
+    VK_UP:
+      if Grouped and (F >= 0) then
+        F := MoveRows(-1, 1)
+      else
+        Dec(F, FCols);
+    VK_DOWN:
+      if Grouped and (F >= 0) then
+        F := MoveRows(1, 1)
+      else
+        Inc(F, FCols);
+    VK_PRIOR:
+      if Grouped and (F >= 0) then
+        F := MoveRows(-1, VisibleRows)
+      else
+        Dec(F, FCols * VisibleRows);
+    VK_NEXT:
+      if Grouped and (F >= 0) then
+        F := MoveRows(1, VisibleRows)
+      else
+        Inc(F, FCols * VisibleRows);
     VK_HOME: F := 0;
     VK_END: F := N - 1;
     VK_RETURN, VK_SPACE:
@@ -898,19 +1152,45 @@ end;
 procedure TPPGRibbonGalleryPopup.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
 var
   C: TPPGRibbonColors;
-  P, Total, TrackH, ThumbH, ThumbY: Integer;
-  Tiles, Track: TRect;
+  P, Total, TrackH, ThumbH, ThumbY, Y, R, I: Integer;
+  Tiles, Track, HR: TRect;
 begin
   if (FRibbon = nil) or (FItem = nil) then
     Exit;
   C := FRibbon.RibbonColors;
   ACanvas.FillRoundRect(ClientR, 0, C.Panel, 255);
   P := PPGScale(4, ScalePPI);
-  Tiles := Rect(P, P + ContentOffset, P + FCols * TileWidth, P + ContentOffset + VisibleRows * TileHeight);
-  if UseRightToLeftAlignment then
-    Tiles := Rect(Width - Tiles.Right, Tiles.Top, Width - Tiles.Left, Tiles.Bottom);
-  FRibbon.PaintGalleryTiles(ACanvas, FItem, Tiles, FCols, FTopRow, VisibleRows, TileWidth, TileHeight,
-    FHot, FFocus, C);
+  if Grouped then
+  begin
+    // Ueberschriften und Kacheln je Zeile (Kategorien)
+    Y := P + ContentOffset;
+    for R := FTopRow to Min(High(FRows), FTopRow + VisibleRows - 1) do
+    begin
+      if FRows[R].Header then
+      begin
+        HR := Rect(P + PPGScale(6, ScalePPI), Y, P + FCols * TileWidth, Y + HeaderHeight);
+        if UseRightToLeftAlignment then
+          HR := Rect(Width - HR.Right, HR.Top, Width - HR.Left, HR.Bottom);
+        ACanvas.DrawText(HR, FRows[R].Caption, FRibbon.Font, C.TextSecondary,
+          DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_END_ELLIPSIS));
+        ACanvas.FillRoundRect(Rect(P, HR.Bottom - 1, P + FCols * TileWidth, HR.Bottom), 0,
+          PPGBlendColor(C.Panel, C.Text, 0.15), 255);
+      end
+      else
+        for I := FRows[R].First to FRows[R].First + FRows[R].Count - 1 do
+          FRibbon.PaintGalleryTile(ACanvas, FItem, I, TileRect(I), FHot, FFocus, C);
+      Inc(Y, RowH(R));
+    end;
+    Tiles := Rect(P, P + ContentOffset, P + FCols * TileWidth, Y);
+  end
+  else
+  begin
+    Tiles := Rect(P, P + ContentOffset, P + FCols * TileWidth, P + ContentOffset + VisibleRows * TileHeight);
+    if UseRightToLeftAlignment then
+      Tiles := Rect(Width - Tiles.Right, Tiles.Top, Width - Tiles.Left, Tiles.Bottom);
+    FRibbon.PaintGalleryTiles(ACanvas, FItem, Tiles, FCols, FTopRow, VisibleRows, TileWidth, TileHeight,
+      FHot, FFocus, C);
+  end;
   // schmale Bildlaufanzeige, wenn nicht alles passt
   Total := RowCount;
   if Total > VisibleRows then
@@ -920,7 +1200,10 @@ begin
       Track := Rect(Width - Track.Right, Track.Top, Width - Track.Left, Track.Bottom);
     TrackH := RectH(Track);
     ThumbH := Max(PPGScale(16, ScalePPI), TrackH * VisibleRows div Total);
-    ThumbY := Track.Top + (TrackH - ThumbH) * FTopRow div Max(1, Total - VisibleRows);
+    if Grouped then
+      ThumbY := Track.Top + (TrackH - ThumbH) * FTopRow div Max(1, MaxTopRow)
+    else
+      ThumbY := Track.Top + (TrackH - ThumbH) * FTopRow div Max(1, Total - VisibleRows);
     ACanvas.FillRoundRect(Rect(Track.Left, ThumbY, Track.Right, ThumbY + ThumbH), PPGScale(2, ScalePPI),
       C.TextSecondary, 160);
   end;
@@ -1074,6 +1357,8 @@ begin
   FKeyTipsEnabled := True;
   FPopupTab := -1;
   FNavIndex := -1;
+  FNavReturnGroup := -1;
+  FNavReturnTab := -1;
   FHot := NoHit;
   FDown := NoHit;
   FContextHit := NoHit;
@@ -2536,17 +2821,40 @@ procedure TPPGCustomRibbon.PaintGalleryTiles(const ACanvas: IPPGCanvas; Item: TP
   const Tiles: TRect; Cols, TopRow, Rows, TileW, TileH, HotTile, FocusTile: Integer;
   const C: TPPGRibbonColors);
 var
+  I, First, Last, Row, Cl: Integer;
+  R: TRect;
+begin
+  if (Item = nil) or (Cols < 1) then
+    Exit;
+  First := TopRow * Cols;
+  Last := Min(Item.GalleryTotal, (TopRow + Rows) * Cols) - 1;
+  for I := First to Last do
+  begin
+    Row := I div Cols - TopRow;
+    Cl := I mod Cols;
+    if UseRightToLeftAlignment then
+      R := Rect(Tiles.Right - (Cl + 1) * TileW, Tiles.Top + Row * TileH, Tiles.Right - Cl * TileW,
+        Tiles.Top + (Row + 1) * TileH)
+    else
+      R := Rect(Tiles.Left + Cl * TileW, Tiles.Top + Row * TileH, Tiles.Left + (Cl + 1) * TileW,
+        Tiles.Top + (Row + 1) * TileH);
+    PaintGalleryTile(ACanvas, Item, I, R, HotTile, FocusTile, C);
+  end;
+end;
+
+procedure TPPGCustomRibbon.PaintGalleryTile(const ACanvas: IPPGCanvas; Item: TPPGRibbonItem;
+  Index: Integer; const R: TRect; HotTile, FocusTile: Integer; const C: TPPGRibbonColors);
+var
   Info: TPPGItemPaintInfo;
   IR: IPPGItemRenderer;
   Data: TPPGItemData;
   Col: TColor;
-  I, First, Last, Row, Cl: Integer;
-  R, Inner, Sw: TRect;
+  Inner, Sw: TRect;
   DC: HDC;
   Cv: TCanvas;
   Handled, Sel, Hot: Boolean;
 begin
-  if (Item = nil) or (Cols < 1) then
+  if (Item = nil) or IsRectEmpty(R) then
     Exit;
   IR := PPGItemRendererOf(Renderer);
   Info.ListStyle := EffectiveAppearance.Resolve(vsNormal, ScalePPI, False);
@@ -2571,75 +2879,73 @@ begin
   Info.Dark := UseDarkMode;
   Info.Focused := Focused;
   Info.TabWidth := 0;
-  First := TopRow * Cols;
-  Last := Min(Item.GalleryTotal, (TopRow + Rows) * Cols) - 1;
-  for I := First to Last do
+  Sel := Index = Item.GalleryIndex;
+  Hot := (Index = HotTile) or (Index = FocusTile);
+  Handled := False;
+  if Assigned(FOnDrawGalleryItem) then
   begin
-    Row := I div Cols - TopRow;
-    Cl := I mod Cols;
-    if Info.RightToLeft then
-      R := Rect(Tiles.Right - (Cl + 1) * TileW, Tiles.Top + Row * TileH, Tiles.Right - Cl * TileW,
-        Tiles.Top + (Row + 1) * TileH)
-    else
-      R := Rect(Tiles.Left + Cl * TileW, Tiles.Top + Row * TileH, Tiles.Left + (Cl + 1) * TileW,
-        Tiles.Top + (Row + 1) * TileH);
-    Sel := I = Item.GalleryIndex;
-    Hot := (I = HotTile) or (I = FocusTile);
-    Handled := False;
-    if Assigned(FOnDrawGalleryItem) then
-    begin
-      DC := ACanvas.BeginGdi;
+    DC := ACanvas.BeginGdi;
+    try
+      Cv := TCanvas.Create;
       try
-        Cv := TCanvas.Create;
-        try
-          Cv.Handle := DC;
-          Cv.Font := Font;
-          FOnDrawGalleryItem(Self, Item, I, Cv, R, Sel, Hot, Handled);
-          Cv.Handle := 0;
-        finally
-          Cv.Free;
-        end;
+        Cv.Handle := DC;
+        Cv.Font := Font;
+        FOnDrawGalleryItem(Self, Item, Index, Cv, R, Sel, Hot, Handled);
+        Cv.Handle := 0;
       finally
-        ACanvas.EndGdi(DC);
+        Cv.Free;
       end;
+    finally
+      ACanvas.EndGdi(DC);
     end;
-    if Handled then
-      Continue;
-    Inner := R;
-    InflateRect(Inner, -Sc(1), -Sc(1));
-    FPainter.PaintBackground(ACanvas, IR, Inner, Info, Sel, I = FocusTile, Ord(Hot));
-    PPGInitItemData(Data);
-    Data.Enabled := Item.Enabled;
-    Col := clNone;
-    GetGalleryData(Item, I, Data, Col);
-    if Col <> clNone then
-    begin
-      // Farbfeld: links quadratisch, bei hohen Kacheln oben
-      if RectH(Inner) >= 2 * TextHeight + Sc(16) then
-      begin
-        Sw := Rect(Inner.Left + Sc(6), Inner.Top + Sc(6), Inner.Right - Sc(6),
-          Inner.Bottom - TextHeight - Sc(8));
-        Inner.Top := Sw.Bottom;
-      end
-      else
-      begin
-        Sw := Rect(Inner.Left + Sc(6), Inner.Top + Sc(5), Inner.Left + Sc(6) + RectH(Inner) - Sc(10),
-          Inner.Bottom - Sc(5));
-        Inner.Left := Sw.Right;
-      end;
-      ACanvas.FillRoundRect(Sw, Sc(3), PPGColorToRGB(Col), 255);
-      ACanvas.FrameRoundRect(Sw, Sc(3), 1, PPGBlendColor(PPGColorToRGB(Col), C.Text, 0.3), 255);
-    end;
-    if (Data.Text <> '') or (Data.ImageIndex >= 0) then
-      FPainter.PaintContent(ACanvas, IR, Inner, Data, Info, Hot or Sel);
   end;
+  if Handled then
+    Exit;
+  Inner := R;
+  InflateRect(Inner, -Sc(1), -Sc(1));
+  FPainter.PaintBackground(ACanvas, IR, Inner, Info, Sel, Index = FocusTile, Ord(Hot));
+  PPGInitItemData(Data);
+  Data.Enabled := Item.Enabled;
+  Col := clNone;
+  GetGalleryData(Item, Index, Data, Col);
+  if Col <> clNone then
+  begin
+    // Farbfeld: links quadratisch, bei hohen Kacheln oben
+    if RectH(Inner) >= 2 * TextHeight + Sc(16) then
+    begin
+      Sw := Rect(Inner.Left + Sc(6), Inner.Top + Sc(6), Inner.Right - Sc(6),
+        Inner.Bottom - TextHeight - Sc(8));
+      Inner.Top := Sw.Bottom;
+    end
+    else
+    begin
+      Sw := Rect(Inner.Left + Sc(6), Inner.Top + Sc(5), Inner.Left + Sc(6) + RectH(Inner) - Sc(10),
+        Inner.Bottom - Sc(5));
+      Inner.Left := Sw.Right;
+    end;
+    ACanvas.FillRoundRect(Sw, Sc(3), PPGColorToRGB(Col), 255);
+    ACanvas.FrameRoundRect(Sw, Sc(3), 1, PPGBlendColor(PPGColorToRGB(Col), C.Text, 0.3), 255);
+  end;
+  if (Data.Text <> '') or (Data.ImageIndex >= 0) then
+    FPainter.PaintContent(ACanvas, IR, Inner, Data, Info, Hot or Sel);
 end;
 
 procedure TPPGCustomRibbon.GetGalleryData(Item: TPPGRibbonItem; Index: Integer; var Data: TPPGItemData;
   var Color: TColor);
+var
+  P: Integer;
 begin
   if (Index >= 0) and (Index < Item.GalleryItems.Count) then
+  begin
+    // "Kategorie|Text" wie bei den Hints der VCL ("Titel|Text")
     Data.Text := Item.GalleryItems[Index];
+    P := Pos('|', Data.Text);
+    if P > 0 then
+    begin
+      Data.Group := Copy(Data.Text, 1, P - 1);
+      Data.Text := Copy(Data.Text, P + 1, MaxInt);
+    end;
+  end;
   if Assigned(FOnGetGalleryItem) then
     FOnGetGalleryItem(Self, Item, Index, Data, Color);
 end;
@@ -3080,15 +3386,47 @@ begin
   end;
 end;
 
-procedure TPPGCustomRibbon.PaintKeyboardFocus(const ACanvas: IPPGCanvas; const C: TPPGRibbonColors);
+procedure TPPGCustomRibbon.PaintKeyboardFocus(const ACanvas: IPPGCanvas; const C: TPPGRibbonColors;
+  View: TPPGRibbonView);
 var
   E: TArray<TPPGRibbonElement>;
 begin
-  if not FNavMode then
+  if not FNavMode or (NavView <> View) then
     Exit;
   E := Elements;
   if (FNavIndex >= 0) and (FNavIndex <= High(E)) and not IsRectEmpty(E[FNavIndex].Rect) then
     ACanvas.FrameRoundRect(E[FNavIndex].Rect, Sc(4), Sc(2), PPGColorToRGB(EffectiveAppearance.FocusColor), 255);
+end;
+
+function TPPGCustomRibbon.NavView: TPPGRibbonView;
+begin
+  Result := nil;
+  if (FGroupPopup <> nil) and FGroupPopup.IsOpen then
+    Result := FGroupPopup.View
+  else if FMinimized and (FPanelPopup <> nil) and FPanelPopup.IsOpen then
+    Result := FPanelPopup.View;
+end;
+
+procedure TPPGCustomRibbon.InvalidateNav;
+begin
+  Invalidate;
+  if (FGroupPopup <> nil) and FGroupPopup.IsOpen then
+    FGroupPopup.Invalidate;
+  if (FPanelPopup <> nil) and FPanelPopup.IsOpen then
+    FPanelPopup.Invalidate;
+end;
+
+procedure TPPGCustomRibbon.EnterPopupNavigation;
+begin
+  // Popup per Tastatur geoeffnet: Fokus auf den ersten Befehl darin
+  if NavView = nil then
+    Exit;
+  HideKeyTips;
+  FNavMode := True;
+  FNavIndex := 0;
+  InvalidateNav;
+  NotifyAccessibility(EVENT_SYSTEM_MENUPOPUPSTART);
+  NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, FNavIndex + 1);
 end;
 
 procedure TPPGCustomRibbon.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
@@ -3760,9 +4098,10 @@ begin
   FGalleryPopup.FFocus := Item.GalleryIndex;
   FGalleryPopup.FTopRow := 0;
   P := Sc(4);
-  Rows := Max(1, Min(6, (Item.GalleryTotal + Cols - 1) div Cols));
+  FGalleryPopup.BuildRows;
+  Rows := 6;
   W := FGalleryPopup.FCols * FGalleryPopup.TileWidth + 2 * P + Sc(8);
-  H := Rows * FGalleryPopup.TileHeight + 2 * P;
+  H := FGalleryPopup.PreferredHeight(Rows) + 2 * P;
   if Hit.Part <> rpNone then
     // ueber der Galerie in der Leiste, links buendig
     Anchor := Rect(Anchor.Left, Anchor.Top, Anchor.Left, Anchor.Top);
@@ -4405,6 +4744,16 @@ begin
       Handled := True;
     Exit;
   end;
+  if (Msg.message = WM_KEYDOWN) and (NavView <> nil) and
+    ((Msg.wParam = VK_DOWN) or (Msg.wParam = VK_UP) or (Msg.wParam = VK_LEFT) or
+     (Msg.wParam = VK_RIGHT) or (Msg.wParam = VK_TAB)) then
+  begin
+    FNavReturnGroup := -1;
+    FNavReturnTab := -1;
+    EnterPopupNavigation;
+    Handled := True;
+    Exit;
+  end;
   if Msg.message = WM_KEYDOWN then
   begin
     Ctrl := GetKeyState(VK_CONTROL) < 0;
@@ -4901,7 +5250,7 @@ end;
 
 function TPPGCustomRibbon.Elements: TArray<TPPGRibbonElement>;
 var
-  N, I, G: Integer;
+  N, I: Integer;
   It: TPPGRibbonItem;
   L: TArray<TPPGRibbonElement>;
 
@@ -4913,10 +5262,43 @@ var
     Inc(N);
   end;
 
+  procedure AddView(V: TPPGRibbonView);
+  var
+    GG, II: Integer;
+  begin
+    EnsureView(V);
+    for GG := 0 to V.GroupCount - 1 do
+    begin
+      if V.Groups[GG].State = rgsCollapsed then
+      begin
+        Add(MakeHit(rpGroup, V, GG, -1, -1));
+        Continue;
+      end;
+      for II := 0 to High(V.Groups[GG].Items) do
+      begin
+        It := V.Groups[GG].Items[II];
+        if It.Kind in [rikSeparator, rikControl] then
+          Continue;
+        if It.Kind = rikGallery then
+          Add(MakeHit(rpGalleryMore, V, GG, II, -1))
+        else
+          Add(MakeHit(rpItem, V, GG, II, -1));
+      end;
+      if not IsRectEmpty(V.Groups[GG].LauncherRect) then
+        Add(MakeHit(rpLauncher, V, GG, -1, -1));
+    end;
+  end;
+
 begin
   EnsureLayout;
   N := 0;
   SetLength(L, 0);
+  // In einem offenen Popup wandert die Tastatur nur durch dessen Befehle
+  if NavView <> nil then
+  begin
+    AddView(NavView);
+    Exit(L);
+  end;
   if not IsRectEmpty(FAppRect) then
     Add(MakeHit(rpAppButton, nil, 0, -1, -1));
   for I := 0 to High(FQatRects) do
@@ -4930,32 +5312,25 @@ begin
   if not IsRectEmpty(FMinimizeRect) then
     Add(MakeHit(rpMinimize, nil, 0, -1, -1));
   if not FMinimized then
-    for G := 0 to FMainView.GroupCount - 1 do
-    begin
-      if FMainView.Groups[G].State = rgsCollapsed then
-      begin
-        Add(MakeHit(rpGroup, FMainView, G, -1, -1));
-        Continue;
-      end;
-      for I := 0 to High(FMainView.Groups[G].Items) do
-      begin
-        It := FMainView.Groups[G].Items[I];
-        if It.Kind in [rikSeparator, rikControl] then
-          Continue;
-        if It.Kind = rikGallery then
-          Add(MakeHit(rpGalleryMore, FMainView, G, I, -1))
-        else
-          Add(MakeHit(rpItem, FMainView, G, I, -1));
-      end;
-      if not IsRectEmpty(FMainView.Groups[G].LauncherRect) then
-        Add(MakeHit(rpLauncher, FMainView, G, -1, -1));
-    end;
+    AddView(FMainView);
   Result := L;
 end;
 
 function TPPGCustomRibbon.ElementCount: Integer;
 begin
   Result := Length(Elements);
+end;
+
+function TPPGCustomRibbon.NavHit: TPPGRibbonHit;
+var
+  E: TArray<TPPGRibbonElement>;
+begin
+  Result := NoHit;
+  if not FNavMode then
+    Exit;
+  E := Elements;
+  if (FNavIndex >= 0) and (FNavIndex <= High(E)) then
+    Result := E[FNavIndex].Hit;
 end;
 
 procedure TPPGCustomRibbon.EnterKeyboardNavigation;
@@ -5106,7 +5481,7 @@ begin
     UserSelectTab(E[FNavIndex].Hit.Index);
     E := Elements;
   end;
-  Invalidate;
+  InvalidateNav;
   NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, FNavIndex + 1);
 end;
 
@@ -5127,17 +5502,49 @@ begin
         Hit := E[FNavIndex].Hit;
         if Hit.Part = rpTab then
         begin
-          // Enter auf der Karte: ins Band
+          // Enter auf der Karte: ins Band (eingeklappt: ins Popup der Karte)
+          FNavReturnTab := FNavIndex;
           UserSelectTab(Hit.Index);
           if not FMinimized then
-            NavMove(VK_DOWN, []);
+            NavMove(VK_DOWN, [])
+          else
+            EnterPopupNavigation;
+          Exit;
+        end;
+        if Hit.Part = rpGroup then
+        begin
+          // Geschrumpfte Gruppe: Popup oeffnen und darin weiter
+          FNavReturnGroup := FNavIndex;
+          ActivateHit(Hit, True);
+          if (FGroupPopup <> nil) and FGroupPopup.IsOpen then
+            EnterPopupNavigation
+          else
+            LeaveKeyboardNavigation;
           Exit;
         end;
         LeaveKeyboardNavigation;
         ActivateHit(Hit, True);
       end;
     VK_ESCAPE:
-      LeaveKeyboardNavigation;
+      if (FGroupPopup <> nil) and FGroupPopup.IsOpen then
+      begin
+        // eine Ebene zurueck: zur Gruppe, aus der das Popup kam
+        CloseGroupPopup;
+        FNavIndex := FNavReturnGroup;
+        InvalidateNav;
+        NotifyAccessibility(EVENT_SYSTEM_MENUPOPUPEND);
+        NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, FNavIndex + 1);
+      end
+      else if FMinimized and (FPanelPopup <> nil) and FPanelPopup.IsOpen then
+      begin
+        ClosePanelPopup;
+        FNavIndex := FNavReturnTab;
+        InvalidateNav;
+        NotifyAccessibility(EVENT_SYSTEM_MENUPOPUPEND);
+        NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, FNavIndex + 1);
+      end
+      else
+        LeaveKeyboardNavigation;
   else
     Result := False;
   end;
