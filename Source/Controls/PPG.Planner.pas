@@ -77,7 +77,15 @@ type
     ContBefore, ContAfter: Boolean;
   end;
 
-  TPPGAppointmentChangeKind = (ackMove, ackResize, ackCopy, ackSubject);
+  TPPGAppointmentChangeKind = (ackMove, ackResize, ackCopy, ackSubject, ackLocation, ackDialog);
+
+  /// Aendern eines Vorkommens einer Serie: nachfragen (Vorgabe), immer nur
+  /// das Vorkommen (herausloesen) oder immer die ganze Serie.
+  TPPGSeriesEditMode = (semAsk, semOccurrence, semSeries);
+  TPPGSeriesAction = (saMove, saResize, saSubject, saLocation, saDelete, saEdit);
+  TPPGSeriesChoice = (scOccurrence, scSeries, scCancel);
+  TPPGSeriesEditEvent = procedure(Sender: TObject; const Occurrence: TPPGOccurrence;
+    Action: TPPGSeriesAction; var Choice: TPPGSeriesChoice) of object;
 
   TPPGAppointmentChangingEvent = procedure(Sender: TObject; Appointment: TPPGAppointment;
     Kind: TPPGAppointmentChangeKind; var NewStart, NewFinish: TDateTime;
@@ -280,6 +288,11 @@ type
     FEditor: TPPGPlannerEdit;
     FEditAppt: TPPGAppointment;
     FEditNew: Boolean;
+    FEditLocation: Boolean;
+    FEditOcc: TPPGOccurrence;
+    FSeriesEditMode: TPPGSeriesEditMode;
+    FDefaultEditor: Boolean;
+    FOnSeriesEdit: TPPGSeriesEditEvent;
     // Kalender-Markierungen
     FMarkFrom: Integer;
     FMarkTo: Integer;
@@ -374,6 +387,8 @@ type
     // Bearbeiten
     procedure EditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure EditorExit(Sender: TObject);
+    procedure BeginEditField(Location: Boolean; InitialChar: Char);
+    procedure OpenItem(Item: Integer);
     // Jetzt-Linie
     procedure NowStep(Sender: TObject);
     procedure UpdateNowLoop;
@@ -415,6 +430,8 @@ type
     procedure RangeChanged; virtual;
     procedure SelectionChanged; virtual;
     function AppointmentColor(A: TPPGAppointment): TColor; virtual;
+    /// Abfrage "nur dieses Vorkommen oder ganze Serie" (Vorgabe: Aufgabendialog).
+    function DoAskSeries(const Occ: TPPGOccurrence; Action: TPPGSeriesAction): TPPGSeriesChoice; virtual;
     { IPPGAppointmentsHost }
     procedure AppointmentsChanged;
     procedure AppointmentRemoving(A: TPPGAppointment);
@@ -478,6 +495,12 @@ type
     property OnGetAppointmentColor: TPPGAppointmentColorEvent read FOnGetAppointmentColor write FOnGetAppointmentColor;
     property OnSelectionChange: TNotifyEvent read FOnSelectionChange write FOnSelectionChange;
     property OnRangeChange: TNotifyEvent read FOnRangeChange write FOnRangeChange;
+    property SeriesEditMode: TPPGSeriesEditMode read FSeriesEditMode write FSeriesEditMode default semAsk;
+    /// Ohne OnAppointmentOpen: Doppelklick/Enter oeffnen den Termin-Dialog
+    /// (PPG.Planner.Dialog); False = Betreff direkt bearbeiten wie bisher.
+    property DefaultEditor: Boolean read FDefaultEditor write FDefaultEditor default True;
+    /// Ersetzt die Serienabfrage (Choice vorbelegt mit scOccurrence).
+    property OnSeriesEdit: TPPGSeriesEditEvent read FOnSeriesEdit write FOnSeriesEdit;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -523,7 +546,14 @@ type
     /// Gewaehlten Termin verschieben (Minuten, Tage) bzw. Dauer aendern.
     function MoveSelected(DMinutes, DDays: Integer; Resize: Boolean = False): Boolean;
     procedure BeginEditSubject(InitialChar: Char = #0);
+    /// Ort direkt bearbeiten (Umschalt+F2).
+    procedure BeginEditLocation;
     procedure EndEditSubject(Accept: Boolean);
+    /// Welcher Teil einer Serie gemeint ist (Abfrage nach SeriesEditMode);
+    /// fuer Termine ohne Serie immer scOccurrence.
+    function SeriesChoice(const Occ: TPPGOccurrence; Action: TPPGSeriesAction): TPPGSeriesChoice;
+    /// Termin-Dialog fuer das Vorkommen Item (-1 = gewaehlter); True = geaendert.
+    function EditAppointment(Item: Integer = -1): Boolean;
     function Editing: Boolean;
     /// Zeit (Anzeige) auf das Raster.
     function SnapTime(T: TDateTime): TDateTime;
@@ -604,6 +634,9 @@ type
     property OnCustomDrawAppointment;
     property OnSelectionChange;
     property OnRangeChange;
+    property SeriesEditMode;
+    property DefaultEditor;
+    property OnSeriesEdit;
     property OnScroll;
     property OnEnter;
     property OnExit;
@@ -619,7 +652,7 @@ uses
   PPG.Lang,
   System.Math, System.DateUtils, System.UITypes, System.TypInfo, Winapi.oleacc,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.Chart.Palette,
-  PPG.Planner.Layout;
+  PPG.Planner.Layout, Vcl.Dialogs, PPG.Dialogs, PPG.Planner.Dialog;
 
 const
   HeadH = 30;        // Tageskopf
@@ -959,6 +992,8 @@ begin
   FDrawCanvas := TCanvas.Create;
   FFonts := TPPGFontCache.Create;
   FView := pvWeek;
+  FSeriesEditMode := semAsk;
+  FDefaultEditor := True;
   FDate := System.SysUtils.Date;
   FDayCount := 1;
   FWorkDays := [wdMonday, wdTuesday, wdWednesday, wdThursday, wdFriday];
@@ -3458,6 +3493,7 @@ function TPPGCustomPlanner.ChangeAppointment(const Occ: TPPGOccurrence;
 var
   A, Series: TPPGAppointment;
   Allow: Boolean;
+  Choice: TPPGSeriesChoice;
 begin
   Result := False;
   A := Occ.Appointment;
@@ -3473,6 +3509,16 @@ begin
     FOnAppointmentChanging(Self, A, Kind, NewStart, NewFinish, NewResourceId, Allow);
   if not Allow then
     Exit;
+  Choice := scOccurrence;
+  if (Kind <> ackCopy) and Occ.Recurring then
+  begin
+    if Kind = ackResize then
+      Choice := SeriesChoice(Occ, saResize)
+    else
+      Choice := SeriesChoice(Occ, saMove);
+    if Choice = scCancel then
+      Exit;
+  end;
   if Kind = ackCopy then
   begin
     Series := A;
@@ -3487,6 +3533,13 @@ begin
     finally
       A.Collection.EndUpdate;
     end;
+  end
+  else if Choice = scSeries then
+  begin
+    // Ganze Serie: Beginn um dieselbe Spanne, Dauer wie das Vorkommen
+    A.ShiftSeries(NewStart - Occ.Start, NewFinish - NewStart);
+    if NewResourceId <> A.ResourceId then
+      A.ResourceId := NewResourceId;
   end
   else
   begin
@@ -3557,7 +3610,8 @@ var
   A: TPPGAppointment;
   Occ: TPPGOccurrence;
   Allow: Boolean;
-  ResId: Integer;
+  ResId, I: Integer;
+  Choice: TPPGSeriesChoice;
 begin
   Result := False;
   EnsureLayout;
@@ -3573,18 +3627,28 @@ begin
   // OnDeleting kann den Termin selbst entfernt haben
   if not Allow or (FSelAppt <> A) then
     Exit;
+  Choice := SeriesChoice(Occ, saDelete);
+  if Choice = scCancel then
+    Exit;
   // Vor dem Loeschen sichern: DoDeleteAppointment gibt A frei
   ResId := A.ResourceId;
   FSelItem := -1;
   FSelAppt := nil;
-  if Occ.Recurring then
+  if Occ.Recurring and (Choice = scOccurrence) then
   begin
     // Nur dieses Vorkommen
     A.AddException(Occ.Start);
     AppointmentWritten(A);
   end
   else
+  begin
+    // Ganze Serie: auch die herausgeloesten Einzeltermine
+    if Occ.Recurring and (A.Collection = FAppointments) then
+      for I := FAppointments.Count - 1 downto 0 do
+        if (FAppointments[I] <> A) and (A.Id <> 0) and (FAppointments[I].RecurrenceParent = A.Id) then
+          DoDeleteAppointment(FAppointments[I]);
     DoDeleteAppointment(A);
+  end;
   SetSlotSelection(Occ.Start, Occ.Start + CurrentSlotLength, ResId, False);
   InvalidateLayout;
   NotifyAccessibility(EVENT_OBJECT_REORDER);
@@ -3619,6 +3683,160 @@ begin
   end;
 end;
 
+{ ---- Serien ---- }
+
+function TPPGCustomPlanner.SeriesChoice(const Occ: TPPGOccurrence;
+  Action: TPPGSeriesAction): TPPGSeriesChoice;
+begin
+  Result := scOccurrence;
+  if not Occ.Recurring then
+    Exit;
+  case FSeriesEditMode of
+    semOccurrence:
+      Exit;
+    semSeries:
+      Exit(scSeries);
+  end;
+  if Assigned(FOnSeriesEdit) then
+  begin
+    FOnSeriesEdit(Self, Occ, Action, Result);
+    Exit;
+  end;
+  // Ohne sichtbares Fenster nicht fragen (Laeufe ohne Bediener): wie bisher
+  if (csDesigning in ComponentState) or not HandleAllocated or not IsWindowVisible(Handle) then
+    Exit;
+  Result := DoAskSeries(Occ, Action);
+end;
+
+function TPPGCustomPlanner.DoAskSeries(const Occ: TPPGOccurrence;
+  Action: TPPGSeriesAction): TPPGSeriesChoice;
+var
+  D: TPPGTaskDialog;
+  B: TTaskDialogBaseButtonItem;
+  Subject: string;
+begin
+  Result := scCancel;
+  Subject := '';
+  if Occ.Appointment <> nil then
+    Subject := Occ.Appointment.Subject;
+  D := TPPGTaskDialog.Create(nil);
+  try
+    D.Caption := PPGStr(@SPPGPlannerSeriesTitle);
+    if Action = saDelete then
+      D.Title := Format(PPGStr(@SPPGPlannerSeriesDelete), [Subject])
+    else
+      D.Title := Format(PPGStr(@SPPGPlannerSeriesChange), [Subject]);
+    D.Text := PPGStr(@SPPGPlannerSeriesText);
+    D.MainIcon := tdiInformation;
+    D.Flags := [tfUseCommandLinks, tfAllowDialogCancellation, tfPositionRelativeToWindow];
+    D.CommonButtons := [tcbCancel];
+    B := D.Buttons.Add;
+    B.Caption := PPGStr(@SPPGPlannerSeriesOne);
+    TTaskDialogButtonItem(B).CommandLinkHint := PPGStr(@SPPGPlannerSeriesOneHint);
+    B.ModalResult := 100;
+    B.Default := True;
+    B := D.Buttons.Add;
+    B.Caption := PPGStr(@SPPGPlannerSeriesAll);
+    TTaskDialogButtonItem(B).CommandLinkHint := PPGStr(@SPPGPlannerSeriesAllHint);
+    B.ModalResult := 101;
+    if D.Execute(Handle) then
+      case D.ModalResult of
+        100: Result := scOccurrence;
+        101: Result := scSeries;
+      end;
+  finally
+    D.Free;
+  end;
+end;
+
+procedure TPPGCustomPlanner.OpenItem(Item: Integer);
+begin
+  if (Item < 0) or (Item > High(FItems)) then
+    Exit;
+  if Assigned(FOnAppointmentOpen) then
+    FOnAppointmentOpen(Self, FItems[Item].Appointment)
+  else if FDefaultEditor and not FReadOnly then
+    EditAppointment(Item)
+  else
+    BeginEditSubject;
+end;
+
+function TPPGCustomPlanner.EditAppointment(Item: Integer): Boolean;
+var
+  Occ: TPPGOccurrence;
+  A, Series, Copy_: TPPGAppointment;
+  Choice: TPPGSeriesChoice;
+  Allow: Boolean;
+  NS, NF: TDateTime;
+  NR: Integer;
+begin
+  Result := False;
+  EnsureLayout;
+  if Item < 0 then
+    Item := FSelItem;
+  if FReadOnly or (Item < 0) or (Item > High(FItems)) then
+    Exit;
+  Occ := FItems[Item];
+  A := Occ.Appointment;
+  if (A = nil) or A.ReadOnly then
+    Exit;
+  Choice := SeriesChoice(Occ, saEdit);
+  if Choice = scCancel then
+    Exit;
+  Allow := True;
+  NS := A.Start;
+  NF := A.Finish;
+  NR := A.ResourceId;
+  if Assigned(FOnAppointmentChanging) then
+    FOnAppointmentChanging(Self, A, ackDialog, NS, NF, NR, Allow);
+  if not Allow then
+    Exit;
+  if Occ.Recurring and (Choice = scOccurrence) and (A.Collection is TPPGAppointments) then
+  begin
+    // Nur dieses Vorkommen: eine Kopie bearbeiten, erst nach OK herausloesen
+    Copy_ := TPPGAppointment.Create(nil);
+    try
+      Copy_.Assign(A);
+      Copy_.Recurrence := '';
+      Copy_.ExDates := '';
+      Copy_.Start := Occ.Start;
+      Copy_.Finish := Occ.Finish;
+      if not PPGEditAppointmentDialog(Self, Copy_, False) then
+        Exit;
+      Series := A;
+      A := TPPGAppointments(Series.Collection).DetachOccurrence(Occ);
+      A.Collection.BeginUpdate;
+      try
+        A.AllDay := Copy_.AllDay;
+        A.Start := Copy_.Start;
+        A.Finish := Copy_.Finish;
+        A.Subject := Copy_.Subject;
+        A.Location := Copy_.Location;
+        A.Body := Copy_.Body;
+        A.Category := Copy_.Category;
+        A.ResourceId := Copy_.ResourceId;
+      finally
+        A.Collection.EndUpdate;
+      end;
+      AppointmentWritten(Series);
+    finally
+      Copy_.Free;
+    end;
+  end
+  else if not PPGEditAppointmentDialog(Self, A, True) then
+    Exit;
+  AppointmentWritten(A);
+  FSelAppt := A;
+  FSelOccStart := A.Start;
+  InvalidateLayout;
+  EnsureLayout;
+  NotifyAccessibility(EVENT_OBJECT_REORDER);
+  if Assigned(FOnAppointmentChanged) then
+    FOnAppointmentChanged(Self, A);
+  SelectionChanged;
+  Result := True;
+end;
+
 { ---- Betreff bearbeiten ---- }
 
 function TPPGCustomPlanner.Editing: Boolean;
@@ -3627,6 +3845,16 @@ begin
 end;
 
 procedure TPPGCustomPlanner.BeginEditSubject(InitialChar: Char);
+begin
+  BeginEditField(False, InitialChar);
+end;
+
+procedure TPPGCustomPlanner.BeginEditLocation;
+begin
+  BeginEditField(True, #0);
+end;
+
+procedure TPPGCustomPlanner.BeginEditField(Location: Boolean; InitialChar: Char);
 var
   R: TRect;
   H: Integer;
@@ -3648,7 +3876,9 @@ begin
     FEditor.AutoSize := False;
   end;
   FEditAppt := FItems[FSelItem].Appointment;
+  FEditOcc := FItems[FSelItem];
   FEditNew := False;
+  FEditLocation := Location;
   FEditor.Font := Font;
   H := Max(-Font.Height * 2, S(28));
   if R.Bottom - R.Top > H then
@@ -3662,6 +3892,11 @@ begin
     FEditor.Text := InitialChar;
     FEditor.SelStart := 1;
   end
+  else if Location then
+  begin
+    FEditor.Text := FEditAppt.Location;
+    FEditor.SelectAll;
+  end
   else
   begin
     FEditor.Text := FEditAppt.Subject;
@@ -3674,18 +3909,24 @@ end;
 
 procedure TPPGCustomPlanner.EndEditSubject(Accept: Boolean);
 var
-  A: TPPGAppointment;
+  A, Series: TPPGAppointment;
   S_: string;
-  Allow, HadFocus, WasNew: Boolean;
+  Allow, HadFocus, WasNew, IsLoc: Boolean;
   NS, NF: TDateTime;
   NR: Integer;
+  Occ: TPPGOccurrence;
+  Kind: TPPGAppointmentChangeKind;
+  Choice: TPPGSeriesChoice;
 begin
   if not Editing or (FEditAppt = nil) then
     Exit;
   A := FEditAppt;
   WasNew := FEditNew;
+  IsLoc := FEditLocation;
+  Occ := FEditOcc;
   FEditAppt := nil;
   FEditNew := False;
+  FEditLocation := False;
   S_ := FEditor.Text;
   HadFocus := FEditor.Focused;
   FEditor.Visible := False;
@@ -3703,18 +3944,43 @@ begin
     end;
     Exit;
   end;
-  if S_ = A.Subject then
+  if (IsLoc and (S_ = A.Location)) or (not IsLoc and (S_ = A.Subject)) then
     Exit;
   Allow := True;
   NS := A.Start;
   NF := A.Finish;
   NR := A.ResourceId;
+  if IsLoc then
+    Kind := ackLocation
+  else
+    Kind := ackSubject;
   if Assigned(FOnAppointmentChanging) then
-    FOnAppointmentChanging(Self, A, ackSubject, NS, NF, NR, Allow);
+    FOnAppointmentChanging(Self, A, Kind, NS, NF, NR, Allow);
   if not Allow then
     Exit;
-  A.Subject := S_;
+  if Occ.Recurring and not WasNew then
+  begin
+    if IsLoc then
+      Choice := SeriesChoice(Occ, saLocation)
+    else
+      Choice := SeriesChoice(Occ, saSubject);
+    if Choice = scCancel then
+      Exit;
+    if (Choice = scOccurrence) and (A.Collection is TPPGAppointments) then
+    begin
+      Series := A;
+      A := TPPGAppointments(A.Collection).DetachOccurrence(Occ);
+      AppointmentWritten(Series);
+      FSelAppt := A;
+      FSelOccStart := A.Start;
+    end;
+  end;
+  if IsLoc then
+    A.Location := S_
+  else
+    A.Subject := S_;
   AppointmentWritten(A);
+  InvalidateLayout;
   if Assigned(FOnAppointmentChanged) then
     FOnAppointmentChanged(Self, A);
   Invalidate;
@@ -4002,10 +4268,7 @@ begin
   Hit := HitTest(P.X, P.Y);
   case Hit.Kind of
     phAppointment, phResizeStart, phResizeEnd:
-      if Assigned(FOnAppointmentOpen) then
-        FOnAppointmentOpen(Self, FItems[Hit.Item].Appointment)
-      else
-        BeginEditSubject;
+      OpenItem(Hit.Item);
     phSlot:
       if (FSelItem < 0) and (Hit.Time >= FSelFrom - Eps) and (Hit.Time < FSelTo - Eps) and not FSelAllDay then
         CreateAppointment(FSelFrom, FSelTo, FSelRes, False)
@@ -4300,19 +4563,17 @@ begin
     VK_RETURN:
       begin
         if FSelItem >= 0 then
-        begin
-          if Assigned(FOnAppointmentOpen) then
-            FOnAppointmentOpen(Self, FItems[FSelItem].Appointment)
-          else
-            BeginEditSubject;
-        end
+          OpenItem(FSelItem)
         else if FSelTo > FSelFrom then
           CreateAppointment(FSelFrom, FSelTo, FSelRes, FSelAllDay);
         Key := 0;
       end;
     VK_F2:
       begin
-        BeginEditSubject;
+        if ssShift in Shift then
+          BeginEditLocation
+        else
+          BeginEditSubject;
         Key := 0;
       end;
     VK_DELETE:
@@ -4429,8 +4690,8 @@ begin
     if (Integer(Message.WParam) >= 1) and (Integer(Message.WParam) <= Length(FItems)) then
     begin
       SelectItemIndex(Integer(Message.WParam) - 1, True);
-      if Assigned(FOnAppointmentOpen) then
-        FOnAppointmentOpen(Self, FItems[FSelItem].Appointment);
+      if FSelItem >= 0 then
+        OpenItem(FSelItem);
     end;
     Exit;
   end;

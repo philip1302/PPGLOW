@@ -120,6 +120,7 @@ uses
   PPG.Kanban in '..\Source\Controls\PPG.Kanban.pas',
   PPG.Print in '..\Source\Controls\PPG.Print.pas',
   PPG.Planner in '..\Source\Controls\PPG.Planner.pas',
+  PPG.Planner.Dialog in '..\Source\Controls\PPG.Planner.Dialog.pas',
   PPG.TimeZones in '..\Source\Core\PPG.TimeZones.pas',
   PPG.Planner.Recurrence in '..\Source\Core\PPG.Planner.Recurrence.pas',
   PPG.Planner.Layout in '..\Source\Core\PPG.Planner.Layout.pas',

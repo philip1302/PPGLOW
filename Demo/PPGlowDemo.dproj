@@ -227,6 +227,7 @@
         <DCCReference Include="..\Source\Controls\PPG.Kanban.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Print.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Planner.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Planner.Dialog.pas"/>
         <DCCReference Include="..\Source\Core\PPG.TimeZones.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Planner.Recurrence.pas"/>
         <DCCReference Include="..\Source\Core\PPG.Planner.Layout.pas"/>

@@ -263,6 +263,43 @@ resourcestring
   SPPGBusyCancel = 'Cancel';
   SPPGBusyCancelling = 'Cancelling...';
 
+  // Planer: Serienabfrage und Termin-Dialog (Phase 20a)
+  SPPGPlannerSeriesTitle = 'Recurring appointment';
+  SPPGPlannerSeriesChange = '"%s" is part of a series';
+  SPPGPlannerSeriesDelete = 'Delete "%s"?';
+  SPPGPlannerSeriesText = 'Only this occurrence or the whole series?';
+  SPPGPlannerSeriesOne = 'Only this occurrence';
+  SPPGPlannerSeriesOneHint = 'The other appointments of the series stay as they are.';
+  SPPGPlannerSeriesAll = 'The whole series';
+  SPPGPlannerSeriesAllHint = 'All appointments of the series change.';
+  SPPGApptNew = 'New appointment';
+  SPPGApptTitle = 'Appointment';
+  SPPGApptSubject = 'Subject';
+  SPPGApptLocation = 'Location';
+  SPPGApptStart = 'Start';
+  SPPGApptEnd = 'End';
+  SPPGApptAllDay = 'All day';
+  SPPGApptCategory = 'Category';
+  SPPGApptNoCategory = '(None)';
+  SPPGApptResource = 'Resource';
+  SPPGApptNotes = 'Notes';
+  SPPGApptRepeat = 'Repeat';
+  SPPGApptFreqNone = 'Does not repeat';
+  SPPGApptFreqDaily = 'Daily';
+  SPPGApptFreqWeekly = 'Weekly';
+  SPPGApptFreqMonthly = 'Monthly';
+  SPPGApptFreqYearly = 'Yearly';
+  SPPGApptFreqCustom = 'Custom (unchanged)';
+  SPPGApptEvery = 'every';
+  SPPGApptUnitDays = 'day(s)';
+  SPPGApptUnitWeeks = 'week(s)';
+  SPPGApptUnitMonths = 'month(s)';
+  SPPGApptUnitYears = 'year(s)';
+  SPPGApptEndsNever = 'Never ends';
+  SPPGApptEndsAfter = 'Ends after';
+  SPPGApptEndsOn = 'Ends on';
+  SPPGApptEndBeforeStart = 'The end must not be before the start.';
+
 implementation
 
 end.

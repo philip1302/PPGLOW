@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 218;
+  PPGLangDeCount = 253;
 
 implementation
 
@@ -458,6 +458,76 @@ begin
     'Abbrechen');
   PPGAddTranslation(PPGLangDeCode, @SPPGBusyCancelling,
     'Wird abgebrochen '#$2026);
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesTitle,
+    'Serientermin');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesChange,
+    #$201E'%s'#$201C' geh'#$00F6'rt zu einer Serie');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesDelete,
+    #$201E'%s'#$201C' l'#$00F6'schen?');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesText,
+    'Nur dieses Vorkommen oder die ganze Serie?');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesOne,
+    'Nur dieses Vorkommen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesOneHint,
+    'Die '#$00FC'brigen Termine der Serie bleiben, wie sie sind.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesAll,
+    'Die ganze Serie');
+  PPGAddTranslation(PPGLangDeCode, @SPPGPlannerSeriesAllHint,
+    'Alle Termine der Serie '#$00E4'ndern sich.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptNew,
+    'Neuer Termin');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptTitle,
+    'Termin');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptSubject,
+    'Betreff');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptLocation,
+    'Ort');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptStart,
+    'Beginn');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptEnd,
+    'Ende');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptAllDay,
+    'Ganzt'#$00E4'gig');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptCategory,
+    'Kategorie');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptNoCategory,
+    '(Keine)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptResource,
+    'Ressource');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptNotes,
+    'Notiz');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptRepeat,
+    'Wiederholung');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptFreqNone,
+    'Keine');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptFreqDaily,
+    'T'#$00E4'glich');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptFreqWeekly,
+    'W'#$00F6'chentlich');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptFreqMonthly,
+    'Monatlich');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptFreqYearly,
+    'J'#$00E4'hrlich');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptFreqCustom,
+    'Benutzerdefiniert (unver'#$00E4'ndert)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptEvery,
+    'alle');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptUnitDays,
+    'Tag(e)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptUnitWeeks,
+    'Woche(n)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptUnitMonths,
+    'Monat(e)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptUnitYears,
+    'Jahr(e)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptEndsNever,
+    'Endet nie');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptEndsAfter,
+    'Endet nach');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptEndsOn,
+    'Endet am');
+  PPGAddTranslation(PPGLangDeCode, @SPPGApptEndBeforeStart,
+    'Das Ende darf nicht vor dem Beginn liegen.');
 end;
 
 initialization

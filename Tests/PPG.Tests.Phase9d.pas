@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..217] of PResStringRec = (
+  AllTexts: array[0..252] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -114,7 +114,42 @@ const
     @SPPGValGoToError,
     @SPPGBusyWait,
     @SPPGBusyCancel,
-    @SPPGBusyCancelling);
+    @SPPGBusyCancelling,
+    @SPPGPlannerSeriesTitle,
+    @SPPGPlannerSeriesChange,
+    @SPPGPlannerSeriesDelete,
+    @SPPGPlannerSeriesText,
+    @SPPGPlannerSeriesOne,
+    @SPPGPlannerSeriesOneHint,
+    @SPPGPlannerSeriesAll,
+    @SPPGPlannerSeriesAllHint,
+    @SPPGApptNew,
+    @SPPGApptTitle,
+    @SPPGApptSubject,
+    @SPPGApptLocation,
+    @SPPGApptStart,
+    @SPPGApptEnd,
+    @SPPGApptAllDay,
+    @SPPGApptCategory,
+    @SPPGApptNoCategory,
+    @SPPGApptResource,
+    @SPPGApptNotes,
+    @SPPGApptRepeat,
+    @SPPGApptFreqNone,
+    @SPPGApptFreqDaily,
+    @SPPGApptFreqWeekly,
+    @SPPGApptFreqMonthly,
+    @SPPGApptFreqYearly,
+    @SPPGApptFreqCustom,
+    @SPPGApptEvery,
+    @SPPGApptUnitDays,
+    @SPPGApptUnitWeeks,
+    @SPPGApptUnitMonths,
+    @SPPGApptUnitYears,
+    @SPPGApptEndsNever,
+    @SPPGApptEndsAfter,
+    @SPPGApptEndsOn,
+    @SPPGApptEndBeforeStart);
 
 var
   GChanges: Integer;

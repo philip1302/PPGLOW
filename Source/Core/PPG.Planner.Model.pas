@@ -75,6 +75,10 @@ type
     procedure AddException(OccurrenceStart: TDateTime);
     /// Ausnahmen (EXDATE) in Anzeige-Zeit.
     function ExceptionDates: TArray<TDateTime>;
+    /// Ganze Serie verschieben (Delta in Tagen, Anzeige-Zeit) und Dauer setzen.
+    /// Ausnahmen wandern mit; bei einem Tageswechsel auch die Wochentage
+    /// (BYDAY) und Monatstage (BYMONTHDAY > 0) der Regel.
+    procedure ShiftSeries(Delta, NewDuration: TDateTime);
   published
     /// Eindeutige Nummer (vergibt die Collection).
     property Id: Integer read FId write SetId default 0;
@@ -449,6 +453,46 @@ begin
     SetExDates(S)
   else
     SetExDates(FExDates + ',' + S);
+end;
+
+procedure TPPGAppointment.ShiftSeries(Delta, NewDuration: TDateTime);
+var
+  Ex: TArray<TDateTime>;
+  R: TPPGRecurrence;
+  Days, I, W: Integer;
+  NewStart: TDateTime;
+begin
+  Ex := ExceptionDates;
+  Days := Round(Int(Start + Delta) - Int(Start));
+  NewStart := Start + Delta;
+  if Owner <> nil then
+    Owner.BeginUpdate;
+  try
+    Start := NewStart;
+    Finish := NewStart + NewDuration;
+    // Ausnahmen gelten fuer die verschobenen Vorkommen weiter
+    SetExDates('');
+    for I := 0 to High(Ex) do
+      AddException(Ex[I] + Delta);
+    if (Days <> 0) and IsRecurring then
+    begin
+      R := Rule;
+      for I := 0 to High(R.ByDay) do
+      begin
+        W := (R.ByDay[I].Weekday - 1 + Days) mod 7;
+        if W < 0 then
+          Inc(W, 7);
+        R.ByDay[I].Weekday := W + 1;
+      end;
+      for I := 0 to High(R.ByMonthDay) do
+        if R.ByMonthDay[I] > 0 then
+          R.ByMonthDay[I] := ((R.ByMonthDay[I] - 1 + Days) mod 31 + 31) mod 31 + 1;
+      SetRecurrence(R.ToString);
+    end;
+  finally
+    if Owner <> nil then
+      Owner.EndUpdate;
+  end;
 end;
 
 { TPPGAppointments }

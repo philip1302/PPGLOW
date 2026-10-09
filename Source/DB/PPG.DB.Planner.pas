@@ -195,6 +195,9 @@ type
     property OnCustomDrawAppointment;
     property OnSelectionChange;
     property OnRangeChange;
+    property SeriesEditMode;
+    property DefaultEditor;
+    property OnSeriesEdit;
     property OnScroll;
     property OnEnter;
     property OnExit;
