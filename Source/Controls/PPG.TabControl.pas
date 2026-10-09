@@ -401,7 +401,7 @@ begin
   if IsRectEmpty(R) or not HandleAllocated then
     Invalidate
   else
-    Winapi.Windows.InvalidateRect(Handle, @R, False);
+    InvalidateArea(R);
 end;
 
 function TPPGCustomTabs.IsBottom: Boolean;

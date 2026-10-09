@@ -4600,8 +4600,7 @@ begin
   if (VRow >= VFixedRows) and (R.Top < GV.Top + FixedHeight) then
     R.Top := GV.Top + FixedHeight;
   IntersectRect(R, R, GV);
-  if not IsRectEmpty(R) then
-    InvalidateRect(Handle, @R, False);
+  InvalidateArea(R);
 end;
 
 procedure TPPGCustomGrid.PrepareStyleColors;
@@ -5626,6 +5625,8 @@ var
   CX: Integer;
   CY: Int64;
   GV: TRect;
+  M, CR0, CR1: Integer;
+  VC, R: TRect;
 
   function Mirror(const R: TRect): TRect;
   begin
@@ -5634,6 +5635,14 @@ var
       Result := Rect(GV.Left + GV.Right - R.Right, R.Top, GV.Left + GV.Right - R.Left, R.Bottom)
     else
       Result := R;
+  end;
+
+  procedure PaintRegionIn(ColFrom, ColTo, RowFrom, RowTo: Integer; const AClip: TRect;
+    FixedArea: Boolean);
+  begin
+    // Bereich ausserhalb des neu zu zeichnenden Teils: gar nicht anfassen
+    if NeedsPaint(AClip, M) then
+      PaintRegion(ACanvas, ColFrom, ColTo, RowFrom, RowTo, AClip, FixedArea);
   end;
 
 begin
@@ -5696,28 +5705,51 @@ begin
       Inc(R1);
     if R0 >= FLayout.Count then
       R1 := R0 - 1; // keine Datenzeilen sichtbar
+    // Audit 8E: nur Zeilen im neu zu zeichnenden Bereich (Rand M fuer den
+    // Fokusrahmen). Nicht bei verbundenen Zellen (Rahmen und Text haengen am
+    // Ursprung, der ausserhalb liegen kann) und nicht beim Verlauf der festen
+    // Spalte (er reicht ueber die ganze Hoehe des Bereichs).
+    M := PPGScale(4, ScalePPI);
+    VC := ViewportClip;
+    CR0 := R0;
+    CR1 := R1;
+    if (R0 <= R1) and not MergesActive then
+    begin
+      while (CR0 < CR1) and (RawCellRect(0, CR0).Bottom <= VC.Top - M) do
+        Inc(CR0);
+      while (CR1 > CR0) and (RawCellRect(0, CR1).Top >= VC.Bottom + M) do
+        Dec(CR1);
+    end;
     // Bereiche: Daten, Kopfzeilen, Kopfspalten, rechts fixierte, Ecke
-    PaintRegion(ACanvas, C0, C1, R0, R1,
+    // (ganz uebersprungen, wenn sie den Bereich nicht beruehren)
+    PaintRegionIn(C0, C1, CR0, CR1,
       Mirror(Rect(GV.Left + FW, GV.Top + FH, GV.Left + MidRight, GV.Bottom)), False);
-    PaintRegion(ACanvas, C0, C1, 0, VFixedRows - 1,
+    PaintRegionIn(C0, C1, 0, VFixedRows - 1,
       Mirror(Rect(GV.Left + FW, GV.Top, GV.Left + MidRight, GV.Top + FH)), True);
-    PaintRegion(ACanvas, 0, FFixedCols - 1, R0, R1,
-      Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FW, GV.Bottom)), True);
+    if FPaint.Gradient then
+      PaintRegionIn(0, FFixedCols - 1, R0, R1,
+        Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FW, GV.Bottom)), True)
+    else
+      PaintRegionIn(0, FFixedCols - 1, CR0, CR1,
+        Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FW, GV.Bottom)), True);
     if FR < VColCount then
     begin
-      PaintRegion(ACanvas, FR, VColCount - 1, R0, R1,
+      PaintRegionIn(FR, VColCount - 1, CR0, CR1,
         Mirror(Rect(GV.Left + MidRight, GV.Top + FH, GV.Right, GV.Bottom)), False);
-      PaintRegion(ACanvas, FR, VColCount - 1, 0, VFixedRows - 1,
+      PaintRegionIn(FR, VColCount - 1, 0, VFixedRows - 1,
         Mirror(Rect(GV.Left + MidRight, GV.Top, GV.Right, GV.Top + FH)), True);
     end;
-    PaintRegion(ACanvas, 0, FFixedCols - 1, 0, VFixedRows - 1,
+    PaintRegionIn(0, FFixedCols - 1, 0, VFixedRows - 1,
       Mirror(Rect(GV.Left, GV.Top, GV.Left + FW, GV.Top + FH)), True);
-    if BH > 0 then
-      PaintBands(ACanvas, Rect(View.Left, View.Top + PH, View.Right, View.Top + PH + BH));
-    if PH > 0 then
-      PaintGroupPanel(ACanvas, Rect(View.Left, View.Top, View.Right, View.Top + PH));
-    if GV.Bottom < View.Bottom then
-      PaintFooter(ACanvas, Rect(View.Left, GV.Bottom, View.Right, View.Bottom));
+    R := Rect(View.Left, View.Top + PH, View.Right, View.Top + PH + BH);
+    if (BH > 0) and NeedsPaint(R, M) then
+      PaintBands(ACanvas, R);
+    R := Rect(View.Left, View.Top, View.Right, View.Top + PH);
+    if (PH > 0) and NeedsPaint(R, M) then
+      PaintGroupPanel(ACanvas, R);
+    R := Rect(View.Left, GV.Bottom, View.Right, View.Bottom);
+    if (GV.Bottom < View.Bottom) and NeedsPaint(R, M) then
+      PaintFooter(ACanvas, R);
     // Einfuegemarke beim Verschieben einer Spalte
     if FColDragging and not FDropToGroup and (FColDropAt >= 0) and HandleAllocated and
       (GetCapture = Handle) then

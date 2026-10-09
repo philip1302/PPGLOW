@@ -2662,7 +2662,7 @@ begin
   if IsRectEmpty(R) then
     Invalidate
   else
-    Winapi.Windows.InvalidateRect(Handle, @R, False);
+    InvalidateArea(R);
 end;
 
 function TPPGCustomRibbon.HitScreenRect(const Hit: TPPGRibbonHit): TRect;
@@ -3333,7 +3333,15 @@ begin
     Exit;
   end;
   for I := 0 to High(P.Items) do
-    PaintItem(ACanvas, View, G, I, C);
+  begin
+    // Audit 8E (8a #5): Texte und Bilder eines Eintrags in einem GDI+-Block
+    PPGBeginBatch(ACanvas);
+    try
+      PaintItem(ACanvas, View, G, I, C);
+    finally
+      PPGEndBatch(ACanvas);
+    end;
+  end;
   // Beschriftung und Startknopf fuer den Dialog
   TextR := P.CaptionRect;
   if not IsRectEmpty(P.LauncherRect) then
