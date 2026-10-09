@@ -4476,7 +4476,7 @@ begin
       R := PieceRect(I);
       InflateRect(R, S(3), S(3));
       if not IsRectEmpty(R) then
-        InvalidateRect(Handle, @R, False);
+        Winapi.Windows.InvalidateRect(Handle, @R, False);
     end;
 end;
 

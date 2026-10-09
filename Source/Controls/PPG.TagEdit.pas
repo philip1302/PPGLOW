@@ -25,7 +25,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.SysUtils,
-  System.Variants, Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls,
+  System.Variants, System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls,
   PPG.Types, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base, PPG.Controls.Field,
   PPG.Controls.DropDown, PPG.Popup, PPG.RowPopup;
 
@@ -74,9 +74,13 @@ type
     FLayoutWidth: Integer;
     FLayoutValid: Boolean;
     FInChange: Boolean;
+    // Audit 8D: Textbreite je Chip-Text, gueltig fuer FChipKey (Schrift, PPI)
+    FChipW: TDictionary<string, Integer>;
+    FChipKey: string;
     FOnTagAdding: TPPGTagAddingEvent;
     FOnTagRemoved: TPPGTagEvent;
     FOnTagClick: TPPGTagEvent;
+    procedure CheckChipCache;
     procedure SetDelimiter(const Value: Char);
     procedure ReadDelimitersEmpty(Reader: TReader);
     procedure WriteDelimitersEmpty(Writer: TWriter);
@@ -241,7 +245,7 @@ type
 implementation
 
 uses
-  System.Math, Winapi.oleacc, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.Lang,
+  System.Math, System.UITypes, Winapi.oleacc, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.Lang,
   PPG.Consts, PPG.Exceptions, PPG.Render.Gdi, PPG.Render.Registry;
 
 const
@@ -369,6 +373,7 @@ end;
 
 destructor TPPGTagEdit.Destroy;
 begin
+  FreeAndNil(FChipW);
   FreeAndNil(FTags);
   FreeAndNil(FSuggestions);
   inherited Destroy;
@@ -643,11 +648,35 @@ begin
   Result := PPGScale(4, ScalePPI);
 end;
 
-function TPPGTagEdit.ChipWidth(const S: string): Integer;
+procedure TPPGTagEdit.CheckChipCache;
+var
+  Key: string;
 begin
-  // Text + Abstand + Kreuz
-  Result := PPGMeasureTextNoCanvas(S, Font, 0, False).cx + PPGScale(10, ScalePPI) +
-    ChipHeight;
+  // Gemessene Breiten gelten fuer Schrift und PPI; danach neu messen
+  Key := Font.Name + '|' + IntToStr(Font.Height) + '|' + IntToStr(Byte(Font.Style)) + '|' +
+    IntToStr(Font.Charset) + '|' + IntToStr(ScalePPI);
+  if FChipW = nil then
+    FChipW := TDictionary<string, Integer>.Create;
+  if (Key <> FChipKey) or (FChipW.Count > 4 * FTags.Count + 64) then
+  begin
+    FChipW.Clear;
+    FChipKey := Key;
+  end;
+end;
+
+function TPPGTagEdit.ChipWidth(const S: string): Integer;
+var
+  W: Integer;
+begin
+  // Text + Abstand + Kreuz; Textbreite gemerkt (Audit 8D: vorher je Layout
+  // jeder Chip mit eigenem DC)
+  if (FChipW = nil) or not FChipW.TryGetValue(S, W) then
+  begin
+    W := PPGMeasureTextNoCanvas(S, Font, 0, False).cx;
+    if FChipW <> nil then
+      FChipW.AddOrSetValue(S, W);
+  end;
+  Result := W + PPGScale(10, ScalePPI) + ChipHeight;
 end;
 
 function TPPGTagEdit.CrossRect(const Chip: TRect): TRect;
@@ -675,6 +704,7 @@ begin
   H := ChipHeight;
   Gap := ChipGap;
   MinW := PPGScale(MinInnerWidth, ScalePPI);
+  CheckChipCache;
   SetLength(FChipRects, FTags.Count);
   X := Area.Left;
   Y := Area.Top;

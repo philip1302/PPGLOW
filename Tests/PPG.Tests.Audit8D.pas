@@ -72,6 +72,11 @@ type
     procedure ChartPiePointPosUsesSums;
     procedure PlannerHoverRepaintsItemOnly;
     procedure PlannerDragRepaintsOnlyOnGhostChange;
+    procedure KanbanChangeMeasuresOneCard;
+    procedure KanbanHoverRepaintsCardOnly;
+    procedure RibbonEnabledKeepsLayout;
+    procedure PageControlBracketBuildsOnce;
+    procedure TabStripHoverRepaintsTabOnly;
   end;
 
   TAudit8DDBTests = class(TControlTestCase)
@@ -1316,6 +1321,168 @@ begin
     U := UpdateRectOf(P);
     CheckFalse(IsRectEmpty(U), 'Neuzeichnen bei neuem Schatten');
     P.Perform(WM_LBUTTONUP, 0, MouseLParam(X, Y + 120));
+  finally
+    FForm.Hide;
+  end;
+end;
+
+type
+  TKanbanAccess8D = class(TPPGKanban);
+  TRibbonAccess8D = class(TPPGRibbon);
+  TPageControlAccess8D = class(TPPGPageControl);
+
+procedure TAudit8DCountTests.KanbanChangeMeasuresOneCard;
+var
+  K: TPPGKanban;
+  B: TBitmap;
+  I, N: Integer;
+  Col: array[0..2] of TPPGKanbanColumn;
+begin
+  K := TPPGKanban.Create(FForm);
+  K.Parent := FForm;
+  K.SetBounds(0, 0, 900, 600);
+  for I := 0 to 2 do
+    Col[I] := K.Columns.AddColumn('Spalte ' + IntToStr(I));
+  for I := 0 to 59 do
+    K.Cards.AddCard(Col[I mod 3].Id, 'Aufgabe ' + IntToStr(I), 'Text');
+  B := RenderToBitmap(K);
+  B.Free;
+  N := TKanbanAccess8D(K).FMeasureCount;
+  CheckEquals(60, N, 'jede Karte einmal');
+  K.Cards[7].Title := 'Ein anderer Titel';
+  K.EnsureLayout;
+  CheckEquals(N + 1, TKanbanAccess8D(K).FMeasureCount, 'nur die geaenderte Karte');
+  K.FilterText := '1';
+  K.EnsureLayout;
+  K.FilterText := '';
+  K.EnsureLayout;
+  CheckEquals(N + 1, TKanbanAccess8D(K).FMeasureCount, 'Filter misst nicht neu');
+  K.Cards[3].Index := 40;
+  K.EnsureLayout;
+  CheckEquals(N + 1, TKanbanAccess8D(K).FMeasureCount, 'Umsortieren misst nicht neu');
+  K.ColumnWidth := K.ColumnWidth + 20;
+  K.EnsureLayout;
+  CheckEquals(N + 61, TKanbanAccess8D(K).FMeasureCount, 'neue Breite: alle neu');
+  K.Font.Size := K.Font.Size + 1;
+  K.EnsureLayout;
+  CheckEquals(N + 121, TKanbanAccess8D(K).FMeasureCount, 'neue Schrift: alle neu');
+end;
+
+procedure TAudit8DCountTests.KanbanHoverRepaintsCardOnly;
+var
+  K: TPPGKanban;
+  I: Integer;
+  R, U: TRect;
+  Col: TPPGKanbanColumn;
+begin
+  FForm.SetBounds(0, 0, 1000, 700);
+  FForm.Show;
+  try
+    K := TPPGKanban.Create(FForm);
+    K.Parent := FForm;
+    K.SetBounds(0, 0, 900, 600);
+    Col := K.Columns.AddColumn('Offen');
+    K.Columns.AddColumn('Fertig');
+    for I := 0 to 5 do
+      K.Cards.AddCard(Col.Id, 'Aufgabe ' + IntToStr(I), '');
+    // Erste Bewegung: die Basis zeichnet beim Eintritt der Maus alles neu
+    K.Perform(WM_MOUSEMOVE, 0, MouseLParam(K.Width - 20, K.Height - 20));
+    K.Update;
+    ValidateRect(K.Handle, nil);
+    R := K.CardRect(0, 0, 2);
+    K.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+    U := UpdateRectOf(K);
+    CheckFalse(IsRectEmpty(U), 'Karte neu');
+    CheckTrue(U.Bottom - U.Top < (R.Bottom - R.Top) * 2, 'nur die Karte');
+    CheckTrue(U.Right - U.Left < K.Width div 2, 'nur die Spalte');
+  finally
+    FForm.Hide;
+  end;
+end;
+
+procedure TAudit8DCountTests.RibbonEnabledKeepsLayout;
+var
+  R: TPPGRibbon;
+  G: TPPGRibbonGroup;
+  It: TPPGRibbonItem;
+  B: TBitmap;
+  I, N: Integer;
+begin
+  R := TPPGRibbon.Create(FForm);
+  R.Parent := FForm;
+  R.Width := 900;
+  G := R.Tabs.AddTab('Start').Groups.AddGroup('Gruppe');
+  It := G.Items.AddButton('Befehl', $E77F, rsLarge);
+  G.Items.AddCheck('Fett', $E8DD, rsSmall);
+  B := RenderToBitmap(R);
+  B.Free;
+  N := TRibbonAccess8D(R).FLayoutCount;
+  for I := 0 to 19 do
+  begin
+    It.Enabled := Odd(I);
+    G.Items[1].Down := not Odd(I);
+    B := RenderToBitmap(R);
+    B.Free;
+  end;
+  CheckEquals(N, TRibbonAccess8D(R).FLayoutCount, 'Enabled/Down ohne neues Layout');
+  It.Caption := 'Anderer Befehl';
+  B := RenderToBitmap(R);
+  B.Free;
+  CheckEquals(N + 1, TRibbonAccess8D(R).FLayoutCount, 'Text: neues Layout');
+end;
+
+procedure TAudit8DCountTests.PageControlBracketBuildsOnce;
+var
+  PC: TPPGPageControl;
+  S: TPPGTabSheet;
+  I, N: Integer;
+begin
+  PC := TPPGPageControl.Create(FForm);
+  PC.Parent := FForm;
+  PC.SetBounds(0, 0, 380, 200);
+  N := TPageControlAccess8D(PC).FTabsBuildCount;
+  PC.BeginUpdate;
+  try
+    for I := 0 to 49 do
+    begin
+      S := TPPGTabSheet.Create(PC);
+      S.Caption := 'Seite ' + IntToStr(I);
+      S.PageControl := PC;
+    end;
+    PC.Pages[5].PageIndex := 40;
+    PC.ActivePageIndex := 45;
+    CheckEquals(N, TPageControlAccess8D(PC).FTabsBuildCount, 'kein Neuaufbau in der Klammer');
+    CheckEquals('Seite 45', PC.ActivePage.Caption, 'ActivePage sofort');
+  finally
+    PC.EndUpdate;
+  end;
+  CheckEquals(N + 1, TPageControlAccess8D(PC).FTabsBuildCount, 'ein Neuaufbau');
+  CheckEquals(PC.ActivePageIndex, PC.Strip.Tab(PC.Strip.Selected).Index, 'Leiste waehlt die Seite');
+  CheckFalse(IsRectEmpty(PC.TabRect(PC.ActivePageIndex)), 'aktiver Reiter sichtbar');
+end;
+
+procedure TAudit8DCountTests.TabStripHoverRepaintsTabOnly;
+var
+  T: TPPGTabControl;
+  I: Integer;
+  R, U: TRect;
+begin
+  FForm.SetBounds(0, 0, 900, 400);
+  FForm.Show;
+  try
+    T := TPPGTabControl.Create(FForm);
+    T.Parent := FForm;
+    T.SetBounds(0, 0, 800, 200);
+    for I := 0 to 5 do
+      T.Tabs.Add('Reiter ' + IntToStr(I));
+    T.Perform(WM_MOUSEMOVE, 0, MouseLParam(T.Width - 10, T.Height - 10));
+    T.Update;
+    ValidateRect(T.Handle, nil);
+    R := T.TabRect(3);
+    T.Perform(WM_MOUSEMOVE, 0, MouseLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2));
+    U := UpdateRectOf(T);
+    CheckFalse(IsRectEmpty(U), 'Reiter neu');
+    CheckTrue(U.Right - U.Left < T.Width div 3, 'nur der Reiter');
   finally
     FForm.Hide;
   end;

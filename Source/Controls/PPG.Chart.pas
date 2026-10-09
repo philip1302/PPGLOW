@@ -1508,10 +1508,11 @@ begin
     Exit;
   A := TooltipBox(OldPos, FTipW, FTipH, ClientRect);
   B := TooltipBox(NewPos, FTipW, FTipH, ClientRect);
-  UnionRect(A, A, B);
+  A := Rect(System.Math.Min(A.Left, B.Left), System.Math.Min(A.Top, B.Top),
+    System.Math.Max(A.Right, B.Right), System.Math.Max(A.Bottom, B.Bottom));
   // Rand fuer Schatten und Rahmen
   InflateRect(A, PPGScale(12, ScalePPI), PPGScale(12, ScalePPI));
-  InvalidateRect(Handle, @A, False);
+  Winapi.Windows.InvalidateRect(Handle, @A, False);
 end;
 
 procedure TPPGCustomChart.NotifyReorder;

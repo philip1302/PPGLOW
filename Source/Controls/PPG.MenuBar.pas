@@ -495,7 +495,7 @@ begin
     Exit;
   R := ItemRect(Index);
   if not IsRectEmpty(R) then
-    InvalidateRect(Handle, @R, False);
+    Winapi.Windows.InvalidateRect(Handle, @R, False);
 end;
 
 procedure TPPGCustomMenuBar.SetHot(Index: Integer);
