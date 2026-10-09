@@ -308,7 +308,7 @@ uses
   PPG.Lang,
   System.SysUtils, System.Math, Winapi.oleacc, Vcl.StdCtrls, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
-  PPG.Render.Registry, PPG.Markup, PPG.Render.Gdi;
+  PPG.Render.Registry, PPG.Markup.Parser, PPG.Render.Gdi;
 
 const
   MaxVariableRows = 200000;   // darueber nie einzeln vermessen

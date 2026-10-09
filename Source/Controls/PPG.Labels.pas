@@ -24,7 +24,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.StdCtrls, Vcl.ExtCtrls,
-  PPG.Types, PPG.Render.Intf, PPG.Markup, PPG.Accessibility, PPG.Controls.Base;
+  PPG.Types, PPG.Render.Intf, PPG.Markup, PPG.Markup.Parser, PPG.Accessibility, PPG.Controls.Base;
 
 type
   TPPGLabel = class(TCustomLabel)

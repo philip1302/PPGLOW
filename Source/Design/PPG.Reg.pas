@@ -281,6 +281,8 @@ begin
   try
     inherited SetValue(Value);
   except
+    // Grenze zur IDE (Objektinspektor): Fehler als Dialog zeigen, die IDE
+    // nicht mit einer Exception aus dem Property-Editor belasten
     on E: Exception do
       MessageDlg(E.Message, mtError, [mbOK], 0);
   end;
@@ -372,6 +374,7 @@ begin
     else if BaseVerb(Index - OwnVerbCount, V) then
       ExecuteBaseVerb(V);
   except
+    // Grenze zur IDE (Verb im Kontextmenue): Fehler als Dialog
     ShowError(ExceptObject);
   end;
 end;
@@ -783,6 +786,7 @@ begin
     try
       EditCollection;
     except
+      // Grenze zur IDE (Doppelklick im Designer): Fehler als Dialog
       ShowError(ExceptObject);
     end;
   end
@@ -1000,6 +1004,7 @@ begin
   try
     ExecuteOwnVerb(0);
   except
+    // Grenze zur IDE (Doppelklick im Designer): Fehler als Dialog
     on E: Exception do
       ShowError(E);
   end;

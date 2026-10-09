@@ -467,7 +467,7 @@ begin
     if (FClients.IndexOf(Snapshot[I]) >= 0) and
       Supports(Snapshot[I], IPPGStyleClient, Client) then
     begin
-      // Jeder Client einzeln abgesichert: ein fehlerhafter Client darf die
+      // Grenze: jeder Client einzeln abgesichert, ein fehlerhafter Client darf die
       // Aenderung fuer die uebrigen nicht abbrechen.
       try
         try

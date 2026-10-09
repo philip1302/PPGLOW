@@ -11,7 +11,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.StdCtrls,
   PPG.Types, PPG.Consts, PPG.Exceptions, PPG.Render.Intf, PPG.Render.Registry,
   PPG.Render.Gdi, PPG.Accessibility, PPG.Controls.Base,
-  PPG.RowLayout, PPG.Selection, PPG.Items, PPG.Markup, PPG.Controls.Scroll,
+  PPG.RowLayout, PPG.Selection, PPG.Items, PPG.Markup, PPG.Markup.Parser, PPG.Controls.Scroll,
   PPG.Controls.Container, PPG.Panel, PPG.GroupBox, PPG.CheckBox, PPG.PageControl,
   PPG.Tests.Controls, PPG.Tests.Gaps, PPG.Tests.Phase4a;
 

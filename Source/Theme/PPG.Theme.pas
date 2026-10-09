@@ -443,6 +443,7 @@ begin
       try
         ApplyToForm(Form);
       except
+        // Grenze: je Formular (siehe oben)
         on E: Exception do
           TPPGErrorHandler.HandleCallbackError(Form, E, 'Theme.ApplyToForm');
       end;
@@ -458,6 +459,7 @@ begin
           try
             TControl(Copy[I]).Perform(PPGThemeChangedMessage, 0, 0);
           except
+            // Grenze: je Control einzeln (siehe oben)
             on E: Exception do
               // Sender nur, solange das Control noch angemeldet ist
               if GClients.IndexOf(Copy[I]) >= 0 then

@@ -279,7 +279,7 @@ implementation
 uses
   PPG.Lang,
   System.SysUtils, System.StrUtils, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.Render.Registry, PPG.Markup;
+  PPG.Consts, PPG.Appearance, PPG.Render.Registry, PPG.Markup.Parser;
 
 type
   /// Reiche Eintraege der Combo fuer die Liste (Indizes wie Items).

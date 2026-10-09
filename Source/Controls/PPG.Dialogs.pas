@@ -284,7 +284,7 @@ uses
   PPG.Lang,
   System.Math, Vcl.Clipbrd, Vcl.Themes, Vcl.Menus, Vcl.ComCtrls, Winapi.oleacc,
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Exceptions, PPG.ErrorHandler,
-  PPG.Render.Registry, PPG.Render.Gdi, PPG.IconFont, PPG.Theme, PPG.Markup,
+  PPG.Render.Registry, PPG.Render.Gdi, PPG.IconFont, PPG.Theme, PPG.Markup, PPG.Markup.Parser,
   PPG.Accessibility, PPG.VclStyles, PPG.Hints;
 
 const

@@ -48,7 +48,7 @@ uses
   Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.StdCtrls, Vcl.Forms, Vcl.Menus,
   PPG.Types, PPG.RowLayout, PPG.Render.Intf, PPG.Accessibility, PPG.UIA,
   PPG.Controls.Base, PPG.Controls.Scroll,
-  PPG.Grid.Columns, PPG.Grid.View, PPG.Grid.Data, PPG.Grid.Paint, PPG.Grid.Edit, PPG.Markup,
+  PPG.Grid.Columns, PPG.Grid.View, PPG.Grid.Data, PPG.Grid.Paint, PPG.Grid.Edit, PPG.Markup, PPG.Markup.Parser,
   PPG.Grid.CellKinds, PPG.Grid.Styles, PPG.ElementStyle;
 
 const

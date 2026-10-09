@@ -323,6 +323,12 @@ begin
     raise EPPGError.CreateFmt(PPGStr(@SPPGPrinterNotFound), [Name]);
 end;
 
+/// Eigener Import: Winapi.WinSpool von XE2 kennt DocumentProperties nur mit
+/// const/var TDeviceMode (kein nil moeglich); hier mit PDeviceMode wie in neueren Versionen.
+function PPGDocumentProperties(hWnd: HWND; hPrinter: THandle; pDeviceName: PChar;
+  pDevModeOutput, pDevModeInput: PDeviceMode; fMode: DWORD): Longint; stdcall;
+  external 'winspool.drv' name 'DocumentPropertiesW';
+
 /// Ueber die Windows-API statt TPrinter.GetPrinter (dessen PChar-Fassung ist
 /// veraltet, die string-Fassung gibt es in XE2 noch nicht).
 function PPGCreatePrinterDC(const Name: string; Landscape, InfoOnly: Boolean): HDC;
@@ -334,18 +340,18 @@ begin
   DM := nil;
   if OpenPrinter(PChar(Name), HPrn, nil) then
   try
-    Size := DocumentProperties(0, HPrn, PChar(Name), nil, nil, 0);
+    Size := PPGDocumentProperties(0, HPrn, PChar(Name), nil, nil, 0);
     if Size > 0 then
     begin
       GetMem(DM, Size);
-      if DocumentProperties(0, HPrn, PChar(Name), DM, nil, DM_OUT_BUFFER) = IDOK then
+      if PPGDocumentProperties(0, HPrn, PChar(Name), DM, nil, DM_OUT_BUFFER) = IDOK then
       begin
         if Landscape then
           DM^.dmOrientation := DMORIENT_LANDSCAPE
         else
           DM^.dmOrientation := DMORIENT_PORTRAIT;
         DM^.dmFields := DM^.dmFields or DM_ORIENTATION;
-        DocumentProperties(0, HPrn, PChar(Name), DM, DM, DM_IN_BUFFER or DM_OUT_BUFFER);
+        PPGDocumentProperties(0, HPrn, PChar(Name), DM, DM, DM_IN_BUFFER or DM_OUT_BUFFER);
       end
       else
       begin
@@ -551,7 +557,8 @@ begin
       DeleteDC(DC);
     end;
   except
-    // Druckersystem nicht verfuegbar: A4 bleibt (protokolliert)
+    // Grenze zum Druckersystem (Spooler, Treiber): nicht verfuegbar oder
+    // fehlerhaft -> A4 bleibt (protokolliert)
     on E: Exception do
       TPPGErrorHandler.LogWarning(Self, 'PrinterDevice: ' + E.Message);
   end;
