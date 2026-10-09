@@ -83,6 +83,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `TitleFont` | `TFont` |  | Wie TDBGrid.TitleFont: Schrift der Titelzeile. Ist ein Alias für Styles.Header.Font und wird nicht eigens gespeichert. |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen. |
 | `DefaultDrawing` | `Boolean` | `True` | False: Der Zelltext wird nicht gezeichnet (Hintergrund, Linien und Auswahl schon); den Inhalt zeichnet man in OnDrawCell selbst. |
+| `ToolTips` | `Boolean` | `True` | Wie TTreeView.ToolTips: Ein abgeschnittener Zelltext (auch im Spaltenkopf) erscheint ganz als Hinweis, solange die Maus auf der Zelle steht. Nicht bei Zellarten wie Haken oder Fortschritt; nur ohne eigenen Hint; braucht ShowHint = True. |
 
 ## Eigenschaften wie in der VCL
 

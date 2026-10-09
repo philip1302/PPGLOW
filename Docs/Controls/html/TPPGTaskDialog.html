@@ -45,6 +45,7 @@ if PPGTaskDialog1.Execute and (PPGTaskDialog1.ModalResult = 101) then
 <tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage des Dialogs (&#39;&#39; = Standard bzw. StyleManager).</td></tr>
 <tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle f&#252;r Preset und Farben des Dialogs.</td></tr>
 <tr><td><code>AllowMarkup</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Text, Fu&#223;zeile und Zusatztexte d&#252;rfen Mini-Markup enthalten (&lt;b&gt;, &lt;i&gt;, &lt;color=...&gt;).</td></tr>
+<tr><td><code>HighContrastSupport</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Im Windows-Hochkontrastmodus verwendet der Dialog mit allen Teilen (Schaltfl&#228;chen, Felder, Fu&#223;zeile) die Systemfarben.</td></tr>
 <tr><td><code>ContentControl</code></td><td><code>TControl</code></td><td></td><td>Eigenes Control, das im Dialog unter dem Text eingebettet wird (z. B. ein Panel mit Eingabefeldern). Es wird f&#252;r die Dauer des Dialogs umgeh&#228;ngt. Nutzung: <code>PPGTaskDialog1.ContentControl := pnlOptionen;</code></td></tr>
 </table>
 <h2>Eigenschaften wie in der VCL</h2>

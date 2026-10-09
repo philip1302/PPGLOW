@@ -30,6 +30,7 @@ Ein Satz Token-Farben für Hell oder Dunkel. Jede gesetzte Farbe (≠ clDefault)
 | `Warning` | `TColor` | `clDefault` | Signalfarbe Warnung. |
 | `Success` | `TColor` | `clDefault` | Signalfarbe Erfolg. |
 | `Paused` | `TColor` | `clDefault` | Farbe angehaltener Fortschritt (ProgressBar im Zustand Paused). |
+| `Link` | `TColor` | `clDefault` | Farbe von Links (Label-Markup, LinkLabel, Hinweise, InfoBar). Vorgabe: der Akzent, bei Bedarf so weit abgedunkelt bzw. im Dark Mode aufgehellt, dass er mindestens 4,5:1 gegen den Hintergrund erreicht. |
 
 ## Verwendet in
 

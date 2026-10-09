@@ -20,9 +20,10 @@ TPPGDatePicker - Datumsfeld mit Kalender-Popup (Phase 7b).
 
 - Basis TPPGCustomField: natives Edit fuer die Eingabe, Kalender-Button rechts, optional ein Kontrollkaestchen links (ShowCheckbox/Checked wie TDateTimePicker: ohne Haken gilt "kein Datum").
 - Eingabe: Ziffern und Datumstrenner; Oben/Unten aendern den Tag (Strg: Monat). Beim Verlassen bzw. Enter wird geprueft: gueltig = uebernehmen (OnChange), ungueltig = ValidationState pvsError, der Text bleibt zum Korrigieren stehen. Grenzen MinDate/MaxDate.
-- Popup: TPPGCalendar in einem Popup ohne Aktivierung. Das Feld behaelt den Fokus und leitet Pfeile, Bild, Pos1/Ende und Enter an den Kalender weiter. Klick ausserhalb (Maus-Hook des Threads, solange offen), Esc und Fokusverlust schliessen; Klick auf einen Tag uebernimmt.
+- Popup: TPPGCalendar in einem Popup ohne Aktivierung, auf der gemeinsamen Aufklapp-Basis TPPGCustomDropDownField (Audit 7a #3): das Feld behaelt Fokus und Maus (SetCapture) und reicht Maus, Pfeile, Bild, Pos1/Ende und Enter an den Kalender weiter. Klick ausserhalb, Esc und Fokusverlust schliessen ohne Uebernahme; Klick auf einen Tag, Enter, F4 und Alt+Pfeil uebernehmen.
 - DFM-nah zu TDateTimePicker: Date, Time, MinDate, MaxDate, ShowCheckbox, Checked, DateFormat, Format, CalAlignment, Kind, DateMode, ParseInput.
-- Kind: dtkDate (Datum mit Kalender), dtkTime (Uhrzeit, Auf/Ab-Knoepfe, Oben/Unten = Minute, Strg = Stunde), dtkDateTime (Datum und Uhrzeit).
+- Kind: dtkDate (Datum mit Kalender), dtkTime (Uhrzeit, Auf/Ab-Knoepfe), dtkDateTime (Datum und Uhrzeit). Oben/Unten, Auf/Ab und das Rad aendern in der Uhrzeit den Teil unter der Einfuegemarke (Stunde, Minute, Sekunde, AM/PM; Strg = Stunde, wie der TimePicker), im Datum den Tag (Strg: Monat). Ohne Fokus (Text im Anzeigeformat) bleibt es bei Minute bzw. Tag.
+- Das Rad aendert den Wert nur mit Fokus (Audit 7b).
 - DateMode = dmUpDown: Auf/Ab-Knoepfe statt Kalender (Tag, Strg = Monat).
 - ParseInput + OnUserInput: eigene Auswertung der Eingabe (wie TDateTimePicker.OnUserInput), z. B. "morgen" oder "+3".
 - Code (Date := ...) loest kein OnChange aus.

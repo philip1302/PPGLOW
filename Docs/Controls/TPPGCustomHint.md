@@ -52,6 +52,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle; gesetzt kommt das Preset vom Manager. |
 | `AllowMarkup` | `Boolean` | `False` | True: Titel und Beschreibung dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). |
 | `MaxWidth` | `Integer` | `360` | Größte Breite des Hint-Fensters in logischen Pixeln (80..2000); längerer Text bricht um. |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus erscheint dieser Hinweis in den Systemfarben für Tooltips. |
 
 ## Eigenschaften wie in der VCL
 

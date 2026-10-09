@@ -33,6 +33,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `AllowMarkup` | `Boolean` | `False` | True: Caption darf Mini-Markup enthalten (fett, kursiv, Farbe, Bilder). Links werden nur dargestellt; klickbare Links bietet TPPGLinkLabel. Nutzung: `Label1.AllowMarkup := True; Label1.Caption := 'Summe: <b>42,00 €</b>';` |
 | `Secondary` | `Boolean` | `False` | True: dezente Textfarbe (TextSecondary aus dem Theme), z. B. für Hinweise und Beschreibungen; folgt dem Dark Mode. |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus zeichnet das Label Text und Links in den Systemfarben (wie alle PPGlow-Controls). |
 
 ## Eigenschaften wie in der VCL
 

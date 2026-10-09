@@ -55,6 +55,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ShowTitle` | `Boolean` | `True` | True: Besteht ein Hint aus Titel und Text, getrennt durch einen senkrechten Strich (wie bei der VCL), erscheint der Titel fett und der Text darunter; False: nur der kurze Teil wie bei der VCL. Nutzung: Hint-Text im Format der VCL: kurzer Titel, senkrechter Strich, ausführlicher Text. |
 | `AllowMarkup` | `Boolean` | `False` | True: Hint-Texte dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). |
 | `MaxWidth` | `Integer` | `360` | Größte Breite eines Hints in logischen Pixeln (80..2000); längerer Text bricht um. |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus erscheinen die Hinweise in den Systemfarben für Tooltips statt in den Farben des Presets. |
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGHintManager.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

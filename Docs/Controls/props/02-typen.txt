@@ -81,6 +81,7 @@ TPPGTokenColorSet.Accent = Hauptakzent: Fokus, Auswahl, Fortschritt, eingeschalt
 TPPGTokenColorSet.AccentHover = Akzent unter der Maus (z. B. Akzent-Button bei Hover).
 TPPGTokenColorSet.AccentPressed = Akzent beim Drücken.
 TPPGTokenColorSet.OnAccent = Text- und Symbolfarbe auf Akzentflächen (muss genug Kontrast zum Akzent haben).
+TPPGTokenColorSet.Link = Farbe von Links (Label-Markup, LinkLabel, Hinweise, InfoBar). Vorgabe: der Akzent, bei Bedarf so weit abgedunkelt bzw. im Dark Mode aufgehellt, dass er mindestens 4,5:1 gegen den Hintergrund erreicht.
 TPPGTokenColorSet.Background = Fensterhintergrund.
 TPPGTokenColorSet.Layer = Flächen von Containern, Seiten und Listen.
 TPPGTokenColorSet.Surface = Fläche eines Bedienelements in Ruhe (Button, Feld).

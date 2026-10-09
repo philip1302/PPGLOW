@@ -117,3 +117,41 @@ Dark/VCL-Style kommen über `EffectiveAppearance` automatisch mit; Hochkontrast 
 2. **Hochkontrast als Token-Satz (7e #7, groß, 45 Units):** jetzt mit, oder nur der Helfer und die Vereinheitlichung bei Labels/Hints/Dialogs?
 3. **Mausrad nur mit Fokus (7b):** Wert-Controls (SpinEdit, Calendar, TrackBar …) ändern den Wert nur noch mit Fokus, wie das Audit vorschlägt. Das weicht bei TTrackBar von der VCL ab (die reagiert auch ohne Fokus, wenn Windows „inaktive Fenster scrollen“ an hat).
 4. **Akzentrolle aus `Checked` (7g):** Badge/ProgressRing/Rating nehmen den Akzent aus `Appearance.Checked` statt `FocusColor`, wie die ProgressBar.
+
+Antworten: 1. ja (voller Umbau), 2. ja (ganzer Token-Satz), 3. ja, 4. ja (mit Ausnahme Classic, siehe Abweichungen).
+
+## Umsetzung (09.10.2026)
+
+Parallel in fünf Git-Worktrees (`PPGlow-a7a` … `a7e`, Zweige `claude/audit7-a` … `e`), IDE-Builds über eine gemeinsame Sperre nacheinander; danach in `claude/task-elizkl` zusammengeführt. Neue Testgruppen `Audit7A`–`Audit7D` (`Tests\PPG.Tests.Audit7*.pas`), der Testlauf kennt `/suite Name[,Name]`.
+
+Commits: e5ce41f, e55ddc6, 43011d9 (7a), eb8b4c1 (7b), da2777a (7c #1–#5, 7a #7, 7f), 25e170c (7c #6), 52765fc, a6cb545 (7d), f8433b6 (7e #1–#6), a528acb (7f #5), 245486e (7g), 3d2062f (7e #7), dazu Testkorrekturen.
+
+Ergebnis: **1635 Tests Win32 und Win64 grün** (vorher 1548), Leak-Lauf Win32/Win64 ohne Zuwachs, alle sechs Projekte (Win32) gebaut, Demo-Selbsttest 185/185, Regel-Prüfer ohne Verstoß, `make-docs` 0 fehlend. Referenzbilder neu nur für ProgressRing, Rating, Splitter (bewusste Optikänderung); neu in der Galerie `HighContrast.png`. Nichts installiert.
+
+**7a:** `TPPGCustomField.InputPending` – Enter (und bei NumberEdit Esc) gehört dem Feld nur bei offenem Popup oder getipptem Text, sonst reagiert der Default-Button (DatePicker, TimePicker, NumberEdit). DatePicker erbt von `TPPGCustomDropDownField`, `TPPGCalendarPopup` von `TPPGDropPopup`; Maus-Hook, `GOpenPicker`, `GMsgDateToggle` entfallen, published-Schnittstelle unverändert. `TPPGPopupWindow.FollowSource` (`OnFollow`, `OnSourceHidden`, über `PPGWatchControl`): Popups wandern mit dem Formular, schließen beim Verstecken/Minimieren; Ribbon-Popups ebenso. Region einmal statt je Animationsbild, `ItemHeight`-Cache. `TPPGTypeAhead` und `PPGTypeAheadMs` in `PPG.Types` für ComboBox, ItemList, ColumnComboBox, TileView.
+
+**7b:** `PPGWheelSteps`/`WheelSteps`, `PPGWheelScrollLines`, `WheelNeedsFocus` in `PPG.Controls.Base`; Teil-Deltas werden gesammelt, Zeilen aus `SPI_GETWHEELSCROLLLINES` (seitenweise = sichtbare Höhe), Wert-Controls ändern nur mit Fokus, `OnMouseWheel` kommt zuerst.
+
+**7c:** `inherited KeyDown` zuerst über `NavigateKey` (ItemList, TreeView, Grid, DB-Grid, RadioButton) – `OnKeyDown` kommt bei allen Tasten genau einmal; RadioButton-Tabstopp nur an der markierten Option; Strg+F4 schließt Reiter; Überspringen am Rand; Grid `ClearSelection`/`CutToClipboard` (Entf, Strg+X, Umschalt+Entf, Umschalt/Strg+Einfg); DatePicker-Uhrzeit nach Segment (`PPGTimeSegmentAt`, `PPGStepTimeSegment`).
+
+**7d:** Validierungstext als Beschreibung am inneren Edit, `EVENT_SYSTEM_ALERT` bei Fehler. Basis meldet `ROLE_SYSTEM_CLIENT` ohne Standardaktion; „Drücken“ nur bei Buttons sowie Badge/KpiTile mit `OnClick`; LinkLabel mit einem Link „Springen“.
+
+**7e:** `PPGContrastTextColor`/`PPGReadableTextColor`, Token `Link` (≥ 4,5:1, auch in StyleManager/Theme-Datei), `PPGPresetTokens`, `PPGDisabledColor`/`PPGDisabledTokens` (Kanban und Planner blenden ab), `PPGPlainTableLook`. Hochkontrast: `PPGHighContrastTokens`/`PPGApplyHighContrastAppearance`, `Tokens` und `EffectiveAppearance` liefern sie bei `UseHighContrast`; 80 eigene `PPGIsHighContrast`-Abfragen in 45 Units → 0 (Sonderfälle über `UseHighContrast`/`UseOwnColors`); `HighContrastSupport` bei Label, HintManager, CustomHint, TaskDialog; Testhaken `PPGSetHighContrastReader`.
+
+**7f:** Tooltips für abgeschnittene Texte (`ToolTips` in ItemList-Basis und Grid), TileView-Hint nur bei Abschnitt, TagEdit-Hover, `PPGDragExceeded` (halbe `SM_CXDRAG`), Hints und RadioButton bei RTL.
+
+**7g:** `PPGCheckedIsAccent`/`PPGAccentColor` in `PPG.Appearance`; Badge, ProgressRing, Rating, Splitter lesen Zustandsfarben, Rahmen, Rundung, Linienbreite.
+
+**Abweichungen:**
+- 7g Classic: `Checked` ist dort der goldene Office-Verlauf. Checked trägt den Akzent deshalb nur, wenn `Normal` keinen Verlauf hat; sonst gilt `FocusColor` (Classic bleibt blau).
+- 7g im Einzelnen: Badge-Radius = `Rounding` × 3, gedeckelt auf die Pille; deaktivierte Badge über `PPGDisabledColor`; ProgressRing ohne Glow, `BorderWidth` als Mindeststärke; Rating mischt leere Sterne bis 3:1 und die Hover-Vorschau zu 30 % mit `Hot.Color`.
+- 7e #1: Weiß bleibt, solange es gerundet 4,5:1 erreicht (Weiß auf #0078D7 = 4,499:1); Export/Xlsx folgen der gemeinsamen Regel (Rot jetzt mit schwarzer Schrift).
+- 7e #3: Link im hellen Modus nur so weit abgedunkelt wie für 4,5:1 nötig.
+- 7d: kein neuer Text „Ausführen“, LinkLabel nutzt das vorhandene „Springen“; Kanban (PANE) und Ribbon (GROUPING) behalten ihre Rollen.
+- 7a: Klick oder Enter auf den schon gewählten Tag schließt den Kalender (wie Windows); Ausblenden wird über `IsWindowVisible` erkannt, versteckte Panels innerhalb des Formulars nicht.
+- 7c/7f: Ziehschwelle jetzt 2 px statt 4 px (wie DragDetect); RadioButtons schreiben `TabStop = False` für nicht markierte Optionen.
+- 7e #7: Im Hochkontrast erscheinen Validierung und Signale in `clHighlight`, deaktivierte Einträge grau; Tooltips/MenuBar/Dialog-Fußzeile behalten `clInfoBk`/`clMenuBar`/`clBtnFace`. Nur mit simuliertem Hochkontrast geprüft, nicht in einem echten Kontrastdesign.
+
+**Testkorrekturen:** `TNamingTests.CheckListBoxOnItemCheck` setzt den Zähler zurück (scheiterte im zweiten Durchlauf von `/leaks`); `TComboBoxTests.WheelScrollsOnlyOpenList` rechnet mit der Systemeinstellung; Zwischenablage-Tests des Grids wiederholen bei belegter Zwischenablage.
+
+**Offen:** Sichtprüfung im echten Windows-Kontrastdesign und mit Narrator; `TRibbonTests.ManyItemsStayFast` bleibt unter paralleler Last wackelig (Paket 11).

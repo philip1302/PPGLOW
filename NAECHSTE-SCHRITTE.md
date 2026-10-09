@@ -1,6 +1,6 @@
 # PPGlow – Stand und nächste Schritte
 
-**Aktueller Stand (09.10.2026):** Phase 20 und die Audit-Pakete 1–6 sind fertig, committet und gepusht (Zweig `claude/task-elizkl`, Commit 4a90ddc). Seit dem 08.10.2026 ist nichts installiert. Der neueste Eintrag ist „Audit-Pakete 4 und 5 fertig“ weiter unten; Details stehen in `Docs\Audit-Paket4-5-Plan.md` (Umsetzung, Abweichungen, offene Liste) und `Docs\Audit-Plan.md` (Fortschritt). **Gewählt: Audit-Paket 7.** Der Detailplan `Docs\Audit-Paket7-Plan.md` ist geschrieben (Befunde am 09.10.2026 neu geprüft), am 09.10.2026 zur Umsetzung freigegeben (Entscheidungen wie empfohlen); die Umsetzung läuft. Vorher zur Wahl standen: Audit-Paket 7 (UI/UX, mit Appearance bei Badge/ProgressRing/Rating/Splitter), 8 (Performance), 11 (Tests/Build/Demo/Doku), Phase 16 (Tour, Kommando-Palette) oder Phase 21 (nur nach einer Inventur). Phase 15 bleibt zurückgestellt. Regeln: je Schritt erst ein Detailplan, dann Bericht und OK; nie installieren, die IDE nie ungefragt schließen; `Demo/PPGlowDemo.alt-204712.exe` nicht committen.
+**Aktueller Stand (09.10.2026, abends):** Phase 20 und die Audit-Pakete 1–7 sind fertig und committet (Zweig `claude/task-elizkl`; Paket 7 noch nicht gepusht). Seit dem 08.10.2026 ist nichts installiert. Der neueste Eintrag ist „Audit-Paket 7 fertig“ weiter unten; Details in `Docs\Audit-Paket7-Plan.md` (Abschnitt Umsetzung) und `Docs\Audit-Plan.md` (Fortschritt). Offen ist die Wahl des Users, wie es weitergeht: Audit-Paket 8 (Performance), 11 (Tests/Build/Demo/Doku), Phase 16 (Tour, Kommando-Palette) oder Phase 21 (nur nach einer Inventur). Phase 15 bleibt zurückgestellt. Regeln: je Schritt erst ein Detailplan, dann Bericht und OK; nie installieren, die IDE nie ungefragt schließen; `Demo/PPGlowDemo.alt-204712.exe` nicht committen.
 
 *Ältere Übergabe, Stand 07.10.2026: Phasen 5–13 und **Phase 14a–c (Terminplaner, Ribbon, Kanban)** sind abgeschlossen: 1105 Tests Win32 und Win64, Leak-Lauf grün (kein Zuwachs), Demo-Selbsttest 141/141. Phase 11–14c sind **noch nicht installiert**. 14d (Code-Editor) ist laut Entscheidung vom 05.10.2026 weggelassen; als Nächstes käme Phase 15 (Produkt) – vorher Bericht und OK.*
 
@@ -28,6 +28,18 @@
 - Demo: Planer, Kanban, Ribbon und „Auswahl & Regler“ erweitert, `/ribboncapture groupkeys`.
 - Prüfung: 1466 Tests Win32 und Win64, Leak-Lauf grün, Demo-Selbsttest 185/185, Benchmark eingehalten (zwei neue Messungen).
 - **Noch nicht installiert.**
+
+**09.10.2026: Audit-Paket 7 fertig** (UI/UX, Details und Abweichungen: `Docs\Audit-Paket7-Plan.md`, Abschnitt Umsetzung):
+- 7a Aufklappfelder: Enter gehört dem Feld nur bei offenem Popup oder getipptem Text (Default-Button reagiert). Der DatePicker läuft auf der Aufklapp-Basis. Popups folgen dem Formular (`FollowSource`). Gemeinsame Tippsuche `TPPGTypeAhead`.
+- 7b Mausrad: gemeinsamer Helfer (Teil-Deltas, Systemeinstellung), Wert-Controls nur mit Fokus.
+- 7c Tastatur: `OnKeyDown` kommt bei allen Tasten. RadioButton hat einen Tabstopp. Strg+F4 schließt Reiter. Grid Entf/Strg+X. DatePicker-Uhrzeit nach Segment.
+- 7d Barrierefreiheit: Validierung am inneren Edit, „Drücken“ und Button-Rolle nur noch bei Buttons.
+- 7e Farben: Kontrast-Helfer, Token `Link`, Abblenden bei Kanban/Planner, schlichte Tabellenoptik. Hochkontrast als Token-Satz (80 Einzelabfragen → 0), `HighContrastSupport` bei Label/Hints/TaskDialog.
+- 7f: Tooltips für abgeschnittene Texte (ItemList, Grid, TileView), TagEdit-Hover, Ziehschwelle nach System, RTL bei Hints und RadioButton.
+- 7g: Badge, ProgressRing, Rating, Splitter lesen die Appearance (Classic behält `FocusColor`).
+- Arbeitsweise: parallele Agenten in Git-Worktrees, Builds über eine Sperre nacheinander; Testlauf neu mit `/suite Name[,Name]`.
+- Prüfung: 1635 Tests Win32 und Win64, Leak-Lauf Win32/Win64 grün, sechs Projekte gebaut, Demo-Selbsttest 185/185, `make-docs` 0 fehlend.
+- **Noch nicht installiert.** Nicht geprüft: echtes Windows-Kontrastdesign und Narrator.
 
 **09.10.2026: Audit-Pakete 4 und 5 fertig** (Details und Abweichungen: `Docs\Audit-Paket4-5-Plan.md`, Abschnitt Umsetzung):
 - 4: gemeinsame DB-Bindung `TPPGDBBinding` für alle DB-Controls, DB-Fehler und Designer-Punkte.

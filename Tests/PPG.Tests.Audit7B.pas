@@ -458,10 +458,75 @@ begin
   CheckEquals('x', G.Cells[1, 1], 'ohne goEditing nichts loeschen');
 end;
 
+/// Zwischenablage kurz belegt (anderes Programm, Zwischenablage-Verlauf):
+/// einige Male versuchen, wie in PPG.Tests.Phase12a.
+function GetClip7: string;
+var
+  I: Integer;
+begin
+  for I := 1 to 20 do
+    try
+      Exit(Clipboard.AsText);
+    except
+      on EClipboardException do
+        Sleep(50);
+    end;
+  Result := Clipboard.AsText;
+end;
+
+procedure SetClip7(const S: string);
+var
+  I: Integer;
+begin
+  for I := 1 to 20 do
+    try
+      Clipboard.AsText := S;
+      Exit;
+    except
+      on EClipboardException do
+        Sleep(50);
+    end;
+  Clipboard.AsText := S;
+end;
+
+/// Taste ans Grid; scheitert der Zugriff auf die Zwischenablage, hat das Grid
+/// nichts geaendert (erst kopieren, dann leeren) und es wird wiederholt.
+procedure GridKey7(G: TPPGCustomGrid; Key: Word; Shift: TShiftState);
+var
+  I: Integer;
+  K: Word;
+begin
+  for I := 1 to 20 do
+    try
+      K := Key;
+      TGridAccess7(G).KeyDown(K, Shift);
+      Exit;
+    except
+      on EClipboardException do
+        Sleep(50);
+    end;
+  K := Key;
+  TGridAccess7(G).KeyDown(K, Shift);
+end;
+
+procedure GridCut7(G: TPPGCustomGrid);
+var
+  I: Integer;
+begin
+  for I := 1 to 20 do
+    try
+      G.CutToClipboard;
+      Exit;
+    except
+      on EClipboardException do
+        Sleep(50);
+    end;
+  G.CutToClipboard;
+end;
+
 procedure TAudit7BTests.GridCutAndClipboardKeys;
 var
   G: TPPGGrid;
-  K: Word;
   Sel: TGridRect;
 begin
   G := NewGrid;
@@ -471,24 +536,20 @@ begin
   Sel.Bottom := 1;
   G.Selection := Sel;
   // Strg+Einfg kopiert
-  Clipboard.AsText := '';
-  K := VK_INSERT;
-  TGridAccess7(G).KeyDown(K, [ssCtrl]);
-  CheckEquals('1/1'#13#10, Clipboard.AsText, 'Strg+Einfg kopiert');
+  SetClip7('');
+  GridKey7(G, VK_INSERT, [ssCtrl]);
+  CheckEquals('1/1'#13#10, GetClip7, 'Strg+Einfg kopiert');
   // Strg+X schneidet aus
-  K := Ord('X');
-  TGridAccess7(G).KeyDown(K, [ssCtrl]);
-  CheckEquals('1/1'#13#10, Clipboard.AsText, 'Strg+X kopiert');
+  GridKey7(G, Ord('X'), [ssCtrl]);
+  CheckEquals('1/1'#13#10, GetClip7, 'Strg+X kopiert');
   CheckEquals('', G.Cells[1, 1], 'Strg+X leert');
   // Umschalt+Einfg fuegt ein
-  K := VK_INSERT;
-  TGridAccess7(G).KeyDown(K, [ssShift]);
+  GridKey7(G, VK_INSERT, [ssShift]);
   CheckEquals('1/1', G.Cells[1, 1], 'Umschalt+Einfg fuegt ein');
   // Umschalt+Entf schneidet aus
   G.Cells[1, 1] := 'neu';
-  K := VK_DELETE;
-  TGridAccess7(G).KeyDown(K, [ssShift]);
-  CheckEquals('neu'#13#10, Clipboard.AsText, 'Umschalt+Entf kopiert');
+  GridKey7(G, VK_DELETE, [ssShift]);
+  CheckEquals('neu'#13#10, GetClip7, 'Umschalt+Entf kopiert');
   CheckEquals('', G.Cells[1, 1], 'Umschalt+Entf leert');
 end;
 
@@ -775,8 +836,8 @@ begin
   Sel.Right := 1;
   Sel.Bottom := 1;
   G.Selection := Sel;
-  G.CutToClipboard;
-  CheckEquals('a'#13#10, Clipboard.AsText, 'ausgeschnitten');
+  GridCut7(G);
+  CheckEquals('a'#13#10, GetClip7, 'ausgeschnitten');
   CheckEquals('', G.Cells[1, 1]);
 end;
 
