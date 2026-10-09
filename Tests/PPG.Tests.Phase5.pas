@@ -198,15 +198,6 @@ begin
       S.SmallBlockTypeStates[I].UseableBlockSize);
 end;
 
-function WheelLines: Integer;
-var
-  L: UINT;
-begin
-  L := 3;
-  SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, @L, 0);
-  Result := Integer(L);
-end;
-
 { TTestScroller }
 
 procedure TTestScroller.PaintViewport(const ACanvas: IPPGCanvas; const View: TRect);
@@ -449,27 +440,22 @@ procedure TRowLayoutTests.MillionRowsAreFast;
 var
   L: TPPGRowLayout;
   I, R: Integer;
-  T0: Cardinal;
 begin
+  // Audit 11a #7: nur noch die Ergebnisse; die Laufzeit misst der Benchmark
+  // (Bench11, vorher Grenzen 100 bzw. 300 ms im Test)
   L := TPPGRowLayout.Create;
   try
     L.DefaultHeight := 20;
     L.Count := 1000000;
-    T0 := GetTickCount;
     for I := 0 to 99999 do
     begin
       R := L.RowAt(Int64(I) * 197);
       if R <> I * 197 div 20 then
         Fail('RowAt fest');
     end;
-    CheckTrue(GetTickCount - T0 < 100, 'fest: 100 000 RowAt');
     for I := 0 to 999 do
       L.SetRowHeight(I * 1000, 40);
-    T0 := GetTickCount;
     CheckEquals(Int64(1000000) * 20 + 1000 * 20, L.TotalHeight64);
-    for I := 0 to 99999 do
-      L.RowAt(Int64(I) * 197);
-    CheckTrue(GetTickCount - T0 < 300, Format('variabel: %d ms', [GetTickCount - T0]));
     CheckEquals(1000, L.RowAt(L.RowTop(1000) + 39), 'hohe Zeile');
     CheckEquals(1001, L.RowAt(L.RowTop(1000) + 40));
   finally
@@ -700,19 +686,17 @@ end;
 procedure TSelectionTests.MillionItemsAreFast;
 var
   S: TPPGSelection;
-  T0: Cardinal;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 500 ms im Test)
   S := TPPGSelection.Create;
   try
     S.Mode := smExtended;
     S.Count := 1000000;
-    T0 := GetTickCount;
     S.SelectAll;
     S.Click(500000, [ssCtrl]);
     S.Clear;
     S.SelectRange(10, 900000, False);
     S.ItemsDeleted(0, 5);
-    CheckTrue(GetTickCount - T0 < 500, Format('%d ms', [GetTickCount - T0]));
     CheckEquals(900000 - 10 + 1, S.SelCount);
   finally
     S.Free;
@@ -998,7 +982,7 @@ const
   Alphabet = '<>&=/"''#;bicolrsuahefimg01 ';
 var
   I, J, N: Integer;
-  S: string;
+  S, T: string;
 begin
   RandSeed := 4711;
   for I := 1 to 3000 do
@@ -1008,9 +992,14 @@ begin
     for J := 1 to N do
       S[J] := Alphabet[1 + Random(Length(Alphabet))];
     PPGParseMarkup(S);
-    PPGStripMarkup(S);
+    // Audit 11a #4: vorher nur Check(True) - Ergebnis fachlich pruefen: Tags
+    // und Entities werden entfernt bzw. kuerzer, nie laenger; ohne "<" und
+    // "&" bleibt der Text unveraendert
+    T := PPGStripMarkup(S);
+    CheckTrue(Length(T) <= Length(S), 'Strip verlaengert nicht: ' + S);
+    if (Pos('<', S) = 0) and (Pos('&', S) = 0) then
+      CheckEquals(S, T, 'ohne Markup unveraendert');
   end;
-  Check(True);
 end;
 
 procedure TMarkupTests.StripMarkup;
@@ -1180,16 +1169,19 @@ var
   S: TTestScroller;
   I: Integer;
 begin
+  // Audit 11a #6: Radzeilen eingespeist (Windows-Vorgabe 3) statt aus der
+  // Systemeinstellung; 3 Zeilen x 20 px
+  PPGSetWheelScrollLinesReader(PPGTestWheel3Lines);
   S := NewScroller(100, 20);
   CheckFalse(TTestScroller(S).DoMouseWheel([], WHEEL_DELTA, Point(0, 0)),
     'oben: nach oben nichts zu tun');
   CheckTrue(S.DoMouseWheel([], -WHEEL_DELTA, Point(0, 0)));
-  CheckEquals(WheelLines * 20, S.ScrollY, 'Zeilen laut Systemeinstellung');
+  CheckEquals(60, S.ScrollY, '3 Zeilen je Raste');
   S.ScrollY := 0;
   // Touchpad: vier Viertelschritte = ein Radschritt
   for I := 1 to 4 do
     CheckTrue(S.DoMouseWheel([], -WHEEL_DELTA div 4, Point(0, 0)));
-  CheckEquals(WheelLines * 20, S.ScrollY, 'Teilschritte summieren sich');
+  CheckEquals(60, S.ScrollY, 'Teilschritte summieren sich');
   S.ScrollY := S.MaxScroll(saVert);
   CheckFalse(S.DoMouseWheel([], -WHEEL_DELTA, Point(0, 0)), 'unten: nicht verbraucht');
 end;

@@ -978,9 +978,9 @@ var
   P: TPPGPlanner;
   I: Integer;
   A: TPPGAppointment;
-  T0: Cardinal;
   B: TBitmap;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1500 ms im Test)
   P := NewPlanner;
   P.Appointments.BeginUpdate;
   try
@@ -994,13 +994,11 @@ begin
   finally
     P.Appointments.EndUpdate;
   end;
-  T0 := GetTickCount;
   P.InvalidateLayout;
   P.EnsureLayout;
   CheckTrue(P.ItemCount > 900, IntToStr(P.ItemCount));
   B := RenderToBitmap(P);
   B.Free;
-  CheckTrue(GetTickCount - T0 < 1500, 'Woche mit 50 000 Terminen: ' + IntToStr(GetTickCount - T0) + ' ms');
 end;
 
 procedure TPlannerTests.PrintsPagesWithSameDrawing;

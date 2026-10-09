@@ -869,21 +869,18 @@ end;
 procedure TTileViewTests.VirtualHundredThousand;
 var
   V: TPPGTileView;
-  T0: Cardinal;
   B: TBitmap;
 begin
+  // Audit 11a #7: Laufzeiten im Benchmark (Bench11, vorher 3000 bzw. 500 ms
+  // im Test)
   V := NewView(0);
   V.OnGetItem := GetVirtual;
   V.OwnerData := True;
-  T0 := GetTickCount;
   V.ItemCount := 100000;
   CheckEquals(100000, V.VisibleCount);
-  CheckTrue(GetTickCount - T0 < 3000, 'Layout von 100 000 Eintraegen');
   V.ScrollTo(0, MaxInt);
-  T0 := GetTickCount;
   B := RenderToBitmap(V);
   B.Free;
-  CheckTrue(GetTickCount - T0 < 500, 'Zeichnen nur des sichtbaren Teils');
   V.ItemIndex := 99999;
   CheckEquals(99999, V.ItemIndex);
   V.FilterText := 'Datei 9999';

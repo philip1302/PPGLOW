@@ -240,12 +240,32 @@ begin
 end;
 
 procedure TGridPrintTests.Placeholders;
+
+  function GermanDate(D: TDateTime): string;
+  var
+    Y, M, T: Word;
+  begin
+    DecodeDate(D, Y, M, T);
+    Result := Format('%.2d.%.2d.%.4d', [T, M, Y]);
+  end;
+
+var
+  D0, D1: TDateTime;
+  S1, S2: string;
 begin
   FPrn.Title := 'Liste';
   CheckEquals('Seite 2 von 5', FPrn.ExpandText('Seite [Seite] von [Seiten]', 2, 5));
   CheckEquals('Page 2 of 5 - Liste', FPrn.ExpandText('Page [page] of [PAGES] - [Title]', 2, 5));
-  CheckEquals(DateToStr(Date), FPrn.ExpandText('[Datum]', 1, 1));
-  CheckEquals(DateToStr(Date), FPrn.ExpandText('[Date]', 1, 1));
+  // Audit 11a #6: feste deutsche Formate; die Erwartung entsteht ohne
+  // DateToStr (vorher dieselbe Funktion wie im Code) aus DecodeDate. Datum
+  // vor und nach dem Aufruf gelesen (Lauf ueber Mitternacht).
+  FormatSettings := PPGTestGermanFormat;
+  D0 := Date;
+  S1 := FPrn.ExpandText('[Datum]', 1, 1);
+  S2 := FPrn.ExpandText('[Date]', 1, 1);
+  D1 := Date;
+  CheckTrue((S1 = GermanDate(D0)) or (S1 = GermanDate(D1)), '[Datum]: ' + S1);
+  CheckTrue((S2 = GermanDate(D0)) or (S2 = GermanDate(D1)), '[Date]: ' + S2);
 end;
 
 procedure TGridPrintTests.RenderDrawsContent;
@@ -350,9 +370,10 @@ begin
     FPrn.Page(5);
     Fail('Index ausserhalb');
   except
-    on E: Exception do
-      if E is ETestFailure then
-        raise;
+    // Audit 11a #4: konkrete Klasse (vorher galt jede Exception ausser
+    // ETestFailure als Erfolg, auch eine Zugriffsverletzung)
+    on EPPGError do
+      ;
   end;
 end;
 

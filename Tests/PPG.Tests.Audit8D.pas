@@ -13,7 +13,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.Math, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.Menus, Vcl.ComCtrls,
   Data.DB, Datasnap.DBClient, MidasLib,
-  PPG.Types, PPG.Appearance, PPG.Render.Gdi, PPG.AppHooks, PPG.MenuBar, PPG.Chart.Series,
+  PPG.Types, PPG.Animation, PPG.Appearance, PPG.Render.Gdi, PPG.AppHooks, PPG.MenuBar, PPG.Chart.Series,
   PPG.Chart, PPG.Kanban.Items, PPG.Kanban, PPG.DB.Kanban, PPG.Planner.Model, PPG.Planner,
   PPG.Ribbon.Layout, PPG.Ribbon.Items, PPG.Ribbon, PPG.TabStrip, PPG.TabControl, PPG.PageControl, PPG.Feedback,
   PPG.TeachingTip, PPG.TagEdit, PPG.Exceptions, PPG.Tests.Controls, PPG.CustomDraw,
@@ -123,6 +123,17 @@ type
   end;
 
 implementation
+
+/// Audit 11a #5: Die Referenzwerte gelten fuer 96 PPI. Das Control (bzw. Formular)
+/// wird unabhaengig vom Bildschirm auf 96 PPI gestellt, statt den Vergleich
+/// bei anderem PPI still zu ueberspringen.
+procedure ForcePPI96(C: TControl);
+begin
+{$IF CompilerVersion >= 33.0}
+  if C.CurrentPPI <> 96 then
+    C.ScaleForPPI(96);
+{$IFEND}
+end;
 
 function MouseLParam(X, Y: Integer): LPARAM;
 begin
@@ -522,8 +533,10 @@ var
   A: TPPGAppointment;
   D: TDateTime;
 begin
+  ForcePPI96(FForm);
   Result := TPPGPlanner.Create(FForm);
   Result.Parent := FForm;
+  ForcePPI96(Result);
   Result.SetBounds(0, 0, 1000, 640);
   Result.ShowNowLine := False;
   Result.Animation.Enabled := False;
@@ -586,11 +599,7 @@ begin
   P.View := pvMonth;
   P.EnsureLayout;
   S := S + '|' + PieceDigest(P);
-  if P.ScalePPI <> 96 then
-  begin
-    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
-    Exit;
-  end;
+  CheckEquals(96, P.ScalePPI, 'Referenzwert gilt fuer 96 PPI (' + S + ')');
   // Referenz: alter Code (vor Audit 8D, Commit 3594b0b), 96 PPI. Win32 (x87) und
   // Win64 (SSE) runden die Zeitpositionen unterschiedlich, daher je Plattform.
   // Nachweis Win64 (09.10.2026, Audit 11a #3): temporaerer Worktree auf 3594b0b,
@@ -614,11 +623,7 @@ begin
   P.TimelineDays := 14;
   P.EnsureLayout;
   S := PieceDigest(P);
-  if P.ScalePPI <> 96 then
-  begin
-    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
-    Exit;
-  end;
+  CheckEquals(96, P.ScalePPI, 'Referenzwert gilt fuer 96 PPI (' + S + ')');
   // Referenz je Plattform aus dem alten Code (3594b0b), Win64-Nachweis siehe
   // PlannerGroupedLayoutIsUnchanged
   {$IFDEF CPUX64}
@@ -650,11 +655,7 @@ begin
       B.Free;
     end;
   end;
-  if P.ScalePPI <> 96 then
-  begin
-    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
-    Exit;
-  end;
+  CheckEquals(96, P.ScalePPI, 'Referenzwert gilt fuer 96 PPI (' + S + ')');
   CheckEquals('615531511;924146489;125693176;400710589;716246505;', S, 'Bilder der Zeitleiste');
 end;
 
@@ -789,8 +790,10 @@ var
   S: string;
 begin
   S := '';
+  ForcePPI96(FForm);
   T := TPPGTabControl.Create(FForm);
   T.Parent := FForm;
+  ForcePPI96(T);
   T.SetBounds(0, 0, 380, 120);
   for I := 0 to 39 do
     T.Tabs.Add('Reiter ' + IntToStr(I) + StringOfChar('m', I mod 6));
@@ -812,11 +815,7 @@ begin
       S := S + IntToStr(First) + ',';
     end;
   end;
-  if T.ScalePPI <> 96 then
-  begin
-    Status('PPI <> 96: Vergleich mit dem Referenzwert uebersprungen (' + S + ')');
-    Exit;
-  end;
+  CheckEquals(96, T.ScalePPI, 'Referenzwert gilt fuer 96 PPI (' + S + ')');
   // Referenz: erste sichtbare Reiter mit dem alten MakeVisible (96 PPI)
   CheckEquals('0,16,32,11,26,5,20,37,16,31,10,25,4,19,36,15,30,9,24,3,18,35,14,29,8,23,2,17,34,13,' +
     '28,7,22,1,16,34,12,28,6,22,0,16,33,11,27,5,21,38,16,32,10,26,4,20,37,15,31,9,25,3,19,36,14,' +
@@ -1185,15 +1184,14 @@ var
 begin
   FForm.Show;
   try
+    // Audit 11a #5: Systemanimationen eingespeist (vorher still per Status
+    // uebersprungen, wenn sie im System aus sind)
+    PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
     C := TPPGChart.Create(FForm);
     C.Parent := FForm;
     C.SetBounds(0, 0, 600, 320);
     C.Animation.Enabled := True;
-    if not C.Animation.EffectiveEnabled then
-    begin
-      Status('Systemanimationen aus');
-      Exit;
-    end;
+    CheckTrue(C.Animation.EffectiveEnabled, 'Animation an');
     S := C.Series.Add;
     S.SetValues([1, 2, 3]);
     C.HandleNeeded;

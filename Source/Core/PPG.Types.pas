@@ -137,6 +137,14 @@ const
   /// Pause, nach der die Tippsuche neu beginnt.
   PPGTypeAheadMs = 1000;
 
+type
+  /// Uhr der Tippsuche in ms (wie GetTickCount).
+  TPPGTickSource = function: Cardinal;
+
+/// Testhaken: ersetzt die Uhr der Tippsuche (nil = GetTickCount), damit Tests
+/// die Pause einspeisen statt zu warten.
+procedure PPGSetTypeAheadClock(Clock: TPPGTickSource);
+
 /// True, wenn sich die Maus seit DownPt weit genug fuer ein Ziehen bewegt hat
 /// (Audit 7f #4): ausserhalb des Rechtecks SM_CXDRAG x SM_CYDRAG um DownPt,
 /// wie DragDetect von Windows.
@@ -153,13 +161,24 @@ type
 
 { TPPGTypeAhead }
 
+var
+  GTypeAheadClock: TPPGTickSource = nil;
+
+procedure PPGSetTypeAheadClock(Clock: TPPGTickSource);
+begin
+  GTypeAheadClock := Clock;
+end;
+
 function TPPGTypeAhead.Add(Key: Char): string;
 var
   Now: Cardinal;
   I: Integer;
   Same: Boolean;
 begin
-  Now := GetTickCount;
+  if Assigned(GTypeAheadClock) then
+    Now := GTypeAheadClock()
+  else
+    Now := GetTickCount;
   if Now - Tick > PPGTypeAheadMs then
     Text := '';
   Tick := Now;

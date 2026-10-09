@@ -44,6 +44,7 @@ type
   TVclStyleTests = class(TGapTestCase)
   private
     FStyleName: string;
+    FStyleFile: string;
     function ActivateDarkStyle: Boolean;
     procedure RestoreSystemStyle;
   published
@@ -68,7 +69,7 @@ type
 implementation
 
 uses
-  Vcl.Themes, Vcl.Styles, Vcl.Imaging.pngimage
+  System.Win.Registry, Vcl.Themes, Vcl.Styles, Vcl.Imaging.pngimage
   {$IF CompilerVersion >= 34.0}, Vcl.ImageCollection, Vcl.VirtualImageList{$IFEND};
 
 type
@@ -108,7 +109,7 @@ end;
 
 procedure TGapTestCase.RaisingDropDown(Sender: TObject);
 begin
-  raise EAbort.Create('OnDropDownClick failed');
+  raise EPPGTestUserError.Create('OnDropDownClick failed');
 end;
 
 function TGapTestCase.AccOf(C: TWinControl): IAccessible;
@@ -304,13 +305,107 @@ end;
 
 { TVclStyleTests }
 
+/// BDS-Version (Registry-Schluessel) des Compilers, mit dem die Tests gebaut
+/// wurden; '' = unbekannt.
+function BdsVersion: string;
+begin
+  case Trunc(CompilerVersion) of
+    23: Result := '9.0';   // XE2
+    24: Result := '10.0';
+    25: Result := '11.0';
+    26: Result := '12.0';
+    27: Result := '14.0';
+    28: Result := '15.0';
+    29: Result := '16.0';
+    30: Result := '17.0';
+    31: Result := '18.0';
+    32: Result := '19.0';
+    33: Result := '20.0';
+    34: Result := '21.0';
+    35: Result := '22.0';
+    36: Result := '23.0';
+    37: Result := '37.0';  // Delphi 13
+  else
+    Result := '';
+  end;
+end;
+
+/// BDSCOMMONDIR wie die IDE (vgl. Build\install.ps1): Umgebungsvariable,
+/// Override in der Registry (Umgebungsvariablen der IDE), SET in
+/// bin\rsvars.bat der Installation, sonst der uebliche Standardpfad.
+function BdsCommonDir: string;
+var
+  Ver: string;
+  R: TRegistry;
+  Root, Line: string;
+  L: TStringList;
+  I: Integer;
+begin
+  Result := GetEnvironmentVariable('BDSCOMMONDIR');
+  if Result <> '' then
+    Exit;
+  Ver := BdsVersion;
+  if Ver = '' then
+    Exit;
+  Root := '';
+  R := TRegistry.Create(KEY_READ);
+  try
+    R.RootKey := HKEY_CURRENT_USER;
+    if R.OpenKeyReadOnly('Software\Embarcadero\BDS\' + Ver + '\Environment Variables') then
+    begin
+      if R.ValueExists('BDSCOMMONDIR') then
+        Result := R.ReadString('BDSCOMMONDIR');
+      R.CloseKey;
+    end;
+    if Result <> '' then
+      Exit;
+    R.RootKey := HKEY_LOCAL_MACHINE;
+    if R.OpenKeyReadOnly('SOFTWARE\Embarcadero\BDS\' + Ver) or
+      R.OpenKeyReadOnly('SOFTWARE\WOW6432Node\Embarcadero\BDS\' + Ver) then
+    begin
+      if R.ValueExists('RootDir') then
+        Root := R.ReadString('RootDir');
+      R.CloseKey;
+    end;
+  finally
+    R.Free;
+  end;
+  if (Root <> '') and FileExists(IncludeTrailingPathDelimiter(Root) + 'bin\rsvars.bat') then
+  begin
+    L := TStringList.Create;
+    try
+      L.LoadFromFile(IncludeTrailingPathDelimiter(Root) + 'bin\rsvars.bat');
+      for I := 0 to L.Count - 1 do
+      begin
+        Line := Trim(L[I]);
+        if (Line <> '') and (Line[1] = '@') then
+          Line := Trim(Copy(Line, 2, MaxInt));
+        if SameText(Copy(Line, 1, 17), 'SET BDSCOMMONDIR=') then
+          Exit(Trim(Copy(Line, 18, MaxInt)));
+      end;
+    finally
+      L.Free;
+    end;
+  end;
+  Result := GetEnvironmentVariable('PUBLIC');
+  if Result <> '' then
+    Result := IncludeTrailingPathDelimiter(Result) + 'Documents\Embarcadero\Studio\' + Ver;
+end;
+
 function TVclStyleTests.ActivateDarkStyle: Boolean;
 var
   FileName: string;
   Info: TStyleInfo;
 begin
   Result := False;
-  FileName := 'C:\Users\Public\Documents\Embarcadero\Studio\37.0\Styles\Windows10Dark.vsf';
+  // Audit 11a #5: Pfad wie die IDE ermitteln statt fest Studio\37.0; fehlt die
+  // Style-Datei wirklich (Installation ohne Styles), meldet der Aufrufer Skip
+  FStyleFile := '(BDSCOMMONDIR nicht ermittelbar)';
+  FileName := BdsCommonDir;
+  if FileName = '' then
+    Exit;
+  FileName := IncludeTrailingPathDelimiter(FileName) + 'Styles\Windows10Dark.vsf';
+  FStyleFile := FileName;
   if not FileExists(FileName) then
     Exit;
   // Datei vorhanden, aber nicht ladbar = echter Fehler (nicht still ueberspringen)
@@ -351,7 +446,7 @@ begin
   Before := B.Appearance.Normal.Color;
   if not ActivateDarkStyle then
   begin
-    Status('Style-Datei nicht vorhanden - Test uebersprungen');
+    Skip('VCL-Style-Datei nicht vorhanden: ' + FStyleFile);
     Exit;
   end;
   try
@@ -557,7 +652,7 @@ begin
     B.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(B.Width - 12, 15));
     Fail('Exception muss propagieren');
   except
-    on E: EAbort do
+    on E: EPPGTestUserError do
       ;
   end;
   CheckFalse(TButtonAccess(B).MousePressed);
@@ -627,7 +722,8 @@ begin
 end;
 {$ELSE}
 begin
-  Status('ImageName erst ab Delphi 10.4');
+  // Audit 11a #5: Skip statt Status (der Compiler kennt TVirtualImageList nicht)
+  Skip('ImageName erst ab Delphi 10.4');
 end;
 {$IFEND}
 
@@ -664,7 +760,8 @@ begin
 end;
 {$ELSE}
 begin
-  Status('ImageName erst ab Delphi 10.4');
+  // Audit 11a #5: Skip statt Status (der Compiler kennt TVirtualImageList nicht)
+  Skip('ImageName erst ab Delphi 10.4');
 end;
 {$IFEND}
 

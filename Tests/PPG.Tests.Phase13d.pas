@@ -9,7 +9,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.Grids, Vcl.ImgList,
   PPG.Types, PPG.Tokens, PPG.UIA, PPG.UIA.Intf, PPG.Render.Intf, PPG.Grid,
-  PPG.Grid.Columns, PPG.Grid.CellKinds, PPG.Grid.Styles, PPG.Tests.Controls;
+  PPG.Grid.Columns, PPG.Grid.CellKinds, PPG.Grid.Styles, PPG.Tests.Controls, PPG.Exceptions;
 
 type
   TGridCellTests = class(TControlTestCase)
@@ -662,10 +662,12 @@ var
       G.MergeCells(ACol, ARow, ACS, ARS);
       Fail(Msg);
     except
-      on E: Exception do
-        if E is ETestFailure then
-          raise;
+      // Audit 11a #4: konkrete Klasse (vorher galt jede Exception ausser
+      // ETestFailure als Erfolg, auch eine Zugriffsverletzung)
+      on EPPGError do
+        ;
     end;
+    CheckEquals(1, G.MergeCount, Msg + ': Verbindungen unveraendert');
   end;
 
 begin

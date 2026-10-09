@@ -12,7 +12,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.DateUtils, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ComCtrls,
   Data.DB, Datasnap.DBClient, MidasLib,
-  PPG.Types, PPG.Controls.Base, PPG.Controls.Field, PPG.Controls.DropDown, PPG.Popup,
+  PPG.Types, PPG.Animation, PPG.Controls.Base, PPG.Controls.Field, PPG.Controls.DropDown, PPG.Popup,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NumberEdit, PPG.SpinEdit,
   PPG.ComboBox, PPG.TrackBar, PPG.Kanban, PPG.Planner, PPG.TileView, PPG.Panel,
   PPG.Edit, PPG.DB.Controls, PPG.Popup.Placement, PPG.Tests.Controls;
@@ -113,15 +113,6 @@ type
 function MouseLParam(X, Y: Integer): LPARAM;
 begin
   Result := LPARAM(Word(SmallInt(X)) or (Cardinal(Word(SmallInt(Y))) shl 16));
-end;
-
-function SystemWheelLines: Integer;
-var
-  L: UINT;
-begin
-  L := 3;
-  SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, @L, 0);
-  Result := Integer(L);
 end;
 
 function RgnBox(Wnd: HWND; out Box: TRect): Boolean;
@@ -661,9 +652,11 @@ begin
   FinalH := D.Popup.Height;
   CheckTrue(RgnBox(D.Popup.Handle, Final), 'abgerundetes Popup hat eine Region');
   D.CloseUp(False);
+  // Audit 11a #5: Systemanimationen eingespeist (sonst stilles Exit, wenn
+  // sie im System aus sind)
+  PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
   D.Animation.Enabled := True;
-  if not D.Animation.EffectiveEnabled then
-    Exit; // Animationen im System aus: nichts zu pruefen
+  CheckTrue(D.Animation.EffectiveEnabled, 'Animation eingeschaltet');
   D.DropDown;
   CheckTrue(D.Popup.Height < FinalH, 'Animation laeuft');
   CheckTrue(RgnBox(D.Popup.Handle, Box));
@@ -718,7 +711,12 @@ begin
   CheckEquals(-1, PPGWheelSteps(Rest, -80, 1));
   CheckEquals(3, PPGWheelSteps(Rest, WHEEL_DELTA, 3), 'Lines je Raste');
   CheckEquals(30, PPGWheelSteps(Rest, 60, 60), 'Pixel je Raste: 60 * 60 / 120');
-  CheckTrue(PPGWheelScrollLines >= -1, 'Systemeinstellung gelesen');
+  // Audit 11a #4: Systemwert eingespeist (Rohwert wie SPI_GETWHEELSCROLLLINES)
+  PPGSetWheelScrollLinesReader(PPGTestWheel3Lines);
+  CheckEquals(3, PPGWheelScrollLines, 'Zeilen je Raste');
+  PPGSetWheelScrollLinesReader(PPGTestWheelPage);
+  CheckEquals(-1, PPGWheelScrollLines, 'WHEEL_PAGESCROLL = seitenweise');
+  PPGSetWheelScrollLinesReader(nil);
 end;
 
 procedure TWheelTests.SpinEditNeedsFocusAndCollects;
@@ -836,11 +834,11 @@ end;
 procedure TWheelTests.PopupListUsesSystemLines;
 var
   C: TPPGComboBox;
-  I, Lines: Integer;
+  I: Integer;
 begin
-  Lines := SystemWheelLines;
-  if (Lines <= 0) or (Lines > 20) then
-    Exit; // seitenweise bzw. aus: hier nicht pruefbar
+  // Audit 11a #5/#6: Radzeilen eingespeist (Windows-Vorgabe 3) statt aus
+  // der Systemeinstellung gelesen und bei "seitenweise" still uebersprungen
+  PPGSetWheelScrollLinesReader(PPGTestWheel3Lines);
   FForm.Show;
   C := TPPGComboBox.Create(FForm);
   C.Parent := FForm;
@@ -854,7 +852,7 @@ begin
   TComboAccess(C).DoMouseWheel([], -40, Point(0, 0));
   TComboAccess(C).DoMouseWheel([], -40, Point(0, 0));
   TComboAccess(C).DoMouseWheel([], -40, Point(0, 0));
-  CheckEquals(Lines, C.PopupList.TopIndex, '3 x 40 = eine Raste = Zeilen aus der Systemeinstellung');
+  CheckEquals(3, C.PopupList.TopIndex, '3 x 40 = eine Raste = 3 Zeilen');
   C.CloseUp(False);
 end;
 

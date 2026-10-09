@@ -600,6 +600,8 @@ var
 begin
   FForm.Show;
   try
+    // Audit 11a #7: Pause der Tippsuche eingespeist statt Sleep(1100)
+    PPGSetTypeAheadClock(PPGTestClock);
     C := NewCombo(csDropDownList);
     C.SetFocus;
     C.Perform(WM_CHAR, Ord('b'), 0);
@@ -608,11 +610,11 @@ begin
     CheckEquals(2, C.ItemIndex, 'b nochmal -> Birne (blaettern)');
     C.Perform(WM_CHAR, Ord('b'), 0);
     CheckEquals(1, C.ItemIndex, 'und wieder von vorn');
-    Sleep(1100);
+    PPGTestAdvanceClock(PPGTypeAheadMs + 100);
     C.Perform(WM_CHAR, Ord('b'), 0);
     C.Perform(WM_CHAR, Ord('i'), 0);
     CheckEquals(2, C.ItemIndex, 'bi -> Birne');
-    Sleep(1100);
+    PPGTestAdvanceClock(PPGTypeAheadMs + 100);
     C.DroppedDown := True;
     C.Perform(WM_CHAR, Ord('d'), 0);
     CheckEquals(4, C.PopupList.Highlight, 'offen: nur Hervorhebung');
@@ -723,7 +725,7 @@ end;
 procedure TComboBoxTests.WheelScrollsOnlyOpenList;
 var
   C: TPPGComboBox;
-  I, Lines: Integer;
+  I: Integer;
 begin
   FForm.Show;
   try
@@ -736,20 +738,21 @@ begin
     CheckEquals(0, C.ItemIndex, 'geschlossen: Rad aendert die Auswahl nicht');
     C.DroppedDown := True;
     CheckEquals(0, C.PopupList.TopIndex);
+    // Audit 11a #6: Radzeilen eingespeist statt aus der Systemeinstellung
+    // (vorher wurde die Erwartung nach der Formel aus TPPGPopupList.DropWheel
+    // berechnet). Windows-Vorgabe: 3 Zeilen je Raste.
+    PPGSetWheelScrollLinesReader(PPGTestWheel3Lines);
     CheckTrue(TComboAccess(C).DoMouseWheel([], -WHEEL_DELTA, Point(0, 0)));
-    // Zeilen je Raste aus der Systemeinstellung (Standard 3), seitenweise bzw.
-    // am Ende begrenzt wie in TPPGPopupList.DoWheel
-    Lines := PPGWheelScrollLines;
-    if Lines < 0 then
-      Lines := C.PopupList.VisibleRows - 1;
-    if Lines < 1 then
-      Lines := 1;
-    if Lines > 30 - C.PopupList.VisibleRows then
-      Lines := 30 - C.PopupList.VisibleRows;
-    CheckEquals(Lines, C.PopupList.TopIndex, 'offen: Zeilen je Raste weiter');
+    CheckEquals(3, C.PopupList.TopIndex, 'offen: drei Zeilen weiter');
     TComboAccess(C).DoMouseWheel([], WHEEL_DELTA, Point(0, 0));
     CheckEquals(0, C.PopupList.TopIndex);
     CheckEquals(0, C.ItemIndex);
+    // Seitenweise (WHEEL_PAGESCROLL): eine sichtbare Seite (DropDownCount 8)
+    // weniger eine Zeile Ueberlappung
+    PPGSetWheelScrollLinesReader(PPGTestWheelPage);
+    CheckEquals(8, C.PopupList.VisibleRows, 'Vorgabe DropDownCount');
+    TComboAccess(C).DoMouseWheel([], -WHEEL_DELTA, Point(0, 0));
+    CheckEquals(7, C.PopupList.TopIndex, 'seitenweise: 8 - 1 Zeilen weiter');
   finally
     FForm.Hide;
   end;

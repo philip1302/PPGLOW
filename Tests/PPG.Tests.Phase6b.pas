@@ -796,15 +796,14 @@ end;
 procedure TTreeTests.HundredThousandNodes;
 var
   T: TPPGTreeView;
-  Tick: Cardinal;
   I, J: Integer;
   R: TPPGTreeNode;
   Bmp: TBitmap;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 2000 ms im Test)
   FForm.Show;
   try
     T := NewTree;
-    Tick := GetTickCount;
     T.Items.BeginUpdate;
     try
       for I := 0 to 99 do
@@ -821,7 +820,6 @@ begin
     Bmp := RenderToBitmap(T);
     Bmp.Free;
     CheckEquals(100100, T.RowCount);
-    CheckTrue(GetTickCount - Tick < 2000, Format('100 000 Knoten: %d ms', [GetTickCount - Tick]));
     T.Items.Clear;
     CheckEquals(0, T.RowCount);
   finally

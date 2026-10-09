@@ -8,7 +8,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, Vcl.Controls, Vcl.Forms, Vcl.Graphics,
   PPG.Types, PPG.Tokens, PPG.Consts, PPG.Render.Registry, PPG.Controls.Base,
-  PPG.Exceptions, PPG.Sparkline, PPG.Gauge, PPG.Tests.Controls;
+  PPG.Exceptions, PPG.Animation, PPG.Sparkline, PPG.Gauge, PPG.Tests.Controls;
 
 type
   TGaugeTests = class(TControlTestCase)
@@ -77,6 +77,9 @@ end;
 procedure TGaugeTests.SetUp;
 begin
   inherited SetUp;
+  // Audit 11a #6: feste deutsche Formate statt der Systemeinstellung; die
+  // Erwartungen sind Literale (vorher mit FormatFloat/FloatToStr wie im Code)
+  FormatSettings := PPGTestGermanFormat;
   FLog := TStringList.Create;
 end;
 
@@ -355,13 +358,14 @@ var
 begin
   FForm.Show;
   try
+    // Audit 11a #5: Systemanimationen eingespeist (vorher nur Status, wenn
+    // sie im System aus sind)
+    PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
     G := NewGauge;
     G.Animation.Enabled := True;
+    CheckTrue(G.Animation.EffectiveEnabled, 'Animation an');
     G.Value := 80;
-    if G.Animation.EffectiveEnabled then
-      CheckTrue(G.DisplayValue < 80, 'gleitet hin')
-    else
-      Status('Systemanimationen aus - nur sofortiger Wechsel geprueft');
+    CheckTrue(G.DisplayValue < 80, 'gleitet hin');
     CheckEquals(80, G.Value, 1E-12, 'Value sofort');
     G.Animation.Enabled := False;
     G.Value := 30;
@@ -431,7 +435,7 @@ begin
   CheckEquals(ROLE_SYSTEM_SLIDER, TGaugeAccess(G).AccRole);
   CheckEquals(0, TGaugeAccess(G).AccState and STATE_SYSTEM_READONLY);
   G.ValueFormat := '0.0';
-  CheckEquals(FormatFloat('0.0', 68) + ' %', TGaugeAccess(G).AccValue);
+  CheckEquals('68,0 %', TGaugeAccess(G).AccValue);
 end;
 
 procedure TGaugeTests.GaugeStreamingKeepsRanges;
@@ -547,15 +551,15 @@ begin
   K := NewTile;
   K.Value := 12480;
   K.Units := 'EUR';
-  CheckEquals(FormatFloat('#,##0', 12480) + ' EUR', K.DisplayValueText);
+  CheckEquals('12.480 EUR', K.DisplayValueText);
   K.ValueText := 'n/a';
   CheckEquals('n/a EUR', K.DisplayValueText);
   K.Units := '';
   CheckEquals('n/a', K.DisplayValueText);
   K.Change := 4.25;
-  CheckEquals(FormatFloat('+0.0%;-0.0%;0.0%', 4.25), K.DisplayChangeText);
+  CheckEquals('+4,3%', K.DisplayChangeText, '4,25 kaufmaennisch gerundet');
   K.ChangeFormat := '';
-  CheckEquals(FloatToStr(4.25), K.DisplayChangeText);
+  CheckEquals('4,25', K.DisplayChangeText);
 end;
 
 procedure TGaugeTests.KpiClickAndKeyboard;

@@ -170,6 +170,8 @@ type
   TCalAccessB = class(TPPGCalendar);
   /// Audit 8D: Hoehe der InfoBar wie in der Oeffnen-Animation anfordern.
   TInfoBarAccessB = class(TPPGInfoBar);
+  /// Audit 11a: KeyDown (geschuetzt) fuer die Tastatur im Benchmark.
+  TWinControlAccessB = class(TWinControl);
 
   /// Virtuelle Tabelle fuer Export und Druck (1 000 000 Zeilen)
   TBenchTable = class(TInterfacedObject, IPPGTableSource)
@@ -187,6 +189,9 @@ type
     procedure GridText(Sender: TObject; ACol, ARow: Integer; var Text: string);
     procedure GroupText(Sender: TObject; ACol, ARow: Integer; var Text: string);
     procedure TileItem(Sender: TObject; Index: Integer; var Data: TPPGItemData);
+    procedure KanbanCard(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer;
+      var Data: TPPGKanbanCardData);
+    procedure ComboCell(Sender: TObject; Row, Column: Integer; var Text: string);
   end;
 
   TBenchProc = reference to procedure;
@@ -1270,6 +1275,648 @@ begin
     end);
 end;
 
+/// Audit 11a #7: Nachrichten verarbeiten, bis Done True liefert oder TimeoutMs
+/// vergangen sind (Animator-Timer und gepostete Nachrichten).
+procedure Pump11(TimeoutMs: Cardinal; const Done: TFunc<Boolean>);
+var
+  T0: Cardinal;
+  Dummy: THandle;
+begin
+  Dummy := 0;
+  T0 := GetTickCount;
+  while not Done() and (GetTickCount - T0 < TimeoutMs) do
+  begin
+    MsgWaitForMultipleObjects(0, Dummy, False, 10, QS_ALLINPUT);
+    Application.ProcessMessages;
+  end;
+end;
+
+procedure TBenchData.KanbanCard(Sender: TObject; Column: TPPGKanbanColumn; Index: Integer;
+  var Data: TPPGKanbanCardData);
+begin
+  Data.Title := 'V' + IntToStr(Index);
+end;
+
+procedure TBenchData.ComboCell(Sender: TObject; Row, Column: Integer; var Text: string);
+begin
+  if Column = 0 then
+    Text := IntToStr(100000 + Row)
+  else
+    Text := 'Kunde ' + IntToStr(Row);
+end;
+
+/// Audit-Paket 11a #7 (Docs\Audit-Paket11-Plan.md): die Zeitgrenzen, die bis
+/// dahin in Unit-Tests standen (GetTickCount gegen eine Grenze, unter Last
+/// unzuverlaessig). Gleiches Szenario wie im Test, Vorgabe = alte Grenze; der
+/// Unit-Test prueft nur noch das Ergebnis.
+procedure Bench11;
+var
+  D: TBenchData;
+  Tiles: TPPGTileView;
+  XlsxSrc: TPPGStringTableSource;
+  XlsxTable: IPPGTableSource;
+  Appts: TPPGAppointments;
+  A: TPPGAppointment;
+  Planner: TPPGPlanner;
+  Kanban: TPPGKanban;
+  Ribbon: TPPGRibbon;
+  Tab: TPPGRibbonTab;
+  Grp: TPPGRibbonGroup;
+  I, T, G: Integer;
+begin
+  D := TBenchData.Create;
+  try
+    // Phase5 TRowLayoutTests.MillionRowsAreFast
+    Measure('11a Zeilen-Layout 1 Mio. fest: 100 000 x RowAt', 100,
+      procedure
+      var
+        L: TPPGRowLayout;
+        I: Integer;
+      begin
+        L := TPPGRowLayout.Create;
+        try
+          L.DefaultHeight := 20;
+          L.Count := 1000000;
+          for I := 0 to 99999 do
+            L.RowAt(Int64(I) * 197);
+        finally
+          L.Free;
+        end;
+      end);
+    Measure('11a Zeilen-Layout 1 Mio. variabel: 100 000 x RowAt', 300,
+      procedure
+      var
+        L: TPPGRowLayout;
+        I: Integer;
+        H: Int64;
+      begin
+        L := TPPGRowLayout.Create;
+        try
+          L.DefaultHeight := 20;
+          L.Count := 1000000;
+          for I := 0 to 999 do
+            L.SetRowHeight(I * 1000, 40);
+          H := L.TotalHeight64;
+          if H = 0 then
+            Exit;
+          for I := 0 to 99999 do
+            L.RowAt(Int64(I) * 197);
+        finally
+          L.Free;
+        end;
+      end);
+
+    // Phase5 TSelectionTests.MillionItemsAreFast
+    Measure('11a Auswahl 1 Mio.: SelectAll, Strg+Klick, Bereich, Loeschen', 500,
+      procedure
+      var
+        S: TPPGSelection;
+      begin
+        S := TPPGSelection.Create;
+        try
+          S.Mode := smExtended;
+          S.Count := 1000000;
+          S.SelectAll;
+          S.Click(500000, [ssCtrl]);
+          S.Clear;
+          S.SelectRange(10, 900000, False);
+          S.ItemsDeleted(0, 5);
+        finally
+          S.Free;
+        end;
+      end);
+
+    // Phase6a TListBoxTests.VirtualMillionItems
+    Measure('11a ListBox virtuell 1 Mio.: Count, letzter Eintrag, zeichnen', 1000,
+      procedure
+      var
+        L: TPPGListBox;
+      begin
+        L := TPPGListBox.Create(Form);
+        try
+          L.Parent := Form;
+          L.SetBounds(0, 0, 300, 400);
+          L.Style := lbVirtual;
+          L.OnData := D.ListData;
+          L.Count := 1000000;
+          L.ItemIndex := 999999;
+          PaintToBitmap(L);
+        finally
+          L.Free;
+        end;
+      end);
+
+    // Phase6b TTreeTests.HundredThousandNodes
+    Measure('11a TreeView 100 000 Knoten: aufbauen, aufklappen, Auswahl, zeichnen', 2000,
+      procedure
+      var
+        T: TPPGTreeView;
+        R: TPPGTreeNode;
+        I, J: Integer;
+      begin
+        T := TPPGTreeView.Create(Form);
+        try
+          T.Parent := Form;
+          T.SetBounds(0, 0, 300, 400);
+          T.Items.BeginUpdate;
+          try
+            for I := 0 to 99 do
+            begin
+              R := T.Items.Add(nil, 'Gruppe ' + IntToStr(I));
+              for J := 0 to 999 do
+                T.Items.AddChild(R, 'Knoten ' + IntToStr(J));
+            end;
+          finally
+            T.Items.EndUpdate;
+          end;
+          T.FullExpand;
+          T.Selected := T.Items[T.Items.Count - 1];
+          PaintToBitmap(T);
+        finally
+          T.Free;
+        end;
+      end);
+
+    // Phase6c TGridTests.VirtualMillionRows
+    Measure('11a Grid virtuell 1 Mio. x 20: Fokus ans Ende + zeichnen', 1000,
+      procedure
+      var
+        G: TPPGGrid;
+      begin
+        G := TPPGGrid.Create(Form);
+        try
+          G.Parent := Form;
+          G.SetBounds(0, 0, 600, 400);
+          G.OnGetCellText := D.GridText;
+          G.ColCount := 20;
+          G.RowCount := 1000001;
+          G.Row := 1000000;
+          G.Col := 19;
+          PaintToBitmap(G);
+        finally
+          G.Free;
+        end;
+      end);
+
+    // Phase10b TSparklineTests.ManyValuesAreCondensed
+    Measure('11a Sparkline 100 000 Werte zeichnen', 1000,
+      procedure
+      var
+        S: TPPGSparkline;
+        V: TArray<Double>;
+        I: Integer;
+      begin
+        S := TPPGSparkline.Create(Form);
+        try
+          S.Parent := Form;
+          S.SetBounds(10, 10, 120, 40);
+          SetLength(V, 100000);
+          for I := 0 to High(V) do
+            V[I] := Sin(I / 500) * 10 + Random(3);
+          S.SetValues(V);
+          PaintToBitmap(S);
+        finally
+          S.Free;
+        end;
+      end);
+
+    // Phase10d TChartBehaviourTests.ManyPointsAreFast
+    Measure('11a Chart 100 000 Punkte: einmal zeichnen', 500,
+      procedure
+      var
+        C: TPPGChart;
+        V: TArray<Double>;
+        I: Integer;
+      begin
+        C := TPPGChart.Create(Form);
+        try
+          C.Parent := Form;
+          C.SetBounds(0, 0, 600, 320);
+          C.Animation.Enabled := False;
+          SetLength(V, 100000);
+          for I := 0 to High(V) do
+            V[I] := Sin(I / 1000) * 100 + Random(10);
+          C.Series.Add.SetValues(V);
+          PaintToBitmap(C);
+        finally
+          C.Free;
+        end;
+      end);
+    Measure('11a Chart 100 000 Punkte: 200 x Append im Lauffenster', 2000,
+      procedure
+      var
+        C: TPPGChart;
+        S: TPPGChartSeries;
+        V: TArray<Double>;
+        I: Integer;
+      begin
+        C := TPPGChart.Create(Form);
+        try
+          C.Parent := Form;
+          C.SetBounds(0, 0, 600, 320);
+          C.Animation.Enabled := False;
+          SetLength(V, 100000);
+          for I := 0 to High(V) do
+            V[I] := Sin(I / 1000) * 100 + Random(10);
+          S := C.Series.Add;
+          S.SetValues(V);
+          for I := 1 to 200 do
+            S.Append(I, 100000);
+        finally
+          C.Free;
+        end;
+      end);
+
+    // Phase12c TColumnComboTests.VirtualRowsAreFast
+    Measure('11a ColumnComboBox 100 000 virtuell: aufklappen + Ende', 1000,
+      procedure
+      var
+        C: TPPGColumnComboBox;
+        K: Word;
+      begin
+        C := TPPGColumnComboBox.Create(Form);
+        try
+          C.Parent := Form;
+          C.SetBounds(10, 10, 260, 32);
+          C.Animation.Enabled := False;
+          C.Columns.Add.Title := 'Nr';
+          C.Columns.Add.Title := 'Name';
+          C.OnGetCellText := D.ComboCell;
+          C.VirtualRowCount := 100000;
+          C.SetFocus;
+          C.DropDown;
+          K := VK_END;
+          TWinControlAccessB(C).KeyDown(K, []);
+          C.CloseUp(False);
+        finally
+          C.Free;
+        end;
+      end);
+
+    // Phase12c TTagEditTests.ManyTagsLayoutFast
+    Measure('11a TagEdit 500 Tags: anlegen + zeichnen', 1500,
+      procedure
+      var
+        T: TPPGTagEdit;
+        I: Integer;
+      begin
+        T := TPPGTagEdit.Create(Form);
+        try
+          T.Parent := Form;
+          T.SetBounds(10, 10, 500, 32);
+          T.Tags.BeginUpdate;
+          try
+            for I := 1 to 500 do
+              T.Tags.Add('Tag' + IntToStr(I));
+          finally
+            T.Tags.EndUpdate;
+          end;
+          PaintToBitmap(T);
+        finally
+          T.Free;
+        end;
+      end);
+
+    // Phase13b TGridColumnTests.AutoSizeSamplesManyRows
+    Measure('11a Grid 1 Mio. Zeilen: AutoSizeColumn (Stichprobe)', 2000,
+      procedure
+      var
+        G: TPPGGrid;
+        R, C: Integer;
+      begin
+        G := TPPGGrid.Create(Form);
+        try
+          G.Parent := Form;
+          G.SetBounds(0, 0, 600, 400);
+          G.ColCount := 4;
+          G.RowCount := 6;
+          for R := 1 to 5 do
+            for C := 0 to 3 do
+              G.Cells[C, R] := Chr(Ord('A') + C) + IntToStr(R * 37);
+          G.RowCount := 1000001;
+          G.AutoSizeColumn(1);
+        finally
+          G.Free;
+        end;
+      end);
+
+    // Phase13f TExportTests.ManyRows (gemessen wie im Test: nur der Export)
+    XlsxSrc := TPPGStringTableSource.Create(['Nr', 'Text', 'Wert']);
+    XlsxTable := XlsxSrc;
+    for I := 1 to 20000 do
+      XlsxSrc.AddRow([IntToStr(I), 'Text ' + IntToStr(I mod 100), FloatToStr(I / 4)]);
+    Measure('11a xlsx: 20 000 Zeilen x 3 exportieren (Datei)', 10000,
+      procedure
+      var
+        F: string;
+      begin
+        F := TPath.Combine(TPath.GetTempPath, 'ppg_bench11.xlsx');
+        try
+          PPGExportXlsx(XlsxTable, F);
+        finally
+          System.SysUtils.DeleteFile(F);
+        end;
+      end);
+    XlsxTable := nil;
+
+    // Phase14a TModelTests.RangeQuery: 50 000 Termine; gemessen: Abfrage einer Woche
+    Appts := TPPGAppointments.Create(nil);
+    try
+      Appts.BeginUpdate;
+      try
+        for I := 0 to 49999 do
+        begin
+          A := Appts.Add;
+          A.StartTime := EncodeDate(2026, 1, 1) + (I mod 365) + (I mod 9) / 24;
+          A.FinishTime := A.StartTime + 1 / 24;
+        end;
+      finally
+        Appts.EndUpdate;
+      end;
+      Measure('11a Termine 50 000: eine Woche abfragen', 1000,
+        procedure
+        begin
+          Appts.GetOccurrences(EncodeDate(2026, 3, 2), EncodeDate(2026, 3, 9));
+        end);
+    finally
+      Appts.Free;
+    end;
+
+    // Phase14aPlanner TPlannerTests.ManyAppointmentsStayFast; gemessen wie im
+    // Test erst nach dem Anlegen: anordnen + zeichnen
+    Planner := TPPGPlanner.Create(Form);
+    try
+      Planner.Parent := Form;
+      Planner.SetBounds(0, 0, 860, 640);
+      Planner.Animation.Enabled := False;
+      Planner.SmoothScrolling := False;
+      Planner.Date := EncodeDate(2026, 6, 3);
+      Planner.Appointments.BeginUpdate;
+      try
+        for I := 0 to 49999 do
+        begin
+          A := Planner.Appointments.Add;
+          A.StartTime := EncodeDate(2026, 1, 1) + (I mod 365) + (8 + I mod 10) / 24;
+          A.FinishTime := A.StartTime + 1 / 24;
+          A.Subject := 'T' + IntToStr(I);
+        end;
+      finally
+        Planner.Appointments.EndUpdate;
+      end;
+      Measure('11a Planer 50 000 Termine: Woche anordnen + zeichnen', 1500,
+        procedure
+        begin
+          Planner.InvalidateLayout;
+          Planner.EnsureLayout;
+          PaintToBitmap(Planner);
+        end);
+    finally
+      Planner.Free;
+    end;
+
+    // Phase14cKanban TKanbanTests.VirtualColumn
+    Measure('11a Kanban virtuelle Spalte 100 000: scrollen, zeichnen, HitTest', 1000,
+      procedure
+      var
+        K: TPPGKanban;
+        R0, R1: TRect;
+      begin
+        K := TPPGKanban.Create(Form);
+        try
+          K.Parent := Form;
+          K.SetBounds(0, 0, 1080, 640);
+          K.Animation.Enabled := False;
+          K.SmoothScrolling := False;
+          K.OnGetCard := D.KanbanCard;
+          K.Columns.AddColumn('Archiv').VirtualCount := 100000;
+          K.HandleNeeded;
+          R0 := K.CardRect(0, 0, 0);
+          R1 := K.CardRect(0, 0, 1);
+          K.ScrollColumn(0, 50000 * (R1.Top - R0.Top));
+          K.ScrollBy(10000, 0);
+          PaintToBitmap(K);
+          K.HitTest(K.ColumnRect(0).Left + 20, K.ColumnRect(0).Top + 200);
+        finally
+          K.Free;
+        end;
+      end);
+
+    // Phase14cKanban TKanbanTests.ManyCardsStayFast; gemessen wie im Test:
+    // Layout + 100 x scrollen und zeichnen (ohne das Anlegen der Karten)
+    Kanban := TPPGKanban.Create(Form);
+    try
+      Kanban.Parent := Form;
+      Kanban.SetBounds(0, 0, 1080, 640);
+      Kanban.Animation.Enabled := False;
+      Kanban.SmoothScrolling := False;
+      for I := 1 to 4 do
+        Kanban.Columns.AddColumn('Spalte ' + IntToStr(I));
+      Kanban.Cards.BeginUpdate;
+      try
+        for I := 1 to 5000 do
+          with Kanban.Cards.AddCard(1 + I mod 4, 'Aufgabe ' + IntToStr(I), 'Beschreibung <b>' + IntToStr(I) + '</b>') do
+          begin
+            Labels := 'L' + IntToStr(I mod 7);
+            Assignee := 'Person ' + IntToStr(I mod 5);
+          end;
+      finally
+        Kanban.Cards.EndUpdate;
+      end;
+      Measure('11a Kanban 5000 Karten: Layout + 100 x scrollen und zeichnen', 5000,
+        procedure
+        var
+          J: Integer;
+        begin
+          Kanban.EnsureLayout;
+          for J := 0 to 99 do
+          begin
+            Kanban.ScrollColumn(0, 400);
+            PaintToBitmap(Kanban);
+          end;
+        end);
+    finally
+      Kanban.Free;
+    end;
+
+    // Phase14bRibbon TRibbonTests.ManyItemsStayFast; gemessen wie im Test:
+    // 200 x Breite + Zeichnen (ohne den Aufbau)
+    Ribbon := TPPGRibbon.Create(Form);
+    try
+      Ribbon.Parent := Form;
+      Ribbon.Animation.Enabled := False;
+      Ribbon.Align := alNone;
+      for T := 0 to 9 do
+      begin
+        Tab := Ribbon.Tabs.AddTab('Karte ' + IntToStr(T));
+        for G := 0 to 9 do
+        begin
+          Grp := Tab.Groups.AddGroup('Gruppe ' + IntToStr(G));
+          for I := 0 to 9 do
+            Grp.Items.AddButton('Befehl ' + IntToStr(G) + '.' + IntToStr(I), $E700 + I, TPPGRibbonSize(I mod 3));
+        end;
+      end;
+      for G := 0 to 29 do
+      begin
+        Grp := Ribbon.Tabs[0].Groups.AddGroup('Viel ' + IntToStr(G));
+        for I := 0 to 9 do
+          Grp.Items.AddButton('Befehl ' + IntToStr(I), $E700 + I, TPPGRibbonSize(I mod 3));
+      end;
+      Measure('11a Ribbon 130 Gruppen: 200 x Breite + Zeichnen', 4000,
+        procedure
+        var
+          J: Integer;
+        begin
+          for J := 0 to 199 do
+          begin
+            Ribbon.Width := 300 + (J * 7) mod 1300;
+            Ribbon.UpdateLayout;
+            PaintToBitmap(Ribbon);
+          end;
+        end);
+    finally
+      Ribbon.Free;
+    end;
+
+    // Phase18 TTileViewTests.VirtualHundredThousand
+    Measure('11a TileView virtuell 100 000: Layout', 3000,
+      procedure
+      var
+        V: TPPGTileView;
+      begin
+        V := TPPGTileView.Create(Form);
+        try
+          V.Parent := Form;
+          V.SetBounds(0, 0, 600, 400);
+          V.OnGetItem := D.TileItem;
+          V.OwnerData := True;
+          V.ItemCount := 100000;
+          if V.VisibleCount <> 100000 then
+            Exit;
+        finally
+          V.Free;
+        end;
+      end);
+    // Gemessen wird wie im Test nur das Zeichnen (Layout steht schon)
+    Tiles := TPPGTileView.Create(Form);
+    try
+      Tiles.Parent := Form;
+      Tiles.SetBounds(0, 0, 600, 400);
+      Tiles.OnGetItem := D.TileItem;
+      Tiles.OwnerData := True;
+      Tiles.ItemCount := 100000;
+      if Tiles.VisibleCount = 100000 then
+        Tiles.ScrollTo(0, MaxInt);
+      Measure('11a TileView virtuell 100 000: am Ende zeichnen (nur sichtbar)', 500,
+        procedure
+        begin
+          PaintToBitmap(Tiles);
+        end);
+    finally
+      Tiles.Free;
+    end;
+
+    // Phase19 TBusyOverlayTests.FreeWhileAsyncRunningWaits (gemessen: Free)
+    Measure('11a BusyOverlay: Free bricht laufende Arbeit ab', 2000,
+      procedure
+      var
+        O: TPPGBusyOverlay;
+        P: TPanel;
+      begin
+        P := TPanel.Create(Form);
+        try
+          P.Parent := Form;
+          P.SetBounds(0, 0, 300, 200);
+          O := TPPGBusyOverlay.Create(Form);
+          O.Target := P;
+          O.RunAsync(
+            procedure(const C: IPPGBusyContext)
+            var
+              T0: Cardinal;
+            begin
+              T0 := GetTickCount;
+              while not C.Cancelled and (GetTickCount - T0 < 5000) do
+                Sleep(10);
+            end, nil);
+          O.Free;
+        finally
+          P.Free;
+        end;
+      end);
+
+    // Audit8B TAudit8BTests.RowHeightsMillionRows
+    Measure('11a Grid 1 Mio. Zeilen: 3 x RowHeights + 50 x ColWidths', 2000,
+      procedure
+      var
+        G: TPPGGrid;
+        V: Integer;
+      begin
+        G := TPPGGrid.Create(Form);
+        try
+          G.Parent := Form;
+          G.SetBounds(0, 0, 600, 400);
+          G.ColCount := 3;
+          G.OnGetCellText := D.GridText;
+          G.RowCount := 1000001;
+          G.RowHeights[0] := 30;
+          G.RowHeights[3] := 10;
+          G.RowHeights[999999] := 40;
+          for V := 0 to 49 do
+            G.ColWidths[1] := 60 + V;
+        finally
+          G.Free;
+        end;
+      end);
+
+    // Audit8A TAudit8AAnimatorTests.DueModeEndsOnTime (Ende nach 300 ms)
+    Measure('11a Animation Faelligkeitsmodus 300 ms: Ende', 700,
+      procedure
+      var
+        A: TPPGAnimation;
+      begin
+        A := TPPGAnimation.Create(nil);
+        try
+          A.StepInterval := 60000;
+          A.AnimateTo(1, 300, ekLinear);
+          Pump11(2000,
+            function: Boolean
+            begin
+              Result := not A.Running;
+            end);
+        finally
+          A.Free;
+        end;
+      end);
+
+    // Audit8A TAudit8AAnimatorTests.ToastLifetimeEndsWithoutFrames (400 ms)
+    Measure('11a Toast mit Lebensdauer 400 ms: Ende', 1000,
+      procedure
+      var
+        F: TForm;
+        C: TPPGNotificationCenter;
+        T: TPPGToast;
+      begin
+        F := TForm.CreateNew(nil);
+        try
+          C := TPPGNotificationCenter.Create(F);
+          C.Animation.Enabled := False;
+          C.RespectQuietHours := False;
+          T := C.Show('Kurz', 'Lebensdauer', psInformational, 400);
+          T.Perform(CM_MOUSELEAVE, 0, 0);
+          Pump11(3000,
+            function: Boolean
+            begin
+              Result := C.VisibleCount = 0;
+            end);
+        finally
+          F.Free;
+        end;
+      end);
+  finally
+    D.Free;
+  end;
+end;
+
+
 begin
   // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
   if PPGRunOnHiddenDesktop then
@@ -2078,6 +2725,10 @@ begin
     Bench8B;
     Bench8C;
     Bench8D;
+
+    Writeln;
+    Writeln('Audit-Paket 11 (Zeitgrenzen aus den Unit-Tests)');
+    Bench11;
 
     Writeln;
     if Exceeded = 0 then

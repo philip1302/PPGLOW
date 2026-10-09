@@ -113,9 +113,17 @@ type
 
 /// Wendet eine Kurve auf T (0..1) an; Ergebnis 0..1, Anfang 0, Ende 1.
 function PPGEase(Easing: TPPGEasing; T: Single): Single;
+type
+  /// Ersatz fuer die Systemabfrage "Animationen erlaubt" (Tests).
+  TPPGSystemAnimationsReader = function: Boolean;
+
 /// Systempruefungen (auch fuer Tests/Diagnose oeffentlich).
 function PPGSystemAnimationsEnabled: Boolean;
 function PPGIsRemoteSession: Boolean;
+/// Testhaken: ersetzt die Systemabfrage (Client-Animationen und
+/// Remote-Sitzung) fuer PPGSystemAnimationsEnabled und
+/// TPPGAnimationSettings.EffectiveEnabled (nil = System).
+procedure PPGSetSystemAnimationsReader(Reader: TPPGSystemAnimationsReader);
 /// Anzahl gerade laufender Animationen (Diagnose/Tests).
 function PPGRunningAnimationCount: Integer;
 /// Diagnose/Tests: aktuelles Intervall des gemeinsamen Timers in ms
@@ -169,10 +177,20 @@ begin
   Result := GAnimator;
 end;
 
+var
+  GSystemAnimationsReader: TPPGSystemAnimationsReader = nil;
+
+procedure PPGSetSystemAnimationsReader(Reader: TPPGSystemAnimationsReader);
+begin
+  GSystemAnimationsReader := Reader;
+end;
+
 function PPGSystemAnimationsEnabled: Boolean;
 var
   Enabled: BOOL;
 begin
+  if Assigned(GSystemAnimationsReader) then
+    Exit(GSystemAnimationsReader());
   // SPI_GETCLIENTAREAANIMATION = $1042 (ab Vista). Schlaegt der Aufruf fehl,
   // gehen wir von "an" aus.
   Enabled := True;
@@ -269,7 +287,12 @@ function TPPGAnimationSettings.EffectiveEnabled: Boolean;
 begin
   Result := FEnabled and (FDuration > 0);
   if Result and FRespectSystemSettings then
-    Result := PPGSystemAnimationsEnabled and not PPGIsRemoteSession;
+  begin
+    if Assigned(GSystemAnimationsReader) then
+      Result := GSystemAnimationsReader()
+    else
+      Result := PPGSystemAnimationsEnabled and not PPGIsRemoteSession;
+  end;
 end;
 
 procedure TPPGAnimationSettings.SetDuration(const Value: Integer);

@@ -135,7 +135,7 @@ type
   private
     FSelChanges: Integer;
     procedure SelChange(Sender: TObject);
-    procedure CheckRejects(const What: string; Proc: TProc);
+    procedure CheckRejects(const What: string; Proc: TProc; Value: TFunc<Double>);
   published
     procedure SilentClampsNowRejected;
     procedure KanbanSelectedCardScrollsWithoutEvent;
@@ -1374,10 +1374,13 @@ begin
   Inc(FSelChanges);
 end;
 
-procedure TSetterFixTests.CheckRejects(const What: string; Proc: TProc);
+procedure TSetterFixTests.CheckRejects(const What: string; Proc: TProc; Value: TFunc<Double>);
 var
   Raised: Boolean;
+  Old: Double;
 begin
+  // Audit 11a #4: abgelehnt UND Wert unveraendert (erst pruefen, dann zuweisen)
+  Old := Value();
   Raised := False;
   try
     Proc();
@@ -1386,6 +1389,7 @@ begin
       Raised := True;
   end;
   CheckTrue(Raised, What + ': abgelehnt statt still begrenzt');
+  CheckEquals(Old, Value(), 0, What + ': Wert unveraendert');
 end;
 
 procedure TSetterFixTests.SilentClampsNowRejected;
@@ -1399,22 +1403,31 @@ var
 begin
   S := TPPGStatusBar.Create(FForm);
   S.Panels.Add;
-  CheckRejects('StatusPanel.Progress', procedure begin S.Panels[0].Progress := 140 end);
-  CheckRejects('StatusPanel.Width', procedure begin S.Panels[0].Width := -1 end);
-  CheckRejects('StatusPanel.BadgeCount', procedure begin S.Panels[0].BadgeCount := -1 end);
+  CheckRejects('StatusPanel.Progress', procedure begin S.Panels[0].Progress := 140 end,
+    function: Double begin Result := S.Panels[0].Progress end);
+  CheckRejects('StatusPanel.Width', procedure begin S.Panels[0].Width := -1 end,
+    function: Double begin Result := S.Panels[0].Width end);
+  CheckRejects('StatusPanel.BadgeCount', procedure begin S.Panels[0].BadgeCount := -1 end,
+    function: Double begin Result := S.Panels[0].BadgeCount end);
   N := TPPGNavigationView.Create(FForm);
   N.Items.AddItem('A');
-  CheckRejects('NavItem.BadgeCount', procedure begin N.Items[0].BadgeCount := -2 end);
-  CheckRejects('CompactModeThresholdWidth', procedure begin N.CompactModeThresholdWidth := -1 end);
+  CheckRejects('NavItem.BadgeCount', procedure begin N.Items[0].BadgeCount := -2 end,
+    function: Double begin Result := N.Items[0].BadgeCount end);
+  CheckRejects('CompactModeThresholdWidth', procedure begin N.CompactModeThresholdWidth := -1 end,
+    function: Double begin Result := N.CompactModeThresholdWidth end);
   E := TPPGFileEdit.Create(FForm);
-  CheckRejects('FilterIndex', procedure begin E.FilterIndex := -1 end);
+  CheckRejects('FilterIndex', procedure begin E.FilterIndex := -1 end,
+    function: Double begin Result := E.FilterIndex end);
   C := TPPGCheckComboBox.Create(FForm);
-  CheckRejects('FilterThreshold', procedure begin C.FilterThreshold := -5 end);
+  CheckRejects('FilterThreshold', procedure begin C.FilterThreshold := -5 end,
+    function: Double begin Result := C.FilterThreshold end);
   T := TPPGTagEdit.Create(FForm);
-  CheckRejects('TagEdit.Delimiter', procedure begin T.Delimiter := #0 end);
+  CheckRejects('TagEdit.Delimiter', procedure begin T.Delimiter := #0 end,
+    function: Double begin Result := Ord(T.Delimiter) end);
   CheckEquals(';', string(T.Delimiter), 'unveraendert');
   R := TPPGProgressRing.Create(FForm);
-  CheckRejects('ProgressRing.Value', procedure begin R.Value := -1 end);
+  CheckRejects('ProgressRing.Value', procedure begin R.Value := -1 end,
+    function: Double begin Result := R.Value end);
 end;
 
 procedure TSetterFixTests.KanbanSelectedCardScrollsWithoutEvent;
@@ -1751,7 +1764,8 @@ begin
 end;
 {$ELSE}
 begin
-  Status('ImageName erst ab Delphi 10.4');
+  // Audit 11a #5: Skip statt Status (der Compiler kennt TVirtualImageList nicht)
+  Skip('ImageName erst ab Delphi 10.4');
 end;
 {$IFEND}
 

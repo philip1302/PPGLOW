@@ -12,7 +12,7 @@ uses
   System.Types, System.DateUtils, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.Clipbrd, System.TypInfo, Vcl.Imaging.pngimage,
   PPG.Types, PPG.Tokens, PPG.Consts, PPG.Render.Registry, PPG.Controls.Base,
   PPG.Exceptions, PPG.Accessibility, PPG.Chart.Scale, PPG.Chart.Series, PPG.Chart,
-  PPG.Sparkline, PPG.Gauge, PPG.Tests.Controls;
+  PPG.Animation, PPG.Sparkline, PPG.Gauge, PPG.Tests.Controls;
 
 type
   TChartTestCase = class(TControlTestCase)
@@ -420,6 +420,9 @@ var
 begin
   FForm.Show;
   try
+    // Audit 11a #5: Systemanimationen eingespeist (vorher still per Status
+    // uebersprungen, wenn sie im System aus sind)
+    PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
     C := SampleChart;
     C.Animation.Enabled := False;
     C.Series[1].Visible := False;
@@ -427,13 +430,9 @@ begin
     CheckFalse(C.Series[1].IsDrawn);
     C.Animation.Enabled := True;
     C.Series[1].Visible := True;
-    if C.Animation.EffectiveEnabled then
-    begin
-      CheckTrue(C.Series[1].VisibleFactor < 1, 'blendet ein');
-      CheckTrue(C.Series[1].IsDrawn, 'waehrend der Animation gezeichnet');
-    end
-    else
-      Status('Systemanimationen aus');
+    CheckTrue(C.Animation.EffectiveEnabled, 'Animation an');
+    CheckTrue(C.Series[1].VisibleFactor < 1, 'blendet ein');
+    CheckTrue(C.Series[1].IsDrawn, 'waehrend der Animation gezeichnet');
   finally
     FForm.Hide;
   end;
@@ -870,13 +869,12 @@ var
 begin
   FForm.Show;
   try
+    // Audit 11a #5: Systemanimationen eingespeist (vorher still per Status
+    // uebersprungen, wenn sie im System aus sind)
+    PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
     C := NewChart;
     C.Animation.Enabled := True;
-    if not C.Animation.EffectiveEnabled then
-    begin
-      Status('Systemanimationen aus - Animationen nicht pruefbar');
-      Exit;
-    end;
+    CheckTrue(C.Animation.EffectiveEnabled, 'Animation an');
     CheckEquals(1, C.IntroProgress, 1E-6, 'ohne Daten kein Aufbau');
     C.Series.Add.SetValues([1, 2, 3]);
     CheckTrue(C.IntroProgress < 1, 'Aufbau mit den ersten Daten');
@@ -911,14 +909,13 @@ var
 begin
   FForm.Show;
   try
+    // Audit 11a #5: Systemanimationen eingespeist (vorher still per Status
+    // uebersprungen, wenn sie im System aus sind)
+    PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
     C := SampleChart;
     C.HandleNeeded; // CreateWnd -> Aufbau erledigt, danach gibt es Uebergaenge
     C.Animation.Enabled := True;
-    if not C.Animation.EffectiveEnabled then
-    begin
-      Status('Systemanimationen aus');
-      Exit;
-    end;
+    CheckTrue(C.Animation.EffectiveEnabled, 'Animation an');
     C.BeginDataUpdate;
     try
       for I := 0 to 5 do
@@ -942,9 +939,10 @@ var
   S: TPPGChartSeries;
   V: TArray<Double>;
   I: Integer;
-  T0, T1: Cardinal;
   B: TBitmap;
 begin
+  // Audit 11a #7: Laufzeiten im Benchmark (Bench11, vorher 500 bzw. 2000 ms
+  // im Test); hier bleibt das Ergebnis
   FForm.Show;
   try
     C := NewChart;
@@ -953,22 +951,17 @@ begin
       V[I] := Sin(I / 1000) * 100 + Random(10);
     S := C.Series.Add;
     S.SetValues(V);
-    RenderToBitmap(C).Free; // Aufwaermen
-    T0 := GetTickCount;
     B := RenderToBitmap(C);
-    T1 := GetTickCount - T0;
     try
-      Status(Format('100 000 Punkte: %d ms', [T1]));
-      CheckTrue(T1 < 500, Format('zu langsam: %d ms', [T1]));
       CheckTrue(ContentPixels(B, FForm.Color) > 1000, 'gezeichnet');
     finally
       B.Free;
     end;
     // Live: Werte anhaengen mit Lauffenster
-    T0 := GetTickCount;
     for I := 1 to 200 do
       S.Append(I, 100000);
-    CheckTrue(GetTickCount - T0 < 2000, Format('Append: %d ms', [GetTickCount - T0]));
+    CheckEquals(100000, S.Count, 'Lauffenster haelt 100 000 Punkte');
+    CheckEquals(200, S.Y[S.Count - 1], 0, 'letzter angehaengter Wert');
   finally
     FForm.Hide;
   end;
@@ -983,7 +976,7 @@ var
   M: TFileStream;
   Sig: array[0..7] of Byte;
   Gdi: Boolean;
-  X, Y, Diff: Integer;
+  X, Y, Diff, Attempt: Integer;
 begin
   C := SampleChart;
   C.Title := 'Export';
@@ -1030,13 +1023,22 @@ begin
       TPPGRendererRegistry.ForceGdiFallback := False;
     end;
   end;
-  try
-    C.CopyToClipboard;
-    CheckTrue(Clipboard.HasFormat(CF_BITMAP), 'Zwischenablage');
-  except
-    on E: Exception do
-      Status('Zwischenablage nicht verfuegbar: ' + E.Message);
-  end;
+  // Audit 11a #4/#7: vorher verschluckte "on Exception do Status" auch den
+  // eigenen Fehlschlag. Die Zwischenablage kann kurz von einem anderen
+  // Programm belegt sein: begrenzt wiederholen (wie GetClip7 in Audit7B),
+  // der letzte Versuch wirft und laesst den Test fehlschlagen.
+  for Attempt := 1 to 20 do
+    try
+      C.CopyToClipboard;
+      Break;
+    except
+      on EClipboardException do
+        if Attempt = 20 then
+          raise
+        else
+          Sleep(50);
+    end;
+  CheckTrue(Clipboard.HasFormat(CF_BITMAP), 'Zwischenablage');
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 

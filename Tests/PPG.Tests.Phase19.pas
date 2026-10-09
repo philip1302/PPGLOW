@@ -1653,8 +1653,14 @@ end;
 procedure TBusyOverlayTests.FreeWhileAsyncRunningWaits;
 var
   O: TPPGBusyOverlay;
-  Start: Cardinal;
+  Ended, SawCancel: Boolean;
 begin
+  // Audit 11a #7: statt Zeitgrenze (vorher < 2000 ms) fachlich pruefen: Free
+  // bricht die Arbeit ab (sie sieht Cancelled, statt erst nach ihrer
+  // Hoechstdauer von 5 s zu enden) und wartet, bis sie beendet ist. Die
+  // Laufzeit misst der Benchmark (Bench11).
+  Ended := False;
+  SawCancel := False;
   O := TPPGBusyOverlay.Create(FForm);
   O.Target := FPanel;
   O.RunAsync(
@@ -1665,10 +1671,12 @@ begin
       T0 := GetTickCount;
       while not C.Cancelled and (GetTickCount - T0 < 5000) do
         Sleep(10);
+      SawCancel := C.Cancelled;
+      Ended := True;
     end, nil);
-  Start := GetTickCount;
   O.Free;
-  CheckTrue(GetTickCount - Start < 2000, 'Freigeben bricht ab und wartet kurz');
+  CheckTrue(Ended, 'Free wartet auf das Ende der Arbeit');
+  CheckTrue(SawCancel, 'Free bricht die Arbeit ab');
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 
