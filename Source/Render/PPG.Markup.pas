@@ -50,6 +50,9 @@ type
     FLineCount: Integer;
     FFonts: array[0..15] of TFont;
     FBaseFont: TFont;
+    FBaseLF: TLogFont; // Audit 8d #7: Schrift, zu der FFonts/FTextH gehoeren
+    FBaseValid: Boolean;
+    FTextH: Integer;
     FImages: TCustomImageList;
     FRunLink: array of Integer;
     FLinkCount: Integer;
@@ -103,6 +106,9 @@ const
 
 var
   GCache: TDictionary<string, TPPGMarkupRuns> = nil;
+  // Audit 8d #7: ein Speicher-DC fuer alle Layouts (nur Hauptthread, wie
+  // GCache); vorher ein neuer DC je Layout-Aufruf
+  GMeasureDC: HDC = 0;
 
 function PPGIsPlainText(const S: string): Boolean;
 begin
@@ -437,6 +443,7 @@ var
 begin
   for I := Low(FFonts) to High(FFonts) do
     FreeAndNil(FFonts[I]);
+  FBaseValid := False;
 end;
 
 function TPPGMarkupLayout.StyleFont(Style: TFontStyles): TFont;
@@ -470,6 +477,8 @@ var
   Wrap: Boolean;
   Sz: TSize;
   F: TFont;
+  LF: TLogFont;
+  OwnDC: Boolean;
 
   procedure FinishLine;
   var
@@ -518,8 +527,18 @@ var
   end;
 
 begin
-  ResetFonts;
-  FBaseFont.Assign(Font);
+  // Audit 8d #7: Stil-Schriften und Zeilenhoehe behalten, solange die
+  // Grundschrift gleich bleibt (Listen, Kanban, Hints messen sonst je Text neu)
+  FillChar(LF, SizeOf(LF), 0);
+  if (GetObject(Font.Handle, SizeOf(LF), @LF) = 0) or not FBaseValid or
+    not CompareMem(@LF, @FBaseLF, SizeOf(LF)) then
+  begin
+    ResetFonts;
+    FBaseFont.Assign(Font);
+    FBaseLF := LF;
+    FBaseValid := True;
+    FTextH := -1;
+  end;
   FImages := Images;
   if PPGIsPlainText(S) then
   begin
@@ -544,9 +563,16 @@ begin
   LineStart := 0;
   Wrap := WordWrap and (MaxWidth > 0);
 
-  DC := CreateCompatibleDC(0);
+  if GMeasureDC = 0 then
+    GMeasureDC := CreateCompatibleDC(0);
+  DC := GMeasureDC;
+  OwnDC := DC = 0;
+  if OwnDC then
+    DC := CreateCompatibleDC(0);
   try
-    TextH := PPGGdiMeasureText(DC, 'Wg', FBaseFont, 0, False).cy;
+    if FTextH < 0 then
+      FTextH := PPGGdiMeasureText(DC, 'Wg', FBaseFont, 0, False).cy;
+    TextH := FTextH;
     for I := 0 to High(FRuns) do
       case FRuns[I].Kind of
         mrkBreak:
@@ -599,7 +625,8 @@ begin
     if (FragCount > LineStart) or (FLineCount = 0) then
       FinishLine;
   finally
-    DeleteDC(DC);
+    if OwnDC then
+      DeleteDC(DC);
   end;
   SetLength(FFrags, FragCount);
   FSize.cy := LineTop;
@@ -771,5 +798,8 @@ initialization
 
 finalization
   FreeAndNil(GCache);
+  if GMeasureDC <> 0 then
+    DeleteDC(GMeasureDC);
+  GMeasureDC := 0;
 
 end.
