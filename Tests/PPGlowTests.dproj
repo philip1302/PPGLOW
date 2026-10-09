@@ -251,6 +251,7 @@
         <DCCReference Include="..\Source\DB\PPG.DB.Chart.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Planner.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Kanban.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.Navigator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Fields.pas"/>
         <DCCReference Include="..\Source\Render\PPG.Render.Fluent11.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.Presets.pas"/>

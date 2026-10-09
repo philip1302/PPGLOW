@@ -10,7 +10,8 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, Vcl.Graphics, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
   PPG.Types, PPG.Controls.Field, PPG.RadioGroup, PPG.Items, PPG.Controls.Scroll, PPG.TileView,
-  PPG.Grid.Data, PPG.Grid.Export, PPG.Tests.Controls;
+  PPG.Grid.Data, PPG.Grid.Export, Data.DB, Datasnap.DBClient, MidasLib, Vcl.DBCtrls,
+  PPG.DB.Navigator, PPG.Tests.Controls;
 
 type
   TChoiceGroupTests = class(TControlTestCase)
@@ -84,13 +85,41 @@ type
     procedure StreamsItemsAndStyle;
   end;
 
+  TDBNavigatorTests = class(TControlTestCase)
+  private
+    FData: TClientDataSet;
+    FSource: TDataSource;
+    FNav: TPPGDBNavigator;
+    FLog: string;
+    procedure NavBefore(Sender: TObject; Button: TNavigateBtn);
+    procedure NavClick(Sender: TObject; Button: TNavigateBtn);
+    procedure OwnFilter(DataSet: TDataSet; var Accept: Boolean);
+    function VisibleRecords: Integer;
+    procedure ClickButton(Btn: TNavigateBtn);
+  protected
+    procedure SetUp; override;
+  published
+    procedure ButtonStatesFollowDataSet;
+    procedure CounterShowsPosition;
+    procedure ClickRunsActionWithEvents;
+    procedure SearchFindsAndWraps;
+    procedure QuickFilterChainsAndRestores;
+    procedure OverflowWhenNarrow;
+    procedure KeyboardShortcuts;
+    procedure AccessibleButtons;
+    procedure StreamsLikeTDBNavigator;
+    procedure PaintsWithoutErrors;
+    procedure RadioGroupReadsAndWritesField;
+  end;
+
 implementation
 
 uses
-  Vcl.Imaging.pngimage, Winapi.oleacc, PPG.Exceptions, PPG.Accessibility, PPG.Render.Registry, PPG.Tokens;
+  Vcl.Imaging.pngimage, PPG.Lang, PPG.Consts, Winapi.oleacc, PPG.Exceptions, PPG.Accessibility, PPG.Render.Registry, PPG.Tokens;
 
 type
   TGroupAccess = class(TPPGCustomChoiceGroup);
+  TNavAccess = class(TPPGCustomDBNavigator);
 
 /// Bild zur Sichtpruefung nach Tests\Visual\Gallery (wie die Sichttests).
 procedure SaveGalleryPng(B: TBitmap; const FileName: string);
@@ -1108,8 +1137,296 @@ begin
   end;
 end;
 
+{ TDBNavigatorTests }
+
+procedure TDBNavigatorTests.SetUp;
+const
+  Names: array[0..4] of string = ('Anna', 'Bernd', 'Carla', 'Bertram', 'Doris');
+  States: array[0..4] of string = ('A', 'B', 'C', 'B', 'A');
+var
+  I: Integer;
+begin
+  inherited SetUp;
+  FLog := '';
+  FData := TClientDataSet.Create(FForm);
+  FData.FieldDefs.Add('ID', ftInteger);
+  FData.FieldDefs.Add('Name', ftString, 20);
+  FData.FieldDefs.Add('Status', ftString, 1);
+  FData.CreateDataSet;
+  for I := 0 to 4 do
+    FData.AppendRecord([I + 1, Names[I], States[I]]);
+  FData.First;
+  FSource := TDataSource.Create(FForm);
+  FSource.DataSet := FData;
+  FNav := TPPGDBNavigator.Create(FForm);
+  FNav.Parent := FForm;
+  FNav.SetBounds(0, 0, 700, 36);
+  FNav.DataSource := FSource;
+  FNav.ConfirmDelete := False;
+  FNav.BeforeAction := NavBefore;
+  FNav.OnClick := NavClick;
+end;
+
+procedure TDBNavigatorTests.NavBefore(Sender: TObject; Button: TNavigateBtn);
+begin
+  FLog := FLog + 'B' + IntToStr(Ord(Button));
+end;
+
+procedure TDBNavigatorTests.NavClick(Sender: TObject; Button: TNavigateBtn);
+begin
+  FLog := FLog + 'C' + IntToStr(Ord(Button));
+end;
+
+procedure TDBNavigatorTests.OwnFilter(DataSet: TDataSet; var Accept: Boolean);
+begin
+  Accept := DataSet.FieldByName('Status').AsString <> 'C';
+end;
+
+function TDBNavigatorTests.VisibleRecords: Integer;
+begin
+  Result := 0;
+  FData.First;
+  while not FData.Eof do
+  begin
+    Inc(Result);
+    FData.Next;
+  end;
+  FData.First;
+end;
+
+procedure TDBNavigatorTests.ClickButton(Btn: TNavigateBtn);
+var
+  R: TRect;
+  P: LPARAM;
+begin
+  R := FNav.ButtonRect(Btn);
+  CheckFalse(IsRectEmpty(R), 'Knopf sichtbar');
+  P := MakeLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+  FNav.Perform(WM_MOUSEMOVE, 0, P);
+  FNav.Perform(WM_LBUTTONDOWN, MK_LBUTTON, P);
+  FNav.Perform(WM_LBUTTONUP, 0, P);
+end;
+
+procedure TDBNavigatorTests.ButtonStatesFollowDataSet;
+begin
+  CheckFalse(FNav.ButtonEnabled(nbFirst), 'am Anfang: Erster aus');
+  CheckFalse(FNav.ButtonEnabled(nbPrior));
+  CheckTrue(FNav.ButtonEnabled(nbNext));
+  CheckFalse(FNav.ButtonEnabled(nbPost), 'ohne Bearbeitung kein Speichern');
+  FData.Last;
+  CheckFalse(FNav.ButtonEnabled(nbNext), 'am Ende: Naechster aus');
+  CheckTrue(FNav.ButtonEnabled(nbFirst));
+  FData.Edit;
+  CheckTrue(FNav.ButtonEnabled(nbPost));
+  CheckTrue(FNav.ButtonEnabled(nbCancel));
+  CheckFalse(FNav.ButtonEnabled(nbFirst), 'beim Bearbeiten keine Navigation');
+  CheckFalse(FNav.ButtonEnabled(nbDelete));
+  FData.Cancel;
+  FNav.DataSource := nil;
+  CheckFalse(FNav.ButtonEnabled(nbNext), 'ohne Datenmenge alles aus');
+end;
+
+procedure TDBNavigatorTests.CounterShowsPosition;
+begin
+  CheckEquals(Format(PPGStr(@SPPGNavCounter), [1, 5]), FNav.CounterText);
+  FData.Next;
+  CheckEquals(Format(PPGStr(@SPPGNavCounter), [2, 5]), FNav.CounterText);
+  FData.Insert;
+  CheckEquals(PPGStr(@SPPGNavNewRecord), FNav.CounterText);
+  FData.Cancel;
+  FData.EmptyDataSet;
+  CheckEquals(PPGStr(@SPPGNavNoRecords), FNav.CounterText);
+  CheckEquals(PPGStr(@SPPGNavNoRecords), TNavAccess(FNav).AccValue, 'auch fuer Screenreader');
+end;
+
+procedure TDBNavigatorTests.ClickRunsActionWithEvents;
+begin
+  ClickButton(nbNext);
+  CheckEquals(2, FData.RecNo);
+  CheckEquals('B' + IntToStr(Ord(nbNext)) + 'C' + IntToStr(Ord(nbNext)), FLog,
+    'BeforeAction, dann OnClick');
+  ClickButton(nbLast);
+  CheckEquals(5, FData.RecNo);
+  FLog := '';
+  FNav.BtnClick(nbNext);
+  CheckEquals('', FLog, 'gesperrter Knopf: keine Aktion, kein Ereignis');
+  FNav.BtnClick(nbDelete);
+  CheckEquals(4, FData.RecordCount, 'loeschen ohne Rueckfrage');
+end;
+
+procedure TDBNavigatorTests.SearchFindsAndWraps;
+begin
+  FNav.ShowSearch := True;
+  FNav.SearchField := 'Name';
+  CheckNotNull(FNav.SearchEdit);
+  CheckTrue(FNav.FindText('ber', True));
+  CheckEquals('Bernd', FData.FieldByName('Name').AsString);
+  CheckTrue(FNav.FindText('ber', False), 'naechster Treffer');
+  CheckEquals('Bertram', FData.FieldByName('Name').AsString);
+  CheckTrue(FNav.FindText('ber', False), 'von vorn');
+  CheckEquals('Bernd', FData.FieldByName('Name').AsString);
+  CheckFalse(FNav.FindText('xyz', True));
+  CheckEquals('Bernd', FData.FieldByName('Name').AsString, 'ohne Treffer bleibt der Satz');
+  FNav.SearchField := '';
+  CheckTrue(FNav.FindText('dor', True), 'alle Textfelder');
+  CheckEquals(5, FData.RecNo);
+end;
+
+procedure TDBNavigatorTests.QuickFilterChainsAndRestores;
+var
+  Old, Mine: TFilterRecordEvent;
+begin
+  Mine := OwnFilter;
+  FData.OnFilterRecord := OwnFilter;
+  FData.Filtered := True;
+  CheckEquals(4, VisibleRecords, 'eigener Filter: ohne C');
+  FNav.ShowSearch := True;
+  FNav.ShowFilter := True;
+  FNav.SearchField := 'Name';
+  FNav.SearchEdit.Text := 'b';
+  FNav.SetQuickFilter(True);
+  CheckTrue(FNav.QuickFilterActive);
+  CheckEquals(2, VisibleRecords, 'Bernd, Bertram (eigener Filter laeuft mit)');
+  FNav.SetQuickFilter(False);
+  Old := FData.OnFilterRecord;
+  CheckTrue(TMethod(Old).Code = TMethod(Mine).Code, 'Handler zurueck');
+  CheckTrue(FData.Filtered, 'Filtered zurueck');
+  CheckEquals(4, VisibleRecords);
+end;
+
+procedure TDBNavigatorTests.OverflowWhenNarrow;
+begin
+  CheckFalse(IsRectEmpty(FNav.ButtonRect(nbRefresh)), 'breit: alle Knoepfe');
+  FNav.Width := 160;
+  CheckFalse(IsRectEmpty(FNav.ButtonRect(nbFirst)));
+  CheckTrue(IsRectEmpty(FNav.ButtonRect(nbRefresh)), 'schmal: hinten im Ueberlauf');
+  FNav.VisibleButtons := [nbPrior, nbNext];
+  FNav.Width := 400;
+  CheckTrue(IsRectEmpty(FNav.ButtonRect(nbFirst)), 'ausgeblendet');
+  CheckFalse(IsRectEmpty(FNav.ButtonRect(nbNext)));
+end;
+
+procedure TDBNavigatorTests.KeyboardShortcuts;
+begin
+  FNav.Perform(WM_KEYDOWN, VK_NEXT, 0);
+  CheckEquals(2, FData.RecNo, 'Bild ab = naechster Satz');
+  FNav.Perform(WM_KEYDOWN, VK_INSERT, 0);
+  CheckTrue(FData.State = dsInsert, 'Einfg');
+  FNav.Perform(WM_KEYDOWN, VK_ESCAPE, 0);
+  CheckTrue(FData.State = dsBrowse, 'Esc bricht ab');
+  FNav.Perform(WM_KEYDOWN, VK_F2, 0);
+  CheckTrue(FData.State = dsEdit, 'F2 bearbeitet');
+  FData.Cancel;
+end;
+
+procedure TDBNavigatorTests.AccessibleButtons;
+var
+  A: IPPGAccessibleChildren;
+begin
+  CheckTrue(Supports(FNav, IPPGAccessibleChildren, A));
+  CheckEquals(10, A.AccChildCount, 'Standard-Knoepfe');
+  CheckEquals(PPGStr(@SPPGNavFirst), A.AccChildName(1));
+  CheckEquals(STATE_SYSTEM_UNAVAILABLE, A.AccChildState(1), 'Erster am Anfang gesperrt');
+  CheckEquals(ROLE_SYSTEM_PUSHBUTTON, A.AccChildRole(3));
+  FNav.Hints.Text := 'Zum Anfang';
+  CheckEquals('Zum Anfang', A.AccChildName(1), 'eigene Hints wie TDBNavigator');
+end;
+
+procedure TDBNavigatorTests.StreamsLikeTDBNavigator;
+var
+  M: TMemoryStream;
+  N2: TPPGDBNavigator;
+begin
+  FNav.VisibleButtons := [nbFirst, nbLast];
+  FNav.ShowSearch := True;
+  FNav.ShowFilter := True;
+  FNav.ShowCounter := False;
+  FNav.SearchField := 'Name';
+  FNav.Flat := True;
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(FNav);
+    M.Position := 0;
+    N2 := TPPGDBNavigator.Create(FForm);
+    M.ReadComponent(N2);
+    CheckTrue(N2.VisibleButtons = [nbFirst, nbLast]);
+    CheckTrue(N2.ShowSearch and N2.ShowFilter and not N2.ShowCounter and N2.Flat);
+    CheckFalse(N2.ConfirmDelete);
+    CheckEquals('Name', N2.SearchField);
+  finally
+    M.Free;
+  end;
+end;
+
+procedure TDBNavigatorTests.PaintsWithoutErrors;
+var
+  B: TBitmap;
+  Gdi: Boolean;
+begin
+  FNav.ShowSearch := True;
+  FNav.ShowFilter := True;
+  for Gdi := False to True do
+  begin
+    TPPGRendererRegistry.ForceGdiFallback := Gdi;
+    try
+      B := RenderToBitmap(FNav);
+      B.Free;
+      FData.Edit;
+      B := RenderToBitmap(FNav);
+      B.Free;
+      FData.Cancel;
+      FNav.Enabled := False;
+      B := RenderToBitmap(FNav);
+      B.Free;
+      FNav.Enabled := True;
+    finally
+      TPPGRendererRegistry.ForceGdiFallback := False;
+    end;
+  end;
+  CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+procedure TDBNavigatorTests.RadioGroupReadsAndWritesField;
+var
+  G: TPPGDBRadioGroup;
+  R: TRect;
+  P: LPARAM;
+begin
+  G := TPPGDBRadioGroup.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(0, 50, 300, 120);
+  G.Items.CommaText := 'Aktiv,Beendet,Club';
+  G.Values.CommaText := 'A,B,C';
+  G.DataSource := FSource;
+  G.DataField := 'Status';
+  CheckEquals(0, G.ItemIndex, 'Anna: A');
+  FData.Next;
+  CheckEquals(1, G.ItemIndex, 'Bernd: B');
+  // Anwender waehlt "Club": Satz geht in Bearbeitung, Wert landet im Feld
+  R := G.ItemRect(2);
+  P := MakeLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+  G.Perform(WM_LBUTTONDOWN, MK_LBUTTON, P);
+  G.Perform(WM_LBUTTONUP, 0, P);
+  CheckTrue(FData.State = dsEdit);
+  FData.Post;
+  CheckEquals('C', FData.FieldByName('Status').AsString);
+  G.ReadOnly := True;
+  G.Perform(WM_LBUTTONDOWN, MK_LBUTTON, MakeLParam(5, 5));
+  R := G.ItemRect(0);
+  P := MakeLParam((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+  G.Perform(WM_LBUTTONDOWN, MK_LBUTTON, P);
+  G.Perform(WM_LBUTTONUP, 0, P);
+  CheckEquals(2, G.ItemIndex, 'ReadOnly: keine Aenderung');
+  CheckTrue(FData.State = dsBrowse);
+  FData.Edit;
+  FData.FieldByName('Status').Clear;
+  CheckEquals(-1, G.ItemIndex, 'Null: nichts gewaehlt');
+  FData.Cancel;
+end;
+
 initialization
   RegisterTest('Phase18', TChoiceGroupTests.Suite);
   RegisterTest('Phase18', TTileViewTests.Suite);
+  RegisterTest('Phase18', TDBNavigatorTests.Suite);
 
 end.

@@ -165,6 +165,7 @@ uses
   PPG.DB.Chart in '..\Source\DB\PPG.DB.Chart.pas',
   PPG.DB.Planner in '..\Source\DB\PPG.DB.Planner.pas',
   PPG.DB.Kanban in '..\Source\DB\PPG.DB.Kanban.pas',
+  PPG.DB.Navigator in '..\Source\DB\PPG.DB.Navigator.pas',
   PPG.DB.Fields in '..\Source\DB\PPG.DB.Fields.pas',
   DemoKit in 'DemoKit.pas',
   DemoPages1 in 'DemoPages1.pas',

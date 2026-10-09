@@ -219,6 +219,7 @@
     <File Path="..\Source\DB\PPG.DB.Fields.pas"/>
     <File Path="..\Source\DB\PPG.DB.Planner.pas"/>
     <File Path="..\Source\DB\PPG.DB.Kanban.pas"/>
+    <File Path="..\Source\DB\PPG.DB.Navigator.pas"/>
     <File Path="..\Source\Render"/>
     <File Path="..\Source\Render\PPG.IconFont.pas"/>
     <File Path="..\Source\Render\PPG.Markup.pas"/>

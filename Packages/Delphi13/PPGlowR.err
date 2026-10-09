@@ -23,4 +23,4 @@ dcc32 Befehlszeile für "PPGlowR.dpk"
   (x86)\embarcadero\studio\37.0\include" -K00400000 --description:"PPGlow Components - Runtime" -NB..\..\Lib\37.0\Win32\Debug 
   -NHC:\Users\Public\Documents\Embarcadero\Studio\37.0\hpp\Win32 -NO..\..\Lib\37.0\Win32\Debug  PPGlowR.dpk   
 Erfolg
-Verstrichene Zeit: 00:00:01.6
+Verstrichene Zeit: 00:00:01.2

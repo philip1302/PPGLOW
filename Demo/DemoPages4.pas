@@ -10,7 +10,7 @@ uses
   Data.DB, Datasnap.DBClient,
   PPG.Types, PPG.Controls.Base, PPG.Feedback, PPG.Panel, PPG.Labels, PPG.ToolBar, PPG.Grid,
   PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.Chart.Series, PPG.DB.Chart,
-  PPG.NumberFormat, PPG.DB.Fields,
+  PPG.NumberFormat, PPG.DB.Fields, PPG.DB.Navigator,
   Vcl.Dialogs, PPG.Grid.Data, PPG.Grid.Export,
   DemoKit;
 
@@ -22,6 +22,7 @@ type
     FSource: TDataSource;
     FCatSource: TDataSource;
     FGrid: TPPGDBGrid;
+    FNav: TPPGDBNavigator;
     FName: TPPGDBEdit;
     FCity: TPPGDBComboBox;
     FSince: TPPGDBDatePicker;
@@ -33,6 +34,7 @@ type
     FResult: TPPGLabel;
     FChart: TPPGDBChart;
     procedure BuildData;
+    procedure CustomersNewRecord(DataSet: TDataSet);
     procedure ToolClick(Sender: TObject; Item: TPPGToolItem);
     procedure SourceChange(Sender: TObject; Field: TField);
     procedure SourceStateChange(Sender: TObject);
@@ -128,6 +130,7 @@ begin
     FCustomers.AppendRecord([I + 1, L(Names[I]), L(Cities[I]), EncodeDate(2015 + I, 1 + I, 3 + I),
       CatOf[I], I mod 3 <> 2, Sales[I], '', TagsOf(I)]);
   FCustomers.First;
+  FCustomers.OnNewRecord := CustomersNewRecord;
   FSource := TDataSource.Create(Own);
   FSource.DataSet := FCustomers;
   FSource.OnDataChange := SourceChange;
@@ -158,19 +161,19 @@ begin
 
   // Tabelle mit Navigation
   Card := NewCard(Own, Sheet, PageX, PageContentTop, FullW, GridH, '', '');
+  // Navigator (Phase 18c): Knoepfe, Zaehler, Suche im Namen, "Nur Treffer"
+  FNav := TPPGDBNavigator.Create(Own);
+  FNav.Parent := Card;
+  FNav.SetBounds(CardPad - 2, 14, FullW - 2 * CardPad - 120, 36);
+  FNav.ShowSearch := True;
+  FNav.ShowFilter := True;
+  FNav.SearchField := 'Name';
+  FNav.ShowHint := True;
+  FNav.DataSource := FSource;
   TB := TPPGToolBar.Create(Own);
   TB.Parent := Card;
   TB.Align := alNone;
-  TB.SetBounds(CardPad - 6, 12, 760, 40);
-  TB.Items.AddButton(L('Zur{ue}ck'), IcoPrior);
-  TB.Items.AddButton('Weiter', IcoNext);
-  TB.Items.AddSeparator;
-  TB.Items.AddButton('Neu', IcoAdd);
-  TB.Items.AddButton(L('L{oe}schen'), IcoDelete);
-  TB.Items.AddSeparator;
-  TB.Items.AddButton('Speichern', IcoPost);
-  TB.Items.AddButton('Verwerfen', IcoCancel);
-  TB.Items.AddSeparator;
+  TB.SetBounds(FullW - CardPad - 110, 12, 110, 40);
   TB.Items.AddButton('Excel', $EDE1);
   TB.OnItemClick := ToolClick;
   FGrid := TPPGDBGrid.Create(Own);
@@ -320,6 +323,14 @@ begin
     end;
 end;
 
+procedure TDemoDatabasePage.CustomersNewRecord(DataSet: TDataSet);
+begin
+  // Vorbelegung fuer "Neu" (Navigator wie frueher der Knopf der Leiste)
+  DataSet.FieldByName('ID').AsInteger := DataSet.RecordCount + 1;
+  DataSet.FieldByName('Since').AsDateTime := Date;
+  DataSet.FieldByName('Active').AsBoolean := True;
+end;
+
 procedure TDemoDatabasePage.ToolClick(Sender: TObject; Item: TPPGToolItem);
 begin
   try
@@ -430,6 +441,13 @@ begin
   Check('Datenbank: Summenzeile aus TAggregateField', FGrid.FooterText(5) <> '');
   Check('Datenbank: Export liest alle Saetze',
     (FGrid as IPPGTableSource).TableRowCount = FCustomers.RecordCount);
+  FCustomers.First;
+  Check('Datenbank: Navigator zaehlt', Pos(IntToStr(FCustomers.RecordCount), FNav.CounterText) > 0);
+  Check('Datenbank: Navigator sucht', FNav.FindText(Copy(FCustomers.FieldByName('Name').AsString, 2, 3), False) or
+    (FCustomers.RecNo = 1));
+  FNav.SetQuickFilter(True);
+  FNav.SetQuickFilter(False);
+  Check('Datenbank: Filter aus stellt alle her', not FCustomers.Filtered);
 end;
 
 end.

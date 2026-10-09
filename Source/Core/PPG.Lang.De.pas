@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 169;
+  PPGLangDeCount = 188;
 
 implementation
 
@@ -286,6 +286,44 @@ begin
     'Plakette');
   PPGAddTranslation(PPGLangDeCode, @SPPGTileColGroup,
     'Gruppe');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavFirst,
+    'Erster Datensatz');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavPrior,
+    'Vorheriger Datensatz');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavNext,
+    'N'#$00E4'chster Datensatz');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavLast,
+    'Letzter Datensatz');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavInsert,
+    'Datensatz einf'#$00FC'gen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavDelete,
+    'Datensatz l'#$00F6'schen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavEdit,
+    'Datensatz bearbeiten');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavPost,
+    'Bearbeitung speichern');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavCancel,
+    'Bearbeitung abbrechen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavRefresh,
+    'Daten aktualisieren');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavApply,
+    #$00C4'nderungen '#$00FC'bernehmen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavCancelUpdates,
+    #$00C4'nderungen verwerfen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavNewRecord,
+    'Neuer Datensatz');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavNoRecords,
+    'Keine Datens'#$00E4'tze');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavCounter,
+    'Datensatz %d von %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavCount,
+    '%d Datens'#$00E4'tze');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavSearchHint,
+    'Suchen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavFilter,
+    'Nur Treffer zeigen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGNavDeleteConfirm,
+    'Datensatz l'#$00F6'schen?');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupMargins,
     'R'#$00E4'nder links, oben, rechts, unten (mm)');
   PPGAddTranslation(PPGLangDeCode, @SPPGPageSetupHeader,

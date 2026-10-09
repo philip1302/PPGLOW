@@ -62,7 +62,7 @@ implementation
 uses
   System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, Data.DB, ColnEdit,
   PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Fields,
-  PPG.DB.Planner, PPG.DB.Kanban;
+  PPG.DB.Planner, PPG.DB.Kanban, PPG.DB.Navigator;
 
 resourcestring
   SPPGDBPalette = 'PPGlow DB';
@@ -209,7 +209,10 @@ var
 begin
   RegisterComponents(SPPGDBPalette, [TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
     TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart, TPPGDBPlanner, TPPGDBKanban,
-    TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit]);
+    TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit,
+    TPPGDBNavigator, TPPGDBRadioGroup]);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBRadioGroup, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBNavigator, 'SearchField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBEdit, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBMemo, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBCheckBox, 'DataField', TPPGDataFieldProperty);
