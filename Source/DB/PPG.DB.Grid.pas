@@ -190,7 +190,7 @@ type
     procedure Resize; override;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure NavigateKey(var Key: Word; Shift: TShiftState); override;
     procedure ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     /// Rueckfrage vor dem Loeschen (dgConfirmDelete). Standard: MessageDlg.
     function ConfirmDelete: Boolean; virtual;
@@ -270,6 +270,7 @@ type
     property ParentShowHint;
     property PopupMenu;
     property ShowHint;
+    property ToolTips;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
     {$ENDIF}
@@ -1551,13 +1552,14 @@ begin
   Result := MessageDlg(PPGStr(@SPPGDBGridConfirmDelete), mtConfirmation, [mbOK, mbCancel], 0) = mrOK;
 end;
 
-procedure TPPGCustomDBGrid.KeyDown(var Key: Word; Shift: TShiftState);
+procedure TPPGCustomDBGrid.NavigateKey(var Key: Word; Shift: TShiftState);
 var
   DS: TDataSet;
 begin
+  // Audit 7c #1: laeuft nach OnKeyDown (KeyDown der Grid-Basis)
   if not FDataLink.Active or EditorMode then
   begin
-    inherited KeyDown(Key, Shift);
+    inherited NavigateKey(Key, Shift);
     Exit;
   end;
   DS := FDataLink.DataSet;
@@ -1623,7 +1625,7 @@ begin
       end;
   end;
   if Key <> 0 then
-    inherited KeyDown(Key, Shift);
+    inherited NavigateKey(Key, Shift);
 end;
 
 

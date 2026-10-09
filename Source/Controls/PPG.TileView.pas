@@ -86,8 +86,7 @@ type
     FBanding: Boolean;
     FBandBase: array of Boolean;
     FDownPos: Integer;
-    FTypeText: string;
-    FTypeTick: Cardinal;
+    FTypeBuf: TPPGTypeAhead;
     FEditor: TEdit;
     FEditIndex: Integer;
     FUpdating: Integer;
@@ -129,6 +128,8 @@ type
     procedure EditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure EditorExit(Sender: TObject);
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
+    /// Beschriftung (Titel oder Detail) der Kachel an Pos abgeschnitten? Audit 7f #2.
+    function TileTextTruncated(Pos: Integer): Boolean;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure CMBiDiModeChanged(var Message: TMessage); message CM_BIDIMODECHANGED;
   protected
@@ -341,7 +342,6 @@ const
   Gap = 8;
   Pad = 10;
   HeadH = 32;
-  TypeAheadMs = 1000;
 
 var
   GMsgTileAction: Cardinal;
@@ -1730,14 +1730,85 @@ begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
 end;
 
+function TPPGCustomTileView.TileTextTruncated(Pos: Integer): Boolean;
+var
+  R: TRect;
+  PPI, P, TH, IconSz, W, H, PicBottom: Integer;
+  D: TPPGItemData;
+  Code: Word;
+  F, FB, Temp, TempB: TFont;
+  Sz: TSize;
+begin
+  // Dieselbe Aufteilung wie PaintTile, nur gemessen (ohne Canvas)
+  Result := False;
+  R := PosClientRect(Pos);
+  if IsRectEmpty(R) then
+    Exit;
+  D := GetItemData(FViewIndex[Pos]);
+  PPI := ScalePPI;
+  P := PPGScale(MulDiv(Pad, FZoom, 100), PPI);
+  Temp := nil;
+  TempB := nil;
+  try
+    F := PPGElementFont(FItemStyle, Font, D.FontStyle, Temp);
+    FB := PPGElementFont(FItemStyle, Font, D.FontStyle + [fsBold], TempB);
+    TH := PPGMeasureTextNoCanvas('Ag', F, 0, False).cy;
+    case FTileStyle of
+      tsIcons:
+        begin
+          // Titel unter dem Symbol, umbrechend
+          IconSz := Min(R.Right - R.Left - 2 * P, (R.Bottom - R.Top) - 2 * TH - 3 * P div 2);
+          W := (R.Right - R.Left) - 2 * (P div 2);
+          H := (R.Bottom - P div 2) - (R.Top + P + IconSz + P div 2);
+          Sz := PPGMeasureTextNoCanvas(D.Text, F, Max(W, 1), True);
+          Result := (Sz.cx > W) or (Sz.cy > H);
+        end;
+      tsTiles:
+        begin
+          // Titel und Detail je eine Zeile neben dem Symbol, vor der Plakette
+          IconSz := (R.Bottom - R.Top) - 2 * P;
+          Code := 0;
+          if Assigned(FOnGetItemIcon) then
+            FOnGetItemIcon(Self, FViewIndex[Pos], Code);
+          W := (R.Right - R.Left) - 2 * P;
+          if (Code <> 0) or ((FImages <> nil) and (D.ImageIndex >= 0)) then
+            Dec(W, IconSz + P);
+          if D.Badge <> '' then
+            Dec(W, PPGMeasureTextNoCanvas(D.Badge, F, 0, False).cx + P + P div 2);
+          Result := (PPGMeasureTextNoCanvas(D.Text, FB, 0, False).cx > W) or
+            (PPGMeasureTextNoCanvas(D.Detail, F, 0, False).cx > W);
+        end;
+    else
+      begin
+        // Karte: Titel eine Zeile, Detail umbrechend bis zum unteren Rand
+        W := (R.Right - R.Left) - 2 * P;
+        PicBottom := R.Top + (R.Bottom - R.Top) * 11 div 20;
+        H := (R.Bottom - P div 2) - (PicBottom + P div 2 + TH + 2);
+        Result := PPGMeasureTextNoCanvas(D.Text, FB, 0, False).cx > W;
+        if not Result and (D.Detail <> '') then
+        begin
+          Sz := PPGMeasureTextNoCanvas(D.Detail, F, Max(W, 1), True);
+          Result := (Sz.cx > W) or (Sz.cy > H);
+        end;
+      end;
+    end;
+  finally
+    TempB.Free;
+    Temp.Free;
+  end;
+end;
+
 procedure TPPGCustomTileView.CMHintShow(var Message: TCMHintShow);
 var
   P: Integer;
   D: TPPGItemData;
 begin
   inherited;
+  // Audit 7f #2: eigener Hint hat Vorrang; sonst nur abgeschnittene Beschriftung
+  if (Hint <> '') or (Message.HintInfo = nil) then
+    Exit;
   P := PosAt(Message.HintInfo.CursorPos.X, Message.HintInfo.CursorPos.Y);
-  if P >= 0 then
+  if (P >= 0) and TileTextTruncated(P) then
   begin
     // Abgeschnittene Beschriftung als Hint (Titel und Detail)
     D := GetItemData(FViewIndex[P]);
@@ -1828,27 +1899,25 @@ end;
 
 procedure TPPGCustomTileView.KeyPress(var Key: Char);
 var
-  T: Cardinal;
   I, Start, P: Integer;
-  S: string;
+  S, Text: string;
 begin
   inherited KeyPress(Key);
   if (Key < ' ') or (Length(FViewIndex) = 0) then
     Exit;
-  // Tippsuche: Anfang der Beschriftung, Zeichen innerhalb einer Sekunde sammeln
-  T := GetTickCount;
-  if T - FTypeTick > TypeAheadMs then
-    FTypeText := '';
-  FTypeTick := T;
-  FTypeText := FTypeText + Key;
-  Start := Max(FSelection.Focus, 0);
-  if Length(FTypeText) = 1 then
+  // Tippsuche (TPPGTypeAhead): Anfang der Beschriftung, Zeichen innerhalb
+  // einer Sekunde sammeln; derselbe Buchstabe wiederholt blaettert weiter
+  Text := FTypeBuf.Add(Key);
+  Start := FSelection.Focus;
+  if Length(Text) = 1 then
     Inc(Start);
+  if Start < 0 then
+    Start := 0;
   for I := 0 to High(FViewIndex) do
   begin
     P := (Start + I) mod Length(FViewIndex);
     S := GetItemData(FViewIndex[P]).Text;
-    if AnsiStartsText(FTypeText, S) then
+    if AnsiStartsText(Text, S) then
     begin
       FocusPos(P, []);
       Break;

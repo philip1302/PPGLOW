@@ -211,6 +211,7 @@ type
     FItemCanvas: TCanvas;
     FInOwnerDraw: Boolean;
     FDefaultDrawing: Boolean;
+    FToolTips: Boolean;
     FLastFocusRow: Integer;
     FBorderStyle: TBorderStyle;
     FOnGetCellText: TPPGGetCellTextEvent;
@@ -292,6 +293,7 @@ type
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
     procedure CMEnter(var Message: TCMEnter); message CM_ENTER;
+    procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
   protected
     procedure WndProc(var Message: TMessage); override;
     procedure DefineProperties(Filer: TFiler); override;
@@ -492,6 +494,9 @@ type
     procedure DoAutoScroll(const P: TPoint); override;
     procedure DblClick; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    /// Eigene Tastennavigation (Audit 7c #1): laeuft in KeyDown NACH OnKeyDown
+    /// und nur, wenn das Ereignis die Taste nicht verbraucht hat (Key <> 0).
+    procedure NavigateKey(var Key: Word; Shift: TShiftState); virtual;
     procedure KeyPress(var Key: Char); override;
     function SizingColAt(X, Y: Integer): Integer;
     /// Fokus auf eine Zelle (sichtbare Zeile); Extend = Bereich vom Anker.
@@ -560,6 +565,9 @@ type
     property DefaultColWidth: Integer read FDefaultColWidth write SetDefaultColWidth default 64;
     property DefaultRowHeight: Integer read FDefaultRowHeight write SetDefaultRowHeight default 24;
     property DefaultDrawing: Boolean read FDefaultDrawing write SetDefaultDrawing default True;
+    /// Abgeschnittene Zelltexte als Hinweis (wie TTreeView.ToolTips; nur ohne
+    /// eigenen Hint, braucht ShowHint). Audit 7f #1.
+    property ToolTips: Boolean read FToolTips write FToolTips default True;
     property Options: TGridOptions read FOptions write SetOptions
       default [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect];
     property Columns: TPPGGridColumns read FColumns write SetColumns;
@@ -680,6 +688,11 @@ type
     procedure HideEditor(Accept: Boolean = True);
     procedure CopyToClipboard;
     procedure PasteFromClipboard;
+    /// Leert die editierbaren Zellen der Auswahl (Entf), je Zelle ueber
+    /// SetCellByUser wie beim Einfuegen. Audit 7c #5.
+    procedure ClearSelection;
+    /// Kopiert die Auswahl und leert danach ihre editierbaren Zellen.
+    procedure CutToClipboard;
     /// Auswahl als TSV (Tab/CRLF) bzw. Text einfuegen ab der Fokuszelle.
     function SelectionAsText: string;
     procedure PasteText(const S: string);
@@ -763,6 +776,7 @@ type
     property ParentShowHint;
     property PopupMenu;
     property ShowHint;
+    property ToolTips;
     {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
     {$ENDIF}
@@ -869,6 +883,7 @@ begin
   FFixedRows := 1;
   FOptions := [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect];
   FDefaultDrawing := True;
+  FToolTips := True;
   FBorderStyle := bsSingle;
   FView := TPPGGridView.Create;
   FStore := TPPGCellStore.Create;
@@ -5569,9 +5584,7 @@ begin
   // Kopf ziehen: verschiebt die Spalte (goColMoving) bzw. gruppiert (Leiste)
   if (FHeaderDown >= 0) and (ssLeft in Shift) and CanDragColumn(FHeaderDown) then
   begin
-    if not FColDragging and
-      ((Abs(X - FHeaderDownPos.X) > GetSystemMetrics(SM_CXDRAG)) or
-      (Abs(Y - FHeaderDownPos.Y) > GetSystemMetrics(SM_CYDRAG))) then
+    if not FColDragging and PPGDragExceeded(FHeaderDownPos, Point(X, Y)) then
       FColDragging := True;
     if FColDragging then
     begin
@@ -5722,6 +5735,29 @@ end;
 
 procedure TPPGCustomGrid.KeyDown(var Key: Word; Shift: TShiftState);
 var
+  Scroll: Boolean;
+begin
+  // Audit 7c #1: OnKeyDown zuerst (inherited), dann die eigene Navigation,
+  // erst danach das Scrollen per Tastatur der Basis.
+  Scroll := KeyboardScrolling;
+  KeyboardScrolling := False;
+  try
+    inherited KeyDown(Key, Shift);
+  finally
+    KeyboardScrolling := Scroll;
+  end;
+  // Das Grid ist keine Schaltflaeche: Leertaste loest kein Click aus
+  if KeyPressed then
+    SetKeyPressed(False);
+  if Key = 0 then
+    Exit;
+  NavigateKey(Key, Shift);
+  if (Key <> 0) and KeyboardScrolling and ScrollKey(Key, Shift) then
+    Key := 0;
+end;
+
+procedure TPPGCustomGrid.NavigateKey(var Key: Word; Shift: TShiftState);
+var
   C, V, Page, PageRows, M0, N0, M1, N1: Integer;
   Ext: Boolean;
   VR: TRect;
@@ -5806,10 +5842,7 @@ begin
         Ext := False;
       end
       else
-      begin
-        inherited KeyDown(Key, Shift);
         Exit;
-      end;
     VK_F2, VK_RETURN:
       begin
         if (Key = VK_RETURN) and KindKey(Key) then
@@ -5833,10 +5866,43 @@ begin
           Key := 0;
         Exit;
       end;
-    Ord('C'), VK_INSERT:
+    Ord('C'):
       if ssCtrl in Shift then
       begin
         CopyToClipboard;
+        Key := 0;
+        Exit;
+      end
+      else
+        Exit;
+    VK_INSERT:
+      begin
+        // Strg+Einfg kopiert, Umschalt+Einfg fuegt ein (wie Windows-Edits)
+        if ssCtrl in Shift then
+          CopyToClipboard
+        else if ssShift in Shift then
+          PasteFromClipboard
+        else
+          Exit;
+        Key := 0;
+        Exit;
+      end;
+    VK_DELETE:
+      begin
+        // Entf leert die Auswahl, Umschalt+Entf schneidet aus (Audit 7c #5)
+        if Shift = [] then
+          ClearSelection
+        else if Shift = [ssShift] then
+          CutToClipboard
+        else
+          Exit;
+        Key := 0;
+        Exit;
+      end;
+    Ord('X'):
+      if ssCtrl in Shift then
+      begin
+        CutToClipboard;
         Key := 0;
         Exit;
       end
@@ -5861,10 +5927,7 @@ begin
       else
         Exit;
   else
-    begin
-      inherited KeyDown(Key, Shift);
-      Exit;
-    end;
+    Exit;
   end;
   if MergeAtCell(FFocusC, FFocusV, M0, N0, M1, N1) then
   begin
@@ -6209,6 +6272,93 @@ procedure TPPGCustomGrid.PasteFromClipboard;
 begin
   if Clipboard.HasFormat(CF_TEXT) then
     PasteText(Clipboard.AsText);
+end;
+
+procedure TPPGCustomGrid.ClearSelection;
+var
+  Sl: TGridRect;
+  C, V, D, DC: Integer;
+begin
+  // Nur editierbare Zellen (CanEditCell: goEditing, ReadOnly, DB-Grid ReadOnly),
+  // je Zelle ueber SetCellByUser wie beim Einfuegen (OnSetEditText)
+  HideEditor(True);
+  Sl := GetSelection;
+  for V := Sl.Top to Sl.Bottom do
+  begin
+    if V >= VRowCount then
+      Break;
+    D := DataRow(V);
+    if D < FFixedRows then
+      Continue;
+    for C := Sl.Left to Sl.Right do
+    begin
+      if C >= VColCount then
+        Break;
+      DC := DataCol(C);
+      // Kaestchen bleiben: leer hiesse still "aus"
+      if CanEditCell(DC, V) and (CellEditorKind(DC, D) <> gekCheck) and
+        (GetCellText(DC, D) <> '') then
+        SetCellByUser(DC, D, '');
+    end;
+  end;
+end;
+
+procedure TPPGCustomGrid.CutToClipboard;
+begin
+  CopyToClipboard;
+  ClearSelection;
+end;
+
+procedure TPPGCustomGrid.CMHintShow(var Message: TCMHintShow);
+var
+  C, V, D, DC, Avail, W, PPI, M0, N0, M1, N1: Integer;
+  R: TRect;
+  S: string;
+  Col: TPPGGridColumn;
+  F, Temp: TFont;
+begin
+  inherited;
+  // Audit 7f #1: abgeschnittener Zelltext als Hinweis (nur ohne eigenen Hint)
+  if not FToolTips or (Hint <> '') or (Message.HintInfo = nil) then
+    Exit;
+  if not MouseCoord(Message.HintInfo^.CursorPos.X, Message.HintInfo^.CursorPos.Y, C, V) then
+    Exit;
+  D := DataRow(V);
+  if D < 0 then
+    Exit; // Filterzeile, Gruppenkopf und -fuss
+  DC := DataCol(C);
+  // Zellarten (Haken, Fortschritt ...) zeichnen selbst; verbundene Zellen nicht
+  if (D >= FFixedRows) and (C >= FFixedCols) and (KindOf(DC) <> nil) then
+    Exit;
+  if MergesActive and MergeAtCell(C, V, M0, N0, M1, N1) then
+    Exit;
+  S := GetCellText(DC, D);
+  if S = '' then
+    Exit;
+  R := CellRect(C, V);
+  if IsRectEmpty(R) then
+    Exit;
+  PPI := ScalePPI;
+  Avail := (R.Right - R.Left) - 2 * PPGScale(CellPadX, PPI);
+  if (D = 0) and (DC = FSortCol) then
+    Dec(Avail, PPGScale(TPPGCellPainter.SortArrowSpace, PPI));
+  Col := ColumnOf(DC);
+  Temp := nil;
+  try
+    if (D < FFixedRows) or (C < FFixedCols) then
+      F := PPGElementFont(FStyles.Header, Font, [], Temp)
+    else if Col <> nil then
+      F := PPGElementFont(Col.Style, Font, [], Temp)
+    else
+      F := Font;
+    W := PPGMeasureTextNoCanvas(S, F, 0, False).cx;
+  finally
+    Temp.Free;
+  end;
+  if W <= Avail then
+    Exit;
+  Message.HintInfo^.HintStr := S;
+  Message.HintInfo^.CursorRect := R;
 end;
 
 procedure TPPGCustomGrid.PasteText(const S: string);

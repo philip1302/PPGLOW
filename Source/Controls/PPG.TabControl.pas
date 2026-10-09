@@ -958,6 +958,15 @@ var
   I, N: Integer;
 begin
   inherited KeyDown(Key, Shift);
+  // Audit 7c #3: Strg+F4 schliesst den aktiven Reiter (wie MDI/Browser), nur
+  // mit Schliessen-Knopf und ueber CloseTab (OnClosing/OnClose)
+  if (Key = VK_F4) and (Shift = [ssCtrl]) and FShowCloseButtons and
+    (GetActiveTabIndex >= 0) then
+  begin
+    Key := 0;
+    CloseTab(GetActiveTabIndex);
+    Exit;
+  end;
   if Shift * [ssCtrl, ssAlt] <> [] then
     Exit;
   N := TabCount;

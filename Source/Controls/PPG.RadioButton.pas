@@ -27,9 +27,14 @@ type
     procedure SetGroupIndex(const Value: Integer);
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
     function IsSameGroup(C: TControl): Boolean;
+    /// Audit 7c #2: nur die markierte Option der Gruppe ist Tabstopp, ohne
+    /// Markierung die erste (nach TabOrder); wie Windows-Optionsfelder.
+    class procedure UpdateGroupTabStops(AParent: TWinControl; AGroup: Integer);
   protected
     procedure Toggle; override;
     procedure StateChanged; override;
+    procedure Loaded; override;
+    procedure SetParent(AParent: TWinControl); override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     function AccRole: Integer; override;
     function AccDefaultAction: string; override;
@@ -137,25 +142,89 @@ begin
   inherited StateChanged;
   // Beim Laden nichts korrigieren: die DFM ist die Wahrheit, Geschwister
   // sind evtl. noch gar nicht geladen.
-  if not Checked or (Parent = nil) or (csLoading in ComponentState) then
+  if (Parent = nil) or (csLoading in ComponentState) then
     Exit;
-  for I := 0 to Parent.ControlCount - 1 do
-    if IsSameGroup(Parent.Controls[I]) then
-    begin
-      Sibling := TPPGCustomRadioButton(Parent.Controls[I]);
-      if Sibling.Checked then
-        Sibling.SetStateInternal(cbUnchecked, True);
-    end;
+  if Checked then
+    for I := 0 to Parent.ControlCount - 1 do
+      if IsSameGroup(Parent.Controls[I]) then
+      begin
+        Sibling := TPPGCustomRadioButton(Parent.Controls[I]);
+        if Sibling.Checked then
+          Sibling.SetStateInternal(cbUnchecked, True);
+      end;
+  UpdateGroupTabStops(Parent, FGroupIndex);
 end;
 
 procedure TPPGCustomRadioButton.SetGroupIndex(const Value: Integer);
+var
+  Old: Integer;
 begin
   if FGroupIndex <> Value then
   begin
+    Old := FGroupIndex;
     FGroupIndex := Value;
     if Checked then
       StateChanged; // in der neuen Gruppe exklusiv machen
+    if (Parent <> nil) and not (csLoading in ComponentState) then
+    begin
+      UpdateGroupTabStops(Parent, Old);
+      UpdateGroupTabStops(Parent, FGroupIndex);
+    end;
   end;
+end;
+
+class procedure TPPGCustomRadioButton.UpdateGroupTabStops(AParent: TWinControl;
+  AGroup: Integer);
+var
+  I: Integer;
+  C: TControl;
+  R, First, Marked: TPPGCustomRadioButton;
+begin
+  if (AParent = nil) or (csDestroying in AParent.ComponentState) then
+    Exit;
+  First := nil;
+  Marked := nil;
+  for I := 0 to AParent.ControlCount - 1 do
+  begin
+    C := AParent.Controls[I];
+    if not (C is TPPGCustomRadioButton) or (csDestroying in C.ComponentState) then
+      Continue;
+    R := TPPGCustomRadioButton(C);
+    if R.FGroupIndex <> AGroup then
+      Continue;
+    if R.Checked and (Marked = nil) then
+      Marked := R;
+    if (First = nil) or (R.TabOrder < First.TabOrder) then
+      First := R;
+  end;
+  if Marked = nil then
+    Marked := First;
+  for I := 0 to AParent.ControlCount - 1 do
+  begin
+    C := AParent.Controls[I];
+    if (C is TPPGCustomRadioButton) and not (csDestroying in C.ComponentState) and
+      (TPPGCustomRadioButton(C).FGroupIndex = AGroup) then
+      TPPGCustomRadioButton(C).TabStop := C = Marked;
+  end;
+end;
+
+procedure TPPGCustomRadioButton.Loaded;
+begin
+  inherited Loaded;
+  UpdateGroupTabStops(Parent, FGroupIndex);
+end;
+
+procedure TPPGCustomRadioButton.SetParent(AParent: TWinControl);
+var
+  Old: TWinControl;
+begin
+  Old := Parent;
+  inherited SetParent(AParent);
+  if csLoading in ComponentState then
+    Exit;
+  if (Old <> nil) and (Old <> Parent) then
+    UpdateGroupTabStops(Old, FGroupIndex);
+  UpdateGroupTabStops(Parent, FGroupIndex);
 end;
 
 procedure TPPGCustomRadioButton.WMGetDlgCode(var Message: TWMGetDlgCode);
@@ -202,11 +271,21 @@ end;
 procedure TPPGCustomRadioButton.KeyDown(var Key: Word; Shift: TShiftState);
 var
   Next: TPPGCustomRadioButton;
+  Fwd: Boolean;
 begin
+  // Audit 7c #1: OnKeyDown zuerst; Key := 0 im Ereignis unterdrueckt den Wechsel
+  inherited KeyDown(Key, Shift);
+  if Key = 0 then
+    Exit;
   if (Shift = []) and ((Key = VK_LEFT) or (Key = VK_UP) or (Key = VK_RIGHT) or
     (Key = VK_DOWN)) then
   begin
-    Next := FindSibling((Key = VK_RIGHT) or (Key = VK_DOWN));
+    // Audit 7f #6: links/rechts bei RTL gespiegelt (wie die RadioGroup)
+    if (Key = VK_LEFT) or (Key = VK_RIGHT) then
+      Fwd := (Key = VK_RIGHT) <> UseRightToLeftAlignment
+    else
+      Fwd := Key = VK_DOWN;
+    Next := FindSibling(Fwd);
     Key := 0;
     if Next <> nil then
     begin
@@ -214,9 +293,7 @@ begin
         Next.SetFocus;
       Next.Click; // einschalten + OnClick wie bei Benutzerbedienung
     end;
-    Exit;
   end;
-  inherited KeyDown(Key, Shift);
 end;
 
 function TPPGCustomRadioButton.AccRole: Integer;

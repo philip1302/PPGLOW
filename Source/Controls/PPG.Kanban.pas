@@ -2906,7 +2906,7 @@ begin
   end;
   // Spalte ziehen beginnt nach ein paar Pixeln waagerecht
   if (ssLeft in Shift) and (FColPress >= 0) and (FPress.Part = kpHeader) and FAllowColumnDrag and
-    not FReadOnly and (Length(FCols) > 1) and (Abs(X - FPressPt.X) > Sc(4)) then
+    not FReadOnly and (Length(FCols) > 1) and PPGDragExceeded(FPressPt, Point(X, FPressPt.Y)) then
   begin
     FColDragging := True;
     FColDragFrom := FColPress;
@@ -2916,7 +2916,7 @@ begin
   end;
   // Ziehen beginnt nach ein paar Pixeln
   if (ssLeft in Shift) and (FPress.Part = kpCard) and FAllowDrag and not FReadOnly and
-    ((Abs(X - FPressPt.X) > Sc(4)) or (Abs(Y - FPressPt.Y) > Sc(4))) then
+    PPGDragExceeded(FPressPt, Point(X, Y)) then
   begin
     R := RawCardRect(FPress.Col, FPress.Lane, FPress.Index);
     FDragSrc := FPress;
