@@ -28,7 +28,9 @@ type
   TDemoPropKind = (pkInteger, pkInt64, pkEnum, pkBoolean, pkSet, pkString, pkColor,
     pkIdentInt, pkFloat, pkComponent, pkObject, pkEvent, pkOther,
     // TStrings (Items, Lines), TCollection (Panels, Tabs ...) und ein Eintrag darin
-    pkStrings, pkCollection, pkItem);
+    pkStrings, pkCollection, pkItem,
+    // Char (PasswordChar, Delimiter ...)
+    pkChar);
 
   TDemoPropModel = class;
 
@@ -323,6 +325,8 @@ begin
         else
           Result := pkObject;
       end;
+    tkChar, tkWChar:
+      Result := pkChar;
     tkMethod:
       Result := pkEvent;
   else
@@ -641,6 +645,14 @@ begin
           Result := TCollectionItem(O).DisplayName
         else
           Result := '';
+      end;
+    pkChar:
+      begin
+        V := GetOrd(ARoot);
+        if (V >= 32) and (V < 127) and (V <> 39) then
+          Result := QuotedStr(Char(V))
+        else
+          Result := '#$' + IntToHex(Integer(V), 4);
       end;
     pkEvent:
       Result := TypeName;
@@ -1069,11 +1081,13 @@ begin
         TPPGSpinEdit(FEditor).Value := Integer(Max(Low(Integer), Min(High(Integer), N.GetOrd(Root))));
       pkColor:
         TPPGColorPicker(FEditor).Selected := TColor(N.GetOrd(Root));
-      pkString, pkFloat:
+      pkString, pkFloat, pkChar:
         if FEditor is TPPGEdit then
         begin
           if N.Kind = pkString then
             TPPGEdit(FEditor).Text := N.GetStr(Root)
+          else if N.Kind = pkChar then
+            TPPGEdit(FEditor).Text := Char(N.GetOrd(Root))
           else
             TPPGEdit(FEditor).Text := N.Literal(Root);
         end
@@ -1469,7 +1483,7 @@ begin
         Group.OnChange := EditorChange;
         Row.FEditor := Group;
       end;
-    pkString, pkFloat:
+    pkString, pkFloat, pkChar:
       if (N.Kind = pkString) and (SameText(N.Name, 'Preset') or IsFontName) then
       begin
         Combo := TPPGComboBox.Create(Row);
@@ -1483,6 +1497,8 @@ begin
       begin
         Ed := TPPGEdit.Create(Row);
         Ed.Parent := Row;
+        if N.Kind = pkChar then
+          Ed.MaxLength := 1;
         Ed.OnChange := EditorChange;
         Row.FEditor := Ed;
       end;
@@ -1576,6 +1592,9 @@ begin
           end
           else
             N.SetStr(Root, TPPGEdit(Row.Editor).Text);
+        pkChar:
+          if TPPGEdit(Row.Editor).Text <> '' then
+            N.SetOrd(Root, Ord(TPPGEdit(Row.Editor).Text[1]));
         pkFloat:
           begin
             FS := TFormatSettings.Create('en-US');

@@ -301,6 +301,10 @@ type
     /// Eigenschaft im Selbsttest-Rundlauf (setzen/zuruecksetzen) auslassen;
     /// AReason erscheint im Bericht. Nur fuer fachlich begruendete Faelle.
     function SkipInRoundTrip(Node: TDemoPropNode; var AReason: string): Boolean; virtual;
+    /// Eigenschaft, die beim Oeffnen und nach "Alles zuruecksetzen" gewaehlt
+    /// ist (Erklaerung unten links). Vorgabe: Caption, sonst Text, sonst die
+    /// erste Eigenschaft.
+    function InitialPath: string; virtual;
     /// Ein Ereignis der Buehnen-Komponente; Detail = Parameter.
     procedure EventOccurred(const AName, ADetail: string); virtual;
     function AddExample(const ACaption, AUnitName, ADescription: string): TDemoExampleView;
@@ -900,6 +904,16 @@ begin
   Result := False;
 end;
 
+function TDemoComponentPage.InitialPath: string;
+begin
+  Result := 'Caption';
+  if FInspector.RowOf(Result) = nil then
+    Result := 'Text';
+  if (FInspector.RowOf(Result) = nil) and (FInspector.Model <> nil) and
+    (FInspector.Model.Nodes.Count > 0) then
+    Result := FInspector.Model.Nodes[0].Name;
+end;
+
 procedure TDemoComponentPage.BuildOverviewTab;
 const
   Sections: array[0..3] of string = ('Wann verwenden', 'Unterschiede und Hinweise', 'Anpassung',
@@ -1056,7 +1070,7 @@ begin
   AddCandidates(FInspector.Candidates);
   FInspector.Inspect(FSubject, FReference);
   ApplyDemoStyles(FInspector, nil);
-  FInspector.SelectPath('Caption');
+  FInspector.SelectPath(InitialPath);
   RefreshCode;
 end;
 
@@ -1470,7 +1484,14 @@ begin
         if Value = '' then
           Continue;
       end;
-      if (N.Kind = pkFloat) or ((N.Kind = pkString) and (Value = '') and not (Row.Editor is TPPGComboBox)) then
+      if N.Kind = pkFloat then
+        Value := FloatToStr(GetFloatProp(N.OwnerIn(FSubject), N.Info) + 1,
+          TFormatSettings.Create('en-US'));
+      if N.Kind = pkChar then
+      begin
+        if N.GetOrd(FSubject) = Ord('x') then Value := 'y' else Value := 'x';
+      end;
+      if (N.Kind = pkString) and (Value = '') and not (Row.Editor is TPPGComboBox) then
         Continue;
       if not FInspector.SetValueText(N.Path, Value) then
       begin

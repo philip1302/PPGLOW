@@ -26,6 +26,27 @@ implementation
 uses
   System.TypInfo, System.Generics.Collections, Vcl.Controls;
 
+/// Knoten ist (oder liegt in) einer Liste bzw. Collection mit stored False,
+/// also einer zweiten Sicht auf Daten, die eine andere Eigenschaft speichert.
+function InUnstoredList(N: TDemoPropNode; Root: TObject): Boolean;
+var
+  P: TDemoPropNode;
+  O: TObject;
+begin
+  Result := False;
+  P := N;
+  while P <> nil do
+  begin
+    if (P.Kind in [pkStrings, pkCollection]) and (P.Info <> nil) then
+    begin
+      O := P.OwnerIn(Root);
+      if (O <> nil) and not IsStoredProp(O, P.Info) then
+        Exit(True);
+    end;
+    P := P.Parent;
+  end;
+end;
+
 function IsBoundsName(const N: string): Boolean;
 begin
   Result := SameText(N, 'Left') or SameText(N, 'Top') or SameText(N, 'Width') or SameText(N, 'Height');
@@ -118,6 +139,9 @@ begin
           T.Literal(Root), W.Literal(Root), H.Literal(Root)]));
       for N in All do
       begin
+        // Nicht gespeicherte Sicht (z. B. Items neben ItemsEx): wie die DFM auslassen
+        if InUnstoredList(N, Root) then
+          Continue;
         if N.Kind = pkCollection then
         begin
           SC := N.ValueIn(Root);
@@ -178,17 +202,65 @@ end;
 
 type
   TSavedEvent = record
+    Obj: TObject;
     Info: PPropInfo;
     Method: TMethod;
   end;
 
-function DfmText(AComponent: TComponent): string;
+// Ereignisse von AObj, seinen Unterobjekten und Collection-Eintraegen merken
+// und leeren (ihre Handler gehoeren der Demo, nicht einem Formular)
+procedure ClearEvents(AObj: TObject; Saved: TList<TSavedEvent>; Depth: Integer);
 var
   Props: PPropList;
-  Count, I: Integer;
-  Saved: TList<TSavedEvent>;
+  Count, I, J: Integer;
   E: TSavedEvent;
   Empty: TMethod;
+  Sub: TObject;
+begin
+  if (AObj = nil) or (AObj.ClassInfo = nil) or (Depth > 6) then
+    Exit;
+  Count := GetPropList(AObj.ClassInfo, tkAny, nil, False);
+  if Count = 0 then
+    Exit;
+  GetMem(Props, Count * SizeOf(PPropInfo));
+  try
+    GetPropList(AObj.ClassInfo, tkAny, Props, False);
+    Empty.Code := nil;
+    Empty.Data := nil;
+    for I := 0 to Count - 1 do
+    begin
+      if Props^[I]^.PropType^^.Kind = tkMethod then
+      begin
+        E.Obj := AObj;
+        E.Info := Props^[I];
+        E.Method := GetMethodProp(AObj, E.Info);
+        if (E.Method.Code <> nil) and (E.Info^.SetProc <> nil) then
+        begin
+          Saved.Add(E);
+          SetMethodProp(AObj, E.Info, Empty);
+        end;
+      end
+      else if (Props^[I]^.PropType^^.Kind = tkClass) and (Props^[I]^.GetProc <> nil) then
+      begin
+        Sub := GetObjectProp(AObj, Props^[I]);
+        if Sub is TCollection then
+        begin
+          for J := 0 to TCollection(Sub).Count - 1 do
+            ClearEvents(TCollection(Sub).Items[J], Saved, Depth + 1);
+        end
+        else if (Sub is TPersistent) and not (Sub is TComponent) then
+          ClearEvents(Sub, Saved, Depth + 1);
+      end;
+    end;
+  finally
+    FreeMem(Props);
+  end;
+end;
+
+function DfmText(AComponent: TComponent): string;
+var
+  Saved: TList<TSavedEvent>;
+  E: TSavedEvent;
   Bin, Txt: TMemoryStream;
   Writer: TWriter;
   Lines: TStringList;
@@ -199,25 +271,7 @@ begin
   Txt := TMemoryStream.Create;
   Lines := TStringList.Create;
   try
-    Count := GetPropList(AComponent.ClassInfo, [tkMethod], nil, False);
-    GetMem(Props, Count * SizeOf(PPropInfo) + 1);
-    try
-      GetPropList(AComponent.ClassInfo, [tkMethod], Props, False);
-      Empty.Code := nil;
-      Empty.Data := nil;
-      for I := 0 to Count - 1 do
-      begin
-        E.Info := Props^[I];
-        E.Method := GetMethodProp(AComponent, E.Info);
-        if E.Method.Code <> nil then
-        begin
-          Saved.Add(E);
-          SetMethodProp(AComponent, E.Info, Empty);
-        end;
-      end;
-    finally
-      FreeMem(Props);
-    end;
+    ClearEvents(AComponent, Saved, 0);
     try
       Writer := TWriter.Create(Bin, 4096);
       try
@@ -230,7 +284,7 @@ begin
       end;
     finally
       for E in Saved do
-        SetMethodProp(AComponent, E.Info, E.Method);
+        SetMethodProp(E.Obj, E.Info, E.Method);
     end;
     Bin.Position := 0;
     ObjectBinaryToText(Bin, Txt);
