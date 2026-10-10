@@ -1,0 +1,110 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGRadioGroup.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- Korrigierte Wirkung (Quelltext: ItemIndex im Code loest kein Ereignis aus) ---
+TPPGRadioGroup.ItemIndex = Gewählter Eintrag (-1 = keiner). Setzen im Code löst weder OnClick noch OnChange aus (PPGlow-Regel wie bei der CheckBox); nur die Wahl durch den Anwender meldet beides.
+> `if Grp.ItemIndex = 1 then ...`
+TPPGRadioGroup.OnChange = Der Anwender hat die Auswahl geändert (Klick, Pfeiltasten, Zugriffstaste); kommt direkt nach OnClick. Setzen von ItemIndex oder Value im Code löst es nicht aus.
+
+# --- TPPGRadioGroup ---
+TPPGRadioGroup.Align ! Für Einstellungsseiten mit veränderbarer Breite: Align = alTop stapelt mehrere Optionsgruppen untereinander und dehnt sie mit dem Fenster. Freie Gruppen in Formularen bleiben alNone.
+TPPGRadioGroup.AlignWithMargins ! Zusammen mit Align einschalten, damit gestapelte Gruppen nicht aneinanderkleben; die Abstände (typisch 8) unter Margins einstellen.
+TPPGRadioGroup.Anchors ! In größenveränderlichen Dialogen [akLeft, akTop, akRight] setzen: Die Gruppe wächst in der Breite mit, und mit Columns = 0 passen dann mehr Einträge nebeneinander.
+TPPGRadioGroup.Animation ! An lassen: Beim Segment-Umschalter gleitet der Akzent zum neuen Eintrag, das zeigt den Wechsel deutlich. RespectSystemSettings = True beachtet die Windows-Einstellung.
+TPPGRadioGroup.Appearance ! Selten direkt nötig; Farben der Einträge setzen Sie gezielter über ItemStyle und SelectedStyle. Die Optik der ganzen Anwendung gehört in Preset bzw. StyleManager.
+TPPGRadioGroup.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern: Kreise, Spalten und Segmente werden dann gespiegelt. Am Formular setzen und über ParentBiDiMode vererben.
+TPPGRadioGroup.Caption ! Die Frage, die die Gruppe beantwortet, kurz als Substantiv („Zahlungsart", „Versand"). Mit & vergeben Sie eine Zugriffstaste: Alt+Buchstabe springt zum gewählten Eintrag.
+TPPGRadioGroup.CaptionStyle ! Um die Beschriftung einer wichtigen Gruppe hervorzuheben, z. B. FontStyle = [fsBold] oder eine eigene Textfarbe. Für alle Gruppen einheitlich lieber das Preset nutzen.
+TPPGRadioGroup.ChoiceStyle ! csList für Formulare und Einstellungen wie gewohnt, csSegmented für zwei bis vier kurze Optionen in Werkzeugleisten (Ansicht, Zeitraum), csCards für wenige Optionen mit Erklärung (Versandart, Tarif).
+TPPGRadioGroup.Color ! Selten nötig; die Gruppe übernimmt mit ParentBackground den Hintergrund ihres Panels. Eigene Farben der Einträge setzen Sie über ItemStyle.
+TPPGRadioGroup.Columns ! Ab etwa fünf Einträgen 2 oder 3 Spalten, damit die Gruppe nicht zu hoch wird. 0 bei Kacheln oder in Gruppen mit veränderbarer Breite: Dann bestimmt der Platz die Spaltenzahl.
+TPPGRadioGroup.Constraints ! Mit Align oder Anchors eine Mindestbreite (MinWidth) setzen, damit die Einträge nicht abgeschnitten werden, wenn der Anwender das Fenster verkleinert.
+TPPGRadioGroup.Cursor ! crDefault lassen; Optionsfelder zeigen in Windows den Pfeil. crHandPoint passt höchstens zu Kacheln, die wie Links wirken sollen.
+TPPGRadioGroup.CustomHint ! Für Hinweise mit Titel und Symbol einen TPPGCustomHint oder TBalloonHint zuweisen; gilt auch für die Hints der einzelnen Einträge.
+TPPGRadioGroup.DoubleBuffered ! Nicht nötig, PPGlow-Controls zeichnen immer flackerfrei. Steht nur da, damit Formulare mit TRadioGroup ohne Fehler laden.
+TPPGRadioGroup.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. wenn Gruppen in einem Formular-Editor umgestellt werden.
+TPPGRadioGroup.DragKind ! dkDrag lassen; dkDock nur, wenn die Gruppe als Werkzeugfenster andockbar sein soll.
+TPPGRadioGroup.DragMode ! dmManual lassen, sonst startet jeder Klick auf einen Eintrag ein Ziehen statt einer Auswahl.
+TPPGRadioGroup.Enabled ! Sperren Sie die ganze Gruppe, solange die Frage nicht passt (z. B. Lieferadresse bei Abholung). Einzelne Einträge sperren Sie über ItemsEx[i].Enabled.
+TPPGRadioGroup.Font ! Am Formular einstellen und vererben. Eine größere Schrift (11 bis 12) passt zu Touch-Oberflächen; die Einträge werden dann automatisch höher.
+TPPGRadioGroup.Height ! So hoch, dass alle Zeilen Platz haben: in der Liste etwa 28 Pixel je Zeile plus Rahmen, beim Segment-Umschalter ohne Rahmen etwa 36, bei Kacheln etwa 90 je Reihe plus Rahmen.
+TPPGRadioGroup.HelpContext ! Nur mit Hilfedatei: Kontext-ID der Seite, die F1 bei fokussierter Gruppe öffnet, z. B. die Erklärung der Zahlungsarten.
+TPPGRadioGroup.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword); praktisch bei HTML-Hilfen.
+TPPGRadioGroup.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGRadioGroup.HighContrastSupport ! True lassen: Im Windows-Hochkontrast zeichnet die Gruppe Kreise, Segmente und Kacheln in Systemfarben und bleibt für sehbehinderte Anwender lesbar.
+TPPGRadioGroup.HighlightFocus ! True lassen: Die Plakette leuchtet in der Fokusfarbe, solange die Gruppe den Fokus hat; so sieht man in langen Formularen, wo man gerade wählt.
+TPPGRadioGroup.Hint ! Für eine Erklärung der ganzen Frage („Wie möchten Sie bezahlen?"). Erklärungen zu einzelnen Optionen gehören in ItemsEx[i].Hint, die erscheinen über dem Eintrag.
+TPPGRadioGroup.Images ! Eine Bildliste zuweisen, wenn Einträge eigene Bilder statt Symbolschrift zeigen sollen (z. B. Logos von Zahlungsanbietern); das Bild wählt ItemsEx[i].ImageIndex.
+TPPGRadioGroup.ItemIndex ! Zum Vorbelegen beim Öffnen (gespeicherte Einstellung) und zum Auswerten beim Speichern. -1 lassen, wenn der Anwender bewusst wählen soll. Danach abhängige Felder selbst aktualisieren, denn das Setzen meldet kein OnChange.
+TPPGRadioGroup.Items ! Für einfache Optionen ohne Extras: Items.CommaText := 'Rechnung,Lastschrift,Kreditkarte'. Alte Formulare mit TRadioGroup laden ihre Items unverändert.
+TPPGRadioGroup.ItemsEx ! Wenn Einträge mehr brauchen als einen Text: Beschreibung und Symbol für Kacheln, Value für das Programm, Enabled zum Sperren einzelner Optionen, Hint als Erklärung.
+TPPGRadioGroup.ItemStyle ! Für die Textfarbe oder Schrift der Einträge, z. B. FontStyle = [fsBold] bei Kacheln mit kurzem Titel. clDefault lassen, wenn das Preset passt.
+TPPGRadioGroup.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Gruppen, z. B. Grp.SetBounds(16, 16, 418, 64).
+TPPGRadioGroup.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Bottom = 12 zwischen gestapelten Gruppen. Wirkt nur mit AlignWithMargins.
+TPPGRadioGroup.Name ! Sprechend benennen (rgZahlungsart, rgVersand) statt PPGRadioGroup1, dann liest sich if rgZahlungsart.ItemIndex = 1 im Code von selbst.
+TPPGRadioGroup.OnChange ! Hier reagieren Sie auf die Wahl des Anwenders: Summe neu rechnen, abhängige Felder freigeben, Fehlermarke (ValidationState) löschen. Wird beim Laden gespeicherter Werte im Code nicht ausgelöst.
+TPPGRadioGroup.OnClick ! Wie bei TRadioGroup: kommt nur, wenn der Anwender einen anderen Eintrag wählt. Bestehender Code aus TRadioGroup-Formularen läuft hier unverändert; für neuen Code ist OnChange gleichwertig.
+TPPGRadioGroup.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Als Standard merken" nur zeigen, wenn ein Eintrag gewählt ist.
+TPPGRadioGroup.OnDblClick ! Für „Wählen und gleich bestätigen": Doppelklick auf eine Kachel wählt sie und schließt den Dialog, wie ein Doppelklick in einer Liste.
+TPPGRadioGroup.OnDragDrop ! Selten für Optionsgruppen; z. B. eine Datei auf die Gruppe „Importformat" ziehen und das passende Format anhand der Endung vorwählen.
+TPPGRadioGroup.OnDragOver ! Zusammen mit OnDragDrop: Accept nur für passende Quellen setzen.
+TPPGRadioGroup.OnEndDock ! Nur bei DragKind = dkDock: melden, wo die Gruppe angedockt wurde.
+TPPGRadioGroup.OnEndDrag ! Nach dem Ziehen der Gruppe (DragMode = dmAutomatic): Target = nil heißt abgebrochen.
+TPPGRadioGroup.OnEnter ! Für eine Erklärung in der Statusleiste („Wählen Sie, wie Sie bezahlen möchten"), sobald die Gruppe per Tab den Fokus bekommt.
+TPPGRadioGroup.OnExit ! Guter Ort für die Pflichtprüfung: Ist beim Verlassen nichts gewählt, ValidationState := pvsError setzen und ValidationHint erklären lassen.
+TPPGRadioGroup.OnGesture ! Auf Touch-Geräten: Wischen nach links/rechts über einem Segment-Umschalter wechselt zum Nachbar-Eintrag (EventInfo.GestureID).
+TPPGRadioGroup.OnKeyDown ! Für zusätzliche Tasten; Pfeile, Pos1/Ende und Zugriffstasten erledigt die Gruppe schon selbst. Z. B. Entf, um die Auswahl auf -1 zurückzusetzen.
+TPPGRadioGroup.OnKeyPress ! Selten nötig; die Zugriffstasten (&) in den Einträgen wählen schon per Buchstabe.
+TPPGRadioGroup.OnKeyUp ! Selten nötig; z. B. eine Vorschau nur aktualisieren, wenn der Anwender die Pfeiltaste loslässt statt bei jedem Wechsel.
+TPPGRadioGroup.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGRadioGroup.OnMouseDown ! Selten nötig; die Wahl gehört in OnChange. Z. B. Rechtsklick auf einen Eintrag auswerten (ItemAt(X, Y) nennt ihn).
+TPPGRadioGroup.OnMouseEnter ! Um beim Überfahren eine Vorschau zu zeigen, z. B. eine Erklärung der Optionen in einer Infozeile.
+TPPGRadioGroup.OnMouseLeave ! Gegenstück zu OnMouseEnter: Vorschau oder Infozeile wieder leeren.
+TPPGRadioGroup.OnMouseMove ! Für eine Vorschau je Eintrag: ItemAt(X, Y) nennt den Eintrag unter der Maus, z. B. um dessen Preis in einer Infozeile zu zeigen. Feuert sehr oft, daher kurz halten.
+TPPGRadioGroup.OnMouseUp ! Selten nötig; die Wahl selbst meldet OnClick bzw. OnChange.
+TPPGRadioGroup.OnMouseWheel ! Selten nötig; z. B. mit dem Rad durch die Segmente eines Zoom-Umschalters blättern. Handled := True verhindert dann das Scrollen des Parents.
+TPPGRadioGroup.OnStartDock ! Nur bei DragKind = dkDock: eigenes Dock-Objekt setzen.
+TPPGRadioGroup.OnStartDrag ! Nur bei DragMode = dmAutomatic: eigenes DragObject beim Beginn des Ziehens setzen.
+TPPGRadioGroup.ParentBackground ! True lassen: Dann sieht man hinter Rahmen und Segmenten die Farbe der Karte oder des Panels, auf dem die Gruppe liegt.
+TPPGRadioGroup.ParentBiDiMode ! True lassen, damit die Gruppe der Leserichtung des Formulars folgt.
+TPPGRadioGroup.ParentColor ! True lassen, damit die Gruppe die Hintergrundfarbe ihres Parents übernimmt.
+TPPGRadioGroup.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGRadioGroup.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGRadioGroup.ParentFont ! True lassen, damit die Gruppe die Formularschrift trägt. Ändern Sie Font, wird es automatisch False.
+TPPGRadioGroup.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann erscheinen auch die Hints der Einträge.
+TPPGRadioGroup.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Auswahl zurücksetzen" oder „Als Standard speichern".
+TPPGRadioGroup.Preset ! Einheitlich für die ganze Anwendung über einen TPPGStyleManager festlegen; Fluent11 passt zu Windows 11, ModernFlat zu flachen Business-Oberflächen.
+TPPGRadioGroup.SelectedStyle ! Um den gewählten Eintrag in einer Markenfarbe zu zeigen (Color, TextColor). Leer lassen, dann nimmt die Gruppe die Akzentfarbe des Presets, auch im Dark Mode.
+TPPGRadioGroup.ShowFrame ! False für Segment-Umschalter in Werkzeugleisten oder über Listen („Alle | Offen | Erledigt"); dann steht die Frage in einem Label davor. True für Gruppen in Formularen.
+TPPGRadioGroup.ShowHint ! Einschalten (oder über ParentShowHint vom Formular), wenn Einträge eine Erklärung in ItemsEx[i].Hint haben, z. B. „Bei Bestellung bis 14 Uhr".
+TPPGRadioGroup.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält die Gruppe ihre PPGlow-Farben statt der Style-Farben.
+TPPGRadioGroup.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Controls zuweisen; dann wechseln Preset und Hell/Dunkel für alle Gruppen auf einmal.
+TPPGRadioGroup.TabOrder ! So vergeben, dass Tab die Gruppen in Lesereihenfolge erreicht. Innerhalb der Gruppe wechseln die Pfeiltasten, Tab verlässt sie.
+TPPGRadioGroup.TabStop ! True lassen, damit die Gruppe per Tastatur erreichbar ist (Barrierefreiheit). False nur bei reinen Anzeigegruppen, die gesperrt sind.
+TPPGRadioGroup.Tag ! Freie Zahl, z. B. die ID der Einstellung, wenn mehrere Gruppen einen gemeinsamen OnChange-Handler haben (TPPGRadioGroup(Sender).Tag).
+TPPGRadioGroup.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Gruppen.
+TPPGRadioGroup.Touch ! Nur für Touch-Geräte: Gesten anhaken (z. B. Wischen) und in OnGesture auswerten. Für normale Auswahl nicht nötig.
+TPPGRadioGroup.ValidationHint ! Kurz sagen, was fehlt („Bitte eine Zahlungsart wählen"); der Text erscheint als Tooltip und für Screenreader, solange ValidationState gesetzt ist. TPPGValidator füllt ihn selbst.
+TPPGRadioGroup.ValidationState ! Bei einer Pflichtauswahl beim Speichern pvsError setzen, wenn ItemIndex = -1 ist, und in OnChange wieder pvsNone. Mit TPPGValidator geschieht das automatisch.
+TPPGRadioGroup.Visible ! Blenden Sie Fragen aus, die in diesem Fall gar nicht vorkommen (z. B. Zahlungsart bei Gratis-Tarif). Was nur gerade nicht geht, besser mit Enabled sperren.
+TPPGRadioGroup.Width ! So breit, dass die längste Option in jeder Spalte passt; mit Columns = 0 bestimmt die Breite die Spaltenzahl. Kacheln mit Beschreibung brauchen je Spalte etwa 200 Pixel, sonst wird der Text abgeschnitten.
+
+# --- Typen ---
+TPPGChoiceItem.Caption ! Kurzer Titel der Option („Express", „Lastschrift"); ein & davor vergibt eine Zugriffstaste innerhalb der Gruppe.
+TPPGChoiceItem.Description ! Für Kacheln die eine Zeile, die die Wahl erleichtert („Morgen bei Ihnen", „3 bis 5 Werktage"); in der Liste nur sparsam einsetzen.
+TPPGChoiceItem.Enabled ! Optionen, die gerade nicht möglich sind, sperren statt entfernen: Der Anwender sieht, dass es sie gibt. Die Beschreibung kann sagen, warum.
+TPPGChoiceItem.Hint ! Erklärung zu einer Option, die beim Überfahren erscheint, z. B. Bedingungen („Bei Bestellung bis 14 Uhr"). ShowHint der Gruppe einschalten.
+TPPGChoiceItem.Icon ! Ein Symbol aus Segoe Fluent Icons macht Kacheln und Segmente schneller erfassbar, z. B. $E916 (Stoppuhr) für Express. In der einfachen Liste meist weglassen.
+TPPGChoiceItem.ImageIndex ! Für farbige Bilder wie Logos von Zahlungsanbietern; dazu Images der Gruppe setzen. Für einfarbige Symbole reicht Icon.
+TPPGChoiceItem.State ! Nur bei TPPGCheckGroup von Bedeutung (Kästchen an, aus oder grau); in der RadioGroup gilt ItemIndex.
+TPPGChoiceItem.Value ! Den Wert für Programm und Datenbank hinterlegen (Kürzel, Preis, Schlüssel), dann darf sich der angezeigte Text ändern oder übersetzt werden, ohne dass die Auswertung bricht. Gelesen wird er über Grp.Value.
+TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. eine helle Markenfarbe für den gewählten Eintrag. clDefault lassen, dann passt die Farbe zum Preset.
+TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. Weiß auf einer dunklen eigenen Fläche. Auf ausreichenden Kontrast achten (mindestens 4,5:1).
+TPPGElementStyle.BorderColor ! Rand- bzw. Linienfarbe, z. B. ein Akzentrand um den gewählten Bereich. clDefault folgt dem Preset.
+TPPGElementStyle.DarkColor ! Pflicht, sobald Sie Color selbst setzen: Sonst bleibt die helle Farbe im Dark Mode stehen bzw. gilt dort gar nicht. Eine dunklere Variante derselben Farbe wählen.
+TPPGElementStyle.DarkTextColor ! Textfarbe im Dark Mode passend zu DarkColor; meist hell.
+TPPGElementStyle.DarkBorderColor ! Randfarbe im Dark Mode passend zu DarkColor.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Für Fett oder Kursiv reicht FontStyle; eine eigene Schrift (Font) nur für eine andere Größe oder Schriftart.
+TPPGElementStyle.Font ! Nur wenn der Bereich eine andere Größe oder Schriftart braucht, z. B. kleinere Schrift in einer Fußzeile; dabei wird ParentFont automatisch False.
+TPPGElementStyle.FontStyle ! Der einfachste Weg zur Hervorhebung: [fsBold] für Titel oder den gewählten Eintrag, ohne die Schrift sonst zu ändern.
