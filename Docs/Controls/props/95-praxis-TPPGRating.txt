@@ -1,0 +1,73 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGRating.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGRating ---
+TPPGRating.Preset ! Einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager. Das Preset bestimmt Fokusring, Rundung und Akzentfarbe der Sterne; die Sterne selbst sehen in allen Presets gleich aus.
+TPPGRating.StyleManager ! Wie bei allen PPGlow-Controls den TPPGStyleManager des Formulars zuweisen. Dann folgen die Sterne (Akzentfarbe, Hell/Dunkel) automatisch der Optik der übrigen Felder.
+TPPGRating.Appearance ! Selten nötig: Die leeren Sterne nehmen Normal.BorderColor, die gesperrten Disabled.TextColor, der Fokusring Focused bzw. FocusColor. Für eine eigene Sternfarbe ist StarColor einfacher.
+TPPGRating.HighContrastSupport ! True lassen: Im Hochkontrastmodus zeichnet die Bewertung mit Systemfarben und bleibt auch für sehbehinderte Anwender lesbar.
+TPPGRating.Value ! Den gespeicherten Wert beim Öffnen eines Datensatzes setzen (Rating1.Value := Kunde.Zufriedenheit) und beim Speichern zurücklesen. 0 bedeutet „noch nicht bewertet"; prüfen Sie das vor dem Absenden.
+TPPGRating.Max ! 5 Sterne sind die gewohnte Skala für Zufriedenheit und Produktbewertungen. 3 für grobe Einstufungen (z. B. Priorität niedrig/mittel/hoch), 10 nur für feine Fachbewertungen.
+TPPGRating.AllowHalf ! Für Anzeigen von Durchschnittswerten einschalten (4,5 Sterne aus vielen Bewertungen). Für die eigene Eingabe des Anwenders meist aus lassen; ganze Sterne sind schneller und eindeutiger.
+TPPGRating.AllowClear ! True lassen, wenn „keine Bewertung" erlaubt ist: Ein zweiter Klick auf den gewählten Stern nimmt sie zurück. False, wenn ein einmal vergebener Wert nur noch geändert, aber nicht gelöscht werden darf.
+TPPGRating.ReadOnly ! Für reine Anzeigen (Durchschnitt, Bewertung eines Kollegen, bereits abgeschickte Bewertung). Anders als Enabled = False bleiben die Sterne in voller Farbe und für Screenreader erreichbar.
+TPPGRating.StarSize ! 16 bis 20 für Bewertungen in Listen und Formularzeilen, 28 bis 32 für die zentrale Frage eines Feedback-Dialogs oder für Touch-Bedienung.
+TPPGRating.StarSpacing ! Die Vorgabe 4 passt meist. Bei großen Sternen für Touch etwas mehr (8), damit man nicht den Nachbarstern trifft; 0 für sehr kompakte Anzeigen in Tabellen.
+TPPGRating.StarColor ! clDefault übernimmt die Akzentfarbe der Anwendung. Für die vertraute Gold-Optik von Produktbewertungen $0000C0FF setzen; im Dark Mode vorher die Lesbarkeit prüfen.
+TPPGRating.Align ! Meist alNone: Die Bewertung steht als Feld in einer Formularzeile. alLeft nur, wenn sie in einem Panel neben einer Beschriftung sitzt.
+TPPGRating.AlignWithMargins ! Zusammen mit Align einschalten, damit die Sterne nicht am Rand des Panels kleben; die Abstände kommen aus Margins.
+TPPGRating.Anchors ! Standard [akLeft, akTop] lassen; die Sterne haben eine feste Breite und wachsen nicht mit. [akRight, akTop] nur, wenn die Bewertung rechtsbündig in einer Kopfzeile stehen soll.
+TPPGRating.AutoSize ! True lassen: Breite und Höhe ergeben sich aus Max, StarSize und StarSpacing. Ausschalten nur, wenn die Sterne in einer festen, höheren Zeile senkrecht mittig stehen sollen.
+TPPGRating.BiDiMode ! Nur für arabische oder hebräische Oberflächen: Die Sterne füllen sich dann von rechts, und die Pfeiltasten sind gespiegelt. Am Formular setzen und über ParentBiDiMode übernehmen.
+TPPGRating.Color ! Bei der Bewertung selten nötig; sie ist der Hintergrund hinter den Sternen. Meist ParentColor = True, damit die Sterne auf der Farbe der Karte oder des Panels liegen.
+TPPGRating.Constraints ! Kaum nötig, weil AutoSize die Größe festlegt. MinHeight hilft, wenn die Bewertung in einer Zeile mit 32 Pixel hohen Eingabefeldern gleich hoch stehen soll (dann AutoSize aus).
+TPPGRating.Cursor ! crHandPoint zeigt, dass man auf die Sterne klicken kann. Bei ReadOnly crDefault lassen, damit niemand einen Klick erwartet.
+TPPGRating.CustomHint ! Für einen Hinweis mit Titel, z. B. „Bewertung: 1 = schlecht, 5 = sehr gut": einen TPPGCustomHint aufs Formular legen und hier zuweisen.
+TPPGRating.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGRating.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; für Bewertungen praktisch nie gebraucht.
+TPPGRating.DragMode ! dmManual lassen, sonst startet jeder Klick auf einen Stern ein Ziehen statt einer Bewertung.
+TPPGRating.Enabled ! Sperren, solange eine Bewertung noch nicht möglich ist (z. B. vor Abschluss des Tickets). Zum bloßen Anzeigen eines Werts besser ReadOnly, da gesperrte Sterne grau werden.
+TPPGRating.Height ! Ergibt sich mit AutoSize aus StarSize (plus 4 Pixel für den Fokusring). Statt die Höhe zu setzen, StarSize ändern.
+TPPGRating.HelpContext ! Nur mit Hilfedatei sinnvoll: die Seite, die F1 bei fokussierter Bewertung öffnet, z. B. die Erklärung der Bewertungsskala.
+TPPGRating.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword), z. B. „Lieferantenbewertung".
+TPPGRating.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGRating.Hint ! Erklären Sie die Skala: „1 = mangelhaft, 5 = sehr gut. Erneut klicken entfernt die Bewertung". Mit ShowHint am Formular anzeigen.
+TPPGRating.Left ! Im Designer per Maus; im Code bei dynamisch gebauten Formularzeilen, z. B. bündig mit den Eingabefeldern darüber.
+TPPGRating.Margins ! Abstand zu Nachbarn bei Align; wirkt nur mit AlignWithMargins.
+TPPGRating.Name ! Sprechende Namen vergeben (rtgZufriedenheit, rtgLieferzeit) statt PPGRating1, vor allem wenn mehrere Bewertungen auf einem Formular stehen.
+TPPGRating.ParentBiDiMode ! True lassen, damit die Bewertung der Leserichtung des Formulars folgt.
+TPPGRating.ParentColor ! True lassen, damit der Hintergrund hinter den Sternen zur Karte oder zum Panel passt.
+TPPGRating.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGRating.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGRating.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann zeigt auch die Bewertung ihren Hint.
+TPPGRating.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Bewertung entfernen" oder „Alle Kriterien auf 3 setzen" in einem Bewertungsbogen.
+TPPGRating.ShowHint ! Einmal am Formular einschalten statt an jeder Bewertung; dann bleibt ParentShowHint True.
+TPPGRating.StyleElements ! Nur bei VCL-Styles wichtig: seClient herausnehmen, wenn die Sterne ihre eigene Farbe (StarColor) behalten sollen.
+TPPGRating.TabOrder ! In Bewertungsbögen in Lesereihenfolge vergeben, damit man mit Tab von Kriterium zu Kriterium springt und die Sterne mit Pfeiltasten oder Ziffern setzt.
+TPPGRating.TabStop ! True lassen: Mit Tab erreichbar, dann setzen Pfeiltasten, Pos1/Ende und Ziffern den Wert ohne Maus. Auch bei ReadOnly sinnvoll, weil Screenreader den Wert dann vorlesen.
+TPPGRating.Tag ! Bei mehreren Bewertungen mit einem gemeinsamen OnChange die Nummer des Kriteriums ablegen (Tag = 0, 1, 2) und im Handler über TPPGRating(Sender).Tag auswerten.
+TPPGRating.Top ! Wie Left: im Designer per Maus, im Code bei dynamisch gebauten Bewertungszeilen.
+TPPGRating.Touch ! Nur für Touch-Geräte mit eigenen Gesten nötig; ein Tipp auf einen Stern funktioniert auch ohne Einstellung.
+TPPGRating.Visible ! Ausblenden, wenn eine Bewertung im aktuellen Zusammenhang nicht vorgesehen ist (z. B. intern erledigte Tickets ohne Kundenfeedback).
+TPPGRating.Width ! Ergibt sich mit AutoSize aus Max, StarSize und StarSpacing. Breite nicht von Hand setzen, sondern über diese drei Werte steuern.
+TPPGRating.OnChange ! Hier reagieren Sie auf die Bewertung des Anwenders: Text „Gut"/„Sehr gut" anzeigen, Absenden freigeben, Durchschnitt neu berechnen. Value im Code löst es nicht aus; rufen Sie die Auswertung nach dem Laden selbst auf.
+TPPGRating.OnClick ! Selten gebraucht; feuert bei jedem Mausklick, auch wenn sich der Wert nicht ändert, aber nicht bei Tastatureingabe. Für Wertänderungen OnChange nehmen.
+TPPGRating.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Bewertung entfernen" nur anbieten, wenn Value > 0 ist.
+TPPGRating.OnDragDrop ! Für Bewertungen praktisch nie gebraucht; nur wenn ein gezogenes Element (z. B. ein Listeneintrag) hier abgelegt werden darf.
+TPPGRating.OnDragOver ! Zusammen mit OnDragDrop: Accept := True nur für passende Quellen.
+TPPGRating.OnEndDrag ! Nur bei DragMode = dmAutomatic; für Bewertungen kaum sinnvoll.
+TPPGRating.OnEnter ! Um beim Betreten per Tab einen Hilfetext anzuzeigen, z. B. „Pfeiltasten oder Ziffern 1 bis 5" in der Statusleiste.
+TPPGRating.OnExit ! Guter Ort für eine Pflichtprüfung: Ist Value = 0, das Kriterium rot markieren oder einen Hinweis zeigen.
+TPPGRating.OnGesture ! Auf Touch-Geräten: Wischgesten auswerten, z. B. nach links wischen = eine Bewertung zurück (EventInfo.GestureID).
+TPPGRating.OnKeyDown ! Für zusätzliche Tasten, z. B. Entf setzt die Bewertung auf 0. Pfeiltasten, Pos1 und Ende erledigt die Bewertung schon selbst.
+TPPGRating.OnKeyPress ! Selten nötig; die Ziffern 0 bis 9 setzen den Wert bereits direkt. Mit Key := #0 könnten Sie diese Direkteingabe unterdrücken.
+TPPGRating.OnKeyUp ! Selten gebraucht; z. B. um nach dem Loslassen einer Pfeiltaste eine teure Neuberechnung zu starten.
+TPPGRating.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGRating.OnMouseDown ! Selten gebraucht; der Wert wird erst beim Loslassen gesetzt. Für die Auswertung OnChange nehmen.
+TPPGRating.OnMouseEnter ! Um beim Überfahren eine Erklärung der Skala einzublenden. Die Sternvorschau beim Überfahren macht die Bewertung selbst.
+TPPGRating.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGRating.OnMouseMove ! Für eine Textvorschau zur Sternvorschau, z. B. „Sehr gut" schon beim Überfahren: HoverValue der Bewertung lesen (-1 = keine Vorschau).
+TPPGRating.OnMouseUp ! Selten gebraucht; wenn sich der Wert ändert, meldet das OnChange zuverlässiger (auch per Tastatur).
+TPPGRating.OnMouseWheel ! Die Bewertung reagiert nicht selbst auf das Mausrad. Wer das möchte, setzt hier Value schrittweise und ruft danach die eigene Auswertung auf.
+TPPGRating.OnStartDrag ! Nur bei DragMode = dmAutomatic; für Bewertungen kaum sinnvoll.
