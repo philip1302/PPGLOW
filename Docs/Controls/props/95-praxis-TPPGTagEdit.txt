@@ -1,0 +1,101 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGTagEdit.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGTagEdit ---
+TPPGTagEdit.Tags ! Die eingetragenen Werte lesen oder vorbelegen, z. B. die Empfänger einer E-Mail oder die Schlagworte eines Datensatzes. Beim Laden aus der Datenbank Tags bzw. TagsText setzen; das löst bewusst keine Ereignisse aus.
+TPPGTagEdit.Suggestions ! Mit den bekannten Werten füllen, z. B. Adressen aus dem Adressbuch oder die erlaubten Kategorien. Der Anwender tippt „ver“ und wählt „Vertrieb“, statt es auszuschreiben; bei langen Listen beim Öffnen des Formulars einmal laden.
+TPPGTagEdit.InputDelimiters ! „;,“ lassen, wenn Anwender Adresslisten aus Outlook oder Excel einfügen. Für Schlagworte mit Komma im Text (z. B. „Müller, Hans“) nur „;“ eintragen, für reine Enter-Bestätigung leer lassen.
+TPPGTagEdit.Delimiter ! Trennzeichen für das Datenbankfeld bzw. TagsText; „;“ passt zu den meisten Adress- und Schlagwortlisten. Wählen Sie ein Zeichen, das in den Werten selbst nie vorkommt.
+TPPGTagEdit.AllowNew ! False für feste Auswahllisten wie Kategorien, Abteilungen oder Status: Dann landen keine Tippfehler in der Datenbank. True für freie Schlagworte und E-Mail-Adressen.
+TPPGTagEdit.AllowDuplicates ! Fast immer False lassen: Zwei gleiche Empfänger oder Schlagworte sind ein Versehen. True nur, wenn die Wiederholung etwas bedeutet, z. B. Mengen als Einträge.
+TPPGTagEdit.CaseSensitive ! False lassen, damit „Vertrieb“ und „vertrieb“ als dasselbe Tag gelten. True nur bei Werten, bei denen die Schreibweise zählt, z. B. Artikelcodes.
+TPPGTagEdit.MaxTags ! Begrenzt die Auswahl, wo das Fachliche eine Grenze hat, z. B. höchstens 5 Empfänger oder 3 Schwerpunkte je Mitarbeiter. 0 lassen, wenn es keine Grenze gibt.
+TPPGTagEdit.AddOnExit ! True lassen, damit eine angefangene Eingabe beim Klick auf „Speichern“ nicht verloren geht. False, wenn nur ausdrücklich bestätigte Einträge (Enter) zählen sollen.
+TPPGTagEdit.OnTagAdding ! Hier prüfen und vereinheitlichen Sie jeden neuen Eintrag: Tag := LowerCase(Tag) für E-Mail-Adressen, Allow := False bei ungültigen Werten. Abgelehnter Text bleibt im Feld stehen, damit der Anwender ihn korrigieren kann.
+TPPGTagEdit.OnTagRemoved ! Um auf das Entfernen zu reagieren, z. B. abhängige Felder leeren oder in der Statuszeile „Anna Berger entfernt“ melden.
+TPPGTagEdit.OnTagClick ! Um ein Tag als Verweis zu nutzen: nach dem Schlagwort filtern oder zum Empfänger die Kontaktkarte öffnen.
+TPPGTagEdit.OnChange = Der Anwender hat Tags hinzugefügt oder entfernt (auch über den Löschknopf). Tippen ohne neues Tag und Änderungen aus Code (Tags, TagsText) lösen es nicht aus.
+TPPGTagEdit.OnChange !Feuert, wenn der Anwender Tags hinzufügt oder entfernt (nicht beim Tippen und nicht bei Änderungen aus Code). Der richtige Ort, um z. B. „Senden“ freizugeben oder einen Zähler zu aktualisieren.
+TPPGTagEdit.Preset ! Legen Sie die Optik einmal für die ganze Anwendung fest, am besten über einen TPPGStyleManager. Dann sehen TagEdit, Edit und ComboBox im Formular gleich aus.
+TPPGTagEdit.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Feldern zuweisen; dann wechseln Optik und Hell/Dunkel für alle Eingabefelder auf einmal.
+TPPGTagEdit.Appearance ! Für einzelne Hervorhebungen, z. B. einen kräftigeren Fokusrand in Pflichtfeldern. Für eine einheitliche Optik besser Preset bzw. StyleManager.
+TPPGTagEdit.Animation ! An lassen; Fokus- und Hover-Übergänge wirken ruhiger. RespectSystemSettings beachtet die Windows-Einstellung „Animationen anzeigen“.
+TPPGTagEdit.TextHint ! Sagt, was eingegeben wird, z. B. „Name oder E-Mail-Adresse“ oder „Schlagwort tippen …“. Er erscheint nur, solange noch kein Text getippt ist.
+TPPGTagEdit.ValidationState ! pvsError, wenn ein Eintrag abgelehnt wurde oder ein Pflichtfeld leer ist; pvsNone, sobald alles stimmt. Den Grund schreiben Sie in ValidationHint.
+TPPGTagEdit.ValidationHint ! Erklärt den roten Rand in einem Satz, z. B. „Keine E-Mail-Adresse: max huber“. Er erscheint als Tooltip und wird vom Screenreader vorgelesen.
+TPPGTagEdit.HighContrastSupport ! True lassen: Sehbehinderte Anwender mit Hochkontrast sehen Rand und Chips dann in klaren Systemfarben.
+TPPGTagEdit.BorderStyle ! bsSingle für normale Formularfelder. bsNone, wenn das Feld in eine eigene Fläche eingebettet ist, z. B. als Empfängerzeile in einem Mail-Kopf ohne eigene Rahmen.
+TPPGTagEdit.ReadOnly ! Für Datensätze, die man sehen, aber nicht ändern darf, z. B. abgeschlossene Tickets oder fehlende Schreibrechte. Die Tags bleiben lesbar, Kreuz und Eingabe sind gesperrt.
+TPPGTagEdit.ReadOnlyStyle ! Wenn gesperrte Felder deutlich anders aussehen sollen als bearbeitbare, z. B. mit grauer Fläche. clDefault lassen, wenn die Optik des Presets reicht.
+TPPGTagEdit.TabStop ! True lassen, damit das Feld per Tab erreichbar ist; Tags werden dann komplett per Tastatur bearbeitet (Enter, Rücktaste, Pfeile).
+TPPGTagEdit.ShowClearButton ! True bei Filterfeldern, damit der Anwender alle Tags auf einmal entfernen kann. In Datenformularen eher aus, dort entfernt man einzeln über das Kreuz am Chip.
+TPPGTagEdit.TextHintVisibleOnFocus ! True, wenn der Platzhalter eine Anleitung enthält („Adresse eingeben und Enter drücken“), die man beim Hineinklicken noch lesen soll.
+TPPGTagEdit.Align ! alTop für eine Empfänger- oder Schlagwortzeile über einem Textbereich; mit AutoSize wächst die Zeile bei vielen Tags nach unten mit. In Formularen sonst alNone.
+TPPGTagEdit.AlignWithMargins ! Zusammen mit Align einschalten, damit das Feld nicht am Rand klebt; die Abstände stehen unter Margins.
+TPPGTagEdit.Anchors ! In Formularen mit veränderbarer Größe [akLeft, akTop, akRight]: Das Feld wird breiter, und es passen mehr Tags in eine Zeile.
+TPPGTagEdit.AutoSize ! True lassen: Bei vielen Tags wächst das Feld um weitere Zeilen, statt Tags abzuschneiden. Darunter liegende Controls dann mit Abstand oder per Align anordnen.
+TPPGTagEdit.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; die Chips laufen dann von rechts nach links. Am Formular setzen und über ParentBiDiMode folgen lassen.
+TPPGTagEdit.Color ! Selten nötig; die Feldfarbe kommt aus Appearance bzw. dem Preset. Color wirkt nur ohne Dark Mode, VCL-Style und Hochkontrast.
+TPPGTagEdit.Constraints ! MinHeight hält eine einzeilige Mindesthöhe, MaxHeight verhindert, dass das Feld bei sehr vielen Tags mit AutoSize das ganze Formular füllt.
+TPPGTagEdit.Cursor ! crDefault lassen; über dem Eingabebereich zeigt das Feld ohnehin den Textcursor.
+TPPGTagEdit.CustomHint ! Für Hinweise mit Titel und Symbol, z. B. „Mehrere Adressen mit ; trennen“: einen TBalloonHint oder TPPGCustomHint zuweisen.
+TPPGTagEdit.DoubleBuffered ! Nicht nötig; PPGlow-Felder zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGTagEdit.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. crDrag, wenn Schlagworte auf ein anderes Feld gezogen werden.
+TPPGTagEdit.DragMode ! dmManual lassen, sonst startet jeder Klick in das Feld ein Ziehen. Zum Ablegen auf das Feld (OnDragDrop) ist dmAutomatic nicht nötig.
+TPPGTagEdit.Enabled ! False, wenn die Eingabe gerade nicht zur Situation passt, z. B. Empfänger erst nach Wahl des Kunden. Für „ansehen, aber nicht ändern“ besser ReadOnly.
+TPPGTagEdit.Font ! Am besten über ParentFont vom Formular übernehmen. Eine größere Schrift macht auch die Chips höher; das Feld wächst mit AutoSize mit.
+TPPGTagEdit.Height ! Mit AutoSize bestimmt die Zahl der Tag-Zeilen die Höhe. Ohne AutoSize so hoch setzen, dass die erwarteten Tags hineinpassen (eine Zeile etwa 32 Pixel).
+TPPGTagEdit.HelpContext ! Nur mit einer Hilfedatei sinnvoll: die Kontext-ID der Seite eintragen, die F1 im Feld öffnen soll, z. B. „Empfänger eintragen“.
+TPPGTagEdit.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword).
+TPPGTagEdit.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGTagEdit.Hint ! Erklärt die Bedienung, z. B. „Adresse eingeben und mit Enter oder ; bestätigen“. Sichtbar mit ShowHint am Formular.
+TPPGTagEdit.Left ! Position im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern, z. B. TagEdit.SetBounds(16, 40, 410, 32).
+TPPGTagEdit.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Bottom = 8 unter einer Schlagwortzeile mit alTop. Wirkt nur mit AlignWithMargins.
+TPPGTagEdit.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGTagEdit.ParentColor ! False lassen; ein Eingabefeld soll sich vom Hintergrund abheben.
+TPPGTagEdit.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGTagEdit.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGTagEdit.ParentFont ! True lassen, damit das Feld die Formularschrift trägt wie die übrigen Felder.
+TPPGTagEdit.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten.
+TPPGTagEdit.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Alle Empfänger kopieren“ oder „Aus Verteilerliste einfügen“.
+TPPGTagEdit.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGTagEdit.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält das Feld seine eigenen Farben aus Appearance.
+TPPGTagEdit.TabOrder ! In Formularen in Lesereihenfolge vergeben, z. B. Kunde, Empfänger, Betreff. Achtung: Tab verlässt das Feld und macht mit AddOnExit angefangenen Text zum Tag.
+TPPGTagEdit.Tag ! Freier Wert, z. B. die ID des Datensatzes, zu dem die Schlagworte gehören, wenn mehrere TagEdits einen gemeinsamen Handler nutzen.
+TPPGTagEdit.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern. Mit AutoSize unten genug Platz lassen.
+TPPGTagEdit.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für die normale Eingabe nicht nötig.
+TPPGTagEdit.Visible ! Blenden Sie das Feld aus, wenn es für den Datensatz nicht gilt, z. B. „CC“ erst nach Klick auf „CC hinzufügen“.
+TPPGTagEdit.Width ! So breit, dass die üblichen Tags in eine bis zwei Zeilen passen; für E-Mail-Adressen 350 bis 450 Pixel. Mit Anchors wächst es mit dem Formular.
+TPPGTagEdit.Name ! Sprechende Namen vergeben (tagEmpfaenger, tagSchlagworte) statt PPGTagEdit1; der Code in den Ereignissen wird dadurch lesbar.
+TPPGTagEdit.OnClick ! Selten nötig; feuert beim Klick in das Feld. Für Klicks auf einen Chip nehmen Sie OnTagClick.
+TPPGTagEdit.OnDblClick ! Selten nötig, z. B. um bei Doppelklick in das leere Feld ein Auswahlfenster (Adressbuch) zu öffnen.
+TPPGTagEdit.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Entfernen“ nur bei markiertem Tag freigeben, oder mit Handled := True zu unterdrücken.
+TPPGTagEdit.OnDragDrop ! Zum Ablegen auf das Feld, z. B. Kontakte aus einer Liste als Empfänger hinzufügen: hier TagEdit.Tags.Add oder AddTag mit dem gezogenen Wert.
+TPPGTagEdit.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source = lstKontakte erlaubt das Ablegen nur aus der passenden Liste.
+TPPGTagEdit.OnEndDrag ! Nur wenn das Feld selbst gezogen wird (DragMode); Target = nil heißt abgebrochen.
+TPPGTagEdit.OnStartDrag ! Nur wenn das Feld selbst gezogen wird: ein eigenes DragObject setzen, z. B. mit allen Tags als Text.
+TPPGTagEdit.OnEnter ! Für Hilfetexte in der Statusleiste („Mehrere Adressen mit ; trennen“), sobald das Feld den Fokus bekommt.
+TPPGTagEdit.OnExit ! Guter Ort für die Pflichtfeld-Prüfung: Tags.Count = 0 → ValidationState := pvsError. Angefangener Text ist dank AddOnExit zu diesem Zeitpunkt schon ein Tag.
+TPPGTagEdit.OnGesture ! Auf Touch-Geräten: Wischgesten auswerten (EventInfo.GestureID); für die normale Eingabe nicht nötig.
+TPPGTagEdit.OnKeyDown ! Für zusätzliche Tasten, z. B. Strg+K öffnet das Adressbuch. Enter, Rücktaste, Entf und Pfeile erledigt das Feld schon selbst.
+TPPGTagEdit.OnKeyPress ! Um Zeichen zu verwerfen, die in Tags nicht vorkommen dürfen, z. B. Key := #0 bei Leerzeichen in Artikelcodes.
+TPPGTagEdit.OnKeyUp ! Selten nötig; z. B. für eine eigene Live-Suche nach jedem Tastendruck.
+TPPGTagEdit.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster) ändern; sonst nicht belegen.
+TPPGTagEdit.OnMouseDown ! Selten nötig; Klicks auf Chips und Kreuz behandelt das Feld selbst (OnTagClick, OnTagRemoved).
+TPPGTagEdit.OnMouseEnter ! Um beim Überfahren eine Erklärung in der Statuszeile zu zeigen; die Hover-Optik macht das Feld selbst.
+TPPGTagEdit.OnMouseLeave ! Gegenstück zu OnMouseEnter: Erklärung wieder ausblenden.
+TPPGTagEdit.OnMouseMove ! Selten nötig; feuert bei jeder Mausbewegung. Hervorhebung der Chips und des Kreuzes macht das Feld selbst.
+TPPGTagEdit.OnMouseUp ! Gegenstück zu OnMouseDown; für Aktionen auf Chips besser OnTagClick nehmen.
+TPPGTagEdit.OnMouseWheel ! Selten nötig; Handled := True verhindert, dass der Parent scrollt.
+
+# --- Typen ---
+TPPGElementStyle.Color ! Eigene Fläche des Bereichs, z. B. ein helles Grau für gesperrte Felder (ReadOnlyStyle) oder eine Kopfzeile. clDefault lassen, solange das Preset passt.
+TPPGElementStyle.TextColor ! Eigene Textfarbe, z. B. clGrayText für schreibgeschützte Felder. Auf ausreichenden Kontrast zur Fläche achten (mindestens 4,5:1).
+TPPGElementStyle.BorderColor ! Eigene Rand- bzw. Linienfarbe, z. B. ein dezenter Rand für gesperrte Felder, damit sie sich von bearbeitbaren abheben.
+TPPGElementStyle.DarkColor ! Gegenstück zu Color im Dark Mode. Setzen, sobald Sie Color selbst setzen, sonst bleibt der Bereich im Dunkeln beim Preset.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor im Dark Mode, z. B. ein helles Grau statt clGrayText.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor im Dark Mode.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Nur für eine wirklich andere Schrift auf False stellen und Font setzen.
+TPPGElementStyle.Font ! Eigene Schrift des Bereichs (mit ParentFont = False), z. B. eine kleinere Schrift für Fußzeilen. Für nur fett reicht FontStyle.
+TPPGElementStyle.FontStyle ! Hebt den Bereich ohne eigene Schrift hervor, z. B. [fsItalic] für schreibgeschützte Werte oder [fsBold] für Kopfzeilen.
