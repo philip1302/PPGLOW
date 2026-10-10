@@ -1,0 +1,103 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGMemo.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGMemo: Wirkung, die beim Memo anders ist als der allgemeine Text ---
+TPPGMemo.WordWrap = True: Lange Zeilen brechen am rechten Rand um; das ist nur Anzeige, der Text bekommt keine zusätzlichen Zeilenumbrüche. False: Zeilen laufen nach rechts weiter und werden waagerecht gescrollt (dann ScrollBars = ssHorizontal oder ssBoth).
+> `Memo1.WordWrap := False; Memo1.ScrollBars := ssBoth;`
+! Für Fließtext (Bemerkungen, E-Mails, Beschreibungen) True lassen und ScrollBars = ssVertical setzen. False für Protokolle, Listen und Code, deren Zeilen nicht umbrechen sollen; dann ScrollBars = ssBoth.
+
+# --- TPPGMemo ---
+TPPGMemo.Preset ! Nicht am einzelnen Memo setzen, sondern einmal für die Anwendung über den TPPGStyleManager. So sehen Memo, Edit und ComboBox eines Formulars gleich aus.
+TPPGMemo.StyleManager ! Denselben TPPGStyleManager wie bei allen anderen Feldern des Formulars zuweisen; dann folgt das Memo dem Wechsel Hell/Dunkel und dem Preset automatisch.
+TPPGMemo.Appearance ! Beim Memo selten nötig: Rand, Rundung und Fokusfarbe kommen vom Preset. Für ein auffälliges Pflichtfeld lieber ValidationState nutzen als eigene Farben.
+TPPGMemo.Animation ! An lassen: Die Übergänge von Rand und Fokus laufen dann weich. RespectSystemSettings = True beachtet die Windows-Einstellung „Animationen anzeigen“.
+TPPGMemo.TextHint ! Ein kurzes Beispiel statt einer Anweisung zeigen, z. B. „z. B. Lieferung nur vormittags“. Die Beschriftung des Feldes gehört trotzdem in ein Label darüber, denn der Platzhalter verschwindet beim Tippen.
+TPPGMemo.TextHintVisibleOnFocus ! True, wenn das Memo beim Öffnen eines Formulars sofort den Fokus hat; sonst sähe der Anwender den Platzhalter nie. Sonst False lassen.
+TPPGMemo.UseSystemContextMenu ! False lassen: Das PPGlow-Menü passt zum Preset und ist übersetzt. True nur, wenn Anwender ausdrücklich das gewohnte Windows-Menü erwarten.
+TPPGMemo.ValidationState ! Ergebnis einer Prüfung anzeigen: pvsError beim Speichern, wenn ein Pflicht-Memo leer ist, pvsWarning kurz vor MaxLength. Im OnChange wieder auf pvsNone setzen, sobald der Anwender korrigiert.
+TPPGMemo.ValidationHint ! Immer zusammen mit ValidationState setzen und sagen, was zu tun ist („Bitte eine Bemerkung eintragen.“). Der Text erscheint als Tooltip und wird vom Screenreader vorgelesen.
+TPPGMemo.HighContrastSupport ! True lassen, damit das Feld im Windows-Hochkontrastmodus mit Systemfarben gut lesbar bleibt.
+TPPGMemo.Alignment ! Beim Memo fast immer taLeftJustify. taCenter höchstens für kurze, zentrierte Texte wie eine Grußzeile in einer Vorschau, taRightJustify nur bei rechts-nach-links-Sprachen.
+TPPGMemo.BorderStyle ! bsSingle für normale Eingabefelder. bsNone, wenn das Memo eine ganze Fläche füllt (Align = alClient in einem Panel oder Reiter), z. B. als Notizblock oder Protokollansicht.
+TPPGMemo.CharCase ! Beim Memo selten: ecUpperCase etwa für Freitext, der in Großbuchstaben gedruckt oder an ein Altsystem übergeben wird. Für normalen Text ecNormal lassen.
+TPPGMemo.HideSelection ! False, wenn ein Suchen-Dialog Fundstellen im Memo markiert: Dann bleibt die Markierung sichtbar, während der Dialog den Fokus hat. Sonst True lassen.
+TPPGMemo.Lines ! Den Text zeilenweise lesen oder füllen: Lines.Add für Protokolle, Lines.LoadFromFile/SaveToFile für Textdateien, viele Zeilen zwischen Lines.BeginUpdate und EndUpdate. Für den ganzen Text als String nehmen Sie Text. Achtung: Bei WordWrap = True zählt Lines.Count die sichtbaren (umbrochenen) Zeilen.
+TPPGMemo.MaxLength ! Grenze der Datenbankspalte eintragen (z. B. 200 bei VARCHAR(200)), dann kann der Anwender nicht mehr eingeben, als gespeichert werden kann. Ein Zeilenumbruch zählt als zwei Zeichen; Text aus Code wird nicht gekürzt.
+TPPGMemo.ReadOnly ! Für Texte, die man lesen und kopieren, aber nicht ändern soll: Verläufe, Protokolle, Vertragstexte, gesperrte Datensätze. Im Gegensatz zu Enabled = False bleibt der Text scrollbar und markierbar.
+TPPGMemo.ReadOnlyStyle ! Eine leicht graue Fläche (Color) zeigt auf einen Blick, dass hier niemand tippt. DarkColor mit setzen, sonst bleibt die Fläche im Dark Mode bei der Preset-Farbe.
+TPPGMemo.ScrollBars ! ssVertical für Fließtext mit WordWrap, ssBoth für Protokolle ohne Umbruch. ssNone nur, wenn das Memo groß genug für den ganzen Text ist; Scrollen per Tastatur und Mausrad geht trotzdem.
+TPPGMemo.TabStop ! True lassen. Nur bei reinen Anzeige-Memos (ReadOnly, z. B. ein Hilfetext im Dialog) auf False setzen, damit Tab sie überspringt.
+TPPGMemo.WantReturns ! True für normale Mehrzeiler. False in Dialogen, in denen Enter den Standard-Button auslösen soll (Default = True); eine neue Zeile gibt es dann mit Strg+Enter.
+TPPGMemo.WantTabs ! True nur für Texte, in denen Tabulatoren gebraucht werden (Code, eingerückte Listen). Sonst False lassen, damit Tab wie gewohnt zum nächsten Feld springt.
+TPPGMemo.Align ! alClient für Memos, die den Rest eines Panels oder Reiters füllen (Notizen, Protokoll), meist mit BorderStyle = bsNone. In Formularen mit Beschriftung alNone lassen und Anchors nutzen.
+TPPGMemo.AlignWithMargins ! Zusammen mit Align einschalten, damit ein ausgerichtetes Memo nicht am Rand des Panels klebt; Abstände unter Margins (typisch 8).
+TPPGMemo.Anchors ! [akLeft, akTop, akRight, akBottom] für ein Bemerkungsfeld in einem größenveränderlichen Dialog: Das Memo wächst dann mit, die Felder darüber bleiben gleich.
+TPPGMemo.BiDiMode ! Nur für arabische oder hebräische Texte ändern; am Formular setzen und über ParentBiDiMode übernehmen.
+TPPGMemo.Color ! Beim Memo selten nötig: Die Fläche kommt aus dem Preset. Für schreibgeschützte Memos ReadOnlyStyle nehmen, für geprüfte Felder ValidationState.
+TPPGMemo.Constraints ! MinHeight (z. B. 60) verhindert, dass ein mitwachsendes Memo beim Verkleinern des Fensters auf eine Zeile schrumpft.
+TPPGMemo.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; beim Memo selten gebraucht.
+TPPGMemo.DragKind ! dkDrag lassen; Andocken (dkDock) ist für Eingabefelder nicht sinnvoll.
+TPPGMemo.DragMode ! dmManual lassen: Mit dmAutomatic würde jedes Markieren mit der Maus ein Ziehen starten.
+TPPGMemo.Enabled ! False, wenn das Feld gerade nicht gilt (z. B. „Bemerkung“ nur bei Option „Sonderwunsch“). Zum reinen Lesen besser ReadOnly, dann bleibt der Text kopierbar.
+TPPGMemo.Font ! Für Protokolle, Code oder Tabellen-Texte eine Festbreitenschrift (Consolas) wählen, damit Spalten untereinander stehen. Sonst die Formularschrift über ParentFont übernehmen.
+TPPGMemo.ParentBiDiMode ! True lassen, damit das Memo der Leserichtung des Formulars folgt.
+TPPGMemo.ParentColor ! False lassen: Ein Eingabefeld soll sich vom Hintergrund des Formulars abheben.
+TPPGMemo.ParentFont ! True lassen, damit das Memo die Formularschrift trägt. Eine eigene Schrift (z. B. Consolas) setzt es automatisch auf False.
+TPPGMemo.ParentShowHint ! True lassen und ShowHint am Formular einschalten, dann erscheint der Hint ohne Einstellung je Feld. Den ValidationHint zeigt das Feld ohnehin.
+TPPGMemo.PopupMenu ! Für zusätzliche Befehle per Rechtsklick, z. B. „Textbaustein einfügen“ oder „Datum einfügen“. Ohne PopupMenu zeigt das Memo das PPGlow-Bearbeiten-Menü.
+TPPGMemo.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGMemo.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält das Memo die Farben aus dem Preset statt der Style-Farben.
+TPPGMemo.TabOrder ! So vergeben, dass Tab von oben nach unten durch das Formular läuft; das Bemerkungs-Memo meist als letztes Feld vor den Buttons.
+TPPGMemo.Visible ! Ausblenden, wenn ein Feld für den Anwender nie in Frage kommt (z. B. interne Notizen ohne Recht). Was nur gerade nicht gilt, besser mit Enabled sperren.
+TPPGMemo.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für normale Texteingabe nicht nötig.
+TPPGMemo.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, der Rahmen wird immer flackerfrei gezeichnet. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGMemo.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGMemo.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Memos, z. B. Memo.SetBounds(16, 40, 400, 110).
+TPPGMemo.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Memos, meist knapp unter dem Label.
+TPPGMemo.Width ! So breit wie die übrigen Felder des Formulars, damit die rechte Kante fluchtet. Bei veränderbarer Fenstergröße Anchors mit akRight.
+TPPGMemo.Height ! Nach der erwarteten Textmenge wählen: etwa 3 bis 5 Zeilen (80 bis 120 Pixel) für Bemerkungen, mehr für Beschreibungen. Ein zu kleines Memo verleitet zu kurzen Texten.
+TPPGMemo.Cursor ! crDefault lassen; das innere Feld zeigt automatisch den Textcursor (I-Balken).
+TPPGMemo.Hint ! Erklären, was in das Feld gehört („Wird auf dem Lieferschein gedruckt“). Solange ValidationState gesetzt ist, zeigt das Feld stattdessen den ValidationHint.
+TPPGMemo.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext mit Kontext-IDs. Ohne Hilfedatei egal.
+TPPGMemo.HelpKeyword ! Stichwort der Hilfeseite zum Feld (HelpType = htKeyword), z. B. „Auftrag.Bemerkung“.
+TPPGMemo.HelpContext ! Kontext-ID der Hilfeseite, die F1 bei fokussiertem Memo öffnen soll; nur mit Hilfedatei sinnvoll.
+TPPGMemo.Margins ! Abstand zum Rand bei Align, z. B. 8 rundum für ein Notiz-Memo, das ein Panel füllt. Wirkt nur mit AlignWithMargins.
+TPPGMemo.CustomHint ! Für Hinweise mit Titel und Symbol einen TBalloonHint oder TPPGCustomHint zuweisen; für die ganze Anwendung ist TPPGHintManager bequemer.
+TPPGMemo.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGMemo.Name ! Sprechend benennen, z. B. memBemerkung oder memVerlauf statt PPGMemo1; der Code in OnChange und beim Speichern wird dadurch lesbar.
+TPPGMemo.Tag ! Für mehrere Memos mit einem gemeinsamen OnChange, z. B. Tag = Spaltennummer, um im Handler das Datenfeld zu finden.
+TPPGMemo.OnChange ! Für alles, was dem Text folgt: Zeichenzähler, Speichern-Button freigeben, ValidationState zurücksetzen. Kommt bei jedem Tastendruck und auch bei Text aus Code, deshalb hier nichts Langsames tun.
+TPPGMemo.OnClick ! Selten gebraucht; feuert bei jedem Klick ins Feld. Für Reaktionen auf Text OnChange, für die Cursorposition OnKeyUp/OnMouseUp nehmen.
+TPPGMemo.OnDblClick ! Z. B. in einem Protokoll-Memo: Doppelklick auf eine Zeile öffnet den zugehörigen Datensatz (Zeile über CaretPos.Y ermitteln, bei WordWrap = False).
+TPPGMemo.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Textbaustein einfügen“ bei ReadOnly sperren.
+TPPGMemo.OnDragDrop ! Wenn Textbausteine aus einer Liste ins Memo gezogen werden: hier den Text an der Cursorposition einfügen (SelText).
+TPPGMemo.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur für passende Quellen.
+TPPGMemo.OnEndDock ! Nur bei DragKind = dkDock; beim Memo praktisch nie gebraucht.
+TPPGMemo.OnEndDrag ! Nach dem Ziehen des Memos selbst (DragMode = dmAutomatic); beim Memo selten gebraucht.
+TPPGMemo.OnEnter ! Um beim Betreten des Feldes einen Hilfetext in der Statusleiste zu zeigen, z. B. „Bemerkung erscheint auf dem Lieferschein“.
+TPPGMemo.OnExit ! Guter Ort für Prüfungen nach der Eingabe, z. B. Pflichtfeld leer: ValidationState := pvsError. Den Fokus nicht zurückzwingen, das stört beim Abbrechen.
+TPPGMemo.OnGesture ! Auf Touch-Geräten Wischgesten auswerten (EventInfo.GestureID), z. B. zum nächsten Datensatz blättern.
+TPPGMemo.OnKeyDown ! Für Tastenkürzel im Feld, z. B. Strg+Enter = Speichern (if (Key = VK_RETURN) and (ssCtrl in Shift)). Key := 0 verhindert dann die neue Zeile.
+TPPGMemo.OnKeyPress ! Um bestimmte Zeichen abzuweisen (Key := #0), z. B. Semikolons in einem Text für einen CSV-Export.
+TPPGMemo.OnKeyUp ! Um nach jeder Cursorbewegung Zeile und Spalte (CaretPos) in einer Statusleiste anzuzeigen.
+TPPGMemo.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster) belegen; sonst leer lassen.
+TPPGMemo.OnMouseDown ! Selten gebraucht; Markieren und Cursor setzen macht das Memo selbst.
+TPPGMemo.OnMouseEnter ! Um beim Überfahren eine Erklärung in einer Statuszeile zu zeigen. Die Hover-Optik macht das Feld selbst.
+TPPGMemo.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGMemo.OnMouseMove ! Selten gebraucht; feuert bei jeder Mausbewegung über dem Feld.
+TPPGMemo.OnMouseUp ! Nach dem Markieren mit der Maus, z. B. um „Kopieren“ in einer Symbolleiste je nach SelLength freizugeben.
+TPPGMemo.OnMouseWheel ! Selten gebraucht; das Memo scrollt mit dem Rad selbst. Handled := True verhindert das.
+TPPGMemo.OnStartDock ! Nur bei DragKind = dkDock; beim Memo praktisch nie gebraucht.
+TPPGMemo.OnStartDrag ! Nur wenn das Memo selbst gezogen wird (DragMode = dmAutomatic); beim Memo selten gebraucht.
+
+# --- Typen ---
+TPPGElementStyle.Color ! Flächenfarbe des Bereichs im Hellen, z. B. ein leichtes Grau ($00F3F3F3) für schreibgeschützte Felder. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Eigene Textfarbe nur mit Grund, z. B. clGrayText für gesperrte Inhalte. Auf ausreichenden Kontrast zur Fläche achten (mindestens 4,5:1).
+TPPGElementStyle.BorderColor ! Rand- oder Linienfarbe; meist clDefault lassen. Eine eigene Farbe nur, wenn der Bereich sich deutlich abgrenzen soll.
+TPPGElementStyle.DarkColor ! Immer mit setzen, wenn Color eine eigene Farbe hat (z. B. $00303030 zu einem hellen Grau). Sonst gilt im Dark Mode die Preset-Farbe.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor für den Dark Mode; hell wählen, damit der Text auf dunkler Fläche lesbar bleibt.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor für den Dark Mode; nur setzen, wenn BorderColor eine eigene Farbe hat.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Wird automatisch False, sobald Sie Font ändern.
+TPPGElementStyle.Font ! Eigene Schrift für den Bereich, z. B. kleiner für eine Fußzeile. Für fett oder kursiv reicht FontStyle.
+TPPGElementStyle.FontStyle ! Schnell hervorheben ohne eigene Schrift, z. B. [fsBold] für eine Kopfzeile oder [fsItalic] für schreibgeschützte Inhalte.
