@@ -1,5 +1,16 @@
 **Vorbild:** WinUI PasswordBox
 
+## Wofür
+
+Das Kennwortfeld nimmt Kennwörter, PINs und andere Geheimnisse entgegen. Die Zeichen sind verdeckt; ein Auge im Feld deckt sie bei Bedarf auf, und bei aktiver Feststelltaste erscheint ein Hinweis. Kopieren, Ausschneiden und der Rückgängig-Puffer geben den Klartext nicht heraus, und der Text wird nie in der DFM gespeichert.
+
+## Wann verwenden
+
+- Für alles, was niemand mitlesen soll: Anmeldung, Kennwort ändern, PIN, API-Schlüssel oder Zugangsdaten zu einem Server.
+- Statt `TPPGEdit` mit `PasswordChar`: Das Kennwortfeld bringt Auge, Feststelltasten-Hinweis, Kopiersperre und Screenreader-Schutz („geschützt", kein Wert) schon mit.
+- Nicht für Daten, die nur formatiert sein müssen (IBAN, Telefonnummer); dafür ist `TPPGMaskEdit` gedacht.
+- Für Zahlen-PINs mit fester Stellenzahl reicht das Kennwortfeld mit `MaxLength`; ein eigenes PIN-Control gibt es nicht.
+
 ## Unterschiede und Hinweise
 
 - Die Zeichen sind verdeckt (`PasswordChar`, Vorgabe ●).
