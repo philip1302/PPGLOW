@@ -1,0 +1,103 @@
+﻿PPGlow-Benchmark (Zeiten in ms, Exit-Code = Anzahl ueberschrittener Vorgaben)
+
+1000 Buttons erzeugen, zeichnen, freigeben             1453 ms  (Vorgabe  4000 ms)  ok
+Zeilen-Layout 1 000 000 fest: 1 000 000 x RowAt          15 ms  (Vorgabe   150 ms)  ok
+Zeilen-Layout 1 000 000 variabel: Cache + 1M RowAt       32 ms  (Vorgabe  1000 ms)  ok
+Auswahl 1 000 000: SelectAll, Bereich, Loeschen          15 ms  (Vorgabe   500 ms)  ok
+Markup 10 000 Texte parsen + Layout                    1656 ms  (Vorgabe  2500 ms)  ok
+Scroll-Control 100 000 Zeilen: 300 x scrollen + zeichnen    344 ms  (Vorgabe  3000 ms)  ok
+Referenz VCL: Resize TPanel + 300 TCheckBox            4188 ms  (Referenz)
+Resize-Sturm: 200 x TPPGPanel + 300 TPPGCheckBox       4000 ms  (Vorgabe  5544 ms)  ok
+Panel mit 300 Kindern zeichnen (10 x PaintTo)           578 ms  (Vorgabe  3000 ms)  ok
+ListBox virtuell 1 000 000: 300 x scrollen + zeichnen   1047 ms  (Vorgabe  3000 ms)  ok
+TreeView 100 000 Knoten: aufbauen, aufklappen, zeichnen    109 ms  (Vorgabe  2000 ms)  ok
+Grid 1 000 000 x 20 virtuell: 300 x scrollen + zeichnen   2234 ms  (Vorgabe  3000 ms)  ok
+Grid 1 000 000 Zeilen: gruppieren (100 Gruppen) + Summen + zeichnen    360 ms  (Vorgabe  1500 ms)  ok
+xlsx: 1 000 000 Zeilen x 5 exportieren (Datei)         3187 ms  (Vorgabe  6000 ms)  ok
+Druck: 1 000 000 Zeilen aufteilen + 3 Seiten in der Vorschau     32 ms  (Vorgabe  1000 ms)  ok
+Calendar: 1000 Monate blaettern + zeichnen             1453 ms  (Vorgabe  2500 ms)  ok
+Calendar: 20 000 Tage per Tastatur                       47 ms  (Vorgabe  1000 ms)  ok
+NavigationView 1000 Eintraege: 300 x scrollen + zeichnen    640 ms  (Vorgabe  2500 ms)  ok
+NavigationView 1000 Eintraege: 1000 x Auswahl + zeichnen   2063 ms  (Vorgabe  3000 ms)  ok
+Chart 100 000 Punkte: 20 x zeichnen                     265 ms  (Vorgabe  1000 ms)  ok
+Chart live: 600 x Wert anhaengen (1000 Punkte) + zeichnen   2360 ms  (Vorgabe  3000 ms)  ok
+Planer 50 000 Termine: 20 Wochen abfragen, anordnen, zeichnen   1859 ms  (Vorgabe  2500 ms)  ok
+Planer: 500 Serien, 12 Monate in der Monatsansicht      219 ms  (Vorgabe  2500 ms)  ok
+Planer: 500 Serien, 50 x ganze Serie verschieben + zeichnen    750 ms  (Vorgabe  2500 ms)  ok
+Kanban 10 000 Karten: 20 x filtern + zeichnen           343 ms  (Vorgabe  2000 ms)  ok
+Kanban 10 000 Karten aufbauen                           765 ms  (Referenz)
+TileView virtuell 100 000: 300 x scrollen + zeichnen   1344 ms  (Vorgabe  3000 ms)  ok
+TileView virtuell 100 000: 20 x filtern + zeichnen     1156 ms  (Vorgabe  3000 ms)  ok
+Validator: Validate mit 500 Fehlern (sortiert, markiert)     16 ms  (Vorgabe    50 ms)  ok
+Validator: Validate, alles gueltig                       47 ms  (Vorgabe    50 ms)  ok
+Validator: 500 Felder + 1000 Regeln aufbauen           1172 ms  (Referenz)
+
+Audit-Paket 8
+8A ListBox 10 000: 300 Mausbewegungen + Neuzeichnen     203 ms  (Vorgabe  1300 ms)  ok
+8A ListBox 1 000 000: 300 x eine Zeile neu zeichnen     109 ms  (Vorgabe   800 ms)  ok
+8A NavigationView 1000: 300 Mausbewegungen + Neuzeichnen    188 ms  (Vorgabe  1100 ms)  ok
+8A ToolBar 40 Buttons: 300 Mausbewegungen + Neuzeichnen    125 ms  (Vorgabe   900 ms)  ok
+8A PPGMeasureTextNoCanvas 100 000 x                      62 ms  (Vorgabe   200 ms)  ok
+8A Leerlauf ohne Animation: Wakeups                       0 /s  (Vorgabe     5 /s)  ok
+8A Leerlauf Planer mit Jetzt-Linie: Wakeups               1 /s  (Vorgabe     5 /s)  ok
+8A Leerlauf Maus ueber Scroll-Control: Wakeups            5 /s  (Vorgabe    15 /s)  ok
+8B Grid: 1 000 000 x 5 per Cells[] fuellen             6593 ms  (Vorgabe 27000 ms)  ok
+8B Grid 1 Mio.: sortieren Zahl auf + ab, Text auf      1563 ms  (Vorgabe  3500 ms)  ok
+8B Grid 1 Mio.: filtern + 3 x umsortieren mit Filter    328 ms  (Vorgabe   700 ms)  ok
+8B Grid 1 Mio.: bedingte Formate (Oben-10 %, Farbskala)    250 ms  (Vorgabe   600 ms)  ok
+8B Grid 1 Mio.: Spaltenbreite 100 x (Summe, Farbskala, RowHeights)    453 ms  (Vorgabe  1500 ms)  ok
+8B Grid 1 Mio.: 100 Einzelaenderungen mit Summe         406 ms  (Vorgabe  1400 ms)  ok
+8B Grid 1 Mio.: Hover 300 x mit HotRow-Stil + zeichnen   1234 ms  (Vorgabe  3000 ms)  ok
+8E Grid 1 Mio.: Hover 300 x im Fenster (Teil-Neuzeichnen)    282 ms  (Vorgabe   800 ms)  ok
+8B Grid 1 Mio.: 100 x zeichnen mit Zellarten (Fortschritt, Link)    531 ms  (Vorgabe  1200 ms)  ok
+TreeView 10 000 Wurzeln: Items[]-Schleife                 0 ms  (Vorgabe   100 ms)  ok
+TreeView 10 000 Wurzeln: AlphaSort                       15 ms  (Vorgabe   100 ms)  ok
+TreeView 10 000 Wurzeln ohne BeginUpdate                 16 ms  (Vorgabe   100 ms)  ok
+TreeView AutoCheck: 10 000 Kinder in BeginUpdate          0 ms  (Vorgabe   100 ms)  ok
+CheckListBox 10 000 (ItemsEx): CheckAll an + aus          0 ms  (Vorgabe   100 ms)  ok
+ListBox 100 000 mit Gruppen: 5 x Layout + zeichnen       31 ms  (Vorgabe   100 ms)  ok
+Markup-Layout 20 000 x (gleiche Grundschrift)           656 ms  (Vorgabe  1300 ms)  ok
+ComboBox 10 000 x ItemsEx.Add (unsortiert)               32 ms  (Vorgabe   100 ms)  ok
+ComboBox 2 000 x ItemsEx.Add (sortiert)                   0 ms  (Vorgabe   100 ms)  ok
+Auswahl 100 000: 10 000 x ItemIndex (Single)              0 ms  (Vorgabe   100 ms)  ok
+Auswahl 100 000: 10 000 x vorne einfuegen + loeschen      0 ms  (Vorgabe   100 ms)  ok
+MenuBar 10 Menues: 300 Mausbewegungen + zeichnen        171 ms  (Vorgabe   400 ms)  ok
+Chart 100 000 Punkte: 300 Mausbewegungen (Hover)         32 ms  (Vorgabe   100 ms)  ok
+Chart: 10 000 x AddXY (sichtbar)                         47 ms  (Vorgabe   100 ms)  ok
+Planer Zeitleiste 366 Tage, 60 Ressourcen: 300 x scrollen   1046 ms  (Vorgabe  2500 ms)  ok
+Planer Woche, 40 Ressourcen gruppiert: 50 x anordnen   1375 ms  (Vorgabe  3000 ms)  ok
+Kanban 10 000 Karten: 300 Mausbewegungen (Hover)        594 ms  (Vorgabe  3500 ms)  ok
+8E Kanban 10 000 Karten: 300 Mausbewegungen im Fenster (ohne Aufbau)    203 ms  (Vorgabe   450 ms)  ok
+8E Planer Woche 2000 Termine: 300 Mausbewegungen im Fenster    141 ms  (Vorgabe   300 ms)  ok
+Kanban 10 000 Karten: 100 x eine Karte aendern + zeichnen   1734 ms  (Vorgabe  4500 ms)  ok
+Ribbon: 1000 x Enabled umschalten (100 x zeichnen)      125 ms  (Vorgabe   250 ms)  ok
+PageControl: 200 Seiten einfuegen (BeginUpdate)          16 ms  (Vorgabe   100 ms)  ok
+InfoBar: 1000 x Hoehe (Oeffnen-Animation)                 0 ms  (Vorgabe    50 ms)  ok
+
+Audit-Paket 11 (Zeitgrenzen aus den Unit-Tests)
+11a Zeilen-Layout 1 Mio. fest: 100 000 x RowAt            0 ms  (Vorgabe   100 ms)  ok
+11a Zeilen-Layout 1 Mio. variabel: 100 000 x RowAt        0 ms  (Vorgabe   300 ms)  ok
+11a Auswahl 1 Mio.: SelectAll, Strg+Klick, Bereich, Loeschen     16 ms  (Vorgabe   500 ms)  ok
+11a ListBox virtuell 1 Mio.: Count, letzter Eintrag, zeichnen      0 ms  (Vorgabe  1000 ms)  ok
+11a TreeView 100 000 Knoten: aufbauen, aufklappen, Auswahl, zeichnen     15 ms  (Vorgabe  2000 ms)  ok
+11a Grid virtuell 1 Mio. x 20: Fokus ans Ende + zeichnen      0 ms  (Vorgabe  1000 ms)  ok
+11a Sparkline 100 000 Werte zeichnen                     16 ms  (Vorgabe  1000 ms)  ok
+11a Chart 100 000 Punkte: einmal zeichnen                16 ms  (Vorgabe   500 ms)  ok
+11a Chart 100 000 Punkte: 200 x Append im Lauffenster      0 ms  (Vorgabe  2000 ms)  ok
+11a ColumnComboBox 100 000 virtuell: aufklappen + Ende      0 ms  (Vorgabe  1000 ms)  ok
+11a TagEdit 500 Tags: anlegen + zeichnen                 78 ms  (Vorgabe  1500 ms)  ok
+11a Grid 1 Mio. Zeilen: AutoSizeColumn (Stichprobe)       0 ms  (Vorgabe  2000 ms)  ok
+11a xlsx: 20 000 Zeilen x 3 exportieren (Datei)          47 ms  (Vorgabe 10000 ms)  ok
+11a Termine 50 000: eine Woche abfragen                  62 ms  (Vorgabe  1000 ms)  ok
+11a Planer 50 000 Termine: Woche anordnen + zeichnen     93 ms  (Vorgabe  1500 ms)  ok
+11a Kanban virtuelle Spalte 100 000: scrollen, zeichnen, HitTest     16 ms  (Vorgabe  1000 ms)  ok
+11a Kanban 5000 Karten: Layout + 100 x scrollen und zeichnen   1468 ms  (Vorgabe  5000 ms)  ok
+11a Ribbon 130 Gruppen: 200 x Breite + Zeichnen        1094 ms  (Vorgabe  4000 ms)  ok
+11a TileView virtuell 100 000: Layout                   328 ms  (Vorgabe  3000 ms)  ok
+11a TileView virtuell 100 000: am Ende zeichnen (nur sichtbar)      0 ms  (Vorgabe   500 ms)  ok
+11a BusyOverlay: Free bricht laufende Arbeit ab          15 ms  (Vorgabe  2000 ms)  ok
+11a Grid 1 Mio. Zeilen: 3 x RowHeights + 50 x ColWidths      0 ms  (Vorgabe  2000 ms)  ok
+11a Animation Faelligkeitsmodus 300 ms: Ende            313 ms  (Vorgabe   700 ms)  ok
+11a Toast mit Lebensdauer 400 ms: Ende                  406 ms  (Vorgabe  1000 ms)  ok
+
+Alle Vorgaben eingehalten.

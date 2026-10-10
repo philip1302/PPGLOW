@@ -1,9 +1,9 @@
 # PPGlow – Stand und nächste Schritte
 
-## Stand (09.10.2026)
-- **Aktuell: Audit-Paket 11 in Arbeit** (Tests, Build, Demo, Doku; Detailplan `Docs\Audit-Paket11-Plan.md`, am 09.10.2026 freigegeben, alle Entscheidungen wie empfohlen).
-- **Fertig:** Phasen 1–14c (ohne 14d), 17–20, Anpassbarkeit sowie die Audit-Pakete 1–8 (Plan und Fortschritt: `Docs\Audit-Plan.md`). 84 Paletten-Controls (67 PPGlow, 17 PPGlow DB), 1764 Tests Win32/Win64 (Stand nach Paket 8), Demo mit 20 Seiten. Phase 14d entfällt, Phase 15 ist zurückgestellt (Arbeitgeber), Phase 16 und 21 sind offen.
-- **Branch:** Arbeitszweig `claude/task-elizkl` (GitHub `philip1302/ppglow`); Audit 11 läuft in Worktrees auf eigenen Zweigen (`claude/audit11-*`) und wird danach dorthin gemergt.
+## Stand (10.10.2026)
+- **Zuletzt fertig: Audit-Paket 11** (Tests, Build, Demo, Doku; Umsetzung und Abweichungen in `Docs\Audit-Paket11-Plan.md`, Abschnitt Umsetzung). Tests prüfen jetzt wirklich: zentrale Fehlerprüfung im TearDown, fehlende Referenzbilder sind Fehler (`/baseline`), übersprungene Tests sind rot (`/allowskip`), keine Zeitgrenzen in Unit-Tests (Benchmark `Bench11`), Regel TESTS im Regel-Prüfer. Dabei gefunden und behoben: 3 verdeckte Fehler (Kontextmenü per Shift+F10, Splitter, DB-Controls beim Zerstören), 2 Darstellungsfehler (Wizard deaktiviert, Kanban-Fokus), fehlender Fehlertext an Auswahlgruppen (`ValidationHint`).
+- **Fertig:** Phasen 1–14c (ohne 14d), 17–20, Anpassbarkeit sowie die Audit-Pakete 1–8 und 11 (Plan und Fortschritt: `Docs\Audit-Plan.md`). 84 Paletten-Controls (67 PPGlow, 17 PPGlow DB), **1818 Tests Win32/Win64, 0 übersprungen**, Demo mit 20 Seiten (Selbsttest 205 Prüfungen). Phase 14d entfällt, Phase 15 ist zurückgestellt (Arbeitgeber), Phase 16 und 21 sind offen.
+- **Branch:** Arbeitszweig `claude/task-elizkl` (GitHub `philip1302/ppglow`); Pakete werden parallel in Worktrees auf eigenen Zweigen gebaut und danach dorthin gemergt. Hängt eine alte Batch-IDE (`bds.exe -rPPGlowBuild`, nur per Neustart zu beenden), scheitert `git merge` an gesperrten Artefakten; dann über `git merge-tree --write-tree` + `commit-tree` zusammenführen.
 - **Installiert:** Stand 08.10.2026 (Anpassbarkeit, alle Phasen bis 14c, inkl. DB-Pakete, Win32 und Win64). **Seit dem 08.10.2026 ist nichts installiert:** Die Property-Nacharbeiten vom 08.10., die Phasen 17–20 und die Audit-Pakete 1–8 fehlen in der IDE (Prüfliste unten).
 - Der ganze Verlauf (alle datierten Einträge, Phasentabelle, frühere Roadmap-Stände) steht in `Docs\Verlauf.md`.
 
@@ -23,7 +23,7 @@ Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt /hidden    # Szenarien aller 
 powershell -ExecutionPolicy Bypass -File Build\make-docs.ps1 -Missing C:\pfad\fehlt.txt   # Soll: 0 fehlend
 ```
 
-## Nächste Wahl (nach Audit-Paket 11, mit dem User abstimmen)
+## Nächste Wahl (mit dem User abstimmen)
 - Audit-Paket 9 (Architektur) oder 10 (XE2, `Docs\Kompatibilitaet.md`) aus `Docs\Audit-Plan.md`.
 - Phase 16 (Demo-Tour, Kommando-Palette, `Docs\Phase16-Plan.md`).
 - Phase 21 (LayoutControl, Inspector, FilterBuilder) erst nach einer Inventur eines echten Projekts; `Build\inventory.ps1` ist noch zu bauen (`Docs\Umstellung-Kundenprojekt-Plan.md`).

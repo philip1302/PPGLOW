@@ -452,7 +452,7 @@ Zur Erinnerung, falls später gewünscht: ~1.330 Artefakte (~150 MB: 1.276 `.dcu
 | 6 Migration | **erledigt** (08.10.2026); Umbenennungen aus 5c seit 09.10.2026 dabei (auch im Code der Unit) |
 | 4 DB-Controls | **erledigt** (09.10.2026, `Docs\Audit-Paket4-5-Plan.md`, Abschnitt Umsetzung) |
 | 5 Properties, Objektinspektor, Benennung | **erledigt** (09.10.2026); 5d Stufen 1–3, größere Funktionen auf eigener Liste; Appearance bei Badge/ProgressRing/Rating/Splitter mit Paket 7 |
-| 11 Tests, Build, Demo, Doku | offen |
+| 11 Tests, Build, Demo, Doku | **erledigt** (10.10.2026, `Docs\Audit-Paket11-Plan.md`, Abschnitt Umsetzung) |
 | 7 UI/UX-Konsistenz | **erledigt** (09.10.2026, `Docs\Audit-Paket7-Plan.md`, Abschnitt Umsetzung); inkl. Appearance bei Badge/ProgressRing/Rating/Splitter (aus 5b) und Hochkontrast als Token-Satz |
 | 8 Performance | **erledigt** (09.10.2026, `Docs\Audit-Paket8-Plan.md`, Abschnitt Umsetzung; Messungen `Tests\Bench\Messung-vor/nach-Paket8.txt`) |
 | 10 XE2 | offen |

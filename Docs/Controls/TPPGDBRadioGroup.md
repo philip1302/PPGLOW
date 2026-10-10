@@ -117,7 +117,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
-Tests: `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Phase19` (TBusyOverlayTests, TChoiceValidationHintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBRadioGroup.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

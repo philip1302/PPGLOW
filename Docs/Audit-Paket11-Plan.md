@@ -127,3 +127,70 @@ Neue Regeln mit je einem Negativbeispiel in `check-rules-tests`, dazu Fälle fü
 3. **`NAECHSTE-SCHRITTE.md` kürzen**, Historie nach `Docs\Verlauf.md`. Empfehlung: ja.
 4. **Demo startet auf Deutsch.** Empfehlung: ja.
 5. **Echte Fehler, die schärfere Tests finden:** kleine im Paket beheben, größere als Liste an dich. Empfehlung: ja.
+
+## Umsetzung (09./10.10.2026)
+
+Zwei Wellen in Git-Worktrees. Welle 1: **F** Testgrundlage, **B** Build-Skripte und Regel-Prüfer, **D** Demo und Doku. Welle 2: **T** Reparatur bestehender Tests, **C** Abdeckung, **R** `ValidationHint` der Auswahlgruppen (Wunsch des Users während des Pakets). Jeder Agent bekam die Leitlinie wörtlich mit. Jede Teständerung steht im Commit als „Test geändert: …“.
+
+Ergebnis: **1818 Tests Win32 und Win64 grün, 0 übersprungen (ohne `/allowskip`)**, vorher 1764. Leak-Lauf Win32/Win64 ohne Leck. Alle sechs Projekte gebaut. Regel-Prüfer ohne Verstoß (Selbsttest mit Negativbeispielen je Regel). Demo-Selbsttest 205/205 (vorher 185), `make-docs` 0 fehlend. Benchmark: alle Vorgaben eingehalten, einschließlich der aus den Unit-Tests übernommenen Zeitmessungen (`Bench11`). Nichts installiert.
+
+**Testintegrität (F, T):**
+- **Regeln:** Abschnitt „Testintegrität“ in `Docs\Coding-Rules.md`.
+- **Zentrale Prüfung im `TControlTestCase.TearDown`:** abgefangene Zeichenfehler und Anwendungs-Exceptions führen zum Fehlschlag (`ExpectErrors` für absichtlich provozierte). Der globale Zustand wird zurückgesetzt: Theme, Sprache, GDI-Rückfall, Hochkontrast, FormatSettings, Caches und die eingespeisten Systemwerte.
+- **Referenzdaten:** Ein fehlendes Referenzbild ist ein Fehler (anlegen nur mit `/baseline`). Die Grid-Referenzbilder aus Paket 8 wurden aus dem Code vor dem Umbau (72f9e8a) erzeugt und eingecheckt; der aktuelle Code ist pixelgleich. Die Win64-Planer-Digests sind mit dem alten Code (3594b0b) nachgewiesen.
+- **Überspringen:** `Skip(Grund)`, ohne `/allowskip` rot; am Ende des Laufs Zählung und Liste. Auf diesem Rechner 0 Skips, weil PPI, Animationen, Radzeilen und die Uhr der Tippsuche eingespeist werden (`PPGSetWheelScrollLinesReader`, `PPGSetSystemAnimationsReader`, `PPGSetTypeAheadClock`).
+- **Reparatur der Prüfungen:** 6 wirkungslose, 7 verschluckende und 5 „jede Exception“-Prüfungen. Dazu fast immer wahre und zirkuläre Erwartungen; letztere sind jetzt Literale, darunter die eigene Formel-Erwartung aus Paket 7 in `Phase4b`.
+- **Zeit:** Die Zeitgrenzen sind aus den Unit-Tests in den Benchmark gewandert, `Sleep` ist durch eingespeiste Uhren ersetzt.
+- **Regel TESTS im Regel-Prüfer:** `CheckTrue(True)`, verschluckte Fehlschläge, `Exit` ohne `Skip`. Sie fand beim Zusammenführen sofort eine Stelle im neuen Streaming-Test, die nun Fehlschläge ausdrücklich weiterreicht.
+- **Gegenproben:** absichtlich eingebaute Fehler (Zeichenfehler, falsche Exception-Klasse, Setter ohne Wirkung, Radzeilen, Hash, iCal-Kodierung u. a.) machten die zuständigen Tests rot.
+
+**Abdeckung (C):**
+- **Streaming:** über alle 84 Paletten-Controls (vorher 43). Geprüft wird, dass der Setter den Wert übernimmt; dazu Set-, Klassen- und Collection-Properties und DB-Controls an einer Datenquelle.
+- **Galerie:** 77 Controls, mit 72 neuen Referenzbildern nur für neu aufgenommene Controls. Bei RTL und Hochkontrast ist „keine Änderung“ ein Fehler, außer bei begründeten Ausnahmen.
+- **Zeichentests:** 13 mit GDI+ und GDI-Rückfall; 34 bestehende Zeichentests prüfen jetzt „nicht leer“ und „Zustand sichtbar“.
+- **Verhaltenstests:** 27 für die schwach getesteten Bereiche.
+- **Index:** „Control → Testunits“ (`Docs\Controls\Tests.md`, Zeile „Tests:“ auf jeder Control-Seite).
+
+**Build und Regel-Prüfer (B):**
+- **Build-Skripte:**
+  - Ein Build zählt nur mit Abschlusszeile als Erfolg.
+  - Unbekannte Projektnamen werden sofort abgewiesen.
+  - `install.ps1`: Sicherung vor jeder Änderung, auch beim Deinstallieren. PATH wird gesichert und nur zurückgenommen, wenn `install.ps1` ihn selbst eingetragen hat (Marker). `BDSCOMMONDIR` kommt aus Registry bzw. `rsvars.bat`.
+  - `install.ps1` wurde nie ausgeführt, nur per Syntaxprüfung und herausgelöste Funktionen getestet.
+- **Neue Regeln:** DB, DESIGN, UNITS, IMAGEINDEX, TIMER, TEXT, REQUIRES, LAYER, XE2, EXCEPT-Grenzen.
+- **Code-Anpassungen dafür:**
+  - Der Markup-Parser liegt jetzt in der Core-Unit `PPG.Markup.Parser`; damit ist die Schichtverletzung in ICal aufgelöst.
+  - XE2-Stellen: `FMod`, `TCollectionNotification`, `DocumentProperties`.
+  - 13 Grenzen sind kommentiert.
+
+**Demo und Doku (D):**
+- **Demo:**
+  - Der Katalog enthält alle 84 Controls, mit Selbsttest. Neue Karten für GroupBox, CustomHint, KanbanPrinter und vier DB-Controls.
+  - Die Demo startet auf Deutsch.
+  - `ForceGdiFallback` zeichnet über einen Haken selbst neu.
+  - Das Preset läuft über `TPPGStyleManager`; alle nicht sichtbaren Komponenten unterstützen ihn schon.
+- **Doku:**
+  - `NAECHSTE-SCHRITTE.md` ist neu aufgebaut, die Historie steht in `Docs\Verlauf.md`.
+  - `Docs\Architektur.md` hat den Abschnitt „Leistung“ (Messwerte Paket 8), dazu weitere Korrekturen.
+  - Ebenfalls korrigiert: Coding-Rules (PPGStr, Umbenennung, Referenz nach Anwender-Ereignis, catch-all-Grenzen), Roadmap 3, Kompatibilität, DatePicker-Hilfe.
+
+**Auswahlgruppen (R):** `ValidationHint` an RadioGroup, CheckGroup und DBRadioGroup: Tooltip, Screenreader-Beschreibung und Alarm. Die DB-RadioGroup zeigt beim Verlassen die Meldung aus `OnValidate`, und der Validator setzt seinen Regeltext auch bei Auswahlgruppen. Ist `ShowHint` beim Anwender aus, wird es bei einem Fehler nur, solange die Maus über der Gruppe steht, eingeschaltet und danach wiederhergestellt.
+
+**Echte Fehler, gefunden durch die schärferen Tests und behoben:**
+1. Kontextmenü per Shift+F10 in Feldern erschien nie (`ERangeError` bei LParam = -1).
+2. Splitter: Zugriffsverletzung, wenn das Ziel beim Ziehen freigegeben wird.
+3. 11 DB-Controls: Zugriff auf die schon freigegebene Bindung in `CM_EXIT` beim Zerstören.
+4. Wizard deaktiviert: Schrittkreise blieben in Akzentfarbe.
+5. Kanban: Tastaturfokus auf der gewählten Karte unsichtbar (jetzt Fokusring).
+6. DB-RadioGroup: Fehlertext aus `OnValidate` ging verloren.
+
+**Abweichungen:**
+- `ValidationHint` steht im DFM nach `ValidationState`, wie bei den Feldern.
+- `Phase3` `ChildPaintsOnPanelBackground` lief bisher nie (Skip ohne Themes). Seine Erwartung „reines Grün“ war fachlich falsch, weil das Panel einen Verlauf zeichnet. Jetzt vergleicht der Test mit dem Panel-Pixel in gleicher Höhe.
+- Zwei ExtremeSizes-Tests (1×1, 8×8 px) prüfen bewusst nicht „nicht leer“.
+- Weiterhin weich: `Phase7b` wartet 400 ms fest auf eine Popup-Animation; `Visual` überspringt vor Delphi 10.3 per Status (hier nicht relevant).
+
+**Offen für den User:**
+- Planer und Kanban zeigen keinen Fokus, solange nichts gewählt ist (UX-Entscheidung).
+- `PPG_HAS_IMAGECOLLECTION` ist definiert, aber unbenutzt.
+- Die XE2-Anpassungen sind nur unter Delphi 13 gebaut (Paket 10).
