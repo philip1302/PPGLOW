@@ -1,0 +1,80 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGRadioButton.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGRadioButton ---
+TPPGRadioButton.Action ! Selten nötig. Sinnvoll, wenn dieselbe Wahl auch im Menü steht, z. B. „Ansicht: Liste / Kacheln": je Option eine Action mit gleichem GroupIndex, dann folgen Menü und RadioButton demselben Checked.
+TPPGRadioButton.Align ! Für Optionen, die untereinander in einer GroupBox stehen: Align = alTop stapelt sie ohne Pixelrechnen, mit AlignWithMargins bekommen sie Luft. Freie Optionen in Formularen bleiben alNone.
+TPPGRadioButton.AlignWithMargins ! Zusammen mit Align = alTop einschalten, damit gestapelte Optionen nicht aneinanderkleben; Margins.Top = 4 reicht meist.
+TPPGRadioButton.Anchors ! [akLeft, akTop, akRight] bei langen Beschriftungen in Dialogen mit veränderbarer Größe, damit der Text beim Verbreitern Platz bekommt.
+TPPGRadioButton.AutoSize ! Bei übersetzten Oberflächen einschalten: Die Option wird so breit wie ihr Text und schneidet nichts ab. Mit WordWrap wächst stattdessen die Höhe.
+TPPGRadioButton.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; der Kreis wandert dann nach rechts, die Pfeiltasten links/rechts tauschen. Am Formular setzen und über ParentBiDiMode vererben.
+TPPGRadioButton.Caption ! Die Option kurz und eindeutig benennen („Standard (3-5 Werktage)", „Abholung im Lager"); ein & vergibt die Zugriffstaste (Alt+S wählt die Option direkt). Alle Optionen einer Gruppe gleich formulieren.
+TPPGRadioButton.Checked ! Beim Öffnen genau eine Option vorwählen, meist die übliche oder die gespeicherte Einstellung. Im Code Checked := True setzen; die anderen der Gruppe schalten sich selbst aus, OnChange feuert, OnClick nicht.
+TPPGRadioButton.Color ! Selten nötig: Mit ParentBackground = True scheint der Hintergrund des Containers durch. Color nur setzen, wenn die Option auf einer farbigen Fläche liegt und ParentBackground aus ist.
+TPPGRadioButton.Constraints ! MaxWidth begrenzt Optionen mit AutoSize, damit lange Übersetzungen das Layout nicht sprengen; zusammen mit WordWrap bricht der Text dann um.
+TPPGRadioButton.Cursor ! crDefault lassen; Optionsfelder zeigen unter Windows den normalen Pfeil. crHandPoint nur in web-artigen Oberflächen.
+TPPGRadioButton.CustomHint ! Für eine ausführliche Erklärung einer Option (z. B. was „Sperrgut" bedeutet) einen TPPGCustomHint mit Titel zuweisen; für die ganze Anwendung ist TPPGHintManager bequemer.
+TPPGRadioButton.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGRadioButton.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; bei Optionsfeldern praktisch nie gebraucht.
+TPPGRadioButton.DragKind ! dkDrag lassen; Optionsfelder werden in der Praxis weder gezogen noch angedockt.
+TPPGRadioButton.DragMode ! dmManual lassen, sonst startet jeder Klick auf die Option ein Ziehen statt sie zu wählen.
+TPPGRadioButton.Enabled ! Optionen sperren, die gerade nicht möglich sind (Express bei Sperrgut), statt sie auszublenden: Der Anwender sieht, dass es sie gibt. War die gesperrte Option gewählt, im Code auf eine erlaubte ausweichen.
+TPPGRadioButton.Font ! ParentFont lassen, damit Optionen die Formularschrift tragen. Eine empfohlene Option lieber mit dem Zusatz „(empfohlen)" kennzeichnen als mit anderer Schrift.
+TPPGRadioButton.GroupIndex ! Mehrere Gruppen im selben Container trennen, ohne extra GroupBox: Format = 1, Umfang = 2. Optionen in verschiedenen Containern sind ohnehin getrennt; dort 0 lassen.
+TPPGRadioButton.Height ! 24 Pixel reicht für eine Zeile; mit WordWrap entsprechend höher oder AutoSize einschalten. Bei Touch-Oberflächen 32 Pixel für bequemes Tippen.
+TPPGRadioButton.HelpContext ! Nur mit einer Hilfedatei sinnvoll: die Kontext-ID der Seite eintragen, die F1 bei fokussierter Option öffnen soll.
+TPPGRadioButton.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword); praktisch bei HTML-Hilfen mit Stichwortverzeichnis.
+TPPGRadioButton.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext mit Kontext-IDs. Ohne Hilfedatei egal.
+TPPGRadioButton.HighContrastSupport ! True lassen: Sehbehinderte Anwender mit Hochkontrast sehen dann Kreis und Markierung in klaren Systemfarben.
+TPPGRadioButton.Hint ! Für Folgen, die nicht in die Beschriftung passen, z. B. „Lieferung am nächsten Werktag bei Bestellung bis 14 Uhr". ShowHint am Formular einschalten.
+TPPGRadioButton.Left ! Alle Optionen einer Gruppe auf gleiche linke Kante setzen, damit die Kreise eine Linie bilden. Im Code nur bei dynamisch erzeugten Optionen nötig.
+TPPGRadioButton.Margins ! Abstand zwischen gestapelten Optionen bei Align = alTop, z. B. Margins.Top = 4. Wirkt nur mit AlignWithMargins.
+TPPGRadioButton.Name ! Sprechende Namen nach der Option vergeben (rbVersandExpress, rbFormatPdf) statt PPGRadioButton1: Abfragen wie if rbVersandExpress.Checked lesen sich dann von selbst.
+TPPGRadioButton.ParentBackground ! True lassen: Dann sieht man hinter der Option die Fläche der GroupBox oder Karte, auf der sie liegt.
+TPPGRadioButton.ParentBiDiMode ! True lassen, damit die Option der Leserichtung des Formulars folgt.
+TPPGRadioButton.ParentColor ! True, wenn die Option die Farbe des Containers übernehmen soll; meist zusammen mit ParentBackground.
+TPPGRadioButton.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGRadioButton.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGRadioButton.ParentFont ! True lassen, damit alle Optionen die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGRadioButton.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann zeigen alle Optionen ihre Hints.
+TPPGRadioButton.PopupMenu ! Selten bei Optionen; z. B. „Als Standard merken" per Rechtsklick, um die gewählte Option für das nächste Mal zu speichern.
+TPPGRadioButton.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager; dann sehen Optionen, Häkchen und Buttons gleich aus.
+TPPGRadioButton.ShowFocusRect ! True lassen, damit Tastaturbenutzer sehen, welche Option den Fokus hat; mit den Pfeiltasten wandert er durch die Gruppe.
+TPPGRadioButton.ShowHint ! Einmal am Formular einschalten statt an jeder Option; dann bleibt ParentShowHint True.
+TPPGRadioButton.Spacing ! Abstand Kreis–Text; die Vorgabe 4 passt meist. Bei größerer Schrift etwas mehr, damit der Text nicht am Kreis klebt.
+TPPGRadioButton.StyleElements ! Nur bei VCL-Styles wichtig: Nehmen Sie seClient heraus, wenn die Option ihre PPGlow-Farben behalten soll.
+TPPGRadioButton.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Optionen zuweisen; so wechselt die ganze Seite Preset und Farben auf einmal.
+TPPGRadioButton.TabOrder ! Die Optionen einer Gruppe in Lesereihenfolge nummerieren: Die Pfeiltasten wechseln in dieser Reihenfolge, und ohne Auswahl ist die erste der Tabstopp.
+TPPGRadioButton.TabStop ! Verwaltet die Gruppe selbst: Nur die gewählte Option (ohne Auswahl die erste) ist mit Tab erreichbar, innerhalb der Gruppe geht es mit den Pfeiltasten weiter. Nicht von Hand setzen.
+TPPGRadioButton.Tag ! Ein Wert je Option für einen gemeinsamen Handler, z. B. der Preis in Cent oder der Enum-Wert (Ord(fmPdf)); im Handler TPPGRadioButton(Sender).Tag lesen.
+TPPGRadioButton.Top ! Optionen einer Gruppe mit gleichem Abstand untereinander setzen (z. B. alle 28 Pixel); bequemer ist Align = alTop.
+TPPGRadioButton.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für das Antippen einer Option nicht nötig.
+TPPGRadioButton.Visible ! Optionen ausblenden, die es für diesen Anwender nie gibt (fehlende Lizenz). Was nur gerade nicht geht, besser mit Enabled = False sperren.
+TPPGRadioButton.Width ! So breit, dass die längste Beschriftung der Gruppe passt; alle Optionen einer Gruppe gleich breit wirken ruhiger. Mit AutoSize bestimmt der Text die Breite.
+TPPGRadioButton.WordWrap ! Für Optionen mit erklärendem Text in schmalen Spalten einschalten; Height erhöhen oder AutoSize einschalten, damit die zweite Zeile sichtbar ist.
+TPPGRadioButton.Alignment ! taRightJustify (Text rechts vom Kreis) ist unter Windows üblich. taLeftJustify nur in Tabellen-Layouts, in denen die Kreise rechtsbündig in einer Spalte stehen sollen.
+TPPGRadioButton.Appearance ! Meist unverändert lassen. Checked färbt den gewählten Kreis, FocusColor den Fokusring; für Akzentfarben einmal im StyleManager statt an jeder Option.
+TPPGRadioButton.Animation ! An lassen; der Kreis füllt sich dann weich. RespectSystemSettings = True schaltet die Animation aus, wenn der Anwender das in Windows so eingestellt hat.
+TPPGRadioButton.OnChange ! Für alles, was der Auswahl folgen muss (Preis, Zusammenfassung, Felder sperren), egal ob Klick, Pfeiltaste oder Checked im Code. Feuert auch für die Option, die ausgeschaltet wird, deshalb den Gesamtzustand lesen statt nur den Sender.
+TPPGRadioButton.OnClick ! Für Reaktionen nur auf Bedienung durch den Anwender (Klick, Leertaste, Pfeiltaste, Alt+Zugriffstaste). Ein gemeinsamer Handler für alle Optionen der Gruppe, die Option über Sender oder Tag unterscheiden. Checked im Code löst ihn nicht aus.
+TPPGRadioButton.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen (Einträge sperren) oder mit Handled := True ganz zu unterdrücken.
+TPPGRadioButton.OnDragDrop ! Bei Optionsfeldern selten; z. B. eine Datei auf „Als Vorlage verwenden" ziehen und die Option dabei wählen.
+TPPGRadioButton.OnDragOver ! Zusammen mit OnDragDrop: Accept := True nur für passende Quellen.
+TPPGRadioButton.OnEndDock ! Nur bei DragKind = dkDock; bei Optionsfeldern praktisch nie gebraucht.
+TPPGRadioButton.OnEndDrag ! Nur wenn die Option selbst gezogen wird (DragMode); bei Optionsfeldern praktisch nie gebraucht.
+TPPGRadioButton.OnEnter ! Für eine Erklärung der Option in der Statusleiste oder einem Hilfefeld, sobald sie per Tab oder Pfeiltaste den Fokus bekommt.
+TPPGRadioButton.OnExit ! Selten nötig; z. B. um die Erklärung aus OnEnter wieder zu löschen. Prüfungen gehören in OnChange.
+TPPGRadioButton.OnGesture ! Auf Touch-Geräten: Wischgesten auswerten (EventInfo.GestureID). Für das Antippen einer Option nicht nötig.
+TPPGRadioButton.OnKeyDown ! Feuert vor dem Wechsel mit den Pfeiltasten: Key := 0 verhindert ihn, z. B. solange eine Rückfrage offen ist. Leertaste und Pfeile erledigt die Option sonst selbst.
+TPPGRadioButton.OnKeyPress ! Selten für Optionen; für Tastenkürzel besser die Zugriffstaste (&) in Caption nehmen.
+TPPGRadioButton.OnKeyUp ! Selten für Optionen; z. B. um nach dem Loslassen einer Pfeiltaste eine teure Vorschau einmal statt bei jedem Wechsel zu rechnen.
+TPPGRadioButton.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen) ändern; sonst nicht belegen.
+TPPGRadioButton.OnMouseDown ! Selten für Optionen; die Reaktion auf die Wahl gehört in OnClick bzw. OnChange.
+TPPGRadioButton.OnMouseEnter ! Um beim Überfahren eine Vorschau der Option zu zeigen, z. B. das Layout „Kacheln" schon andeuten, bevor der Anwender klickt.
+TPPGRadioButton.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Vorschau wieder auf die gewählte Option zurückstellen.
+TPPGRadioButton.OnMouseMove ! Selten für Optionen; feuert bei jeder Mausbewegung. Für Hover-Effekte reicht Appearance.
+TPPGRadioButton.OnMouseUp ! Selten für Optionen; die Reaktion auf die Wahl gehört in OnClick bzw. OnChange.
+TPPGRadioButton.OnMouseWheel ! Selten für Optionen; das Mausrad sollte den umgebenden Bereich scrollen, nicht die Auswahl ändern.
+TPPGRadioButton.OnStartDock ! Nur bei DragKind = dkDock; bei Optionsfeldern praktisch nie gebraucht.
+TPPGRadioButton.OnStartDrag ! Nur wenn die Option selbst gezogen wird (DragMode = dmAutomatic); bei Optionsfeldern praktisch nie gebraucht.
