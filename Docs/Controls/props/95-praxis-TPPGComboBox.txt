@@ -1,0 +1,130 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGComboBox.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGComboBox ---
+TPPGComboBox.Align ! Selten für Auswahlfelder; nützlich in einer Filterleiste: das Panel mit Align = alTop, die Combo darin mit Align = alRight für „Zeitraum: Dieser Monat“.
+TPPGComboBox.AlignWithMargins ! Zusammen mit Align einschalten, damit die Combo in einer Filterleiste nicht am Rand klebt; die Abstände stehen unter Margins.
+TPPGComboBox.Anchors ! In Formularen mit veränderbarer Größe [akLeft, akTop, akRight] setzen: Lange Auswahlfelder wie „Kostenstelle“ wachsen dann mit dem Fenster.
+TPPGComboBox.Animation ! An lassen: Der Pfeil dreht sich beim Aufklappen und die Liste gleitet auf. RespectSystemSettings = True schaltet das ab, wenn Windows keine Animationen zeigen soll.
+TPPGComboBox.Appearance ! Nur für einzelne Abweichungen, z. B. eine Combo in einer farbigen Kopfzeile. Einheitliche Felder bekommen ihre Optik über Preset bzw. StyleManager.
+TPPGComboBox.AutoCloseUp ! Für schnelle Erfasser, die per Tastatur wählen: Ein Buchstabe übernimmt den passenden Eintrag und schließt die Liste sofort, ohne Enter.
+TPPGComboBox.AutoComplete ! True lassen bei freier Eingabe mit Vorschlägen (Branche, Ort): Nach „Ha“ steht schon „Handel“ im Feld. Abschalten, wenn häufig Texte eingegeben werden, die mit einem Eintrag beginnen, aber anders weitergehen.
+TPPGComboBox.AutoDropDown ! Für Felder, in denen der Anwender sofort sehen soll, was es gibt: Beim ersten Tastendruck klappt die Liste auf. Zusammen mit FilterMode meist nicht nötig, das Filtern klappt selbst auf.
+TPPGComboBox.AutoDropDownWidth ! Einschalten, wenn das Feld schmal ist, die Einträge aber lang („Zahlungsziel: 30 Tage netto, 2 % Skonto bei 10 Tagen“): Die Liste wird so breit wie der längste Eintrag.
+TPPGComboBox.AutoSize ! True lassen: Die Höhe folgt der Schrift, und alle Eingabefelder einer Zeile sind gleich hoch. Ausschalten nur für feste Rasterlayouts.
+TPPGComboBox.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; am Formular setzen und über ParentBiDiMode folgen lassen. Der Pfeil wandert dann nach links.
+TPPGComboBox.BorderStyle ! bsNone, wenn die Combo in eine eigene Fläche eingebettet ist, z. B. als Zelleditor in einer Tabelle oder in einer Suchleiste mit eigenem Rahmen.
+TPPGComboBox.CharCase ! ecUpperCase für Kürzel und Codes, die immer groß geschrieben werden (Länderkürzel „DE“, Kostenstelle „VK-NORD“).
+TPPGComboBox.Color ! Nur ohne Preset-Farben sinnvoll; die Feldfläche kommt normalerweise aus Appearance. Pflichtfelder lieber über ValidationState kennzeichnen als über eine Hintergrundfarbe.
+TPPGComboBox.Constraints ! MinWidth setzen, wenn die Combo mit Anchors oder Align wächst, damit „Bitte wählen …“ nie abgeschnitten wird.
+TPPGComboBox.Cursor ! crDefault lassen; Eingabefelder zeigen von selbst den Textcursor über dem Edit und den Pfeil über dem Aufklapp-Knopf.
+TPPGComboBox.CustomHint ! Für ausführliche Hinweise mit Titel, z. B. „Kostenstelle: bestimmt die Buchung im Controlling“. Einen TPPGCustomHint aufs Formular legen und hier zuweisen.
+TPPGComboBox.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGComboBox.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; für Auswahlfelder kaum gebraucht.
+TPPGComboBox.DragKind ! dkDrag lassen; Andocken (dkDock) ist für Auswahlfelder nicht sinnvoll.
+TPPGComboBox.DragMode ! dmManual lassen, sonst startet jeder Klick ins Feld ein Ziehen statt die Liste zu öffnen.
+TPPGComboBox.DropDownCount ! Bei langen Listen (Länder, Artikel) 10 bis 15 Zeilen zeigen, damit weniger gescrollt wird; bei drei bis fünf Einträgen genau so viele, dann gibt es keinen Rollbalken.
+TPPGComboBox.DropDownWidth ! Feste Breite für die Liste, wenn das Feld bewusst schmal ist, die Einträge aber mit Detailzeile breiter sind, z. B. 320 bei einem 120 Pixel breiten Feld.
+TPPGComboBox.Enabled ! Sperren, solange die Auswahl noch nicht möglich ist, z. B. „Lager“ erst nach der Wahl eines Artikels. So muss der Anwender keine Fehlermeldung lesen.
+TPPGComboBox.FilterMode ! Für lange Listen mit Suche: fmContains findet „Toner“ auch in „HP-Toner 59A“. fmPrefix, wenn die Einträge mit einem Schlüssel beginnen (Artikelnummer, PLZ).
+TPPGComboBox.Font ! Am Formular einstellen und über ParentFont vererben. Die Schrift gilt für Feld und Liste; eine größere Schrift (11 bis 12) für Touch-Kassen.
+TPPGComboBox.Height ! Mit AutoSize bestimmt die Schrift die Höhe (rund 32 Pixel bei Segoe UI 10). Von Hand nur bei AutoSize = False.
+TPPGComboBox.HelpContext ! Nur mit einer Hilfedatei: die Kontext-ID der Seite eintragen, die F1 im Feld öffnet, z. B. die Erklärung der Zahlungsarten.
+TPPGComboBox.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword), z. B. „Zahlungsziel“.
+TPPGComboBox.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext mit Kontext-IDs. Ohne Hilfedatei egal.
+TPPGComboBox.HighContrastSupport ! True lassen: Im Hochkontrast sehen Feld und Liste wie Windows-Felder aus und bleiben für Sehbehinderte lesbar.
+TPPGComboBox.Hint ! Erklären, was die Auswahl bewirkt („Bestimmt Währung und Steuersatz“). Bei Feldern mit Beschriftung davor oft nicht nötig.
+TPPGComboBox.Images ! Eine Bildliste zuweisen, wenn die Einträge in ItemsEx Symbole tragen, z. B. Flaggen bei Ländern oder Status-Symbole bei Aufträgen.
+TPPGComboBox.ItemHeight ! 0 lassen; die Zeilen richten sich nach der Schrift. Größer (z. B. 36) für Touch-Bedienung oder wenn Bilder mehr Platz brauchen.
+TPPGComboBox.ItemIndex ! Die Auswahl im Code lesen und setzen, z. B. beim Laden eines Datensatzes: cbLand.ItemIndex := cbLand.Items.IndexOf(Kunde.Land). -1 heißt „nichts gewählt“; Setzen löst kein Ereignis aus.
+TPPGComboBox.Items ! Für einfache Auswahllisten mit festen Texten (Anrede, Zahlungsart). Mit Items.AddObject hängen Sie an jeden Eintrag eine ID, die auch beim Sortieren am Eintrag bleibt.
+TPPGComboBox.ItemsEx ! Für Einträge mit mehr Information: Artikel mit Detailzeile (Nummer, Preis), Plakette („neu“) oder Symbol. Bei wenigen schlichten Texten reicht Items.
+TPPGComboBox.Left ! Position im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern setzen, z. B. Combo.SetBounds(X, Y, 240, 32).
+TPPGComboBox.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Right = 8 in einer Filterleiste. Wirkt nur mit AlignWithMargins.
+TPPGComboBox.MaxLength ! Bei freier Eingabe die Länge des Datenbankfeldes übernehmen (z. B. 40 für „Branche“), damit beim Speichern nichts abgeschnitten wird.
+TPPGComboBox.Name ! Sprechende Namen vergeben (cbLand, cbZahlungsart) statt PPGComboBox1; der Code in OnSelect liest sich dann von selbst.
+TPPGComboBox.OnChange ! Für freie Eingabe: reagiert auf jedes getippte Zeichen, z. B. um eine Prüfung zurückzusetzen. Ohne OnSelect meldet es auch die Auswahl aus der Liste.
+TPPGComboBox.OnClick ! Wie bei TComboBox: meldet die Auswahl durch den Anwender (vor OnSelect). Für neuen Code besser OnSelect nehmen, das ist eindeutiger.
+TPPGComboBox.OnCloseUp ! Die Liste ist zu, mit oder ohne Übernahme. Gut, um eine beim Aufklappen gestartete Vorschau wieder zu entfernen.
+TPPGComboBox.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Eintrag verwalten …“ nur für Administratoren freigeben.
+TPPGComboBox.OnCustomDrawItem ! Einzelne Einträge hervorheben, ohne ItemsEx zu nutzen: z. B. gesperrte Lager grau, den Standardeintrag fett (Style.FontStyle := [fsBold]).
+TPPGComboBox.OnDblClick ! Selten gebraucht; z. B. um bei freier Eingabe den ganzen Text zu markieren oder einen Verwaltungsdialog für die Einträge zu öffnen.
+TPPGComboBox.OnDragDrop ! Wenn ein Eintrag aus einer Liste auf das Feld gezogen werden darf: hier den Text bzw. ItemIndex übernehmen.
+TPPGComboBox.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur für passende Quellen.
+TPPGComboBox.OnDropDown ! Einträge erst beim Aufklappen laden, wenn sie von anderen Feldern abhängen oder teuer sind: z. B. nur die Lager mit Bestand für den gewählten Artikel.
+TPPGComboBox.OnEndDock ! Nur bei DragKind = dkDock; für Auswahlfelder praktisch nie gebraucht.
+TPPGComboBox.OnEndDrag ! Nach dem Ziehen aus dem Feld: Target = nil heißt abgebrochen. Für Auswahlfelder selten.
+TPPGComboBox.OnEnter ! Für Hilfetexte in der Statusleiste („Wählen Sie das Land der Lieferadresse“), sobald das Feld per Tab den Fokus bekommt.
+TPPGComboBox.OnExit ! Der richtige Ort zum Prüfen freier Eingaben: Passt der Text zu keinem Eintrag, ValidationState auf pvsWarning setzen und im ValidationHint erklären.
+TPPGComboBox.OnGesture ! Auf Touch-Geräten: Wischen über dem Feld z. B. zum nächsten Eintrag nutzen (EventInfo.GestureID).
+TPPGComboBox.OnKeyDown ! Für zusätzliche Tasten, z. B. Entf zum Leeren bei csDropDownList. Pfeiltasten, F4, Alt+Pfeil, Enter und Esc erledigt die Combo selbst.
+TPPGComboBox.OnKeyPress ! Um Zeichen bei freier Eingabe zu filtern, z. B. nur Ziffern in einem Feld für Kostenstellen-Nummern (Key := #0 verwirft).
+TPPGComboBox.OnKeyUp ! Selten nötig; z. B. um nach dem Loslassen von Enter zum nächsten Feld zu springen.
+TPPGComboBox.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen) ändern; sonst nicht belegen.
+TPPGComboBox.OnMouseDown ! Selten für Auswahlfelder; Aufklappen und Auswahl erledigt die Combo selbst.
+TPPGComboBox.OnMouseEnter ! Um beim Überfahren eine Erklärung in der Statuszeile zu zeigen; die Hover-Optik macht die Combo selbst.
+TPPGComboBox.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGComboBox.OnMouseMove ! Selten gebraucht; feuert bei jeder Mausbewegung über dem Feld.
+TPPGComboBox.OnMouseUp ! Selten für Auswahlfelder; für die Auswahl OnSelect nehmen.
+TPPGComboBox.OnMouseWheel ! Das Rad ändert die geschlossene Combo bewusst nicht (kein versehentliches Umstellen beim Scrollen). Wer das trotzdem will, wählt hier per Code den nächsten Eintrag.
+TPPGComboBox.OnSelect ! Hier steht die Reaktion auf die Auswahl: abhängige Felder füllen, Preise anzeigen, Werte übernehmen. Feuert nur bei Bedienung, nicht bei ItemIndex aus dem Code.
+TPPGComboBox.OnStartDock ! Nur bei DragKind = dkDock; für Auswahlfelder praktisch nie gebraucht.
+TPPGComboBox.OnStartDrag ! Beim Ziehen aus dem Feld ein eigenes DragObject setzen; für Auswahlfelder selten.
+TPPGComboBox.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGComboBox.ParentColor ! False lassen: Ein Eingabefeld soll sich vom Hintergrund abheben.
+TPPGComboBox.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGComboBox.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGComboBox.ParentFont ! True lassen, damit alle Felder die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGComboBox.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann zeigen alle Felder ihre Hints.
+TPPGComboBox.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Liste bearbeiten …“. Bei freier Eingabe zeigt die Combo sonst ihr eigenes Edit-Menü (Kopieren, Einfügen).
+TPPGComboBox.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager; dann passen Combo, Edit und Buttons zusammen.
+TPPGComboBox.RoundedCorners ! Für Eingabegruppen: Combo „Währung“ links neben einem Betragsfeld bekommt [pcTopLeft, pcBottomLeft], das Betragsfeld die rechten Ecken.
+TPPGComboBox.ShowClearButton ! Bei optionalen Feldern mit freier Eingabe (Suche, Filter): Das „×“ leert das Feld mit einem Klick. Bei csDropDownList erscheint er nicht.
+TPPGComboBox.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGComboBox.Sorted ! Für Listen, die der Anwender durchsucht (Länder, Orte): alphabetisch. Bei Listen mit fachlicher Reihenfolge (Prioritäten Hoch/Mittel/Niedrig, Monate) False lassen.
+TPPGComboBox.Style ! csDropDownList, wenn nur Einträge der Liste gültig sind (Anrede, Land, Zahlungsart). csDropDown, wenn auch eigene Texte erlaubt sind und die Liste nur Vorschläge macht (Branche, Ort).
+TPPGComboBox.StyleElements ! Nur bei VCL-Styles wichtig: Nehmen Sie seClient heraus, wenn das Feld seine PPGlow-Farben behalten soll.
+TPPGComboBox.StyleManager ! Einen TPPGStyleManager aufs Formular (oder ein Datenmodul) legen und allen Controls zuweisen; dann wechselt ein Befehl die Optik aller Felder, auch Hell/Dunkel.
+TPPGComboBox.Styles ! Für lange Listen Zebra-Zeilen (Styles.AlternateRow.Color), für einen deutlichen Auswahlbalken Styles.Selection. Nicht gesetzte Farben kommen aus dem Preset.
+TPPGComboBox.TabOrder ! In Formularen so vergeben, dass Tab von oben nach unten durch die Felder läuft (Anrede, Name, Land …).
+TPPGComboBox.TabStop ! True lassen, damit das Feld per Tastatur erreichbar ist. False nur für reine Anzeige-Felder.
+TPPGComboBox.Tag ! Für mehrere Combos mit gemeinsamem OnSelect: Tag unterscheidet sie, z. B. 1 = Lieferland, 2 = Rechnungsland.
+TPPGComboBox.Text ! Bei freier Eingabe der eigentliche Wert (Branche „Messebau“, auch ohne Listeneintrag). Bei csDropDownList besser ItemIndex lesen; Text ist dann der Text des gewählten Eintrags.
+TPPGComboBox.TextHint ! Sagt, was erwartet wird: „Bitte wählen …“ oder „Artikel suchen (Name oder Nummer)“. Er ersetzt eine zusätzliche Beschriftung nicht ganz, hilft aber in kompakten Formularen.
+TPPGComboBox.TextHintVisibleOnFocus ! True, wenn der Platzhalter auch beim Hineinklicken sichtbar bleiben soll, z. B. bei Suchfeldern, die gleich nach dem Öffnen den Fokus haben.
+TPPGComboBox.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern.
+TPPGComboBox.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für normales Antippen nicht nötig.
+TPPGComboBox.UseSystemContextMenu ! True, wenn die Anwendung überall das gewohnte Windows-Menü zeigen soll (z. B. wegen Bildschirmlesern oder Schulungsunterlagen).
+TPPGComboBox.ValidationHint ! Kurz sagen, was fehlt oder falsch ist: „Bitte ein Land wählen“. Erscheint als Tooltip und wird vom Screenreader vorgelesen.
+TPPGComboBox.ValidationState ! Beim Speichern prüfen: pvsError für ein leeres Pflichtfeld, pvsWarning für einen Text ohne passenden Eintrag. Nach der Korrektur auf pvsNone zurücksetzen.
+TPPGComboBox.Visible ! Felder ausblenden, die für den Fall nicht gelten, z. B. „Bundesland“ nur bei Land = Deutschland. Was nur gerade nicht geht, besser mit Enabled sperren.
+TPPGComboBox.Width ! So breit wie der längste übliche Eintrag plus Pfeil; Anrede um 120, Land um 200 Pixel. Für längere Einträge DropDownWidth oder AutoDropDownWidth nehmen.
+
+# --- Typen ---
+TPPGListStyles.Selection ! Den gewählten Eintrag deutlich machen, z. B. in der Firmenfarbe. Nur setzen, wenn die Preset-Farbe nicht zum Corporate Design passt.
+TPPGListStyles.SelectionInactive ! Gedämpftere Fassung von Selection für Listen ohne Fokus; so sieht man, welche Liste gerade bedient wird.
+TPPGListStyles.AlternateRow ! Für lange Listen (Artikel, Kunden) eine sehr helle Zebra-Farbe setzen, damit das Auge in der Zeile bleibt. Bei fünf Einträgen unnötig.
+TPPGListStyles.HotItem ! Eigene Hover-Farbe, wenn die Preset-Farbe auf einem farbigen Hintergrund zu schwach ist.
+TPPGListStyles.GroupHeader ! Für gegliederte Listen (z. B. „Hardware“, „Software“): Überschriften fett oder farbig absetzen, damit die Gruppen auf einen Blick erkennbar sind.
+TPPGListStyles.Detail ! Die zweite Zeile (Artikelnummer, Preis) etwas kleiner oder grauer setzen, damit der Haupttext führt.
+TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. ein sehr helles Grau für Zebra-Zeilen. clDefault lassen, solange die Preset-Farbe passt.
+TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. Grau für Detailzeilen. Auf ausreichenden Kontrast zur Fläche achten (mindestens 4,5:1).
+TPPGElementStyle.BorderColor ! Rand bzw. Akzent, z. B. der farbige Balken links am gewählten Eintrag in der Firmenfarbe.
+TPPGElementStyle.DarkColor ! Immer mitpflegen, wenn Sie Color setzen: Sonst gilt im Dark Mode die Preset-Farbe und Ihre Gestaltung fehlt dort.
+TPPGElementStyle.DarkTextColor ! Textfarbe im Dark Mode; hell genug wählen, damit sie auf DarkColor lesbar bleibt.
+TPPGElementStyle.DarkBorderColor ! Rand bzw. Akzent im Dark Mode, meist eine hellere Fassung von BorderColor.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift der Liste trägt. Wird automatisch False, sobald Sie Font ändern.
+TPPGElementStyle.Font ! Eigene Schrift nur für diesen Bereich, z. B. eine kleinere Schrift (Size 8) für Detailzeilen.
+TPPGElementStyle.FontStyle ! Einfacher als eine eigene Schrift: [fsBold] für Gruppenüberschriften oder den gewählten Eintrag.
+TPPGItem.Text ! Der Haupttext, nach dem der Anwender sucht: Artikelname, Kundenname. Kurz halten; Nummern und Preise gehören in Detail.
+TPPGItem.Detail ! Zusatzinfo in der zweiten Zeile, die bei der Wahl hilft: „Art.-Nr. 10014 · 899,00 €“ oder die Adresse unter dem Kundennamen.
+TPPGItem.Badge ! Kurze Kennzeichnung rechts, z. B. „neu“, „Aktion“ oder eine Anzahl. Sparsam einsetzen, sonst geht die Wirkung verloren.
+TPPGItem.Group ! Einträge nach Gruppe sortiert anlegen (z. B. „Hardware“, „Software“); in Listen mit Gruppenköpfen erscheint die Überschrift einmal je Gruppe.
+TPPGItem.ImageIndex ! Symbol aus Images der Liste, z. B. eine Flagge je Land oder ein Status-Symbol je Auftrag. -1 für Einträge ohne Bild.
+TPPGItem.Checked ! Nur in Listen mit Kästchen (CheckListBox) sichtbar: den Haken beim Laden setzen, z. B. für bereits zugeordnete Rechte.
+TPPGItem.Enabled ! Einträge zeigen, aber sperren, z. B. ein Lager ohne Bestand. So sieht der Anwender, dass es den Eintrag gibt, er aber gerade nicht wählbar ist.
+TPPGItem.Tag ! Die ID des Datensatzes ablegen (Artikel-ID, Kunden-Nr.), damit man nach der Wahl nicht über den Text suchen muss.
+TPPGItem.Color ! Einzelne Einträge farbig hinterlegen, z. B. überfällige Aufträge hellrot. Sparsam einsetzen und nicht als einziges Merkmal (Farbenblindheit).
+TPPGItem.TextColor ! Eigene Schriftfarbe, z. B. Grau für auslaufende Artikel. Auf Kontrast zur Fläche achten.
+TPPGItem.FontStyle ! [fsBold] für hervorgehobene Einträge wie den Standard-Lieferanten oder ungelesene Nachrichten.
