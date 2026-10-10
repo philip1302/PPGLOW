@@ -1,0 +1,100 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGSpinEdit.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGSpinEdit ---
+TPPGSpinEdit.Value ! Der eigentliche Zahlenwert: Lesen Sie ihn als Integer (Menge := SpinMenge.Value), nicht über Text. Beim Laden eines Datensatzes setzen; zu große oder kleine Werte werden still auf Min..Max begrenzt.
+TPPGSpinEdit.Min ! Kleinster erlaubter Wert, z. B. 1 für eine Bestellmenge oder 0 für einen Rabatt. Zusammen mit Max setzen; Min = Max (beide 0) bedeutet „ohne Grenze".
+TPPGSpinEdit.Max ! Größter erlaubter Wert, z. B. der Lagerbestand oder 100 für Prozent. Zur Laufzeit anpassen, wenn die Grenze von Daten abhängt (Spin.Max := Artikel.Bestand); der Pfeil nach oben wird an der Grenze grau.
+TPPGSpinEdit.Increment ! Schrittweite der Pfeile, z. B. 5 für Rabattstufen oder 15 für Minuten im Viertelstundentakt. Bild auf/ab springt um das Zehnfache; Tippen bleibt frei, außer EditorEnabled = False.
+TPPGSpinEdit.EditorEnabled ! Auf False stellen, wenn nur feste Stufen erlaubt sind (Rabatt 0, 5, 10 …): Dann ändern nur Pfeile, Pfeiltasten und Mausrad den Wert, Tippfehler sind ausgeschlossen.
+TPPGSpinEdit.ReadOnly ! Für Werte, die der Anwender sehen, aber nicht ändern darf (Vorgabe des Administrators, abgeschlossener Beleg). Anders als Enabled = False bleibt der Wert gut lesbar und kopierbar; die Pfeile sind gesperrt.
+TPPGSpinEdit.ReadOnlyStyle ! Damit schreibgeschützte Zahlenfelder als solche erkennbar sind, z. B. ReadOnlyStyle.Color = $00F3F3F3. Einmal je Formular einheitlich festlegen.
+TPPGSpinEdit.Alignment ! Zahlen in Formularen rechtsbündig (taRightJustify) ausrichten, damit Stellen in untereinanderstehenden Feldern fluchten.
+TPPGSpinEdit.AutoSelect ! True lassen: Beim Hineintabben ist die Zahl markiert und wird durch Tippen ersetzt. False nur, wenn Anwender meist eine Ziffer anhängen.
+TPPGSpinEdit.MaxLength ! Begrenzt die Stellen beim Tippen, z. B. 3 für Mengen bis 999. Meist reicht Max; MaxLength verhindert zusätzlich überlange Eingaben vor dem Verlassen.
+TPPGSpinEdit.TextHint ! Bei einem Zahlenfeld selten sichtbar, weil immer ein Wert drinsteht. Nur nützlich, wenn der Text im Code geleert wird, z. B. „Anzahl" als Hinweis.
+TPPGSpinEdit.TextHintVisibleOnFocus ! Nur zusammen mit TextHint von Bedeutung; True lässt den Hinweis beim Hineinklicken stehen, bis getippt wird.
+TPPGSpinEdit.ValidationState ! Für Werte, die erlaubt, aber ungewöhnlich sind: pvsWarning bei sehr kurzem Speicherintervall, pvsError bei einer Menge über dem Lager, wenn Sie nicht still begrenzen wollen. In OnChange setzen.
+TPPGSpinEdit.ValidationHint ! Erklärt den ValidationState in einem Satz („Mehr als 50 Stück sind nicht auf Lager"). Ohne Hinweis sieht der Anwender nur eine Farbe und weiß nicht, warum.
+TPPGSpinEdit.UseSystemContextMenu ! False lassen, dann passt das Kontextmenü zur Optik. True nur, wenn Anwender das gewohnte Windows-Menü erwarten (z. B. in Terminal-Server-Umgebungen mit eigener Übersetzung).
+TPPGSpinEdit.BorderStyle ! bsSingle für normale Formularfelder; bsNone, wenn das Zahlenfeld in eine Tabelle oder Karte eingebettet ist, die selbst einen Rahmen zeichnet.
+TPPGSpinEdit.RoundedCorners ! Für Feld-Gruppen: Spin links an einem Einheiten-Feld oder Button bekommt nur [pcTopLeft, pcBottomLeft], dann wirken beide wie ein Control.
+TPPGSpinEdit.Preset ! Meist leer lassen und das Preset zentral über StyleManager vorgeben. Nur für ein einzelnes abweichendes Feld direkt setzen.
+TPPGSpinEdit.StyleManager ! Den StyleManager des Formulars zuweisen, damit das Zahlenfeld wie alle anderen Felder aussieht und Preset-Wechsel mitmacht.
+TPPGSpinEdit.Appearance ! Nur ohne StyleManager wirksam. Rand- und Fokusfarbe lassen sich hier anpassen, z. B. Appearance.Rounding = 0 für eckige Felder in einer Tabelle.
+TPPGSpinEdit.Animation ! An lassen: Rand und Fokus blenden weich über. Abschalten nur, wenn sehr viele Felder gleichzeitig umgefärbt werden.
+TPPGSpinEdit.HighContrastSupport ! True lassen, damit das Feld im Windows-Hochkontrast lesbar bleibt (Pflicht bei Barrierefreiheit).
+TPPGSpinEdit.Align ! Für Zahlenfelder selten; in Werkzeugleisten mit Align = alLeft neben Beschriftungen, sonst frei platzieren.
+TPPGSpinEdit.AlignWithMargins ! Zusammen mit Align einschalten, damit das Feld in einer Leiste nicht am Nachbarn klebt.
+TPPGSpinEdit.Anchors ! In mitwachsenden Dialogen [akLeft, akTop] lassen: Zahlenfelder brauchen keine zusätzliche Breite, nur Textfelder sollten mitwachsen.
+TPPGSpinEdit.AutoSize ! True lassen: Die Höhe folgt der Schrift und passt zu den übrigen Feldern in derselben Zeile.
+TPPGSpinEdit.BiDiMode ! Nur für arabische oder hebräische Oberflächen; am Formular setzen und über ParentBiDiMode folgen lassen.
+TPPGSpinEdit.Color ! Selten nötig, die Feldfarbe kommt aus dem Preset. Für Pflichtfelder lieber ValidationState oder einen Hinweis neben dem Feld nutzen.
+TPPGSpinEdit.Constraints ! MinWidth = 80 verhindert, dass das Feld bei Align so schmal wird, dass die Pfeile die Zahl verdecken.
+TPPGSpinEdit.Cursor ! Vorgabe lassen; über dem Textteil erscheint automatisch der Textcursor, über den Pfeilen der Pfeil.
+TPPGSpinEdit.CustomHint ! Für Hinweise mit Titel, z. B. „Menge" mit Erklärung zu Mindestabnahme: einen TPPGCustomHint oder TBalloonHint zuweisen.
+TPPGSpinEdit.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGSpinEdit.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; bei Zahlenfeldern praktisch nie gebraucht.
+TPPGSpinEdit.DragKind ! dkDrag lassen; Zahlenfelder werden nicht angedockt.
+TPPGSpinEdit.DragMode ! dmManual lassen, sonst startet jeder Klick ins Feld ein Ziehen und man kann nicht mehr markieren.
+TPPGSpinEdit.Enabled ! Sperren, wenn der Wert gerade keine Bedeutung hat, z. B. Intervall bei ausgeschaltetem automatischem Speichern. Für „sichtbar, aber nicht änderbar" ReadOnly nehmen.
+TPPGSpinEdit.Font ! Am Formular einstellen und über ParentFont vererben. Für eine hervorgehobene Kennzahl Font.Style = [fsBold].
+TPPGSpinEdit.Height ! Mit AutoSize bestimmt die Schrift die Höhe; ohne AutoSize 32 Pixel wie die übrigen Felder im Formular.
+TPPGSpinEdit.HelpContext ! Nur mit Hilfedatei: Kontext-ID der Seite, die F1 im fokussierten Feld öffnet, z. B. die Erklärung der Rabattstaffel.
+TPPGSpinEdit.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword).
+TPPGSpinEdit.HelpType ! htKeyword bei Stichwort-Hilfen, sonst htContext. Ohne Hilfedatei egal.
+TPPGSpinEdit.Hint ! Nennt Einheit und Grenzen („Menge in Stück, 1 bis 50"), wenn das nicht schon in der Beschriftung steht. Mit ShowHint am Formular anzeigen.
+TPPGSpinEdit.Left ! Im Designer per Maus; im Code bei dynamisch erzeugten Feldern über SetBounds(X, Y, 100, 32).
+TPPGSpinEdit.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Right = 8 in einer Leiste. Wirkt nur mit AlignWithMargins.
+TPPGSpinEdit.Name ! Sprechend benennen (spMenge, spRabatt), damit Zugriffe wie spMenge.Value im Code lesbar sind.
+TPPGSpinEdit.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGSpinEdit.ParentColor ! False lassen: Ein Eingabefeld soll sich vom Hintergrund abheben.
+TPPGSpinEdit.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGSpinEdit.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGSpinEdit.ParentFont ! True lassen, damit alle Felder die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGSpinEdit.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten.
+TPPGSpinEdit.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Auf Standard zurücksetzen" oder „Lagerbestand übernehmen". Ohne Zuweisung erscheint das Bearbeiten-Menü.
+TPPGSpinEdit.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGSpinEdit.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält das Feld die PPGlow-Farben.
+TPPGSpinEdit.TabOrder ! So vergeben, dass Tab in Lesereihenfolge durch das Formular läuft, z. B. Artikel, Menge, Rabatt.
+TPPGSpinEdit.TabStop ! True lassen, damit das Feld per Tastatur erreichbar ist; Pfeiltasten ändern den Wert dann ohne Maus.
+TPPGSpinEdit.Tag ! Für mehrere gleichartige Felder mit einem gemeinsamen OnChange: Tag = Spaltennummer oder Artikel-ID unterscheidet sie.
+TPPGSpinEdit.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern.
+TPPGSpinEdit.Touch ! Auf Touch-Geräten meist nicht nötig, die Pfeile sind groß genug zum Tippen. Gesten nur für Sonderfälle anhaken.
+TPPGSpinEdit.Visible ! Ausblenden, wenn das Feld für diesen Fall nicht gilt (z. B. Stückzahl bei Dienstleistungen); nur vorübergehend nicht nutzbar besser Enabled = False.
+TPPGSpinEdit.Width ! 80 bis 120 Pixel reichen für die meisten Zahlen samt Pfeilen; breiter wirkt leer. Einheitlich breite Zahlenfelder wirken ruhiger.
+TPPGSpinEdit.OnChange ! Hier reagieren Sie auf jede Wertänderung (Tippen, Pfeile, Mausrad, Code), z. B. Summe neu berechnen. Value ist darin schon begrenzt.
+TPPGSpinEdit.OnClick ! Selten nötig; feuert beim Klick ins Feld. Für Wertänderungen OnChange nehmen.
+TPPGSpinEdit.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen (Einträge sperren) oder mit Handled := True zu unterdrücken.
+TPPGSpinEdit.OnDblClick ! Z. B. Doppelklick setzt den Vorschlagswert (Lagerbestand oder Standardmenge) ein.
+TPPGSpinEdit.OnDragDrop ! Wenn ein Wert per Ziehen übernommen werden soll, z. B. Menge aus einer Artikelliste ins Feld ziehen.
+TPPGSpinEdit.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur für passende Quellen.
+TPPGSpinEdit.OnEndDock ! Nur bei DragKind = dkDock; für Zahlenfelder praktisch nie gebraucht.
+TPPGSpinEdit.OnEndDrag ! Nach dem Ziehen des Felds; für Zahlenfelder selten gebraucht.
+TPPGSpinEdit.OnEnter ! Für Hilfetexte in der Statusleiste („Menge 1 bis 50"), sobald das Feld den Fokus bekommt.
+TPPGSpinEdit.OnExit ! Ort für Prüfungen über mehrere Felder, z. B. Menge mal Preis gegen das Kreditlimit. Der Text ist beim Verlassen bereits auf den gültigen Wert gesetzt.
+TPPGSpinEdit.OnGesture ! Auf Touch-Geräten: Wischen nach oben/unten als Schritt auswerten (EventInfo.GestureID).
+TPPGSpinEdit.OnKeyDown ! Für zusätzliche Tasten, z. B. Entf setzt auf Min. Pfeile und Bild auf/ab erledigt das Feld selbst.
+TPPGSpinEdit.OnKeyPress ! Selten nötig, das Feld lässt nur Ziffern und Vorzeichen zu. Enter übernimmt den Wert bereits.
+TPPGSpinEdit.OnKeyUp ! Für Aktionen nach dem Loslassen einer Taste, z. B. eine Vorschau erst nach dem letzten Tastendruck aktualisieren.
+TPPGSpinEdit.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGSpinEdit.OnMouseDown ! Selten nötig; die Pfeile verarbeitet das Feld selbst. Für eigene Befehle per Mittelklick o. Ä.
+TPPGSpinEdit.OnMouseEnter ! Z. B. eine Erklärung zur Einheit in der Statusleiste zeigen, solange die Maus über dem Feld ist.
+TPPGSpinEdit.OnMouseLeave ! Gegenstück zu OnMouseEnter: den Statusleisten-Text wieder löschen.
+TPPGSpinEdit.OnMouseMove ! Für Zahlenfelder selten gebraucht; feuert bei jeder Mausbewegung, deshalb nur leichte Arbeit darin.
+TPPGSpinEdit.OnMouseUp ! Selten nötig; die Wiederholung beim Halten der Pfeile endet automatisch beim Loslassen.
+TPPGSpinEdit.OnMouseWheel ! Das Mausrad ändert den Wert bereits (mit Fokus). Handled := True nur, wenn Sie das Rad anders auswerten wollen.
+TPPGSpinEdit.OnStartDock ! Nur bei DragKind = dkDock; für Zahlenfelder praktisch nie gebraucht.
+TPPGSpinEdit.OnStartDrag ! Beginn des Ziehens; hier könnte ein eigenes DragObject mit dem Wert gesetzt werden.
+
+# --- Typen ---
+TPPGElementStyle.Color ! Flächenfarbe für den Bereich, z. B. ein leichtes Grau $00F3F3F3 für schreibgeschützte Felder. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf Kontrast achten (mindestens 4,5:1).
+TPPGElementStyle.BorderColor ! Rand- bzw. Linienfarbe, z. B. ein hellerer Rand für schreibgeschützte Felder, damit sie nicht wie Eingaben wirken.
+TPPGElementStyle.DarkColor ! Gegenstück zu Color für den Dark Mode. Immer mitsetzen, wenn Color eigene helle Werte hat, sonst bleibt der Bereich im Dunkeln beim Preset.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor für den Dark Mode; hell wählen, damit der Text auf dunklem Grund lesbar bleibt.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor für den Dark Mode.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Nur auf False, wenn er eine ganz eigene Schrift braucht.
+TPPGElementStyle.Font ! Eigene Schrift nur, wenn sich der Bereich deutlich abheben soll (z. B. kleinere Schrift für Fußzeilen); wirkt nur mit ParentFont = False.
+TPPGElementStyle.FontStyle ! Bequemer als Font: z. B. [fsItalic] für schreibgeschützte Werte oder [fsBold] für Kopfzeilen, ohne die Schrift zu ersetzen.
