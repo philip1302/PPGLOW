@@ -1,0 +1,82 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGToggleSwitch.
+# Format: siehe Build\make-docs.ps1 und props\90-praxis.txt.
+
+# --- Wirkung, genauer als der allgemeine Text (Schalter statt Kaestchen bzw. Bild) ---
+TPPGToggleSwitch.Alignment = Lage der Beschriftung zum Schalter: taRightJustify = Text rechts vom Schalter (Standard), taLeftJustify = Text links, Schalter am rechten Rand.
+TPPGToggleSwitch.Spacing = Abstand zwischen Schalter und Beschriftung in logischen Pixeln (wird mit der DPI skaliert).
+
+# --- TPPGToggleSwitch ---
+TPPGToggleSwitch.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager. Fluent11 zeichnet den Schalter wie in den Windows-11-Einstellungen, ModernFlat flach mit Glow.
+TPPGToggleSwitch.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Schaltern zuweisen; dann folgen sie gemeinsam Preset und Hell/Dunkel der Anwendung.
+TPPGToggleSwitch.Appearance ! Appearance.Normal färbt den ausgeschalteten, Appearance.Checked den eingeschalteten Schalter. Für einen roten „Wartungsmodus“-Schalter nur Checked.Color und Checked.BorderColor ändern.
+TPPGToggleSwitch.Animation ! An lassen: Der gleitende Knopf zeigt, dass sich etwas geändert hat. Beim Laden des Formulars und solange der Schalter unsichtbar ist, springt er ohne Animation in die neue Lage.
+TPPGToggleSwitch.Alignment ! taLeftJustify für Einstellungsseiten wie in Windows: Text links, Schalter bündig am rechten Rand (Width bis zum Rand ziehen). taRightJustify für kurze Schalter in Formularen.
+TPPGToggleSwitch.Checked ! Beim Öffnen der Einstellungen aus der Konfiguration setzen (swAutoSave.Checked := Config.AutoSave) und in OnChange zurückschreiben. Setzen im Code löst OnChange aus, aber kein OnClick.
+TPPGToggleSwitch.Spacing ! Die Vorgabe 4 passt meist. Etwas mehr (8), wenn Schalter und Text bei großer Schrift zu dicht wirken.
+TPPGToggleSwitch.WordWrap ! Für Schalter mit erklärendem Text in schmalen Spalten („Bei neuen Aufträgen eine E-Mail an den Vertrieb senden“). Height dann von Hand oder mit AutoSize anpassen.
+TPPGToggleSwitch.ShowFocusRect ! True lassen, damit Tastaturbenutzer sehen, welcher Schalter mit der Leertaste umgeschaltet wird.
+TPPGToggleSwitch.HighContrastSupport ! True lassen: Im Hochkontrastmodus zeichnet der Schalter mit Systemfarben, an und aus bleiben klar unterscheidbar.
+TPPGToggleSwitch.Action ! Wenn derselbe Ein/Aus-Zustand auch im Menü steht (Ansicht > Nur offene Aufträge): eine Action mit AutoCheck anlegen und Schalter und Menüeintrag zuweisen; Checked bleibt dann überall gleich.
+TPPGToggleSwitch.Align ! Auf Einstellungsseiten mit Align = alTop untereinander stapeln; zusammen mit Alignment = taLeftJustify stehen alle Schalter bündig am rechten Rand.
+TPPGToggleSwitch.AlignWithMargins ! Bei gestapelten Schaltern (Align = alTop) einschalten, damit sie Luft zueinander und zum Rand haben.
+TPPGToggleSwitch.Anchors ! [akLeft, akTop, akRight] für Einstellungsseiten mit Text links und Schalter rechts: Beim Vergrößern des Fensters wandert der Schalter mit dem rechten Rand.
+TPPGToggleSwitch.AutoSize ! Einschalten, wenn die Beschriftung übersetzt wird: Die Breite passt sich dem Text an. Bei Text links und Schalter am rechten Rand ausgeschaltet lassen.
+TPPGToggleSwitch.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; Schalter und Text werden dann gespiegelt. Am Formular setzen und über ParentBiDiMode folgen lassen.
+TPPGToggleSwitch.Caption ! Die Einstellung als Hauptwort oder kurze Aussage formulieren („Automatisch speichern“), nicht als Frage oder Befehl. Ein & vergibt die Zugriffstaste (Alt+A schaltet um).
+TPPGToggleSwitch.Color ! Selten nötig: Der Schalter zeichnet auf dem Hintergrund des Parents (ParentBackground). Color nur setzen, wenn er auf einer eigenen farbigen Fläche stehen soll.
+TPPGToggleSwitch.Constraints ! MinWidth hält Schalter mit AutoSize in einer Liste gleich breit, MaxWidth verhindert, dass lange Übersetzungen die Seite sprengen.
+TPPGToggleSwitch.Cursor ! crDefault lassen; Windows-Schalter zeigen den Pfeil. crHandPoint nur, wenn die Seite sonst mit Link-Optik arbeitet.
+TPPGToggleSwitch.CustomHint ! Für ausführlichere Erklärungen mit Titel (z. B. was „Offline arbeiten“ genau bewirkt) einen TPPGCustomHint oder TBalloonHint zuweisen.
+TPPGToggleSwitch.DoubleBuffered ! Nicht nötig, PPGlow-Controls zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGToggleSwitch.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; bei Schaltern praktisch nie gebraucht.
+TPPGToggleSwitch.DragKind ! dkDrag lassen. Schalter werden nicht gezogen oder angedockt.
+TPPGToggleSwitch.DragMode ! dmManual lassen, sonst startet jeder Klick ein Ziehen statt umzuschalten.
+TPPGToggleSwitch.Enabled ! Abhängige Einstellungen sperren, solange die übergeordnete aus ist: swSound.Enabled := swNotify.Checked. Der Wert bleibt erhalten und gilt wieder, sobald freigegeben wird.
+TPPGToggleSwitch.Font ! Über ParentFont die Formularschrift nehmen. Für eine Haupteinstellung über einer Gruppe Font.Style = [fsBold].
+TPPGToggleSwitch.Height ! Die Vorgabe 28 passt für eine Zeile Text. Mit WordWrap bei zweizeiligem Text etwa 44.
+TPPGToggleSwitch.HelpContext ! Nur mit Hilfedatei: Kontext-ID der Seite, die F1 bei fokussiertem Schalter öffnet, z. B. die Erklärung der Einstellung.
+TPPGToggleSwitch.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword).
+TPPGToggleSwitch.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGToggleSwitch.Hint ! Erklärt die Folgen der Einstellung („Speichert alle 5 Minuten im Hintergrund“), wenn die Beschriftung dafür zu kurz ist. ShowHint am Formular einschalten.
+TPPGToggleSwitch.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Schaltern, z. B. Sw.SetBounds(16, Y, 400, 28).
+TPPGToggleSwitch.Margins ! Abstand zwischen gestapelten Schaltern bei Align = alTop, z. B. Margins.Top = 4. Wirkt nur mit AlignWithMargins.
+TPPGToggleSwitch.Name ! Sprechend vergeben (swAutoSave, swNotify) statt PPGToggleSwitch1; dann liest sich swNotify.Checked im Code wie die Einstellung selbst.
+TPPGToggleSwitch.ParentBackground ! True lassen: Der Schalter steht dann sauber auf Panel, Karte oder Formular, ohne eigenen Kasten.
+TPPGToggleSwitch.ParentBiDiMode ! True lassen, damit der Schalter der Leserichtung des Formulars folgt.
+TPPGToggleSwitch.ParentColor ! True lassen, damit der Hintergrund zur Fläche passt, auf der der Schalter liegt.
+TPPGToggleSwitch.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGToggleSwitch.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGToggleSwitch.ParentFont ! True lassen, damit alle Schalter die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGToggleSwitch.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten.
+TPPGToggleSwitch.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Auf Standard zurücksetzen“ oder „Für alle Benutzer übernehmen“.
+TPPGToggleSwitch.ShowHint ! Einmal am Formular einschalten statt an jedem Schalter; dann bleibt ParentShowHint True.
+TPPGToggleSwitch.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält der Schalter seine Farben aus Appearance statt der Style-Farben.
+TPPGToggleSwitch.TabOrder ! In Einstellungsseiten von oben nach unten vergeben, damit Tab die Schalter in Lesereihenfolge durchläuft.
+TPPGToggleSwitch.TabStop ! True lassen: Schalter müssen per Tab erreichbar und mit der Leertaste umschaltbar sein (Barrierefreiheit).
+TPPGToggleSwitch.Tag ! Für mehrere Schalter mit einem gemeinsamen OnChange: Tag = Nummer der Einstellung, im Handler über TPPGToggleSwitch(Sender).Tag auswerten.
+TPPGToggleSwitch.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Schaltern; bei gestapelten Schaltern besser Align = alTop.
+TPPGToggleSwitch.Touch ! Nur für Touch-Geräte mit eigenen Gesten; Tippen schaltet den Schalter ohnehin um.
+TPPGToggleSwitch.Visible ! Einstellungen ausblenden, die der Anwender nicht ändern darf oder die es in seiner Lizenz nicht gibt. Was nur gerade nicht geht, mit Enabled sperren.
+TPPGToggleSwitch.Width ! So breit, dass die Beschriftung ganz passt; bei Text links (taLeftJustify) bis zum rechten Rand der Seite, damit alle Schalter untereinander fluchten.
+TPPGToggleSwitch.OnChange ! Hier die Einstellung übernehmen oder speichern und abhängige Controls freigeben. Feuert bei Klick, Leertaste und Checked := … im Code, nicht beim Laden des Formulars.
+TPPGToggleSwitch.OnClick ! Nur für Reaktionen, die ausschließlich bei Bedienung durch den Anwender passieren sollen, z. B. „Einstellung geändert“ protokollieren. Die eigentliche Logik gehört in OnChange.
+TPPGToggleSwitch.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Auf Standard zurücksetzen“ sperren, wenn der Schalter schon auf Standard steht.
+TPPGToggleSwitch.OnDragDrop ! Bei Schaltern kaum gebraucht; nur wenn etwas auf den Schalter gezogen werden darf.
+TPPGToggleSwitch.OnDragOver ! Zusammen mit OnDragDrop: Accept := True erlaubt das Ablegen; bei Schaltern selten nötig.
+TPPGToggleSwitch.OnEndDock ! Nur bei DragKind = dkDock; bei Schaltern praktisch nie gebraucht.
+TPPGToggleSwitch.OnEndDrag ! Nur wenn der Schalter selbst gezogen wird (DragMode); bei Schaltern selten.
+TPPGToggleSwitch.OnEnter ! Um beim Fokus eine ausführliche Erklärung der Einstellung in einem Hilfebereich oder der Statusleiste zu zeigen.
+TPPGToggleSwitch.OnExit ! Gegenstück zu OnEnter: den Hilfetext wieder löschen.
+TPPGToggleSwitch.OnGesture ! Nur auf Touch-Geräten mit eigenen Gesten; zum Umschalten reicht Tippen.
+TPPGToggleSwitch.OnKeyDown ! Für Zusatztasten am fokussierten Schalter, z. B. Entf für „auf Standard zurücksetzen“. Die Leertaste schaltet der Schalter selbst um.
+TPPGToggleSwitch.OnKeyPress ! Selten nötig; Zeichentasten schalten nicht um. Für Kürzel die Zugriffstaste (&) in Caption nehmen.
+TPPGToggleSwitch.OnKeyUp ! Selten nötig; Gegenstück zu OnKeyDown.
+TPPGToggleSwitch.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGToggleSwitch.OnMouseDown ! Selten nötig; das Umschalten selbst geschieht beim Loslassen und wird in OnChange gemeldet.
+TPPGToggleSwitch.OnMouseEnter ! Um beim Überfahren eine Vorschau der Einstellung zu zeigen, z. B. wie die Liste mit Filter aussähe.
+TPPGToggleSwitch.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Vorschau wieder ausblenden.
+TPPGToggleSwitch.OnMouseMove ! Selten nötig; feuert bei jeder Mausbewegung. Die Hover-Optik zeichnet der Schalter selbst.
+TPPGToggleSwitch.OnMouseUp ! Selten nötig; für die Reaktion auf das Umschalten OnChange nehmen.
+TPPGToggleSwitch.OnMouseWheel ! Selten nötig; Handled := True verhindert, dass der Parent scrollt, solange die Maus über dem Schalter steht.
+TPPGToggleSwitch.OnStartDock ! Nur bei DragKind = dkDock; bei Schaltern praktisch nie gebraucht.
+TPPGToggleSwitch.OnStartDrag ! Nur wenn der Schalter selbst gezogen wird; hier ein eigenes DragObject setzen.
