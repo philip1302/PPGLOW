@@ -1,5 +1,16 @@
 **Vorbild:** TMS TAdvEdit (`EditType`), WinUI NumberBox
 
+## Wofür
+
+Das Zahlenfeld erfasst Mengen, Preise, Prozente und Maße in einem Control. Es formatiert ohne Fokus („1.234,50 €“), lässt beim Tippen nur Zahlen zu, rechnet auf Wunsch einfache Ausdrücke aus („3*19,99“) und hält den Wert in den Grenzen `Min`/`Max`. Beträge rechnet es mit `nkCurrency` ohne Rundungsfehler.
+
+## Wann verwenden
+
+- Für jede Zahl, mit der gerechnet wird: Menge, Einzelpreis, Rabatt, Gewicht, Steuersatz. Für Nummern ohne Rechenbedeutung (Postleitzahl, Kundennummer, IBAN) ist `TPPGEdit` bzw. `TPPGMaskEdit` richtig.
+- Statt `TPPGSpinEdit`, wenn Nachkommastellen, Währung, Prozent oder „kein Wert“ (`AllowNull`) gebraucht werden. `TPPGSpinEdit` bleibt für reine Ganzzahlen und den Umstieg von `TSpinEdit`.
+- Statt `TPPGTrackBar`, wenn der genaue Wert zählt und eingetippt werden soll. Ein Schieberegler passt, wenn grob eingestellt und das Verhältnis gesehen werden soll (Lautstärke, Zoom).
+- Mit `ReadOnly` auch für berechnete Ergebnisse (Summe, Steuer), damit sie genauso formatiert sind wie die Eingaben.
+
 ## Unterschiede und Hinweise
 
 - Ein Feld für Ganzzahl, Kommazahl, Währung und Prozent (`Kind`). Es ersetzt das früher geplante `TPPGFloatSpinEdit`; `TPPGSpinEdit` bleibt für die Kompatibilität mit `TSpinEdit`.

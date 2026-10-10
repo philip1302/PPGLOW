@@ -1,0 +1,107 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGNumberEdit.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- Wirkung, wo die allgemeine Beschreibung fuer das Zahlenfeld nicht passt ---
+TPPGNumberEdit.OnChange = Der Anwender hat den Wert geändert und übernommen: Enter, Verlassen des Felds, Pfeil/Bild auf/ab, Spin-Buttons oder Mausrad. Nicht bei jedem Tastendruck und nicht, wenn Value, AsCurrency oder Clear aus Code gesetzt werden.
+TPPGNumberEdit.ShowClearButton = True: Ein „×"-Knopf im Feld leert den Wert (mit AllowNull „kein Wert", sonst 0). Er ist sichtbar, solange das Feld Text hat und bearbeitbar ist; wie Clear aus Code löst er kein OnChange aus.
+
+# --- TPPGNumberEdit ---
+TPPGNumberEdit.Kind ! Nach der Bedeutung wählen: nkInteger für Mengen und Stückzahlen, nkCurrency für Preise und Beträge (rechnet ohne Rundungsfehler), nkPercent für Rabatt oder Steuersatz, nkFloat für Maße und Gewichte.
+TPPGNumberEdit.Decimals ! Nach der Fachlichkeit setzen: 2 für Geld, 1 für Rabatte in Prozent, 3 für Gewichte in kg. Bei nkInteger ohne Wirkung.
+TPPGNumberEdit.Min ! Zusammen mit Max den erlaubten Bereich festlegen, z. B. Menge 1 bis 9999 oder Rabatt 0 bis 100. Werte außerhalb werden still begrenzt, eine eigene Prüfung ist dann nicht nötig.
+TPPGNumberEdit.Max ! Obergrenze für Plausibilität, z. B. 100 bei Prozent oder ein Kreditlimit. Min = Max (beide 0) bedeutet ohne Grenze; das ist die Vorgabe.
+TPPGNumberEdit.Increment ! Schritt für Pfeiltasten, Mausrad und Spin-Buttons: 1 für Stückzahlen, 0,5 für Rabatte, 0,05 für Preise, die in 5-Cent-Schritten gehen.
+TPPGNumberEdit.LargeIncrement ! Großer Schritt für Bild auf/ab, z. B. 10 bei Mengen oder 5 bei Prozent. So erreicht man große Werte schnell, ohne zu tippen.
+TPPGNumberEdit.ShowSpinButtons ! Für Werte, die man meist nur um wenige Schritte ändert (Menge, Anzahl Kopien, Rabatt). Bei Beträgen, die man eintippt, weglassen, das spart Platz.
+TPPGNumberEdit.ShowThousandSeparator ! True lassen für Beträge und Mengen ab 1.000, das liest sich sicherer. Für Kennnummern wie Jahreszahl oder Postleitzahl ausschalten, besser ist dort aber ein TPPGEdit oder TPPGMaskEdit.
+TPPGNumberEdit.CurrencyString ! Leer lassen, dann gilt das Währungszeichen aus den Windows-Einstellungen. Fest eintragen (CHF, USD), wenn ein Betrag in einer anderen Währung erfasst wird, z. B. der Einkaufspreis beim Lieferanten.
+TPPGNumberEdit.AllowExpressions ! True lassen bei Preisen und Mengen: Der Anwender tippt „3*19,99" oder „120/1,19" und bekommt das Ergebnis. Ausschalten, wenn nur eine reine Zahl zulässig ist, z. B. bei Importen oder Kennzahlen.
+TPPGNumberEdit.AllowNull ! Einschalten, wenn „nicht angegeben" etwas anderes ist als 0, z. B. ein optionaler Meldebestand oder ein Rabatt, der erst noch verhandelt wird. Abfragen mit IsNull.
+TPPGNumberEdit.Value ! Den Wert lesen und setzen, z. B. beim Laden eines Datensatzes. Setzen aus Code löst kein OnChange aus; für Geld besser AsCurrency, für Stückzahlen AsInteger verwenden.
+TPPGNumberEdit.TextHint ! Nur zusammen mit AllowNull sichtbar, denn sonst steht immer eine Zahl im Feld. Erklärt, was ein leeres Feld bedeutet, z. B. „keine Warnung" oder „unbegrenzt".
+TPPGNumberEdit.TextHintVisibleOnFocus ! Einschalten, wenn der Platzhalter beim Tippen weiterhilft, z. B. „leer = unbegrenzt". Meist reicht die Vorgabe.
+TPPGNumberEdit.UseSystemContextMenu ! False lassen: Das PPGlow-Menü passt zur Optik und ist übersetzt. Nur einschalten, wenn die Anwendung überall das Windows-Menü zeigen soll.
+TPPGNumberEdit.ValidationState ! Für fachliche Prüfungen, die über Min/Max hinausgehen: pvsWarning, wenn der Bestand unter dem Meldebestand liegt, pvsError bei einem unzulässigen Betrag. Ungültige Eingaben (z. B. Buchstaben) meldet das Feld bei Enter selbst als Fehler.
+TPPGNumberEdit.ValidationHint ! Immer zusammen mit ValidationState setzen und sagen, was zu tun ist („Bestand unter Meldebestand – bitte nachbestellen"). Der Text erscheint als Tooltip und wird vorgelesen.
+TPPGNumberEdit.HighContrastSupport ! True lassen: Sehbehinderte Anwender mit Hochkontrast sehen dann klare Systemfarben. Nur für reine Vorschau-Flächen abschalten.
+TPPGNumberEdit.Alignment ! taRightJustify (Vorgabe) lassen: Zahlen untereinander lassen sich rechtsbündig am besten vergleichen. Linksbündig nur, wenn das Feld neben linksbündigen Textfeldern allein steht.
+TPPGNumberEdit.BorderStyle ! bsSingle für normale Formulare. bsNone, wenn das Feld in eine eigene Fläche eingebettet ist, z. B. als Eingabe in einer Tabellenzeile oder einer Kachel.
+TPPGNumberEdit.ReadOnly ! Für berechnete Werte, die man sehen und kopieren, aber nicht ändern soll, z. B. Gesamtbetrag oder Steuer. Dazu TabStop = False, damit Tab sie überspringt.
+TPPGNumberEdit.ReadOnlyStyle ! Damit berechnete Felder sich sichtbar von Eingabefeldern unterscheiden: eine leicht graue Fläche (Color) und ggf. fette Schrift (FontStyle) für die Summe.
+TPPGNumberEdit.TabStop ! True für Eingabefelder. False für schreibgeschützte Ergebnisfelder, damit Tab direkt zum nächsten Eingabefeld springt.
+TPPGNumberEdit.ShowClearButton ! Nur zusammen mit AllowNull sinnvoll, wenn „kein Wert" häufig gewählt wird. Achtung: Der Knopf löst kein OnChange aus; abhängige Berechnungen deshalb zusätzlich in OnExit anstoßen.
+TPPGNumberEdit.RoundedCorners ! Für zusammengesetzte Eingaben, z. B. Betrag und daneben eine Währungsauswahl: das Zahlenfeld rechts eckig, die Auswahl links eckig. Einzelne Felder behalten alle vier Ecken.
+TPPGNumberEdit.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager. Dann sehen Zahlenfelder, Textfelder und Buttons gleich aus.
+TPPGNumberEdit.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Feldern zuweisen. Dann wechselt ein einziger Befehl die Optik aller Controls, auch Hell/Dunkel.
+TPPGNumberEdit.Appearance ! Selten nötig, die Feldoptik kommt vom Preset. Für eine Ausnahme, z. B. ein farbig hervorgehobenes Summenfeld, Normal und Disabled anpassen.
+TPPGNumberEdit.Animation ! An lassen; Fokus- und Hover-Übergänge wirken ruhiger. RespectSystemSettings = True schaltet sie aus, wenn der Anwender in Windows Animationen abgeschaltet hat.
+TPPGNumberEdit.Align ! In Formularen meist alNone. alTop nur in schmalen Seitenleisten, in denen Beschriftung und Feld untereinander stehen.
+TPPGNumberEdit.AlignWithMargins ! Zusammen mit Align einschalten, damit ausgerichtete Felder nicht am Rand kleben. Die Abstände stellen Sie unter Margins ein.
+TPPGNumberEdit.Anchors ! Zahlenfelder brauchen selten mehr Breite: [akLeft, akTop] lassen. In rechtsbündigen Summenblöcken [akRight, akTop], damit sie beim Vergrößern rechts bleiben.
+TPPGNumberEdit.AutoSize ! True lassen: Die Höhe passt dann immer zur Schrift, auch bei hoher DPI. Die Breite stellen Sie selbst ein.
+TPPGNumberEdit.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern. Am Formular setzen und alle Controls über ParentBiDiMode folgen lassen.
+TPPGNumberEdit.Color ! Bei PPGlow-Feldern selten nötig: Die Feldfarbe kommt aus Appearance bzw. dem Preset. Für schreibgeschützte Summen ReadOnlyStyle nehmen.
+TPPGNumberEdit.Constraints ! MinWidth hält das Feld breit genug für den größten erwarteten Betrag, z. B. 120 für „99.999,99 €", auch wenn das Formular schmaler wird.
+TPPGNumberEdit.Enabled ! Felder sperren, die gerade nicht gelten, z. B. „Rabatt" erst nach Auswahl eines Kunden. Für reine Anzeige besser ReadOnly, dann bleibt der Wert kopierbar.
+TPPGNumberEdit.Font ! Am Formular einstellen und über ParentFont vererben. Für eine hervorgehobene Endsumme Font.Style = [fsBold].
+TPPGNumberEdit.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGNumberEdit.ParentColor ! False lassen; die Feldfläche soll sich vom Hintergrund abheben.
+TPPGNumberEdit.ParentFont ! True lassen, damit alle Felder die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGNumberEdit.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann zeigen alle Felder ihre Hints und Prüfhinweise.
+TPPGNumberEdit.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Letzten Preis übernehmen". Ohne eigenes Menü zeigt das Feld das Bearbeiten-Menü (Kopieren, Einfügen …).
+TPPGNumberEdit.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGNumberEdit.StyleElements ! Nur bei VCL-Styles wichtig: Nehmen Sie seClient heraus, wenn das Feld seine PPGlow-Farben behalten soll.
+TPPGNumberEdit.TabOrder ! So vergeben, dass Tab in Lesereihenfolge durch die Eingaben läuft, z. B. Menge, Einzelpreis, Rabatt.
+TPPGNumberEdit.Visible ! Felder ausblenden, die für den Fall nicht gelten, z. B. „Fremdwährungsbetrag" nur bei Auslandskunden. Was nur gerade nicht geht, besser mit Enabled sperren.
+TPPGNumberEdit.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für die normale Eingabe nicht nötig.
+TPPGNumberEdit.DragMode ! dmManual lassen, sonst startet jeder Klick ins Feld ein Ziehen statt die Eingabe.
+TPPGNumberEdit.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; bei Eingabefeldern praktisch nie gebraucht.
+TPPGNumberEdit.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGNumberEdit.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGNumberEdit.Left ! Position im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern setzen, z. B. Ed.SetBounds(X, Y, 160, 32).
+TPPGNumberEdit.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern.
+TPPGNumberEdit.Width ! Nach dem größten erwarteten Wert bemessen: 80 für Mengen, 120 bis 160 für Beträge mit Währungszeichen und Spin-Buttons.
+TPPGNumberEdit.Height ! Mit AutoSize bestimmt die Schrift die Höhe. Für einheitliche Zeilen in Formularen AutoSize lassen statt Höhen von Hand zu setzen.
+TPPGNumberEdit.Cursor ! crDefault lassen; über dem Eingabebereich zeigt Windows ohnehin den Textcursor.
+TPPGNumberEdit.Hint ! Für Einheit und Bereich, z. B. „Rabatt in Prozent, 0 bis 30". Bei Prüffehlern hat ValidationHint Vorrang.
+TPPGNumberEdit.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext mit Kontext-IDs. Ohne Hilfedatei egal.
+TPPGNumberEdit.HelpKeyword ! Stichwort der Hilfeseite, die F1 im Feld öffnet, z. B. „Rabattstaffel" (mit HelpType = htKeyword).
+TPPGNumberEdit.HelpContext ! Kontext-ID der Hilfeseite für F1, wenn die Anwendung eine Hilfedatei mit IDs hat.
+TPPGNumberEdit.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Bottom = 8 zwischen untereinander ausgerichteten Feldern. Wirkt nur mit AlignWithMargins.
+TPPGNumberEdit.CustomHint ! Für Hinweise mit Titel und Symbol, z. B. eine Erklärung zur Rabattstaffel: einen TPPGCustomHint oder TBalloonHint aufs Formular legen und hier zuweisen.
+TPPGNumberEdit.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGNumberEdit.Name ! Sprechende Namen vergeben (edMenge, edEinzelpreis, edRabatt) statt PPGNumberEdit1: Berechnungen im Code werden dadurch lesbar.
+TPPGNumberEdit.Tag ! Für mehrere Felder mit einem gemeinsamen OnChange: Tag = Spaltennummer oder ID der Position, ausgewertet über TPPGNumberEdit(Sender).Tag.
+TPPGNumberEdit.OnChange ! Hier abhängige Werte neu berechnen, z. B. Gesamtbetrag aus Menge, Preis und Rabatt. Weil es nur bei übernommenen Änderungen kommt, rechnet die Summe nicht bei jedem Tastendruck.
+TPPGNumberEdit.OnClick ! Selten gebraucht; der Klick setzt nur die Einfügemarke. Für Reaktionen auf neue Werte OnChange nehmen.
+TPPGNumberEdit.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Letzten Preis übernehmen" nur anbieten, wenn es einen gibt.
+TPPGNumberEdit.OnDblClick ! Z. B. um einen Rechner oder eine Preishistorie zu öffnen. Ohne Handler markiert der Doppelklick die Zahl.
+TPPGNumberEdit.OnEnter ! Für Hilfetexte in der Statusleiste („Menge in Stück"), sobald das Feld per Tab den Fokus bekommt. Den Wechsel ins Bearbeitungsformat macht das Feld selbst.
+TPPGNumberEdit.OnExit ! Für Prüfungen über mehrere Felder, z. B. „Rabatt nur bis 10 % ohne Freigabe". Der Wert ist hier schon übernommen und gerundet.
+TPPGNumberEdit.OnKeyDown ! Für zusätzliche Tasten, z. B. F4 öffnet die Preisliste. Pfeile und Bild auf/ab nutzt das Feld selbst zum Hoch- und Runterzählen.
+TPPGNumberEdit.OnKeyPress ! Selten nötig: Das Feld lässt ohnehin nur Ziffern, Trenner, Minus und Rechenzeichen zu. Key := #0 verwirft ein weiteres Zeichen.
+TPPGNumberEdit.OnKeyUp ! Selten gebraucht; z. B. für eine Live-Vorschau, solange getippt wird (der Wert selbst wird erst bei Enter übernommen).
+TPPGNumberEdit.OnMouseDown ! Selten für Eingabefelder; die normale Bedienung erledigt das Feld selbst.
+TPPGNumberEdit.OnMouseEnter ! Um beim Überfahren eine Erklärung zur Einheit in einer Statuszeile zu zeigen.
+TPPGNumberEdit.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGNumberEdit.OnMouseMove ! Selten für Eingabefelder; feuert bei jeder Mausbewegung.
+TPPGNumberEdit.OnMouseUp ! Selten für Eingabefelder; Gegenstück zu OnMouseDown.
+TPPGNumberEdit.OnMouseWheel ! Meist nicht nötig: Mit Fokus zählt das Rad selbst um Increment. Handled := True unterdrückt das, z. B. in langen scrollenden Formularen.
+TPPGNumberEdit.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGNumberEdit.OnDragDrop ! Wenn ein Wert per Ziehen übernommen werden darf, z. B. ein Preis aus einer Preisliste: hier den Wert der Quelle in Value schreiben.
+TPPGNumberEdit.OnDragOver ! Zusammen mit OnDragDrop: Accept nur für passende Quellen setzen, z. B. Source is TPPGListBox.
+TPPGNumberEdit.OnStartDrag ! Nur bei DragMode = dmAutomatic: eigenes DragObject setzen, wenn der Wert in ein anderes Feld gezogen werden soll.
+TPPGNumberEdit.OnEndDrag ! Nach dem Ziehen: Target = nil heißt abgebrochen.
+TPPGNumberEdit.OnGesture ! Auf Touch-Geräten: Wischgesten auswerten (EventInfo.GestureID), z. B. Wischen nach oben erhöht um LargeIncrement.
+
+# --- Typen ---
+TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. ein leichtes Grau für schreibgeschützte Felder, damit man sie von Eingaben unterscheidet. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf ausreichenden Kontrast zur Fläche achten.
+TPPGElementStyle.BorderColor ! Randfarbe des Bereichs; meist clDefault lassen. Eine eigene Farbe nur, wenn der Bereich bewusst hervorgehoben werden soll.
+TPPGElementStyle.DarkColor ! Gegenstück zu Color im Dark Mode. Wichtig, sobald Color selbst gesetzt ist, sonst bleibt der Bereich im Dunkeln hell.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor im Dark Mode; hell wählen, damit der Text auf dunkler Fläche lesbar bleibt.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor im Dark Mode; nur setzen, wenn auch BorderColor gesetzt ist.
+TPPGElementStyle.ParentFont ! True lassen, dann gilt die Schrift des Controls. Wird automatisch False, sobald Font geändert wird.
+TPPGElementStyle.Font ! Eigene Schrift für den Bereich, z. B. kleiner für Fußzeilen. Meist reicht FontStyle.
+TPPGElementStyle.FontStyle ! Schnellster Weg zur Hervorhebung ohne eigene Schrift, z. B. [fsBold] für eine Summe oder Kopfzeile.
