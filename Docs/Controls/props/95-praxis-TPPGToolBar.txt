@@ -1,0 +1,89 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGToolBar.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGToolBar ---
+TPPGToolBar.Align ! alTop lassen: Die Leiste sitzt dann wie gewohnt oben über Liste oder Editor und läuft beim Vergrößern des Fensters mit. alNone nur, wenn die Leiste frei in einer Karte oder einem Dialog steht (dann Left, Top und Width setzen).
+TPPGToolBar.AlignWithMargins ! Einschalten, wenn die Leiste nicht bündig am Rand der Karte kleben soll; die Abstände kommen dann aus Margins.
+TPPGToolBar.Anchors ! Nur bei Align = alNone wichtig: [akLeft, akTop, akRight] lässt eine frei platzierte Leiste mit dem Fenster breiter werden, damit weniger Befehle im „…"-Menü landen.
+TPPGToolBar.Appearance ! Bestimmt die Hover-, Druck- und Eingerastet-Optik der Befehle; in Ruhe bleibt die Leiste flach. Meist reicht Preset bzw. StyleManager; Appearance nur für eine eigene Markenfarbe ändern.
+TPPGToolBar.AutoSize ! True lassen: Die Höhe folgt der Schrift, die Leiste wird bei größerer Schrift oder hoher DPI nicht abgeschnitten. Die Breite bestimmen Align bzw. Width.
+TPPGToolBar.BiDiMode ! Nur für arabische oder hebräische Oberflächen: Die Befehle laufen dann von rechts nach links, das „…"-Menü steht links.
+TPPGToolBar.Color ! Hintergrund der Leiste. Meist über ParentColor die Farbe der Karte oder des Fensters übernehmen; eine eigene Farbe nur, wenn die Leiste sich als Band abheben soll.
+TPPGToolBar.Constraints ! Bei frei platzierter Leiste MinWidth setzen, damit wenigstens die wichtigsten Befehle sichtbar bleiben, auch wenn das Fenster schmal wird.
+TPPGToolBar.Cursor ! crDefault lassen; Symbolleisten zeigen in Windows den normalen Pfeil, die Hover-Fläche zeigt schon, was klickbar ist.
+TPPGToolBar.CustomHint ! Für Tooltips mit Titel und Symbol einen TPPGCustomHint zuweisen; die Texte kommen weiter aus Items[].Hint.
+TPPGToolBar.DoubleBuffered ! Nicht nötig, die Leiste zeichnet immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGToolBar.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. wenn der Anwender die ganze Leiste auf eine andere Fläche ziehen darf.
+TPPGToolBar.DragMode ! dmManual lassen, sonst startet jeder Klick auf einen Befehl ein Ziehen.
+TPPGToolBar.Enabled ! Sperrt alle Befehle auf einmal, z. B. solange ein Speichervorgang läuft. Einzelne Befehle sperren Sie über Items[].Enabled oder deren Action.
+TPPGToolBar.Font ! Schrift der Beschriftungen; meist über ParentFont vom Formular. Eine größere Schrift macht die Leiste mit AutoSize automatisch höher, z. B. für Touch-Bildschirme.
+TPPGToolBar.Height ! Mit AutoSize = True bestimmt die Schrift die Höhe (40 Pixel bei Segoe UI 9). Nur ohne AutoSize von Hand setzen, z. B. um mehrere Leisten exakt gleich hoch zu halten.
+TPPGToolBar.HelpContext ! Kontext-ID der Hilfeseite, die F1 öffnet, solange die Leiste den Fokus hat, z. B. die Seite „Befehle der Kundenliste".
+TPPGToolBar.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword), z. B. „Symbolleiste".
+TPPGToolBar.HelpType ! htKeyword, wenn Ihre Hilfe mit Stichwörtern arbeitet, sonst htContext. Ohne Hilfedatei egal.
+TPPGToolBar.HighContrastSupport ! True lassen: Im Hochkontrastmodus erscheinen Befehle und Trenner in Systemfarben, Sehbehinderte finden sie so sicher.
+TPPGToolBar.Hint ! Hint der Leiste selbst wird kaum gebraucht; die Tooltips der Befehle stehen in Items[].Hint (ohne Hint und mit ShowCaptions = False zeigt die Leiste die Caption).
+TPPGToolBar.Images ! Eine Bildliste für alle Befehle zuweisen (bei hoher DPI eine TVirtualImageList); jedes Item wählt sein Bild über ImageIndex. Ohne Bildliste reichen Symbole aus der Symbolschrift (IconChar).
+TPPGToolBar.ImageTint ! itTextColor bei einfarbigen Symbolen aus Images: Sie folgen dann Hover, Dark Mode und Sperren automatisch, ohne zweite Bildliste.
+TPPGToolBar.Items ! Hier stehen die Befehle. Im Designer über den Collection-Editor, im Code mit Items.AddButton, AddCheck und AddSeparator; häufige Befehle nach vorne, seltene nach hinten, weil die hinteren zuerst ins „…"-Menü wandern.
+TPPGToolBar.Left ! Nur bei Align = alNone von Bedeutung; im Code z. B. ToolBar.SetBounds(16, 16, 418, 40).
+TPPGToolBar.Margins ! Abstände zur Umgebung bei Align, z. B. Margins.Left = 8, damit die Leiste mit dem Inhalt darunter fluchtet. Wirkt nur mit AlignWithMargins.
+TPPGToolBar.Name ! Sprechend benennen, z. B. tbKunden oder tbEditor, damit im Code klar ist, zu welcher Liste die Leiste gehört.
+TPPGToolBar.OnClick ! Selten gebraucht: feuert bei jedem Klick auf die Leiste, auch neben die Befehle. Für Befehle Items[].OnClick oder OnItemClick nehmen.
+TPPGToolBar.OnContextPopup ! Um ein Kontextmenü der Leiste anzupassen, z. B. „Leiste anpassen …" nur für Administratoren freigeben.
+TPPGToolBar.OnDragDrop ! Wenn etwas auf die Leiste gezogen werden darf, z. B. eine Datei auf die Leiste eines Dokumentenfensters: hier das Ablegen verarbeiten.
+TPPGToolBar.OnDragOver ! Zusammen mit OnDragDrop: Accept nur für passende Quellen auf True setzen.
+TPPGToolBar.OnEndDrag ! Nach dem Ziehen der Leiste selbst (DragMode = dmAutomatic): Target = nil heißt abgebrochen.
+TPPGToolBar.OnEnter ! Z. B. einen Hinweis in der Statusleiste zeigen („Pfeiltasten wählen den Befehl, Enter führt ihn aus").
+TPPGToolBar.OnExit ! Gegenstück zu OnEnter: den Hinweis in der Statusleiste wieder löschen.
+TPPGToolBar.OnGesture ! Auf Touch-Geräten z. B. Wischen nach links auf der Leiste für „Zurück" auswerten (EventInfo.GestureID).
+TPPGToolBar.OnItemClick ! Ein Handler für alle Befehle: Item.Tag als Befehls-ID nutzen und per case verteilen. Läuft nach Items[].OnClick bzw. der Action, eignet sich also auch zum Protokollieren oder für einen Zähler „zuletzt benutzt".
+TPPGToolBar.OnKeyDown ! Für zusätzliche Tasten, solange die Leiste den Fokus hat. Links/Rechts, Pos1/Ende, Enter und Leertaste erledigt die Leiste selbst.
+TPPGToolBar.OnKeyPress ! Selten gebraucht; Zeichentasten lösen keine Befehle aus. Tastenkürzel für Befehle besser über Actions (ShortCut) vergeben.
+TPPGToolBar.OnKeyUp ! Selten gebraucht, z. B. um eine Vorschau zu beenden, wenn eine Taste losgelassen wird.
+TPPGToolBar.OnMouseActivate ! Nur in Werkzeugfenstern ändern, die beim Klick auf die Leiste nicht aktiv werden sollen; sonst nicht belegen.
+TPPGToolBar.OnMouseDown ! Selten gebraucht; die Befehle lösen beim Loslassen aus. Mit PartAt(X, Y) erfahren Sie, welcher Befehl unter der Maus liegt.
+TPPGToolBar.OnMouseEnter ! Z. B. eine Hilfezeile einblenden, sobald die Maus über die Leiste kommt. Die Hover-Optik je Befehl zeichnet die Leiste selbst.
+TPPGToolBar.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Hilfezeile wieder ausblenden.
+TPPGToolBar.OnMouseMove ! Mit PartAt(X, Y) den Befehl unter der Maus bestimmen, z. B. um seinen Langtext in der Statusleiste zu zeigen.
+TPPGToolBar.OnMouseUp ! Selten gebraucht; die eigentliche Aktion gehört in OnItemClick bzw. Items[].OnClick.
+TPPGToolBar.OnMouseWheel ! Selten gebraucht; Handled := True verhindert, dass das Fenster darunter scrollt.
+TPPGToolBar.OnStartDrag ! Beim Ziehen der Leiste (DragMode = dmAutomatic) ein eigenes DragObject setzen.
+TPPGToolBar.ParentBiDiMode ! True lassen, damit die Leiste der Leserichtung des Formulars folgt.
+TPPGToolBar.ParentColor ! True, wenn die Leiste dieselbe Farbe wie die Fläche darunter haben soll (übliche flache Optik).
+TPPGToolBar.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch für die Tooltips der Befehle gilt.
+TPPGToolBar.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGToolBar.ParentFont ! True lassen, damit die Leiste die Formularschrift trägt. Ändern Sie Font, wird es automatisch False.
+TPPGToolBar.ParentShowHint ! True lassen und ShowHint am Formular einschalten; dann zeigen die Befehle ihre Tooltips.
+TPPGToolBar.PopupMenu ! Für ein Kontextmenü der Leiste, z. B. „Beschriftungen anzeigen" zum Umschalten von ShowCaptions.
+TPPGToolBar.Preset ! Wie bei allen Controls einmal für die Anwendung festlegen, am besten über den StyleManager. Fluent11 wirkt mit der flachen Leiste wie die Befehlsleiste im Windows-11-Explorer.
+TPPGToolBar.ShowCaptions ! True für Leisten mit wenigen, seltenen Befehlen (Text hilft beim Finden); False für Leisten mit bekannten Symbolen oder wenig Platz. Ohne Text zeigt der Tooltip die Caption.
+TPPGToolBar.ShowHint ! Einschalten (oder über ParentShowHint vom Formular), sonst sieht der Anwender bei ShowCaptions = False nicht, was ein Symbol tut.
+TPPGToolBar.StyleElements ! Nur bei VCL-Styles wichtig: ohne seClient behält die Leiste ihre Farben aus dem Preset.
+TPPGToolBar.StyleManager ! Denselben TPPGStyleManager wie die übrigen Controls zuweisen; dann wechseln Leiste, Liste und Felder gemeinsam die Optik, auch Hell/Dunkel.
+TPPGToolBar.TabOrder ! Die Leiste kommt in der Tab-Reihenfolge meist vor dem Inhalt, den sie bedient (Leiste, dann Liste).
+TPPGToolBar.TabStop ! True lassen: Tastaturbenutzer erreichen die Leiste mit Tab und wählen die Befehle mit den Pfeiltasten. False nur, wenn alle Befehle auch per Tastenkürzel gehen.
+TPPGToolBar.Tag ! Freier Wert, z. B. um mehrere gleich gebaute Leisten in einem gemeinsamen OnItemClick zu unterscheiden.
+TPPGToolBar.Top ! Wie Left: nur bei Align = alNone von Bedeutung.
+TPPGToolBar.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für normales Tippen auf Befehle nicht nötig.
+TPPGToolBar.Visible ! Ganze Leiste ausblenden, z. B. in einer reinen Leseansicht; mit Align = alTop rückt der Inhalt darunter dann nach oben.
+TPPGToolBar.Width ! Mit Align = alTop folgt die Breite dem Fenster. Bei alNone bestimmt Width, wie viele Befehle sichtbar sind; der Rest steht im „…"-Menü.
+
+# --- Typen ---
+TPPGToolItem.Action ! Für Befehle, die auch im Menü oder per Tastenkürzel stehen: eine Action zuweisen. Caption, Hint, Enabled und Checked kommen dann aus ihr; actSpeichern.Enabled := False sperrt alle Stellen auf einmal.
+TPPGToolItem.Caption ! Kurz und als Verb oder Substantiv („Neu", „Drucken"). Ein & wird nur ausgeblendet, es vergibt keine Zugriffstaste; bei ShowCaptions = False dient die Caption als Tooltip.
+TPPGToolItem.Color ! Nur für die eine Hauptaktion der Leiste, z. B. „Speichern" oder „Neuer Auftrag" in der Akzentfarbe; zusammen mit TextColor = clWhite. Die übrigen Befehle bleiben flach.
+TPPGToolItem.Down ! Zustand eines Umschalt-Buttons lesen oder setzen, z. B. itFett.Down := Text.Fett beim Wechsel des Absatzes. Setzen im Code löst kein Ereignis aus.
+TPPGToolItem.Enabled ! Befehle sperren, die gerade nicht gehen, z. B. „Bearbeiten" ohne ausgewählten Datensatz. Mit Action besser deren Enabled setzen.
+TPPGToolItem.FontStyle ! [fsBold] für die Hauptaktion, damit sie auch ohne Farbe auffällt. Die Breite des Befehls passt sich an.
+TPPGToolItem.GroupIndex ! Gleiche Zahl > 0 für Umschalt-Buttons, von denen genau einer gedrückt ist, z. B. 1 für Ansicht „Liste / Kacheln / Details". 0 für einzelne Umschalter wie „Nur aktive".
+TPPGToolItem.Hint ! Tooltip mit Zweck und Tastenkürzel, z. B. „Kunden entfernen (Entf)". Pflicht bei ShowCaptions = False, wenn die Caption allein nicht genügt.
+TPPGToolItem.IconChar ! Symbol aus Segoe Fluent Icons bzw. Segoe MDL2 Assets ohne Bildliste, z. B. $E710 (Neu), $E74E (Speichern), $E749 (Drucken). Färbt sich automatisch in der Textfarbe.
+TPPGToolItem.ImageIndex ! Bild aus ToolBar.Images, wenn Ihre Anwendung eigene Symbole hat. Hat ImageIndex ein Bild, gilt es statt IconChar.
+TPPGToolItem.ImageName ! Ab Delphi 10.4 statt ImageIndex: Der Name bleibt richtig, wenn die Bildliste umsortiert wird.
+TPPGToolItem.OnClick ! Die Aktion genau dieses Befehls. Für viele Befehle mit ähnlicher Logik ist ein gemeinsames ToolBar.OnItemClick übersichtlicher; mit Action führt die Action den Befehl aus.
+TPPGToolItem.Style ! tisButton für Befehle, tisCheck für Ein/Aus-Zustände (Filter, Fett, Ansicht), tisSeparator, um zusammengehörige Befehle zu gruppieren.
+TPPGToolItem.Tag ! Befehls-ID für ein gemeinsames OnItemClick, am besten als Konstante (cmdNeu = 1, cmdDrucken = 2 …): case Item.Tag of …
+TPPGToolItem.TextColor ! Eigene Schriftfarbe, meist zusammen mit Color (Weiß auf Akzent) oder Rot für einen „Löschen"-Befehl. Gesperrte Befehle bleiben trotzdem grau.
+TPPGToolItem.Visible ! Befehle ausblenden, die der Anwender nicht nutzen darf (fehlendes Recht). Was nur gerade nicht geht, besser mit Enabled sperren.
