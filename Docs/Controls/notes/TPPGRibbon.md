@@ -1,5 +1,17 @@
 **Vorbild:** TMS AdvToolBar / Office-Ribbon, Windows Ribbon Framework
 
+## Wofür
+
+Das Ribbon ist das Menüband am oberen Rand des Hauptfensters: Registerkarten mit Gruppen von Befehlen, dazu „Datei", Schnellzugriff und Kontext-Registerkarten wie in Office. Es ersetzt Hauptmenü und Symbolleisten in Anwendungen mit vielen Befehlen, z. B. Belegerfassung, Berichts- oder Texteditoren. Bei schmalem Fenster schrumpft es selbst, und mit Alt bzw. F10 ist es vollständig per Tastatur bedienbar.
+
+## Wann verwenden
+
+- Für das Hauptfenster einer Anwendung mit vielen Befehlen, die sich thematisch auf Karten verteilen lassen (Start, Einfügen, Ansicht).
+- Statt `TPPGToolBar`, wenn es mehr als eine Leiste voll Befehle gibt oder Galerien, eingebettete Felder und große Hauptbefehle gebraucht werden. Für eine einzelne Leiste über einer Liste oder in einem Dialog ist die ToolBar schlanker.
+- Statt `TPPGMenuBar`, wenn die Anwender Office gewohnt sind und Befehle sichtbar statt in Menüs versteckt sein sollen. Für klassische Programme mit wenigen Befehlen bleibt die Menüleiste kompakter.
+- Nicht für Navigation zwischen Bereichen der Anwendung: Dafür sind `TPPGNavigationView` oder `TPPGTabControl` gedacht. Die Registerkarten des Ribbons wechseln nur die Befehle, nicht den Inhalt.
+- Nicht in kleinen Dialogen: Dort genügen einzelne `TPPGButton`.
+
 ## Unterschiede und Hinweise
 
 - Aufbau: `Tabs` → `Groups` → `Items`, alles im Objektinspektor und in der DFM pflegbar. Das Ribbon liegt unter der normalen Titelleiste (kein Zeichnen im Nicht-Client-Bereich, damit VCL-Styles, DPI und Snap-Layouts funktionieren).

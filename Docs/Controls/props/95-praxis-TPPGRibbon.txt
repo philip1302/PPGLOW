@@ -1,0 +1,139 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGRibbon.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGRibbon ---
+TPPGRibbon.Align ! alTop lassen: Das Menüband gehört an den oberen Rand des Hauptfensters, direkt unter die Titelleiste. Andere Werte nur, wenn es in einem Panel über einem Teilbereich liegt.
+TPPGRibbon.AlignWithMargins ! Meist aus lassen, das Band soll bündig am Fensterrand sitzen. Einschalten, wenn es in einer Karte oder einem Panel mit Abstand zum Rand liegt.
+TPPGRibbon.Anchors ! Nur bei Align = alNone wichtig: [akLeft, akTop, akRight], damit das Band beim Vergrößern des Fensters mitwächst und die Gruppen wieder aufklappen.
+TPPGRibbon.Animation ! Vorgaben lassen; die Übergänge beim Überfahren der Befehle wirken dann wie in Office. Ausschalten nur für sehr langsame Remote-Desktop-Sitzungen.
+TPPGRibbon.Appearance ! Selten einzeln ändern: Farben und Rundung der Befehle kommen am besten aus Preset bzw. StyleManager, damit das Band zum Rest der Anwendung passt.
+TPPGRibbon.ApplicationButtonCaption ! Leer lassen, dann steht dort „Datei" in der Sprache der Anwendung. Einen eigenen Text nur, wenn das Menü dahinter anders heißt, z. B. „Mandant" oder „Projekt".
+TPPGRibbon.ApplicationMenu ! Für einfache Programme statt eines Backstage: ein TPPGPopupMenu mit Neu, Öffnen, Drucken und Beenden anlegen und hier zuweisen.
+TPPGRibbon.AutoSize ! True lassen: Die Höhe ergibt sich aus Schrift, Schnellzugriff und Einklappen. Beim Einklappen (Minimized) rückt der Inhalt darunter dann automatisch nach oben.
+TPPGRibbon.Backstage ! Für „Datei"-Seiten wie in Office (Zuletzt verwendet, Drucken, Optionen): ein Panel oder PageControl mit Visible = False aufs Formular legen und hier zuweisen.
+TPPGRibbon.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; dann spiegelt sich das ganze Band samt Datei-Button und Schnellzugriff. Am besten über ParentBiDiMode vom Formular.
+TPPGRibbon.Color ! Beim Ribbon kaum nötig: Hintergrund und Registerkarten färbt das Preset. Color wirkt nur ohne Dark Mode und VCL-Style.
+TPPGRibbon.Constraints ! MinWidth setzen, wenn das Hauptfenster nicht so schmal werden soll, dass alle Gruppen nur noch Dropdowns sind (z. B. 480).
+TPPGRibbon.Cursor ! crDefault lassen; Office zeigt über dem Band den normalen Pfeil.
+TPPGRibbon.CustomHint ! Für Tooltips mit Titel: einen TPPGCustomHint zuweisen. Die Befehle zeigen dann Caption als Titel und Hint als Text.
+TPPGRibbon.DoubleBuffered ! Nicht nötig, das Ribbon zeichnet immer gepuffert. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGRibbon.DragCursor ! Beim Ribbon ohne Bedeutung, solange DragMode = dmManual bleibt.
+TPPGRibbon.DragMode ! dmManual lassen: Mit dmAutomatic würde jeder Klick auf einen Befehl ein Ziehen beginnen.
+TPPGRibbon.Enabled ! Für Phasen, in denen nichts bedient werden darf (z. B. während eines langen Imports), das ganze Band sperren. Einzelne Befehle sperren Sie über Item.Enabled oder die Action.
+TPPGRibbon.Font ! Über ParentFont die Formularschrift übernehmen (Segoe UI 9). Eine größere Schrift (z. B. 11) macht das Band für Touch-Arbeitsplätze höher.
+TPPGRibbon.Height ! Nicht von Hand setzen: Mit AutoSize bestimmt das Ribbon seine Höhe selbst (Schnellzugriff, Registerkarten, Band).
+TPPGRibbon.HelpContext ! Kontext-ID der Hilfeseite „Menüband", die F1 zeigt, solange das Ribbon den Fokus hat. Ohne Hilfedatei egal.
+TPPGRibbon.HelpKeyword ! Wie HelpContext, aber als Stichwort (HelpType = htKeyword), z. B. „Menüband".
+TPPGRibbon.HelpType ! htKeyword bei HTML-Hilfen mit Stichwörtern, sonst htContext. Ohne Hilfedatei egal.
+TPPGRibbon.HighContrastSupport ! True lassen: Im Hochkontrastmodus von Windows zeigt das Band Systemfarben und bleibt für sehbehinderte Anwender lesbar.
+TPPGRibbon.Hint ! Für das Band selbst selten nötig; die Tooltips stehen an den Befehlen (Item.Hint bzw. Action.Hint).
+TPPGRibbon.Images ! Die gemeinsame ImageList (16 px) der Anwendung zuweisen, dieselbe wie bei Menüs und Actions. Ohne Bildliste genügen IconChar-Symbole aus der Symbolschrift.
+TPPGRibbon.KeyTipsEnabled ! True lassen: Tastaturnutzer bedienen das Band mit Alt und Buchstaben wie in Office. Ausschalten nur, wenn Alt+Buchstabe schon von der Anwendung belegt ist.
+TPPGRibbon.LargeImages ! Eine zweite ImageList mit 32-px-Bildern für große Befehle (Size = rsLarge, LargeImageIndex). Ohne sie werden die kleinen Bilder bzw. IconChar vergrößert.
+TPPGRibbon.Left ! Bei Align = alTop ohne Wirkung; nur bei alNone im Designer per Maus.
+TPPGRibbon.Margins ! Mit AlignWithMargins: Abstand zum Rand, wenn das Band in einer Karte liegt, z. B. 8 rundum.
+TPPGRibbon.Minimized ! Den Zustand beim Beenden speichern und beim Start wiederherstellen; Anwender mit kleinen Bildschirmen klappen das Band gern ein (Strg+F1).
+TPPGRibbon.Name ! Sprechend benennen, z. B. rbnHaupt; im Code greifen Sie über den Namen auf Tabs und Schnellzugriff zu.
+TPPGRibbon.ParentBiDiMode ! True lassen, damit das Band der Leserichtung des Formulars folgt.
+TPPGRibbon.ParentColor ! False lassen; die Flächenfarbe kommt aus dem Preset.
+TPPGRibbon.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch für die Befehle im Band gilt.
+TPPGRibbon.ParentDoubleBuffered ! True lassen; ohne sichtbare Wirkung.
+TPPGRibbon.ParentFont ! True lassen, damit das Band die Schrift des Hauptfensters trägt.
+TPPGRibbon.ParentShowHint ! True lassen und ShowHint am Formular einschalten, dann zeigen alle Befehle ihre Tooltips.
+TPPGRibbon.PopupMenu ! Meist leer lassen: Das Ribbon bringt ein eigenes Kontextmenü mit (Schnellzugriff anpassen, Band einklappen).
+TPPGRibbon.Preset ! Passend zur übrigen Anwendung wählen: Fluent11 für Windows-11-Optik, ModernFlat flach, Classic im Office-2010-Stil. Am bequemsten über den StyleManager.
+TPPGRibbon.QuickAccess ! Die zwei, drei häufigsten Befehle (Speichern, Rückgängig) hier eintragen, am besten mit derselben Action wie im Band; dann wirkt der Eintrag auf denselben Befehl.
+TPPGRibbon.QuickAccessCustomizable ! True, damit Anwender per Rechtsklick eigene Befehle in den Schnellzugriff legen. In OnQuickAccessChange mit SaveQuickAccess speichern.
+TPPGRibbon.QuickAccessPosition ! qapAbove wie in Office; qapBelow, wenn der Schnellzugriff näher am Arbeitsbereich liegen soll. Den Wunsch des Anwenders mit speichern.
+TPPGRibbon.ShowApplicationButton ! True, wenn es Datei-Befehle gibt (Backstage oder ApplicationMenu). Bei reinen Werkzeugleisten ohne Dateien ausblenden.
+TPPGRibbon.ShowHint ! Am Formular einschalten statt hier; die Tooltips der Befehle sind für Symbol-Befehle ohne Text wichtig.
+TPPGRibbon.ShowQuickAccess ! Ausblenden in kleinen Fenstern mit wenigen Befehlen; dort genügt das Band.
+TPPGRibbon.StyleElements ! Nur bei VCL-Styles wichtig: seClient herausnehmen, wenn das Band seine Preset-Farben behalten soll.
+TPPGRibbon.StyleManager ! Den gemeinsamen TPPGStyleManager zuweisen, dann wechselt das Band mit Hell/Dunkel und Preset der ganzen Anwendung.
+TPPGRibbon.TabIndex ! Im Code die passende Karte zeigen, z. B. nach dem Markieren einer Tabelle die Kontext-Registerkarte. Löst kein OnChange aus.
+TPPGRibbon.Tabs ! Im Designer per Doppelklick bzw. „Edit tabs…" pflegen; im Code mit Tabs.AddTab, Groups.AddGroup und Items.AddButton aufbauen. Pro Karte nicht mehr als fünf bis sechs Gruppen.
+TPPGRibbon.TabStop ! False lassen: Das Band erreicht man über Alt/F10 (KeyTips), nicht über Tab, damit Tab im Formular von Feld zu Feld springt.
+TPPGRibbon.Tag ! Freier Wert, z. B. um mehrere Ribbons (Haupt- und Editorfenster) in gemeinsamen Handlern zu unterscheiden.
+TPPGRibbon.Top ! Bei Align = alTop ohne Wirkung.
+TPPGRibbon.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für die Bedienung der Befehle nicht nötig.
+TPPGRibbon.Visible ! Für einen Vollbild- oder Lesemodus das ganze Band ausblenden; sonst lieber Minimized, dann bleiben die Registerkarten sichtbar.
+TPPGRibbon.Width ! Bei Align = alTop bestimmt das Fenster die Breite. Wird es schmal, schrumpfen die Gruppen von selbst (ReduceOrder).
+TPPGRibbon.OnApplicationButtonClick ! Hier die Backstage-Seite vorbereiten, bevor sie erscheint, z. B. die Liste „Zuletzt verwendet" neu füllen.
+TPPGRibbon.OnBackstageChange ! Den Arbeitsbereich darunter sperren bzw. wieder freigeben oder beim Schließen des Backstage den Fokus zurück ins Dokument setzen (BackstageVisible abfragen).
+TPPGRibbon.OnChange ! Auf den Wechsel der Registerkarte durch den Anwender reagieren, z. B. die Statusleiste anpassen oder die Wahl für den nächsten Start merken.
+TPPGRibbon.OnChanging ! Einen Kartenwechsel verhindern (AllowChange := False), solange etwas nicht abgeschlossen ist, z. B. eine Eingabe in einem eingebetteten Feld ungültig ist.
+TPPGRibbon.OnClick ! Selten gebraucht; für Befehle ist OnItemClick bzw. Item.OnClick der richtige Ort. OnClick kommt bei jedem Klick auf die Fläche des Bands.
+TPPGRibbon.OnContextPopup ! Mit Handled := True das eingebaute Kontextmenü (Schnellzugriff, Einklappen) unterdrücken, z. B. in einer gesperrten Kiosk-Anwendung.
+TPPGRibbon.OnCustomDrawGalleryItem ! Für Vorschaubilder in einer Galerie (Farbschema, Tabellenvorlage, Diagrammtyp): selbst auf Canvas zeichnen und Handled := True setzen.
+TPPGRibbon.OnDblClick ! Selten gebraucht; der Doppelklick auf eine Registerkarte klappt das Band schon von selbst ein.
+TPPGRibbon.OnDragDrop ! Beim Ribbon kaum gebraucht; denkbar zum Ablegen von Dateien auf das Band, die dann geöffnet werden.
+TPPGRibbon.OnDragOver ! Zusammen mit OnDragDrop: Accept nur für passende Quellen setzen.
+TPPGRibbon.OnEndDrag ! Beim Ribbon kaum gebraucht, das Band selbst wird nicht gezogen.
+TPPGRibbon.OnEnter ! Selten; das Band nimmt den Fokus nur bei der Tastaturbedienung (Alt, Pfeiltasten).
+TPPGRibbon.OnExit ! Selten; z. B. eine Statuszeile mit Tastenhinweisen wieder leeren, wenn die Tastaturbedienung des Bands endet.
+TPPGRibbon.OnGalleryClick ! Die gewählte Vorlage anwenden: Index ist der Eintrag, Item die Galerie. Bei mehreren Galerien über Item (oder Item.Tag) unterscheiden.
+TPPGRibbon.OnGesture ! Auf Touch-Geräten z. B. Wischen nach links/rechts zum Wechseln der Registerkarte auswerten.
+TPPGRibbon.OnGetGalleryItem ! Für Galerien mit Daten aus der Anwendung (Vorlagen aus der Datenbank, Farben): GalleryCount setzen und hier Data.Text bzw. Color je Index füllen.
+TPPGRibbon.OnItemClick ! Zentrale Stelle für alle Befehle ohne eigene Action: über Item.Tag eine Befehls-ID auswerten, z. B. für Protokoll oder Rechteprüfung.
+TPPGRibbon.OnKeyDown ! Selten; die Tastaturbedienung (Pfeile, Enter, Esc) erledigt das Ribbon selbst.
+TPPGRibbon.OnKeyPress ! Selten; Buchstaben nach Alt wertet das Ribbon als KeyTips aus.
+TPPGRibbon.OnKeyUp ! Selten für das Ribbon.
+TPPGRibbon.OnLauncherClick ! Den Einstellungsdialog der Gruppe öffnen, z. B. „Seite einrichten" bei der Gruppe Seite. Über Group (oder Group.Tag) unterscheiden.
+TPPGRibbon.OnMinimizedChange ! Den Zustand Minimized speichern, damit das Band beim nächsten Start wieder ein- oder ausgeklappt ist.
+TPPGRibbon.OnMouseActivate ! Nicht belegen; nur für Spezialfälle wie Werkzeugfenster.
+TPPGRibbon.OnMouseDown ! Selten; Befehle gehören in Item.OnClick bzw. OnItemClick.
+TPPGRibbon.OnMouseEnter ! Z. B. eine Hilfezeile in der Statusleiste zeigen, sobald die Maus über dem Band ist.
+TPPGRibbon.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Hilfezeile wieder leeren.
+TPPGRibbon.OnMouseMove ! Selten; Tooltips der Befehle zeigt das Ribbon selbst.
+TPPGRibbon.OnMouseUp ! Selten; Befehle gehören in Item.OnClick bzw. OnItemClick.
+TPPGRibbon.OnMouseWheel ! Mit Handled := True verhindern, dass das Mausrad über einer Galerie im Band deren Zeilen blättert, z. B. in einer Anwendung, die das Rad global für den Zoom nutzt.
+TPPGRibbon.OnQuickAccessChange ! Hier SaveQuickAccess aufrufen und das Ergebnis in INI-Datei oder Registry schreiben; beim Start mit LoadQuickAccess laden.
+TPPGRibbon.OnStartDrag ! Beim Ribbon kaum gebraucht.
+
+# --- Typen ---
+TPPGRibbonTab.Caption ! Kurze Substantive wie in Office: Start, Einfügen, Ansicht, Rechnung. Die erste Karte enthält die häufigsten Befehle.
+TPPGRibbonTab.ContextColor ! Eine Farbe je Kontext (z. B. grün für Tabellentools, violett für Bildtools), damit der Anwender sieht, wozu die Karte gehört. clDefault nimmt die Akzentfarbe.
+TPPGRibbonTab.ContextName ! Für Karten, die nur bei einer bestimmten Auswahl gebraucht werden (Tabelle, Bild, Diagramm): Namen setzen, Visible := False, und bei passender Auswahl einblenden.
+TPPGRibbonTab.Groups ! Die Befehle einer Karte thematisch in Gruppen teilen (Zwischenablage, Schrift, Absatz); drei bis sechs Gruppen pro Karte bleiben übersichtlich.
+TPPGRibbonTab.KeyTip ! Nur setzen, wenn der automatische Buchstabe kollidiert oder ein gewohnter Buchstabe gewünscht ist (z. B. „R" für Rechnung).
+TPPGRibbonTab.Tag ! Z. B. eine Karten-ID, um in OnChange ohne Textvergleich zu erkennen, welche Karte gewählt wurde.
+TPPGRibbonTab.Visible ! Karten ausblenden, die der Anwender nicht braucht (fehlendes Recht) oder die nur zu einer Auswahl gehören (Kontext-Registerkarten).
+TPPGRibbonGroup.Caption ! Kurz und beschreibend (Zwischenablage, Beleg, Ansicht); der Text steht unter den Befehlen und erscheint auch auf dem Dropdown der geschrumpften Gruppe.
+TPPGRibbonGroup.IconChar ! Symbol für die als Dropdown geschrumpfte Gruppe setzen, wenn das erste Item keines hat oder ein allgemeineres besser passt.
+TPPGRibbonGroup.ImageIndex ! Wie IconChar, aber aus der Bildliste; nur nötig, wenn die Gruppe auf schmalen Bildschirmen zum Dropdown schrumpft.
+TPPGRibbonGroup.Items ! Die Befehle der Gruppe: die wichtigsten groß (rsLarge), weitere klein und gestapelt. Mehr als sechs bis acht Befehle besser auf zwei Gruppen verteilen.
+TPPGRibbonGroup.KeyTip ! Nur bei Kollisionen setzen; der KeyTip öffnet die zum Dropdown geschrumpfte Gruppe per Tastatur.
+TPPGRibbonGroup.LauncherHint ! Den Dialog nennen, den der Pfeil öffnet, z. B. „Seite einrichten (Strg+Umschalt+P)".
+TPPGRibbonGroup.ReduceOrder ! Selten genutzte Gruppen bekommen kleine Werte und schrumpfen zuerst; die wichtigste Gruppe einen hohen Wert, damit sie am längsten groß bleibt.
+TPPGRibbonGroup.ShowLauncher ! Einschalten, wenn es zur Gruppe einen ausführlichen Dialog gibt (Schrift, Absatz, Seite einrichten); den Dialog in OnLauncherClick öffnen.
+TPPGRibbonGroup.Tag ! Z. B. eine Gruppen-ID, um in OnLauncherClick den passenden Dialog zu wählen.
+TPPGRibbonGroup.Visible ! Ganze Gruppen ausblenden, die in einer Ausgabe oder für eine Rolle nicht verfügbar sind.
+TPPGRibbonItem.Action ! Für Befehle, die auch im Menü, im Kontextmenü oder per Tastenkürzel stehen: eine Action zuweisen. Text, Bild, Enabled und Ausführen kommen dann von dort.
+TPPGRibbonItem.BeginColumn ! Einen neuen Stapel kleiner Befehle beginnen, z. B. damit Kopieren/Ausschneiden und Format übertragen getrennte Spalten bilden.
+TPPGRibbonItem.Caption ! Kurz und eindeutig („Speichern", „Als PDF"); lange Texte bricht ein großer Befehl in zwei Zeilen um. Ein & legt den KeyTip-Buchstaben fest.
+TPPGRibbonItem.Control ! Für Eingaben direkt im Band, z. B. eine TPPGComboBox für Schriftart oder Mandant: das Control aufs Formular legen und hier mit Kind = rikControl zuweisen.
+TPPGRibbonItem.Down ! Im Code den Zustand eines Umschalters setzen, z. B. Fett nach dem Wechsel der Markierung. Löst kein Ereignis aus.
+TPPGRibbonItem.DropDownMenu ! Für Varianten eines Befehls: Split-Button „Drucken" mit Menü Vorschau, Als PDF. Der Hauptteil führt die häufigste Variante aus.
+TPPGRibbonItem.Enabled ! Befehle sperren, die gerade nicht gehen (Speichern ohne Änderung, Einfügen mit leerer Zwischenablage); mit Action besser zentral über Action.Enabled.
+TPPGRibbonItem.GalleryColumns ! So viele Spalten, dass die Galerie im Band etwa so breit ist wie zwei, drei große Befehle (meist 3 bis 5).
+TPPGRibbonItem.GalleryCount ! Für Galerien, deren Einträge aus der Anwendung kommen (Farben, Vorlagen aus der Datenbank): Anzahl setzen und den Inhalt in OnGetGalleryItem liefern.
+TPPGRibbonItem.GalleryIndex ! Im Code die aktuelle Vorlage markieren, z. B. die Formatvorlage des Absatzes unter dem Cursor. Löst kein OnGalleryClick aus.
+TPPGRibbonItem.GalleryItemHeight ! 0 lassen für Text-Einträge; eine feste Höhe für Vorschaubilder, die in OnCustomDrawGalleryItem gezeichnet werden.
+TPPGRibbonItem.GalleryItems ! Für feste Listen wie Formatvorlagen oder Berichtsstile, ein Eintrag je Zeile. „Kategorie|Text" gruppiert die aufgeklappte Galerie.
+TPPGRibbonItem.GalleryItemWidth ! An die längsten Texte anpassen (z. B. 90 für „Überschrift 1"); zu schmale Kacheln kürzen den Text.
+TPPGRibbonItem.GalleryPopupColumns ! Mehr Spalten in der aufgeklappten Galerie, wenn es viele Einträge gibt; 0 nimmt eine Spalte mehr als im Band.
+TPPGRibbonItem.GroupIndex ! Gleicher Wert für Umschalter, von denen genau einer gilt (Links, Zentriert, Rechts); 0 für unabhängige Umschalter wie Fett.
+TPPGRibbonItem.Hint ! Erklären, was der Befehl tut, mit Tastenkürzel: „Speichert den Beleg (Strg+S)". Der Tooltip zeigt Caption als Titel darüber.
+TPPGRibbonItem.IconChar ! Ohne Bildliste schnell zu Symbolen kommen: Zeichen der Symbolschrift, z. B. $E74E Speichern, $E749 Drucken, $E8C8 Kopieren.
+TPPGRibbonItem.ImageIndex ! Wenn die Anwendung eine eigene Bildliste hat: das 16-px-Bild für kleine und mittlere Befehle.
+TPPGRibbonItem.ImageName ! Wie ImageIndex, aber über den Namen in einer TVirtualImageList (ab Delphi 10.4); robuster, wenn die Liste umsortiert wird.
+TPPGRibbonItem.KeyTip ! Nur setzen, wenn der automatisch vergebene Buchstabe ungünstig ist, z. B. „S" für Speichern, wie Anwender es aus Office kennen.
+TPPGRibbonItem.Kind ! rikButton für Befehle, rikSplitButton für Befehl mit Varianten, rikCheck für Umschalter, rikGallery für Vorlagen, rikControl für Eingaben, rikSeparator zum Trennen.
+TPPGRibbonItem.LargeImageIndex ! Für die großen Hauptbefehle einer Gruppe ein 32-px-Bild aus LargeImages; sonst wird das kleine Bild hochskaliert.
+TPPGRibbonItem.MinSize ! rsMedium für Befehle, deren Text auch bei schmalem Fenster sichtbar bleiben soll; rsSmall erlaubt das Schrumpfen auf das Symbol.
+TPPGRibbonItem.OnClick ! Die Aktion eines einzelnen Befehls ohne Action. Für viele gleichartige Befehle ist ein gemeinsamer Handler in Ribbon.OnItemClick mit Tag übersichtlicher.
+TPPGRibbonItem.SameRow ! Für kompakte Reihen kleiner Symbole in einer Zeile, z. B. Fett, Kursiv, Unterstrichen oder die drei Ausrichtungen.
+TPPGRibbonItem.Size ! rsLarge für die ein, zwei wichtigsten Befehle einer Gruppe, rsMedium für weitere mit Text, rsSmall für bekannte Symbole wie Fett oder Kursiv.
+TPPGRibbonItem.Tag ! Eine Befehls-ID für den gemeinsamen Handler in OnItemClick, z. B. 1 = Neu, 2 = Speichern.
+TPPGRibbonItem.Visible ! Befehle ausblenden, die der Anwender nicht nutzen darf; was nur gerade nicht geht, besser mit Enabled sperren.
