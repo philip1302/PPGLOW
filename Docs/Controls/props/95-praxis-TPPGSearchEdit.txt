@@ -1,0 +1,110 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGSearchEdit.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGSearchEdit ---
+TPPGSearchEdit.Align ! Für ein Suchfeld über einer Liste: in ein Panel mit Align = alTop legen und das Feld darin mit alClient füllen. Frei platzierte Suchfelder in Masken bleiben alNone.
+TPPGSearchEdit.Alignment ! Suchtexte bleiben links bündig (taLeftJustify). Rechtsbündig nur, wenn nach Nummern gesucht wird, die in der Liste darunter ebenfalls rechts stehen.
+TPPGSearchEdit.AlignWithMargins ! Zusammen mit Align einschalten, damit das Suchfeld oben in der Liste nicht am Rand klebt; die Abstände unter Margins einstellen (typisch 8).
+TPPGSearchEdit.Anchors ! In Fenstern mit veränderbarer Größe [akLeft, akTop, akRight] setzen: Das Suchfeld wächst dann mit der Liste darunter in die Breite.
+TPPGSearchEdit.Animation ! An lassen: Hover und Fokus gleiten weich über. RespectSystemSettings = True schaltet das ab, wenn der Anwender in Windows Animationen abgeschaltet hat.
+TPPGSearchEdit.Appearance ! Nur für einzelne Abweichungen, z. B. ein Suchfeld ohne Rand in einer farbigen Kopfleiste. Für die einheitliche Optik aller Felder den StyleManager nehmen.
+TPPGSearchEdit.AutoComplete ! Meist False lassen: Beim Suchfeld wählt der Anwender aus den Vorschlägen. True nur, wenn er ganze Begriffe aus einer festen Liste tippt, z. B. Ländernamen.
+TPPGSearchEdit.AutoSelect ! True lassen: Wer das Suchfeld erneut anklickt, überschreibt die alte Suche gleich mit dem neuen Begriff. False, wenn Suchen meist nur ergänzt werden.
+TPPGSearchEdit.AutoSize ! True lassen, dann passt die Höhe zur Schrift und zu den anderen Eingabefeldern der Maske. Ausschalten nur für eine feste Höhe in einer Kopfleiste.
+TPPGSearchEdit.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; am Formular setzen und über ParentBiDiMode vererben. Lupe und Löschen-Knopf wandern dann nach links.
+TPPGSearchEdit.BorderStyle ! bsNone für Suchfelder, die in eine eigene Fläche eingebettet sind, z. B. eine Kopfleiste mit eigenem Rahmen. In Masken bsSingle lassen.
+TPPGSearchEdit.CharCase ! ecUpperCase für Suchen nach Kürzeln oder Kennzeichen (Artikelnummer „AB-1234“), damit die Eingabe so aussieht wie in den Daten. Für Namen ecNormal.
+TPPGSearchEdit.Color ! Selten nötig: Die Feldfarben je Zustand kommen aus Appearance. Color wirkt nur ohne Dark Mode, VCL-Style und Hochkontrast.
+TPPGSearchEdit.Constraints ! MinWidth = 160 hält das Suchfeld in einer Kopfleiste mit Align breit genug für sinnvolle Suchbegriffe; MaxWidth = 400 verhindert sehr lange Felder auf großen Monitoren.
+TPPGSearchEdit.Cursor ! crDefault lassen; über dem Text zeigt das Feld ohnehin den Textcursor und über Lupe und Löschen-Knopf den Pfeil.
+TPPGSearchEdit.CustomHint ! Für einen Hinweis mit Titel, z. B. „Suche: Name, Ort oder Kundennummer“, einen TPPGCustomHint zuweisen. Für die ganze Anwendung ist TPPGHintManager bequemer.
+TPPGSearchEdit.DoubleBuffered ! Nicht nötig, PPGlow-Felder zeichnen flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGSearchEdit.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; beim Suchfeld praktisch nie gebraucht.
+TPPGSearchEdit.DragMode ! dmManual lassen, sonst startet jeder Klick ins Feld ein Ziehen statt den Cursor zu setzen.
+TPPGSearchEdit.DropDownCount ! 6 bis 8 Vorschläge reichen; wer mehr braucht, sollte genauer tippen. Bei Vorschlägen mit Detailzeile eher weniger, damit die Liste nicht das halbe Fenster verdeckt.
+TPPGSearchEdit.DropDownWidth ! Für schmale Suchfelder in Kopfleisten mit langen Vorschlägen, z. B. 360, damit Name und Detailzeile nicht abgeschnitten werden. 0 = so breit wie das Feld.
+TPPGSearchEdit.Enabled ! Sperren, solange es nichts zu durchsuchen gibt, z. B. bis die Liste geladen ist. Gesperrte Felder bekommen keinen Fokus.
+TPPGSearchEdit.FilterMode ! fmContains (Vorgabe), wenn OnSearch eine feste Liste liefert und das Feld selbst filtern soll. fmNone, wenn OnSearch schon passend filtert (Datenbank-Abfrage), damit nichts doppelt ausgesiebt wird.
+TPPGSearchEdit.Font ! Am Formular einstellen und über ParentFont vererben. Ein größeres Suchfeld (Size 11 bis 12) passt für eine zentrale Suche auf einer Startseite.
+TPPGSearchEdit.Height ! Mit AutoSize bestimmt die Schrift die Höhe; 32 Pixel passt zu Windows 11 und den Buttons daneben.
+TPPGSearchEdit.HelpContext ! Nur mit einer Hilfedatei sinnvoll: die Kontext-ID der Seite, die erklärt, wonach man suchen kann (Name, Nummer, Ort).
+TPPGSearchEdit.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword), z. B. „Suche“.
+TPPGSearchEdit.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGSearchEdit.HighContrastSupport ! True lassen: Im Hochkontrastmodus zeigt das Feld klare Systemfarben, auch für Lupe und Vorschlagsliste.
+TPPGSearchEdit.Hint ! Sagen Sie, wonach gesucht werden kann: „Name, Ort oder Kundennummer“. Der Platzhalter (TextHint) verschwindet beim Tippen, der Hint bleibt beim Verweilen erreichbar.
+TPPGSearchEdit.Images ! Eine Bildliste zuweisen, wenn die Vorschläge Symbole zeigen sollen (ImageIndex der ItemsEx-Einträge), z. B. Person, Firma und Artikel unterscheiden.
+TPPGSearchEdit.ItemHeight ! 0 lassen, dann folgt die Zeilenhöhe der Schrift. Für Touch-Bedienung z. B. 36, damit Vorschläge gut mit dem Finger zu treffen sind.
+TPPGSearchEdit.Items ! Für einfache Vorschläge ohne Detailzeile in OnSearch füllen: Items.Assign(Treffer). Feste Listen (Orte, Abteilungen) können auch im Designer stehen; das Feld filtert sie dann selbst.
+TPPGSearchEdit.ItemsEx ! Für Vorschläge mit Zusatzinfo: in OnSearch Einträge mit Detail (Ort, Nummer) oder Symbol anlegen. So unterscheidet der Anwender „Becker Bau“ in Bremen von „Becker Druck“ in Bonn.
+TPPGSearchEdit.Left ! Position im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern setzen, z. B. Search.SetBounds(16, 16, 320, 32).
+TPPGSearchEdit.Margins ! Abstand zum Rand bei Align, z. B. 8 rundum für ein Suchfeld in einer Kopfleiste. Wirkt nur mit AlignWithMargins.
+TPPGSearchEdit.MaxLength ! Auf die Länge des längsten sinnvollen Suchbegriffs begrenzen, z. B. 40 oder die Feldlänge in der Datenbank; 0 = unbegrenzt.
+TPPGSearchEdit.Name ! Sprechend benennen (edtKundeSuche, edtArtikelFilter), damit OnSearch und OnSubmit im Code sofort zuzuordnen sind.
+TPPGSearchEdit.OnChange ! Für alles, was sofort bei jeder Eingabe passieren soll, z. B. eine Fehlermarkierung zurücknehmen. Die eigentliche Suche gehört in OnSearch, das erst nach der Tipp-Pause kommt.
+TPPGSearchEdit.OnClick ! Selten gebraucht; das Suchfeld meldet den Klick ins Feld. Für das Absenden (Lupe, Enter, Vorschlag) ist OnSubmit da.
+TPPGSearchEdit.OnCloseUp ! Um nach dem Schließen der Vorschläge aufzuräumen, z. B. eine Vorschau des markierten Vorschlags wieder auszublenden.
+TPPGSearchEdit.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Letzte Suchen“ einzutragen, oder es mit Handled := True zu unterdrücken.
+TPPGSearchEdit.OnDblClick ! Selten gebraucht; ein Doppelklick markiert im Feld ein Wort. Nicht für Aktionen nutzen, die der Anwender nicht erwartet.
+TPPGSearchEdit.OnDragDrop ! Wenn ein Begriff aus einer Liste ins Suchfeld gezogen werden darf: hier den Text übernehmen und die Suche starten.
+TPPGSearchEdit.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur aus passenden Listen.
+TPPGSearchEdit.OnDropDown ! Kurz vor dem Aufklappen der Vorschläge, z. B. um Einträge zu sperren, die der Anwender nicht öffnen darf.
+TPPGSearchEdit.OnEndDrag ! Nur bei DragMode = dmAutomatic; beim Suchfeld praktisch nie gebraucht.
+TPPGSearchEdit.OnEnter ! Für einen Hilfetext in der Statusleiste („Name, Ort oder Kundennummer eingeben“), sobald das Feld den Fokus bekommt.
+TPPGSearchEdit.OnExit ! Um eine wartende Suche mit FlushSearch abzuschließen oder einen Hilfetext in der Statusleiste zu löschen.
+TPPGSearchEdit.OnGesture ! Auf Touch-Geräten selten gebraucht; z. B. Wischen nach links leert das Suchfeld.
+TPPGSearchEdit.OnKeyDown ! Für zusätzliche Tasten, z. B. Strg+Enter für „In neuem Fenster öffnen“. Enter, Esc und Pfeil runter erledigt das Suchfeld selbst.
+TPPGSearchEdit.OnKeyPress ! Um unerwünschte Zeichen zu verwerfen (Key := #0), z. B. bei einer Suche nur nach Ziffern.
+TPPGSearchEdit.OnKeyUp ! Selten gebraucht; die Reaktion auf getippten Text gehört in OnChange bzw. OnSearch.
+TPPGSearchEdit.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster) ändern; sonst nicht belegen.
+TPPGSearchEdit.OnMouseDown ! Selten gebraucht; Lupe und Löschen-Knopf arbeiten ohne eigenen Code.
+TPPGSearchEdit.OnMouseEnter ! Um beim Überfahren eine Erklärung in der Statusleiste zu zeigen, wonach man suchen kann.
+TPPGSearchEdit.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGSearchEdit.OnMouseMove ! Selten gebraucht; feuert bei jeder Mausbewegung über dem Feld.
+TPPGSearchEdit.OnMouseUp ! Selten gebraucht; für das Absenden der Suche OnSubmit nehmen.
+TPPGSearchEdit.OnMouseWheel ! Selten gebraucht; Handled := True verhindert, dass das Rad über dem Feld den Parent scrollt.
+TPPGSearchEdit.OnSearch ! Hier die Vorschläge holen: Datenbank abfragen und Items bzw. ItemsEx füllen. Erst ab zwei Zeichen suchen, sonst wird die Liste zu lang; bei leerem Text die Vorschläge leeren.
+TPPGSearchEdit.OnSelect ! Wenn die Wahl eines Vorschlags anders behandelt wird als eine frei getippte Suche, z. B. den Datensatz direkt öffnen. Für beides gemeinsam reicht OnSubmit.
+TPPGSearchEdit.OnStartDrag ! Nur bei DragMode = dmAutomatic; beim Suchfeld praktisch nie gebraucht.
+TPPGSearchEdit.OnSubmit ! Hier die Suche ausführen bzw. den Treffer übernehmen: Ergebnisliste füllen, Datensatz öffnen. Kommt bei Enter, Klick auf die Lupe und Wahl eines Vorschlags.
+TPPGSearchEdit.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGSearchEdit.ParentColor ! False lassen; die Feldfarbe kommt aus Appearance. True nur für randlose Felder (BorderStyle = bsNone) auf farbiger Fläche.
+TPPGSearchEdit.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGSearchEdit.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGSearchEdit.ParentFont ! True lassen, damit das Suchfeld die Formularschrift trägt. Ändern Sie Font, wird es automatisch False.
+TPPGSearchEdit.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann zeigen alle Felder ihre Hints.
+TPPGSearchEdit.PopupMenu ! Für eigene Befehle per Rechtsklick, z. B. „Letzte Suchen“ oder „Erweiterte Suche …“. Ohne Zuweisung zeigt das Feld das übliche Bearbeiten-Menü.
+TPPGSearchEdit.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager, damit Suchfeld und übrige Eingabefelder gleich aussehen.
+TPPGSearchEdit.ReadOnly ! Selten beim Suchfeld; z. B. wenn ein fester Filter aus einem anderen Fenster angezeigt, aber hier nicht geändert werden soll.
+TPPGSearchEdit.SearchDelay ! 200 bis 400 ms für Datenbank- oder Netzwerkabfragen, damit nicht nach jedem Buchstaben gesucht wird. 0 für kleine Listen im Speicher, die sofort filtern sollen.
+TPPGSearchEdit.ShowClearButton ! True lassen: Ein Klick auf „×“ leert die Suche und zeigt wieder alles. Esc leert das Feld ebenfalls.
+TPPGSearchEdit.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGSearchEdit.Sorted ! True für feste Vorschlagslisten (Orte, Abteilungen), damit sie alphabetisch erscheinen. False, wenn OnSearch die Treffer schon nach Relevanz sortiert liefert.
+TPPGSearchEdit.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält das Suchfeld seine eigenen Farben aus Appearance.
+TPPGSearchEdit.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Controls zuweisen; dann folgt das Suchfeld Preset, Hell/Dunkel und Animation der Anwendung.
+TPPGSearchEdit.TabOrder ! Das Suchfeld einer Liste kommt in der Tab-Reihenfolge direkt vor der Liste, damit Tab nach der Eingabe in die Treffer springt.
+TPPGSearchEdit.TabStop ! True lassen, damit die Suche per Tastatur erreichbar ist (Barrierefreiheit).
+TPPGSearchEdit.Tag ! Für mehrere Suchfelder mit einem gemeinsamen OnSearch: Tag = 1 Kunden, 2 Artikel unterscheidet sie (TPPGSearchEdit(Sender).Tag).
+TPPGSearchEdit.Text ! Lesen Sie den Suchbegriff lieber aus dem Parameter SearchText von OnSearch bzw. OnSubmit. Setzen im Code (z. B. eine gespeicherte Suche) löst keine Suche aus; danach selbst filtern.
+TPPGSearchEdit.TextHint ! Sagen Sie, was gesucht werden kann: „Kunde suchen (Name oder Nummer)“. Ein Suchfeld ohne Beschriftung braucht den Platzhalter unbedingt.
+TPPGSearchEdit.TextHintVisibleOnFocus ! True, wenn das Suchfeld beim Öffnen des Fensters schon den Fokus hat: Dann sieht der Anwender den Platzhalter trotzdem, bis er tippt.
+TPPGSearchEdit.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern.
+TPPGSearchEdit.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für normale Bedienung nicht nötig.
+TPPGSearchEdit.UseSystemContextMenu ! False lassen, dann passt das Kontextmenü zur PPGlow-Optik. True, wenn die Anwendung überall das native Windows-Menü zeigen soll.
+TPPGSearchEdit.ValidationHint ! Kurz erklären, was nicht passt und was zu tun ist: „Kein Kunde mit diesem Namen. Bitte einen Vorschlag nehmen.“ Bei pvsNone leeren.
+TPPGSearchEdit.ValidationState ! pvsWarning, wenn die Suche nichts findet; pvsError, wenn ein Pflicht-Treffer fehlt (z. B. unbekannter Kunde); pvsValid nach Übernahme. Bei neuer Eingabe in OnChange auf pvsNone zurücksetzen.
+TPPGSearchEdit.Visible ! Blenden Sie die Suche aus, wenn die Liste darunter nur wenige Einträge hat und Suchen keinen Sinn ergibt.
+TPPGSearchEdit.Width ! 240 bis 320 Pixel für Namen und Nummern; in Kopfleisten mit Anchors oder Align mitwachsen lassen.
+
+# --- Typen ---
+TPPGItem.Badge ! Für eine kurze Zahl oder Markierung rechts im Eintrag, z. B. die Anzahl offener Aufträge eines Kunden oder „neu“. Nur wenige Zeichen, sonst wird der Text verdrängt.
+TPPGItem.Checked ! In Listen mit Kästchen (CheckListBox) den Zustand eines Eintrags setzen, z. B. beim Laden gespeicherter Auswahlen. cbGrayed für „teilweise“.
+TPPGItem.Color ! Sparsam einsetzen, um einzelne Einträge hervorzuheben, z. B. gesperrte Kunden leicht rot. Für Bedeutung zusätzlich Text oder Symbol verwenden, nicht nur Farbe.
+TPPGItem.Detail ! Für eine zweite Zeile mit Zusatzinfo, die beim Unterscheiden hilft, z. B. Ort und Kundennummer unter dem Namen oder der Preis unter dem Artikel.
+TPPGItem.Enabled ! Einträge sperren, die gerade nicht wählbar sind, z. B. ausverkaufte Artikel. Sie bleiben sichtbar, damit der Anwender weiß, dass es sie gibt.
+TPPGItem.FontStyle ! [fsBold] für ungelesene oder wichtige Einträge, z. B. neue Nachrichten oder Favoriten.
+TPPGItem.Group ! Einträge unter Überschriften ordnen, z. B. „Kunden“ und „Lieferanten“ in einer gemeinsamen Vorschlagsliste. Die Einträge einer Gruppe müssen hintereinander stehen.
+TPPGItem.ImageIndex ! Ein Symbol aus Images der Liste, damit Arten von Einträgen auf einen Blick erkennbar sind, z. B. Person, Firma, Artikel. -1 = kein Symbol.
+TPPGItem.Tag ! Die Datensatz-ID des Eintrags ablegen, damit Sie nach der Auswahl den richtigen Datensatz laden, auch wenn zwei Einträge gleich heißen.
+TPPGItem.Text ! Der Text, den der Anwender liest und der bei der Auswahl übernommen wird, z. B. der Kundenname. Zusatzinfos gehören in Detail.
+TPPGItem.TextColor ! Für einzelne Einträge in eigener Schriftfarbe, z. B. grau für archivierte Datensätze. Auf ausreichenden Kontrast zur Fläche achten.
