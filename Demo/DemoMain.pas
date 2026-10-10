@@ -111,7 +111,8 @@ type
     /// oder .png (erste Druckseite mit 120 dpi). False = unbekannt.
     function SaveTableExport(const Key, FileName: string): Boolean;
     /// Selbsttest aller Seiten (/selftest datei.txt). Ergebnis = Anzahl Fehler.
-    function RunSelfTest(const FileName: string): Integer;
+    /// AOnly: nur die Komponentenseite dieser Klasse pruefen (/only TPPGx).
+    function RunSelfTest(const FileName: string; const AOnly: string = ''): Integer;
     /// Katalog: Seite zum Suchtext (Control-Name oder Stichwort), -1 = keine.
     function FindCatalogPage(const SearchText: string): Integer;
   end;
@@ -1527,7 +1528,7 @@ begin
   end;
 end;
 
-function TDemoForm.RunSelfTest(const FileName: string): Integer;
+function TDemoForm.RunSelfTest(const FileName: string; const AOnly: string): Integer;
 var
   I, J, Page: Integer;
   Missing: string;
@@ -1539,8 +1540,12 @@ begin
   try
     FFailures := 0;
     FNotify.Animation.Enabled := False;
+    if (AOnly <> '') and (ShowcasePage(AOnly) < 0) then
+      SelfCheck('Komponentenseite ' + AOnly + ' ist nicht angemeldet', False);
     for I := 0 to FPageObjects.Count - 1 do
     begin
+      if (AOnly <> '') and (I <> ShowcasePage(AOnly)) then
+        Continue;
       ShowPage(I);
       Application.ProcessMessages;
       try
@@ -1552,6 +1557,8 @@ begin
       Application.ProcessMessages;
     end;
     FNotify.CloseAll;
+    if AOnly = '' then
+    begin
     // Katalogsuche
     SelfCheck('Suche: DBGrid -> Datenbank', FindCatalogPage('DBGrid') = PgDatabase);
     SelfCheck('Suche: Toast -> Rueckmeldung', FindCatalogPage('toast') = PgFeedback);
@@ -1612,6 +1619,7 @@ begin
       (FNav.Selected <> nil) and (FNav.Selected.PageIndex = ShowcasePage('TPPGButton')));
     // Die Suite-Texte sind beim Start deutsch (Audit 11e)
     SelfCheck('Sprache: Demo laeuft auf Deutsch', PPGLanguage = 'de');
+    end;
     FReport.Add(Format('%d Pruefungen, %d Fehler', [FReport.Count, FFailures]));
     FReport.SaveToFile(FileName, TEncoding.UTF8);
   finally

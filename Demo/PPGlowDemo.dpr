@@ -26,6 +26,7 @@ program PPGlowDemo;
     /bottomtab <n>           unten rechts: 0 Ereignisse, 1 Code (Pascal), 2 DFM
     /showcode                in den Praxisbeispielen den Code einblenden
     /select <Pfad>           Eigenschaft im Inspektor waehlen (z.B. Appearance.Normal.Color)
+    /only <Klasse>           mit /selftest: nur die Komponentenseite dieser Klasse pruefen
     /selftest <datei.txt>    Szenarien aller Seiten pruefen, Exit-Code = Fehlerzahl
     /hidden                  auf eigenem Windows-Desktop laufen (keine Fenster auf dem Bildschirm) }
 
@@ -214,6 +215,7 @@ var
   ShowCls: string;
   ShowTab, BottomTab: Integer;
   SelectPath: string;
+  OnlyCls: string;
   Tick: Cardinal;
 begin
   // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
@@ -233,6 +235,7 @@ begin
   ShowTab := -1;
   BottomTab := -1;
   SelectPath := '';
+  OnlyCls := '';
   for I := 1 to ParamCount - 1 do
   begin
     if SameText(ParamStr(I), '/screenshot') then
@@ -256,6 +259,8 @@ begin
       BottomTab := StrToIntDef(ParamStr(I + 1), 0);
     if SameText(ParamStr(I), '/select') then
       SelectPath := ParamStr(I + 1);
+    if SameText(ParamStr(I), '/only') then
+      OnlyCls := ParamStr(I + 1);
     // /scroll y  -> aktive Seite scrollen (nach /page)
     if SameText(ParamStr(I), '/scroll') then
       Form.ScrollActivePage(StrToIntDef(ParamStr(I + 1), 0));
@@ -292,7 +297,7 @@ begin
     if SameText(ParamStr(I), '/selftest') then
     begin
       Form.Show;
-      ExitCode := Form.RunSelfTest(ParamStr(I + 1));
+      ExitCode := Form.RunSelfTest(ParamStr(I + 1), OnlyCls);
       Exit;
     end;
 
