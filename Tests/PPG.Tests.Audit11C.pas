@@ -160,6 +160,12 @@ end;
 procedure TAudit11CCase.SetUp;
 begin
   inherited SetUp;
+  // DUnit verwendet die Testinstanz in jedem Lauf wieder (/leaks); die
+  // Datenquellen gehoerten dem alten Formular
+  FData := nil;
+  FOrte := nil;
+  FSource := nil;
+  FOrtSrc := nil;
   FForm.SetBounds(0, 0, 900, 700);
 end;
 

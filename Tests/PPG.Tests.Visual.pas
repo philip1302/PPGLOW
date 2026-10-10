@@ -484,6 +484,9 @@ begin
   inherited SetUp;
   FRtl := False;
   FPPI := 96;
+  // DUnit verwendet die Testinstanz in jedem Lauf wieder (/leaks): Verweise auf
+  // Objekte des alten Formulars zuruecksetzen
+  FTipTarget := nil;
   FForm.SetBounds(0, 0, 640, 520);
   FForm.Show;
   // Datenquelle der DB-Controls (fester Inhalt, erster Datensatz aktiv)
