@@ -1,0 +1,110 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGEdit.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGEdit ---
+TPPGEdit.Align ! Für Suchfelder über einer Liste: Align = alTop, dann läuft das Feld immer über die volle Breite. In Formularen mit Beschriftung links bleibt es alNone.
+TPPGEdit.AlignWithMargins ! Zusammen mit Align einschalten, damit ein angedocktes Suchfeld nicht am Rand klebt; die Abstände stehen in Margins (typisch 8).
+TPPGEdit.Alignment ! taRightJustify für Beträge und Mengen, damit Zahlen untereinander fluchten. Namen, Adressen und Suchbegriffe bleiben linksbündig.
+TPPGEdit.Anchors ! In Dialogen mit veränderbarer Größe [akLeft, akTop, akRight] setzen: Das Feld wird beim Vergrößern breiter, die Beschriftung links bleibt stehen.
+TPPGEdit.AutoSelect ! True lassen: Wer per Tab ins Feld springt, überschreibt den alten Wert direkt. Abschalten bei langen Texten, die man eher ergänzt als ersetzt (z. B. Bemerkung).
+TPPGEdit.AutoSize ! True lassen, dann passt die Höhe immer zur Schrift, auch bei hoher DPI. Abschalten nur, wenn alle Felder eines Formulars exakt eine feste Höhe haben sollen.
+TPPGEdit.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; am Formular setzen und über ParentBiDiMode vererben. Text und Knöpfe im Feld werden dann gespiegelt.
+TPPGEdit.BorderStyle ! bsNone für Felder, die in eine eigene Fläche eingebettet sind, z. B. eine Suchzeile in einer Kopfleiste. In Formularen bsSingle lassen, damit der Anwender das Feld als Eingabe erkennt.
+TPPGEdit.CharCase ! ecUpperCase für Kürzel, Kennzeichen oder Artikelnummern, die immer in Großbuchstaben gespeichert werden; dann muss der Anwender nicht auf die Schreibweise achten.
+TPPGEdit.Color ! Selten nötig: Die Feldfarbe kommt aus Appearance und dem Preset. Für gesperrte Felder lieber ReadOnlyStyle nehmen, damit es auch im Dark Mode stimmt.
+TPPGEdit.Constraints ! MinWidth z. B. 120 für Felder mit Anchors, damit das Feld beim Verkleinern des Fensters nicht unbrauchbar schmal wird.
+TPPGEdit.Cursor ! crDefault lassen: Über dem Text zeigt Windows ohnehin den Textcursor. Andere Werte verwirren eher.
+TPPGEdit.CustomHint ! Für längere Erklärungen mit Titel, z. B. zum Format einer IBAN: einen TPPGCustomHint oder TBalloonHint aufs Formular legen und hier zuweisen.
+TPPGEdit.DoubleBuffered ! Nicht nötig, PPGlow-Felder zeichnen flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGEdit.DragCursor ! Nur mit DragMode = dmAutomatic sichtbar; bei Eingabefeldern fast nie gebraucht.
+TPPGEdit.DragKind ! dkDrag lassen; dkDock ist für Werkzeugleisten gedacht, nicht für Eingabefelder.
+TPPGEdit.DragMode ! dmManual lassen, sonst kann man im Feld keinen Text mehr mit der Maus markieren. Zum Ablegen in das Feld reichen OnDragOver und OnDragDrop.
+TPPGEdit.Enabled ! Sperren Sie Felder, die gerade keine Bedeutung haben, z. B. „Firmenname“, solange „Privatkunde“ gewählt ist. Für Werte, die man lesen und kopieren soll, besser ReadOnly.
+TPPGEdit.Font ! Am Formular einstellen und über ParentFont erben. Für ein großes Suchfeld oben auf einer Seite Font.Size = 12 setzen.
+TPPGEdit.Height ! Bei AutoSize = True ergibt sie sich aus der Schrift (etwa 32 Pixel bei Segoe UI 10). Von Hand nur ändern, wenn AutoSize aus ist.
+TPPGEdit.HelpContext ! Nur mit Hilfedatei: die Kontext-ID der Seite, die F1 im Feld öffnen soll, z. B. die Erklärung zum Feld „Steuernummer“.
+TPPGEdit.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword), praktisch bei HTML-Hilfen.
+TPPGEdit.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGEdit.HideSelection ! False für Felder, deren Markierung auch ohne Fokus sichtbar bleiben soll, z. B. ein Suchen/Ersetzen-Dialog, der den Treffer im Feld zeigt.
+TPPGEdit.Hint ! Erklärt das erwartete Format, z. B. „Kundennummer, 6 Ziffern“. Für Prüfergebnisse nehmen Sie ValidationHint; der Hint bleibt die allgemeine Erklärung.
+TPPGEdit.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern, z. B. Edit.SetBounds(110, 16, 320, 32) rechts neben einer Beschriftung.
+TPPGEdit.Margins ! Abstand bei Align, z. B. Margins.SetBounds(8, 8, 8, 4) für ein Suchfeld über einer Liste. Wirkt nur mit AlignWithMargins.
+TPPGEdit.MaxLength ! Immer auf die Länge der Datenbankspalte setzen (z. B. 40 für den Namen, 5 für die PLZ). Dann schneidet beim Speichern nichts ab und der Anwender merkt die Grenze beim Tippen.
+TPPGEdit.Name ! Sprechende Namen vergeben (edtName, edtEmail, edtSuche) statt PPGEdit1, damit der Code beim Lesen und Speichern verständlich bleibt.
+TPPGEdit.NumbersOnly ! Für reine Ziffernfolgen ohne Rechenwert: PLZ, Kunden- oder Telefonnummernteile. Für Beträge mit Komma und Grenzen nehmen Sie TPPGNumberEdit.
+TPPGEdit.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGEdit.ParentColor ! False lassen: Eingabefelder sollen sich vom Hintergrund abheben. True nur bei BorderStyle = bsNone in einer eigenen Fläche.
+TPPGEdit.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGEdit.ParentDoubleBuffered ! True lassen; bei PPGlow-Feldern ohne sichtbare Wirkung.
+TPPGEdit.ParentFont ! True lassen, damit alle Felder die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGEdit.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten; dann zeigen alle Felder ihre Hints und ValidationHints.
+TPPGEdit.PasswordChar ! Für ein einfaches PIN- oder Kennwortfeld z. B. „●“ setzen. Soll der Anwender das Kennwort aufdecken können, nehmen Sie TPPGPasswordEdit.
+TPPGEdit.PopupMenu ! Für fachliche Zusatzbefehle per Rechtsklick, z. B. „Aus Adressbuch übernehmen“. Ohne eigenes Menü zeigt das Feld das übliche Bearbeiten-Menü.
+TPPGEdit.ReadOnly ! Für Werte, die man sehen und kopieren, aber nicht ändern soll: Kundennummer, Anlagedatum, berechnete Werte. Anders als Enabled = False bleibt der Text gut lesbar und markierbar.
+TPPGEdit.ReadOnlyStyle ! Damit schreibgeschützte Felder auf einen Blick anders aussehen, z. B. Color hellgrau und TextColor clGrayText. Für alle Felder einheitlich, sonst wirkt das Formular unruhig.
+TPPGEdit.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGEdit.StyleElements ! Nur bei VCL-Styles wichtig: seClient herausnehmen, wenn das Feld seine Farben aus Appearance behalten soll.
+TPPGEdit.TabOrder ! In Formularen von oben nach unten vergeben, in der Reihenfolge, in der der Anwender die Daten vor sich hat (Name, Straße, PLZ, Ort).
+TPPGEdit.TabStop ! True lassen; Eingabefelder müssen per Tab erreichbar sein. False höchstens für ReadOnly-Anzeigefelder, die man beim Erfassen überspringen soll.
+TPPGEdit.Tag ! Für gleichartige Felder mit einem gemeinsamen OnChange: Tag = Spaltennummer oder Feld-ID, dann weiß der Handler, welcher Wert sich geändert hat.
+TPPGEdit.Text ! Der Wert des Felds: beim Öffnen aus dem Datensatz setzen, beim Speichern auslesen (meist mit Trim). Setzen löst OnChange aus, also Prüfungen dort nicht doppelt anstoßen.
+TPPGEdit.Top ! Wie Left: im Designer per Maus, im Code bei dynamisch erzeugten Formularen in festen Zeilenabständen (z. B. 40 Pixel).
+TPPGEdit.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für normale Eingabe nicht nötig.
+TPPGEdit.Visible ! Blenden Sie Felder aus, die für den Fall nicht gelten (z. B. „USt-IdNr.“ nur bei Firmenkunden). Beschriftung dazu mit ausblenden.
+TPPGEdit.Width ! Nach der erwarteten Länge wählen: PLZ etwa 80, Name und E-Mail 250 bis 320 Pixel. Gleich breite Felder untereinander wirken ruhiger.
+TPPGEdit.RoundedCorners ! Für Feld-plus-Button-Gruppen: Feld rechts eckig ([pcTopLeft, pcBottomLeft]), der Button daneben links eckig. Einzelne Felder behalten alle vier Ecken.
+TPPGEdit.Preset ! Einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager. Ein Feld mit eigenem Preset wirkt im Formular wie ein Fremdkörper.
+TPPGEdit.StyleManager ! Einen TPPGStyleManager aufs Formular oder Datenmodul legen und allen Feldern zuweisen. Dann wechselt ein Befehl Optik und Hell/Dunkel für alle.
+TPPGEdit.Appearance ! Nur für Ausnahmen, z. B. ein hervorgehobenes Suchfeld mit Akzentrand (Normal.BorderColor). Für Pflicht- oder Fehlerfelder nehmen Sie ValidationState statt eigener Farben.
+TPPGEdit.Animation ! An lassen; der Fokus- und Hover-Übergang wirkt ruhiger. RespectSystemSettings beachtet die Windows-Einstellung „Animationen anzeigen“.
+TPPGEdit.Images ! Bildliste für die Knöpfe im Feld (LeftButton, RightButton). Eine Liste für das ganze Formular anlegen; bei hoher DPI eine TVirtualImageList.
+TPPGEdit.LeftButton ! Für ein Symbol vor dem Text, das den Zweck zeigt oder eine Auswahl öffnet, z. B. Person-Symbol mit Menü „Suchen in: Name / Ort“.
+TPPGEdit.RightButton ! Für eine Aktion zum Wert, z. B. „E-Mail schreiben“ hinter der Adresse oder „…“ für einen Auswahldialog. Sperren Sie ihn über RightButton.Enabled, solange der Wert ungültig ist.
+TPPGEdit.ShowClearButton ! Für Such- und Filterfelder einschalten: Ein Klick auf „×“ leert das Feld und löst OnChange aus, die Liste zeigt wieder alles. In normalen Formularfeldern eher aus.
+TPPGEdit.TextHint ! Zeigt im leeren Feld, was hinein gehört („Kunde suchen …“, „name@firma.de“). Ersetzt keine Beschriftung, denn er verschwindet beim Tippen.
+TPPGEdit.UseSystemContextMenu ! True, wenn das Feld genau das Windows-Menü zeigen soll (z. B. für Eingabehilfen oder Unicode-Steuerzeichen). Sonst False lassen, dann passt das Menü zur PPGlow-Optik.
+TPPGEdit.TextHintVisibleOnFocus ! True für Felder, die oft per Tab erreicht werden: Der Hinweis auf das Format bleibt sichtbar, bis der Anwender tippt.
+TPPGEdit.ValidationState ! In OnChange oder OnExit nach der Prüfung setzen: pvsError bei ungültiger E-Mail, pvsWarning bei unvollständiger PLZ, pvsValid wenn alles stimmt, pvsNone im leeren Feld.
+TPPGEdit.ValidationHint ! Immer zusammen mit ValidationState setzen und konkret formulieren, was fehlt („PLZ hat 5 Ziffern“). Der Text erscheint als Tooltip und wird vom Screenreader vorgelesen.
+TPPGEdit.HighContrastSupport ! True lassen: Anwender mit Hochkontrast sehen klare Systemfarben. Abschalten nur für reine Vorschau-Felder.
+TPPGEdit.OnChange ! Für alles, was sofort auf die Eingabe reagiert: Liste filtern, Eingabe prüfen (ValidationState), Speichern-Button freigeben. Feuert auch beim Setzen von Text im Code.
+TPPGEdit.OnClick ! Selten gebraucht; der Klick setzt nur die Schreibmarke. Für Aktionen zum Wert nehmen Sie LeftButton oder RightButton.
+TPPGEdit.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen (z. B. „Einfügen“ sperren) oder mit Handled := True zu unterdrücken.
+TPPGEdit.OnDblClick ! Für eine Abkürzung: Doppelklick in ein Kundennummer-Feld öffnet den Kunden. Normalerweise markiert der Doppelklick nur ein Wort.
+TPPGEdit.OnDragDrop ! Zum Ablegen in das Feld, z. B. einen Kunden aus einer Liste auf das Feld „Ansprechpartner“ ziehen und den Namen übernehmen.
+TPPGEdit.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur aus passenden Listen.
+TPPGEdit.OnEndDock ! Bei Eingabefeldern praktisch nie gebraucht (nur mit DragKind = dkDock).
+TPPGEdit.OnEndDrag ! Nur wenn das Feld selbst gezogen wird (DragMode = dmAutomatic); bei Eingabefeldern selten.
+TPPGEdit.OnEnter ! Um beim Betreten einen Hilfetext in der Statusleiste zu zeigen („Format: name@firma.de“) oder eine passende Vorauswahl zu laden.
+TPPGEdit.OnExit ! Guter Ort für Prüfungen, die erst nach der vollständigen Eingabe Sinn ergeben, z. B. die PLZ-Länge oder eine Dublettenprüfung der Kundennummer.
+TPPGEdit.OnGesture ! Auf Touch-Geräten, z. B. Wischen nach links leert ein Suchfeld. Für normale Eingabe nicht nötig.
+TPPGEdit.OnKeyDown ! Für Tasten mit Bedeutung im Feld: Enter übernimmt den ersten Suchtreffer, Pfeil runter springt in die Ergebnisliste. Key := 0 verhindert die Standardwirkung.
+TPPGEdit.OnKeyPress ! Um einzelne Zeichen umzuwandeln oder zu verwerfen, z. B. Komma durch Punkt ersetzen (Key := '.'). Für reine Ziffern reicht NumbersOnly.
+TPPGEdit.OnKeyUp ! Selten; z. B. eine Suche erst starten, wenn eine Taste losgelassen wurde. Meist ist OnChange der bessere Ort.
+TPPGEdit.OnLeftButtonClick ! Aktion des linken Knopfs, z. B. eine Auswahl öffnen. Hat der Knopf ein DropDownMenu, öffnet sich das Menü nach dem Ereignis von selbst.
+TPPGEdit.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGEdit.OnMouseDown ! Selten bei Eingabefeldern; die Maus setzt die Schreibmarke. Für Aktionen besser die Knöpfe im Feld.
+TPPGEdit.OnMouseEnter ! Um beim Überfahren eine Erklärung zum Feld in der Statusleiste zu zeigen. Die Hover-Optik macht das Feld selbst.
+TPPGEdit.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGEdit.OnMouseMove ! Selten; feuert bei jeder Bewegung. Für Hinweise reicht Hint.
+TPPGEdit.OnMouseUp ! Selten bei Eingabefeldern; z. B. nach dem Markieren mit der Maus die Markierung auswerten (SelText).
+TPPGEdit.OnMouseWheel ! Z. B. in einem Feld für eine laufende Nummer mit dem Rad hoch- und runterzählen. Für echte Zahlenfelder nehmen Sie TPPGSpinEdit.
+TPPGEdit.OnRightButtonClick ! Aktion des rechten Knopfs, z. B. E-Mail-Programm öffnen, Suchdialog zeigen oder den Wert nachschlagen. Hat der Knopf ein DropDownMenu, öffnet es sich danach von selbst.
+TPPGEdit.OnStartDock ! Bei Eingabefeldern praktisch nie gebraucht (nur mit DragKind = dkDock).
+TPPGEdit.OnStartDrag ! Nur wenn das Feld selbst gezogen wird (DragMode = dmAutomatic); hier ein eigenes DragObject setzen.
+
+# --- Typen ---
+TPPGEditButton.DropDownMenu ! Für Varianten zum Feld, z. B. „Suchen in: Name / Ort“ oder zuletzt verwendete Werte. Ohne Bild zeigt der Knopf dann einen Pfeil.
+TPPGEditButton.Enabled ! Den Knopf sperren, solange seine Aktion nicht geht, z. B. „E-Mail schreiben“ nur bei gültiger Adresse.
+TPPGEditButton.ImageIndex ! Symbol aus Images des Felds, das die Aktion zeigt (Brief, Lupe, Person). -1 lassen, wenn der Knopf nur ein Menü öffnet; dann erscheint ein Pfeil.
+TPPGEditButton.Visible ! Einschalten, um den Knopf zu zeigen; per Code ausblenden, wenn die Aktion für den Datensatz nicht gilt.
+TPPGElementStyle.Color ! Eigene Fläche für den Bereich, z. B. hellgrau für schreibgeschützte Felder oder die Kopfzeile. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Eigene Textfarbe, z. B. clGrayText für Anzeige- und Nur-Lese-Werte. Auf genug Kontrast zur Fläche achten.
+TPPGElementStyle.BorderColor ! Eigene Rand- oder Linienfarbe, z. B. ein blasser Rand für Nur-Lese-Felder, damit sie weniger nach Eingabe aussehen.
+TPPGElementStyle.DarkColor ! Gegenstück zu Color im Dark Mode. Setzen Sie es immer, wenn Sie Color geändert haben, sonst greift im Dunkeln die Preset-Farbe.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor im Dark Mode; hell genug wählen, damit der Text auf dunkler Fläche lesbar bleibt.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor im Dark Mode.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Für nur fett oder kursiv reicht FontStyle.
+TPPGElementStyle.Font ! Nur für eine ganz andere Schrift im Bereich, z. B. kleiner in einer Fußzeile. Setzt ParentFont automatisch auf False.
+TPPGElementStyle.FontStyle ! Für eine Hervorhebung ohne eigene Schrift, z. B. [fsBold] für Kopfzeilen oder [fsItalic] für Nur-Lese-Werte.
