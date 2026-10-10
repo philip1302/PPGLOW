@@ -1,0 +1,103 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite
+# TPPGCheckComboBox (Gruppe "Auswahl"). Format: siehe Build\make-docs.ps1.
+
+# --- TPPGCheckComboBox: eigene Eigenschaften ---
+TPPGCheckComboBox.Items ! Die Werte, aus denen der Anwender mehrere wählt, z. B. Abteilungen, Wochentage oder Status für einen Listenfilter. Kommen sie aus der Datenbank, füllen Sie Items beim Öffnen des Formulars oder in OnDropDown.
+TPPGCheckComboBox.CheckedText ! Der bequemste Weg zum Speichern und Laden: Settings.Values['Tage'] := Combo.CheckedText bzw. umgekehrt. Setzen aus Code löst kein OnChange aus; prüfen oder filtern Sie danach selbst.
+TPPGCheckComboBox.Delimiter ! An das Ziel anpassen: „," für INI-Werte und CSV-artige Felder, „;" (Vorgabe), wenn die Einträge selbst Kommas enthalten können. Das Zeichen darf in keinem Eintrag vorkommen.
+TPPGCheckComboBox.DisplayDelimiter ! Meist „, " lassen. „ / " oder „ · " passt, wenn die Namen selbst Kommas enthalten; auf CheckedText hat es keinen Einfluss.
+TPPGCheckComboBox.DisplayMode ! cdmCompact für Filter in schmalen Leisten („Rot, Blau, +2"), cdmList, wenn das Feld breit genug für alle Namen ist, cdmCount bei langen Listen wie Regionen oder Kostenstellen („5 ausgewählt").
+TPPGCheckComboBox.MaxDisplayItems ! So viele Namen, wie in die Feldbreite passen: 2 für ein 200 px breites Filterfeld, 3 bis 4 bei breiten Feldern. Der Rest erscheint als „+n".
+TPPGCheckComboBox.ShowSelectAll ! Einschalten, wenn „alles" eine häufige Wahl ist, z. B. bei Status- oder Wochentagfiltern. Die Zeile zeigt auch an, ob alle, einige oder keine Einträge gewählt sind.
+TPPGCheckComboBox.FilterThreshold ! Bei langen Listen (Länder, Kunden, Kostenstellen) senken, z. B. auf 10, damit man durch Tippen sucht statt zu scrollen. 0 schaltet die Filterzeile ganz ab, etwa bei festen kurzen Listen.
+TPPGCheckComboBox.DropDownCount ! 8 bis 12 Zeilen sind angenehm; bei Wochentagen 7, damit alles ohne Scrollen sichtbar ist. Sehr lange Listen besser mit Filterzeile (FilterThreshold) statt mit vielen Zeilen.
+TPPGCheckComboBox.OnItemCheck ! Für Prüfungen und Abhängigkeiten je Eintrag, z. B. „mindestens ein Tag" melden oder beim Haken auf „Alle Filialen" die einzelnen sperren. Index nennt den Eintrag, Checked[Index] den neuen Zustand.
+TPPGCheckComboBox.OnChange ! Hier reagieren Sie auf jede Änderung der Auswahl, z. B. eine Liste sofort neu filtern oder einen Speichern-Button freigeben. Code-Änderungen (CheckedText, Checked[]) lösen es nicht aus.
+TPPGCheckComboBox.OnDropDown ! Um die Einträge erst beim Öffnen zu laden oder zu aktualisieren, z. B. die aktuellen Mitarbeiter aus der Datenbank. Bereits gesetzte Haken bleiben beim gleichen Text erhalten.
+TPPGCheckComboBox.OnCloseUp ! Für teure Aktionen nach der fertigen Auswahl, z. B. eine Datenbankabfrage erst nach dem Schließen statt bei jedem Haken in OnChange.
+TPPGCheckComboBox.OnClick ! Feuert wie OnChange bei jedem Haken des Anwenders (wie bei der ComboBox). Für neue Formulare OnChange oder OnItemCheck nehmen; OnClick ist für übernommenen VCL-Code da.
+
+# --- TPPGCheckComboBox: PPGlow-Eigenschaften ---
+TPPGCheckComboBox.Preset ! Am besten über einen TPPGStyleManager für die ganze Anwendung festlegen, damit Filterfelder, Edits und Buttons gleich aussehen.
+TPPGCheckComboBox.StyleManager ! Den StyleManager des Formulars zuweisen; dann folgt das Feld samt Aufklappliste der Optik und dem Hell/Dunkel-Wechsel der Anwendung.
+TPPGCheckComboBox.Appearance ! Nur für einzelne Hervorhebungen anpassen, z. B. einen kräftigeren Rand für einen Pflichtfilter. Die Haken in der Liste nehmen die Farben aus Appearance.Checked.
+TPPGCheckComboBox.Animation ! An lassen; Hover- und Fokuswechsel wirken dann ruhiger. Die Windows-Einstellung „Animationen anzeigen" wird mit RespectSystemSettings beachtet.
+TPPGCheckComboBox.TextHint ! Sagt, was ohne Haken gilt: „Alle Status" bei Filtern oder „Bitte wählen" bei Pflichtangaben. So versteht der Anwender das leere Feld richtig.
+TPPGCheckComboBox.ValidationState ! Nach einer Prüfung setzen, z. B. pvsError, wenn bei einer Pflichtangabe kein Eintrag angehakt ist; nach der Korrektur wieder pvsNone.
+TPPGCheckComboBox.ValidationHint ! Die konkrete Erklärung zum Fehler („Bitte mindestens einen Tag ankreuzen."). Sie erscheint als Tooltip und wird vom Screenreader vorgelesen.
+TPPGCheckComboBox.HighContrastSupport ! True lassen: Im Windows-Hochkontrast sind Feld, Haken und Liste dann in klaren Systemfarben gezeichnet.
+TPPGCheckComboBox.BorderStyle ! bsSingle für Formulare; bsNone, wenn das Feld in eine eigene Fläche eingebettet ist, z. B. in eine Filterzeile über einem Grid.
+TPPGCheckComboBox.ReadOnly ! Für Anwender ohne Bearbeitungsrecht: Die Auswahl bleibt sichtbar und die Liste lässt sich öffnen, aber Haken ändern sich nicht.
+TPPGCheckComboBox.ReadOnlyStyle ! Damit gesperrte Felder sofort als nicht änderbar erkennbar sind, z. B. eine leicht graue Fläche (Color) bei ReadOnly.
+TPPGCheckComboBox.TabStop ! True lassen; das Feld wird per Tab erreicht und mit Leertaste oder Alt+Pfeil runter aufgeklappt.
+
+# --- TPPGCheckComboBox: VCL-Eigenschaften ---
+TPPGCheckComboBox.Align ! Meist alNone. alTop in einer schmalen Seitenleiste mit Filtern untereinander, dann mit AlignWithMargins für Abstände.
+TPPGCheckComboBox.AlignWithMargins ! Zusammen mit Align einschalten, damit untereinander angedockte Filterfelder nicht aneinanderkleben (Margins 4 bis 8).
+TPPGCheckComboBox.Anchors ! In größenveränderlichen Formularen [akLeft, akTop, akRight], damit das Feld mitwächst und mehr Namen zeigt.
+TPPGCheckComboBox.AutoSize ! True lassen: Die Höhe passt dann zur Schrift und das Feld ist so hoch wie Edits und ComboBoxen daneben.
+TPPGCheckComboBox.BiDiMode ! Nur für arabische oder hebräische Oberflächen; am Formular setzen und über ParentBiDiMode übernehmen.
+TPPGCheckComboBox.Color ! Selten nötig; die Feldfarbe kommt aus Appearance bzw. dem Preset. Color wirkt nur ohne Dark Mode, VCL-Style und Hochkontrast.
+TPPGCheckComboBox.Constraints ! MinWidth setzen (z. B. 160), damit ein mitwachsendes Feld beim Verkleinern noch mindestens einen Namen zeigt.
+TPPGCheckComboBox.Cursor ! crDefault lassen; das Feld zeigt beim Überfahren schon, dass es klickbar ist.
+TPPGCheckComboBox.CustomHint ! Für Hinweise mit Titel und Symbol einen TBalloonHint oder TPPGCustomHint zuweisen, z. B. für erklärende Filter in Berichtsdialogen.
+TPPGCheckComboBox.DoubleBuffered ! Nicht nötig, PPGlow zeichnet immer flackerfrei; steht nur da, damit Formulare aus der VCL laden.
+TPPGCheckComboBox.DragCursor ! Nur mit DragMode = dmAutomatic sichtbar; bei Auswahlfeldern praktisch nie gebraucht.
+TPPGCheckComboBox.DragMode ! dmManual lassen, sonst startet ein Klick zum Aufklappen ein Ziehen.
+TPPGCheckComboBox.Enabled ! Sperren, wenn der Filter gerade nicht gilt, z. B. „Wochentage" nur bei Wiederholung „wöchentlich". Für reines Ansehen besser ReadOnly.
+TPPGCheckComboBox.Font ! Über ParentFont die Formularschrift übernehmen. Eine eigene Schrift gilt für Feld und Aufklappliste gemeinsam.
+TPPGCheckComboBox.Height ! Mit AutoSize bestimmt die Schrift die Höhe; sonst 32 px wie die übrigen Eingabefelder im Windows-11-Stil.
+TPPGCheckComboBox.HelpContext ! Kontext-ID der Hilfeseite, die F1 im Feld öffnet, z. B. eine Seite, die die Filterwerte erklärt.
+TPPGCheckComboBox.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword).
+TPPGCheckComboBox.HelpType ! htKeyword, wenn die Hilfe Stichwörter nutzt, sonst htContext; ohne Hilfedatei egal.
+TPPGCheckComboBox.Hint ! Erklärt, was die Auswahl bewirkt („An diesen Tagen geht der Bericht raus"). Mit ShowHint am Formular einschalten.
+TPPGCheckComboBox.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Filtern, z. B. Combo.SetBounds(X, 40, 200, 32).
+TPPGCheckComboBox.Margins ! Abstände bei Align, z. B. Margins.Bottom = 8 zwischen untereinander angedockten Filtern. Wirkt nur mit AlignWithMargins.
+TPPGCheckComboBox.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGCheckComboBox.ParentColor ! False lassen; das Feld hat seine eigene Feldfarbe aus Appearance.
+TPPGCheckComboBox.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGCheckComboBox.ParentDoubleBuffered ! True lassen; ohne sichtbare Wirkung bei PPGlow-Controls.
+TPPGCheckComboBox.ParentFont ! True lassen, damit Feld und Liste die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGCheckComboBox.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten.
+TPPGCheckComboBox.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Auswahl als Vorlage speichern" oder „Alle abwählen".
+TPPGCheckComboBox.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGCheckComboBox.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält das Feld seine eigenen PPGlow-Farben.
+TPPGCheckComboBox.TabOrder ! So vergeben, dass Tab in der Reihenfolge der Beschriftungen durch die Filter läuft.
+TPPGCheckComboBox.Tag ! Bei mehreren gleichartigen Filtern mit gemeinsamem OnChange: Tag nennt die Spalte, nach der gefiltert wird.
+TPPGCheckComboBox.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern.
+TPPGCheckComboBox.Touch ! Nur für Touch-Geräte mit eigenen Gesten; Aufklappen und Anhaken gehen auch ohne Einstellung per Tippen.
+TPPGCheckComboBox.Visible ! Filter ausblenden, die für den Anwender nicht gelten, z. B. „Filiale" in einer Einzelstandort-Lizenz.
+TPPGCheckComboBox.Width ! So breit, dass die üblichen zwei bis drei Namen hineinpassen, typisch 200 bis 300 px; die Aufklappliste ist mindestens so breit wie das Feld.
+TPPGCheckComboBox.Name ! Sprechend benennen, z. B. cbxStatusFilter oder cbxBerichtstage, damit der Code in OnChange lesbar bleibt.
+
+# --- TPPGCheckComboBox: VCL-Ereignisse ---
+TPPGCheckComboBox.OnEnter ! Z. B. einen Hilfetext zum Filter in der Statusleiste zeigen, sobald das Feld den Fokus bekommt.
+TPPGCheckComboBox.OnExit ! Guter Ort für die Prüfung einer Pflichtauswahl beim Verlassen, z. B. ValidationState setzen, wenn nichts angehakt ist.
+TPPGCheckComboBox.OnKeyDown ! Für eigene Tasten am geschlossenen Feld, z. B. Entf zum Leeren der Auswahl (CheckAll(False)). Leertaste und Alt+Pfeil öffnen schon die Liste.
+TPPGCheckComboBox.OnKeyPress ! Selten nötig; getippte Zeichen filtern in der offenen Liste schon selbst.
+TPPGCheckComboBox.OnKeyUp ! Selten nötig; z. B. um nach einer eigenen Taste aus OnKeyDown die Anzeige zu aktualisieren.
+TPPGCheckComboBox.OnDblClick ! Selten gebraucht; z. B. um per Doppelklick auf das Feld einen größeren Auswahldialog zu öffnen.
+TPPGCheckComboBox.OnMouseDown ! Selten nötig; Aufklappen per Klick macht das Feld selbst.
+TPPGCheckComboBox.OnMouseUp ! Gegenstück zu OnMouseDown; für die Auswahl selbst OnChange nehmen.
+TPPGCheckComboBox.OnMouseMove ! Feuert bei jeder Mausbewegung über dem Feld; für Hover-Optik reicht Appearance.Hot.
+TPPGCheckComboBox.OnMouseEnter ! Um beim Überfahren die vollständige Auswahl in einer Statuszeile zu zeigen, wenn das Feld sie nur gekürzt anzeigt.
+TPPGCheckComboBox.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Statuszeile wieder leeren.
+TPPGCheckComboBox.OnMouseWheel ! Selten nötig; Handled := True verhindert, dass das Rad den umgebenden Bereich scrollt.
+TPPGCheckComboBox.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster ohne Aktivierung) belegen.
+TPPGCheckComboBox.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Alle abwählen" sperren, wenn nichts angehakt ist.
+TPPGCheckComboBox.OnDragDrop ! Selten; z. B. Einträge aus einer Liste auf das Feld ziehen, um sie anzuhaken.
+TPPGCheckComboBox.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur aus passenden Quellen.
+TPPGCheckComboBox.OnStartDrag ! Nur mit DragMode = dmAutomatic; bei Auswahlfeldern praktisch nie gebraucht.
+TPPGCheckComboBox.OnEndDrag ! Nur mit DragMode = dmAutomatic; Target = nil heißt, das Ziehen wurde abgebrochen.
+TPPGCheckComboBox.OnGesture ! Auf Touch-Geräten eine Wischgeste auswerten, z. B. Wischen nach links leert die Auswahl.
+
+# --- Typen ---
+TPPGElementStyle.Color ! Eigene Flächenfarbe für den Bereich, z. B. ein helles Grau für gesperrte (ReadOnly) Felder. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Eigene Textfarbe, z. B. clGrayText für schreibgeschützte Felder; auf ausreichenden Kontrast achten.
+TPPGElementStyle.BorderColor ! Eigene Randfarbe, z. B. ein blasser Rand, damit ein gesperrtes Feld zurücktritt.
+TPPGElementStyle.DarkColor ! Gegenstück zu Color für den Dark Mode. Setzen, sobald Sie Color selbst gesetzt haben, sonst bleibt die Fläche im Dunkeln hell.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor für den Dark Mode; hell wählen, damit der Text auf dunklem Grund lesbar ist.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor für den Dark Mode.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Eine eigene Schrift (Font) setzt es automatisch auf False.
+TPPGElementStyle.Font ! Nur für eine abweichende Schrift des Bereichs, z. B. kursiv für schreibgeschützte Werte. Für fett reicht FontStyle.
+TPPGElementStyle.FontStyle ! Einfacher als eine eigene Font: [fsBold] für eine hervorgehobene Kopfzeile oder [fsItalic] für gesperrte Werte.
