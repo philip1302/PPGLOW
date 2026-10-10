@@ -1,0 +1,102 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGFileEdit.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGFileEdit ---
+TPPGFileEdit.Preset ! Nicht am einzelnen Dateifeld setzen, sondern einmal für die Anwendung über einen TPPGStyleManager; dann sehen Dateifeld, Edit und Buttons im Formular gleich aus.
+TPPGFileEdit.StyleManager ! Denselben TPPGStyleManager wie bei den übrigen Feldern des Formulars zuweisen. Dann wechselt das Dateifeld mit, wenn die Anwendung auf Dunkel oder ein anderes Preset umschaltet.
+TPPGFileEdit.Appearance ! Selten nötig: Rand und Fläche kommen aus dem Preset. Nur für ein besonders hervorgehobenes Pflichtfeld, z. B. die Quelldatei eines Imports, die Randfarbe anpassen.
+TPPGFileEdit.Animation ! An lassen; der weiche Übergang von Rand und Fokus wirkt ruhiger. RespectSystemSettings sorgt dafür, dass er bei abgeschalteten Windows-Animationen entfällt.
+TPPGFileEdit.Kind ! fkOpenFile für Importe und Anhänge (Datei muss es geben), fkSaveFile für Export- und Sicherungsziele, fkFolder für Arbeits-, Ablage- oder Sicherungsordner.
+TPPGFileEdit.Filter ! Nur die Dateitypen anbieten, die das Programm lesen kann, z. B. 'CSV-Dateien (*.csv)|*.csv|Alle Dateien (*.*)|*.*'. Den Eintrag „Alle Dateien“ hinten anhängen, damit falsch benannte Dateien trotzdem wählbar bleiben.
+TPPGFileEdit.FilterIndex ! Den häufigsten Typ vorwählen, z. B. 2 für Excel, wenn der Filter CSV und Excel anbietet. Nach dem Dialog steht hier der zuletzt gewählte Typ; speichern Sie ihn mit den Einstellungen.
+TPPGFileEdit.InitialDir ! Auf einen sinnvollen Startordner stellen, z. B. TPath.GetDocumentsPath oder den zuletzt benutzten Ordner aus den Einstellungen. Steht schon ein Pfad im Feld, startet der Dialog dort.
+TPPGFileEdit.DefaultExt ! Bei Kind = fkSaveFile immer setzen (ohne Punkt, z. B. 'zip'): Tippt der Anwender nur „Sicherung“, wird daraus „Sicherung.zip“ und die Datei lässt sich später wieder öffnen.
+TPPGFileEdit.DialogTitle ! Sagt, wofür gewählt wird: „Kundendaten importieren“ statt „Öffnen“. Besonders wichtig, wenn ein Formular mehrere Dateifelder hat.
+TPPGFileEdit.MustExist ! Für Quelldateien und Zielordner einschalten: Ein vertippter Pfad wird beim Verlassen rot markiert, ohne dass eine Meldung den Anwender unterbricht. Für Speicherziele (fkSaveFile) prüft es nur den Ordner.
+TPPGFileEdit.AcceptDrop ! An lassen, wenn Anwender Dateien oft schon im Explorer offen haben (Importe, Anhänge). Bei reinen Speicherzielen ausschalten, dort wird nichts abgelegt.
+TPPGFileEdit.AutoComplete ! An lassen: Wer Pfade tippt, bekommt Ordner und Dateien wie in der Adresszeile des Explorers vorgeschlagen. Bei Kind = fkFolder schlägt es nur Ordner vor.
+TPPGFileEdit.ShowClearButton ! Einschalten, wenn das Feld optional ist, z. B. ein Logo für Briefe: Der Anwender löscht die Auswahl mit einem Klick, statt den Pfad zu markieren und zu entfernen.
+TPPGFileEdit.TextHint ! Erklärt das leere Feld, z. B. „Datei angeben oder aus dem Explorer ziehen“. Ersetzt kein Label, sondern ergänzt es um den Hinweis, wie man etwas einträgt.
+TPPGFileEdit.TextHintVisibleOnFocus ! Einschalten, wenn der Hinweis ein Muster zeigt, z. B. „z. B. Kunden-2026.zip“: Er bleibt dann beim Anklicken stehen, bis der Anwender tippt.
+TPPGFileEdit.UseSystemContextMenu ! Meist False lassen: Das PPGlow-Menü passt zum Preset und ist übersetzt. True nur, wenn die Anwendung überall das Windows-Menü zeigen soll.
+TPPGFileEdit.ValidationState ! Für eigene Prüfungen über MustExist hinaus, z. B. pvsWarning, wenn die gewählte Datei älter als 30 Tage ist. Zusammen mit ValidationHint setzen, damit der Anwender den Grund sieht.
+TPPGFileEdit.ValidationHint ! Kurz sagen, was nicht stimmt und was zu tun ist, z. B. „Datei ist schreibgeschützt – bitte eine Kopie wählen“. Bei MustExist füllt das Feld den Hinweis selbst.
+TPPGFileEdit.HighContrastSupport ! True lassen: Anwender mit Windows-Hochkontrast sehen Rand, Text und Knopf dann in den Systemfarben.
+TPPGFileEdit.BorderStyle ! bsSingle in Formularen; bsNone nur, wenn das Feld in eine eigene Fläche eingebettet wird, z. B. in eine Zeile einer Einstellungsliste mit eigenem Rahmen.
+TPPGFileEdit.MaxLength ! Meist 0 lassen; Windows-Pfade können lang sein. Nur begrenzen, wenn der Pfad in ein Datenbankfeld fester Länge geschrieben wird, z. B. 255.
+TPPGFileEdit.ReadOnly ! Für Pfade, die nur angezeigt werden, z. B. der Speicherort der Lizenzdatei. Der Anwender kann ihn markieren und kopieren; Knopf und Ablegen sind gesperrt.
+TPPGFileEdit.ReadOnlyStyle ! Damit ein schreibgeschützter Pfad nicht wie ein Eingabefeld aussieht: Fläche etwas grauer (Color) und Text gedämpft (TextColor), im Dunkeln über DarkColor.
+TPPGFileEdit.TabStop ! True lassen, damit das Feld in der Tab-Reihenfolge liegt; per Tastatur öffnet F4 oder Alt+Pfeil runter den Dialog.
+TPPGFileEdit.Text ! Den gespeicherten Pfad beim Öffnen des Formulars laden (Feld.Text := Einstellungen.Importpfad) und beim Speichern zurückschreiben. Setzen löst OnChange aus; ohne OnChange geht es über FileName.
+TPPGFileEdit.Align ! In Einstellungsseiten mit Label darüber alTop, damit das Feld die ganze Breite nutzt; zusammen mit AlignWithMargins für Abstand.
+TPPGFileEdit.AlignWithMargins ! Mit Align = alTop einschalten, damit untereinander stehende Pfadfelder nicht aneinanderkleben; die Abstände kommen aus Margins.
+TPPGFileEdit.Anchors ! [akLeft, akTop, akRight] in Dialogen mit veränderbarer Größe: Das Feld wird mit dem Fenster breiter, und lange Pfade bleiben lesbar.
+TPPGFileEdit.AutoSize ! True lassen: Die Höhe folgt der Schrift, und das Feld passt zu den Edits daneben. Ausschalten nur für eine feste Zeilenhöhe in einem Raster.
+TPPGFileEdit.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern, am besten am Formular. Pfade selbst bleiben von links nach rechts lesbar.
+TPPGFileEdit.Color ! Selten nötig, die Feldfarbe kommt aus dem Preset. Wirkt nur ohne Dark Mode und VCL-Style; für ReadOnly lieber ReadOnlyStyle nehmen.
+TPPGFileEdit.Constraints ! Mit Anchors oder Align: MinWidth = 240 verhindert, dass das Feld in einem schmalen Fenster so kurz wird, dass kein Pfad mehr lesbar ist.
+TPPGFileEdit.Enabled ! Sperren, solange die Einstellung nicht gilt, z. B. das Sicherungsziel, wenn „Automatische Sicherung“ aus ist. Gesperrt öffnet auch der Knopf keinen Dialog.
+TPPGFileEdit.Font ! Am Formular einstellen und über ParentFont erben. Für sehr lange Pfade kann eine etwas kleinere Schrift helfen, damit mehr vom Pfad sichtbar ist.
+TPPGFileEdit.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGFileEdit.ParentColor ! False lassen: Ein Eingabefeld hebt sich mit eigener Fläche vom Formular ab. True nur für ein eingebettetes Feld mit BorderStyle = bsNone.
+TPPGFileEdit.ParentFont ! True lassen, damit das Dateifeld dieselbe Schrift wie die übrigen Felder trägt. Ändern Sie Font, wird es automatisch False.
+TPPGFileEdit.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten; dann zeigen alle Felder ihre Hinweise.
+TPPGFileEdit.PopupMenu ! Für zusätzliche Befehle zum Pfad, z. B. „Im Explorer zeigen“ oder „Zuletzt verwendet“. Ohne eigenes Menü zeigt das Feld Ausschneiden, Kopieren und Einfügen.
+TPPGFileEdit.ShowHint ! Einmal am Formular einschalten statt am Feld; dann bleibt ParentShowHint True.
+TPPGFileEdit.StyleElements ! Nur bei VCL-Styles wichtig: Ohne seClient behält das Feld die Farben aus dem PPGlow-Preset.
+TPPGFileEdit.TabOrder ! So vergeben, dass Tab in der Lesereihenfolge läuft: erst Ordner, dann Dateiname, dann der Button, der damit arbeitet.
+TPPGFileEdit.Visible ! Ausblenden, was der Anwender nie braucht, z. B. den Exportordner ohne Export-Recht. Was nur gerade nicht gilt, besser mit Enabled sperren.
+TPPGFileEdit.Touch ! Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für die Dateiwahl selbst nicht nötig, der Knopf ist auch per Finger bedienbar.
+TPPGFileEdit.DragMode ! dmManual lassen: Das Feld soll Dateien aus dem Explorer annehmen, nicht selbst gezogen werden. dmAutomatic würde jedes Markieren mit der Maus stören.
+TPPGFileEdit.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; beim Dateifeld praktisch nie nötig. Das Ablegen aus dem Explorer steuert AcceptDrop.
+TPPGFileEdit.DoubleBuffered ! Nicht nötig, PPGlow-Felder zeichnen flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGFileEdit.ParentDoubleBuffered ! True lassen; beim Dateifeld ohne sichtbare Wirkung.
+TPPGFileEdit.Left ! Im Designer mit der Maus; im Code nur bei dynamisch gebauten Formularen, z. B. Feld.SetBounds(16, 40, 414, 32).
+TPPGFileEdit.Top ! Wie Left: im Designer setzen, im Code nur bei dynamisch gebauten Formularen, direkt unter dem zugehörigen Label.
+TPPGFileEdit.Width ! Breit genug für typische Pfade wählen, mindestens 300 Pixel; besser mit Anchors oder Align mitwachsen lassen.
+TPPGFileEdit.Height ! Mit AutoSize bestimmt die Schrift die Höhe; 32 Pixel passen zu Windows-11-Buttons in derselben Zeile.
+TPPGFileEdit.Cursor ! crDefault lassen: Über dem Text zeigt das Feld ohnehin den Textcursor, über dem Knopf den Pfeil.
+TPPGFileEdit.Hint ! Sagt, welche Datei erwartet wird, z. B. „CSV-Export aus dem Warenwirtschaftssystem (Trennzeichen Semikolon)“. Hilft besonders bei Importen.
+TPPGFileEdit.HelpType ! htKeyword, wenn Ihre Hilfe mit Stichwörtern arbeitet, sonst htContext. Ohne Hilfedatei egal.
+TPPGFileEdit.HelpKeyword ! Stichwort der Hilfeseite, die F1 im Feld öffnet, z. B. „Import Kundendaten“, wenn dort das erwartete Dateiformat beschrieben ist.
+TPPGFileEdit.HelpContext ! Kontext-ID der Hilfeseite zum Feld (mit HelpType = htContext), z. B. die Seite mit dem Aufbau der Importdatei.
+TPPGFileEdit.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Bottom = 12 zwischen zwei untereinander stehenden Pfadfeldern. Wirkt nur mit AlignWithMargins.
+TPPGFileEdit.CustomHint ! Für ausführlichere Hinweise mit Titel, z. B. zum erwarteten Dateiformat: einen TBalloonHint oder TPPGCustomHint zuweisen.
+TPPGFileEdit.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGFileEdit.Name ! Sprechend benennen, z. B. edtImportDatei oder edtSicherungsordner; dann ist im Code klar, welcher Pfad gemeint ist.
+TPPGFileEdit.Tag ! Bei mehreren gleichartigen Feldern mit gemeinsamem Ereignis, z. B. Tag = 1 für Import, 2 für Export, und im Handler TPPGFileEdit(Sender).Tag auswerten.
+TPPGFileEdit.OnBeforeDialog ! Den Dialog vorbereiten, z. B. InitialDir auf den gewählten Projektordner setzen, oder mit Allow := False abbrechen, solange eine Voraussetzung fehlt.
+TPPGFileEdit.OnAfterDialog ! Die Wahl prüfen oder anpassen: falsche Dateitypen mit Accept := False ablehnen, eine fehlende Endung ergänzen oder den Pfad relativ zum Programmordner speichern.
+TPPGFileEdit.OnChange ! Abhängige Teile sofort nachziehen, z. B. „Importieren“ erst freigeben, wenn die Datei existiert, oder eine Vorschau des Inhalts laden. Feuert bei Tippen, Ablegen und Dialog.
+TPPGFileEdit.OnEnter ! Für einen Hilfetext in der Statusleiste, z. B. „Datei wählen oder aus dem Explorer ziehen (F4 öffnet die Auswahl)“.
+TPPGFileEdit.OnExit ! Für eigene Prüfungen beim Verlassen, z. B. ob die Datei lesbar ist. Ob sie existiert, prüft MustExist schon selbst.
+TPPGFileEdit.OnKeyDown ! Für eigene Tasten im Feld, z. B. Enter startet den Import. F4 und Alt+Pfeil runter öffnen bereits den Dialog.
+TPPGFileEdit.OnKeyPress ! Um Zeichen abzuweisen, die in Windows-Pfaden nicht erlaubt sind (z. B. * ? " < > |): Key := #0.
+TPPGFileEdit.OnKeyUp ! Selten nötig; z. B. um nach dem Tippen verzögert eine Vorschau zu laden. Für Textänderungen ist OnChange der richtige Ort.
+TPPGFileEdit.OnClick ! Selten nötig, ein Klick setzt nur den Textcursor. Für den Knopf im Feld OnBeforeDialog nehmen, nicht OnClick.
+TPPGFileEdit.OnDblClick ! Um z. B. die gewählte Datei per Doppelklick im zugehörigen Programm zu öffnen (ShellExecute), wenn das Feld schon einen Pfad enthält.
+TPPGFileEdit.OnMouseDown ! Selten für Dateifelder; Markieren und Knopf erledigt das Feld selbst.
+TPPGFileEdit.OnMouseMove ! Selten nötig; feuert bei jeder Mausbewegung. Hinweise zeigt man besser über Hint.
+TPPGFileEdit.OnMouseUp ! Gegenstück zu OnMouseDown; beim Dateifeld selten gebraucht.
+TPPGFileEdit.OnMouseEnter ! Um beim Überfahren den vollständigen Pfad in einer Statuszeile zu zeigen, wenn er im Feld abgeschnitten ist.
+TPPGFileEdit.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Pfadanzeige in der Statuszeile wieder leeren.
+TPPGFileEdit.OnMouseWheel ! Selten für Dateifelder; Handled := True verhindert, dass der Parent scrollt.
+TPPGFileEdit.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGFileEdit.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Im Explorer zeigen“ nur bei vorhandener Datei freigeben.
+TPPGFileEdit.OnDragDrop ! Für VCL-Drag & Drop innerhalb der Anwendung, z. B. einen Eintrag aus einer Liste „Zuletzt verwendet“ aufs Feld ziehen und dessen Pfad übernehmen. Dateien aus dem Explorer nimmt AcceptDrop an.
+TPPGFileEdit.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source = lstZuletzt erlaubt das Ablegen nur aus der passenden Liste.
+TPPGFileEdit.OnStartDrag ! Nur wenn das Feld selbst gezogen wird (DragMode = dmAutomatic); beim Dateifeld praktisch nie.
+TPPGFileEdit.OnEndDrag ! Gegenstück zu OnStartDrag; beim Dateifeld praktisch nie gebraucht.
+TPPGFileEdit.OnGesture ! Auf Touch-Geräten, z. B. Wischen nach links leert das Feld; EventInfo.GestureID nennt die Geste.
+
+# --- Typen ---
+TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. ein helles Grau ($00F3F3F3) für schreibgeschützte Felder, damit sie sich von bearbeitbaren unterscheiden. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf ausreichenden Kontrast zur Fläche achten (mindestens 4,5:1).
+TPPGElementStyle.BorderColor ! Randfarbe des Bereichs; für schreibgeschützte Felder etwas heller als normal, damit sie zurücktreten.
+TPPGElementStyle.DarkColor ! Pflicht, sobald Color selbst gesetzt ist: Im Dark Mode gilt die helle Farbe nicht, ohne DarkColor nimmt das Preset seine eigene.
+TPPGElementStyle.DarkTextColor ! Textfarbe im Dark Mode, passend zu DarkColor, z. B. ein helles Grau für gedämpften Text.
+TPPGElementStyle.DarkBorderColor ! Randfarbe im Dark Mode, wenn BorderColor selbst gesetzt ist.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls trägt; für nur fett reicht FontStyle.
+TPPGElementStyle.Font ! Nur für eine ganz andere Schrift im Bereich (mit ParentFont = False), z. B. eine Festbreitenschrift für Pfade oder Codes.
+TPPGElementStyle.FontStyle ! Hebt einen Bereich ohne eigene Schrift hervor, z. B. [fsItalic] für schreibgeschützte Werte oder [fsBold] für Kopfzeilen.

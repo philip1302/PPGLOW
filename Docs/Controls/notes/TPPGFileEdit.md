@@ -1,5 +1,16 @@
 **Vorbild:** TMS TAdvFileNameEdit / TAdvDirectoryEdit
 
+## Wofür
+
+Das Dateifeld nimmt einen Pfad auf: eine Datei zum Öffnen, ein Speicherziel oder einen Ordner. Der Anwender tippt den Pfad (mit Autovervollständigung), wählt ihn über den Knopf im Feld oder zieht ihn aus dem Explorer hinein. Es ersetzt die übliche Kombination aus `TEdit`, „…“-Button und `TOpenDialog` in einem Control.
+
+## Wann verwenden
+
+- Für Pfade in Import-, Export- und Einstellungsdialogen: Quelldatei, Speicherziel, Arbeits- oder Sicherungsordner.
+- Statt `TPPGEdit` mit eigenem Durchsuchen-Button: Dialog, Filter, Ablegen und Existenzprüfung (`MustExist`) sind schon eingebaut.
+- Statt eines einzelnen `TOpenDialog` hinter einem Button, wenn der Pfad sichtbar bleiben und gespeichert werden soll. Für einen einmaligen Befehl „Datei öffnen …“ reicht der Dialog allein.
+- Nicht für mehrere Dateien auf einmal: Das Feld hält genau einen Pfad. Für Listen von Anhängen eine Liste mit eigenem Hinzufügen-Button nehmen.
+
 ## Unterschiede und Hinweise
 
 - `Kind`: Datei öffnen, Datei speichern oder Ordner.
