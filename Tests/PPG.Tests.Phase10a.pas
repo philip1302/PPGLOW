@@ -211,8 +211,17 @@ begin
   T := PPGDateTicks(S);
   CheckEquals(0, Length(T), 'ausserhalb: keine Ticks');
   CheckEquals('', PPGFormatDateTick(1E12, S, Invariant));
+  // NaN/Unendlich gelten als 0 (30.12.1899): endliche Achse um 0 mit Strichen
+  // und lesbaren Beschriftungen (Audit 11a #4: vorher CheckTrue(Txt = Txt))
   S := PPGNiceDateScale(NaN, Infinity, 6);
-  CheckTrue(Txt = Txt);
+  CheckFalse(IsNan(S.Min) or IsInfinite(S.Min), 'Min endlich');
+  CheckFalse(IsNan(S.Max) or IsInfinite(S.Max), 'Max endlich');
+  CheckTrue((S.Min <= 0) and (S.Max >= 0), 'Achse enthaelt 0');
+  CheckTrue(S.Count >= 1, 'Schritt');
+  T := PPGDateTicks(S);
+  CheckTrue((Length(T) >= 1) and (Length(T) <= 7), 'hoechstens MaxTicks + 1 Striche');
+  Txt := PPGFormatDateTick(T[0], S, Invariant);
+  CheckNotEquals('', Txt, 'Beschriftung');
 end;
 
 procedure TChartScaleTests.StripYearFromDateFormat;

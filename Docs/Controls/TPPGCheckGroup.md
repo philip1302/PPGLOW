@@ -27,7 +27,7 @@ Mehrwert gegenueber TRadioGroup/TcxRadioGroup:
 - ChoiceStyle: csList (Kreise bzw. Kaestchen wie die VCL), csSegmented (Umschalter in einer Zeile mit gleitendem Akzent) und csCards (Kacheln mit Symbol, Titel und Beschreibung).
 - ItemsEx: je Eintrag Beschreibung, Symbol (Zeichen der Symbolschrift oder ImageIndex), Enabled, Hint und Value. Items bleibt als einfache Sicht (TStrings) und laedt alte DFMs von TRadioGroup unveraendert.
 - Columns = 0 passt die Spalten der Breite an.
-- ValidationState wie bei den Feldern (Pflichtauswahl rot markieren).
+- ValidationState und ValidationHint wie bei den Feldern (Pflichtauswahl rot markieren, Text als Tooltip und Screenreader-Beschreibung; der Validator und TPPGDBRadioGroup setzen beides).
 
 Aufbau:
 - Basis TPPGCustomGroupBox (Rahmen und Plakette); ein Fenster, Eintraege selbst gezeichnet (keine Fensterflut). ShowFrame = False ohne Rahmen.
@@ -56,7 +56,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Columns` | `Integer` | `1` | Spalten wie bei TRadioGroup; 0 = so viele, wie in die Breite passen (die Einträge brechen um wie Kacheln). |
 | `ChoiceStyle` | `TPPGChoiceStyle` | `csList` | Darstellung: csList = Kreise bzw. Kästchen wie die VCL, csSegmented = Umschalter in einer Zeile mit gleitendem Akzent, csCards = Kacheln mit Symbol, Titel und Beschreibung. Werte: `csList`, `csSegmented`, `csCards`. Nutzung: `Grp.ChoiceStyle := csSegmented; Grp.ShowFrame := False;` |
 | `ShowFrame` | `Boolean` | `True` | True: Rahmen und Beschriftungsplakette wie TPPGGroupBox. False: nur die Einträge, z. B. ein Segment-Umschalter in einer Werkzeugleiste. |
-| `ValidationState` | `TPPGValidationState` | `pvsNone` | Fehler- bzw. Warnzustand wie bei den Eingabefeldern, z. B. rot bei fehlender Pflichtauswahl. Werte: `pvsNone`, `pvsValid`, `pvsWarning`, `pvsError`. Nutzung: `if Grp.ItemIndex < 0 then Grp.ValidationState := vsError;` |
+| `ValidationState` | `TPPGValidationState` | `pvsNone` | Fehler- bzw. Warnzustand wie bei den Eingabefeldern, z. B. rot bei fehlender Pflichtauswahl. ValidationHint erklärt den Zustand. Werte: `pvsNone`, `pvsValid`, `pvsWarning`, `pvsError`. Nutzung: `if Grp.ItemIndex < 0 then Grp.ValidationState := pvsError;` |
+| `ValidationHint` | `string` |  | Erklärung zum ValidationState wie bei den Eingabefeldern: Solange ein Zustand gesetzt ist, erscheint der Text als Tooltip (vor den Hinweisen der Einträge, auch wenn das Formular sonst keine Hints zeigt) und als Beschreibung für den Screenreader; der Hint der Gruppe bleibt unverändert. TPPGValidator setzt hier den Text seiner Regel, TPPGDBRadioGroup beim Verlassen die Meldung des Felds (z. B. aus OnValidate). Nutzung: `Grp.ValidationHint := 'Bitte eine Zahlungsart wählen'; Grp.ValidationState := pvsError;` |
 | `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
 | `ItemStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Aussehen der Einträge: Fläche, Text, Rand und Schrift (Segmente, Kacheln, Text der Liste). |
 | `SelectedStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Aussehen des gewählten Eintrags; leer = Akzentfarbe des Presets. |

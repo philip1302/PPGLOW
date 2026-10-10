@@ -28,7 +28,31 @@ procedure PPGSkip(Test: TTestCase; const Reason: string);
 /// Alle uebersprungenen Tests ("Klasse.Methode: Grund"), nie nil.
 function PPGSkippedTests: TStrings;
 
+/// Eingespeiste Systemeinstellungen (Coding-Rules, Testintegritaet); das
+/// TearDown von TControlTestCase setzt die Reader zurueck.
+/// PPGSetSystemAnimationsReader: Animationen erlaubt bzw. aus.
+function PPGTestAnimationsOn: Boolean;
+function PPGTestAnimationsOff: Boolean;
+/// PPGSetWheelScrollLinesReader: 3 Zeilen je Raste (Windows-Vorgabe) bzw.
+/// seitenweise (WHEEL_PAGESCROLL).
+function PPGTestWheel3Lines: Cardinal;
+function PPGTestWheelPage: Cardinal;
+/// Feste deutsche Formate (de-DE: Dezimalkomma, Tausenderpunkt,
+/// dd.MM.yyyy, hh:mm) statt der Systemeinstellung. Zuweisen mit
+/// "FormatSettings := PPGTestGermanFormat;" - TControlTestCase.TearDown
+/// stellt die alten FormatSettings wieder her.
+function PPGTestGermanFormat: TFormatSettings;
+/// Eingespeiste Uhr der Tippsuche (PPGSetTypeAheadClock(PPGTestClock)): steht,
+/// bis PPGTestAdvanceClock sie weiterstellt - statt Sleep auf die Pause.
+function PPGTestClock: Cardinal;
+procedure PPGTestAdvanceClock(Ms: Cardinal);
+
 type
+  /// Simulierter Fehler im Anwender-Code (Ereignis-Handler der Tests). Eigene
+  /// Klasse statt EAbort: DUnits ETestFailure erbt von EAbort, ein
+  /// "on EAbort" wuerde das eigene Fail mit verschlucken.
+  EPPGTestUserError = class(Exception);
+
   /// Basis der Tests mit echten Fenstern. TearDown prueft zentral, dass die
   /// Fehlergrenze (TPPGErrorHandler) keine Zeichen-/Callback-Fehler und
   /// Application keine Exceptions gesammelt hat, die der Test nicht mit
@@ -74,7 +98,7 @@ type
     procedure StyleManagerMakesAppearanceNotStored;
   end;
 
-  TStreamingTests = class(TControlTestCase)
+  TButtonStreamingTests = class(TControlTestCase)
   private
     function LoadFromText(const DfmText: string): TPPGButton;
   published
@@ -212,6 +236,55 @@ begin
   Test.Status('Uebersprungen: ' + Reason);
 end;
 
+{ Eingespeiste Systemeinstellungen }
+
+function PPGTestAnimationsOn: Boolean;
+begin
+  Result := True;
+end;
+
+function PPGTestAnimationsOff: Boolean;
+begin
+  Result := False;
+end;
+
+function PPGTestWheel3Lines: Cardinal;
+begin
+  Result := 3;
+end;
+
+function PPGTestWheelPage: Cardinal;
+begin
+  Result := $FFFFFFFF; // WHEEL_PAGESCROLL
+end;
+
+var
+  GTestClock: Cardinal = 100000;
+
+function PPGTestClock: Cardinal;
+begin
+  Result := GTestClock;
+end;
+
+procedure PPGTestAdvanceClock(Ms: Cardinal);
+begin
+  Inc(GTestClock, Ms);
+end;
+
+function PPGTestGermanFormat: TFormatSettings;
+begin
+  Result := TFormatSettings.Create('de-DE');
+  // Die fuer die Tests wesentlichen Teile ausdruecklich (unabhaengig von
+  // Anpassungen der Windows-Locale)
+  Result.DecimalSeparator := ',';
+  Result.ThousandSeparator := '.';
+  Result.DateSeparator := '.';
+  Result.TimeSeparator := ':';
+  Result.ShortDateFormat := 'dd.MM.yyyy';
+  Result.ShortTimeFormat := 'hh:mm';
+  Result.LongTimeFormat := 'hh:mm:ss';
+end;
+
 { TControlTestCase }
 
 procedure TControlTestCase.SetUp;
@@ -255,6 +328,9 @@ begin
   if PPGLanguage <> GDefaultLanguage then
     PPGSetLanguage(GDefaultLanguage);
   PPGSetHighContrastReader(nil);
+  PPGSetWheelScrollLinesReader(nil);
+  PPGSetSystemAnimationsReader(nil);
+  PPGSetTypeAheadClock(nil);
   PPGShadowCacheEnabled := True;
   PPGAppointmentDialogHook := nil;
   PPGClearMeasureCache;
@@ -502,9 +578,9 @@ begin
   CheckFalse(B.IsPresetStored);
 end;
 
-{ TStreamingTests }
+{ TButtonStreamingTests }
 
-function TStreamingTests.LoadFromText(const DfmText: string): TPPGButton;
+function TButtonStreamingTests.LoadFromText(const DfmText: string): TPPGButton;
 var
   Src: TStringStream;
   BinStream: TMemoryStream;
@@ -528,7 +604,7 @@ begin
   end;
 end;
 
-procedure TStreamingTests.RoundTripKeepsAllProperties;
+procedure TButtonStreamingTests.RoundTripKeepsAllProperties;
 var
   A, B: TPPGButton;
   S: TMemoryStream;
@@ -561,7 +637,7 @@ begin
   end;
 end;
 
-procedure TStreamingTests.UnknownPresetInDfmFallsBackToDefault;
+procedure TButtonStreamingTests.UnknownPresetInDfmFallsBackToDefault;
 var
   B: TPPGButton;
 begin
@@ -573,7 +649,7 @@ begin
   CheckTrue(B.Renderer <> nil);
 end;
 
-procedure TStreamingTests.OutOfRangeValueInDfmIsClamped;
+procedure TButtonStreamingTests.OutOfRangeValueInDfmIsClamped;
 var
   B: TPPGButton;
 begin
@@ -586,7 +662,7 @@ begin
   CheckEquals(0, B.Spacing);
 end;
 
-procedure TStreamingTests.GroupedDownSurvivesLoading;
+procedure TButtonStreamingTests.GroupedDownSurvivesLoading;
 var
   B: TPPGButton;
 begin
@@ -758,7 +834,7 @@ end;
 
 procedure TBehaviourTests.RaisingClick(Sender: TObject);
 begin
-  raise EAbort.Create('user code failed');
+  raise EPPGTestUserError.Create('user code failed');
 end;
 
 procedure TBehaviourTests.MouseClickFiresOnce;
@@ -798,7 +874,7 @@ begin
     B.Perform(WM_LBUTTONUP, 0, MakeLParam(10, 10));
     Fail('Exception aus OnClick muss propagieren');
   except
-    on E: EAbort do
+    on E: EPPGTestUserError do
       ;
   end;
   CheckFalse(TButtonAccess(B).MousePressed, 'Button haengt im gedrueckten Zustand');
@@ -977,7 +1053,7 @@ initialization
   GDefaultLanguage := PPGLanguage;
   RegisterTest('Controls', TLifecycleTests.Suite);
   RegisterTest('Controls', TStyleTests.Suite);
-  RegisterTest('Controls', TStreamingTests.Suite);
+  RegisterTest('Controls', TButtonStreamingTests.Suite);
   RegisterTest('Controls', TPaintTests.Suite);
   RegisterTest('Controls', TBehaviourTests.Suite);
   RegisterTest('Controls', TResourceTests.Suite);

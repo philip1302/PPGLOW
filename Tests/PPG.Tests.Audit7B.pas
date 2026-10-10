@@ -623,13 +623,15 @@ begin
   C.Items.Add('3|Zander');
   C.Items.Add('4|Mayer');
   C.DisplayColumn := 1;
+  // Audit 11a #7: Pause der Tippsuche eingespeist statt Sleep(1100)
+  PPGSetTypeAheadClock(PPGTestClock);
   C.ItemIndex := 1;
   Ch := 'm';
   C.Perform(WM_CHAR, Ord(Ch), 0);
   CheckEquals(3, C.ItemIndex, 'zu: m -> naechster Treffer');
   C.Perform(WM_CHAR, Ord(Ch), 0);
   CheckEquals(0, C.ItemIndex, 'zu: m nochmal -> blaettert');
-  Sleep(1100);
+  PPGTestAdvanceClock(PPGTypeAheadMs + 100);
   C.ItemIndex := 1;
   FForm.Show;
   try

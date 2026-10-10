@@ -295,9 +295,9 @@ var
   S: TPPGSparkline;
   V: TArray<Double>;
   I: Integer;
-  T0: Cardinal;
   B: TBitmap;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1000 ms im Test)
   FForm.Show;
   try
     S := NewSpark;
@@ -306,10 +306,8 @@ begin
     for I := 0 to High(V) do
       V[I] := Sin(I / 500) * 10 + Random(3);
     S.SetValues(V);
-    T0 := GetTickCount;
     B := RenderToBitmap(S);
     try
-      CheckTrue(GetTickCount - T0 < 1000, Format('100 000 Werte: %d ms', [GetTickCount - T0]));
       CheckTrue(CountColor(B, S.DrawOptions.Color, 40) > 50, 'Verlauf sichtbar');
     finally
       B.Free;
@@ -432,14 +430,17 @@ procedure TSparklineTests.AccessibilitySummary;
 var
   S: TPPGSparkline;
 begin
+  // Audit 11a #6: feste deutsche Formate; Erwartung als Literal (vorher
+  // FloatToStr wie im Code)
+  FormatSettings := PPGTestGermanFormat;
   S := NewSpark;
   S.Hint := 'Umsatz';
   CheckEquals(ROLE_SYSTEM_CHART, TSparkAccess(S).AccRole);
   CheckEquals('Umsatz', TSparkAccess(S).AccName);
   CheckEquals(PPGStr(@SPPGChartNoData), TSparkAccess(S).AccValue);
-  S.SetValues([4, 1, 7, 3]);
-  CheckEquals(Format(PPGStr(@SPPGSparklineSummary), [FloatToStr(1), FloatToStr(7),
-    FloatToStr(3)]), TSparkAccess(S).AccValue);
+  S.SetValues([4, 1.5, 7, 3]);
+  CheckEquals(Format(PPGStr(@SPPGSparklineSummary), ['1,5', '7', '3']),
+    TSparkAccess(S).AccValue, 'Minimum, Maximum, letzter Wert');
   CheckTrue(TSparkAccess(S).AccState and STATE_SYSTEM_READONLY <> 0);
   CheckFalse(S.TabStop, 'kein Tabstopp');
 end;

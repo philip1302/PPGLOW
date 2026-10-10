@@ -167,6 +167,21 @@ const
   WM_AUDIT8_FREE = WM_USER + 801;
   Magenta = $00FF00FF;
 
+type
+  // Meldet seine Freigabe (gehoert dem beobachteten Formular)
+  TFreeSpy = class(TComponent)
+  public
+    Freed: PBoolean;
+    destructor Destroy; override;
+  end;
+
+destructor TFreeSpy.Destroy;
+begin
+  if Freed <> nil then
+    Freed^ := True;
+  inherited Destroy;
+end;
+
 { TClipRecListBox }
 
 procedure TClipRecListBox.Paint;
@@ -815,7 +830,10 @@ begin
       Pump(10);
     Ms := GetTickCount - T0;
     CheckFalse(A.Running, 'beendet');
-    CheckTrue((Ms >= 280) and (Ms < 700), Format('Ende nach %d ms', [Ms]));
+    // Audit 11a #7: nur noch "nicht vor Ablauf der Dauer" (fachlich, unter
+    // Last unveraendert); die obere Grenze (vorher 700 ms) misst der
+    // Benchmark (Bench11)
+    CheckTrue(Ms >= 280, Format('Ende erst nach der Dauer (300 ms), war %d ms', [Ms]));
     CheckEquals(1, A.Value, 0.0001);
     CheckEquals(1, FSteps, 'nur der letzte Schritt');
   finally
@@ -937,7 +955,9 @@ begin
       Pump(10);
     Ms := GetTickCount - T0;
     CheckEquals(0, C.VisibleCount, 'nach Duration geschlossen');
-    CheckTrue((Ms >= 370) and (Ms < 1000), Format('Ende nach %d ms', [Ms]));
+    // Audit 11a #7: nur noch "nicht vor Ablauf der Dauer"; die obere Grenze
+    // (vorher 1000 ms) misst der Benchmark (Bench11)
+    CheckTrue(Ms >= 370, Format('Ende erst nach der Dauer (400 ms), war %d ms', [Ms]));
     CheckTrue(PPGAnimatorTicks - Ticks0 <= 3,
       Format('Timer-Ticks bis zum Ende: %d', [PPGAnimatorTicks - Ticks0]));
   finally
@@ -1506,14 +1526,22 @@ end;
 procedure TAppHooksLifetimeTests.ReleaseOfWatchedFormIsSafe;
 var
   F: TForm;
+  Spy: TFreeSpy;
+  Freed: Boolean;
 begin
   F := TForm.CreateNew(nil);
   PPGWatchControl(F, CountingEvent);
+  CheckEquals(1, PPGControlWatchCount(F), 'Beobachter angemeldet');
+  Freed := False;
+  Spy := TFreeSpy.Create(F);
+  Spy.Freed := @Freed;
   F.Release;
   // CM_RELEASE gibt das Formular in seiner eigenen (beobachteten) WndProc
   // frei; danach darf WatchProc den Beobachter nicht mehr anfassen.
   Application.ProcessMessages;
-  CheckTrue(True, 'ohne Zugriffsverletzung');
+  // Audit 11a #4: vorher CheckTrue(True) - jetzt pruefen, dass CM_RELEASE
+  // das Formular samt Beobachter wirklich freigegeben hat (ohne AV)
+  CheckTrue(Freed, 'Formular per CM_RELEASE freigegeben');
 end;
 
 initialization

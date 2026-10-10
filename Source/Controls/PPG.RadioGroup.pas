@@ -10,7 +10,9 @@ unit PPG.RadioGroup;
     ImageIndex), Enabled, Hint und Value. Items bleibt als einfache Sicht
     (TStrings) und laedt alte DFMs von TRadioGroup unveraendert.
   - Columns = 0 passt die Spalten der Breite an.
-  - ValidationState wie bei den Feldern (Pflichtauswahl rot markieren).
+  - ValidationState und ValidationHint wie bei den Feldern (Pflichtauswahl
+    rot markieren, Text als Tooltip und Screenreader-Beschreibung; der
+    Validator und TPPGDBRadioGroup setzen beides).
 
   Aufbau:
   - Basis TPPGCustomGroupBox (Rahmen und Plakette); ein Fenster, Eintraege
@@ -103,6 +105,9 @@ type
     FMulti: Boolean;
     FAllowGrayed: Boolean;
     FValidationState: TPPGValidationState;
+    FValidationHint: string;
+    FHintForced: Boolean;
+    FForcedParentShowHint: Boolean;
     FImages: TCustomImageList;
     FItemStyle: TPPGElementStyle;
     FSelectedStyle: TPPGElementStyle;
@@ -120,6 +125,9 @@ type
     procedure SetShowFrame(const Value: Boolean);
     procedure SetAllowGrayed(const Value: Boolean);
     procedure SetValidationState(const Value: TPPGValidationState);
+    procedure SetValidationHint(const Value: string);
+    function HasValidationText: Boolean;
+    procedure UpdateHintForce;
     procedure SetImages(const Value: TCustomImageList);
     procedure SetItemStyle(const Value: TPPGElementStyle);
     procedure SetSelectedStyle(const Value: TPPGElementStyle);
@@ -176,6 +184,7 @@ type
     function GroupTextColor: TColor;
     function AccRole: Integer; override;
     function AccValue: string; override;
+    function AccDescription: string; override;
     { IPPGAccessibleChildren }
     function AccChildCount: Integer;
     function AccChildName(Id: Integer): string;
@@ -218,6 +227,8 @@ type
     property ShowFrame: Boolean read FShowFrame write SetShowFrame default True;
     property ValidationState: TPPGValidationState read FValidationState
       write SetValidationState default pvsNone;
+    /// Hinweistext zum Validierungszustand (Tooltip und Screenreader).
+    property ValidationHint: string read FValidationHint write SetValidationHint;
     property Images: TCustomImageList read FImages write SetImages;
     /// Eintraege: Flaeche, Text, Rand, Schrift (Segmente, Kacheln, Text der Liste).
     property ItemStyle: TPPGElementStyle read FItemStyle write SetItemStyle;
@@ -242,6 +253,7 @@ type
     property ChoiceStyle;
     property ShowFrame;
     property ValidationState;
+    property ValidationHint;
     property Images;
     property ItemStyle;
     property SelectedStyle;
@@ -318,6 +330,7 @@ type
     property ChoiceStyle;
     property ShowFrame;
     property ValidationState;
+    property ValidationHint;
     property Images;
     property ItemStyle;
     property SelectedStyle;
@@ -795,7 +808,58 @@ begin
   if FValidationState <> Value then
   begin
     FValidationState := Value;
+    UpdateHintForce;
     Invalidate;
+    // Wie bei den Feldern: Beschreibung geaendert, ein Fehler als Alarm
+    NotifyAccessibility(EVENT_OBJECT_DESCRIPTIONCHANGE);
+    if Value = pvsError then
+      NotifyAccessibility(EVENT_SYSTEM_ALERT);
+  end;
+end;
+
+procedure TPPGCustomChoiceGroup.SetValidationHint(const Value: string);
+begin
+  if FValidationHint <> Value then
+  begin
+    FValidationHint := Value;
+    UpdateHintForce;
+    NotifyAccessibility(EVENT_OBJECT_DESCRIPTIONCHANGE);
+  end;
+end;
+
+function TPPGCustomChoiceGroup.HasValidationText: Boolean;
+begin
+  Result := (FValidationState <> pvsNone) and (FValidationHint <> '');
+end;
+
+procedure TPPGCustomChoiceGroup.UpdateHintForce;
+var
+  Want: Boolean;
+begin
+  // Wie beim Feld (dort ShowHint des inneren Edits) erscheint der Text auch,
+  // wenn das Formular keine Hints zeigt. Die Gruppe hat kein inneres Fenster:
+  // ShowHint gilt deshalb nur, solange die Maus darueber steht, danach kommt
+  // die Einstellung des Anwenders zurueck (nie dauerhaft ueberschrieben).
+  Want := HasValidationText and MouseInside and not (csDesigning in ComponentState);
+  if Want and not FHintForced then
+  begin
+    if ShowHint then
+      Exit;
+    FForcedParentShowHint := ParentShowHint;
+    FHintForced := True;
+    ShowHint := True;
+  end
+  else if not Want and FHintForced then
+  begin
+    FHintForced := False;
+    // Hat der Anwender inzwischen selbst etwas eingestellt, bleibt das
+    if ShowHint and not ParentShowHint then
+    begin
+      if FForcedParentShowHint then
+        ParentShowHint := True
+      else
+        ShowHint := False;
+    end;
   end;
 end;
 
@@ -1803,6 +1867,13 @@ var
   I: Integer;
 begin
   inherited;
+  // Validierungstext vor den Hinweisen der Eintraege und der Gruppe
+  if HasValidationText then
+  begin
+    Message.HintInfo.HintStr := FValidationHint;
+    Message.HintInfo.CursorRect := ClientRect;
+    Exit;
+  end;
   I := ItemAt(Message.HintInfo.CursorPos.X, Message.HintInfo.CursorPos.Y);
   if (I >= 0) and (FItemsEx[I].Hint <> '') then
   begin
@@ -1827,6 +1898,8 @@ begin
     Exit;
   end;
   inherited WndProc(Message);
+  if (Message.Msg = CM_MOUSEENTER) or (Message.Msg = CM_MOUSELEAVE) then
+    UpdateHintForce;
 end;
 
 { Barrierefreiheit }
@@ -1839,6 +1912,15 @@ end;
 function TPPGCustomChoiceGroup.AccValue: string;
 begin
   Result := StripHotkey(Value);
+end;
+
+function TPPGCustomChoiceGroup.AccDescription: string;
+begin
+  // Wie beim Feld: der Validierungstext, sonst der Hint des Anwenders
+  if HasValidationText then
+    Result := FValidationHint
+  else
+    Result := inherited AccDescription;
 end;
 
 function TPPGCustomChoiceGroup.AccChildCount: Integer;

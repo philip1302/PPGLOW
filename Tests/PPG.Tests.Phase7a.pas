@@ -118,7 +118,7 @@ implementation
 
 uses
   PPG.Tests.Visual,
-  System.Math, Winapi.oleacc, PPG.Theme, PPG.Tokens;
+  System.Math, Winapi.oleacc, PPG.Animation, PPG.Theme, PPG.Tokens;
 
 type
   TLinkAccess = class(TPPGLinkLabel);
@@ -533,6 +533,9 @@ procedure TFeedbackTests.ProgressRingValueAndLoop;
 var
   R: TPPGProgressRing;
 begin
+  // Audit 11a #5: Systemanimationen eingespeist (vorher nur geprueft, wenn
+  // sie im System an sind)
+  PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
   R := TPPGProgressRing.Create(FForm);
   R.Parent := FForm;
   R.HandleNeeded;
@@ -540,8 +543,8 @@ begin
   CheckFalse(R.Spinning, 'unsichtbar: keine Animation');
   FForm.Show;
   try
-    if R.Animation.EffectiveEnabled then
-      CheckTrue(R.Spinning, 'sichtbar und unbestimmt: dreht');
+    CheckTrue(R.Animation.EffectiveEnabled, 'Animation an');
+    CheckTrue(R.Spinning, 'sichtbar und unbestimmt: dreht');
     R.Indeterminate := False;
     CheckFalse(R.Spinning);
     // Audit 5b: ausserhalb 0..100 wird abgelehnt statt still begrenzt
@@ -666,6 +669,9 @@ var
   T0: Cardinal;
   Seen: Boolean;
 begin
+  // Audit 11a #5: Systemanimationen eingespeist (vorher nur geprueft, wenn
+  // sie im System an sind)
+  PPGSetSystemAnimationsReader(PPGTestAnimationsOn);
   FForm.Show;
   try
     I := TPPGInfoBar.Create(FForm);
@@ -675,8 +681,8 @@ begin
     I.HandleNeeded;
     CheckEquals(48, I.Height);
     I.Open := False;
-    if I.Animation.EffectiveEnabled then
-      CheckTrue(I.Visible, 'schliesst animiert: noch sichtbar');
+    CheckTrue(I.Animation.EffectiveEnabled, 'Animation an');
+    CheckTrue(I.Visible, 'schliesst animiert: noch sichtbar');
     T0 := GetTickCount;
     Seen := False;
     while I.Visible and (GetTickCount - T0 < 2000) do
@@ -687,8 +693,7 @@ begin
       Sleep(5);
     end;
     CheckFalse(I.Visible, 'am Ende unsichtbar');
-    if I.Animation.EffectiveEnabled then
-      CheckTrue(Seen, 'Zwischenhoehe beim Schliessen');
+    CheckTrue(Seen, 'Zwischenhoehe beim Schliessen');
     I.Open := True;
     CheckTrue(I.Visible);
     T0 := GetTickCount;

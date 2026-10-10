@@ -496,17 +496,15 @@ var
   T: IPPGTableSource;
   F: string;
   I: Integer;
-  T0: Cardinal;
   Rd: TPPGXlsxReader;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 10000 ms im Test)
   S := TPPGStringTableSource.Create(['Nr', 'Text', 'Wert']);
   T := S;
   for I := 1 to 20000 do
     S.AddRow([IntToStr(I), 'Text ' + IntToStr(I mod 100), FloatToStr(I / 4)]);
   F := TempFile('.xlsx');
-  T0 := GetTickCount;
   PPGExportXlsx(T, F);
-  CheckTrue(GetTickCount - T0 < 10000);
   Rd := TPPGXlsxReader.Create;
   try
     Rd.LoadFromFile(F);

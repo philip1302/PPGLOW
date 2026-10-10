@@ -1410,7 +1410,6 @@ var
   T, G, I: Integer;
   Tab: TPPGRibbonTab;
   Grp: TPPGRibbonGroup;
-  Tick: Cardinal;
 begin
   FForm.Show;
   R := TPPGRibbon.Create(FForm);
@@ -1434,16 +1433,14 @@ begin
     for I := 0 to 9 do
       Grp.Items.AddButton('Befehl ' + IntToStr(I), $E700 + I, TPPGRibbonSize(I mod 3));
   end;
-  Tick := GetTickCount;
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 4000 ms im Test);
+  // hier bleibt: 200 x neu anordnen und zeichnen ohne Fehler (TearDown)
   for I := 0 to 199 do
   begin
     R.Width := 300 + (I * 7) mod 1300;
     R.UpdateLayout;
     R.Repaint;
   end;
-  Tick := GetTickCount - Tick;
-  CheckTrue(Tick < 4000, Format('200 x Breite + Zeichnen: %d ms', [Tick]));
-  Status(Format('Ribbon 40 Gruppen, 200 x Breite + Zeichnen: %d ms', [Tick]));
   FForm.Hide;
 end;
 

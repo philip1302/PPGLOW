@@ -341,13 +341,12 @@ end;
 procedure TGridColumnTests.AutoSizeSamplesManyRows;
 var
   G: TPPGGrid;
-  T: Cardinal;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 2000 ms im Test)
   G := SampleGrid;
   G.RowCount := 1000001;
-  T := GetTickCount;
   G.AutoSizeColumn(1);
-  CheckTrue(GetTickCount - T < 2000, 'Stichprobe statt 1 000 000 Zeilen');
+  CheckTrue(G.ColWidths[1] >= 8, 'Breite aus der Stichprobe');
 end;
 
 procedure TGridColumnTests.DoubleClickEdgeAutoSizes;

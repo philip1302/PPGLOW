@@ -580,7 +580,6 @@ var
   V: TPPGKanbanColumn;
   R: TRect;
   H: TPPGKanbanHit;
-  T0: Cardinal;
   A: TPoint;
 begin
   K := NewBoard;
@@ -593,13 +592,12 @@ begin
   CheckTrue(R.Top > K.CardRect(4, 0, 0).Bottom, 'feste Hoehe untereinander');
   // weit unten: Lage in O(1)
   K.ScrollColumn(4, 50000 * (R.Top - K.CardRect(4, 0, 0).Top));
-  T0 := GetTickCount;
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1000 ms im Test)
   K.ScrollBy(10000, 0);
   K.Repaint;
   H := K.HitTest(Center(K.ColumnRect(4)).X, K.ColumnRect(4).Top + 200);
   CheckTrue(H.Part = kpCard);
   CheckTrue(H.Index > 49000, IntToStr(H.Index));
-  CheckTrue(GetTickCount - T0 < 1000);
   // Ziehen in der virtuellen Spalte meldet nur (die Anwendung verschiebt)
   FLog.Clear;
   A := Center(K.CardRect(4, 0, H.Index));
@@ -879,8 +877,9 @@ procedure TKanbanTests.ManyCardsStayFast;
 var
   K: TPPGKanban;
   I: Integer;
-  T0: Cardinal;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 5000 ms im Test);
+  // hier bleibt: Layout und 100 x scrollen + zeichnen ohne Fehler
   K := NewBoard;
   K.Cards.BeginUpdate;
   try
@@ -893,7 +892,6 @@ begin
   finally
     K.Cards.EndUpdate;
   end;
-  T0 := GetTickCount;
   K.EnsureLayout;
   CheckTrue(K.CardCount(0, 0) > 1000);
   for I := 0 to 99 do
@@ -901,9 +899,7 @@ begin
     K.ScrollColumn(0, 400);
     K.Repaint;
   end;
-  T0 := GetTickCount - T0;
-  CheckTrue(T0 < 5000, Format('5000 Karten: Layout + 100 x scrollen und zeichnen %d ms', [T0]));
-  Status(Format('Kanban 5000 Karten: Layout + 100 x scrollen und zeichnen %d ms', [T0]));
+  CheckTrue(K.ColumnScroll(0) > 0, 'Spalte gescrollt');
 end;
 
 initialization

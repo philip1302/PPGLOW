@@ -807,21 +807,19 @@ end;
 procedure TGridTests.VirtualMillionRows;
 var
   G: TPPGGrid;
-  T: Cardinal;
   Bmp: TBitmap;
 begin
+  // Audit 11a #7: Laufzeit im Benchmark (Bench11, vorher 1000 ms im Test)
   FForm.Show;
   try
     G := NewGrid;
     G.OnGetCellText := VirtualText;
-    T := GetTickCount;
     G.ColCount := 20;
     G.RowCount := 1000001;
     G.Row := 1000000;
     G.Col := 19;
     Bmp := RenderToBitmap(G);
     Bmp.Free;
-    CheckTrue(GetTickCount - T < 1000, 'eine Million Zeilen ohne Verzoegerung');
     CheckFalse(IsRectEmpty(G.CellRect(19, G.FocusRow)), 'letzte Zelle sichtbar');
     CheckEquals('', G.Cells[19, 1000000], 'virtuell: Cells bleibt leer');
     CheckEquals('1000000:19', TGridAccess(G).AccValue, 'der Text kommt aus dem Ereignis');

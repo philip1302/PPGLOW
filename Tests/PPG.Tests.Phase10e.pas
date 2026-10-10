@@ -9,7 +9,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.DateUtils, Vcl.Controls, Vcl.Forms, Vcl.Graphics,
   Data.DB, Datasnap.DBClient, MidasLib,
-  PPG.Types, PPG.Chart.Series, PPG.Chart, PPG.DB.Chart, PPG.Tests.Controls;
+  PPG.Types, PPG.Exceptions, PPG.Chart.Series, PPG.Chart, PPG.DB.Chart, PPG.Tests.Controls;
 
 type
   TDBChartTests = class(TControlTestCase)
@@ -163,7 +163,7 @@ begin
     C.MaxRecords := 0;
     Fail('EPPGPropertyError erwartet');
   except
-    on Exception do;
+    on EPPGPropertyError do;
   end;
   CheckEquals(5, C.MaxRecords);
 end;

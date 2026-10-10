@@ -107,7 +107,7 @@ end;
 
 procedure TCheckTestCase.RaisingChange(Sender: TObject);
 begin
-  raise EAbort.Create('OnChange failed');
+  raise EPPGTestUserError.Create('OnChange failed');
 end;
 
 function TCheckTestCase.NewCheck(const ACaption: string): TPPGCheckBox;
@@ -242,7 +242,7 @@ begin
     C.Perform(WM_LBUTTONUP, 0, MakeLParam(5, 5));
     Fail('Exception aus OnChange muss propagieren');
   except
-    on E: EAbort do
+    on E: EPPGTestUserError do
       ;
   end;
   CheckTrue(C.Checked, 'Zustand wurde vor dem Ereignis gesetzt');

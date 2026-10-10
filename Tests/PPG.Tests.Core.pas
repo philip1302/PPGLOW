@@ -35,7 +35,7 @@ type
     procedure BlendSurfaceInterpolatesGlow;
   end;
 
-  TLayoutTests = class(TTestCase)
+  TContentLayoutTests = class(TTestCase)
   private
     function MakeInput(TextW, TextH, ImgW, ImgH: Integer; Pos: TPPGImagePosition): TPPGLayoutInput;
   published
@@ -290,9 +290,9 @@ begin
   CheckEquals(6, R.Rounding);
 end;
 
-{ TLayoutTests }
+{ TContentLayoutTests }
 
-function TLayoutTests.MakeInput(TextW, TextH, ImgW, ImgH: Integer;
+function TContentLayoutTests.MakeInput(TextW, TextH, ImgW, ImgH: Integer;
   Pos: TPPGImagePosition): TPPGLayoutInput;
 begin
   FillChar(Result, SizeOf(Result), 0);
@@ -306,7 +306,7 @@ begin
   Result.Alignment := haCenter;
 end;
 
-procedure TLayoutTests.TextOnlyIsCentered;
+procedure TContentLayoutTests.TextOnlyIsCentered;
 var
   R: TPPGLayoutResult;
 begin
@@ -317,7 +317,7 @@ begin
   CheckTrue(IsRectEmpty(R.ImageRect));
 end;
 
-procedure TLayoutTests.ImageLeftOfText;
+procedure TContentLayoutTests.ImageLeftOfText;
 var
   R: TPPGLayoutResult;
 begin
@@ -329,7 +329,7 @@ begin
   CheckEquals(12, R.ImageRect.Top, 'Bild vertikal zentriert');
 end;
 
-procedure TLayoutTests.RightToLeftMirrorsImage;
+procedure TContentLayoutTests.RightToLeftMirrorsImage;
 var
   Input: TPPGLayoutInput;
   R: TPPGLayoutResult;
@@ -340,7 +340,7 @@ begin
   CheckTrue(R.ImageRect.Left > R.TextRect.Left, 'Bild muss bei RTL rechts stehen');
 end;
 
-procedure TLayoutTests.ImageTopStacksVertically;
+procedure TContentLayoutTests.ImageTopStacksVertically;
 var
   Input: TPPGLayoutInput;
   R: TPPGLayoutResult;
@@ -352,7 +352,7 @@ begin
   CheckEquals(R.TextRect.Top - R.ImageRect.Bottom, 4, 'Abstand = Spacing');
 end;
 
-procedure TLayoutTests.EmptyBoundsGivesEmptyResult;
+procedure TContentLayoutTests.EmptyBoundsGivesEmptyResult;
 var
   Input: TPPGLayoutInput;
   R: TPPGLayoutResult;
@@ -364,7 +364,7 @@ begin
   CheckTrue(IsRectEmpty(R.ImageRect));
 end;
 
-procedure TLayoutTests.TooSmallBoundsNeverNegative;
+procedure TContentLayoutTests.TooSmallBoundsNeverNegative;
 var
   Input: TPPGLayoutInput;
   R: TPPGLayoutResult;
@@ -559,7 +559,7 @@ end;
 initialization
   RegisterTest('Core', TAppearanceTests.Suite);
   RegisterTest('Core', TColorTests.Suite);
-  RegisterTest('Core', TLayoutTests.Suite);
+  RegisterTest('Core', TContentLayoutTests.Suite);
   RegisterTest('Core', TRegistryTests.Suite);
   RegisterTest('Core', TAnimationSettingsTests.Suite);
 

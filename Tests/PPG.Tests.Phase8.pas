@@ -178,7 +178,13 @@ begin
       CheckTrue(PPGRelativeLuminance(L.Surface) > 0.7, Names[I] + ': hell ist hell');
       CheckTrue(PPGRelativeLuminance(D.Surface) < 0.1, Names[I] + ': dunkel ist dunkel');
       CheckTrue(PPGRelativeLuminance(D.TextPrimary) > 0.7, Names[I] + ': Text im Dunkeln hell');
-      CheckTrue(L.RadiusMedium >= 0);
+      // Audit 11a #4: vorher RadiusMedium >= 0 (fast immer wahr). Fachlich:
+      // jedes Preset rundet (Radius > 0), Stufen klein <= mittel <= gross,
+      // und die Radien haengen nicht vom Dunkelmodus ab
+      CheckTrue(L.RadiusMedium > 0, Names[I] + ': gerundet');
+      CheckTrue((L.RadiusSmall <= L.RadiusMedium) and (L.RadiusMedium <= L.RadiusLarge),
+        Names[I] + ': Radien geordnet');
+      CheckEquals(L.RadiusMedium, D.RadiusMedium, Names[I] + ': Radius hell = dunkel');
       CheckTrue(L.DurationFast < L.DurationSlow, Names[I] + ': Dauern geordnet');
     end;
   finally

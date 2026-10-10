@@ -176,7 +176,7 @@ end;
 
 procedure TPhase3TestCase.RaisingChange(Sender: TObject);
 begin
-  raise EAbort.Create('OnChange failed');
+  raise EPPGTestUserError.Create('OnChange failed');
 end;
 
 function TPhase3TestCase.NewProgress(W, H: Integer): TPPGProgressBar;
@@ -894,7 +894,7 @@ begin
     T.Perform(WM_KEYDOWN, VK_RIGHT, 0);
     Fail('Exception aus OnChange muss propagieren');
   except
-    on E: EAbort do
+    on E: EPPGTestUserError do
       ;
   end;
   CheckEquals(1, T.Position, 'Wert wurde vor dem Ereignis gesetzt');
@@ -1145,15 +1145,14 @@ procedure TContainerTests.ChildPaintsOnPanelBackground;
 var
   P: TPPGPanel;
   B: TPPGButton;
-  Bmp: TBitmap;
+  Bmp, PBmp: TBitmap;
+  PanelColor: TColor;
 begin
-  // Abgerundete Ecken des Buttons zeigen den PANEL-Hintergrund (WM_PRINTCLIENT
-  // an das Panel), nicht die Formularfarbe
-  if not StyleServices.Enabled then
-  begin
-    Status('Themes nicht aktiv - Eltern-Hintergrund wird nicht uebernommen');
-    Exit;
-  end;
+  // Abgerundete Ecken des Buttons zeigen den PANEL-Hintergrund, nicht die
+  // Formularfarbe. Ein PPGlow-Container liefert die Flaeche direkt
+  // (GetChildBackground, TPPGCustomControl.FillBackground) - unabhaengig von
+  // den Themes. Audit 11a #5: vorher still uebersprungen, wenn die Themes
+  // nicht aktiv sind (so in jedem /hidden-Lauf auf dem eigenen Testdesktop).
   FForm.Color := clRed;
   P := NewPanel;
   P.Appearance.Normal.Color := clLime;
@@ -1161,10 +1160,22 @@ begin
   B.Parent := P;
   B.SetBounds(20, 20, 120, 36);
   B.Animation.Enabled := False;
+  // Das ModernFlat-Panel zeichnet einen senkrechten Verlauf (oben clLime, nach
+  // unten heller): Vergleichswert ist die Panel-Flaeche in derselben Hoehe
+  // neben dem Button (Panel-Koordinaten 10, 20), nicht reines clLime.
+  PBmp := RenderToBitmap(P);
+  try
+    PanelColor := PBmp.Canvas.Pixels[10, 20];
+  finally
+    PBmp.Free;
+  end;
+  CheckTrue(ColorDist(PanelColor, clLime) < 120, 'Panel ist gruen');
   Bmp := RenderToBitmap(B);
   try
-    CheckTrue(ColorDist(Bmp.Canvas.Pixels[0, 0], clLime) < 40,
-      Format('Ecke zeigt %.6x statt Panel-Farbe', [ColorToRGB(Bmp.Canvas.Pixels[0, 0])]));
+    CheckTrue(ColorDist(Bmp.Canvas.Pixels[0, 0], PanelColor) < 40,
+      Format('Ecke zeigt %.6x statt Panel-Farbe %.6x', [ColorToRGB(Bmp.Canvas.Pixels[0, 0]),
+      ColorToRGB(PanelColor)]));
+    CheckTrue(ColorDist(Bmp.Canvas.Pixels[0, 0], clRed) > 300, 'nicht die Formularfarbe');
   finally
     Bmp.Free;
   end;

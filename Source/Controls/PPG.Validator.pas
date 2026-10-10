@@ -766,6 +766,8 @@ end;
 class procedure TChoiceAdapter.SetMark(AControl: TControl; State: TPPGValidationState;
   const Hint: string);
 begin
+  // Wie bei den Feldern: zuerst der Text (Tooltip und Screenreader)
+  TChoiceAccess(AControl).ValidationHint := Hint;
   TChoiceAccess(AControl).ValidationState := State;
 end;
 
