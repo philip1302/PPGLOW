@@ -24,7 +24,8 @@ type
     FTotalLabel: TPPGLabel;
     FPriceCents: Integer;
     FTotalCents: Integer;
-    function NewLabel(AParent: TWinControl; Y: Integer; const ACaption: string): TPPGLabel;
+    function NewLabel(AParent: TWinControl; Y: Integer;
+      const ACaption: string): TPPGLabel;
     procedure ValuesChange(Sender: TObject);
   public
     constructor CreateLine(AOwner: TComponent; AParent: TWinControl;
@@ -69,7 +70,7 @@ begin
   FQuantity.Value := 1;
   FQuantity.Alignment := taRightJustify;
   FQuantity.OnChange := ValuesChange;
-  NewLabel(AParent, 58, '&Menge (Stueck):').FocusControl := FQuantity;
+  NewLabel(AParent, 58, '&Menge (Stk.):').FocusControl := FQuantity;
   NewLabel(AParent, 58, Format('Lager: %d', [StockOnHand])).SetBounds(284, 58, 140, 20);
 
   // Rabatt: nur feste Stufen 0, 5, 10 ... 30 %. Tippen ist gesperrt,

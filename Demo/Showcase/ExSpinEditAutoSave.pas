@@ -12,7 +12,8 @@ interface
 // EXAMPLE-BEGIN
 uses
   System.SysUtils, System.Classes, Vcl.Controls,
-  PPG.Controls.Field, PPG.StyleManager, PPG.Labels, PPG.CheckBox, PPG.SpinEdit;
+  PPG.Controls.Field, PPG.StyleManager, PPG.Labels, PPG.CheckBox,
+  PPG.SpinEdit;
 
 type
   /// Einstellungen zum automatischen Speichern.
@@ -22,8 +23,8 @@ type
     FInterval: TPPGSpinEdit;
     FVersions: TPPGSpinEdit;
     FStatus: TPPGLabel;
-    function NewSpin(AParent: TWinControl; Y: Integer; const ACaption: string;
-      AStyles: TPPGStyleManager): TPPGSpinEdit;
+    function NewSpin(AParent: TWinControl; Y: Integer;
+      const ACaption: string; AStyles: TPPGStyleManager): TPPGSpinEdit;
     procedure ActiveChange(Sender: TObject);
     procedure IntervalChange(Sender: TObject);
   public
@@ -103,7 +104,7 @@ begin
   if FInterval.Value < 5 then
   begin
     FInterval.ValidationState := pvsWarning;
-    FInterval.ValidationHint := 'Sehr kurze Abstaende bremsen bei grossen Dateien.';
+    FInterval.ValidationHint := 'Unter 5 Minuten bremst das Speichern die Arbeit.';
   end
   else
   begin
@@ -111,7 +112,7 @@ begin
     FInterval.ValidationHint := '';
   end;
   if FActive.Checked then
-    FStatus.Caption := Format('Speichert alle %d Minuten, behaelt %d Versionen.',
+    FStatus.Caption := Format('Speichert alle %d Minuten, %d Versionen bleiben erhalten.',
       [FInterval.Value, FVersions.Value])
   else
     FStatus.Caption := 'Automatisches Speichern ist aus.';

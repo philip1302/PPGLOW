@@ -19,6 +19,7 @@ type
     FAutoSave: TAutoSaveSettings;
   protected
     function SubjectClass: TComponentClass; override;
+    procedure BuildContent; override;
     procedure SetupSubject(ASubject: TComponent); override;
     procedure BuildExamples; override;
     procedure CategoryFor(Sender: TObject; const AName: string; var ACategory: string); override;
@@ -35,6 +36,14 @@ uses
 function TDemoShowSpinEditPage.SubjectClass: TComponentClass;
 begin
   Result := TPPGSpinEdit;
+end;
+
+procedure TDemoShowSpinEditPage.BuildContent;
+begin
+  inherited BuildContent;
+  // Das Geruest waehlt "Caption"; das Zahlenfeld hat keine. Value zeigt die
+  // Erklaerung der wichtigsten Eigenschaft gleich beim Oeffnen.
+  Inspector.SelectPath('Value');
 end;
 
 procedure TDemoShowSpinEditPage.SetupSubject(ASubject: TComponent);
