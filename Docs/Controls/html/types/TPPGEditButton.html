@@ -9,10 +9,10 @@
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
-<tr><td><code>DropDownMenu</code></td><td><code>TPopupMenu</code></td><td></td><td>Men&#252;, das beim Klick auf den Knopf unter dem Feld aufklappt (z. B. Auswahl von Suchbereichen).</td></tr>
-<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Der Knopf ist sichtbar, aber grau und nicht klickbar.</td></tr>
-<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild des Knopfes aus Images des Felds; -1 = kein Bild.</td></tr>
-<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Knopf wird im Feld angezeigt (Vorgabe False).</td></tr>
+<tr><td><code>DropDownMenu</code></td><td><code>TPopupMenu</code></td><td></td><td>Men&#252;, das beim Klick auf den Knopf unter dem Feld aufklappt (z. B. Auswahl von Suchbereichen). Praxis: F&#252;r Varianten zum Feld, z. B. „Suchen in: Name / Ort“ oder zuletzt verwendete Werte. Ohne Bild zeigt der Knopf dann einen Pfeil.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Der Knopf ist sichtbar, aber grau und nicht klickbar. Praxis: Den Knopf sperren, solange seine Aktion nicht geht, z. B. „E-Mail schreiben“ nur bei g&#252;ltiger Adresse.</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild des Knopfes aus Images des Felds; -1 = kein Bild. Praxis: Symbol aus Images des Felds, das die Aktion zeigt (Brief, Lupe, Person). -1 lassen, wenn der Knopf nur ein Men&#252; &#246;ffnet; dann erscheint ein Pfeil.</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>True: Der Knopf wird im Feld angezeigt (Vorgabe False). Praxis: Einschalten, um den Knopf zu zeigen; per Code ausblenden, wenn die Aktion f&#252;r den Datensatz nicht gilt.</td></tr>
 </table>
 <h2>Verwendet in</h2>
 <p><a href="../TPPGDBEdit.html">TPPGDBEdit</a>, <a href="../TPPGEdit.html">TPPGEdit</a></p>

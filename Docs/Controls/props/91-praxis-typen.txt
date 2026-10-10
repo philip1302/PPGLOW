@@ -1,0 +1,22 @@
+# Praxis-Texte fuer gemeinsame Typen (Unterobjekte, Collection-Eintraege),
+# die mehrere Komponentenseiten brauchen. Format: siehe Build\make-docs.ps1.
+TPPGElementStyle.Color ! Eigene Flächenfarbe für den Bereich, z. B. ein helles Grau für gesperrte (ReadOnly) Felder. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Eigene Textfarbe, z. B. clGrayText für schreibgeschützte Felder; auf ausreichenden Kontrast achten.
+TPPGElementStyle.BorderColor ! Eigene Randfarbe, z. B. ein blasser Rand, damit ein gesperrtes Feld zurücktritt.
+TPPGElementStyle.DarkColor ! Gegenstück zu Color für den Dark Mode. Setzen, sobald Sie Color selbst gesetzt haben, sonst bleibt die Fläche im Dunkeln hell.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor für den Dark Mode; hell wählen, damit der Text auf dunklem Grund lesbar ist.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor für den Dark Mode.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Eine eigene Schrift (Font) setzt es automatisch auf False.
+TPPGElementStyle.Font ! Nur für eine abweichende Schrift des Bereichs, z. B. kursiv für schreibgeschützte Werte. Für fett reicht FontStyle.
+TPPGElementStyle.FontStyle ! Einfacher als eine eigene Font: [fsBold] für eine hervorgehobene Kopfzeile oder [fsItalic] für gesperrte Werte.
+TPPGItem.Text ! Der Haupttext, nach dem der Anwender sucht: Artikelname, Kundenname. Kurz halten; Nummern und Preise gehören in Detail.
+TPPGItem.Detail ! Zusatzinfo in der zweiten Zeile, die bei der Wahl hilft: „Art.-Nr. 10014 · 899,00 €“ oder die Adresse unter dem Kundennamen.
+TPPGItem.Badge ! Kurze Kennzeichnung rechts, z. B. „neu“, „Aktion“ oder eine Anzahl. Sparsam einsetzen, sonst geht die Wirkung verloren.
+TPPGItem.Group ! Einträge nach Gruppe sortiert anlegen (z. B. „Hardware“, „Software“); in Listen mit Gruppenköpfen erscheint die Überschrift einmal je Gruppe.
+TPPGItem.ImageIndex ! Symbol aus Images der Liste, z. B. eine Flagge je Land oder ein Status-Symbol je Auftrag. -1 für Einträge ohne Bild.
+TPPGItem.Checked ! Nur in Listen mit Kästchen (CheckListBox) sichtbar: den Haken beim Laden setzen, z. B. für bereits zugeordnete Rechte.
+TPPGItem.Enabled ! Einträge zeigen, aber sperren, z. B. ein Lager ohne Bestand. So sieht der Anwender, dass es den Eintrag gibt, er aber gerade nicht wählbar ist.
+TPPGItem.Tag ! Die ID des Datensatzes ablegen (Artikel-ID, Kunden-Nr.), damit man nach der Wahl nicht über den Text suchen muss.
+TPPGItem.Color ! Einzelne Einträge farbig hinterlegen, z. B. überfällige Aufträge hellrot. Sparsam einsetzen und nicht als einziges Merkmal (Farbenblindheit).
+TPPGItem.TextColor ! Eigene Schriftfarbe, z. B. Grau für auslaufende Artikel. Auf Kontrast zur Fläche achten.
+TPPGItem.FontStyle ! [fsBold] für hervorgehobene Einträge wie den Standard-Lieferanten oder ungelesene Nachrichten.

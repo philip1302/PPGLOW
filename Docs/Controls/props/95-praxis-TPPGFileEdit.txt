@@ -91,12 +91,3 @@ TPPGFileEdit.OnEndDrag ! Gegenstück zu OnStartDrag; beim Dateifeld praktisch ni
 TPPGFileEdit.OnGesture ! Auf Touch-Geräten, z. B. Wischen nach links leert das Feld; EventInfo.GestureID nennt die Geste.
 
 # --- Typen ---
-TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. ein helles Grau ($00F3F3F3) für schreibgeschützte Felder, damit sie sich von bearbeitbaren unterscheiden. clDefault lassen, wenn das Preset passt.
-TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf ausreichenden Kontrast zur Fläche achten (mindestens 4,5:1).
-TPPGElementStyle.BorderColor ! Randfarbe des Bereichs; für schreibgeschützte Felder etwas heller als normal, damit sie zurücktreten.
-TPPGElementStyle.DarkColor ! Pflicht, sobald Color selbst gesetzt ist: Im Dark Mode gilt die helle Farbe nicht, ohne DarkColor nimmt das Preset seine eigene.
-TPPGElementStyle.DarkTextColor ! Textfarbe im Dark Mode, passend zu DarkColor, z. B. ein helles Grau für gedämpften Text.
-TPPGElementStyle.DarkBorderColor ! Randfarbe im Dark Mode, wenn BorderColor selbst gesetzt ist.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls trägt; für nur fett reicht FontStyle.
-TPPGElementStyle.Font ! Nur für eine ganz andere Schrift im Bereich (mit ParentFont = False), z. B. eine Festbreitenschrift für Pfade oder Codes.
-TPPGElementStyle.FontStyle ! Hebt einen Bereich ohne eigene Schrift hervor, z. B. [fsItalic] für schreibgeschützte Werte oder [fsBold] für Kopfzeilen.

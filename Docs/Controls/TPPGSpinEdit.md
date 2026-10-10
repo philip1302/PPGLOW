@@ -4,10 +4,25 @@ Palette **PPGlow** - Unit `PPG.SpinEdit` - Basis `TPPGCustomSpinEdit`
 
 **Vorbild:** TSpinEdit (Vcl.Samples.Spin)
 
+## Wofür
+
+Das Zahlenfeld nimmt eine ganze Zahl auf: Menge, Anzahl, Minuten, Prozent. Pfeile im Feld, Pfeiltasten, Bild auf/ab und das Mausrad ändern den Wert um `Increment`; `Min` und `Max` begrenzen ihn still. Es ersetzt `TSpinEdit` in der Optik des Presets.
+
+## Wann verwenden
+
+- Für kleine ganze Zahlen, die man oft nur um wenige Schritte ändert (Menge, Anzahl Kopien, Intervall in Minuten). Für Beträge, Nachkommastellen, Prozente mit Format oder Rechenausdrücke ist `TPPGNumberEdit` richtig.
+- Statt `TPPGTrackBar`, wenn der genaue Wert zählt und eingetippt werden soll. Der Regler passt besser, wenn die ungefähre Lage im Bereich wichtiger ist (Lautstärke, Zoom).
+- Statt `TPPGComboBox`, wenn die Werte eine gleichmäßige Reihe bilden (0, 5, 10 …). Feste, unregelmäßige Werte oder Werte mit Text („klein, mittel, groß“) gehören in eine Auswahlliste.
+- Statt `TPPGEdit` mit eigener Prüfung, sobald nur ganze Zahlen erlaubt sind: Das Feld filtert die Tasten und liefert `Value` direkt als Integer.
+
 ## Unterschiede und Hinweise
 
+- Die Grenzen heißen `Min` und `Max` (bei `TSpinEdit`: `MinValue` und `MaxValue`). Beim Umstellen einer DFM beide Namen mit ersetzen.
+- `Min = Max` bedeutet wie bei `TSpinEdit` „keine Grenze“.
 - `Min > Max` wirft **nicht** (wie `TSpinEdit`), sonst scheitert `Min := 10; Max := 100`.
-- Wiederholung beim Halten der Buttons über den Animator.
+- Ungültige Eingaben werden beim Verlassen und mit Enter auf den gültigen Wert gesetzt; `Value` ist auch während des Tippens schon begrenzt.
+- `ReadOnly` sperrt auch die Pfeile; `EditorEnabled = False` sperrt nur das Tippen.
+- Wiederholung beim Halten der Buttons über den Animator (400 ms, dann alle 50 ms).
 
 ## Verhalten (aus dem Quelltext)
 
@@ -23,100 +38,100 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `RoundedCorners` | `TPPGCorners` | `[pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft]` | Welche Ecken gerundet sind; die übrigen werden eckig. Für Button-Gruppen und Segment-Schalter: linker Button [pcTopLeft, pcBottomLeft], mittlere [], rechter [pcTopRight, pcBottomRight]. Menge aus: `pcTopLeft`, `pcTopRight`, `pcBottomRight`, `pcBottomLeft`. Nutzung: `PPGButton2.RoundedCorners := [];` |
-| `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
-| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
-| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
-| `TextHint` | `string` |  | Platzhaltertext im leeren Feld (z. B. „Suchen …"). Nutzung: `Edit1.TextHint := 'E-Mail-Adresse';` |
-| `UseSystemContextMenu` | `Boolean` | `False` | True: Rechtsklick zeigt das native Windows-Menü des Edits statt des PPGlow-Menüs (Rückgängig, Ausschneiden, Kopieren, Einfügen, Löschen, Alles markieren; übersetzt und im Preset-Stil). |
-| `ValidationState` | `TPPGValidationState` | `pvsNone` | Ergebnis einer Prüfung: pvsNone (neutral), pvsValid (grüner Rand), pvsWarning (gelb), pvsError (rot). Die Farben kommen aus den Signal-Tokens; ValidationHint erklärt den Zustand. Werte: `pvsNone`, `pvsValid`, `pvsWarning`, `pvsError`. Nutzung: `if not IstMail(Edit1.Text) then begin Edit1.ValidationState := pvsError; Edit1.ValidationHint := 'Keine gültige Adresse'; end;` |
-| `ValidationHint` | `string` |  | Erklärung zum ValidationState; erscheint als Tooltip und wird vom Screenreader vorgelesen. |
-| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
-| `Alignment` | `TAlignment` | `taLeftJustify` | Ausrichtung des Textes im Feld (links, rechts, zentriert). |
-| `AutoSelect` | `Boolean` | `True` | True: Beim Fokus wird der ganze Text markiert, damit man direkt überschreiben kann. |
-| `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
-| `EditorEnabled` | `Boolean` | `True` | False: Der Wert lässt sich nur über die Pfeil-Buttons, Pfeiltasten und das Mausrad ändern, nicht durch Tippen. |
-| `Increment` | `Integer` | `1` | Schrittweite für Buttons, Pfeiltasten und Mausrad; Bild auf/ab ändert um das Zehnfache. |
-| `MaxLength` | `Integer` | `0` | Höchstzahl der Zeichen; 0 = unbegrenzt. |
-| `Max` | `Integer` | `0` | Obergrenze für Value. Min = Max bedeutet „keine Grenze" (wie TSpinEdit). |
-| `Min` | `Integer` | `0` | Untergrenze für Value. Min = Max bedeutet „keine Grenze"; die Reihenfolge beim Setzen ist egal. Nutzung: `Spin.Min := 1; Spin.Max := 99;` |
-| `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. |
-| `ReadOnlyStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Eigene Optik bei ReadOnly: Fläche, Text- und Randfarbe (je auch für Dunkel). clDefault = wie im bearbeitbaren Zustand. Nutzung: `Edit1.ReadOnlyStyle.Color := $00F0F0F0; Edit1.ReadOnlyStyle.TextColor := clGrayText;` |
-| `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
-| `Value` | `Integer` |  | Aktueller Wert; wird still auf Min..Max begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt. |
-| `TextHintVisibleOnFocus` | `Boolean` | `False` | True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus. |
+| `RoundedCorners` | `TPPGCorners` | `[pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft]` | Welche Ecken gerundet sind; die übrigen werden eckig. Für Button-Gruppen und Segment-Schalter: linker Button [pcTopLeft, pcBottomLeft], mittlere [], rechter [pcTopRight, pcBottomRight]. Menge aus: `pcTopLeft`, `pcTopRight`, `pcBottomRight`, `pcBottomLeft`. Nutzung: `PPGButton2.RoundedCorners := [];` Praxis: Für Feld-Gruppen: Spin links an einem Einheiten-Feld oder Button bekommt nur [pcTopLeft, pcBottomLeft], dann wirken beide wie ein Control. |
+| `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. Praxis: Meist leer lassen und das Preset zentral über StyleManager vorgeben. Nur für ein einzelnes abweichendes Feld direkt setzen. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. Praxis: Den StyleManager des Formulars zuweisen, damit das Zahlenfeld wie alle anderen Felder aussieht und Preset-Wechsel mitmacht. |
+| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` Praxis: Nur ohne StyleManager wirksam. Rand- und Fokusfarbe lassen sich hier anpassen, z. B. Appearance.Rounding = 0 für eckige Felder in einer Tabelle. |
+| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. Praxis: An lassen: Rand und Fokus blenden weich über. Abschalten nur, wenn sehr viele Felder gleichzeitig umgefärbt werden. |
+| `TextHint` | `string` |  | Platzhaltertext im leeren Feld (z. B. „Suchen …"). Nutzung: `Edit1.TextHint := 'E-Mail-Adresse';` Praxis: Bei einem Zahlenfeld selten sichtbar, weil immer ein Wert drinsteht. Nur nützlich, wenn der Text im Code geleert wird, z. B. „Anzahl" als Hinweis. |
+| `UseSystemContextMenu` | `Boolean` | `False` | True: Rechtsklick zeigt das native Windows-Menü des Edits statt des PPGlow-Menüs (Rückgängig, Ausschneiden, Kopieren, Einfügen, Löschen, Alles markieren; übersetzt und im Preset-Stil). Praxis: False lassen, dann passt das Kontextmenü zur Optik. True nur, wenn Anwender das gewohnte Windows-Menü erwarten (z. B. in Terminal-Server-Umgebungen mit eigener Übersetzung). |
+| `ValidationState` | `TPPGValidationState` | `pvsNone` | Ergebnis einer Prüfung: pvsNone (neutral), pvsValid (grüner Rand), pvsWarning (gelb), pvsError (rot). Die Farben kommen aus den Signal-Tokens; ValidationHint erklärt den Zustand. Werte: `pvsNone`, `pvsValid`, `pvsWarning`, `pvsError`. Nutzung: `if not IstMail(Edit1.Text) then begin Edit1.ValidationState := pvsError; Edit1.ValidationHint := 'Keine gültige Adresse'; end;` Praxis: Für Werte, die erlaubt, aber ungewöhnlich sind: pvsWarning bei sehr kurzem Speicherintervall, pvsError bei einer Menge über dem Lager, wenn Sie nicht still begrenzen wollen. In OnChange setzen. |
+| `ValidationHint` | `string` |  | Erklärung zum ValidationState; erscheint als Tooltip und wird vom Screenreader vorgelesen. Praxis: Erklärt den ValidationState in einem Satz („Mehr als 50 Stück sind nicht auf Lager"). Ohne Hinweis sieht der Anwender nur eine Farbe und weiß nicht, warum. |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). Praxis: True lassen, damit das Feld im Windows-Hochkontrast lesbar bleibt (Pflicht bei Barrierefreiheit). |
+| `Alignment` | `TAlignment` | `taLeftJustify` | Ausrichtung des Textes im Feld (links, rechts, zentriert). Praxis: Zahlen in Formularen rechtsbündig (taRightJustify) ausrichten, damit Stellen in untereinanderstehenden Feldern fluchten. |
+| `AutoSelect` | `Boolean` | `True` | True: Beim Fokus wird der ganze Text markiert, damit man direkt überschreiben kann. Praxis: True lassen: Beim Hineintabben ist die Zahl markiert und wird durch Tippen ersetzt. False nur, wenn Anwender meist eine Ziffer anhängen. |
+| `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). Praxis: bsSingle für normale Formularfelder; bsNone, wenn das Zahlenfeld in eine Tabelle oder Karte eingebettet ist, die selbst einen Rahmen zeichnet. |
+| `EditorEnabled` | `Boolean` | `True` | False: Der Wert lässt sich nur über die Pfeil-Buttons, Pfeiltasten und das Mausrad ändern, nicht durch Tippen. Praxis: Auf False stellen, wenn nur feste Stufen erlaubt sind (Rabatt 0, 5, 10 …): Dann ändern nur Pfeile, Pfeiltasten und Mausrad den Wert, Tippfehler sind ausgeschlossen. |
+| `Increment` | `Integer` | `1` | Schrittweite für Buttons, Pfeiltasten und Mausrad; Bild auf/ab ändert um das Zehnfache. Praxis: Schrittweite der Pfeile, z. B. 5 für Rabattstufen oder 15 für Minuten im Viertelstundentakt. Bild auf/ab springt um das Zehnfache; Tippen bleibt frei, außer EditorEnabled = False. |
+| `MaxLength` | `Integer` | `0` | Höchstzahl der Zeichen; 0 = unbegrenzt. Praxis: Begrenzt die Stellen beim Tippen, z. B. 3 für Mengen bis 999. Meist reicht Max; MaxLength verhindert zusätzlich überlange Eingaben vor dem Verlassen. |
+| `Max` | `Integer` | `0` | Obergrenze für Value. Min = Max bedeutet „keine Grenze" (wie TSpinEdit). Praxis: Größter erlaubter Wert, z. B. der Lagerbestand oder 100 für Prozent. Zur Laufzeit anpassen, wenn die Grenze von Daten abhängt (Spin.Max := Artikel.Bestand); der Pfeil nach oben wird an der Grenze grau. |
+| `Min` | `Integer` | `0` | Untergrenze für Value. Min = Max bedeutet „keine Grenze"; die Reihenfolge beim Setzen ist egal. Nutzung: `Spin.Min := 1; Spin.Max := 99;` Praxis: Kleinster erlaubter Wert, z. B. 1 für eine Bestellmenge oder 0 für einen Rabatt. Zusammen mit Max setzen; Min = Max (beide 0) bedeutet „ohne Grenze". |
+| `ReadOnly` | `Boolean` | `False` | True: Der Text kann gelesen, markiert und kopiert, aber nicht geändert werden. Die Optik bestimmt ReadOnlyStyle. Praxis: Für Werte, die der Anwender sehen, aber nicht ändern darf (Vorgabe des Administrators, abgeschlossener Beleg). Anders als Enabled = False bleibt der Wert gut lesbar und kopierbar; die Pfeile sind gesperrt. |
+| `ReadOnlyStyle` | [TPPGElementStyle](types/TPPGElementStyle.md) |  | Eigene Optik bei ReadOnly: Fläche, Text- und Randfarbe (je auch für Dunkel). clDefault = wie im bearbeitbaren Zustand. Nutzung: `Edit1.ReadOnlyStyle.Color := $00F0F0F0; Edit1.ReadOnlyStyle.TextColor := clGrayText;` Praxis: Damit schreibgeschützte Zahlenfelder als solche erkennbar sind, z. B. ReadOnlyStyle.Color = $00F3F3F3. Einmal je Formular einheitlich festlegen. |
+| `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. Praxis: True lassen, damit das Feld per Tastatur erreichbar ist; Pfeiltasten ändern den Wert dann ohne Maus. |
+| `Value` | `Integer` |  | Aktueller Wert; wird still auf Min..Max begrenzt. Ungültige Eingaben werden beim Verlassen bzw. mit Enter auf Value zurückgesetzt. Praxis: Der eigentliche Zahlenwert: Lesen Sie ihn als Integer (Menge := SpinMenge.Value), nicht über Text. Beim Laden eines Datensatzes setzen; zu große oder kleine Werte werden still auf Min..Max begrenzt. |
+| `TextHintVisibleOnFocus` | `Boolean` | `False` | True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus. Praxis: Nur zusammen mit TextHint von Bedeutung; True lässt den Hinweis beim Hineinklicken stehen, bis getippt wird. |
 
 ## Eigenschaften wie in der VCL
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
-| `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
-| `AutoSize` | `Boolean` | `True` | True: Das Control passt seine Größe dem Inhalt an (Text, Bild, Schrift). |
-| `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. |
-| `Color` | `TColor` | `clWindow` | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. |
-| `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` |
-| `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). |
-| `DragKind` | `TDragKind` |  | dkDrag = Drag & Drop, dkDock = Andocken beim Ziehen. |
-| `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. |
-| `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. |
-| `Font` | `TFont` |  | Schrift (Name, Größe, Stil, Farbe). Die Textfarbe der Zustände kann Appearance überschreiben. Nutzung: `Label1.Font.Size := 12; Label1.Font.Style := [fsBold];` |
-| `ParentBiDiMode` | `Boolean` |  | True: BiDiMode wird vom Parent übernommen. |
-| `ParentColor` | `Boolean` | `False` | True: Color wird vom Parent übernommen. |
-| `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. |
-| `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
-| `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
-| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
-| `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. |
-| `TabOrder` | `TTabOrder` |  | Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst). |
-| `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
-| `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
-| `DoubleBuffered` | `Boolean` |  | Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht. |
-| `ParentDoubleBuffered` | `Boolean` |  | True: DoubleBuffered wird vom Parent übernommen. |
-| `AlignWithMargins` | `Boolean` |  | True: Beim Ausrichten (Align) gelten die Abstände aus Margins. Nutzung: `Edit1.AlignWithMargins := True; Edit1.Margins.SetBounds(8, 4, 8, 4);` |
-| `Left` | `Integer` |  | Linke Kante relativ zum Parent in Pixeln. |
-| `Top` | `Integer` |  | Obere Kante relativ zum Parent in Pixeln. |
-| `Width` | `Integer` |  | Breite in Pixeln (bei hoher DPI skaliert die VCL beim Laden). |
-| `Height` | `Integer` |  | Höhe in Pixeln (bei hoher DPI skaliert die VCL beim Laden). |
-| `Cursor` | `TCursor` |  | Mauszeiger über dem Control. Nutzung: `crHandPoint` für klickbare Flächen. |
-| `Hint` | `string` |  | Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor "\|" = Tooltip, danach = Langtext für die Statusleiste. Nutzung: `Button1.Hint := 'Dokument speichern\|Speichert das Dokument unter dem bisherigen Namen';` |
-| `HelpType` | `THelpType` |  | Ob F1 HelpContext (htContext) oder HelpKeyword (htKeyword) verwendet. |
-| `HelpKeyword` | `string` |  | Stichwort für die Hilfe (F1), wenn HelpType = htKeyword. |
-| `HelpContext` | `THelpContext` |  | Kontext-ID für die Hilfe (F1). |
-| `Margins` | `TMargins` |  | Außenabstände für das Ausrichten; wirken nur mit AlignWithMargins = True. |
-| `CustomHint` | `TCustomHint` |  | Eigenes Hint-Objekt (z. B. TBalloonHint) statt des Standard-Tooltips. |
-| `ParentCustomHint` | `Boolean` |  | True: CustomHint wird vom Parent übernommen. |
-| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
-| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+| `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. Praxis: Für Zahlenfelder selten; in Werkzeugleisten mit Align = alLeft neben Beschriftungen, sonst frei platzieren. |
+| `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` Praxis: In mitwachsenden Dialogen [akLeft, akTop] lassen: Zahlenfelder brauchen keine zusätzliche Breite, nur Textfelder sollten mitwachsen. |
+| `AutoSize` | `Boolean` | `True` | True: Das Control passt seine Größe dem Inhalt an (Text, Bild, Schrift). Praxis: True lassen: Die Höhe folgt der Schrift und passt zu den übrigen Feldern in derselben Zeile. |
+| `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. Praxis: Nur für arabische oder hebräische Oberflächen; am Formular setzen und über ParentBiDiMode folgen lassen. |
+| `Color` | `TColor` | `clWindow` | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. Praxis: Selten nötig, die Feldfarbe kommt aus dem Preset. Für Pflichtfelder lieber ValidationState oder einen Hinweis neben dem Feld nutzen. |
+| `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` Praxis: MinWidth = 80 verhindert, dass das Feld bei Align so schmal wird, dass die Pfeile die Zahl verdecken. |
+| `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). Praxis: Nur bei DragMode = dmAutomatic sichtbar; bei Zahlenfeldern praktisch nie gebraucht. |
+| `DragKind` | `TDragKind` |  | dkDrag = Drag & Drop, dkDock = Andocken beim Ziehen. Praxis: dkDrag lassen; Zahlenfelder werden nicht angedockt. |
+| `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. Praxis: dmManual lassen, sonst startet jeder Klick ins Feld ein Ziehen und man kann nicht mehr markieren. |
+| `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. Praxis: Sperren, wenn der Wert gerade keine Bedeutung hat, z. B. Intervall bei ausgeschaltetem automatischem Speichern. Für „sichtbar, aber nicht änderbar" ReadOnly nehmen. |
+| `Font` | `TFont` |  | Schrift (Name, Größe, Stil, Farbe). Die Textfarbe der Zustände kann Appearance überschreiben. Nutzung: `Label1.Font.Size := 12; Label1.Font.Style := [fsBold];` Praxis: Am Formular einstellen und über ParentFont vererben. Für eine hervorgehobene Kennzahl Font.Style = [fsBold]. |
+| `ParentBiDiMode` | `Boolean` |  | True: BiDiMode wird vom Parent übernommen. Praxis: True lassen, damit das Feld der Leserichtung des Formulars folgt. |
+| `ParentColor` | `Boolean` | `False` | True: Color wird vom Parent übernommen. Praxis: False lassen: Ein Eingabefeld soll sich vom Hintergrund abheben. |
+| `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. Praxis: True lassen, damit alle Felder die Formularschrift tragen. Ändern Sie Font, wird es automatisch False. |
+| `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). Praxis: True lassen und ShowHint einmal am Formular einschalten. |
+| `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. Praxis: Für Zusatzbefehle per Rechtsklick, z. B. „Auf Standard zurücksetzen" oder „Lagerbestand übernehmen". Ohne Zuweisung erscheint das Bearbeiten-Menü. |
+| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. Praxis: Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True. |
+| `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. Praxis: Nur bei VCL-Styles wichtig: Ohne seClient behält das Feld die PPGlow-Farben. |
+| `TabOrder` | `TTabOrder` |  | Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst). Praxis: So vergeben, dass Tab in Lesereihenfolge durch das Formular läuft, z. B. Artikel, Menge, Rabatt. |
+| `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. Praxis: Ausblenden, wenn das Feld für diesen Fall nicht gilt (z. B. Stückzahl bei Dienstleistungen); nur vorübergehend nicht nutzbar besser Enabled = False. |
+| `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. Praxis: Auf Touch-Geräten meist nicht nötig, die Pfeile sind groß genug zum Tippen. Gesten nur für Sonderfälle anhaken. |
+| `DoubleBuffered` | `Boolean` |  | Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht. Praxis: Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden. |
+| `ParentDoubleBuffered` | `Boolean` |  | True: DoubleBuffered wird vom Parent übernommen. Praxis: True lassen; bei PPGlow-Controls ohne sichtbare Wirkung. |
+| `AlignWithMargins` | `Boolean` |  | True: Beim Ausrichten (Align) gelten die Abstände aus Margins. Nutzung: `Edit1.AlignWithMargins := True; Edit1.Margins.SetBounds(8, 4, 8, 4);` Praxis: Zusammen mit Align einschalten, damit das Feld in einer Leiste nicht am Nachbarn klebt. |
+| `Left` | `Integer` |  | Linke Kante relativ zum Parent in Pixeln. Praxis: Im Designer per Maus; im Code bei dynamisch erzeugten Feldern über SetBounds(X, Y, 100, 32). |
+| `Top` | `Integer` |  | Obere Kante relativ zum Parent in Pixeln. Praxis: Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern. |
+| `Width` | `Integer` |  | Breite in Pixeln (bei hoher DPI skaliert die VCL beim Laden). Praxis: 80 bis 120 Pixel reichen für die meisten Zahlen samt Pfeilen; breiter wirkt leer. Einheitlich breite Zahlenfelder wirken ruhiger. |
+| `Height` | `Integer` |  | Höhe in Pixeln (bei hoher DPI skaliert die VCL beim Laden). Praxis: Mit AutoSize bestimmt die Schrift die Höhe; ohne AutoSize 32 Pixel wie die übrigen Felder im Formular. |
+| `Cursor` | `TCursor` |  | Mauszeiger über dem Control. Nutzung: `crHandPoint` für klickbare Flächen. Praxis: Vorgabe lassen; über dem Textteil erscheint automatisch der Textcursor, über den Pfeilen der Pfeil. |
+| `Hint` | `string` |  | Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor "\|" = Tooltip, danach = Langtext für die Statusleiste. Nutzung: `Button1.Hint := 'Dokument speichern\|Speichert das Dokument unter dem bisherigen Namen';` Praxis: Nennt Einheit und Grenzen („Menge in Stück, 1 bis 50"), wenn das nicht schon in der Beschriftung steht. Mit ShowHint am Formular anzeigen. |
+| `HelpType` | `THelpType` |  | Ob F1 HelpContext (htContext) oder HelpKeyword (htKeyword) verwendet. Praxis: htKeyword bei Stichwort-Hilfen, sonst htContext. Ohne Hilfedatei egal. |
+| `HelpKeyword` | `string` |  | Stichwort für die Hilfe (F1), wenn HelpType = htKeyword. Praxis: Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword). |
+| `HelpContext` | `THelpContext` |  | Kontext-ID für die Hilfe (F1). Praxis: Nur mit Hilfedatei: Kontext-ID der Seite, die F1 im fokussierten Feld öffnet, z. B. die Erklärung der Rabattstaffel. |
+| `Margins` | `TMargins` |  | Außenabstände für das Ausrichten; wirken nur mit AlignWithMargins = True. Praxis: Abstand zu Nachbarn bei Align, z. B. Margins.Right = 8 in einer Leiste. Wirkt nur mit AlignWithMargins. |
+| `CustomHint` | `TCustomHint` |  | Eigenes Hint-Objekt (z. B. TBalloonHint) statt des Standard-Tooltips. Praxis: Für Hinweise mit Titel, z. B. „Menge" mit Erklärung zu Mindestabnahme: einen TPPGCustomHint oder TBalloonHint zuweisen. |
+| `ParentCustomHint` | `Boolean` |  | True: CustomHint wird vom Parent übernommen. Praxis: True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt. |
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) Praxis: Sprechend benennen (spMenge, spRabatt), damit Zugriffe wie spMenge.Value im Code lesbar sind. |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). Praxis: Für mehrere gleichartige Felder mit einem gemeinsamen OnChange: Tag = Spaltennummer oder Artikel-ID unterscheidet sie. |
 
 ## Ereignisse
 
 | Ereignis | Typ und Parameter | Wann und wozu |
 |---|---|---|
-| `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
-| `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Der Text wurde geändert (Tippen, Einfügen, Code). |
-| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. |
-| `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
-| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln zählen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht. |
-| `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. |
-| `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. |
-| `OnEndDock` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Andock-Vorgang dieses Controls beendet. |
-| `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
-| `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
-| `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
-| `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` |
-| `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
-| `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
-| `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. |
-| `OnMouseEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Maus ist in das Control hineinbewegt worden. |
-| `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. |
-| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
-| `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |
-| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
-| `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
-| `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
-| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
+| `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` Praxis: Auf Touch-Geräten: Wischen nach oben/unten als Schritt auswerten (EventInfo.GestureID). |
+| `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Der Text wurde geändert (Tippen, Einfügen, Code). Praxis: Hier reagieren Sie auf jede Wertänderung (Tippen, Pfeile, Mausrad, Code), z. B. Summe neu berechnen. Value ist darin schon begrenzt. |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. Praxis: Selten nötig; feuert beim Klick ins Feld. Für Wertänderungen OnChange nehmen. |
+| `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. Praxis: Um das Kontextmenü vor dem Öffnen anzupassen (Einträge sperren) oder mit Handled := True zu unterdrücken. |
+| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln zählen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht. Praxis: Z. B. Doppelklick setzt den Vorschlagswert (Lagerbestand oder Standardmenge) ein. |
+| `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. Praxis: Wenn ein Wert per Ziehen übernommen werden soll, z. B. Menge aus einer Artikelliste ins Feld ziehen. |
+| `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. Praxis: Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur für passende Quellen. |
+| `OnEndDock` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Andock-Vorgang dieses Controls beendet. Praxis: Nur bei DragKind = dkDock; für Zahlenfelder praktisch nie gebraucht. |
+| `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). Praxis: Nach dem Ziehen des Felds; für Zahlenfelder selten gebraucht. |
+| `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. Praxis: Für Hilfetexte in der Statusleiste („Menge 1 bis 50"), sobald das Feld den Fokus bekommt. |
+| `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. Praxis: Ort für Prüfungen über mehrere Felder, z. B. Menge mal Preis gegen das Kreditlimit. Der Text ist beim Verlassen bereits auf den gültigen Wert gesetzt. |
+| `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` Praxis: Für zusätzliche Tasten, z. B. Entf setzt auf Min. Pfeile und Bild auf/ab erledigt das Feld selbst. |
+| `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. Praxis: Selten nötig, das Feld lässt nur Ziffern und Vorzeichen zu. Enter übernimmt den Wert bereits. |
+| `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. Praxis: Für Aktionen nach dem Loslassen einer Taste, z. B. eine Vorschau erst nach dem letzten Tastendruck aktualisieren. |
+| `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. Praxis: Selten nötig; die Pfeile verarbeitet das Feld selbst. Für eigene Befehle per Mittelklick o. Ä. |
+| `OnMouseEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Maus ist in das Control hineinbewegt worden. Praxis: Z. B. eine Erklärung zur Einheit in der Statusleiste zeigen, solange die Maus über dem Feld ist. |
+| `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. Praxis: Gegenstück zu OnMouseEnter: den Statusleisten-Text wieder löschen. |
+| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. Praxis: Für Zahlenfelder selten gebraucht; feuert bei jeder Mausbewegung, deshalb nur leichte Arbeit darin. |
+| `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. Praxis: Selten nötig; die Wiederholung beim Halten der Pfeile endet automatisch beim Loslassen. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. Praxis: Das Mausrad ändert den Wert bereits (mit Fokus). Handled := True nur, wenn Sie das Rad anders auswerten wollen. |
+| `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. Praxis: Nur bei DragKind = dkDock; für Zahlenfelder praktisch nie gebraucht. |
+| `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. Praxis: Beginn des Ziehens; hier könnte ein eigenes DragObject mit dem Wert gesetzt werden. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. Praxis: Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen. |
 
 Tests: `PPG.Tests.Audit45` (TNamingTests); `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit7A` (TWheelTests); `PPG.Tests.Phase4a` (TPhase4aPaintTests, TSpinEditTests); `PPG.Tests.Phase8` (TFluent11Tests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 

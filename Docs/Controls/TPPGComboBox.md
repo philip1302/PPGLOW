@@ -4,18 +4,41 @@ Palette **PPGlow** - Unit `PPG.ComboBox` - Basis `TPPGCustomComboBox`
 
 **Vorbild:** TComboBox, TMS TAdvComboBox
 
+## Wofür
+
+Die ComboBox lässt den Anwender einen Wert aus einer Liste wählen, ohne dass die Liste dauerhaft Platz braucht: Anrede, Land, Zahlungsart, Artikel. Mit `Style = csDropDownList` sind nur Einträge der Liste gültig; mit `csDropDown` darf er auch eigenen Text eingeben, die Liste macht dann Vorschläge. Reiche Einträge (`ItemsEx` mit Detailzeile, Plakette, Bild) und `FilterMode` machen sie auch für lange Listen wie Artikel- oder Kundenstämme brauchbar.
+
+## Wann verwenden
+
+- Für eine Wahl aus fünf und mehr Werten, oder wenn der Platz knapp ist. Bei zwei bis vier Werten, die man auf einen Blick sehen soll, ist `TPPGRadioGroup` (auch als Segment) klarer.
+- Für Ja/Nein-Einstellungen nicht: Dafür sind `TPPGCheckBox` und `TPPGToggleSwitch` da.
+- Für mehrere gleichzeitig gewählte Werte `TPPGCheckComboBox`, für Einträge mit mehreren Spalten (Nummer, Name, Ort) `TPPGColumnComboBox`.
+- Statt `TPPGSearchEdit`, wenn der Wert aus einer festen Liste kommen soll. Das Suchfeld ist für freie Suchbegriffe mit Vorschlägen gedacht.
+- Statt `TPPGListBox`, wenn nur ein Wert gewählt wird und die Liste nicht ständig sichtbar sein muss.
+- Am Datenfeld `TPPGDBComboBox` bzw. für Nachschlagefelder mit Schlüssel `TPPGDBLookupComboBox`.
+
 ## Unterschiede und Hinweise
 
-- Ereignisse wie `TComboBox`: `OnClick`, dann `OnSelect`; nur ohne `OnSelect` kommt `OnChange`.
+- Ereignisse wie `TComboBox`: `OnClick`, dann `OnSelect`; nur ohne `OnSelect` kommt `OnChange`. Tippen löst `OnChange` aus; `ItemIndex` und `Text` im Code setzen löst kein Ereignis aus.
 - Das Mausrad ändert die geschlossene Combo nicht.
 - `ItemHeight` ist eine Mindesthöhe (alte DFMs speichern 13).
-- Eigene Aufklappliste (`PPG.Popup`) mit `ItemsEx` (Bild, Detail, Plakette, Markup) und `FilterMode`; Filtern ersetzt AutoComplete, ohne Treffer schließt die Liste.
-- Seit Phase 20e auf der gemeinsamen Aufklapp-Basis (`TPPGCustomDropDownField`) wie ColorPicker und CheckComboBox: gleiche Maus-, Tastatur- und Screenreader-Regeln. Anders als dort sperrt `ReadOnly` das Aufklappen nicht, und bei offener Liste gehen Zeichen weiter ins Edit.
+- Eigene Aufklappliste (`PPG.Popup`) mit `ItemsEx` (Bild, Detail, Plakette, Markup) und `FilterMode`; Filtern ersetzt AutoComplete, ohne Treffer schließt die Liste. `Group` der `ItemsEx`-Einträge zeigt die Combo nicht an (keine Gruppenköpfe in der Aufklappliste).
+- Seit Phase 20e auf der gemeinsamen Aufklapp-Basis (`TPPGCustomDropDownField`) wie ColorPicker und CheckComboBox: gleiche Maus-, Tastatur- und Screenreader-Regeln. Anders als dort gibt es (wie bei `TComboBox`) kein `ReadOnly` im Objektinspektor, und bei offener Liste gehen Zeichen weiter ins Edit.
 
 ## Anpassung
 
-- `Styles` für die Aufklappliste (Zebra, Auswahl, Hover) und `OnCustomDrawItem`.
+- `Styles` für die Aufklappliste (Zebra, Auswahl, Hover, Detailzeile) und `OnCustomDrawItem`.
 - `RoundedCorners` für zusammengesetzte Eingabegruppen.
+
+## Beispiel
+
+```pascal
+cbLand.Style := csDropDownList;
+cbLand.Sorted := True;
+cbLand.Items.Text := 'Deutschland' + sLineBreak + 'Schweiz' + sLineBreak + 'Frankreich';
+cbLand.ItemIndex := cbLand.Items.IndexOf('Deutschland');
+cbLand.OnSelect := LandSelect;
+```
 
 ## Verhalten (aus dem Quelltext)
 
@@ -34,113 +57,113 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `RoundedCorners` | `TPPGCorners` | `[pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft]` | Welche Ecken gerundet sind; die übrigen werden eckig. Für Button-Gruppen und Segment-Schalter: linker Button [pcTopLeft, pcBottomLeft], mittlere [], rechter [pcTopRight, pcBottomRight]. Menge aus: `pcTopLeft`, `pcTopRight`, `pcBottomRight`, `pcBottomLeft`. Nutzung: `PPGButton2.RoundedCorners := [];` |
-| `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. |
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. |
-| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` |
-| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. |
-| `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). |
-| `ItemsEx` | [TPPGItems](types/TPPGItems.md) |  | Reiche Einträge mit Bild (aus Images), Detailzeile, Plakette und Markup. Sind welche vorhanden, sind sie die Einträge der Liste. Nutzung: `with ComboBox1.ItemsEx.Add('Berlin', 2) do Detail := '3,7 Mio. Einwohner';` |
-| `FilterMode` | `TPPGFilterMode` | `fmNone` | Filtern beim Tippen (nur Style = csDropDown): fmNone zeigt immer alle Einträge, fmPrefix nur die mit diesem Anfang, fmContains alle, die den Text irgendwo enthalten. Die Liste klappt dabei auf. Werte: `fmNone`, `fmPrefix`, `fmContains`. Nutzung: Für lange Listen: `ComboBox1.FilterMode := fmContains;` |
-| `Styles` | [TPPGListStyles](types/TPPGListStyles.md) |  | Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: `ComboBox1.Styles.AlternateRow.Color := $00FAF7F2;` |
-| `ShowClearButton` | `Boolean` | `False` | True: Ein „×"-Knopf im Feld löscht den Text (nur sichtbar, wenn Text vorhanden und das Feld bearbeitbar ist). |
-| `TextHint` | `string` |  | Platzhaltertext im leeren Feld (z. B. „Suchen …"). Nutzung: `Edit1.TextHint := 'E-Mail-Adresse';` |
-| `UseSystemContextMenu` | `Boolean` | `False` | True: Rechtsklick zeigt das native Windows-Menü des Edits statt des PPGlow-Menüs (Rückgängig, Ausschneiden, Kopieren, Einfügen, Löschen, Alles markieren; übersetzt und im Preset-Stil). |
-| `TextHintVisibleOnFocus` | `Boolean` | `False` | True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus. |
-| `ValidationState` | `TPPGValidationState` | `pvsNone` | Ergebnis einer Prüfung: pvsNone (neutral), pvsValid (grüner Rand), pvsWarning (gelb), pvsError (rot). Die Farben kommen aus den Signal-Tokens; ValidationHint erklärt den Zustand. Werte: `pvsNone`, `pvsValid`, `pvsWarning`, `pvsError`. Nutzung: `if not IstMail(Edit1.Text) then begin Edit1.ValidationState := pvsError; Edit1.ValidationHint := 'Keine gültige Adresse'; end;` |
-| `ValidationHint` | `string` |  | Erklärung zum ValidationState; erscheint als Tooltip und wird vom Screenreader vorgelesen. |
-| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). |
-| `AutoCloseUp` | `Boolean` | `False` | True: Springt die Tippsuche bei offener Liste auf einen Eintrag, wird er sofort übernommen und die Liste geschlossen. |
-| `AutoComplete` | `Boolean` | `True` | True: Bei Style = csDropDown ergänzt das Feld den getippten Anfang zum ersten passenden Eintrag (der Rest ist markiert und wird beim Weitertippen ersetzt). |
-| `AutoDropDown` | `Boolean` | `False` | True: Die Liste klappt beim Tippen automatisch auf. |
-| `AutoDropDownWidth` | `Boolean` | `False` | True: Die Liste wird so breit wie der längste Eintrag, mindestens so breit wie das Feld bzw. DropDownWidth (wie TComboBox.AutoDropDownWidth). |
-| `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). |
-| `CharCase` | `TEditCharCase` | `ecNormal` | Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase). |
-| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). |
-| `DropDownWidth` | `Integer` | `0` | Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. Nützlich für lange Einträge in schmalen Feldern. |
-| `ItemHeight` | `Integer` | `0` | Mindesthöhe einer Listenzeile in logischen Pixeln (0..1000); 0 = aus der Schrift. Einträge mit Detailzeile werden entsprechend höher. |
-| `Items` | `TStrings` |  | Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte. |
-| `ItemIndex` | `Integer` | `-1` | Index des gewählten Eintrags; -1 = keiner. Setzen aus Code löst (wie bei TComboBox) kein Ereignis aus. Nutzung: `ComboBox1.ItemIndex := ComboBox1.Items.IndexOf('Berlin');` |
-| `MaxLength` | `Integer` | `0` | Höchstzahl der Zeichen; 0 = unbegrenzt. |
-| `Sorted` | `Boolean` | `False` | True: Die Einträge werden alphabetisch sortiert gehalten. |
-| `Style` | `TComboBoxStyle` | `csDropDown` | csDropDown: freie Eingabe im Feld plus Liste (mit AutoComplete und FilterMode); csDropDownList: nur Auswahl aus der Liste, Tippen springt per Anfangsbuchstaben. csSimple verhält sich wie csDropDown, csOwnerDraw* wie csDropDownList (Zeichnen über OnCustomDrawItem). |
-| `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. |
-| `Text` | `string` |  | Der angezeigte bzw. eingegebene Text. Bei csDropDownList der Text des gewählten Eintrags. |
+| `RoundedCorners` | `TPPGCorners` | `[pcTopLeft, pcTopRight, pcBottomRight, pcBottomLeft]` | Welche Ecken gerundet sind; die übrigen werden eckig. Für Button-Gruppen und Segment-Schalter: linker Button [pcTopLeft, pcBottomLeft], mittlere [], rechter [pcTopRight, pcBottomRight]. Menge aus: `pcTopLeft`, `pcTopRight`, `pcBottomRight`, `pcBottomLeft`. Nutzung: `PPGButton2.RoundedCorners := [];` Praxis: Für Eingabegruppen: Combo „Währung“ links neben einem Betragsfeld bekommt [pcTopLeft, pcBottomLeft], das Betragsfeld die rechten Ecken. |
+| `Preset` | `string` |  | Optik-Vorlage: „Classic" (glänzend, Office-Stil), „ModernFlat" (flach mit Glow, Standard) oder „Fluent11" (Windows 11) sowie selbst registrierte Renderer. Beim Wechsel übernimmt Appearance die Farben und Formen der Vorlage. Ein unbekannter Name löst zur Laufzeit EPPGPropertyError aus; beim Laden einer DFM wird auf den Standard zurückgefallen. Nutzung: `PPGButton1.Preset := 'Fluent11';` Für alle Controls eines Formulars einheitlich über StyleManager. Praxis: Die Optik einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager; dann passen Combo, Edit und Buttons zusammen. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle (TPPGStyleManager). Ist sie gesetzt, kommen Preset, Appearance und Animation vom Manager; eigene Werte des Controls gelten dann nicht. Nutzung: Einen TPPGStyleManager aufs Formular legen und bei allen Controls zuweisen. Praxis: Einen TPPGStyleManager aufs Formular (oder ein Datenmodul) legen und allen Controls zuweisen; dann wechselt ein Befehl die Optik aller Felder, auch Hell/Dunkel. |
+| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Aussehen je Zustand: Farben, Verläufe, Rand, Glow und Textfarbe für Normal, Hot (Maus darüber), Down (gedrückt), Disabled und Checked, dazu Rundung, Randbreite, Glow-Größe, Fokusfarbe, eigene Fokus- und Dunkel-Farben. Wird beim Preset-Wechsel neu befüllt. Nutzung: `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;` Praxis: Nur für einzelne Abweichungen, z. B. eine Combo in einer farbigen Kopfzeile. Einheitliche Felder bekommen ihre Optik über Preset bzw. StyleManager. |
+| `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird. Praxis: An lassen: Der Pfeil dreht sich beim Aufklappen und die Liste gleitet auf. RespectSystemSettings = True schaltet das ab, wenn Windows keine Animationen zeigen soll. |
+| `Images` | `TCustomImageList` |  | Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten). Praxis: Eine Bildliste zuweisen, wenn die Einträge in ItemsEx Symbole tragen, z. B. Flaggen bei Ländern oder Status-Symbole bei Aufträgen. |
+| `ItemsEx` | [TPPGItems](types/TPPGItems.md) |  | Reiche Einträge mit Bild (aus Images), Detailzeile, Plakette und Markup. Sind welche vorhanden, sind sie die Einträge der Liste. Nutzung: `with ComboBox1.ItemsEx.Add('Berlin', 2) do Detail := '3,7 Mio. Einwohner';` Praxis: Für Einträge mit mehr Information: Artikel mit Detailzeile (Nummer, Preis), Plakette („neu“) oder Symbol. Bei wenigen schlichten Texten reicht Items. |
+| `FilterMode` | `TPPGFilterMode` | `fmNone` | Filtern beim Tippen (nur Style = csDropDown): fmNone zeigt immer alle Einträge, fmPrefix nur die mit diesem Anfang, fmContains alle, die den Text irgendwo enthalten. Die Liste klappt dabei auf. Werte: `fmNone`, `fmPrefix`, `fmContains`. Nutzung: Für lange Listen: `ComboBox1.FilterMode := fmContains;` Praxis: Für lange Listen mit Suche: fmContains findet „Toner“ auch in „HP-Toner 59A“. fmPrefix, wenn die Einträge mit einem Schlüssel beginnen (Artikelnummer, PLZ). |
+| `Styles` | [TPPGListStyles](types/TPPGListStyles.md) |  | Bereiche der Aufklappliste einzeln gestalten: Auswahl (aktueller Wert), Zebra-Zeilen, Hover, Gruppenkopf, Detailzeile. Nicht gesetzte Farben kommen aus dem Preset. Nutzung: `ComboBox1.Styles.AlternateRow.Color := $00FAF7F2;` Praxis: Für lange Listen Zebra-Zeilen (Styles.AlternateRow.Color), für einen deutlichen Auswahlbalken Styles.Selection. Nicht gesetzte Farben kommen aus dem Preset. |
+| `ShowClearButton` | `Boolean` | `False` | True: Ein „×"-Knopf im Feld löscht den Text (nur sichtbar, wenn Text vorhanden und das Feld bearbeitbar ist). Praxis: Bei optionalen Feldern mit freier Eingabe (Suche, Filter): Das „×“ leert das Feld mit einem Klick. Bei csDropDownList erscheint er nicht. |
+| `TextHint` | `string` |  | Platzhaltertext im leeren Feld (z. B. „Suchen …"). Nutzung: `Edit1.TextHint := 'E-Mail-Adresse';` Praxis: Sagt, was erwartet wird: „Bitte wählen …“ oder „Artikel suchen (Name oder Nummer)“. Er ersetzt eine zusätzliche Beschriftung nicht ganz, hilft aber in kompakten Formularen. |
+| `UseSystemContextMenu` | `Boolean` | `False` | True: Rechtsklick zeigt das native Windows-Menü des Edits statt des PPGlow-Menüs (Rückgängig, Ausschneiden, Kopieren, Einfügen, Löschen, Alles markieren; übersetzt und im Preset-Stil). Praxis: True, wenn die Anwendung überall das gewohnte Windows-Menü zeigen soll (z. B. wegen Bildschirmlesern oder Schulungsunterlagen). |
+| `TextHintVisibleOnFocus` | `Boolean` | `False` | True: Der Platzhalter bleibt sichtbar, bis getippt wird; False: er verschwindet schon beim Fokus. Praxis: True, wenn der Platzhalter auch beim Hineinklicken sichtbar bleiben soll, z. B. bei Suchfeldern, die gleich nach dem Öffnen den Fokus haben. |
+| `ValidationState` | `TPPGValidationState` | `pvsNone` | Ergebnis einer Prüfung: pvsNone (neutral), pvsValid (grüner Rand), pvsWarning (gelb), pvsError (rot). Die Farben kommen aus den Signal-Tokens; ValidationHint erklärt den Zustand. Werte: `pvsNone`, `pvsValid`, `pvsWarning`, `pvsError`. Nutzung: `if not IstMail(Edit1.Text) then begin Edit1.ValidationState := pvsError; Edit1.ValidationHint := 'Keine gültige Adresse'; end;` Praxis: Beim Speichern prüfen: pvsError für ein leeres Pflichtfeld, pvsWarning für einen Text ohne passenden Eintrag. Nach der Korrektur auf pvsNone zurücksetzen. |
+| `ValidationHint` | `string` |  | Erklärung zum ValidationState; erscheint als Tooltip und wird vom Screenreader vorgelesen. Praxis: Kurz sagen, was fehlt oder falsch ist: „Bitte ein Land wählen“. Erscheint als Tooltip und wird vom Screenreader vorgelesen. |
+| `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet das Control die Systemfarben statt der eigenen Farben (empfohlen für Barrierefreiheit). Praxis: True lassen: Im Hochkontrast sehen Feld und Liste wie Windows-Felder aus und bleiben für Sehbehinderte lesbar. |
+| `AutoCloseUp` | `Boolean` | `False` | True: Springt die Tippsuche bei offener Liste auf einen Eintrag, wird er sofort übernommen und die Liste geschlossen. Praxis: Für schnelle Erfasser, die per Tastatur wählen: Ein Buchstabe übernimmt den passenden Eintrag und schließt die Liste sofort, ohne Enter. |
+| `AutoComplete` | `Boolean` | `True` | True: Bei Style = csDropDown ergänzt das Feld den getippten Anfang zum ersten passenden Eintrag (der Rest ist markiert und wird beim Weitertippen ersetzt). Praxis: True lassen bei freier Eingabe mit Vorschlägen (Branche, Ort): Nach „Ha“ steht schon „Handel“ im Feld. Abschalten, wenn häufig Texte eingegeben werden, die mit einem Eintrag beginnen, aber anders weitergehen. |
+| `AutoDropDown` | `Boolean` | `False` | True: Die Liste klappt beim Tippen automatisch auf. Praxis: Für Felder, in denen der Anwender sofort sehen soll, was es gibt: Beim ersten Tastendruck klappt die Liste auf. Zusammen mit FilterMode meist nicht nötig, das Filtern klappt selbst auf. |
+| `AutoDropDownWidth` | `Boolean` | `False` | True: Die Liste wird so breit wie der längste Eintrag, mindestens so breit wie das Feld bzw. DropDownWidth (wie TComboBox.AutoDropDownWidth). Praxis: Einschalten, wenn das Feld schmal ist, die Einträge aber lang („Zahlungsziel: 30 Tage netto, 2 % Skonto bei 10 Tagen“): Die Liste wird so breit wie der längste Eintrag. |
+| `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen (z. B. eingebettet in eigene Flächen). Praxis: bsNone, wenn die Combo in eine eigene Fläche eingebettet ist, z. B. als Zelleditor in einer Tabelle oder in einer Suchleiste mit eigenem Rahmen. |
+| `CharCase` | `TEditCharCase` | `ecNormal` | Erzwingt Groß- oder Kleinschreibung der Eingabe (ecNormal, ecUpperCase, ecLowerCase). Praxis: ecUpperCase für Kürzel und Codes, die immer groß geschrieben werden (Länderkürzel „DE“, Kostenstelle „VK-NORD“). |
+| `DropDownCount` | `Integer` | `PPGDefaultDropDownCount` | Sichtbare Zeilen der Aufklappliste, danach wird gescrollt (mindestens 1). Praxis: Bei langen Listen (Länder, Artikel) 10 bis 15 Zeilen zeigen, damit weniger gescrollt wird; bei drei bis fünf Einträgen genau so viele, dann gibt es keinen Rollbalken. |
+| `DropDownWidth` | `Integer` | `0` | Breite der Aufklappliste in logischen Pixeln; 0 = so breit wie das Feld. Nützlich für lange Einträge in schmalen Feldern. Praxis: Feste Breite für die Liste, wenn das Feld bewusst schmal ist, die Einträge aber mit Detailzeile breiter sind, z. B. 320 bei einem 120 Pixel breiten Feld. |
+| `ItemHeight` | `Integer` | `0` | Mindesthöhe einer Listenzeile in logischen Pixeln (0..1000); 0 = aus der Schrift. Einträge mit Detailzeile werden entsprechend höher. Praxis: 0 lassen; die Zeilen richten sich nach der Schrift. Größer (z. B. 36) für Touch-Bedienung oder wenn Bilder mehr Platz brauchen. |
+| `Items` | `TStrings` |  | Die Einträge als einfache Textliste (wie TComboBox.Items). Sind ItemsEx-Einträge vorhanden, enthält Items deren Texte. Praxis: Für einfache Auswahllisten mit festen Texten (Anrede, Zahlungsart). Mit Items.AddObject hängen Sie an jeden Eintrag eine ID, die auch beim Sortieren am Eintrag bleibt. |
+| `ItemIndex` | `Integer` | `-1` | Index des gewählten Eintrags; -1 = keiner. Setzen aus Code löst (wie bei TComboBox) kein Ereignis aus. Nutzung: `ComboBox1.ItemIndex := ComboBox1.Items.IndexOf('Berlin');` Praxis: Die Auswahl im Code lesen und setzen, z. B. beim Laden eines Datensatzes: cbLand.ItemIndex := cbLand.Items.IndexOf(Kunde.Land). -1 heißt „nichts gewählt“; Setzen löst kein Ereignis aus. |
+| `MaxLength` | `Integer` | `0` | Höchstzahl der Zeichen; 0 = unbegrenzt. Praxis: Bei freier Eingabe die Länge des Datenbankfeldes übernehmen (z. B. 40 für „Branche“), damit beim Speichern nichts abgeschnitten wird. |
+| `Sorted` | `Boolean` | `False` | True: Die Einträge werden alphabetisch sortiert gehalten. Praxis: Für Listen, die der Anwender durchsucht (Länder, Orte): alphabetisch. Bei Listen mit fachlicher Reihenfolge (Prioritäten Hoch/Mittel/Niedrig, Monate) False lassen. |
+| `Style` | `TComboBoxStyle` | `csDropDown` | csDropDown: freie Eingabe im Feld plus Liste (mit AutoComplete und FilterMode); csDropDownList: nur Auswahl aus der Liste, Tippen springt per Anfangsbuchstaben. csSimple verhält sich wie csDropDown, csOwnerDraw* wie csDropDownList (Zeichnen über OnCustomDrawItem). Praxis: csDropDownList, wenn nur Einträge der Liste gültig sind (Anrede, Land, Zahlungsart). csDropDown, wenn auch eigene Texte erlaubt sind und die Liste nur Vorschläge macht (Branche, Ort). |
+| `TabStop` | `Boolean` | `True` | True: Das Feld ist mit Tab erreichbar. Praxis: True lassen, damit das Feld per Tastatur erreichbar ist. False nur für reine Anzeige-Felder. |
+| `Text` | `string` |  | Der angezeigte bzw. eingegebene Text. Bei csDropDownList der Text des gewählten Eintrags. Praxis: Bei freier Eingabe der eigentliche Wert (Branche „Messebau“, auch ohne Listeneintrag). Bei csDropDownList besser ItemIndex lesen; Text ist dann der Text des gewählten Eintrags. |
 
 ## Eigenschaften wie in der VCL
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
-| `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
-| `AutoSize` | `Boolean` | `True` | True: Das Control passt seine Größe dem Inhalt an (Text, Bild, Schrift). |
-| `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. |
-| `Color` | `TColor` | `clWindow` | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. |
-| `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` |
-| `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). |
-| `DragKind` | `TDragKind` |  | dkDrag = Drag & Drop, dkDock = Andocken beim Ziehen. |
-| `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. |
-| `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. |
-| `Font` | `TFont` |  | Schrift (Name, Größe, Stil, Farbe). Die Textfarbe der Zustände kann Appearance überschreiben. Nutzung: `Label1.Font.Size := 12; Label1.Font.Style := [fsBold];` |
-| `ParentBiDiMode` | `Boolean` |  | True: BiDiMode wird vom Parent übernommen. |
-| `ParentColor` | `Boolean` | `False` | True: Color wird vom Parent übernommen. |
-| `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. |
-| `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). |
-| `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. |
-| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. |
-| `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. |
-| `TabOrder` | `TTabOrder` |  | Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst). |
-| `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. |
-| `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. |
-| `DoubleBuffered` | `Boolean` |  | Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht. |
-| `ParentDoubleBuffered` | `Boolean` |  | True: DoubleBuffered wird vom Parent übernommen. |
-| `AlignWithMargins` | `Boolean` |  | True: Beim Ausrichten (Align) gelten die Abstände aus Margins. Nutzung: `Edit1.AlignWithMargins := True; Edit1.Margins.SetBounds(8, 4, 8, 4);` |
-| `Left` | `Integer` |  | Linke Kante relativ zum Parent in Pixeln. |
-| `Top` | `Integer` |  | Obere Kante relativ zum Parent in Pixeln. |
-| `Width` | `Integer` |  | Breite in Pixeln (bei hoher DPI skaliert die VCL beim Laden). |
-| `Height` | `Integer` |  | Höhe in Pixeln (bei hoher DPI skaliert die VCL beim Laden). |
-| `Cursor` | `TCursor` |  | Mauszeiger über dem Control. Nutzung: `crHandPoint` für klickbare Flächen. |
-| `Hint` | `string` |  | Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor "\|" = Tooltip, danach = Langtext für die Statusleiste. Nutzung: `Button1.Hint := 'Dokument speichern\|Speichert das Dokument unter dem bisherigen Namen';` |
-| `HelpType` | `THelpType` |  | Ob F1 HelpContext (htContext) oder HelpKeyword (htKeyword) verwendet. |
-| `HelpKeyword` | `string` |  | Stichwort für die Hilfe (F1), wenn HelpType = htKeyword. |
-| `HelpContext` | `THelpContext` |  | Kontext-ID für die Hilfe (F1). |
-| `Margins` | `TMargins` |  | Außenabstände für das Ausrichten; wirken nur mit AlignWithMargins = True. |
-| `CustomHint` | `TCustomHint` |  | Eigenes Hint-Objekt (z. B. TBalloonHint) statt des Standard-Tooltips. |
-| `ParentCustomHint` | `Boolean` |  | True: CustomHint wird vom Parent übernommen. |
-| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
-| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+| `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. Praxis: Selten für Auswahlfelder; nützlich in einer Filterleiste: das Panel mit Align = alTop, die Combo darin mit Align = alRight für „Zeitraum: Dieser Monat“. |
+| `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` Praxis: In Formularen mit veränderbarer Größe [akLeft, akTop, akRight] setzen: Lange Auswahlfelder wie „Kostenstelle“ wachsen dann mit dem Fenster. |
+| `AutoSize` | `Boolean` | `True` | True: Das Control passt seine Größe dem Inhalt an (Text, Bild, Schrift). Praxis: True lassen: Die Höhe folgt der Schrift, und alle Eingabefelder einer Zeile sind gleich hoch. Ausschalten nur für feste Rasterlayouts. |
+| `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. Praxis: Nur für arabische oder hebräische Oberflächen ändern; am Formular setzen und über ParentBiDiMode folgen lassen. Der Pfeil wandert dann nach links. |
+| `Color` | `TColor` | `clWindow` | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. Praxis: Nur ohne Preset-Farben sinnvoll; die Feldfläche kommt normalerweise aus Appearance. Pflichtfelder lieber über ValidationState kennzeichnen als über eine Hintergrundfarbe. |
+| `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` Praxis: MinWidth setzen, wenn die Combo mit Anchors oder Align wächst, damit „Bitte wählen …“ nie abgeschnitten wird. |
+| `DragCursor` | `TCursor` |  | Mauszeiger während das Control gezogen wird (Drag & Drop). Praxis: Nur bei DragMode = dmAutomatic sichtbar; für Auswahlfelder kaum gebraucht. |
+| `DragKind` | `TDragKind` |  | dkDrag = Drag & Drop, dkDock = Andocken beim Ziehen. Praxis: dkDrag lassen; Andocken (dkDock) ist für Auswahlfelder nicht sinnvoll. |
+| `DragMode` | `TDragMode` |  | dmAutomatic: Ziehen beginnt automatisch mit der Maus; dmManual: per Code mit BeginDrag. Praxis: dmManual lassen, sonst startet jeder Klick ins Feld ein Ziehen statt die Liste zu öffnen. |
+| `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. Praxis: Sperren, solange die Auswahl noch nicht möglich ist, z. B. „Lager“ erst nach der Wahl eines Artikels. So muss der Anwender keine Fehlermeldung lesen. |
+| `Font` | `TFont` |  | Schrift (Name, Größe, Stil, Farbe). Die Textfarbe der Zustände kann Appearance überschreiben. Nutzung: `Label1.Font.Size := 12; Label1.Font.Style := [fsBold];` Praxis: Am Formular einstellen und über ParentFont vererben. Die Schrift gilt für Feld und Liste; eine größere Schrift (11 bis 12) für Touch-Kassen. |
+| `ParentBiDiMode` | `Boolean` |  | True: BiDiMode wird vom Parent übernommen. Praxis: True lassen, damit das Feld der Leserichtung des Formulars folgt. |
+| `ParentColor` | `Boolean` | `False` | True: Color wird vom Parent übernommen. Praxis: False lassen: Ein Eingabefeld soll sich vom Hintergrund abheben. |
+| `ParentFont` | `Boolean` |  | True: Font wird vom Parent übernommen; wird automatisch False, sobald Font geändert wird. Praxis: True lassen, damit alle Felder die Formularschrift tragen. Ändern Sie Font, wird es automatisch False. |
+| `ParentShowHint` | `Boolean` |  | True: ShowHint wird vom Parent übernommen (meist vom Formular). Praxis: True lassen und ShowHint einmal am Formular einschalten, dann zeigen alle Felder ihre Hints. |
+| `PopupMenu` | `TPopupMenu` |  | Kontextmenü bei Rechtsklick bzw. Umschalt+F10. Funktioniert mit TPopupMenu und TPPGPopupMenu. Praxis: Für Zusatzbefehle per Rechtsklick, z. B. „Liste bearbeiten …“. Bei freier Eingabe zeigt die Combo sonst ihr eigenes Edit-Menü (Kopieren, Einfügen). |
+| `ShowHint` | `Boolean` |  | True: Hint wird als Tooltip angezeigt. Praxis: Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True. |
+| `StyleElements` | `TStyleElements` |  | Welche Teile ein aktiver VCL-Style färbt (seFont, seClient, seBorder). Ohne seClient behält ein PPGlow-Control seine eigenen Farben aus Appearance. Praxis: Nur bei VCL-Styles wichtig: Nehmen Sie seClient heraus, wenn das Feld seine PPGlow-Farben behalten soll. |
+| `TabOrder` | `TTabOrder` |  | Reihenfolge beim Weiterschalten mit Tab innerhalb des Parents (0 = zuerst). Praxis: In Formularen so vergeben, dass Tab von oben nach unten durch die Felder läuft (Anrede, Name, Land …). |
+| `Visible` | `Boolean` |  | False: Das Control ist ausgeblendet und nimmt keinen Platz bei Align ein. Praxis: Felder ausblenden, die für den Fall nicht gelten, z. B. „Bundesland“ nur bei Land = Deutschland. Was nur gerade nicht geht, besser mit Enabled sperren. |
+| `Touch` | `TTouchManager` |  | Gesten und Touch-Einstellungen (Gestures, InteractiveGestures, GestureManager). Wirkt zusammen mit OnGesture. Nutzung: Im Objektinspektor unter Touch.Gestures Standardgesten (z. B. Wischen links) anhaken und in OnGesture auswerten. Praxis: Nur für Touch-Geräte: Gesten anhaken und in OnGesture auswerten. Für normales Antippen nicht nötig. |
+| `DoubleBuffered` | `Boolean` |  | Zeichnen über einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder übernimmt sie nicht. Praxis: Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden. |
+| `ParentDoubleBuffered` | `Boolean` |  | True: DoubleBuffered wird vom Parent übernommen. Praxis: True lassen; bei PPGlow-Controls ohne sichtbare Wirkung. |
+| `AlignWithMargins` | `Boolean` |  | True: Beim Ausrichten (Align) gelten die Abstände aus Margins. Nutzung: `Edit1.AlignWithMargins := True; Edit1.Margins.SetBounds(8, 4, 8, 4);` Praxis: Zusammen mit Align einschalten, damit die Combo in einer Filterleiste nicht am Rand klebt; die Abstände stehen unter Margins. |
+| `Left` | `Integer` |  | Linke Kante relativ zum Parent in Pixeln. Praxis: Position im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern setzen, z. B. Combo.SetBounds(X, Y, 240, 32). |
+| `Top` | `Integer` |  | Obere Kante relativ zum Parent in Pixeln. Praxis: Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern. |
+| `Width` | `Integer` |  | Breite in Pixeln (bei hoher DPI skaliert die VCL beim Laden). Praxis: So breit wie der längste übliche Eintrag plus Pfeil; Anrede um 120, Land um 200 Pixel. Für längere Einträge DropDownWidth oder AutoDropDownWidth nehmen. |
+| `Height` | `Integer` |  | Höhe in Pixeln (bei hoher DPI skaliert die VCL beim Laden). Praxis: Mit AutoSize bestimmt die Schrift die Höhe (rund 32 Pixel bei Segoe UI 10). Von Hand nur bei AutoSize = False. |
+| `Cursor` | `TCursor` |  | Mauszeiger über dem Control. Nutzung: `crHandPoint` für klickbare Flächen. Praxis: crDefault lassen; Eingabefelder zeigen von selbst den Textcursor über dem Edit und den Pfeil über dem Aufklapp-Knopf. |
+| `Hint` | `string` |  | Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor "\|" = Tooltip, danach = Langtext für die Statusleiste. Nutzung: `Button1.Hint := 'Dokument speichern\|Speichert das Dokument unter dem bisherigen Namen';` Praxis: Erklären, was die Auswahl bewirkt („Bestimmt Währung und Steuersatz“). Bei Feldern mit Beschriftung davor oft nicht nötig. |
+| `HelpType` | `THelpType` |  | Ob F1 HelpContext (htContext) oder HelpKeyword (htKeyword) verwendet. Praxis: htKeyword, wenn Sie Stichwörter pflegen, sonst htContext mit Kontext-IDs. Ohne Hilfedatei egal. |
+| `HelpKeyword` | `string` |  | Stichwort für die Hilfe (F1), wenn HelpType = htKeyword. Praxis: Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword), z. B. „Zahlungsziel“. |
+| `HelpContext` | `THelpContext` |  | Kontext-ID für die Hilfe (F1). Praxis: Nur mit einer Hilfedatei: die Kontext-ID der Seite eintragen, die F1 im Feld öffnet, z. B. die Erklärung der Zahlungsarten. |
+| `Margins` | `TMargins` |  | Außenabstände für das Ausrichten; wirken nur mit AlignWithMargins = True. Praxis: Abstand zu Nachbarn bei Align, z. B. Margins.Right = 8 in einer Filterleiste. Wirkt nur mit AlignWithMargins. |
+| `CustomHint` | `TCustomHint` |  | Eigenes Hint-Objekt (z. B. TBalloonHint) statt des Standard-Tooltips. Praxis: Für ausführliche Hinweise mit Titel, z. B. „Kostenstelle: bestimmt die Buchung im Controlling“. Einen TPPGCustomHint aufs Formular legen und hier zuweisen. |
+| `ParentCustomHint` | `Boolean` |  | True: CustomHint wird vom Parent übernommen. Praxis: True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt. |
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) Praxis: Sprechende Namen vergeben (cbLand, cbZahlungsart) statt PPGComboBox1; der Code in OnSelect liest sich dann von selbst. |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). Praxis: Für mehrere Combos mit gemeinsamem OnSelect: Tag unterscheidet sie, z. B. 1 = Lieferland, 2 = Rechnungsland. |
 
 ## Ereignisse
 
 | Ereignis | Typ und Parameter | Wann und wozu |
 |---|---|---|
-| `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` |
-| `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Der Text wurde geändert (Tippen, Einfügen, Code). |
-| `OnCustomDrawItem` | `TPPGCustomDrawItemEvent` `(Sender: TObject; Canvas: TCanvas; Index: Integer; const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle; var DefaultDraw: Boolean)` | Vor dem Zeichnen jedes Eintrags der Aufklappliste: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen. Nutzung: `if Index = 0 then Style.FontStyle := [fsBold];` |
-| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. |
-| `OnCloseUp` | `TNotifyEvent` `(Sender: TObject)` | Die Aufklappliste wurde geschlossen (mit oder ohne Übernahme). |
-| `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
-| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln zählen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht. |
-| `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. |
-| `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. |
-| `OnDropDown` | `TNotifyEvent` `(Sender: TObject)` | Die Liste klappt gleich auf; hier lassen sich Einträge noch nachladen. |
-| `OnEndDock` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Andock-Vorgang dieses Controls beendet. |
-| `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
-| `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
-| `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
-| `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` |
-| `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
-| `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
-| `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. |
-| `OnMouseEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Maus ist in das Control hineinbewegt worden. |
-| `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. |
-| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. |
-| `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. |
-| `OnSelect` | `TNotifyEvent` `(Sender: TObject)` | Der Anwender hat einen Eintrag gewählt (Klick, Enter, Pfeiltasten im geschlossenen Feld). Kommt nach OnClick; ist OnSelect nicht zugewiesen, wird stattdessen OnChange ausgelöst. Nicht bei ItemIndex aus Code. |
-| `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
-| `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
-| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. |
-| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. |
+| `OnGesture` | `TGestureEvent` `(Sender: TObject; const EventInfo: TGestureEventInfo; var Handled: Boolean)` | Eine Touch- oder Mausgeste wurde erkannt (siehe Touch). EventInfo.GestureID nennt die Geste; Handled := True beendet die Standardbehandlung. Nutzung: `if EventInfo.GestureID = sgiLeft then NaechsteSeite;` Praxis: Auf Touch-Geräten: Wischen über dem Feld z. B. zum nächsten Eintrag nutzen (EventInfo.GestureID). |
+| `OnChange` | `TNotifyEvent` `(Sender: TObject)` | Der Text wurde geändert (Tippen, Einfügen, Code). Praxis: Für freie Eingabe: reagiert auf jedes getippte Zeichen, z. B. um eine Prüfung zurückzusetzen. Ohne OnSelect meldet es auch die Auswahl aus der Liste. |
+| `OnCustomDrawItem` | `TPPGCustomDrawItemEvent` `(Sender: TObject; Canvas: TCanvas; Index: Integer; const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle; var DefaultDraw: Boolean)` | Vor dem Zeichnen jedes Eintrags der Aufklappliste: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst auf Canvas zeichnen. Nutzung: `if Index = 0 then Style.FontStyle := [fsBold];` Praxis: Einzelne Einträge hervorheben, ohne ItemsEx zu nutzen: z. B. gesperrte Lager grau, den Standardeintrag fett (Style.FontStyle := [fsBold]). |
+| `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. Praxis: Wie bei TComboBox: meldet die Auswahl durch den Anwender (vor OnSelect). Für neuen Code besser OnSelect nehmen, das ist eindeutiger. |
+| `OnCloseUp` | `TNotifyEvent` `(Sender: TObject)` | Die Aufklappliste wurde geschlossen (mit oder ohne Übernahme). Praxis: Die Liste ist zu, mit oder ohne Übernahme. Gut, um eine beim Aufklappen gestartete Vorschau wieder zu entfernen. |
+| `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. Praxis: Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Eintrag verwalten …“ nur für Administratoren freigeben. |
+| `OnDblClick` | `TNotifyEvent` `(Sender: TObject)` | Doppelklick mit der linken Maustaste. Controls, bei denen schnelle Klicks einzeln zählen (Button, CheckBox, ToggleSwitch, Rating, ToolBar …), haben es wie TButton nicht. Praxis: Selten gebraucht; z. B. um bei freier Eingabe den ganzen Text zu markieren oder einen Verwaltungsdialog für die Einträge zu öffnen. |
+| `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. Praxis: Wenn ein Eintrag aus einer Liste auf das Feld gezogen werden darf: hier den Text bzw. ItemIndex übernehmen. |
+| `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. Praxis: Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur für passende Quellen. |
+| `OnDropDown` | `TNotifyEvent` `(Sender: TObject)` | Die Liste klappt gleich auf; hier lassen sich Einträge noch nachladen. Praxis: Einträge erst beim Aufklappen laden, wenn sie von anderen Feldern abhängen oder teuer sind: z. B. nur die Lager mit Bestand für den gewählten Artikel. |
+| `OnEndDock` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Andock-Vorgang dieses Controls beendet. Praxis: Nur bei DragKind = dkDock; für Auswahlfelder praktisch nie gebraucht. |
+| `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). Praxis: Nach dem Ziehen aus dem Feld: Target = nil heißt abgebrochen. Für Auswahlfelder selten. |
+| `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. Praxis: Für Hilfetexte in der Statusleiste („Wählen Sie das Land der Lieferadresse“), sobald das Feld per Tab den Fokus bekommt. |
+| `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. Praxis: Der richtige Ort zum Prüfen freier Eingaben: Passt der Text zu keinem Eintrag, ValidationState auf pvsWarning setzen und im ValidationHint erklären. |
+| `OnKeyDown` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste gedrückt (auch Sondertasten wie Pfeile, F-Tasten); Key := 0 verwirft sie. Nutzung: `if Key = VK_RETURN then Speichern;` Praxis: Für zusätzliche Tasten, z. B. Entf zum Leeren bei csDropDownList. Pfeiltasten, F4, Alt+Pfeil, Enter und Esc erledigt die Combo selbst. |
+| `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. Praxis: Um Zeichen bei freier Eingabe zu filtern, z. B. nur Ziffern in einem Feld für Kostenstellen-Nummern (Key := #0 verwirft). |
+| `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. Praxis: Selten nötig; z. B. um nach dem Loslassen von Enter zum nächsten Feld zu springen. |
+| `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. Praxis: Selten für Auswahlfelder; Aufklappen und Auswahl erledigt die Combo selbst. |
+| `OnMouseEnter` | `TNotifyEvent` `(Sender: TObject)` | Die Maus ist in das Control hineinbewegt worden. Praxis: Um beim Überfahren eine Erklärung in der Statuszeile zu zeigen; die Hover-Optik macht die Combo selbst. |
+| `OnMouseLeave` | `TNotifyEvent` `(Sender: TObject)` | Die Maus hat das Control verlassen. Praxis: Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden. |
+| `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. Praxis: Selten gebraucht; feuert bei jeder Mausbewegung über dem Feld. |
+| `OnMouseUp` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control losgelassen. Praxis: Selten für Auswahlfelder; für die Auswahl OnSelect nehmen. |
+| `OnSelect` | `TNotifyEvent` `(Sender: TObject)` | Der Anwender hat einen Eintrag gewählt (Klick, Enter, Pfeiltasten im geschlossenen Feld). Kommt nach OnClick; ist OnSelect nicht zugewiesen, wird stattdessen OnChange ausgelöst. Nicht bei ItemIndex aus Code. Praxis: Hier steht die Reaktion auf die Auswahl: abhängige Felder füllen, Preise anzeigen, Werte übernehmen. Feuert nur bei Bedienung, nicht bei ItemIndex aus dem Code. |
+| `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. Praxis: Nur bei DragKind = dkDock; für Auswahlfelder praktisch nie gebraucht. |
+| `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. Praxis: Beim Ziehen aus dem Feld ein eigenes DragObject setzen; für Auswahlfelder selten. |
+| `OnMouseWheel` | `TMouseWheelEvent` `(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean)` | Mausrad gedreht; Handled := True verhindert das Standard-Scrollen. Praxis: Das Rad ändert die geschlossene Combo bewusst nicht (kein versehentliches Umstellen beim Scrollen). Wer das trotzdem will, wählt hier per Code den nächsten Eintrag. |
+| `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. Praxis: Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen) ändern; sonst nicht belegen. |
 
 Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Audit7A` (TDropDownFieldTests, TWheelTests); `PPG.Tests.Audit8C` (TAudit8CTests); `PPG.Tests.Custom` (TCustomListTests); `PPG.Tests.Phase14bRibbon` (TRibbonTests); `PPG.Tests.Phase20` (TComboDropBaseTests); `PPG.Tests.Phase4b` (TComboAccessibilityTests, TComboBoxTests, TPhase4bPaintTests); `PPG.Tests.Phase6a` (TComboExTests); `PPG.Tests.Phase8` (TFluent11Tests, TThemeTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 

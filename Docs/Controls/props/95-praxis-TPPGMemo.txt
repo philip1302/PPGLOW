@@ -92,12 +92,3 @@ TPPGMemo.OnStartDock ! Nur bei DragKind = dkDock; beim Memo praktisch nie gebrau
 TPPGMemo.OnStartDrag ! Nur wenn das Memo selbst gezogen wird (DragMode = dmAutomatic); beim Memo selten gebraucht.
 
 # --- Typen ---
-TPPGElementStyle.Color ! Flächenfarbe des Bereichs im Hellen, z. B. ein leichtes Grau ($00F3F3F3) für schreibgeschützte Felder. clDefault lassen, wenn das Preset passt.
-TPPGElementStyle.TextColor ! Eigene Textfarbe nur mit Grund, z. B. clGrayText für gesperrte Inhalte. Auf ausreichenden Kontrast zur Fläche achten (mindestens 4,5:1).
-TPPGElementStyle.BorderColor ! Rand- oder Linienfarbe; meist clDefault lassen. Eine eigene Farbe nur, wenn der Bereich sich deutlich abgrenzen soll.
-TPPGElementStyle.DarkColor ! Immer mit setzen, wenn Color eine eigene Farbe hat (z. B. $00303030 zu einem hellen Grau). Sonst gilt im Dark Mode die Preset-Farbe.
-TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor für den Dark Mode; hell wählen, damit der Text auf dunkler Fläche lesbar bleibt.
-TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor für den Dark Mode; nur setzen, wenn BorderColor eine eigene Farbe hat.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Wird automatisch False, sobald Sie Font ändern.
-TPPGElementStyle.Font ! Eigene Schrift für den Bereich, z. B. kleiner für eine Fußzeile. Für fett oder kursiv reicht FontStyle.
-TPPGElementStyle.FontStyle ! Schnell hervorheben ohne eigene Schrift, z. B. [fsBold] für eine Kopfzeile oder [fsItalic] für schreibgeschützte Inhalte.

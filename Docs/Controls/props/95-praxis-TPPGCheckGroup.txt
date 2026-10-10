@@ -95,15 +95,6 @@ TPPGChoiceItem.Icon ! Für Kacheln und Segmente ein Zeichen der Symbolschrift, z
 TPPGChoiceItem.ImageIndex ! Wenn ein farbiges Bild aus Images nötig ist, z. B. Logos von Versanddienstleistern; sonst reicht Icon.
 TPPGChoiceItem.State ! Zustand im Code lesen oder setzen, z. B. beim Laden gespeicherter Rechte; cbGrayed nur mit AllowGrayed an der CheckGroup. Setzen im Code löst kein Ereignis aus.
 TPPGChoiceItem.Value ! Ein festes Kürzel für Datenbank und Programm setzen („mail“, „sms“), dann bleibt die gespeicherte Auswahl gültig, auch wenn die Beschriftung übersetzt oder umformuliert wird.
-TPPGElementStyle.Color ! Eigene Flächenfarbe nur für besondere Bereiche, z. B. eine Kopfzeile oder angehakte Kacheln in Markenfarbe. clDefault lassen, damit Preset und Dark Mode passen.
-TPPGElementStyle.TextColor ! Zusammen mit Color setzen und auf Kontrast achten (mindestens 4,5:1), z. B. Weiß auf dunkler Fläche.
-TPPGElementStyle.BorderColor ! Für eine deutliche Umrandung, z. B. der angehakten Kacheln; sonst clDefault.
-TPPGElementStyle.DarkColor ! Immer mitsetzen, wenn Color gesetzt ist: Sonst gilt im Dark Mode die Preset-Farbe und der Bereich verliert seine Hervorhebung.
-TPPGElementStyle.DarkTextColor ! Textfarbe passend zu DarkColor, meist hell.
-TPPGElementStyle.DarkBorderColor ! Randfarbe im Dark Mode, passend zu BorderColor.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls trägt. Für eine kleinere oder größere Schrift Font ändern, dann wird es False.
-TPPGElementStyle.Font ! Für eine eigene Schriftgröße des Bereichs, z. B. kleinere Schrift bei vielen Einträgen. Für nur fett reicht FontStyle.
-TPPGElementStyle.FontStyle ! Einfachster Weg zur Hervorhebung: [fsBold] für gewählte Einträge oder Kopfzeilen, ohne eine eigene Schrift anzulegen.
 
 # --- Wirkung (berichtigt fuer die CheckGroup) ---
 TPPGCheckGroup.OnChange = Die Auswahl hat sich durch den Anwender geändert (Klick, Leertaste, Zugriffstaste); kommt nach OnItemClick und OnClick. Setzen von Value, Checked[] oder ItemState[] im Code löst es nicht aus.

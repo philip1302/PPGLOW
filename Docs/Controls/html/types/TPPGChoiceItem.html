@@ -6,14 +6,14 @@
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
-<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung des Eintrags.</td></tr>
-<tr><td><code>Description</code></td><td><code>string</code></td><td></td><td>Zweite Zeile unter dem Titel (Kacheln) bzw. ged&#228;mpfter Zusatz in der Liste.</td></tr>
-<tr><td><code>Icon</code></td><td><code>Word</code></td><td><code>0</code></td><td>Zeichen der Symbolschrift (Segoe Fluent Icons bzw. MDL2), z. B. $E80F; 0 = kein Symbol. Wird nur gezeigt, wenn ImageIndex -1 ist.</td></tr>
-<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus Images der Gruppe; hat Vorrang vor Icon. -1 = kein Bild.</td></tr>
-<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Eintrag grau und nicht w&#228;hlbar; die &#252;brigen bleiben bedienbar.</td></tr>
-<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Hinweis, wenn die Maus &#252;ber diesem Eintrag steht (ShowHint der Gruppe muss an sein).</td></tr>
-<tr><td><code>Value</code></td><td><code>string</code></td><td></td><td>Wert f&#252;r Programm und Datenbank; leer = Caption. Bei der CheckGroup ergibt Value der Gruppe die Kommaliste der angehakten Werte.</td></tr>
-<tr><td><code>State</code></td><td><code>TCheckBoxState</code></td><td><code>cbUnchecked</code></td><td>Nur CheckGroup: Zustand des K&#228;stchens (cbUnchecked, cbChecked, cbGrayed mit AllowGrayed).</td></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Beschriftung des Eintrags. Praxis: Kurz und eindeutig formulieren, mit &amp; f&#252;r die Zugriffstaste („&amp;E-Mail“). F&#252;r Datenbank und Code besser Value setzen, damit eine ge&#228;nderte Beschriftung gespeicherte Daten nicht ung&#252;ltig macht.</td></tr>
+<tr><td><code>Description</code></td><td><code>string</code></td><td></td><td>Zweite Zeile unter dem Titel (Kacheln) bzw. ged&#228;mpfter Zusatz in der Liste. Praxis: Vor allem f&#252;r Kacheln: ein kurzer Satz, was die Option bedeutet („Lieferung morgen“, „Adressen und Kontakte“). In der Liste nur f&#252;r wichtige Zus&#228;tze verwenden.</td></tr>
+<tr><td><code>Icon</code></td><td><code>Word</code></td><td><code>0</code></td><td>Zeichen der Symbolschrift (Segoe Fluent Icons bzw. MDL2), z. B. $E80F; 0 = kein Symbol. Wird nur gezeigt, wenn ImageIndex -1 ist. Praxis: F&#252;r Kacheln und Segmente ein Zeichen der Symbolschrift, z. B. $E716 (Personen) f&#252;r „Kunden“. Einheitlich einfarbige Symbole wirken ruhiger als bunte Bilder.</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus Images der Gruppe; hat Vorrang vor Icon. -1 = kein Bild. Praxis: Wenn ein farbiges Bild aus Images n&#246;tig ist, z. B. Logos von Versanddienstleistern; sonst reicht Icon.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False: Eintrag grau und nicht w&#228;hlbar; die &#252;brigen bleiben bedienbar. Praxis: Optionen sperren, die gerade nicht m&#246;glich sind, z. B. SMS ohne Mobilnummer, statt sie auszublenden. Den Grund in Hint nennen.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Hinweis, wenn die Maus &#252;ber diesem Eintrag steht (ShowHint der Gruppe muss an sein). Praxis: Erkl&#228;rt einen Eintrag, besonders einen gesperrten („Erst eine Mobilnummer eintragen“). Erscheint nur mit ShowHint an der Gruppe bzw. am Formular.</td></tr>
+<tr><td><code>Value</code></td><td><code>string</code></td><td></td><td>Wert f&#252;r Programm und Datenbank; leer = Caption. Bei der CheckGroup ergibt Value der Gruppe die Kommaliste der angehakten Werte. Praxis: Ein festes K&#252;rzel f&#252;r Datenbank und Programm setzen („mail“, „sms“), dann bleibt die gespeicherte Auswahl g&#252;ltig, auch wenn die Beschriftung &#252;bersetzt oder umformuliert wird.</td></tr>
+<tr><td><code>State</code></td><td><code>TCheckBoxState</code></td><td><code>cbUnchecked</code></td><td>Nur CheckGroup: Zustand des K&#228;stchens (cbUnchecked, cbChecked, cbGrayed mit AllowGrayed). Praxis: Zustand im Code lesen oder setzen, z. B. beim Laden gespeicherter Rechte; cbGrayed nur mit AllowGrayed an der CheckGroup. Setzen im Code l&#246;st kein Ereignis aus.</td></tr>
 </table>
 <h2>Verwendet in</h2>
 <p><a href="TPPGChoiceItems.html">TPPGChoiceItems</a></p>

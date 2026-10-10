@@ -108,23 +108,3 @@ TPPGListStyles.AlternateRow ! Für lange Listen (Artikel, Kunden) eine sehr hell
 TPPGListStyles.HotItem ! Eigene Hover-Farbe, wenn die Preset-Farbe auf einem farbigen Hintergrund zu schwach ist.
 TPPGListStyles.GroupHeader ! Für gegliederte Listen (z. B. „Hardware“, „Software“): Überschriften fett oder farbig absetzen, damit die Gruppen auf einen Blick erkennbar sind.
 TPPGListStyles.Detail ! Die zweite Zeile (Artikelnummer, Preis) etwas kleiner oder grauer setzen, damit der Haupttext führt.
-TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. ein sehr helles Grau für Zebra-Zeilen. clDefault lassen, solange die Preset-Farbe passt.
-TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. Grau für Detailzeilen. Auf ausreichenden Kontrast zur Fläche achten (mindestens 4,5:1).
-TPPGElementStyle.BorderColor ! Rand bzw. Akzent, z. B. der farbige Balken links am gewählten Eintrag in der Firmenfarbe.
-TPPGElementStyle.DarkColor ! Immer mitpflegen, wenn Sie Color setzen: Sonst gilt im Dark Mode die Preset-Farbe und Ihre Gestaltung fehlt dort.
-TPPGElementStyle.DarkTextColor ! Textfarbe im Dark Mode; hell genug wählen, damit sie auf DarkColor lesbar bleibt.
-TPPGElementStyle.DarkBorderColor ! Rand bzw. Akzent im Dark Mode, meist eine hellere Fassung von BorderColor.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift der Liste trägt. Wird automatisch False, sobald Sie Font ändern.
-TPPGElementStyle.Font ! Eigene Schrift nur für diesen Bereich, z. B. eine kleinere Schrift (Size 8) für Detailzeilen.
-TPPGElementStyle.FontStyle ! Einfacher als eine eigene Schrift: [fsBold] für Gruppenüberschriften oder den gewählten Eintrag.
-TPPGItem.Text ! Der Haupttext, nach dem der Anwender sucht: Artikelname, Kundenname. Kurz halten; Nummern und Preise gehören in Detail.
-TPPGItem.Detail ! Zusatzinfo in der zweiten Zeile, die bei der Wahl hilft: „Art.-Nr. 10014 · 899,00 €“ oder die Adresse unter dem Kundennamen.
-TPPGItem.Badge ! Kurze Kennzeichnung rechts, z. B. „neu“, „Aktion“ oder eine Anzahl. Sparsam einsetzen, sonst geht die Wirkung verloren.
-TPPGItem.Group ! Einträge nach Gruppe sortiert anlegen (z. B. „Hardware“, „Software“); in Listen mit Gruppenköpfen erscheint die Überschrift einmal je Gruppe.
-TPPGItem.ImageIndex ! Symbol aus Images der Liste, z. B. eine Flagge je Land oder ein Status-Symbol je Auftrag. -1 für Einträge ohne Bild.
-TPPGItem.Checked ! Nur in Listen mit Kästchen (CheckListBox) sichtbar: den Haken beim Laden setzen, z. B. für bereits zugeordnete Rechte.
-TPPGItem.Enabled ! Einträge zeigen, aber sperren, z. B. ein Lager ohne Bestand. So sieht der Anwender, dass es den Eintrag gibt, er aber gerade nicht wählbar ist.
-TPPGItem.Tag ! Die ID des Datensatzes ablegen (Artikel-ID, Kunden-Nr.), damit man nach der Wahl nicht über den Text suchen muss.
-TPPGItem.Color ! Einzelne Einträge farbig hinterlegen, z. B. überfällige Aufträge hellrot. Sparsam einsetzen und nicht als einziges Merkmal (Farbenblindheit).
-TPPGItem.TextColor ! Eigene Schriftfarbe, z. B. Grau für auslaufende Artikel. Auf Kontrast zur Fläche achten.
-TPPGItem.FontStyle ! [fsBold] für hervorgehobene Einträge wie den Standard-Lieferanten oder ungelesene Nachrichten.

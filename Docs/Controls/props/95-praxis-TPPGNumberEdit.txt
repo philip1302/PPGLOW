@@ -96,12 +96,3 @@ TPPGNumberEdit.OnEndDrag ! Nach dem Ziehen: Target = nil heißt abgebrochen.
 TPPGNumberEdit.OnGesture ! Auf Touch-Geräten: Wischgesten auswerten (EventInfo.GestureID), z. B. Wischen nach oben erhöht um LargeIncrement.
 
 # --- Typen ---
-TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. ein leichtes Grau für schreibgeschützte Felder, damit man sie von Eingaben unterscheidet. clDefault lassen, wenn das Preset passt.
-TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf ausreichenden Kontrast zur Fläche achten.
-TPPGElementStyle.BorderColor ! Randfarbe des Bereichs; meist clDefault lassen. Eine eigene Farbe nur, wenn der Bereich bewusst hervorgehoben werden soll.
-TPPGElementStyle.DarkColor ! Gegenstück zu Color im Dark Mode. Wichtig, sobald Color selbst gesetzt ist, sonst bleibt der Bereich im Dunkeln hell.
-TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor im Dark Mode; hell wählen, damit der Text auf dunkler Fläche lesbar bleibt.
-TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor im Dark Mode; nur setzen, wenn auch BorderColor gesetzt ist.
-TPPGElementStyle.ParentFont ! True lassen, dann gilt die Schrift des Controls. Wird automatisch False, sobald Font geändert wird.
-TPPGElementStyle.Font ! Eigene Schrift für den Bereich, z. B. kleiner für Fußzeilen. Meist reicht FontStyle.
-TPPGElementStyle.FontStyle ! Schnellster Weg zur Hervorhebung ohne eigene Schrift, z. B. [fsBold] für eine Summe oder Kopfzeile.

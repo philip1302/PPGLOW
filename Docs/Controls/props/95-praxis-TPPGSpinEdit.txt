@@ -89,12 +89,3 @@ TPPGSpinEdit.OnStartDock ! Nur bei DragKind = dkDock; für Zahlenfelder praktisc
 TPPGSpinEdit.OnStartDrag ! Beginn des Ziehens; hier könnte ein eigenes DragObject mit dem Wert gesetzt werden.
 
 # --- Typen ---
-TPPGElementStyle.Color ! Flächenfarbe für den Bereich, z. B. ein leichtes Grau $00F3F3F3 für schreibgeschützte Felder. clDefault lassen, wenn das Preset passt.
-TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf Kontrast achten (mindestens 4,5:1).
-TPPGElementStyle.BorderColor ! Rand- bzw. Linienfarbe, z. B. ein hellerer Rand für schreibgeschützte Felder, damit sie nicht wie Eingaben wirken.
-TPPGElementStyle.DarkColor ! Gegenstück zu Color für den Dark Mode. Immer mitsetzen, wenn Color eigene helle Werte hat, sonst bleibt der Bereich im Dunkeln beim Preset.
-TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor für den Dark Mode; hell wählen, damit der Text auf dunklem Grund lesbar bleibt.
-TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor für den Dark Mode.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Nur auf False, wenn er eine ganz eigene Schrift braucht.
-TPPGElementStyle.Font ! Eigene Schrift nur, wenn sich der Bereich deutlich abheben soll (z. B. kleinere Schrift für Fußzeilen); wirkt nur mit ParentFont = False.
-TPPGElementStyle.FontStyle ! Bequemer als Font: z. B. [fsItalic] für schreibgeschützte Werte oder [fsBold] für Kopfzeilen, ohne die Schrift zu ersetzen.

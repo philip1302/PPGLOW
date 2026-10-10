@@ -99,12 +99,3 @@ TPPGEditButton.DropDownMenu ! Für Varianten zum Feld, z. B. „Suchen in: Name 
 TPPGEditButton.Enabled ! Den Knopf sperren, solange seine Aktion nicht geht, z. B. „E-Mail schreiben“ nur bei gültiger Adresse.
 TPPGEditButton.ImageIndex ! Symbol aus Images des Felds, das die Aktion zeigt (Brief, Lupe, Person). -1 lassen, wenn der Knopf nur ein Menü öffnet; dann erscheint ein Pfeil.
 TPPGEditButton.Visible ! Einschalten, um den Knopf zu zeigen; per Code ausblenden, wenn die Aktion für den Datensatz nicht gilt.
-TPPGElementStyle.Color ! Eigene Fläche für den Bereich, z. B. hellgrau für schreibgeschützte Felder oder die Kopfzeile. clDefault lassen, wenn das Preset passt.
-TPPGElementStyle.TextColor ! Eigene Textfarbe, z. B. clGrayText für Anzeige- und Nur-Lese-Werte. Auf genug Kontrast zur Fläche achten.
-TPPGElementStyle.BorderColor ! Eigene Rand- oder Linienfarbe, z. B. ein blasser Rand für Nur-Lese-Felder, damit sie weniger nach Eingabe aussehen.
-TPPGElementStyle.DarkColor ! Gegenstück zu Color im Dark Mode. Setzen Sie es immer, wenn Sie Color geändert haben, sonst greift im Dunkeln die Preset-Farbe.
-TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor im Dark Mode; hell genug wählen, damit der Text auf dunkler Fläche lesbar bleibt.
-TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor im Dark Mode.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Für nur fett oder kursiv reicht FontStyle.
-TPPGElementStyle.Font ! Nur für eine ganz andere Schrift im Bereich, z. B. kleiner in einer Fußzeile. Setzt ParentFont automatisch auf False.
-TPPGElementStyle.FontStyle ! Für eine Hervorhebung ohne eigene Schrift, z. B. [fsBold] für Kopfzeilen oder [fsItalic] für Nur-Lese-Werte.

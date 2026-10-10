@@ -97,14 +97,3 @@ TPPGSearchEdit.Visible ! Blenden Sie die Suche aus, wenn die Liste darunter nur 
 TPPGSearchEdit.Width ! 240 bis 320 Pixel für Namen und Nummern; in Kopfleisten mit Anchors oder Align mitwachsen lassen.
 
 # --- Typen ---
-TPPGItem.Badge ! Für eine kurze Zahl oder Markierung rechts im Eintrag, z. B. die Anzahl offener Aufträge eines Kunden oder „neu“. Nur wenige Zeichen, sonst wird der Text verdrängt.
-TPPGItem.Checked ! In Listen mit Kästchen (CheckListBox) den Zustand eines Eintrags setzen, z. B. beim Laden gespeicherter Auswahlen. cbGrayed für „teilweise“.
-TPPGItem.Color ! Sparsam einsetzen, um einzelne Einträge hervorzuheben, z. B. gesperrte Kunden leicht rot. Für Bedeutung zusätzlich Text oder Symbol verwenden, nicht nur Farbe.
-TPPGItem.Detail ! Für eine zweite Zeile mit Zusatzinfo, die beim Unterscheiden hilft, z. B. Ort und Kundennummer unter dem Namen oder der Preis unter dem Artikel.
-TPPGItem.Enabled ! Einträge sperren, die gerade nicht wählbar sind, z. B. ausverkaufte Artikel. Sie bleiben sichtbar, damit der Anwender weiß, dass es sie gibt.
-TPPGItem.FontStyle ! [fsBold] für ungelesene oder wichtige Einträge, z. B. neue Nachrichten oder Favoriten.
-TPPGItem.Group ! Einträge unter Überschriften ordnen, z. B. „Kunden“ und „Lieferanten“ in einer gemeinsamen Vorschlagsliste. Die Einträge einer Gruppe müssen hintereinander stehen.
-TPPGItem.ImageIndex ! Ein Symbol aus Images der Liste, damit Arten von Einträgen auf einen Blick erkennbar sind, z. B. Person, Firma, Artikel. -1 = kein Symbol.
-TPPGItem.Tag ! Die Datensatz-ID des Eintrags ablegen, damit Sie nach der Auswahl den richtigen Datensatz laden, auch wenn zwei Einträge gleich heißen.
-TPPGItem.Text ! Der Text, den der Anwender liest und der bei der Auswahl übernommen wird, z. B. der Kundenname. Zusatzinfos gehören in Detail.
-TPPGItem.TextColor ! Für einzelne Einträge in eigener Schriftfarbe, z. B. grau für archivierte Datensätze. Auf ausreichenden Kontrast zur Fläche achten.

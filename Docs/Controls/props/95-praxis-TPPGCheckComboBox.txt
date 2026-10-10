@@ -92,12 +92,3 @@ TPPGCheckComboBox.OnEndDrag ! Nur mit DragMode = dmAutomatic; Target = nil heiß
 TPPGCheckComboBox.OnGesture ! Auf Touch-Geräten eine Wischgeste auswerten, z. B. Wischen nach links leert die Auswahl.
 
 # --- Typen ---
-TPPGElementStyle.Color ! Eigene Flächenfarbe für den Bereich, z. B. ein helles Grau für gesperrte (ReadOnly) Felder. clDefault lassen, wenn das Preset passt.
-TPPGElementStyle.TextColor ! Eigene Textfarbe, z. B. clGrayText für schreibgeschützte Felder; auf ausreichenden Kontrast achten.
-TPPGElementStyle.BorderColor ! Eigene Randfarbe, z. B. ein blasser Rand, damit ein gesperrtes Feld zurücktritt.
-TPPGElementStyle.DarkColor ! Gegenstück zu Color für den Dark Mode. Setzen, sobald Sie Color selbst gesetzt haben, sonst bleibt die Fläche im Dunkeln hell.
-TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor für den Dark Mode; hell wählen, damit der Text auf dunklem Grund lesbar ist.
-TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor für den Dark Mode.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Eine eigene Schrift (Font) setzt es automatisch auf False.
-TPPGElementStyle.Font ! Nur für eine abweichende Schrift des Bereichs, z. B. kursiv für schreibgeschützte Werte. Für fett reicht FontStyle.
-TPPGElementStyle.FontStyle ! Einfacher als eine eigene Font: [fsBold] für eine hervorgehobene Kopfzeile oder [fsItalic] für gesperrte Werte.

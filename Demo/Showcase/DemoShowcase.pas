@@ -854,7 +854,11 @@ begin
   FStageHint := NewLabel(Own, FStage, 16, 12, 600,
     'B{ue}hne: Bedienen Sie die Komponente mit Maus und Tastatur. Rechts jede Eigenschaft '
     + 'ver{ae}ndern; unten erscheinen Erkl{ae}rung, Ereignisse und der passende Code.', tkCaption);
-  FStageHint.Anchors := [akLeft, akTop, akRight];
+  // Oben angedockt: Komponenten mit Align = alTop (Ribbon, ToolBar) liegen
+  // darunter statt darueber
+  FStageHint.Align := alTop;
+  FStageHint.AlignWithMargins := True;
+  FStageHint.Margins.SetBounds(16, 12, 16, 8);
   FRefHost := NewPanel(Own, FTrySheet, alNone);
   FRefHost.Visible := False;
   FRefHost.SetBounds(0, 0, 400, 300);
