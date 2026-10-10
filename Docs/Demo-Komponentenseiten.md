@@ -20,7 +20,7 @@
 
 | Datei | Aufgabe |
 |---|---|
-| `Demo\Showcase\DemoShowcase.pas` | Liste `ShowcaseEntries` (alle 84 Paletten-Komponenten: `Cls`, `Group`, `Done`, `Summary`), Gruppen, `TDemoGroupPage`, `TDemoComponentPage` (Bühne, Inspektor, Erklärung, Protokoll, Code, Beispiele, Überblick), `RegisterShowcasePage` |
+| `Demo\Showcase\DemoShowcase.pas` | Liste `ShowcaseEntries` (alle 84 Paletten-Komponenten: `Cls`, `Group`, `Summary`; fertig ist eine Seite, sobald eine Unit sie mit `RegisterShowcasePage` anmeldet), Gruppen, `TDemoGroupPage`, `TDemoComponentPage` (Bühne, Inspektor, Erklärung, Protokoll, Code, Beispiele, Überblick), `RegisterShowcasePage` |
 | `Demo\Showcase\DemoInspector.pas` | Inspektor: Modell per TypInfo (`TDemoPropModel`, Knoten mit Pfad; dieselben Knoten wirken auf eine zweite Instanz) und Ansicht mit PPGlow-Editoren je Typ |
 | `Demo\Showcase\DemoCodeGen.pas` | Pascal aus den Abweichungen zur Vorgabe-Instanz, DFM über `TWriter` + `ObjectBinaryToText` |
 | `Demo\Showcase\DemoDocs.pas` | Texte aus der Ressource: Auflösung wie `make-docs.ps1` (Klassenkette, `VCL.Name`, `Name`; Wirkung und Praxis getrennt), Notiz-Abschnitte, Beispielcode zwischen `// EXAMPLE-BEGIN` und `// EXAMPLE-END` |
@@ -30,9 +30,9 @@
 
 - **Ereignisse** werden generisch per RTTI an kleine Adapter gehängt (je Ereignis eine Instanz, bekannte VCL-Signaturen). Unbekannte Signaturen bleiben unprotokolliert.
 - **Vorgabe-Instanz:** eine zweite, unsichtbare Komponente derselben Klasse. Sie ist Grundlage für „geändert“, „zurücksetzen“ und die Code-Erzeugung. Für den Code wird sie kurz auf Preset und StyleManager des Ziels gestellt, damit Preset-Farben nicht als eigene Änderungen erscheinen.
-- **Texte:** `Docs\Controls\props\*.txt` mit der neuen Zeilenart `! Praxis` bzw. dem Eintrag `Klasse.Name ! Text` (nur Praxis, Wirkung vom allgemeineren Schlüssel). Komponentenbezogene Praxis-Texte stehen in `props\90-praxis.txt`.
+- **Texte:** `Docs\Controls\props\*.txt` mit der neuen Zeilenart `! Praxis` bzw. dem Eintrag `Klasse.Name ! Text` (nur Praxis, Wirkung vom allgemeineren Schlüssel). Praxis-Texte des Buttons und der gemeinsamen Typen stehen in `props\90-praxis.txt`, die jeder weiteren Komponente in einer eigenen Datei `props\95-praxis-<Klasse>.txt` (keine gemeinsame Datei, damit parallel gearbeitet werden kann).
   - `make-docs.ps1` gibt sie als „Praxis:“ aus.
-  - `make-docs.ps1 -Missing` meldet für Komponenten mit `Done: True` jede Eigenschaft ohne Praxis-Text, auch in Unterobjekt-Typen.
+  - `make-docs.ps1 -Missing` meldet für Komponenten mit angemeldeter Seite jede Eigenschaft ohne Praxis-Text, auch in Unterobjekt-Typen und Collection-Einträgen.
 - `docs-parser.ps1` führt jetzt auch die von der VCL selbst published Eigenschaften (`Left`, `Top`, `Width`, `Height`, `Hint`, `Cursor`, `Margins` …, `Name`, `Tag`) auf.
 - **Schalter** (über PowerShell starten, Git-Bash wandelt `/`-Schalter um):
 
@@ -46,7 +46,7 @@
 
 1. Texte prüfen:
    - `make-docs.ps1 -Missing` muss 0 melden.
-   - Praxis-Texte als `TPPGX.Name ! …` in `props\90-praxis.txt` ergänzen; für Typen und VCL-Unterobjekte allgemein formulieren (sie gelten für alle Controls).
+   - Praxis-Texte als `TPPGX.Name ! …` in `props\95-praxis-TPPGX.txt` ergänzen. Für Typen, Collection-Einträge und VCL-Unterobjekte, die noch keinen Praxis-Text haben, allgemein formulieren (sie gelten für alle Controls); vorher prüfen, ob es den Schlüssel schon gibt.
    - In der Notiz `Docs\Controls\notes\TPPGX.md` die Abschnitte `## Wofür` und `## Wann verwenden` ergänzen.
 2. Zwei Beispiele `Demo\Showcase\ExX<Thema>.pas` mit den EXAMPLE-Marken schreiben, einfach und ohne Demo-Bausteine.
 3. Seite `Demo\Showcase\DemoShowX.pas` schreiben:
@@ -54,12 +54,17 @@
    - Bei Bedarf `SetupSubject`, `AddCandidates` und `EventOccurred`.
    - `SelfTest` mit den Szenarien der Beispiele.
    - Im `initialization`-Teil: `RegisterShowcasePage`.
-4. In `ShowcaseEntries` `Done: True` setzen.
+4. Nichts in `DemoShowcase.pas` ändern: Die Anmeldung per `RegisterShowcasePage` macht die Seite fertig. Eigene Kategorien im Inspektor über `CategoryFor`, fachlich begründete Ausnahmen im Rundlauf über `SkipInRoundTrip`, eigene Ereignis-Signaturen in `SetupSubject` mit `LogEvent`.
 5. Units in `PPGlowDemo.dpr` und `.dproj` eintragen (nicht während eines Batch-Builds); LF→CRLF.
 6. Bauen und prüfen:
    - `build.ps1 -Projects Demo` erzeugt die Ressource neu.
    - Danach `/selftest` laufen lassen. Die allgemeinen Prüfungen der Komponentenseite laufen automatisch: jede Eigenschaft mit Wirkung und Praxis, jede Zeile setzen und zurücksetzen, Code und DFM, Beispielcode vorhanden.
    - Zum Schluss Screenshots ansehen.
+
+## Inspektor: Listen und Collections
+
+- `TStrings` (Items, Lines): Wert „(n Zeilen) erste Zeile“, Knopf „Bearbeiten …“ öffnet einen Dialog; im Code `X.Items.Text := 'a' + sLineBreak + 'b'`.
+- `TCollection` (Panels, Tabs …): Knöpfe + und − (Eintrag anhängen bzw. letzten entfernen); jeder Eintrag klappt mit seinen Eigenschaften auf (`Panels[0].Text`). Im Code `X.Panels.Add;` und `X.Panels[0].Text := …`. Einträge zählen gegenüber einer neuen Komponente als geändert; der Selbsttest setzt ihre Werte, setzt sie aber nicht zurück.
 
 ## Offen bzw. bewusst so
 

@@ -22,11 +22,13 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, System.TypInfo,
   System.Generics.Collections, Vcl.Graphics, Vcl.Controls, Vcl.ExtCtrls,
   PPG.Types, PPG.Panel, PPG.Labels, PPG.Edit, PPG.SpinEdit, PPG.ComboBox, PPG.ToggleSwitch,
-  PPG.RadioGroup, PPG.ColorPicker, PPG.Button;
+  PPG.RadioGroup, PPG.ColorPicker, PPG.Button, PPG.Memo;
 
 type
   TDemoPropKind = (pkInteger, pkInt64, pkEnum, pkBoolean, pkSet, pkString, pkColor,
-    pkIdentInt, pkFloat, pkComponent, pkObject, pkEvent, pkOther);
+    pkIdentInt, pkFloat, pkComponent, pkObject, pkEvent, pkOther,
+    // TStrings (Items, Lines), TCollection (Panels, Tabs ...) und ein Eintrag darin
+    pkStrings, pkCollection, pkItem);
 
   TDemoPropModel = class;
 
@@ -37,8 +39,13 @@ type
     FInfo: PPropInfo;
     FKind: TDemoPropKind;
     FChildren: TObjectList<TDemoPropNode>;
+    FItemIndex: Integer;
+    FItemClass: string;
   public
     constructor Create(AModel: TDemoPropModel; AParent: TDemoPropNode; AInfo: PPropInfo);
+    /// Eintrag Nr. AIndex einer Collection (Knoten ohne PropInfo).
+    constructor CreateItem(AModel: TDemoPropModel; AParent: TDemoPropNode; AIndex: Integer;
+      const AClassName: string);
     destructor Destroy; override;
     function Name: string;
     /// Pfad ab der Komponente, z. B. Appearance.Normal.Color.
@@ -55,6 +62,11 @@ type
     procedure SetStr(ARoot: TObject; const Value: string);
     function GetObj(ARoot: TObject): TObject;
     procedure SetObj(ARoot: TObject; Value: TObject);
+    /// Objekt dieses Knotens (Unterobjekt, Liste, Collection, Eintrag) oder nil.
+    function ValueIn(ARoot: TObject): TObject;
+    /// Knoten liegt in einem Collection-Eintrag (Panels[0].Text ...).
+    function InItem: Boolean;
+    property ItemIndex: Integer read FItemIndex;
     /// Wert als Pascal-Ausdruck (clRed, [fsBold], 'Text', taCenter, nil ...).
     function Literal(ARoot: TObject): string;
     /// Gleicher Wert in beiden Komponenten (Unterobjekte: alle Kinder gleich;
@@ -105,6 +117,7 @@ type
     FCaptionLbl: TPPGLabel;
     FValueLbl: TPPGLabel;
     FEditor: TControl;
+    FEditor2: TControl;
     FReset: TPPGLabel;
     FEventCount: Integer;
     FSelected: Boolean;
@@ -135,6 +148,9 @@ type
 
   TDemoNodeEvent = procedure(Sender: TObject; Node: TDemoPropNode) of object;
   TDemoNodeErrorEvent = procedure(Sender: TObject; Node: TDemoPropNode; const Msg: string) of object;
+  /// Kategorie einer Eigenschaft der Komponente festlegen (Name ohne Pfad);
+  /// nur Namen aus DemoCategories, sonst gilt Sonstiges.
+  TDemoCategoryEvent = procedure(Sender: TObject; const AName: string; var ACategory: string) of object;
 
   TDemoInspector = class(TPanel)
   private
@@ -151,7 +167,14 @@ type
     FOnSelect: TDemoNodeEvent;
     FOnChanged: TDemoNodeEvent;
     FOnError: TDemoNodeErrorEvent;
+    FOnCategory: TDemoCategoryEvent;
+    FRebuildPath: string;
     procedure FilterChange(Sender: TObject);
+    procedure StringsClick(Sender: TObject);
+    procedure AddItemClick(Sender: TObject);
+    procedure RemoveItemClick(Sender: TObject);
+    procedure WMRebuild(var Msg: TMessage); message WM_USER + 501;
+    procedure ChangeCollection(Node: TDemoPropNode; AAdd: Boolean);
     procedure BoxResize(Sender: TObject);
     procedure EditorChange(Sender: TObject);
     procedure ComboSelect(Sender: TObject);
@@ -183,6 +206,12 @@ type
     function RowOf(const APath: string): TDemoInspRow;
     function CategoryOf(Node: TDemoPropNode): string;
     procedure SetSelectionColor(AColor: TColor);
+    /// Modell neu aufbauen (nach Aenderungen an Collections), Zeile APath waehlen.
+    procedure Rebuild(const APath: string);
+    /// Eintrag an eine Collection anhaengen bzw. den letzten entfernen (wie die
+    /// Knoepfe + und -), danach Neuaufbau. False = keine Collection.
+    function AddCollectionItem(const APath: string): Boolean;
+    function RemoveCollectionItem(const APath: string): Boolean;
     property Model: TDemoPropModel read FModel;
     property Reference: TObject read FReference;
     /// Komponenten, die fuer Verweis-Eigenschaften (Images, PopupMenu ...)
@@ -194,13 +223,14 @@ type
     property OnSelect: TDemoNodeEvent read FOnSelect write FOnSelect;
     property OnChanged: TDemoNodeEvent read FOnChanged write FOnChanged;
     property OnError: TDemoNodeErrorEvent read FOnError write FOnError;
+    property OnCategory: TDemoCategoryEvent read FOnCategory write FOnCategory;
   end;
 
 const
   /// Kategorien in der Reihenfolge des Inspektors.
-  DemoCategories: array[0..9] of string = ('PPGlow', 'Beschriftung & Bild', 'Verhalten',
+  DemoCategories: array[0..11] of string = ('PPGlow', 'Inhalt', 'Beschriftung & Bild', 'Verhalten',
     'Layout', 'Tastatur & Fokus', 'Hinweise & Hilfe', 'Darstellung (VCL)', 'Ziehen & Touch',
-    'Sonstiges', 'Ereignisse');
+    'Daten', 'Sonstiges', 'Ereignisse');
 
 /// Name eines TModalResult-Werts (mrOk ...), '' = keiner.
 function ModalResultIdent(Value: Integer): string;
@@ -286,8 +316,10 @@ begin
         C := GetTypeData(T)^.ClassType;
         if C.InheritsFrom(TComponent) then
           Result := pkComponent
-        else if C.InheritsFrom(TCollection) or C.InheritsFrom(TStrings) then
-          Result := pkOther
+        else if C.InheritsFrom(TCollection) then
+          Result := pkCollection
+        else if C.InheritsFrom(TStrings) then
+          Result := pkStrings
         else
           Result := pkObject;
       end;
@@ -306,7 +338,21 @@ begin
   FModel := AModel;
   FParent := AParent;
   FInfo := AInfo;
+  FItemIndex := -1;
   FKind := KindOf(AInfo);
+  FChildren := TObjectList<TDemoPropNode>.Create(True);
+end;
+
+constructor TDemoPropNode.CreateItem(AModel: TDemoPropModel; AParent: TDemoPropNode;
+  AIndex: Integer; const AClassName: string);
+begin
+  inherited Create;
+  FModel := AModel;
+  FParent := AParent;
+  FInfo := nil;
+  FItemIndex := AIndex;
+  FItemClass := AClassName;
+  FKind := pkItem;
   FChildren := TObjectList<TDemoPropNode>.Create(True);
 end;
 
@@ -318,13 +364,18 @@ end;
 
 function TDemoPropNode.Name: string;
 begin
-  Result := string(FInfo^.Name);
+  if FInfo = nil then
+    Result := Format('[%d]', [FItemIndex])
+  else
+    Result := string(FInfo^.Name);
 end;
 
 function TDemoPropNode.Path: string;
 begin
   if FParent = nil then
     Result := Name
+  else if FInfo = nil then
+    Result := FParent.Path + Name
   else
     Result := FParent.Path + '.' + Name;
 end;
@@ -339,30 +390,70 @@ end;
 
 function TDemoPropNode.PropType: PTypeInfo;
 begin
-  Result := FInfo^.PropType^;
+  if FInfo = nil then
+    Result := nil
+  else
+    Result := FInfo^.PropType^;
 end;
 
 function TDemoPropNode.TypeName: string;
 begin
-  Result := TypeNameOf(PropType);
+  if FInfo = nil then
+    Result := FItemClass
+  else
+    Result := TypeNameOf(PropType);
 end;
 
 function TDemoPropNode.ReadOnly: Boolean;
 begin
-  Result := (FInfo^.SetProc = nil) and (FKind <> pkObject);
+  if FInfo = nil then
+    Result := True
+  else
+    Result := (FInfo^.SetProc = nil) and not (FKind in [pkObject, pkStrings, pkCollection]);
+end;
+
+function TDemoPropNode.InItem: Boolean;
+var
+  P: TDemoPropNode;
+begin
+  Result := False;
+  P := FParent;
+  while P <> nil do
+  begin
+    if P.FKind = pkItem then
+      Exit(True);
+    P := P.FParent;
+  end;
 end;
 
 function TDemoPropNode.OwnerIn(ARoot: TObject): TObject;
-var
-  P: TObject;
 begin
   if FParent = nil then
-    Exit(ARoot);
-  P := FParent.OwnerIn(ARoot);
-  if P = nil then
-    Result := nil
+    Result := ARoot
   else
-    Result := GetObjectProp(P, FParent.FInfo);
+    Result := FParent.ValueIn(ARoot);
+end;
+
+function TDemoPropNode.ValueIn(ARoot: TObject): TObject;
+var
+  O: TObject;
+begin
+  Result := nil;
+  if FInfo = nil then
+  begin
+    // Eintrag einer Collection: Eltern-Knoten ist die Collection
+    if FParent = nil then
+      Exit;
+    O := FParent.ValueIn(ARoot);
+    if (O is TCollection) and (FItemIndex >= 0) and (FItemIndex < TCollection(O).Count) then
+      Result := TCollection(O).Items[FItemIndex];
+    Exit;
+  end;
+  if FInfo^.PropType^.Kind <> tkClass then
+    Exit;
+  O := OwnerIn(ARoot);
+  if O <> nil then
+    Result := GetObjectProp(O, FInfo);
 end;
 
 function TDemoPropNode.GetOrd(ARoot: TObject): Int64;
@@ -370,7 +461,7 @@ var
   O: TObject;
 begin
   O := OwnerIn(ARoot);
-  if O = nil then
+  if (O = nil) or (FInfo = nil) then
     Exit(0);
   if FKind = pkInt64 then
     Result := GetInt64Prop(O, FInfo)
@@ -383,7 +474,7 @@ var
   O: TObject;
 begin
   O := OwnerIn(ARoot);
-  if O = nil then
+  if (O = nil) or (FInfo = nil) then
     Exit;
   if FKind = pkInt64 then
     SetInt64Prop(O, FInfo, Value)
@@ -396,8 +487,16 @@ var
   O: TObject;
 begin
   O := OwnerIn(ARoot);
-  if O = nil then
+  if (O = nil) or (FInfo = nil) then
     Result := ''
+  else if FKind = pkStrings then
+  begin
+    O := ValueIn(ARoot);
+    if O is TStrings then
+      Result := TStrings(O).Text
+    else
+      Result := '';
+  end
   else
     Result := GetStrProp(O, FInfo);
 end;
@@ -407,19 +506,21 @@ var
   O: TObject;
 begin
   O := OwnerIn(ARoot);
-  if O <> nil then
+  if (O = nil) or (FInfo = nil) then
+    Exit;
+  if FKind = pkStrings then
+  begin
+    O := ValueIn(ARoot);
+    if O is TStrings then
+      TStrings(O).Text := Value;
+  end
+  else
     SetStrProp(O, FInfo, Value);
 end;
 
 function TDemoPropNode.GetObj(ARoot: TObject): TObject;
-var
-  O: TObject;
 begin
-  O := OwnerIn(ARoot);
-  if O = nil then
-    Result := nil
-  else
-    Result := GetObjectProp(O, FInfo);
+  Result := ValueIn(ARoot);
 end;
 
 procedure TDemoPropNode.SetObj(ARoot: TObject; Value: TObject);
@@ -427,8 +528,24 @@ var
   O: TObject;
 begin
   O := OwnerIn(ARoot);
-  if O <> nil then
+  if (O <> nil) and (FInfo <> nil) then
     SetObjectProp(O, FInfo, Value);
+end;
+
+function StringsLiteral(S: TStrings): string;
+var
+  I: Integer;
+begin
+  // 'Zeile 1' + sLineBreak + 'Zeile 2'
+  Result := '';
+  for I := 0 to S.Count - 1 do
+  begin
+    if I > 0 then
+      Result := Result + ' + sLineBreak + ';
+    Result := Result + QuotedStr(S[I]);
+  end;
+  if Result = '' then
+    Result := '''''';
 end;
 
 function TDemoPropNode.Literal(ARoot: TObject): string;
@@ -501,18 +618,34 @@ begin
         else
           Result := '(' + O.ClassName + ')';
       end;
+    pkStrings:
+      begin
+        O := ValueIn(ARoot);
+        if O is TStrings then
+          Result := StringsLiteral(TStrings(O))
+        else
+          Result := '''''';
+      end;
+    pkCollection:
+      begin
+        O := ValueIn(ARoot);
+        if O is TCollection then
+          Result := Format('(%d)', [TCollection(O).Count])
+        else
+          Result := '(0)';
+      end;
+    pkItem:
+      begin
+        O := ValueIn(ARoot);
+        if O is TCollectionItem then
+          Result := TCollectionItem(O).DisplayName
+        else
+          Result := '';
+      end;
     pkEvent:
       Result := TypeName;
   else
-    begin
-      O := GetObj(ARoot);
-      if (FInfo^.PropType^.Kind = tkClass) and (O is TCollection) then
-        Result := Format('(%d)', [TCollection(O).Count])
-      else if (FInfo^.PropType^.Kind = tkClass) and (O is TStrings) then
-        Result := Format('(%d Zeilen)', [TStrings(O).Count])
-      else
-        Result := '(' + TypeName + ')';
-    end;
+    Result := '(' + TypeName + ')';
   end;
 end;
 
@@ -526,8 +659,23 @@ begin
   if (OA = nil) or (OB = nil) then
     Exit(OA = OB);
   case FKind of
-    pkObject:
+    pkObject, pkItem:
       begin
+        if (FKind = pkItem) and ((ValueIn(A) = nil) or (ValueIn(B) = nil)) then
+          Exit(ValueIn(A) = ValueIn(B));
+        for I := 0 to FChildren.Count - 1 do
+          if not FChildren[I].SameIn(A, B) then
+            Exit(False);
+        Result := True;
+      end;
+    pkCollection:
+      begin
+        OA := ValueIn(A);
+        OB := ValueIn(B);
+        if not ((OA is TCollection) and (OB is TCollection)) then
+          Exit(OA = OB);
+        if TCollection(OA).Count <> TCollection(OB).Count then
+          Exit(False);
         for I := 0 to FChildren.Count - 1 do
           if not FChildren[I].SameIn(A, B) then
             Exit(False);
@@ -535,7 +683,7 @@ begin
       end;
     pkEvent, pkOther:
       Result := True;
-    pkString:
+    pkString, pkStrings:
       Result := GetStr(A) = GetStr(B);
     pkFloat:
       Result := SameValue(GetFloatProp(OA, FInfo), GetFloatProp(OB, FInfo));
@@ -556,9 +704,16 @@ begin
   if (OS = nil) or (OT = nil) then
     Exit;
   case FKind of
-    pkObject:
+    pkObject, pkItem:
       for I := 0 to FChildren.Count - 1 do
         FChildren[I].CopyValue(ASource, ATarget);
+    pkCollection, pkStrings:
+      begin
+        OS := ValueIn(ASource);
+        OT := ValueIn(ATarget);
+        if (OS is TPersistent) and (OT is TPersistent) then
+          TPersistent(OT).Assign(TPersistent(OS));
+      end;
     pkEvent, pkOther:
       ;
     pkString:
@@ -596,9 +751,9 @@ procedure TDemoPropModel.AddChildren(AParent: TDemoPropNode; AObj: TObject;
   List: TObjectList<TDemoPropNode>; Depth: Integer);
 var
   Props: PPropList;
-  Count, I: Integer;
+  Count, I, J: Integer;
   P: PPropInfo;
-  N: TDemoPropNode;
+  N, It: TDemoPropNode;
   Sub: TObject;
 begin
   if (AObj = nil) or (AObj.ClassInfo = nil) then
@@ -616,11 +771,25 @@ begin
         Continue;
       N := TDemoPropNode.Create(Self, AParent, P);
       List.Add(N);
-      if (N.Kind = pkObject) and (Depth < 4) then
+      if Depth >= 6 then
+        Continue;
+      if N.Kind = pkObject then
       begin
         Sub := GetObjectProp(AObj, P);
         if Sub <> nil then
           AddChildren(N, Sub, N.FChildren, Depth + 1);
+      end
+      else if N.Kind = pkCollection then
+      begin
+        // Je Eintrag ein Knoten mit den Eigenschaften des Eintrags
+        Sub := GetObjectProp(AObj, P);
+        if Sub is TCollection then
+          for J := 0 to TCollection(Sub).Count - 1 do
+          begin
+            It := TDemoPropNode.CreateItem(Self, N, J, TCollection(Sub).Items[J].ClassName);
+            N.FChildren.Add(It);
+            AddChildren(It, TCollection(Sub).Items[J], It.FChildren, Depth + 1);
+          end;
       end;
     end;
   finally
@@ -724,8 +893,8 @@ end;
 
 function TDemoInspRow.Expandable: Boolean;
 begin
-  Result := (FRowKind = rkCategory) or ((FNode <> nil) and (FNode.Kind = pkObject) and
-    (FNode.Children.Count > 0));
+  Result := (FRowKind = rkCategory) or ((FNode <> nil) and
+    (FNode.Kind in [pkObject, pkCollection, pkItem]) and (FNode.Children.Count > 0));
 end;
 
 procedure TDemoInspRow.SetSelected(const Value: Boolean);
@@ -783,7 +952,7 @@ end;
 
 procedure TDemoInspRow.LayoutParts;
 var
-  NameW, X, W, EH: Integer;
+  NameW, X, W, EH, X2: Integer;
 begin
   if FCaptionLbl = nil then
     Exit;
@@ -808,6 +977,19 @@ begin
   begin
     FReset.SetBounds(Width - 28, 0, 26, RowH);
     W := W - 30;
+  end;
+  if FEditor is TPPGButton then
+  begin
+    // Liste bzw. Collection: Wert links, Knoepfe rechts
+    X2 := X + W - FEditor.Width;
+    if FEditor2 <> nil then
+      Dec(X2, FEditor2.Width + 4);
+    if FValueLbl <> nil then
+      FValueLbl.SetBounds(X, 0, Max(10, X2 - X - 4), RowH);
+    FEditor.SetBounds(X2, (RowH - 28) div 2, FEditor.Width, 28);
+    if FEditor2 <> nil then
+      FEditor2.SetBounds(X2 + FEditor.Width + 4, (RowH - 28) div 2, FEditor2.Width, 28);
+    Exit;
   end;
   if FValueLbl <> nil then
     FValueLbl.SetBounds(X, 0, Max(10, W), RowH);
@@ -853,6 +1035,23 @@ begin
         FValueLbl.Caption := Format('%s  <b>%d' + #$00D7 + '</b>', [N.TypeName, FEventCount])
       else
         FValueLbl.Caption := N.TypeName;
+    end
+    else if N.Kind = pkStrings then
+    begin
+      Obj := N.ValueIn(Root);
+      if (Obj is TStrings) and (TStrings(Obj).Count > 0) then
+        FValueLbl.Caption := MarkupEscape(Format(L('(%d Zeilen) %s'), [TStrings(Obj).Count,
+          TStrings(Obj)[0]]))
+      else
+        FValueLbl.Caption := L('(leer)');
+    end
+    else if N.Kind = pkCollection then
+    begin
+      Obj := N.ValueIn(Root);
+      if Obj is TCollection then
+        FValueLbl.Caption := Format(L('%d Eintr{ae}ge'), [TCollection(Obj).Count])
+      else
+        FValueLbl.Caption := '';
     end
     else
       FValueLbl.Caption := MarkupEscape(N.Literal(Root));
@@ -987,6 +1186,11 @@ begin
   else if InList(N, ['Preset', 'StyleManager', 'Appearance', 'Animation', 'RoundedCorners',
     'Shadow', 'HighContrastSupport', 'ImageTint', 'Styles', 'ReadOnlyStyle']) then
     Result := 'PPGlow'
+  else if InList(N, ['Items', 'ItemsEx', 'Lines', 'Panels', 'Tabs', 'Pages', 'Columns', 'Series']) and
+    (Node.Kind in [pkStrings, pkCollection]) then
+    Result := 'Inhalt'
+  else if InList(N, ['DataSource', 'DataField', 'ListSource', 'ListField', 'KeyField', 'ReadOnlyField']) then
+    Result := 'Daten'
   else if InList(N, ['Caption', 'Images', 'ImageIndex', 'ImageName', 'HotImageIndex',
     'DisabledImageIndex', 'PressedImageIndex', 'HotImageName', 'DisabledImageName',
     'PressedImageName', 'ImagePosition', 'Spacing', 'Alignment', 'Margin', 'WordWrap', 'Font',
@@ -1010,6 +1214,12 @@ begin
     Result := 'Ziehen & Touch'
   else
     Result := 'Sonstiges';
+  if (Node.Kind <> pkEvent) and Assigned(FOnCategory) then
+  begin
+    FOnCategory(Self, N, Result);
+    if not InList(Result, DemoCategories) then
+      Result := 'Sonstiges';
+  end;
 end;
 
 procedure TDemoInspector.Inspect(AComponent, AReference: TObject);
@@ -1141,9 +1351,50 @@ var
   Picker: TPPGColorPicker;
   BaseT: PTypeInfo;
   IsFontName: Boolean;
+  Btn, Btn2: TPPGButton;
 begin
   N := Row.Node;
-  if (N.Kind in [pkObject, pkEvent, pkOther]) or N.ReadOnly then
+  if N.Kind in [pkStrings, pkCollection] then
+  begin
+    Lbl := TPPGLabel.Create(Row);
+    Lbl.Parent := Row;
+    Lbl.Transparent := True;
+    Lbl.AutoSize := False;
+    Lbl.Layout := tlCenter;
+    Lbl.ShowAccelChar := False;
+    Lbl.AllowMarkup := True;
+    Lbl.Secondary := True;
+    Lbl.EllipsisPosition := epEndEllipsis;
+    Lbl.OnClick := Row.RowClick;
+    ApplyTextKind(Lbl.Font, tkSecondary);
+    Row.FValueLbl := Lbl;
+    Btn := TPPGButton.Create(Row);
+    Btn.Parent := Row;
+    if N.Kind = pkStrings then
+    begin
+      Btn.Caption := L('Bearbeiten {...}');
+      Btn.Width := 110;
+      Btn.OnClick := StringsClick;
+    end
+    else
+    begin
+      Btn.Caption := '+';
+      Btn.Width := 32;
+      Btn.Hint := L('Eintrag hinzuf{ue}gen');
+      Btn.ShowHint := True;
+      Btn.OnClick := AddItemClick;
+      Btn2 := TPPGButton.Create(Row);
+      Btn2.Parent := Row;
+      Btn2.Caption := #$2212;
+      Btn2.Width := 32;
+      Btn2.Hint := L('Letzten Eintrag entfernen');
+      Btn2.ShowHint := True;
+      Btn2.OnClick := RemoveItemClick;
+      Row.FEditor2 := Btn2;
+    end;
+    Row.FEditor := Btn;
+  end
+  else if (N.Kind in [pkObject, pkEvent, pkOther, pkItem]) or N.ReadOnly then
   begin
     Lbl := TPPGLabel.Create(Row);
     Lbl.Parent := Row;
@@ -1393,6 +1644,24 @@ begin
   Row := RowOf(APath);
   if (Row = nil) or (Row.Editor = nil) then
     Exit;
+  if Row.Node.Kind = pkStrings then
+  begin
+    try
+      Row.Node.SetStr(FModel.Root, AValue);
+    except
+      // Grenze: wie ApplyEditor, die Meldung der Komponente wird gezeigt
+      on E: Exception do
+      begin
+        if Assigned(FOnError) then
+          FOnError(Self, Row.Node, E.ClassName + ': ' + E.Message);
+        Exit(True);
+      end;
+    end;
+    RefreshValues;
+    if Assigned(FOnChanged) then
+      FOnChanged(Self, Row.Node);
+    Exit(True);
+  end;
   Inc(FUpdating);
   try
     if Row.Editor is TPPGToggleSwitch then
@@ -1591,32 +1860,38 @@ end;
 function TDemoInspector.RowOf(const APath: string): TDemoInspRow;
 var
   Row: TDemoInspRow;
-  Parts: TStringList;
-  I: Integer;
-  Prefix: string;
+  N, P: TDemoPropNode;
+  Chain: TList<TDemoPropNode>;
+  I, J: Integer;
 begin
   Result := nil;
-  // Eltern aufbauen, damit auch Unterobjekt-Zeilen existieren
-  Parts := TStringList.Create;
+  if FModel = nil then
+    Exit;
+  N := FModel.Find(APath);
+  if N = nil then
+    Exit;
+  // Zeilen der Vorfahren (Unterobjekt, Collection, Eintrag) von aussen nach
+  // innen aufbauen, damit die Zeile selbst existiert
+  Chain := TList<TDemoPropNode>.Create;
   try
-    Parts.Delimiter := '.';
-    Parts.StrictDelimiter := True;
-    Parts.DelimitedText := APath;
-    Prefix := '';
-    for I := 0 to Parts.Count - 2 do
+    P := N.Parent;
+    while P <> nil do
     begin
-      if Prefix <> '' then
-        Prefix := Prefix + '.';
-      Prefix := Prefix + Parts[I];
-      for Row in FRows do
-        if (Row.RowKind = rkProp) and SameText(Row.Node.Path, Prefix) then
-          BuildChildRows(Row);
+      Chain.Insert(0, P);
+      P := P.Parent;
     end;
+    for I := 0 to Chain.Count - 1 do
+      for J := 0 to FRows.Count - 1 do
+        if (FRows[J].RowKind = rkProp) and (FRows[J].Node = Chain[I]) then
+        begin
+          BuildChildRows(FRows[J]);
+          Break;
+        end;
   finally
-    Parts.Free;
+    Chain.Free;
   end;
   for Row in FRows do
-    if (Row.RowKind = rkProp) and SameText(Row.Node.Path, APath) then
+    if (Row.RowKind = rkProp) and (Row.Node = N) then
       Exit(Row);
 end;
 
@@ -1663,7 +1938,173 @@ begin
     FOnSelect(Self, Row.Node);
 end;
 
+function StringsDialog(const ATitle: string; var AText: string): Boolean;
+var
+  F: TForm;
+  Memo: TPPGMemo;
+  Bar: TPanel;
+  Ok, Cancel: TPPGButton;
+begin
+  F := TForm.CreateNew(nil);
+  try
+    F.Caption := ATitle;
+    F.Position := poMainFormCenter;
+    F.BorderStyle := bsSizeToolWin;
+    F.ClientWidth := 480;
+    F.ClientHeight := 360;
+    F.Font.Name := BodyFontName;
+    F.Font.Size := 10;
+    Bar := TPanel.Create(F);
+    Bar.Parent := F;
+    Bar.Align := alBottom;
+    Bar.Height := 52;
+    Bar.BevelOuter := bvNone;
+    Bar.ParentBackground := True;
+    Bar.ParentColor := True;
+    Bar.Caption := '';
+    Memo := TPPGMemo.Create(F);
+    Memo.Parent := F;
+    Memo.Align := alClient;
+    Memo.AlignWithMargins := True;
+    Memo.Margins.SetBounds(12, 12, 12, 0);
+    Memo.ScrollBars := ssVertical;
+    Memo.Lines.Text := AText;
+    Ok := TPPGButton.Create(F);
+    Ok.Parent := Bar;
+    Ok.SetBounds(F.ClientWidth - 232, 10, 104, 32);
+    Ok.Anchors := [akTop, akRight];
+    Ok.Caption := 'OK';
+    Ok.Default := True;
+    Ok.ModalResult := mrOk;
+    Cancel := TPPGButton.Create(F);
+    Cancel.Parent := Bar;
+    Cancel.SetBounds(F.ClientWidth - 116, 10, 104, 32);
+    Cancel.Anchors := [akTop, akRight];
+    Cancel.Caption := L('Abbrechen');
+    Cancel.Cancel := True;
+    Cancel.ModalResult := mrCancel;
+    ApplyDemoStyles(F, nil);
+    F.ActiveControl := Memo;
+    Result := F.ShowModal = mrOk;
+    if Result then
+      AText := Memo.Lines.Text;
+  finally
+    F.Free;
+  end;
+end;
+
+procedure TDemoInspector.StringsClick(Sender: TObject);
+var
+  Row: TDemoInspRow;
+  S: string;
+begin
+  Row := RowOfEditor(Sender);
+  if Row = nil then
+    Exit;
+  S := Row.Node.GetStr(FModel.Root);
+  if StringsDialog(Row.Node.Path, S) then
+    SetValueText(Row.Node.Path, S);
+end;
+
+procedure TDemoInspector.ChangeCollection(Node: TDemoPropNode; AAdd: Boolean);
+var
+  O: TObject;
+begin
+  O := Node.ValueIn(FModel.Root);
+  if not (O is TCollection) then
+    Exit;
+  try
+    if AAdd then
+      TCollection(O).Add
+    else if TCollection(O).Count > 0 then
+      TCollection(O).Delete(TCollection(O).Count - 1);
+  except
+    // Grenze: die Komponente lehnt den Eintrag ab; Meldung zeigen
+    on E: Exception do
+      if Assigned(FOnError) then
+        FOnError(Self, Node, E.ClassName + ': ' + E.Message);
+  end;
+end;
+
+procedure TDemoInspector.AddItemClick(Sender: TObject);
+var
+  Row: TDemoInspRow;
+begin
+  Row := RowOfEditor(Sender);
+  if Row = nil then
+    Exit;
+  ChangeCollection(Row.Node, True);
+  // Die Zeile gehoert zum alten Modell: erst nach dem Klick neu aufbauen
+  FRebuildPath := Row.Node.Path;
+  PostMessage(Handle, WM_USER + 501, 0, 0);
+end;
+
+procedure TDemoInspector.RemoveItemClick(Sender: TObject);
+var
+  Row: TDemoInspRow;
+begin
+  Row := RowOfEditor(Sender);
+  if Row = nil then
+    Exit;
+  ChangeCollection(Row.Node, False);
+  FRebuildPath := Row.Node.Path;
+  PostMessage(Handle, WM_USER + 501, 0, 0);
+end;
+
+procedure TDemoInspector.WMRebuild(var Msg: TMessage);
+begin
+  Rebuild(FRebuildPath);
+end;
+
+procedure TDemoInspector.Rebuild(const APath: string);
+var
+  Root, Ref: TObject;
+  Row: TDemoInspRow;
+begin
+  if FModel = nil then
+    Exit;
+  Root := FModel.Root;
+  Ref := FReference;
+  Inspect(Root, Ref);
+  ApplyDemoStyles(Self, nil);
+  if APath = '' then
+    Exit;
+  if SelectPath(APath) then
+  begin
+    Row := RowOf(APath);
+    if (Row <> nil) and Row.Expandable and not Row.Expanded then
+      Row.RowClick(Row);
+    if Assigned(FOnChanged) and (Row <> nil) then
+      FOnChanged(Self, Row.Node);
+  end;
+end;
+
+function TDemoInspector.AddCollectionItem(const APath: string): Boolean;
+var
+  N: TDemoPropNode;
+begin
+  N := FModel.Find(APath);
+  Result := (N <> nil) and (N.Kind = pkCollection);
+  if not Result then
+    Exit;
+  ChangeCollection(N, True);
+  Rebuild(APath);
+end;
+
+function TDemoInspector.RemoveCollectionItem(const APath: string): Boolean;
+var
+  N: TDemoPropNode;
+begin
+  N := FModel.Find(APath);
+  Result := (N <> nil) and (N.Kind = pkCollection);
+  if not Result then
+    Exit;
+  ChangeCollection(N, False);
+  Rebuild(APath);
+end;
+
 procedure TDemoInspector.EventFired(const AName: string);
+
 var
   Row: TDemoInspRow;
 begin

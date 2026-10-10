@@ -24,7 +24,7 @@ function DfmText(AComponent: TComponent): string;
 implementation
 
 uses
-  System.TypInfo, System.Generics.Collections;
+  System.TypInfo, System.Generics.Collections, Vcl.Controls;
 
 function IsBoundsName(const N: string): Boolean;
 begin
@@ -42,10 +42,18 @@ var
   OldManager: TObject;
   BoundsDiffer: Boolean;
   L, T, W, H: TDemoPropNode;
+  Padded: TList<TCollection>;
+  PadCount: TList<Integer>;
+  OrigCount: TDictionary<TDemoPropNode, Integer>;
+  I, K: Integer;
+  RC, SC: TObject;
 begin
   Root := AModel.Root;
   Lines := TStringList.Create;
   All := TList<TDemoPropNode>.Create;
+  Padded := TList<TCollection>.Create;
+  PadCount := TList<Integer>.Create;
+  OrigCount := TDictionary<TDemoPropNode, Integer>.Create;
   try
     AModel.GetAll(All);
     Lines.Add(Format('%s := %s.Create(Self);', [AVarName, Root.ClassName]));
@@ -76,11 +84,33 @@ begin
         Lines.Add(Format('%s.StyleManager := %s;', [AVarName, ManagerNode.Literal(Root)]));
         ManagerNode.SetObj(AReference, ManagerNode.GetObj(Root));
       end;
+      // Collections der Vorgabe auf die Zahl der Eintraege des Ziels bringen,
+      // damit die Eintraege vergleichbar sind (danach wieder entfernt)
+      for N in All do
+        if N.Kind = pkCollection then
+        begin
+          RC := N.ValueIn(AReference);
+          SC := N.ValueIn(Root);
+          if (RC is TCollection) and (SC is TCollection) then
+          begin
+            OrigCount.AddOrSetValue(N, TCollection(RC).Count);
+            K := 0;
+            while TCollection(RC).Count < TCollection(SC).Count do
+            begin
+              TCollection(RC).Add;
+              Inc(K);
+            end;
+            Padded.Add(TCollection(RC));
+            PadCount.Add(K);
+          end;
+        end;
       L := AModel.Find('Left');
       T := AModel.Find('Top');
       W := AModel.Find('Width');
       H := AModel.Find('Height');
+      // Ausgerichtete Controls (Align <> alNone): Lage kommt aus Align
       BoundsDiffer := (L <> nil) and (T <> nil) and (W <> nil) and (H <> nil) and
+        not ((Root is TControl) and (TControl(Root).Align <> alNone)) and
         not (L.SameIn(Root, AReference) and T.SameIn(Root, AReference) and
         W.SameIn(Root, AReference) and H.SameIn(Root, AReference));
       if BoundsDiffer then
@@ -88,7 +118,27 @@ begin
           T.Literal(Root), W.Literal(Root), H.Literal(Root)]));
       for N in All do
       begin
-        if N.Kind in [pkObject, pkEvent, pkOther] then
+        if N.Kind = pkCollection then
+        begin
+          SC := N.ValueIn(Root);
+          if (SC is TCollection) and OrigCount.TryGetValue(N, K) and
+            ((K > 0) or (TCollection(SC).Count > 0)) and
+            ((K <> TCollection(SC).Count) or not N.SameIn(Root, AReference)) then
+          begin
+            if K > 0 then
+              Lines.Add(Format('%s.%s.Clear;', [AVarName, N.Path]));
+            for I := 0 to TCollection(SC).Count - 1 do
+              Lines.Add(Format('%s.%s.Add;', [AVarName, N.Path]));
+          end;
+          Continue;
+        end;
+        if N.Kind = pkStrings then
+        begin
+          if not N.SameIn(Root, AReference) then
+            Lines.Add(Format('%s.%s.Text := %s;', [AVarName, N.Path, N.Literal(Root)]));
+          Continue;
+        end;
+        if N.Kind in [pkObject, pkEvent, pkOther, pkItem] then
           Continue;
         if N.ReadOnly then
           Continue;
@@ -104,6 +154,9 @@ begin
         Lines.Add(Format('%s.%s := %s;', [AVarName, N.Path, N.Literal(Root)]));
       end;
     finally
+      for I := Padded.Count - 1 downto 0 do
+        for K := 1 to PadCount[I] do
+          Padded[I].Delete(Padded[I].Count - 1);
       // Erst den Manager, dann das Preset: ein Manager setzt sein Preset mit
       if ManagerNode <> nil then
         ManagerNode.SetObj(AReference, OldManager);
@@ -115,6 +168,9 @@ begin
     Lines.Add(Format('// z. B. %s.OnClick := %sClick;', [AVarName, AVarName]));
     Result := Lines.Text;
   finally
+    OrigCount.Free;
+    PadCount.Free;
+    Padded.Free;
     All.Free;
     Lines.Free;
   end;

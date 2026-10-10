@@ -634,7 +634,7 @@ begin
   for I := 0 to High(ShowcaseEntries) do
   begin
     C := ShowcasePageClass(ShowcaseEntries[I].Cls);
-    if ShowcaseEntries[I].Done and (C <> nil) then
+    if C <> nil then
     begin
       AddPage(ShowcaseEntries[I].Cls, C);
       FShowcasePages.AddOrSetValue(UpperCase(ShowcaseEntries[I].Cls), FPageObjects.Count - 1);
@@ -1531,6 +1531,7 @@ function TDemoForm.RunSelfTest(const FileName: string): Integer;
 var
   I, J, Page: Integer;
   Missing: string;
+  Registered: TStringList;
 begin
   // Jede Seite loest ihre Szenarien ueber Mausnachrichten an die Controls aus
   // und prueft die sichtbaren Ergebnisse (Ergebniszeilen, Zustaende, Listen)
@@ -1591,12 +1592,19 @@ begin
     SelfCheck(Format('Komponentenseiten: %d Eintr' + #$00E4 + 'ge, jede Paletten-Komponente genau einmal%s',
       [Length(ShowcaseEntries), Missing]), (Missing = '') and
       (Length(ShowcaseEntries) = Length(PaletteControls)));
+    // Jede angemeldete Seite gehoert zu einem Eintrag der Liste und ist erreichbar
     Missing := '';
-    for J := 0 to High(ShowcaseEntries) do
-      if ShowcaseEntries[J].Done <> (ShowcasePage(ShowcaseEntries[J].Cls) >= 0) then
-        Missing := Missing + ' ' + ShowcaseEntries[J].Cls;
-    SelfCheck('Komponentenseiten: Done = Seite angemeldet und in der Navigation' + Missing,
-      Missing = '');
+    Registered := TStringList.Create;
+    try
+      ShowcaseRegistered(Registered);
+      for J := 0 to Registered.Count - 1 do
+        if (ShowcaseIndex(Registered[J]) < 0) or (ShowcasePage(Registered[J]) < 0) then
+          Missing := Missing + ' ' + Registered[J];
+      SelfCheck(Format('Komponentenseiten: %d angemeldet, alle in der Liste und erreichbar%s',
+        [Registered.Count, Missing]), (Missing = '') and (Registered.Count > 0));
+    finally
+      Registered.Free;
+    end;
     SelfCheck('Suche: TPPGButton -> Komponentenseite',
       (ShowcasePage('TPPGButton') >= 0) and (FindCatalogPage('Button') = ShowcasePage('TPPGButton')));
     SelfCheck('Navigation: Komponentenseite erreichbar',

@@ -29,8 +29,8 @@
 
   Aufruf:  powershell -ExecutionPolicy Bypass -File Build\make-docs.ps1 [-Missing datei.txt]
            -Missing: Liste aller Properties ohne Beschreibung schreiben. Fuer
-           Komponenten, deren Demo-Seite fertig ist (Demo\Showcase\DemoShowcase.pas,
-           Done: True), fehlt auch jede Eigenschaft ohne Praxis-Text ("!").
+           Komponenten mit fertiger Demo-Seite (RegisterShowcasePage in
+           Demo\Showcase\*.pas) fehlt auch jede Eigenschaft ohne Praxis-Text ("!").
 #>
 param(
   [string]$Root = '',
@@ -125,17 +125,26 @@ function Find-Description($Model, [string]$Owner, $Prop) {
   return $d
 }
 
-function Get-ShowcaseDone([string]$File) {
-  # Komponenten mit fertiger Demo-Seite: Eintraege "(Cls: 'TPPGx'; ... Done: True)"
-  if (-not (Test-Path $File)) { return @() }
-  $text = [IO.File]::ReadAllText($File)
-  return @([regex]::Matches($text, "Cls:\s*'(\w+)'[^)]*?Done:\s*True") | ForEach-Object { $_.Groups[1].Value })
+function Get-ShowcaseDone([string]$Dir) {
+  # Komponenten mit fertiger Demo-Seite: RegisterShowcasePage('TPPGx', ...) in
+  # Demo\Showcase\*.pas
+  if (-not (Test-Path $Dir)) { return @() }
+  $names = foreach ($f in Get-ChildItem -Path $Dir -Filter '*.pas' -File) {
+    $text = [IO.File]::ReadAllText($f.FullName)
+    [regex]::Matches($text, "RegisterShowcasePage\(\s*'(\w+)'") | ForEach-Object { $_.Groups[1].Value }
+  }
+  return @($names | Sort-Object -Unique)
 }
 
 function Add-PracticeOwner($Model, [string]$Type) {
-  # Klasse samt aller Unterobjekt-Typen (Appearance, Shadow ...) aufnehmen
+  # Klasse samt aller Unterobjekt-Typen (Appearance, Shadow ...) und der
+  # Eintraege von Collections aufnehmen
   if ($script:PracticeOwners.ContainsKey($Type)) { return }
   $script:PracticeOwners[$Type] = $true
+  if ($Model.Classes.ContainsKey($Type)) {
+    $ic = $Model.Classes[$Type].ItemClass
+    if ($ic -ne '' -and $Model.Classes.ContainsKey($ic)) { Add-PracticeOwner $Model $ic }
+  }
   foreach ($p in (Get-PublishedProps $Model $Type)) {
     if ($p.Type -ne '' -and (Test-TypePage $Model $p.Type)) { Add-PracticeOwner $Model $p.Type }
   }
@@ -591,7 +600,7 @@ function ConvertTo-Html([string]$Md, [string]$Title, [string]$IndexHref) {
 $model = Read-PPGSources (P 'Source')
 $script:TestIndex = Get-TestIndex (P 'Tests')
 Read-Descriptions
-foreach ($cls in (Get-ShowcaseDone (P 'Demo\Showcase\DemoShowcase.pas'))) { Add-PracticeOwner $model $cls }
+foreach ($cls in (Get-ShowcaseDone (P 'Demo\Showcase'))) { Add-PracticeOwner $model $cls }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $index = New-Object System.Text.StringBuilder
 [void]$index.AppendLine('# PPGlow - Hilfe pro Control')

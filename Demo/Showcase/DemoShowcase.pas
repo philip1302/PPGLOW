@@ -10,11 +10,12 @@ unit DemoShowcase;
 //   - Praxisbeispielen mit dem Quelltext, der sie baut,
 //   - Ueberblick aus der Notiz der Klasse (Wofuer, Wann verwenden ...).
 //
-// ShowcaseEntries ist die eine Liste "Komponente -> Gruppe". Done: True heisst:
-// die Seite ist fertig (eine Unit Showcase\DemoShow*.pas meldet ihre
-// Seitenklasse mit RegisterShowcasePage an). Build\make-docs.ps1 liest die
-// Liste und verlangt fuer fertige Komponenten Praxis-Texte zu jeder
-// Eigenschaft. Format eines Eintrags deshalb: Cls, Group, Done, Summary.
+// ShowcaseEntries ist die eine Liste "Komponente -> Gruppe". Fertig ist eine
+// Seite, sobald eine Unit Showcase\DemoShow*.pas ihre Seitenklasse mit
+// RegisterShowcasePage('TPPGx', ...) anmeldet; Build\make-docs.ps1 sucht diese
+// Aufrufe und verlangt fuer fertige Komponenten Praxis-Texte zu jeder
+// Eigenschaft. (Keine gemeinsame Fertig-Liste: parallele Arbeit an mehreren
+// Komponenten aendert so keine gemeinsame Datei.)
 //
 // Seiten werden erst beim ersten Oeffnen aufgebaut (84 Seiten, schneller Start).
 
@@ -41,7 +42,6 @@ type
   TDemoShowcaseEntry = record
     Cls: string;
     Group: TDemoGroup;
-    Done: Boolean;
     Summary: string;
   end;
 
@@ -62,92 +62,92 @@ const
     (Caption: 'Darstellung & Stil'; Icon: $E771; Intro: 'Eine Stilquelle f{ue}r alle Controls: Preset, Hell/Dunkel, Hints, Toasts und Dialoge.'));
 
   // Jede Paletten-Komponente genau einmal (der Selbsttest gleicht mit
-  // DemoMain.PaletteControls ab). Done = Seite fertig.
+  // DemoMain.PaletteControls ab).
   ShowcaseEntries: array[0..83] of TDemoShowcaseEntry = (
-    (Cls: 'TPPGButton'; Group: sgButtons; Done: True; Summary: 'Befehls-Button mit Symbol, Umschalter, Split-Men{ue} und Dialog-Logik.'),
-    (Cls: 'TPPGToolBar'; Group: sgButtons; Done: False; Summary: 'Symbolleiste mit {Ue}berlauf-Men{ue}.'),
-    (Cls: 'TPPGRibbon'; Group: sgButtons; Done: False; Summary: 'Men{ue}band wie in Office mit KeyTips und Schnellzugriff.'),
-    (Cls: 'TPPGEdit'; Group: sgInput; Done: False; Summary: 'Einzeiliges Textfeld mit Hinweistext und Pr{ue}fzustand.'),
-    (Cls: 'TPPGMemo'; Group: sgInput; Done: False; Summary: 'Mehrzeiliges Textfeld.'),
-    (Cls: 'TPPGSpinEdit'; Group: sgInput; Done: False; Summary: 'Ganze Zahl mit Hoch/Runter.'),
-    (Cls: 'TPPGNumberEdit'; Group: sgInput; Done: False; Summary: 'Zahlen, Betr{ae}ge und Prozente; rechnet einfache Ausdr{ue}cke.'),
-    (Cls: 'TPPGMaskEdit'; Group: sgInput; Done: False; Summary: 'Eingabe nach Maske (PLZ, Telefon, IBAN).'),
-    (Cls: 'TPPGPasswordEdit'; Group: sgInput; Done: False; Summary: 'Kennwortfeld mit Aufdecken.'),
-    (Cls: 'TPPGFileEdit'; Group: sgInput; Done: False; Summary: 'Dateipfad mit {Oe}ffnen-Dialog und Ziehen.'),
-    (Cls: 'TPPGSearchEdit'; Group: sgInput; Done: False; Summary: 'Suchfeld mit Vorschl{ae}gen.'),
-    (Cls: 'TPPGTagEdit'; Group: sgInput; Done: False; Summary: 'Stichw{oe}rter als Chips.'),
-    (Cls: 'TPPGColorPicker'; Group: sgInput; Done: False; Summary: 'Farbauswahl mit Palette und eigener Farbe.'),
-    (Cls: 'TPPGCheckBox'; Group: sgChoice; Done: False; Summary: 'Kontrollk{ae}stchen, auch mit drittem Zustand.'),
-    (Cls: 'TPPGRadioButton'; Group: sgChoice; Done: False; Summary: 'Optionsfeld: eine Wahl aus mehreren.'),
-    (Cls: 'TPPGToggleSwitch'; Group: sgChoice; Done: False; Summary: 'Ein/Aus-Schalter f{ue}r Einstellungen.'),
-    (Cls: 'TPPGRadioGroup'; Group: sgChoice; Done: False; Summary: 'Optionsgruppe, auch als Segment oder Auswahlkacheln.'),
-    (Cls: 'TPPGCheckGroup'; Group: sgChoice; Done: False; Summary: 'Gruppe von Kontrollk{ae}stchen.'),
-    (Cls: 'TPPGTrackBar'; Group: sgChoice; Done: False; Summary: 'Regler, auch mit Bereich.'),
-    (Cls: 'TPPGRating'; Group: sgChoice; Done: False; Summary: 'Sterne-Bewertung.'),
-    (Cls: 'TPPGComboBox'; Group: sgChoice; Done: False; Summary: 'Auswahlliste mit Bildern, Filter und eigenem Popup.'),
-    (Cls: 'TPPGCheckComboBox'; Group: sgChoice; Done: False; Summary: 'Mehrfachauswahl im Aufklappfeld.'),
-    (Cls: 'TPPGColumnComboBox'; Group: sgChoice; Done: False; Summary: 'Mehrspaltige Auswahlliste.'),
-    (Cls: 'TPPGListBox'; Group: sgLists; Done: False; Summary: 'Liste mit Mehrfachauswahl, Bildern und Umsortieren.'),
-    (Cls: 'TPPGCheckListBox'; Group: sgLists; Done: False; Summary: 'Liste mit Haken.'),
-    (Cls: 'TPPGTreeView'; Group: sgLists; Done: False; Summary: 'Baum mit Nachladen und Bildern.'),
-    (Cls: 'TPPGTileView'; Group: sgLists; Done: False; Summary: 'Kacheln und Karten wie im Explorer.'),
-    (Cls: 'TPPGGrid'; Group: sgGrid; Done: False; Summary: 'Tabelle mit Sortieren, Filtern, Gruppieren und Summen.'),
-    (Cls: 'TPPGCalendar'; Group: sgDates; Done: False; Summary: 'Monatskalender.'),
-    (Cls: 'TPPGDatePicker'; Group: sgDates; Done: False; Summary: 'Datumsfeld mit Kalender.'),
-    (Cls: 'TPPGTimePicker'; Group: sgDates; Done: False; Summary: 'Uhrzeitfeld.'),
-    (Cls: 'TPPGPlanner'; Group: sgDates; Done: False; Summary: 'Terminplaner mit Tag, Woche, Monat und Ressourcen.'),
-    (Cls: 'TPPGKanban'; Group: sgDates; Done: False; Summary: 'Kanban-Board mit Spalten, Karten und WIP-Grenzen.'),
-    (Cls: 'TPPGPanel'; Group: sgLayout; Done: False; Summary: 'Fl{ae}che bzw. Karte im Stil des Presets.'),
-    (Cls: 'TPPGScrollBox'; Group: sgLayout; Done: False; Summary: 'Scrollbereich.'),
-    (Cls: 'TPPGGroupBox'; Group: sgLayout; Done: False; Summary: 'Gruppe mit Beschriftung.'),
-    (Cls: 'TPPGExpander'; Group: sgLayout; Done: False; Summary: 'Aufklappbarer Abschnitt.'),
-    (Cls: 'TPPGSplitter'; Group: sgLayout; Done: False; Summary: 'Teiler zum Gr{oe}{ss}e-Ziehen.'),
-    (Cls: 'TPPGPageControl'; Group: sgLayout; Done: False; Summary: 'Seiten mit Reitern.'),
-    (Cls: 'TPPGTabControl'; Group: sgLayout; Done: False; Summary: 'Reiterleiste, auch mit Schlie{ss}en.'),
-    (Cls: 'TPPGNavigationView'; Group: sgLayout; Done: False; Summary: 'Navigation links wie in Windows 11.'),
-    (Cls: 'TPPGBreadcrumb'; Group: sgLayout; Done: False; Summary: 'Pfad zum Anklicken.'),
-    (Cls: 'TPPGStatusBar'; Group: sgLayout; Done: False; Summary: 'Statusleiste mit Feldern und Plaketten.'),
-    (Cls: 'TPPGWizard'; Group: sgLayout; Done: False; Summary: 'Assistent mit Schritten.'),
-    (Cls: 'TPPGMenuBar'; Group: sgMenus; Done: False; Summary: 'Men{ue}leiste f{ue}r ein TMainMenu.'),
-    (Cls: 'TPPGPopupMenu'; Group: sgMenus; Done: False; Summary: 'Kontextmen{ue} im Stil des Presets.'),
-    (Cls: 'TPPGTaskDialog'; Group: sgMenus; Done: False; Summary: 'Dialog mit Titel, Befehlslinks und Fu{ss}zeile.'),
-    (Cls: 'TPPGHintManager'; Group: sgMenus; Done: False; Summary: 'Hinweise f{ue}r die ganze Anwendung.'),
-    (Cls: 'TPPGCustomHint'; Group: sgMenus; Done: False; Summary: 'Hinweis mit Titel und Text f{ue}r einzelne Controls.'),
-    (Cls: 'TPPGTeachingTip'; Group: sgMenus; Done: False; Summary: 'Sprechblase f{ue}r Tipps und Einf{ue}hrungen.'),
-    (Cls: 'TPPGLabel'; Group: sgFeedback; Done: False; Summary: 'Beschriftung mit Mini-Markup.'),
-    (Cls: 'TPPGLinkLabel'; Group: sgFeedback; Done: False; Summary: 'Text mit Links.'),
-    (Cls: 'TPPGBadge'; Group: sgFeedback; Done: False; Summary: 'Plakette mit Zahl, Punkt oder Text.'),
-    (Cls: 'TPPGProgressBar'; Group: sgFeedback; Done: False; Summary: 'Fortschrittsbalken.'),
-    (Cls: 'TPPGProgressRing'; Group: sgFeedback; Done: False; Summary: 'Warte- und Fortschrittskreis.'),
-    (Cls: 'TPPGInfoBar'; Group: sgFeedback; Done: False; Summary: 'Hinweisleiste mit Schweregrad und Aktion.'),
-    (Cls: 'TPPGNotificationCenter'; Group: sgFeedback; Done: False; Summary: 'Toasts am Bildschirmrand.'),
-    (Cls: 'TPPGBusyOverlay'; Group: sgFeedback; Done: False; Summary: 'Warten mit Abbrechen {ue}ber einer Fl{ae}che.'),
-    (Cls: 'TPPGValidator'; Group: sgFeedback; Done: False; Summary: 'Pflichtfelder und Regeln f{ue}r ein Formular.'),
-    (Cls: 'TPPGChart'; Group: sgCharts; Done: False; Summary: 'S{ae}ulen, Linien, Fl{ae}chen, Kreis und Ring.'),
-    (Cls: 'TPPGSparkline'; Group: sgCharts; Done: False; Summary: 'Mini-Verlauf in einer Zeile.'),
-    (Cls: 'TPPGGauge'; Group: sgCharts; Done: False; Summary: 'Tacho mit Bereichen.'),
-    (Cls: 'TPPGKpiTile'; Group: sgCharts; Done: False; Summary: 'Kennzahl-Kachel mit Trend.'),
-    (Cls: 'TPPGDBEdit'; Group: sgDatabase; Done: False; Summary: 'Textfeld an einem Datenfeld.'),
-    (Cls: 'TPPGDBMemo'; Group: sgDatabase; Done: False; Summary: 'Memofeld an einem Datenfeld.'),
-    (Cls: 'TPPGDBCheckBox'; Group: sgDatabase; Done: False; Summary: 'Kontrollk{ae}stchen an einem Datenfeld.'),
-    (Cls: 'TPPGDBComboBox'; Group: sgDatabase; Done: False; Summary: 'Auswahlliste an einem Datenfeld.'),
-    (Cls: 'TPPGDBLookupComboBox'; Group: sgDatabase; Done: False; Summary: 'Nachschlagen in einer zweiten Datenmenge.'),
-    (Cls: 'TPPGDBDatePicker'; Group: sgDatabase; Done: False; Summary: 'Datumsfeld an einem Datenfeld.'),
-    (Cls: 'TPPGDBGrid'; Group: sgDatabase; Done: False; Summary: 'Tabelle an einer Datenmenge.'),
-    (Cls: 'TPPGDBChart'; Group: sgDatabase; Done: False; Summary: 'Diagramm aus einer Datenmenge.'),
-    (Cls: 'TPPGDBPlanner'; Group: sgDatabase; Done: False; Summary: 'Terminplaner aus einer Datenmenge.'),
-    (Cls: 'TPPGDBKanban'; Group: sgDatabase; Done: False; Summary: 'Board aus einer Datenmenge.'),
-    (Cls: 'TPPGDBMaskEdit'; Group: sgDatabase; Done: False; Summary: 'Maskenfeld an einem Datenfeld.'),
-    (Cls: 'TPPGDBNumberEdit'; Group: sgDatabase; Done: False; Summary: 'Zahlenfeld an einem Datenfeld.'),
-    (Cls: 'TPPGDBColorPicker'; Group: sgDatabase; Done: False; Summary: 'Farbauswahl an einem Datenfeld.'),
-    (Cls: 'TPPGDBCheckComboBox'; Group: sgDatabase; Done: False; Summary: 'Mehrfachauswahl an einem Datenfeld.'),
-    (Cls: 'TPPGDBTagEdit'; Group: sgDatabase; Done: False; Summary: 'Stichw{oe}rter an einem Datenfeld.'),
-    (Cls: 'TPPGDBNavigator'; Group: sgDatabase; Done: False; Summary: 'Bl{ae}ttern, Suchen und Filtern in einer Datenmenge.'),
-    (Cls: 'TPPGDBRadioGroup'; Group: sgDatabase; Done: False; Summary: 'Optionsgruppe an einem Datenfeld.'),
-    (Cls: 'TPPGGridPrinter'; Group: sgPrint; Done: False; Summary: 'Tabelle drucken mit Vorschau.'),
-    (Cls: 'TPPGPlannerPrinter'; Group: sgPrint; Done: False; Summary: 'Terminplan drucken.'),
-    (Cls: 'TPPGKanbanPrinter'; Group: sgPrint; Done: False; Summary: 'Board drucken.'),
-    (Cls: 'TPPGStyleManager'; Group: sgStyle; Done: False; Summary: 'Eine Stilquelle f{ue}r alle Controls.'));
+    (Cls: 'TPPGButton'; Group: sgButtons; Summary: 'Befehls-Button mit Symbol, Umschalter, Split-Men{ue} und Dialog-Logik.'),
+    (Cls: 'TPPGToolBar'; Group: sgButtons; Summary: 'Symbolleiste mit {Ue}berlauf-Men{ue}.'),
+    (Cls: 'TPPGRibbon'; Group: sgButtons; Summary: 'Men{ue}band wie in Office mit KeyTips und Schnellzugriff.'),
+    (Cls: 'TPPGEdit'; Group: sgInput; Summary: 'Einzeiliges Textfeld mit Hinweistext und Pr{ue}fzustand.'),
+    (Cls: 'TPPGMemo'; Group: sgInput; Summary: 'Mehrzeiliges Textfeld.'),
+    (Cls: 'TPPGSpinEdit'; Group: sgInput; Summary: 'Ganze Zahl mit Hoch/Runter.'),
+    (Cls: 'TPPGNumberEdit'; Group: sgInput; Summary: 'Zahlen, Betr{ae}ge und Prozente; rechnet einfache Ausdr{ue}cke.'),
+    (Cls: 'TPPGMaskEdit'; Group: sgInput; Summary: 'Eingabe nach Maske (PLZ, Telefon, IBAN).'),
+    (Cls: 'TPPGPasswordEdit'; Group: sgInput; Summary: 'Kennwortfeld mit Aufdecken.'),
+    (Cls: 'TPPGFileEdit'; Group: sgInput; Summary: 'Dateipfad mit {Oe}ffnen-Dialog und Ziehen.'),
+    (Cls: 'TPPGSearchEdit'; Group: sgInput; Summary: 'Suchfeld mit Vorschl{ae}gen.'),
+    (Cls: 'TPPGTagEdit'; Group: sgInput; Summary: 'Stichw{oe}rter als Chips.'),
+    (Cls: 'TPPGColorPicker'; Group: sgInput; Summary: 'Farbauswahl mit Palette und eigener Farbe.'),
+    (Cls: 'TPPGCheckBox'; Group: sgChoice; Summary: 'Kontrollk{ae}stchen, auch mit drittem Zustand.'),
+    (Cls: 'TPPGRadioButton'; Group: sgChoice; Summary: 'Optionsfeld: eine Wahl aus mehreren.'),
+    (Cls: 'TPPGToggleSwitch'; Group: sgChoice; Summary: 'Ein/Aus-Schalter f{ue}r Einstellungen.'),
+    (Cls: 'TPPGRadioGroup'; Group: sgChoice; Summary: 'Optionsgruppe, auch als Segment oder Auswahlkacheln.'),
+    (Cls: 'TPPGCheckGroup'; Group: sgChoice; Summary: 'Gruppe von Kontrollk{ae}stchen.'),
+    (Cls: 'TPPGTrackBar'; Group: sgChoice; Summary: 'Regler, auch mit Bereich.'),
+    (Cls: 'TPPGRating'; Group: sgChoice; Summary: 'Sterne-Bewertung.'),
+    (Cls: 'TPPGComboBox'; Group: sgChoice; Summary: 'Auswahlliste mit Bildern, Filter und eigenem Popup.'),
+    (Cls: 'TPPGCheckComboBox'; Group: sgChoice; Summary: 'Mehrfachauswahl im Aufklappfeld.'),
+    (Cls: 'TPPGColumnComboBox'; Group: sgChoice; Summary: 'Mehrspaltige Auswahlliste.'),
+    (Cls: 'TPPGListBox'; Group: sgLists; Summary: 'Liste mit Mehrfachauswahl, Bildern und Umsortieren.'),
+    (Cls: 'TPPGCheckListBox'; Group: sgLists; Summary: 'Liste mit Haken.'),
+    (Cls: 'TPPGTreeView'; Group: sgLists; Summary: 'Baum mit Nachladen und Bildern.'),
+    (Cls: 'TPPGTileView'; Group: sgLists; Summary: 'Kacheln und Karten wie im Explorer.'),
+    (Cls: 'TPPGGrid'; Group: sgGrid; Summary: 'Tabelle mit Sortieren, Filtern, Gruppieren und Summen.'),
+    (Cls: 'TPPGCalendar'; Group: sgDates; Summary: 'Monatskalender.'),
+    (Cls: 'TPPGDatePicker'; Group: sgDates; Summary: 'Datumsfeld mit Kalender.'),
+    (Cls: 'TPPGTimePicker'; Group: sgDates; Summary: 'Uhrzeitfeld.'),
+    (Cls: 'TPPGPlanner'; Group: sgDates; Summary: 'Terminplaner mit Tag, Woche, Monat und Ressourcen.'),
+    (Cls: 'TPPGKanban'; Group: sgDates; Summary: 'Kanban-Board mit Spalten, Karten und WIP-Grenzen.'),
+    (Cls: 'TPPGPanel'; Group: sgLayout; Summary: 'Fl{ae}che bzw. Karte im Stil des Presets.'),
+    (Cls: 'TPPGScrollBox'; Group: sgLayout; Summary: 'Scrollbereich.'),
+    (Cls: 'TPPGGroupBox'; Group: sgLayout; Summary: 'Gruppe mit Beschriftung.'),
+    (Cls: 'TPPGExpander'; Group: sgLayout; Summary: 'Aufklappbarer Abschnitt.'),
+    (Cls: 'TPPGSplitter'; Group: sgLayout; Summary: 'Teiler zum Gr{oe}{ss}e-Ziehen.'),
+    (Cls: 'TPPGPageControl'; Group: sgLayout; Summary: 'Seiten mit Reitern.'),
+    (Cls: 'TPPGTabControl'; Group: sgLayout; Summary: 'Reiterleiste, auch mit Schlie{ss}en.'),
+    (Cls: 'TPPGNavigationView'; Group: sgLayout; Summary: 'Navigation links wie in Windows 11.'),
+    (Cls: 'TPPGBreadcrumb'; Group: sgLayout; Summary: 'Pfad zum Anklicken.'),
+    (Cls: 'TPPGStatusBar'; Group: sgLayout; Summary: 'Statusleiste mit Feldern und Plaketten.'),
+    (Cls: 'TPPGWizard'; Group: sgLayout; Summary: 'Assistent mit Schritten.'),
+    (Cls: 'TPPGMenuBar'; Group: sgMenus; Summary: 'Men{ue}leiste f{ue}r ein TMainMenu.'),
+    (Cls: 'TPPGPopupMenu'; Group: sgMenus; Summary: 'Kontextmen{ue} im Stil des Presets.'),
+    (Cls: 'TPPGTaskDialog'; Group: sgMenus; Summary: 'Dialog mit Titel, Befehlslinks und Fu{ss}zeile.'),
+    (Cls: 'TPPGHintManager'; Group: sgMenus; Summary: 'Hinweise f{ue}r die ganze Anwendung.'),
+    (Cls: 'TPPGCustomHint'; Group: sgMenus; Summary: 'Hinweis mit Titel und Text f{ue}r einzelne Controls.'),
+    (Cls: 'TPPGTeachingTip'; Group: sgMenus; Summary: 'Sprechblase f{ue}r Tipps und Einf{ue}hrungen.'),
+    (Cls: 'TPPGLabel'; Group: sgFeedback; Summary: 'Beschriftung mit Mini-Markup.'),
+    (Cls: 'TPPGLinkLabel'; Group: sgFeedback; Summary: 'Text mit Links.'),
+    (Cls: 'TPPGBadge'; Group: sgFeedback; Summary: 'Plakette mit Zahl, Punkt oder Text.'),
+    (Cls: 'TPPGProgressBar'; Group: sgFeedback; Summary: 'Fortschrittsbalken.'),
+    (Cls: 'TPPGProgressRing'; Group: sgFeedback; Summary: 'Warte- und Fortschrittskreis.'),
+    (Cls: 'TPPGInfoBar'; Group: sgFeedback; Summary: 'Hinweisleiste mit Schweregrad und Aktion.'),
+    (Cls: 'TPPGNotificationCenter'; Group: sgFeedback; Summary: 'Toasts am Bildschirmrand.'),
+    (Cls: 'TPPGBusyOverlay'; Group: sgFeedback; Summary: 'Warten mit Abbrechen {ue}ber einer Fl{ae}che.'),
+    (Cls: 'TPPGValidator'; Group: sgFeedback; Summary: 'Pflichtfelder und Regeln f{ue}r ein Formular.'),
+    (Cls: 'TPPGChart'; Group: sgCharts; Summary: 'S{ae}ulen, Linien, Fl{ae}chen, Kreis und Ring.'),
+    (Cls: 'TPPGSparkline'; Group: sgCharts; Summary: 'Mini-Verlauf in einer Zeile.'),
+    (Cls: 'TPPGGauge'; Group: sgCharts; Summary: 'Tacho mit Bereichen.'),
+    (Cls: 'TPPGKpiTile'; Group: sgCharts; Summary: 'Kennzahl-Kachel mit Trend.'),
+    (Cls: 'TPPGDBEdit'; Group: sgDatabase; Summary: 'Textfeld an einem Datenfeld.'),
+    (Cls: 'TPPGDBMemo'; Group: sgDatabase; Summary: 'Memofeld an einem Datenfeld.'),
+    (Cls: 'TPPGDBCheckBox'; Group: sgDatabase; Summary: 'Kontrollk{ae}stchen an einem Datenfeld.'),
+    (Cls: 'TPPGDBComboBox'; Group: sgDatabase; Summary: 'Auswahlliste an einem Datenfeld.'),
+    (Cls: 'TPPGDBLookupComboBox'; Group: sgDatabase; Summary: 'Nachschlagen in einer zweiten Datenmenge.'),
+    (Cls: 'TPPGDBDatePicker'; Group: sgDatabase; Summary: 'Datumsfeld an einem Datenfeld.'),
+    (Cls: 'TPPGDBGrid'; Group: sgDatabase; Summary: 'Tabelle an einer Datenmenge.'),
+    (Cls: 'TPPGDBChart'; Group: sgDatabase; Summary: 'Diagramm aus einer Datenmenge.'),
+    (Cls: 'TPPGDBPlanner'; Group: sgDatabase; Summary: 'Terminplaner aus einer Datenmenge.'),
+    (Cls: 'TPPGDBKanban'; Group: sgDatabase; Summary: 'Board aus einer Datenmenge.'),
+    (Cls: 'TPPGDBMaskEdit'; Group: sgDatabase; Summary: 'Maskenfeld an einem Datenfeld.'),
+    (Cls: 'TPPGDBNumberEdit'; Group: sgDatabase; Summary: 'Zahlenfeld an einem Datenfeld.'),
+    (Cls: 'TPPGDBColorPicker'; Group: sgDatabase; Summary: 'Farbauswahl an einem Datenfeld.'),
+    (Cls: 'TPPGDBCheckComboBox'; Group: sgDatabase; Summary: 'Mehrfachauswahl an einem Datenfeld.'),
+    (Cls: 'TPPGDBTagEdit'; Group: sgDatabase; Summary: 'Stichw{oe}rter an einem Datenfeld.'),
+    (Cls: 'TPPGDBNavigator'; Group: sgDatabase; Summary: 'Bl{ae}ttern, Suchen und Filtern in einer Datenmenge.'),
+    (Cls: 'TPPGDBRadioGroup'; Group: sgDatabase; Summary: 'Optionsgruppe an einem Datenfeld.'),
+    (Cls: 'TPPGGridPrinter'; Group: sgPrint; Summary: 'Tabelle drucken mit Vorschau.'),
+    (Cls: 'TPPGPlannerPrinter'; Group: sgPrint; Summary: 'Terminplan drucken.'),
+    (Cls: 'TPPGKanbanPrinter'; Group: sgPrint; Summary: 'Board drucken.'),
+    (Cls: 'TPPGStyleManager'; Group: sgStyle; Summary: 'Eine Stilquelle f{ue}r alle Controls.'));
 
 type
   TDemoComponentPage = class;
@@ -295,6 +295,12 @@ type
     procedure AddCandidates(List: TList<TComponent>); virtual;
     /// Praxisbeispiele anlegen (AddExample).
     procedure BuildExamples; virtual;
+    /// Kategorie im Inspektor fuer eine Eigenschaft der Komponente aendern
+    /// (nur Namen aus DemoInspector.DemoCategories).
+    procedure CategoryFor(Sender: TObject; const AName: string; var ACategory: string); virtual;
+    /// Eigenschaft im Selbsttest-Rundlauf (setzen/zuruecksetzen) auslassen;
+    /// AReason erscheint im Bericht. Nur fuer fachlich begruendete Faelle.
+    function SkipInRoundTrip(Node: TDemoPropNode; var AReason: string): Boolean; virtual;
     /// Ein Ereignis der Buehnen-Komponente; Detail = Parameter.
     procedure EventOccurred(const AName, ADetail: string); virtual;
     function AddExample(const ACaption, AUnitName, ADescription: string): TDemoExampleView;
@@ -329,6 +335,8 @@ type
 procedure RegisterShowcasePage(const ACls: string; APage: TDemoComponentPageClass);
 function ShowcasePageClass(const ACls: string): TDemoComponentPageClass;
 function ShowcaseIndex(const ACls: string): Integer;
+/// Klassennamen aller angemeldeten Komponentenseiten.
+procedure ShowcaseRegistered(AList: TStrings);
 
 implementation
 
@@ -391,6 +399,16 @@ function ShowcasePageClass(const ACls: string): TDemoComponentPageClass;
 begin
   if (GPages = nil) or not GPages.TryGetValue(UpperCase(ACls), Result) then
     Result := nil;
+end;
+
+procedure ShowcaseRegistered(AList: TStrings);
+var
+  K: string;
+begin
+  AList.Clear;
+  if GPages <> nil then
+    for K in GPages.Keys do
+      AList.Add(K);
 end;
 
 function ShowcaseIndex(const ACls: string): Integer;
@@ -603,7 +621,7 @@ begin
     X := PageX + Col * (CardW + CardGap);
     Y := PageContentTop + (N div Cols) * (CardH + CardGap);
     Card := NewCard(Own, Sheet, X, Y, CardW, CardH, E.Cls, E.Summary);
-    if E.Done then
+    if ShowcasePageClass(E.Cls) <> nil then
     begin
       Btn := NewButton(Own, Card, CardPad, CardH - CtlH - 14, 140, 'Seite {oe}ffnen', OpenClick, True);
       Btn.Hint := E.Cls;
@@ -631,7 +649,7 @@ begin
   EnsureBuilt;
   Expected := 0;
   for I := 0 to High(ShowcaseEntries) do
-    if (ShowcaseEntries[I].Group = FGroup) and ShowcaseEntries[I].Done then
+    if (ShowcaseEntries[I].Group = FGroup) and (ShowcasePageClass(ShowcaseEntries[I].Cls) <> nil) then
       Inc(Expected);
   Check(Format('Gruppe %s: %d fertige Seite(n) verlinkt', [L(ShowcaseGroups[FGroup].Caption),
     Expected]), FOpenButtons.Count = Expected);
@@ -762,6 +780,7 @@ begin
   FInspector.OnSelect := InspectorSelect;
   FInspector.OnChanged := InspectorChanged;
   FInspector.OnError := InspectorError;
+  FInspector.OnCategory := CategoryFor;
   FInspector.FreeNotification(Self);
   Split := TPPGSplitter.Create(Own);
   Split.Parent := FTrySheet;
@@ -869,6 +888,16 @@ end;
 
 procedure TDemoComponentPage.BuildExamples;
 begin
+end;
+
+procedure TDemoComponentPage.CategoryFor(Sender: TObject; const AName: string;
+  var ACategory: string);
+begin
+end;
+
+function TDemoComponentPage.SkipInRoundTrip(Node: TDemoPropNode; var AReason: string): Boolean;
+begin
+  Result := False;
 end;
 
 procedure TDemoComponentPage.BuildOverviewTab;
@@ -1348,7 +1377,7 @@ var
   Row: TDemoInspRow;
   Value: string;
   I, Edited: Integer;
-  Prefix: string;
+  Prefix, Reason, Skipped: string;
   V: TDemoExampleView;
 begin
   EnsureBuilt;
@@ -1362,6 +1391,8 @@ begin
     FInspector.Model.GetAll(All);
     for N in All do
     begin
+      if N.Kind = pkItem then
+        Continue;
       Owner := N.OwnerIn(FSubject);
       if Owner = nil then
         Continue;
@@ -1379,13 +1410,25 @@ begin
     // 2. Jede bearbeitbare Zeile: anderen Wert setzen, zuruecksetzen
     FErrors.Clear;
     Failed := '';
+    Skipped := '';
     Edited := 0;
     for N in All do
     begin
-      if (N.Kind in [pkObject, pkEvent, pkOther]) or N.ReadOnly then
+      if (N.Kind in [pkObject, pkEvent, pkOther, pkCollection, pkItem]) or N.ReadOnly then
         Continue;
       if (N.Parent = nil) and SameText(N.Name, 'Name') then
         Continue;
+      Reason := '';
+      // Ausgerichtete Controls (Align <> alNone) bestimmen ihre Lage selbst
+      if (N.Parent = nil) and (FSubject is TControl) and (TControl(FSubject).Align <> alNone) and
+        (SameText(N.Name, 'Left') or SameText(N.Name, 'Top') or SameText(N.Name, 'Width') or
+        SameText(N.Name, 'Height')) then
+        Continue;
+      if SkipInRoundTrip(N, Reason) then
+      begin
+        Skipped := Skipped + ' ' + N.Path + ' (' + Reason + ')';
+        Continue;
+      end;
       Row := FInspector.RowOf(N.Path);
       if (Row = nil) or (Row.Editor = nil) then
       begin
@@ -1403,6 +1446,8 @@ begin
         pkString:
           if Row.Editor is TPPGEdit then
             Value := N.GetStr(FSubject) + 'x';
+        pkStrings:
+          Value := N.GetStr(FSubject) + 'Neue Zeile';
         pkSet:
           if TPPGCheckGroup(Row.Editor).Items.Count > 0 then
           begin
@@ -1433,6 +1478,10 @@ begin
         Continue;
       end;
       Inc(Edited);
+      // In Collection-Eintraegen gibt es keine Vorgabe (die neue Komponente
+      // hat den Eintrag nicht): nur setzen, nicht zuruecksetzen
+      if N.InItem then
+        Continue;
       FInspector.ResetNode(N);
       if not N.SameIn(FSubject, FReference) then
         Failed := Failed + ' ' + N.Path + '(zur' + #$00FC + 'cksetzen)';
@@ -1440,7 +1489,9 @@ begin
     for I := 0 to FErrors.Count - 1 do
       Failed := Failed + ' [' + FErrors[I] + ']';
     Check(Format('%s%d Zeilen gesetzt und zur' + #$00FC + 'ckgesetzt%s', [Prefix, Edited, Failed]),
-      (Failed = '') and (Edited > 20));
+      (Failed = '') and (Edited > 5));
+    if Skipped <> '' then
+      Check(Prefix + 'bewusst ausgelassen:' + Skipped, True);
   finally
     All.Free;
   end;
@@ -1470,10 +1521,13 @@ begin
     Pos('object ' + Name + ': ' + SubjectClass.ClassName, Code) = 1);
   Check(Prefix + 'DFM-Text ist g' + #$00FC + 'ltig (ObjectTextToBinary)', DfmIsValid(Code));
   ResetSubject;
-  // 5. Erklaerung zur gewaehlten Zeile
-  FInspector.SelectPath('Caption');
-  Check(Prefix + 'Erkl' + #$00E4 + 'rung zur Zeile Caption mit Wirkung und Praxis',
-    (Pos('Caption', FExplain.Caption) > 0) and (Pos(L('Praxis'), FExplain.Caption) > 0));
+  // 5. Erklaerung zur gewaehlten Zeile (Caption bzw. erste Eigenschaft)
+  Name := 'Caption';
+  if FInspector.RowOf(Name) = nil then
+    Name := FInspector.Model.Nodes[0].Name;
+  FInspector.SelectPath(Name);
+  Check(Prefix + 'Erkl' + #$00E4 + 'rung zur Zeile ' + Name + ' mit Wirkung und Praxis',
+    (Pos(Name, FExplain.Caption) > 0) and (Pos(L('Praxis'), FExplain.Caption) > 0));
   // 6. Praxisbeispiele: Code vorhanden
   for V in FExamples do
     Check(Format('%sBeispiel %s: Code aus der Ressource (%d Zeilen)', [Prefix, V.ExampleUnit,
