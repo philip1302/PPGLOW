@@ -1,0 +1,109 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGCheckGroup.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGCheckGroup ---
+TPPGCheckGroup.Preset ! Einmal für die ganze Anwendung über einen TPPGStyleManager festlegen. Fluent11 zeigt die Kästchen wie Windows 11, ModernFlat passt zu flachen Business-Oberflächen, Classic zu älteren Office-artigen Programmen.
+TPPGCheckGroup.StyleManager ! Denselben TPPGStyleManager wie bei Feldern und Buttons des Formulars zuweisen, dann wechseln Kästchen, Segmente und Kacheln mit Hell/Dunkel und Preset mit.
+TPPGCheckGroup.Appearance ! Färbt Rahmen und Kästchen; der Zustand Checked bestimmt die Farbe der angehakten Kästchen. Für eine einheitliche Markenfarbe besser Preset bzw. StyleManager anpassen.
+TPPGCheckGroup.Animation ! An lassen: Hover und Haken wirken dann weich. RespectSystemSettings = True schaltet die Übergänge ab, wenn der Anwender in Windows Animationen abgeschaltet hat.
+TPPGCheckGroup.HighlightFocus ! True lassen: Arbeitet der Anwender mit der Tastatur in der Gruppe, leuchtet die Plakette und zeigt, wo er gerade ist.
+TPPGCheckGroup.CaptionStyle ! Nur für hervorgehobene Gruppen ändern, z. B. eine farbige Plakette „Pflichtangaben“. Sonst die Preset-Optik behalten, damit alle Gruppen eines Formulars gleich aussehen.
+TPPGCheckGroup.HighContrastSupport ! True lassen: Im Hochkontrastmodus zeichnet die Gruppe Kästchen und Text in Systemfarben, damit sehbehinderte Anwender den Zustand sicher erkennen.
+TPPGCheckGroup.Items ! Für einfache Listen ohne Zusatzangaben: eine Zeile je Kästchen, z. B. Items.CommaText := 'Mo,Di,Mi,Do,Fr' für Liefertage. Alte TCheckListBox-Listen lassen sich so direkt übernehmen.
+TPPGCheckGroup.ItemsEx ! Wenn Einträge mehr brauchen als den Text: Value als Datenbank-Kürzel, Description und Icon für Kacheln, Enabled und Hint für gesperrte Einträge. Im Designer per Doppelklick bearbeiten.
+TPPGCheckGroup.AllowGrayed ! Für einen echten dritten Zustand, z. B. Rechte „bearbeiten / nur lesen / kein Zugriff“ oder „teilweise“ bei Sammelauswahl. Für normale Ja/Nein-Auswahl False lassen, sonst wundert sich der Anwender über graue Kästchen.
+TPPGCheckGroup.Columns ! Bei vier bis acht kurzen Einträgen zwei Spalten, z. B. Wochentage oder Benachrichtigungswege. 0 = so viele Spalten, wie in die Breite passen, praktisch bei Formularen mit veränderbarer Größe.
+TPPGCheckGroup.ChoiceStyle ! csList für normale Formulare, csSegmented für kompakte Filter über Listen (z. B. Status „Offen / In Arbeit / Erledigt“), csCards für wenige wichtige Optionen mit Symbol und Erklärung wie Module oder Rechte.
+TPPGCheckGroup.ShowFrame ! False für Filterleisten und Segmente in Werkzeugleisten, wo ein Rahmen stört; dann gibt ein Label daneben die Überschrift. In Formularen True lassen, die Plakette benennt die Gruppe.
+TPPGCheckGroup.ValidationState ! Für Pflichtauswahl: in OnChange bzw. beim Speichern pvsError setzen, wenn Value leer ist, und pvsNone, sobald ein Haken gesetzt wurde. TPPGValidator erledigt das auch automatisch.
+TPPGCheckGroup.ValidationHint ! Den Grund kurz und als Aufforderung formulieren („Bitte mindestens einen Weg ankreuzen.“). Er erscheint als Tooltip und wird vom Screenreader vorgelesen.
+TPPGCheckGroup.Images ! Für Kacheln (csCards) mit farbigen Bildern statt Symbolschrift: eine Bildliste zuweisen und je Eintrag ItemsEx[i].ImageIndex setzen.
+TPPGCheckGroup.ItemStyle ! Um Einträge an das Formular anzupassen, z. B. eine kleinere Schrift (FontStyle bzw. Font) bei vielen Einträgen oder eine eigene Kachelfläche. clDefault lassen, wo das Preset passt.
+TPPGCheckGroup.SelectedStyle ! Für eine eigene Farbe angehakter Segmente und Kacheln, z. B. Grün für „freigeschaltet“. Leer lassen, dann gilt die Akzentfarbe des Presets.
+TPPGCheckGroup.Align ! Für Einstellungsseiten mit Align = alTop untereinander stapeln (mit AlignWithMargins); freie Gruppen in Formularen bleiben alNone.
+TPPGCheckGroup.AlignWithMargins ! Zusammen mit Align einschalten, damit gestapelte Gruppen nicht aneinanderkleben; Abstände unter Margins.
+TPPGCheckGroup.Anchors ! Bei Columns = 0 oder Segmenten [akLeft, akTop, akRight] setzen: Die Gruppe wächst mit dem Fenster und verteilt die Einträge neu.
+TPPGCheckGroup.BiDiMode ! Nur für arabische oder hebräische Oberflächen; dann stehen Kästchen rechts und die Spalten laufen von rechts nach links. Am besten über ParentBiDiMode vom Formular.
+TPPGCheckGroup.Caption ! Benennt, was angekreuzt wird („Benachrichtigen per“, „Liefertage“). Ein & vergibt die Zugriffstaste: Alt+Buchstabe springt in die Gruppe.
+TPPGCheckGroup.Color ! Selten nötig; die Gruppe übernimmt mit ParentBackground den Hintergrund ihrer Karte oder ihres Panels. Für Farben der Einträge ItemStyle und SelectedStyle nehmen.
+TPPGCheckGroup.Constraints ! Bei Align oder Anchors eine Mindestbreite setzen (z. B. MinWidth = 200), damit zwei Spalten nicht zu schmal werden.
+TPPGCheckGroup.Cursor ! crDefault lassen; die Gruppe zeigt beim Überfahren der Einträge selbst die Hover-Optik.
+TPPGCheckGroup.CustomHint ! Für Hinweise mit Titel und Symbol: einen TPPGCustomHint zuweisen. Er zeigt auch die Hinweise der einzelnen Einträge (ItemsEx[i].Hint).
+TPPGCheckGroup.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, die Gruppe zeichnet immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGCheckGroup.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; bei Auswahlgruppen fast nie gebraucht.
+TPPGCheckGroup.DragKind ! dkDrag lassen; Andocken (dkDock) ist für Auswahlgruppen nicht üblich.
+TPPGCheckGroup.DragMode ! dmManual lassen, sonst startet jeder Klick auf ein Kästchen ein Ziehen statt eines Hakens.
+TPPGCheckGroup.Enabled ! Sperrt die ganze Gruppe, z. B. Benachrichtigungen, solange „Kunde gesperrt“ angehakt ist. Einzelne Einträge sperren Sie mit ItemEnabled[i] bzw. ItemsEx[i].Enabled.
+TPPGCheckGroup.Font ! Am Formular einstellen und über ParentFont erben. Kacheln (csCards) werden mit größerer Schrift höher, deshalb bei Kacheln die Höhe prüfen.
+TPPGCheckGroup.Height ! Bei csList reichen etwa 26 Pixel je Zeile plus Plakette; Kacheln brauchen etwa 85 Pixel je Reihe, Segmente ohne Rahmen 32 bis 36 Pixel.
+TPPGCheckGroup.HelpContext ! Nur mit einer Hilfedatei: die Kontext-ID der Seite, die F1 in der Gruppe öffnen soll, z. B. die Erklärung der Rechte.
+TPPGCheckGroup.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword).
+TPPGCheckGroup.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGCheckGroup.Hint ! Erklärt die Gruppe als Ganzes („Diese Wege nutzt der Mahnlauf“). Für einzelne Einträge ItemsEx[i].Hint nehmen; beides braucht ShowHint.
+TPPGCheckGroup.Left ! Position im Designer per Maus; im Code nur bei dynamisch erzeugten Gruppen, z. B. Grp.SetBounds(16, 16, 418, 112).
+TPPGCheckGroup.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Bottom = 12 zwischen gestapelten Gruppen. Wirkt nur mit AlignWithMargins.
+TPPGCheckGroup.ParentBackground ! True lassen: Dann liegt die Gruppe ohne eigenen Kasten auf Karte oder Panel.
+TPPGCheckGroup.ParentBiDiMode ! True lassen, damit die Gruppe der Leserichtung des Formulars folgt.
+TPPGCheckGroup.ParentColor ! True, wenn die Gruppe die Farbe des Parents haben soll; meist zusammen mit ParentBackground.
+TPPGCheckGroup.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch für die Gruppe und ihre Einträge gilt.
+TPPGCheckGroup.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGCheckGroup.ParentFont ! True lassen, damit die Einträge die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGCheckGroup.ParentShowHint ! True lassen und ShowHint am Formular einschalten; dann erscheinen auch die Hinweise gesperrter Einträge.
+TPPGCheckGroup.PopupMenu ! Für Sammelbefehle per Rechtsklick, z. B. „Alle ankreuzen“ und „Keine“ bei langen Listen wie Filialen oder Produktgruppen.
+TPPGCheckGroup.ShowHint ! Einschalten (oder am Formular), wenn Einträge einen Hinweis haben, z. B. warum SMS gesperrt ist. Ohne ShowHint bleiben die Hinweise unsichtbar.
+TPPGCheckGroup.StyleElements ! Nur bei VCL-Styles wichtig: Nehmen Sie seClient heraus, wenn Segmente oder Kacheln ihre PPGlow-Farben behalten sollen.
+TPPGCheckGroup.TabOrder ! So vergeben, dass Tab in der Lesereihenfolge des Formulars in die Gruppe springt; innerhalb der Gruppe wechseln die Pfeiltasten.
+TPPGCheckGroup.TabStop ! True lassen: Die Gruppe ist ein Tab-Stopp, darin wechseln Pfeiltasten und die Leertaste kreuzt an.
+TPPGCheckGroup.Tag ! Für mehrere Gruppen mit einem gemeinsamen OnChange: Tag unterscheidet sie, z. B. 1 = Liefertage, 2 = Zustellwege.
+TPPGCheckGroup.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Gruppen.
+TPPGCheckGroup.Touch ! Nur für Touch-Geräte mit eigenen Gesten; normales Antippen der Einträge funktioniert ohne Einstellung.
+TPPGCheckGroup.Visible ! Blenden Sie Gruppen aus, die für den Kunden oder die Rolle nie gelten (z. B. Rechte eines nicht lizenzierten Moduls). Was nur gerade nicht geht, mit Enabled sperren.
+TPPGCheckGroup.Width ! So breit, dass die längste Beschriftung je Spalte passt; mit Columns = 0 bestimmt die Breite die Spaltenzahl.
+TPPGCheckGroup.Name ! Sprechende Namen vergeben (grpLiefertage, grpRechte) statt PPGCheckGroup1; Code wie grpLiefertage.Value bleibt so lesbar.
+TPPGCheckGroup.OnChange ! Hier die Auswahl übernehmen: Value speichern, abhängige Felder freigeben oder die Pflichtauswahl prüfen. Feuert nur bei Bedienung durch den Anwender, nicht beim Setzen von Value oder Checked im Code.
+TPPGCheckGroup.OnClick ! Wie in der VCL: meldet einen Haken durch den Anwender, vor OnChange. Für neue Programme OnChange bzw. OnItemClick nehmen, OnClick nur für übernommenen VCL-Code.
+TPPGCheckGroup.OnItemClick ! Wenn es darauf ankommt, welcher Eintrag umgeschaltet wurde: Index nennt ihn, Checked[Index] bzw. ItemState[Index] den neuen Zustand. Z. B. beim Abhaken von „Alle Filialen“ die übrigen mitschalten.
+TPPGCheckGroup.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Alle ankreuzen“ sperren, wenn schon alle angehakt sind.
+TPPGCheckGroup.OnDblClick ! Bei Kästchen selten sinnvoll, weil jeder Klick schon umschaltet; eher für Kacheln, die per Doppelklick eine Detailansicht öffnen.
+TPPGCheckGroup.OnDragDrop ! Nur, wenn etwas auf die Gruppe gezogen werden darf; bei Auswahlgruppen selten.
+TPPGCheckGroup.OnDragOver ! Zusammen mit OnDragDrop: Accept := True nur für passende Quellen.
+TPPGCheckGroup.OnEndDock ! Nur bei DragKind = dkDock; bei Auswahlgruppen praktisch nie gebraucht.
+TPPGCheckGroup.OnEndDrag ! Nach dem Ziehen der Gruppe (DragMode = dmAutomatic); bei Auswahlgruppen selten.
+TPPGCheckGroup.OnEnter ! Für einen Hilfetext in der Statusleiste, sobald der Anwender per Tab in die Gruppe kommt („Wege für Mahnungen und Rechnungen“).
+TPPGCheckGroup.OnExit ! Guter Ort für die Pflichtprüfung beim Verlassen: ohne Haken ValidationState := pvsError.
+TPPGCheckGroup.OnGesture ! Nur auf Touch-Geräten mit eigenen Gesten; Antippen der Einträge braucht kein OnGesture.
+TPPGCheckGroup.OnKeyDown ! Für zusätzliche Tasten, z. B. Strg+A für „alle ankreuzen“. Pfeile, Leertaste, Pos1/Ende und Zugriffstasten erledigt die Gruppe selbst.
+TPPGCheckGroup.OnKeyPress ! Selten nötig; Zeichentasten wählen über die Zugriffstasten (&) der Einträge.
+TPPGCheckGroup.OnKeyUp ! Selten nötig; Gegenstück zu OnKeyDown.
+TPPGCheckGroup.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGCheckGroup.OnMouseDown ! Selten nötig; die Auswahl gehört in OnItemClick bzw. OnChange, weil sie auch per Tastatur kommt.
+TPPGCheckGroup.OnMouseEnter ! Um beim Überfahren eine Erklärung in einer Statuszeile zu zeigen. Für Eintrags-Hinweise reicht ItemsEx[i].Hint.
+TPPGCheckGroup.OnMouseLeave ! Gegenstück zu OnMouseEnter: Erklärung wieder ausblenden.
+TPPGCheckGroup.OnMouseMove ! Selten nötig; feuert bei jeder Bewegung. Mit ItemAt(X, Y) lässt sich der Eintrag unter der Maus ermitteln, z. B. für eine Vorschau.
+TPPGCheckGroup.OnMouseUp ! Selten nötig; Gegenstück zu OnMouseDown.
+TPPGCheckGroup.OnMouseWheel ! Selten nötig; Handled := True verhindert, dass das Mausrad über der Gruppe den Parent scrollt.
+TPPGCheckGroup.OnStartDock ! Nur bei DragKind = dkDock; bei Auswahlgruppen praktisch nie gebraucht.
+TPPGCheckGroup.OnStartDrag ! Nur bei eigenem Drag & Drop der Gruppe; bei Auswahlgruppen selten.
+
+# --- Typen ---
+TPPGChoiceItem.Caption ! Kurz und eindeutig formulieren, mit & für die Zugriffstaste („&E-Mail“). Für Datenbank und Code besser Value setzen, damit eine geänderte Beschriftung gespeicherte Daten nicht ungültig macht.
+TPPGChoiceItem.Description ! Vor allem für Kacheln: ein kurzer Satz, was die Option bedeutet („Lieferung morgen“, „Adressen und Kontakte“). In der Liste nur für wichtige Zusätze verwenden.
+TPPGChoiceItem.Enabled ! Optionen sperren, die gerade nicht möglich sind, z. B. SMS ohne Mobilnummer, statt sie auszublenden. Den Grund in Hint nennen.
+TPPGChoiceItem.Hint ! Erklärt einen Eintrag, besonders einen gesperrten („Erst eine Mobilnummer eintragen“). Erscheint nur mit ShowHint an der Gruppe bzw. am Formular.
+TPPGChoiceItem.Icon ! Für Kacheln und Segmente ein Zeichen der Symbolschrift, z. B. $E716 (Personen) für „Kunden“. Einheitlich einfarbige Symbole wirken ruhiger als bunte Bilder.
+TPPGChoiceItem.ImageIndex ! Wenn ein farbiges Bild aus Images nötig ist, z. B. Logos von Versanddienstleistern; sonst reicht Icon.
+TPPGChoiceItem.State ! Zustand im Code lesen oder setzen, z. B. beim Laden gespeicherter Rechte; cbGrayed nur mit AllowGrayed an der CheckGroup. Setzen im Code löst kein Ereignis aus.
+TPPGChoiceItem.Value ! Ein festes Kürzel für Datenbank und Programm setzen („mail“, „sms“), dann bleibt die gespeicherte Auswahl gültig, auch wenn die Beschriftung übersetzt oder umformuliert wird.
+TPPGElementStyle.Color ! Eigene Flächenfarbe nur für besondere Bereiche, z. B. eine Kopfzeile oder angehakte Kacheln in Markenfarbe. clDefault lassen, damit Preset und Dark Mode passen.
+TPPGElementStyle.TextColor ! Zusammen mit Color setzen und auf Kontrast achten (mindestens 4,5:1), z. B. Weiß auf dunkler Fläche.
+TPPGElementStyle.BorderColor ! Für eine deutliche Umrandung, z. B. der angehakten Kacheln; sonst clDefault.
+TPPGElementStyle.DarkColor ! Immer mitsetzen, wenn Color gesetzt ist: Sonst gilt im Dark Mode die Preset-Farbe und der Bereich verliert seine Hervorhebung.
+TPPGElementStyle.DarkTextColor ! Textfarbe passend zu DarkColor, meist hell.
+TPPGElementStyle.DarkBorderColor ! Randfarbe im Dark Mode, passend zu BorderColor.
+TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls trägt. Für eine kleinere oder größere Schrift Font ändern, dann wird es False.
+TPPGElementStyle.Font ! Für eine eigene Schriftgröße des Bereichs, z. B. kleinere Schrift bei vielen Einträgen. Für nur fett reicht FontStyle.
+TPPGElementStyle.FontStyle ! Einfachster Weg zur Hervorhebung: [fsBold] für gewählte Einträge oder Kopfzeilen, ohne eine eigene Schrift anzulegen.
+
+# --- Wirkung (berichtigt fuer die CheckGroup) ---
+TPPGCheckGroup.OnChange = Die Auswahl hat sich durch den Anwender geändert (Klick, Leertaste, Zugriffstaste); kommt nach OnItemClick und OnClick. Setzen von Value, Checked[] oder ItemState[] im Code löst es nicht aus.
