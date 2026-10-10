@@ -20,3 +20,11 @@ TPPGItem.Tag ! Die ID des Datensatzes ablegen (Artikel-ID, Kunden-Nr.), damit ma
 TPPGItem.Color ! Einzelne Einträge farbig hinterlegen, z. B. überfällige Aufträge hellrot. Sparsam einsetzen und nicht als einziges Merkmal (Farbenblindheit).
 TPPGItem.TextColor ! Eigene Schriftfarbe, z. B. Grau für auslaufende Artikel. Auf Kontrast zur Fläche achten.
 TPPGItem.FontStyle ! [fsBold] für hervorgehobene Einträge wie den Standard-Lieferanten oder ungelesene Nachrichten.
+TPPGChoiceItem.Caption ! Kurz und eindeutig formulieren, mit & für die Zugriffstaste („&E-Mail“). Für Datenbank und Code besser Value setzen, damit eine geänderte Beschriftung gespeicherte Daten nicht ungültig macht.
+TPPGChoiceItem.Description ! Vor allem für Kacheln: ein kurzer Satz, was die Option bedeutet („Lieferung morgen“, „Adressen und Kontakte“). In der Liste nur für wichtige Zusätze verwenden.
+TPPGChoiceItem.Enabled ! Optionen sperren, die gerade nicht möglich sind, z. B. SMS ohne Mobilnummer, statt sie auszublenden. Den Grund in Hint nennen.
+TPPGChoiceItem.Hint ! Erklärt einen Eintrag, besonders einen gesperrten („Erst eine Mobilnummer eintragen“). Erscheint nur mit ShowHint an der Gruppe bzw. am Formular.
+TPPGChoiceItem.Icon ! Für Kacheln und Segmente ein Zeichen der Symbolschrift, z. B. $E716 (Personen) für „Kunden“. Einheitlich einfarbige Symbole wirken ruhiger als bunte Bilder.
+TPPGChoiceItem.ImageIndex ! Wenn ein farbiges Bild aus Images nötig ist, z. B. Logos von Versanddienstleistern; sonst reicht Icon.
+TPPGChoiceItem.State ! Zustand im Code lesen oder setzen, z. B. beim Laden gespeicherter Rechte; cbGrayed nur mit AllowGrayed an der CheckGroup. Setzen im Code löst kein Ereignis aus.
+TPPGChoiceItem.Value ! Ein festes Kürzel für Datenbank und Programm setzen („mail“, „sms“), dann bleibt die gespeicherte Auswahl gültig, auch wenn die Beschriftung übersetzt oder umformuliert wird.

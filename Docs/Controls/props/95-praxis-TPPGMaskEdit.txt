@@ -88,12 +88,3 @@ TPPGMaskEdit.OnMouseWheel ! Z. B. in einem Uhrzeitfeld: Rad dreht die Minuten we
 TPPGMaskEdit.OnStartDrag ! Nur bei DragMode = dmAutomatic: eigenes DragObject beim Ziehen des Felds setzen.
 
 # --- Typen (gelten fuer alle Controls) ---
-TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. hellgrau ($00F3F3F3) für ReadOnly-Felder, damit man sie von bearbeitbaren unterscheidet. clDefault lassen, wenn das Preset passt.
-TPPGElementStyle.TextColor ! Schriftfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf ausreichenden Kontrast zur Fläche achten.
-TPPGElementStyle.BorderColor ! Rand- bzw. Linienfarbe; bei schreibgeschützten Feldern z. B. die Flächenfarbe, damit der Rahmen verschwindet und der Wert wie Text wirkt.
-TPPGElementStyle.DarkColor ! Pflicht, sobald Sie Color selbst setzen: Sonst bleibt der Bereich im Dark Mode bei der Preset-Farbe bzw. passt nicht zum Dunkeln. Eine dunkle Variante der hellen Farbe wählen.
-TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor im Dark Mode; hell wählen, damit der Text auf dunkler Fläche lesbar bleibt.
-TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor im Dark Mode.
-TPPGElementStyle.ParentFont ! True lassen, dann gilt die Schrift des Controls. Nur für einen Bereich mit eigener Schrift (z. B. kleinere Fußzeile) Font ändern, das schaltet ParentFont aus.
-TPPGElementStyle.Font ! Eigene Schrift nur, wenn sich der Bereich deutlich abheben soll, z. B. Font.Size = 8 für eine Fußzeile. Für fett genügt FontStyle.
-TPPGElementStyle.FontStyle ! Einfachster Weg zur Hervorhebung ohne eigene Schrift, z. B. [fsBold] für Kopfzeilen oder [fsItalic] für schreibgeschützte Werte.

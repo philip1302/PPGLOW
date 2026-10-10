@@ -354,6 +354,15 @@
         <DCCReference Include="Showcase\DemoShowToggleSwitch.pas"/>
         <DCCReference Include="Showcase\DemoShowToolBar.pas"/>
         <DCCReference Include="Showcase\DemoShowTrackBar.pas"/>
+        <DCCReference Include="Showcase\ExTagEditRecipients.pas"/>
+        <DCCReference Include="Showcase\ExTagEditTicket.pas"/>
+        <DCCReference Include="Showcase\DemoShowTagEdit.pas"/>
+        <DCCReference Include="Showcase\ExRadioGroupShipping.pas"/>
+        <DCCReference Include="Showcase\ExRadioGroupSubscription.pas"/>
+        <DCCReference Include="Showcase\DemoShowRadioGroup.pas"/>
+        <DCCReference Include="Showcase\ExMaskEditCustomer.pas"/>
+        <DCCReference Include="Showcase\ExMaskEditTimeEntry.pas"/>
+        <DCCReference Include="Showcase\DemoShowMaskEdit.pas"/>
         <DCCReference Include="DemoMain.pas"/>
         <DCCReference Include="..\Tests\PPG.TestDesktop.pas"/>
         <BuildConfiguration Include="Base">

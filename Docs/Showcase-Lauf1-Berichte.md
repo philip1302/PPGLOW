@@ -56,3 +56,10 @@
 - Typ-Schlüssel: TPPGRibbonTab.*, TPPGRibbonGroup.*, TPPGRibbonItem.*
 ## TPPGTagEdit (aff505f0) 29/0
 - SkipInRoundTrip Height bei AutoSize (Höhe aus Inhalt); allgemeiner Hinweis für AutoSize-Controls.
+## TPPGRadioGroup (d6d542e8) 24/0
+- SkipInRoundTrip Items (gleiche Einträge wie ItemsEx).
+- CodeGen stored-Fehler (inzwischen im Gerüst behoben).
+- Doku: 70-auswahl-kacheln.txt ItemIndex/OnChange falsch (wie CheckGroup).
+## TPPGMaskEdit (07fb38cf) 22/0
+- KOMPONENTE (wichtig): TPPGMaskEdit.Text umgeht TCustomMaskEdit.Text (PPG.Controls.Field GetText/SetText ~1654 über TCustomEdit): Maske ";0;" wirkt nicht, Text := '' löscht Platzhalter; FieldClear/SetFieldValue(Null) betroffen. Fix: Text-Zugriff in TPPGCustomMaskEdit auf die Masken-Logik umleiten + Test.
+- VCL: ValidateInput prüft nur Pflichtstellen, nicht Zeichenart.

@@ -91,20 +91,3 @@ TPPGRadioGroup.Visible ! Blenden Sie Fragen aus, die in diesem Fall gar nicht vo
 TPPGRadioGroup.Width ! So breit, dass die längste Option in jeder Spalte passt; mit Columns = 0 bestimmt die Breite die Spaltenzahl. Kacheln mit Beschreibung brauchen je Spalte etwa 200 Pixel, sonst wird der Text abgeschnitten.
 
 # --- Typen ---
-TPPGChoiceItem.Caption ! Kurzer Titel der Option („Express", „Lastschrift"); ein & davor vergibt eine Zugriffstaste innerhalb der Gruppe.
-TPPGChoiceItem.Description ! Für Kacheln die eine Zeile, die die Wahl erleichtert („Morgen bei Ihnen", „3 bis 5 Werktage"); in der Liste nur sparsam einsetzen.
-TPPGChoiceItem.Enabled ! Optionen, die gerade nicht möglich sind, sperren statt entfernen: Der Anwender sieht, dass es sie gibt. Die Beschreibung kann sagen, warum.
-TPPGChoiceItem.Hint ! Erklärung zu einer Option, die beim Überfahren erscheint, z. B. Bedingungen („Bei Bestellung bis 14 Uhr"). ShowHint der Gruppe einschalten.
-TPPGChoiceItem.Icon ! Ein Symbol aus Segoe Fluent Icons macht Kacheln und Segmente schneller erfassbar, z. B. $E916 (Stoppuhr) für Express. In der einfachen Liste meist weglassen.
-TPPGChoiceItem.ImageIndex ! Für farbige Bilder wie Logos von Zahlungsanbietern; dazu Images der Gruppe setzen. Für einfarbige Symbole reicht Icon.
-TPPGChoiceItem.State ! Nur bei TPPGCheckGroup von Bedeutung (Kästchen an, aus oder grau); in der RadioGroup gilt ItemIndex.
-TPPGChoiceItem.Value ! Den Wert für Programm und Datenbank hinterlegen (Kürzel, Preis, Schlüssel), dann darf sich der angezeigte Text ändern oder übersetzt werden, ohne dass die Auswertung bricht. Gelesen wird er über Grp.Value.
-TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. eine helle Markenfarbe für den gewählten Eintrag. clDefault lassen, dann passt die Farbe zum Preset.
-TPPGElementStyle.TextColor ! Textfarbe des Bereichs, z. B. Weiß auf einer dunklen eigenen Fläche. Auf ausreichenden Kontrast achten (mindestens 4,5:1).
-TPPGElementStyle.BorderColor ! Rand- bzw. Linienfarbe, z. B. ein Akzentrand um den gewählten Bereich. clDefault folgt dem Preset.
-TPPGElementStyle.DarkColor ! Pflicht, sobald Sie Color selbst setzen: Sonst bleibt die helle Farbe im Dark Mode stehen bzw. gilt dort gar nicht. Eine dunklere Variante derselben Farbe wählen.
-TPPGElementStyle.DarkTextColor ! Textfarbe im Dark Mode passend zu DarkColor; meist hell.
-TPPGElementStyle.DarkBorderColor ! Randfarbe im Dark Mode passend zu DarkColor.
-TPPGElementStyle.ParentFont ! True lassen, damit der Bereich die Schrift des Controls nutzt. Für Fett oder Kursiv reicht FontStyle; eine eigene Schrift (Font) nur für eine andere Größe oder Schriftart.
-TPPGElementStyle.Font ! Nur wenn der Bereich eine andere Größe oder Schriftart braucht, z. B. kleinere Schrift in einer Fußzeile; dabei wird ParentFont automatisch False.
-TPPGElementStyle.FontStyle ! Der einfachste Weg zur Hervorhebung: [fsBold] für Titel oder den gewählten Eintrag, ohne die Schrift sonst zu ändern.

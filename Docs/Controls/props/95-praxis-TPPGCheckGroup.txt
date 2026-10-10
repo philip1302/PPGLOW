@@ -87,14 +87,6 @@ TPPGCheckGroup.OnStartDock ! Nur bei DragKind = dkDock; bei Auswahlgruppen prakt
 TPPGCheckGroup.OnStartDrag ! Nur bei eigenem Drag & Drop der Gruppe; bei Auswahlgruppen selten.
 
 # --- Typen ---
-TPPGChoiceItem.Caption ! Kurz und eindeutig formulieren, mit & für die Zugriffstaste („&E-Mail“). Für Datenbank und Code besser Value setzen, damit eine geänderte Beschriftung gespeicherte Daten nicht ungültig macht.
-TPPGChoiceItem.Description ! Vor allem für Kacheln: ein kurzer Satz, was die Option bedeutet („Lieferung morgen“, „Adressen und Kontakte“). In der Liste nur für wichtige Zusätze verwenden.
-TPPGChoiceItem.Enabled ! Optionen sperren, die gerade nicht möglich sind, z. B. SMS ohne Mobilnummer, statt sie auszublenden. Den Grund in Hint nennen.
-TPPGChoiceItem.Hint ! Erklärt einen Eintrag, besonders einen gesperrten („Erst eine Mobilnummer eintragen“). Erscheint nur mit ShowHint an der Gruppe bzw. am Formular.
-TPPGChoiceItem.Icon ! Für Kacheln und Segmente ein Zeichen der Symbolschrift, z. B. $E716 (Personen) für „Kunden“. Einheitlich einfarbige Symbole wirken ruhiger als bunte Bilder.
-TPPGChoiceItem.ImageIndex ! Wenn ein farbiges Bild aus Images nötig ist, z. B. Logos von Versanddienstleistern; sonst reicht Icon.
-TPPGChoiceItem.State ! Zustand im Code lesen oder setzen, z. B. beim Laden gespeicherter Rechte; cbGrayed nur mit AllowGrayed an der CheckGroup. Setzen im Code löst kein Ereignis aus.
-TPPGChoiceItem.Value ! Ein festes Kürzel für Datenbank und Programm setzen („mail“, „sms“), dann bleibt die gespeicherte Auswahl gültig, auch wenn die Beschriftung übersetzt oder umformuliert wird.
 
 # --- Wirkung (berichtigt fuer die CheckGroup) ---
 TPPGCheckGroup.OnChange = Die Auswahl hat sich durch den Anwender geändert (Klick, Leertaste, Zugriffstaste); kommt nach OnItemClick und OnClick. Setzen von Value, Checked[] oder ItemState[] im Code löst es nicht aus.

@@ -256,6 +256,15 @@ uses
   DemoShowToggleSwitch in 'Showcase\DemoShowToggleSwitch.pas',
   DemoShowToolBar in 'Showcase\DemoShowToolBar.pas',
   DemoShowTrackBar in 'Showcase\DemoShowTrackBar.pas',
+  ExTagEditRecipients in 'Showcase\ExTagEditRecipients.pas',
+  ExTagEditTicket in 'Showcase\ExTagEditTicket.pas',
+  DemoShowTagEdit in 'Showcase\DemoShowTagEdit.pas',
+  ExRadioGroupShipping in 'Showcase\ExRadioGroupShipping.pas',
+  ExRadioGroupSubscription in 'Showcase\ExRadioGroupSubscription.pas',
+  DemoShowRadioGroup in 'Showcase\DemoShowRadioGroup.pas',
+  ExMaskEditCustomer in 'Showcase\ExMaskEditCustomer.pas',
+  ExMaskEditTimeEntry in 'Showcase\ExMaskEditTimeEntry.pas',
+  DemoShowMaskEdit in 'Showcase\DemoShowMaskEdit.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}
