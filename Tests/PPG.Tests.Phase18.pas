@@ -609,7 +609,6 @@ var
   C: TPPGCheckGroup;
   St: TPPGChoiceStyle;
   Gdi: Boolean;
-  B: TBitmap;
 begin
   G := NewRadio(['Eins', 'Zwei', 'Drei']);
   G.ItemsEx[0].Icon := $E80F;

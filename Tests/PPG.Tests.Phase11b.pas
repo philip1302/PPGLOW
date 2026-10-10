@@ -931,7 +931,6 @@ var
   Names: TStringList;
   P: Integer;
   Dark, Gdi: Boolean;
-  B: TBitmap;
   Pl: TPPGTipPlacementMode;
 begin
   Names := TStringList.Create;

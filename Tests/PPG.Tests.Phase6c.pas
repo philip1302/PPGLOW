@@ -854,7 +854,6 @@ var
   P: Integer;
   Dark, Gdi: Boolean;
   G: TPPGGrid;
-  Bmp: TBitmap;
 begin
   Names := TStringList.Create;
   try

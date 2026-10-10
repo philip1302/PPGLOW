@@ -897,7 +897,6 @@ var
   P: TCapsPassword;
   N: TPPGNumberEdit;
   M: TPPGMaskEdit;
-  B: TBitmap;
 begin
   FForm.Show;
   Names := TStringList.Create;
