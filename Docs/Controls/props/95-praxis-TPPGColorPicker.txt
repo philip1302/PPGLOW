@@ -1,0 +1,87 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGColorPicker.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- Korrekturen der Wirkung ---
+# TPPGCustomField.OnChange spricht von Text; beim ColorPicker gibt es keinen Text.
+TPPGColorPicker.OnChange = Der Anwender hat eine andere Farbe gewählt (Klick im Popup, Enter, HSV-Feld). Selected aus Code löst kein OnChange aus; die Auswahl derselben Farbe auch nicht.
+> `procedure TForm1.PPGColorPicker1Change(Sender: TObject); begin Vorschau.Color := PPGColorPicker1.Selected; end;`
+
+# --- TPPGColorPicker ---
+TPPGColorPicker.Selected ! Lesen Sie die Farbe beim Speichern der Einstellungen und setzen Sie sie beim Laden wieder (löst kein OnChange aus). Mit cbIncludeNone steht clNone für „keine Farbe“, z. B. eine Kategorie ohne Markierung.
+TPPGColorPicker.Style ! Für Anwender-Einstellungen [cbStandardColors, cbExtendedColors, cbCustomColor, cbPrettyNames]; cbIncludeNone, wenn „keine Farbe“ erlaubt ist, cbIncludeDefault für „wie im System“. cbSystemColors nur für Entwickler-Werkzeuge, Anwender kennen clBtnFace nicht.
+TPPGColorPicker.ShowThemeColors ! True lassen, wenn die gewählte Farbe in der eigenen Oberfläche erscheint (Kategorien, Markierungen): Die Designfarben passen dann zum Preset. False für Farben, die nach außen gehen, z. B. Druck- oder Diagrammfarben eines Berichts.
+TPPGColorPicker.RecentColors ! Mit CommaText in den Benutzereinstellungen sichern und beim Start zurückschreiben, damit die eigenen Firmenfarben gleich oben stehen. Mehrere Picker eines Dialogs können sich die Liste per Assign teilen.
+TPPGColorPicker.MaxRecent ! 6 bis 8 reichen für die typischen Hausfarben; 0 schaltet den Abschnitt ab, z. B. in einem Picker, der nur eine feste Palette anbieten soll.
+TPPGColorPicker.ShowHex ! Einschalten, wenn Anwender Farben mit anderen Programmen abgleichen (Webseite, Corporate Design mit „#0078D4“). Für Endanwender ohne Grafik-Hintergrund sind Namen wie „Red“ verständlicher.
+TPPGColorPicker.NoneColorColor ! Meist clBlack lassen: „Keine“ erscheint dann leer mit roter Diagonale. clWhite, wenn „keine Farbe“ in Ihrer Anwendung „weißer Hintergrund“ bedeutet.
+TPPGColorPicker.DefaultColorColor ! Mit cbIncludeDefault auf die Farbe setzen, die „Standard“ tatsächlich ergibt, z. B. clWindow für einen normalen Listenhintergrund. So sieht der Anwender, was „Standard“ bedeutet.
+TPPGColorPicker.Preset ! Einmal für die ganze Anwendung über einen TPPGStyleManager festlegen; das Popup mit HSV-Feld folgt dann derselben Optik.
+TPPGColorPicker.StyleManager ! Den TPPGStyleManager des Formulars zuweisen, damit Feld und Popup wie die übrigen Eingabefelder aussehen und im Dark Mode mitwechseln.
+TPPGColorPicker.Appearance ! Selten nötig; die Feldoptik kommt vom Preset. Höchstens Rounding an die übrigen Eingabefelder des Formulars angleichen.
+TPPGColorPicker.Animation ! An lassen; Hover und Fokus wirken ruhiger. Mit RespectSystemSettings folgt das Feld der Windows-Einstellung.
+TPPGColorPicker.ValidationState ! Für Prüfungen der Farbwahl, z. B. pvsWarning, wenn eine sehr dunkle Hintergrundfarbe den Text unlesbar macht, oder pvsError, wenn eine Pflichtfarbe fehlt (clNone).
+TPPGColorPicker.ValidationHint ! Zusammen mit ValidationState die Begründung als Satz: „Dunkle Farbe: schwarzer Text ist schlecht lesbar.“ Der Anwender sieht sie als Tooltip.
+TPPGColorPicker.HighContrastSupport ! True lassen: Im Hochkontrast bekommt das Feld Systemfarben; das Farbfeld selbst zeigt weiter die gewählte Farbe.
+TPPGColorPicker.BorderStyle ! bsNone, wenn der Picker in eine eigene Fläche eingebettet ist, z. B. in eine Zelle eines Einstellungs-Rasters; sonst bsSingle wie die anderen Felder.
+TPPGColorPicker.TabStop ! True lassen: Die Farbwahl ist komplett per Tastatur bedienbar (Leertaste öffnet, Pfeile wählen, Enter übernimmt).
+TPPGColorPicker.Align ! Meist alNone. alTop in schmalen Einstellungs-Spalten, in denen Feld unter Feld steht.
+TPPGColorPicker.AlignWithMargins ! Zusammen mit Align einschalten, damit untereinander ausgerichtete Felder nicht aneinanderkleben.
+TPPGColorPicker.Anchors ! [akLeft, akTop, akRight] in Dialogen mit veränderbarer Größe; das Feld wird dann breiter und lange Namen bzw. Hexwerte haben Platz.
+TPPGColorPicker.AutoSize ! True lassen: Die Höhe folgt der Schrift und passt zu den übrigen PPGlow-Eingabefeldern.
+TPPGColorPicker.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; am Formular setzen und über ParentBiDiMode folgen lassen.
+TPPGColorPicker.Color ! Selten nötig; der Feldhintergrund kommt aus dem Preset. Die gewählte Farbe steht in Selected, nicht in Color.
+TPPGColorPicker.Constraints ! MinWidth = 160 sorgt dafür, dass Farbfeld und Name auch in engen Layouts lesbar bleiben.
+TPPGColorPicker.Cursor ! crDefault lassen; das Feld sieht schon wie ein Auswahlfeld aus.
+TPPGColorPicker.CustomHint ! Für Hinweise mit Titel, z. B. „Kategoriefarbe“ mit Erklärung, einen TPPGCustomHint zuweisen.
+TPPGColorPicker.DoubleBuffered ! Nicht nötig; PPGlow-Controls zeichnen immer flackerfrei.
+TPPGColorPicker.DragCursor ! Nur mit DragMode = dmAutomatic sichtbar; beim Farbfeld selten gebraucht.
+TPPGColorPicker.DragMode ! dmManual lassen, sonst startet ein Klick ein Ziehen statt das Popup zu öffnen.
+TPPGColorPicker.Enabled ! Sperren, solange die Farbe keine Rolle spielt, z. B. „Eigene Farbe verwenden“ ist nicht angehakt.
+TPPGColorPicker.Font ! Am Formular einstellen und vererben; der Farbname im Feld nutzt diese Schrift.
+TPPGColorPicker.Height ! Mit AutoSize bestimmt die Schrift die Höhe; ohne AutoSize 32 Pixel wie die anderen Eingabefelder.
+TPPGColorPicker.HelpContext ! Kontext-ID der Hilfeseite zur Farbeinstellung, die F1 im Feld öffnen soll.
+TPPGColorPicker.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword), z. B. „Farben“.
+TPPGColorPicker.HelpType ! htKeyword, wenn Ihre Hilfe Stichwörter nutzt, sonst htContext. Ohne Hilfedatei egal.
+TPPGColorPicker.Hint ! Sagen, wofür die Farbe gilt: „Hintergrund offener Rechnungen in der Liste“. Mit ShowHint am Formular anzeigen.
+TPPGColorPicker.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern, z. B. SetBounds(X, Y, 200, 32).
+TPPGColorPicker.Margins ! Abstände bei Align, z. B. Margins.Bottom = 8 zwischen untereinander stehenden Feldern. Wirkt nur mit AlignWithMargins.
+TPPGColorPicker.Name ! Sprechend benennen, z. B. cpKategorieKunde oder cpMarkierung, statt PPGColorPicker1.
+TPPGColorPicker.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGColorPicker.ParentColor ! False lassen; der Feldhintergrund kommt aus dem Preset.
+TPPGColorPicker.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGColorPicker.ParentDoubleBuffered ! True lassen; ohne sichtbare Wirkung.
+TPPGColorPicker.ParentFont ! True lassen, damit das Feld die Formularschrift trägt.
+TPPGColorPicker.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten.
+TPPGColorPicker.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Farbe kopieren“ (Hexwert in die Zwischenablage) oder „Auf Standard zurücksetzen“.
+TPPGColorPicker.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGColorPicker.StyleElements ! Nur bei VCL-Styles wichtig: ohne seClient behält das Feld die Farben aus dem Preset.
+TPPGColorPicker.TabOrder ! In Einstellungs-Dialogen in Leserichtung vergeben: Bezeichnung, Farbfeld, nächste Zeile.
+TPPGColorPicker.Tag ! Für mehrere Picker mit einem gemeinsamen OnChange: Tag = Index der Kategorie, die der Picker einfärbt.
+TPPGColorPicker.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern.
+TPPGColorPicker.Touch ! Nur für Touch-Geräte; zum Antippen und Wählen im Popup nicht nötig.
+TPPGColorPicker.Visible ! Ausblenden, wenn eine Farbe in der aktuellen Variante nicht einstellbar ist; vorübergehend Unpassendes besser mit Enabled sperren.
+TPPGColorPicker.Width ! 180 bis 220 Pixel reichen für Farbfeld und Namen; mit ShowHex genügen 160.
+TPPGColorPicker.OnChange ! Hier übernehmen Sie die Farbe: Vorschau einfärben, Kategorie aktualisieren, Speichern-Button freigeben. Beim Laden der Einstellungen setzen Sie Selected ohne Rückkopplung.
+TPPGColorPicker.OnClick ! Feuert wie bei TColorBox zusammen mit OnChange bei einer Auswahl durch den Anwender. Für neue Programme OnChange nehmen; OnClick ist für übernommenen TColorBox-Code da.
+TPPGColorPicker.OnCloseUp ! Nach dem Schließen des Popups, mit oder ohne Auswahl, z. B. um eine Live-Vorschau wieder auf die gespeicherte Farbe zurückzusetzen.
+TPPGColorPicker.OnDropDown ! Kurz vor dem Öffnen: RecentColors aus den gemeinsamen Einstellungen auffrischen, damit Farben aus anderen Fenstern oben erscheinen.
+TPPGColorPicker.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Auf Standard zurücksetzen“ sperren, wenn schon Standard gewählt ist.
+TPPGColorPicker.OnDblClick ! Selten gebraucht; das Popup öffnet schon beim einfachen Klick.
+TPPGColorPicker.OnDragDrop ! Wenn Farben per Drag & Drop übertragen werden, z. B. von einer Farbmuster-Leiste: hier Selected setzen.
+TPPGColorPicker.OnDragOver ! Zusammen mit OnDragDrop: Accept nur für passende Quellen setzen, z. B. Source is TPPGColorPicker.
+TPPGColorPicker.OnEndDrag ! Nach dem Ziehen des Feldes (DragMode = dmAutomatic): Target = nil heißt abgebrochen.
+TPPGColorPicker.OnEnter ! Für einen Hilfetext in der Statusleiste, sobald das Feld den Fokus bekommt („Farbe der Kategorie Kunde“).
+TPPGColorPicker.OnExit ! Guter Ort für Prüfungen, z. B. ValidationState setzen, wenn eine Pflichtfarbe noch fehlt.
+TPPGColorPicker.OnGesture ! Nur auf Touch-Geräten mit eigenen Gesten; zum Wählen einer Farbe nicht nötig.
+TPPGColorPicker.OnKeyDown ! Für eigene Kürzel am geschlossenen Feld, z. B. Entf setzt Selected := clNone. Leertaste, F4 und Alt+Pfeil öffnen das Popup schon selbst.
+TPPGColorPicker.OnKeyPress ! Selten gebraucht; Hexwerte tippt der Anwender im HSV-Teil des Popups.
+TPPGColorPicker.OnKeyUp ! Selten gebraucht; Gegenstück zu OnKeyDown.
+TPPGColorPicker.OnMouseActivate ! Nur in Spezialfällen wie Werkzeugfenstern, die beim Klick nicht aktiv werden sollen.
+TPPGColorPicker.OnMouseDown ! Selten gebraucht; das Öffnen des Popups erledigt das Feld selbst.
+TPPGColorPicker.OnMouseEnter ! Um beim Überfahren eine Vorschau der aktuellen Farbe an anderer Stelle hervorzuheben.
+TPPGColorPicker.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Hervorhebung wieder entfernen.
+TPPGColorPicker.OnMouseMove ! Selten gebraucht; feuert bei jeder Mausbewegung über dem Feld.
+TPPGColorPicker.OnMouseUp ! Selten gebraucht; Gegenstück zu OnMouseDown.
+TPPGColorPicker.OnMouseWheel ! Selten gebraucht; Handled := True verhindert, dass das Rad den umgebenden Bereich scrollt.
+TPPGColorPicker.OnStartDrag ! Beim Ziehen des Feldes ein eigenes DragObject setzen, z. B. um die Farbe auf andere Felder zu übertragen.
