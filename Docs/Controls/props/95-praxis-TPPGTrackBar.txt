@@ -1,0 +1,88 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGTrackBar.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGTrackBar ---
+TPPGTrackBar.Min ! Untere Grenze des Werts, z. B. 50 für einen Zoom ab 50 %. Bei neuen Grenzen im Code zuerst Max, dann Min setzen, sonst meldet Min > Max einen Fehler.
+TPPGTrackBar.Max ! Obere Grenze, z. B. 100 für Lautstärke oder 60 für ein Intervall in Minuten. Wenige, klar unterscheidbare Stufen (unter etwa 100) lassen sich mit der Maus noch genau treffen.
+TPPGTrackBar.Position ! Den gespeicherten Wert beim Öffnen der Einstellungen hier eintragen und beim Speichern wieder lesen. Werte außerhalb von Min..Max werden still begrenzt, Sie müssen also nicht vorher prüfen.
+TPPGTrackBar.PositionEnd ! Im RangeMode das obere Ende des Bereichs, z. B. „Preis bis". Setzen Sie es nach Max, damit es nicht auf das alte Max begrenzt wird.
+TPPGTrackBar.RangeMode ! Für Filter „von – bis" mit einem einzigen Regler: Preisspanne, Altersgruppe, Zeitraum in Tagen. Für einen einzelnen Wert ausgeschaltet lassen.
+TPPGTrackBar.Orientation ! trVertical für Pegel und Mischpulte oder schmale Seitenleisten; waagerecht ist in Formularen und Einstellungen üblicher. Beim Umschalten tauscht der Regler Breite und Höhe.
+TPPGTrackBar.Frequency ! So wählen, dass 5 bis 10 Teilstriche entstehen, z. B. 10 bei 0..100. Teilstriche helfen beim Schätzen, zu viele wirken unruhig.
+TPPGTrackBar.LineSize ! Feine Schrittweite für Pfeiltasten und Mausrad, z. B. 5 bei einem Zoom. Für Tastaturbenutzer wichtig: Mit 1 bei großem Bereich dauert das Einstellen lange.
+TPPGTrackBar.PageSize ! Grobe Schrittweite für Bild auf/ab, typisch ein Teilstrich (gleich Frequency), damit der Wert von Strich zu Strich springt.
+TPPGTrackBar.TickMarks ! tmBottomRight ist üblich; tmBoth für freistehende Regler, deren Skala man von beiden Seiten ablesen soll; tmTopLeft, wenn darunter eine Beschriftung steht.
+TPPGTrackBar.TickStyle ! tsNone für stufenlos wirkende Regler (Helligkeit, Lautstärke), tsAuto, wenn der Anwender bestimmte Werte gezielt treffen soll.
+TPPGTrackBar.ThumbLength ! 20 passt für Maus; für Touch-Oberflächen 28 bis 32, damit der Griff mit dem Finger gut zu treffen ist.
+TPPGTrackBar.ShowSlider ! False nur für reine Anzeigen, die der Anwender nicht ziehen soll, z. B. einen Pegel. Für einen Fortschritt ist TPPGProgressBar die bessere Wahl.
+TPPGTrackBar.SelStart ! Anfang eines empfohlenen oder zulässigen Bereichs auf der Schiene, z. B. 90 für „empfohlen 90 bis 125 %". Der Anwender kann trotzdem jeden Wert wählen.
+TPPGTrackBar.SelEnd ! Ende des markierten Bereichs; der Bereich erscheint nur, wenn SelEnd größer als SelStart ist. Gleiche Werte (Vorgabe 0/0) heißen: kein Bereich.
+TPPGTrackBar.ShowSelRange ! Auf False setzen, um den markierten Bereich vorübergehend auszublenden, ohne SelStart/SelEnd zu verlieren, z. B. wenn keine Empfehlung gilt.
+TPPGTrackBar.ShowFocusRect ! True lassen: Ein Regler wird oft mit Pfeiltasten bedient, der Fokusring zeigt, welcher Regler gerade reagiert.
+TPPGTrackBar.HighContrastSupport ! True lassen, damit Schiene, Griff und Bereich im Windows-Hochkontrastmodus in klaren Systemfarben erscheinen.
+TPPGTrackBar.Preset ! Einmal für die ganze Anwendung über einen TPPGStyleManager festlegen; Fluent11 zeigt den runden Windows-11-Griff, Classic einen plastischen Griff.
+TPPGTrackBar.StyleManager ! Den TPPGStyleManager des Formulars zuweisen, dann passt der Regler sich mit allen anderen Controls an Optik und Hell/Dunkel an.
+TPPGTrackBar.Appearance ! Für einen Regler mit eigener Akzentfarbe (z. B. Rot für „Risiko") die Zustände Normal und Hot einfärben; einheitliche Farben besser über das Preset.
+TPPGTrackBar.Animation ! An lassen: Der Griff gleitet bei Klick auf die Schiene und bei Tastatur sanft zum neuen Wert. RespectSystemSettings beachtet die Windows-Einstellung.
+TPPGTrackBar.Align ! Für Regler, die eine ganze Leiste füllen sollen, z. B. alTop in einem Einstellungs-Panel oder alClient in einer Zoom-Leiste der Statuszeile.
+TPPGTrackBar.AlignWithMargins ! Zusammen mit Align einschalten, damit der Griff am Rand nicht abgeschnitten wirkt; Abstände unter Margins.
+TPPGTrackBar.Anchors ! [akLeft, akTop, akRight] in Dialogen mit veränderbarer Größe: Der Regler wird mit dem Fenster breiter, die Schritte bleiben gleich.
+TPPGTrackBar.AutoSize ! Einschalten, damit die Höhe genau zu Griff und Teilstrichen passt; die Länge bestimmen weiter Sie.
+TPPGTrackBar.BiDiMode ! Bei Rechts-nach-links-Oberflächen am Formular setzen: Der Regler beginnt dann rechts, und die Pfeiltasten sind gespiegelt.
+TPPGTrackBar.Color ! Selten nötig; der Hintergrund kommt vom Parent (ParentBackground). Die Farben von Schiene und Griff stehen in Appearance.
+TPPGTrackBar.Constraints ! MinWidth, z. B. 120, verhindert bei Align oder Anchors einen so kurzen Regler, dass sich Werte nicht mehr treffen lassen.
+TPPGTrackBar.Cursor ! crHandPoint signalisiert „ziehbar"; meist reicht der Standardpfeil, der Hover-Effekt am Griff zeigt das schon.
+TPPGTrackBar.CustomHint ! Für einen Hinweis mit Titel, z. B. „Zoom – empfohlen 90 bis 125 %", einen TPPGCustomHint oder TBalloonHint zuweisen.
+TPPGTrackBar.DoubleBuffered ! Nicht nötig, PPGlow-Controls zeichnen flackerfrei. Steht nur für die Kompatibilität mit alten Formularen da.
+TPPGTrackBar.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; bei Reglern selten, weil Ziehen dort den Wert ändert.
+TPPGTrackBar.DragKind ! dkDrag lassen; dkDock nur in Werkzeugfenstern mit andockbaren Bedienelementen.
+TPPGTrackBar.DragMode ! dmManual lassen: Mit dmAutomatic würde Ziehen das Control verschieben statt den Wert zu ändern.
+TPPGTrackBar.Enabled ! Sperren, solange die Einstellung nicht gilt, z. B. das Sicherungsintervall, wenn „Automatisch sichern" aus ist.
+TPPGTrackBar.Height ! 40 Pixel für waagerechte Regler mit Teilstrichen; bei tmBoth oder großem ThumbLength etwas mehr oder AutoSize einschalten.
+TPPGTrackBar.HelpContext ! Nur mit Hilfedatei: Kontext-ID der Seite, die F1 für diese Einstellung öffnet.
+TPPGTrackBar.HelpKeyword ! Wie HelpContext, aber als Stichwort (HelpType = htKeyword), z. B. „Zoom".
+TPPGTrackBar.HelpType ! htKeyword bei Stichwort-Hilfen, sonst htContext. Ohne Hilfedatei ohne Bedeutung.
+TPPGTrackBar.Hint ! Erklärt Bedeutung und Einheit, z. B. „Lautstärke in Prozent" oder „Empfohlen: 90 bis 125 %". Den aktuellen Wert zeigen Sie besser in einem Label daneben.
+TPPGTrackBar.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Reglern, z. B. SetBounds(16, Y, 400, 40).
+TPPGTrackBar.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Left = 8 zwischen Beschriftung und Regler; wirkt nur mit AlignWithMargins.
+TPPGTrackBar.Name ! Sprechend benennen (tbZoom, tbLautstaerke), dann liest sich der OnChange-Code von selbst.
+TPPGTrackBar.ParentBackground ! True lassen: Der Regler liegt dann nahtlos auf Panel oder Karte.
+TPPGTrackBar.ParentBiDiMode ! True lassen, damit der Regler der Leserichtung des Formulars folgt.
+TPPGTrackBar.ParentColor ! True, wenn der Hintergrund die Farbe des Parents haben soll; meist zusammen mit ParentBackground.
+TPPGTrackBar.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGTrackBar.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGTrackBar.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten.
+TPPGTrackBar.PopupMenu ! Für „Auf Standard zurücksetzen" per Rechtsklick; spart einen eigenen Button neben jedem Regler.
+TPPGTrackBar.ShowHint ! Einschalten, wenn der Hint Einheit oder Empfehlung erklärt; sonst am Formular steuern.
+TPPGTrackBar.StyleElements ! Nur bei VCL-Styles: seClient herausnehmen, wenn der Regler seine Akzentfarbe aus Appearance behalten soll.
+TPPGTrackBar.TabOrder ! In Einstellungsseiten von oben nach unten vergeben, damit Tab die Regler in Lesereihenfolge erreicht.
+TPPGTrackBar.TabStop ! True lassen: Regler sollen mit Tab und Pfeiltasten bedienbar sein (Barrierefreiheit).
+TPPGTrackBar.Tag ! Bei mehreren gleichartigen Reglern mit einem gemeinsamen OnChange, z. B. Tag = Kanalnummer eines Mischpults.
+TPPGTrackBar.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Reglern.
+TPPGTrackBar.Touch ! Auf Touch-Geräten meist nicht nötig, Ziehen mit dem Finger funktioniert ohne Gesten. Gesten nur für Zusatzfunktionen anhaken.
+TPPGTrackBar.Visible ! Ausblenden, wenn die Einstellung nicht zur Situation passt; was nur gerade nicht gilt, besser mit Enabled = False sperren.
+TPPGTrackBar.Width ! Länge der Schiene: mindestens etwa 3 Pixel je Wert, damit jeder Wert mit der Maus erreichbar bleibt (0..100 also ab etwa 300 Pixel).
+TPPGTrackBar.OnChange ! Hier übernehmen Sie den Wert: Label aktualisieren, Einstellung anwenden. Teure Arbeiten (Abfrage, Neuberechnung) nur, wenn nicht Dragging, und nach dem Loslassen in OnMouseUp.
+TPPGTrackBar.OnTracking ! Während des Ziehens für leichte Rückmeldung nutzen, z. B. den Wert in einem Label anzeigen. Die eigentliche Arbeit gehört in OnChange bzw. nach dem Loslassen.
+TPPGTrackBar.OnClick ! Beim Regler selten nötig; für Wertänderungen OnChange nehmen, denn Tastatur und Mausrad lösen kein OnClick aus.
+TPPGTrackBar.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Auf Standard zurücksetzen" sperren, wenn der Wert schon der Standard ist.
+TPPGTrackBar.OnDragDrop ! Bei Reglern selten; z. B. einen Wert aus einer Liste auf den Regler ziehen und übernehmen.
+TPPGTrackBar.OnDragOver ! Zusammen mit OnDragDrop: Accept nur für passende Quellen setzen.
+TPPGTrackBar.OnEndDock ! Nur bei DragKind = dkDock: die neue Lage des Reglers speichern.
+TPPGTrackBar.OnEndDrag ! Nach dem Ziehen des Controls (nicht des Griffs); Target = nil heißt abgebrochen.
+TPPGTrackBar.OnEnter ! Für eine Erklärung in der Statusleiste („Pfeiltasten ändern in 5er-Schritten"), sobald der Regler den Fokus bekommt.
+TPPGTrackBar.OnExit ! Guter Ort, um einen geänderten Wert endgültig zu speichern, wenn der Anwender das Feld verlässt.
+TPPGTrackBar.OnGesture ! Auf Touch-Geräten für Zusatzgesten, z. B. Doppeltippen setzt auf den Standardwert zurück.
+TPPGTrackBar.OnKeyDown ! Für zusätzliche Tasten, z. B. Entf oder 0 setzt auf den Standardwert. Pfeile, Bild auf/ab, Pos1 und Ende erledigt der Regler selbst.
+TPPGTrackBar.OnKeyPress ! Selten; Zeichentasten ändern den Wert nicht. Für Direkteingabe besser ein TPPGNumberEdit oder TPPGSpinEdit neben den Regler legen.
+TPPGTrackBar.OnKeyUp ! Um nach Tastaturbedienung einmalig zu speichern, statt bei jedem Schritt in OnChange.
+TPPGTrackBar.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen); sonst nicht belegen.
+TPPGTrackBar.OnMouseDown ! Selten nötig; der Klick auf die Schiene setzt den Wert schon selbst. Z. B. um beim Ziehen eine Vorschau einzublenden.
+TPPGTrackBar.OnMouseEnter ! Um beim Überfahren eine Erklärung oder die Skala einzublenden.
+TPPGTrackBar.OnMouseLeave ! Gegenstück zu OnMouseEnter: Erklärung oder Skala wieder ausblenden.
+TPPGTrackBar.OnMouseMove ! Selten; z. B. um den Wert unter dem Mauszeiger als Tooltip vorab anzuzeigen.
+TPPGTrackBar.OnMouseUp ! Ende des Ziehens: hier die teure Arbeit einmal ausführen (Liste filtern, Bild neu berechnen), die während des Ziehens ausgelassen wurde.
+TPPGTrackBar.OnMouseWheel ! Um das Mausrad anders zu nutzen, z. B. mit Strg feiner zu stellen; Handled := True verhindert den Standardschritt.
+TPPGTrackBar.OnStartDock ! Nur bei DragKind = dkDock: eigenes Dock-Objekt setzen.
+TPPGTrackBar.OnStartDrag ! Nur bei DragMode = dmAutomatic: eigenes DragObject setzen; bei Reglern selten.
