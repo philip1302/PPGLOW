@@ -1,0 +1,81 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGCheckBox.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGCheckBox ---
+TPPGCheckBox.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über einen TPPGStyleManager. Dann sehen CheckBoxen, Optionsfelder und Schalter in einem Formular gleich aus.
+TPPGCheckBox.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen CheckBoxen zuweisen. Ein Befehl wechselt dann die Optik aller Kästchen, auch Hell/Dunkel.
+TPPGCheckBox.Appearance ! Appearance.Checked färbt das angehakte Kästchen (Fläche und Haken). Für eine eigene Markenfarbe besser das Preset bzw. den StyleManager anpassen statt jede CheckBox einzeln.
+TPPGCheckBox.Animation ! An lassen: Der Haken blendet weich ein. RespectSystemSettings = True schaltet das ab, wenn der Anwender in Windows Animationen abgeschaltet hat.
+TPPGCheckBox.Alignment ! taRightJustify (Text rechts vom Kästchen) ist der Normalfall in Formularen. taLeftJustify passt, wenn Beschriftungen in einer Spalte links stehen und die Kästchen rechts bündig untereinander sollen.
+TPPGCheckBox.AllowGrayed ! Nur einschalten, wenn der Anwender „unbestimmt" bewusst wählen soll, z. B. „Wert nicht ändern" bei Massenbearbeitung. Für „Alle auswählen" über einer Liste False lassen und cbGrayed im Code setzen.
+TPPGCheckBox.State = Zustand: cbUnchecked, cbChecked oder cbGrayed (unbestimmt). Per Klick erreicht der Anwender cbGrayed nur mit AllowGrayed; im Code geht cbGrayed immer, z. B. für „teilweise ausgewählt".
+TPPGCheckBox.State !Zustand lesen oder setzen, wenn es drei Zustände gibt, z. B. cbGrayed für „teilweise ausgewählt". Für einfaches Ja/Nein reicht zur Laufzeit Checked. Setzen im Code löst nur OnChange aus.
+TPPGCheckBox.Spacing ! Abstand Kästchen–Text; die Vorgabe 4 passt meist. Größer nur, wenn mehrere CheckBoxen mit Optionsfeldern in einer Spalte optisch fluchten sollen.
+TPPGCheckBox.WordWrap ! Für lange Beschriftungen wie „Ich habe die AGB gelesen und akzeptiere sie": umbrechen statt abschneiden. Höhe für zwei Zeilen geben oder AutoSize einschalten.
+TPPGCheckBox.ShowFocusRect ! True lassen, damit Tastaturbenutzer sehen, welches Kästchen die Leertaste umschaltet (Barrierefreiheit).
+TPPGCheckBox.HighContrastSupport ! True lassen: Im Windows-Hochkontrast sieht man Kästchen und Haken dann in klaren Systemfarben.
+TPPGCheckBox.OnChange ! Hier gehört die Reaktion auf den Zustand hin, z. B. ein Feld freigeben oder den OK-Button schalten. Feuert auch beim Setzen im Code, deshalb bleibt die Oberfläche immer passend.
+TPPGCheckBox.Action ! Für Einstellungen, die auch im Menü stehen (z. B. „Statusleiste anzeigen"): eine Action mit AutoCheck anlegen und CheckBox und Menüeintrag zuweisen. Checked bleibt dann überall gleich.
+TPPGCheckBox.Align ! Für Optionslisten, die mit dem Fenster wachsen: CheckBoxen in einem Panel mit Align = alTop untereinander stapeln. Freie CheckBoxen in Formularen bleiben alNone.
+TPPGCheckBox.AlignWithMargins ! Zusammen mit Align einschalten, damit gestapelte CheckBoxen etwas Luft haben. Die Abstände stellen Sie unter Margins ein (typisch 2 bis 4 oben und unten).
+TPPGCheckBox.Anchors ! [akLeft, akTop, akRight] bei CheckBoxen mit langem Text in Dialogen mit veränderbarer Größe: Die Breite wächst mit, WordWrap bricht dann seltener um.
+TPPGCheckBox.AutoSize ! Bei übersetzten Oberflächen einschalten: Die CheckBox wird so breit wie ihr Text, und Klicks auf den Text treffen immer. Mit WordWrap wächst die Höhe.
+TPPGCheckBox.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; dann steht das Kästchen rechts. Am Formular setzen und über ParentBiDiMode folgen lassen.
+TPPGCheckBox.Caption ! Positiv und als Aussage formulieren („Rechnung per E-Mail senden", nicht „Keine Papierrechnung"). Ein & vergibt die Zugriffstaste, Alt+Buchstabe schaltet dann um.
+TPPGCheckBox.Color ! Bei der CheckBox selten nötig; mit ParentBackground = True scheint der Hintergrund des Panels durch. Die Farben des Kästchens stehen in Appearance.
+TPPGCheckBox.Constraints ! Mit AutoSize oder Anchors: MaxWidth begrenzt sehr lange Beschriftungen, MinHeight hält die Klickfläche bei kleiner Schrift groß genug.
+TPPGCheckBox.Cursor ! crDefault lassen; Windows-CheckBoxen zeigen den Pfeil. crHandPoint nur, wenn die CheckBox wie ein Link in Fließtext steht.
+TPPGCheckBox.CustomHint ! Für Hinweise mit Titel und Symbol, z. B. bei Einstellungen mit Folgen („Daten nach 30 Tagen löschen"): einen TPPGCustomHint oder TBalloonHint zuweisen.
+TPPGCheckBox.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGCheckBox.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. beim Umsortieren von Optionen in einem Einstellungs-Editor.
+TPPGCheckBox.DragKind ! dkDrag lassen; Andocken (dkDock) ist für CheckBoxen praktisch nie sinnvoll.
+TPPGCheckBox.DragMode ! dmManual lassen, sonst startet jeder Klick ein Ziehen statt das Kästchen umzuschalten.
+TPPGCheckBox.Enabled ! Sperren Sie Optionen, die gerade nicht gelten, statt sie zu verstecken, z. B. „Anhang mitsenden" ohne Anhang. Der Zustand bleibt dabei sichtbar.
+TPPGCheckBox.Font ! Font.Style = [fsBold] für eine übergeordnete CheckBox wie „Alle auswählen". Sonst ParentFont lassen, damit alle Optionen die Formularschrift tragen.
+TPPGCheckBox.Height ! 24 Pixel reicht für eine Zeile; bei WordWrap mit zwei Zeilen etwa 44. Mit AutoSize bestimmt der Text die Höhe.
+TPPGCheckBox.HelpContext ! Nur mit einer Hilfedatei sinnvoll: die Kontext-ID der Seite eintragen, die F1 bei fokussierter CheckBox öffnet, z. B. die Erklärung einer Datenschutz-Option.
+TPPGCheckBox.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword); praktisch bei HTML-Hilfen mit Stichwortverzeichnis.
+TPPGCheckBox.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext mit Kontext-IDs. Ohne Hilfedatei egal.
+TPPGCheckBox.Hint ! Für Optionen, deren Folgen nicht offensichtlich sind: „Höchstens einmal im Monat, jederzeit abbestellbar". Der Hint erscheint nur mit ShowHint.
+TPPGCheckBox.Left ! Position im Designer per Maus; untergeordnete Optionen etwa 24 Pixel weiter rechts einrücken als die übergeordnete CheckBox.
+TPPGCheckBox.Margins ! Abstand zwischen gestapelten CheckBoxen bei Align = alTop, z. B. Margins.Top = 4. Wirkt nur mit AlignWithMargins.
+TPPGCheckBox.Name ! Sprechende Namen vergeben (chkNewsletter, chkAgb) statt PPGCheckBox1: if chkAgb.Checked liest sich im Code von selbst.
+TPPGCheckBox.OnClick ! Für Reaktionen, die nur bei Bedienung durch den Anwender laufen sollen, z. B. „Alle auswählen" schaltet alle Einträge. Setzen von Checked im Code löst es nicht aus, so entsteht keine Rekursion.
+TPPGCheckBox.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen, z. B. „Auf Vorgabe zurücksetzen" nur bei geänderter Option freigeben.
+TPPGCheckBox.OnDragDrop ! Selten für CheckBoxen; z. B. in einem Editor, in dem Optionen per Ziehen umsortiert werden.
+TPPGCheckBox.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGCheckBox erlaubt nur das Umsortieren anderer Optionen.
+TPPGCheckBox.OnEndDock ! Nur bei DragKind = dkDock; für CheckBoxen praktisch nie nötig.
+TPPGCheckBox.OnEndDrag ! Nach dem Ziehen einer CheckBox: Target = nil heißt abgebrochen, sonst die neue Reihenfolge speichern.
+TPPGCheckBox.OnEnter ! Für einen erklärenden Text in der Statusleiste oder einem Hilfebereich, sobald die Option per Tab den Fokus bekommt.
+TPPGCheckBox.OnExit ! Selten nötig; z. B. den Hilfetext aus OnEnter wieder löschen. Zustandsprüfungen gehören in OnChange.
+TPPGCheckBox.OnGesture ! Auf Touch-Geräten selten gebraucht; das Antippen schaltet das Kästchen schon um.
+TPPGCheckBox.OnKeyDown ! Für zusätzliche Tasten an der fokussierten CheckBox, z. B. Entf setzt auf die Vorgabe zurück. Die Leertaste schaltet schon selbst um.
+TPPGCheckBox.OnKeyPress ! Selten nötig; Zeichentasten schalten nicht um. Für Kürzel die Zugriffstaste (&) in Caption nehmen.
+TPPGCheckBox.OnKeyUp ! Selten nötig; Gegenstück zu OnKeyDown, wenn eine Aktion erst beim Loslassen enden soll.
+TPPGCheckBox.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen) belegen.
+TPPGCheckBox.OnMouseDown ! Selten nötig; das Umschalten erledigt der Klick. Für die Reaktion OnChange bzw. OnClick nehmen.
+TPPGCheckBox.OnMouseEnter ! Um beim Überfahren eine Erklärung der Option zu zeigen, z. B. in einem Hilfebereich neben einer Einstellungsliste.
+TPPGCheckBox.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGCheckBox.OnMouseMove ! Selten nötig; feuert bei jeder Mausbewegung. Für Hover-Effekte reicht Appearance.Hot.
+TPPGCheckBox.OnMouseUp ! Selten nötig; die Aktion zum Umschalten gehört in OnChange bzw. OnClick.
+TPPGCheckBox.OnMouseWheel ! Selten für CheckBoxen; Handled := True nur, wenn das Rad über der Option nicht die Seite scrollen soll.
+TPPGCheckBox.OnStartDock ! Nur bei DragKind = dkDock; für CheckBoxen praktisch nie nötig.
+TPPGCheckBox.OnStartDrag ! Beim Ziehen einer Option (DragMode = dmAutomatic) ein eigenes DragObject setzen, z. B. mit Vorschau.
+TPPGCheckBox.ParentBackground ! True lassen: Dann liegt die CheckBox ohne Kasten auf Karten, Panels und Gruppen und übernimmt deren Hintergrund.
+TPPGCheckBox.ParentBiDiMode ! True lassen, damit die CheckBox der Leserichtung des Formulars folgt.
+TPPGCheckBox.ParentColor ! True, wenn der Hintergrund die Farbe des Parents haben soll; meist zusammen mit ParentBackground.
+TPPGCheckBox.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGCheckBox.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGCheckBox.ParentFont ! True lassen, damit alle Optionen die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGCheckBox.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann zeigen alle Optionen ihre Hints.
+TPPGCheckBox.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Auf Vorgabe zurücksetzen" oder „Was bedeutet das?" bei Einstellungen.
+TPPGCheckBox.ShowHint ! Einmal am Formular einschalten statt an jeder CheckBox; dann bleibt ParentShowHint True.
+TPPGCheckBox.StyleElements ! Nur bei VCL-Styles wichtig: Nehmen Sie seClient heraus, wenn die CheckBox ihre eigenen Farben aus Appearance behalten soll.
+TPPGCheckBox.TabOrder ! In der Reihenfolge der Optionen von oben nach unten vergeben, damit Tab der Leserichtung folgt.
+TPPGCheckBox.TabStop ! True lassen, damit jede Option per Tab erreichbar ist und mit der Leertaste umgeschaltet werden kann.
+TPPGCheckBox.Tag ! Für gleichartige Optionen mit einem gemeinsamen OnChange: Tag = Bit oder Modulnummer, auszuwerten über TPPGCheckBox(Sender).Tag.
+TPPGCheckBox.Top ! Wie Left: im Designer per Maus. Gleicher Abstand zwischen den Zeilen (z. B. 30 Pixel) wirkt ruhig.
+TPPGCheckBox.Touch ! Nur für Touch-Geräte mit eigenen Gesten; zum Umschalten genügt das Antippen.
+TPPGCheckBox.Visible ! Blenden Sie Optionen aus, die für den Anwender nie gelten (fehlende Lizenz, fehlendes Recht). Was nur gerade nicht geht, besser mit Enabled = False sperren.
+TPPGCheckBox.Width ! So breit, dass der ganze Text passt, denn auch ein Klick auf den Text schaltet um. Mit AutoSize bestimmt der Text die Breite.
