@@ -72,3 +72,25 @@
 - Englisch: Die Demo-Texte sind deutsch. `props.en` bzw. englische Notizen folgen erst bei Bedarf.
 - Die Navigation scrollt bei 13 Gruppen per Mausrad; „Bisherige Demo-Seiten“ liegt bei kleiner Fensterhöhe unterhalb des sichtbaren Bereichs.
 - Der Inspektor ist ein Demo-Baustein, keine Suite-Komponente; ein `TPPGInspector` bleibt Phase 21 vorbehalten.
+
+## Parallele Läufe (vom User am 10.10.2026 beauftragt: alle Komponenten, je Komponente ein eigener Agent, in 4 Läufen)
+
+**Lauf 1 (10.10.2026, fertig):** ToolBar, Ribbon, Edit, Memo, SpinEdit, NumberEdit, MaskEdit, PasswordEdit, FileEdit, SearchEdit, TagEdit, ColorPicker, CheckBox, RadioButton, ToggleSwitch, RadioGroup, CheckGroup, TrackBar, Rating, ComboBox, CheckComboBox. Dazu kam vorher der Button. Ergebnis: Demo-Selbsttest 792/792, 1818 Tests grün. Die Berichte der Agenten (gefundene Fehler in Suite, Doku und Gerüst) stehen in `Docs\Showcase-Lauf1-Berichte.md`.
+
+**Lauf 2:** ColumnComboBox, ListBox, CheckListBox, TreeView, TileView, Grid, Calendar, DatePicker, TimePicker, Planner, Kanban, Panel, ScrollBox, GroupBox, Expander, Splitter, PageControl, TabControl, NavigationView, Breadcrumb, StatusBar.
+
+**Lauf 3:** Wizard, MenuBar, PopupMenu, TaskDialog, HintManager, CustomHint, TeachingTip, Label, LinkLabel, Badge, ProgressBar, ProgressRing, InfoBar, NotificationCenter, BusyOverlay, Validator, Chart, Sparkline, Gauge, KpiTile.
+
+**Lauf 4:** die 17 DB-Controls, GridPrinter, PlannerPrinter, KanbanPrinter, StyleManager. Nicht-visuelle Komponenten zeigen auf der Bühne ein kleines Szenario. Die DB-Controls brauchen eine Datenmenge (TClientDataSet wie auf der Datenbank-Seite).
+
+**Ablauf eines Laufs** (Werkzeuge in `Build\showcase-agents`):
+1. Je Komponente ein Worktree: `git worktree add ..\PPGlow-sc-<Name> -b sc/<Name>` ab dem aktuellen Stand.
+2. Je Komponente ein Agent mit der Anweisung `agent-prompt.md`. Die Platzhalter `{CLS}`, `{SHORT}`, `{GROUP}`, `{WT}` und `{TOOLS}` (= `C:\AI\Claude_Arbeitsplatz\PPGlow\Build\showcase-agents`) gibt man im Auftrag an. Es laufen höchstens 20 Agenten gleichzeitig, der 21. startet, sobald einer fertig ist.
+3. Builds laufen über `build-lock.ps1`, Demo-Läufe über `run-lock.ps1`. Beide arbeiten nacheinander per Mutex, sonst stören sich die Batch-IDEs und die Demos. `run-lock.ps1` nimmt die Argumente als Liste oder als Text „a,b,c“; immer `/hidden` mitgeben.
+4. Die Agenten committen nur ihre Seite, Beispiele, `props\95-praxis-<Klasse>.txt` und die Notiz, nicht dpr/dproj, .res oder die erzeugte Doku.
+5. Integration im Hauptbaum:
+   - Zweige `sc/*` mit `git merge --no-ff --no-autostash` zusammenführen.
+   - Im Ordner `Docs\Controls\props` `perl ..\..\..\Build\showcase-agents\dedupe.pl` ausführen: gemeinsame Typ-Schlüssel nach `91-praxis-typen.txt`.
+   - Im Ordner `Demo` `perl ..\Build\showcase-agents\addunits.pl` ausführen: Units in dpr/dproj eintragen.
+   - Danach `make-docs.ps1 -Missing` (0), Build Demo + Tests, voller `/selftest`, `PPGlowTests.exe /hidden`, Commit und Worktrees entfernen.
+6. Gerüst-Fehler aus den Berichten im Hauptbaum beheben, nicht in den Agenten-Zweigen.

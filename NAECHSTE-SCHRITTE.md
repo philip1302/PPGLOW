@@ -1,7 +1,11 @@
 # PPGlow – Stand und nächste Schritte
 
 ## Stand (10.10.2026)
-- **Zuletzt fertig: neue Demo mit Komponentenseiten, erste Seite `TPPGButton`** (Zweig `claude/showcase-button`, noch nicht gemergt, Bericht an den User erfolgt, weitere Komponenten erst nach OK).
+- **Zuletzt fertig: Komponentenseiten Lauf 1 von 4** (10.10.2026, Zweig `claude/showcase-button`, nicht gemergt und nicht gepusht). Vom User beauftragt: alle übrigen Komponenten, je Komponente ein eigener Agent, aufgeteilt in 4 Läufe.
+  - 22 Komponenten haben eine Seite (Button sowie ToolBar … CheckComboBox). Demo-Selbsttest 792/792, 1818 Tests grün.
+  - Läufe 2–4, Einteilung und Ablauf: `Docs\Demo-Komponentenseiten.md`, Abschnitt „Parallele Läufe“. Werkzeuge: `Build\showcase-agents`.
+  - Von den Agenten gefundene Fehler in Suite und Doku (nicht behoben, Liste für den User): `Docs\Showcase-Lauf1-Berichte.md`.
+- **Davor: neue Demo mit Komponentenseiten, erste Seite `TPPGButton`.**
   - Konzept, Technik und Ablauf „neue Komponentenseite anlegen“ stehen in `Docs\Demo-Komponentenseiten.md`.
   - Navigation nach 13 Funktionsgruppen; je Komponente Bühne + Objektinspektor (alle 248 Eigenschaften/Ereignisse des Buttons live änderbar und erklärt: Wirkung, Beispiel, Praxis), Ereignis-Protokoll, Pascal-Code und DFM, zwei Praxisbeispiele mit ihrem Quelltext, Überblick aus der Notiz.
   - Praxis-Texte in `Docs\Controls\props\90-praxis.txt` (`Klasse.Name ! Text`); `make-docs.ps1 -Missing` verlangt sie für fertige Komponenten.
