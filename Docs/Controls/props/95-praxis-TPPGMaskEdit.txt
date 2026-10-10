@@ -1,0 +1,99 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGMaskEdit.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGMaskEdit ---
+TPPGMaskEdit.EditMask ! Für Werte mit festem Aufbau: PLZ „00000;0;_", Datum „00.00.0000;1;_", Uhrzeit „00:00;1;_", Kundennummer „KD-000000;1;_". Als zweite Stelle 1 nehmen, wenn die festen Zeichen (Punkte, Bindestriche) zum gespeicherten Wert gehören; bei Masken ohne feste Zeichen wie der PLZ ist sie egal.
+TPPGMaskEdit.Text ! Hier lesen und schreiben Sie den Wert, z. B. beim Laden und Speichern eines Datensatzes: edtDatum.Text := '09.10.2026'. Werte vollständig im Format der Maske übergeben (mit Punkten, nicht „09102026"); ob alle Stellen gefüllt sind, prüfen IsEmpty und ValidateInput.
+TPPGMaskEdit.ValidationState ! Die Maske setzt pvsError selbst, wenn das Feld unvollständig verlassen wird. Eigene Prüfungen, die die Maske nicht kann (Pflichtfeld, „25:00" ist keine Uhrzeit, Ende vor Beginn), setzen pvsError bzw. pvsWarning selbst und in OnChange wieder pvsNone.
+TPPGMaskEdit.ValidationHint ! Immer zusammen mit ValidationState setzen und konkret sagen, was fehlt: „Pflichtfeld", „PLZ hat 5 Ziffern". Bei Maskenfehlern trägt das Feld selbst „Eingabe passt nicht zur Maske" ein.
+TPPGMaskEdit.OnValidationError ! Für Reaktionen auf eine unvollständige Eingabe über das Rot hinaus: Meldung in der Statuszeile („PLZ unvollständig ab Stelle 4", siehe InvalidPos) oder den Speichern-Button sperren. Ersetzt den Fehlerdialog des TMaskEdit, den Anwender als störend empfinden.
+TPPGMaskEdit.OnChange ! Für alles, was live mitgehen soll: Dauer aus Beginn und Ende berechnen, eigene Fehlermarkierung zurücknehmen, Speichern freigeben. Feuert bei jedem Zeichen, also auch bei halb ausgefüllter Maske; vollständig ist sie erst, wenn EditText kein Leerzeichen-Symbol mehr enthält.
+TPPGMaskEdit.TextHint ! Bei Masken nur eingeschränkt sinnvoll, weil das Feld seine Platzhalter („__.__.____") selbst zeigt. Nützlich, solange EditMask leer ist, oder als Hinweis auf das Format („TT.MM.JJJJ") neben einer Maske mit Leerzeichen als Leer-Symbol.
+TPPGMaskEdit.TextHintVisibleOnFocus ! True, wenn der Platzhalter beim Hineinklicken noch als Formatvorgabe sichtbar bleiben soll; bei Maskenfeldern meist ohne Wirkung, weil die Maske ihre Platzhalter ohnehin zeigt.
+TPPGMaskEdit.ShowClearButton ! Für optionale Felder, die man schnell wieder leeren will, z. B. eine freiwillige IBAN. Bei Pflichtfeldern weglassen, ein leeres Feld ist dort ohnehin ein Fehler.
+TPPGMaskEdit.UseSystemContextMenu ! False lassen, dann passt das Kontextmenü zur PPGlow-Optik und Sprache. True nur, wenn Anwender exakt das Windows-Menü erwarten (z. B. Unicode-Steuerzeichen einfügen).
+TPPGMaskEdit.Alignment ! taCenter für kurze, gleich lange Werte wie Uhrzeiten in einer Zeile, taRightJustify für Beträge oder Nummern in Spalten; sonst taLeftJustify.
+TPPGMaskEdit.AutoSelect ! True lassen: Wer per Tab in ein Datum springt, überschreibt es sofort komplett. False, wenn meist nur einzelne Stellen korrigiert werden.
+TPPGMaskEdit.BorderStyle ! bsSingle für normale Formularfelder. bsNone nur, wenn das Feld in eine eigene Fläche eingebettet ist, z. B. als Zelleneditor in einer Liste.
+TPPGMaskEdit.CharCase ! Bei Masken lieber die Zeichen „>" (groß) und „<" (klein) in EditMask verwenden, die gelten je Abschnitt. CharCase = ecUpperCase passt für Felder ohne Maske, z. B. Kennzeichen oder Kürzel.
+TPPGMaskEdit.HideSelection ! True lassen. False nur, wenn ein Button daneben mit der Markierung arbeitet (z. B. „Markierte Stellen löschen") und sie sichtbar bleiben soll.
+TPPGMaskEdit.MaxLength ! Mit Maske selten nötig, die Maske begrenzt die Länge schon. Ohne Maske z. B. MaxLength = 20 passend zur Datenbankspalte.
+TPPGMaskEdit.PasswordChar ! Für vertrauliche Werte mit festem Aufbau, z. B. eine PIN „0000;0;_" mit PasswordChar = „*". Für Kennwörter besser TPPGPasswordEdit (Auge zum Aufdecken, Feststelltaste-Hinweis).
+TPPGMaskEdit.ReadOnly ! Für Werte, die man sehen und kopieren, aber nicht ändern darf, z. B. eine vergebene Kundennummer. Der Anwender kann sie markieren und kopieren, anders als bei Enabled = False.
+TPPGMaskEdit.ReadOnlyStyle ! Damit gesperrte Felder sich deutlich von bearbeitbaren abheben, z. B. ReadOnlyStyle.Color = $00F3F3F3 (hellgrau). clDefault lassen, wenn die Optik des Presets reicht.
+TPPGMaskEdit.TabStop ! True lassen, Eingabefelder müssen per Tab erreichbar sein. False nur bei ReadOnly-Feldern, die man beim Erfassen überspringen soll.
+TPPGMaskEdit.Preset ! Einheitlich für die ganze Anwendung über den StyleManager setzen, nicht je Feld. Fluent11 für Windows-11-Optik, ModernFlat für flache Business-Oberflächen.
+TPPGMaskEdit.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Feldern zuweisen; dann wechseln Optik und Hell/Dunkel für alle Eingaben auf einmal.
+TPPGMaskEdit.Appearance ! Selten je Feld ändern. Die Fehler- und Warnfarben kommen aus ValidationState; Rand und Rundung besser zentral über Preset oder StyleManager.
+TPPGMaskEdit.Animation ! An lassen: Der Wechsel von Rand und Fokus wirkt ruhiger. RespectSystemSettings beachtet die Windows-Einstellung „Animationen anzeigen".
+TPPGMaskEdit.HighContrastSupport ! True lassen, damit sehbehinderte Anwender im Hochkontrast klare Systemfarben sehen.
+TPPGMaskEdit.Align ! Freie Formularfelder bleiben alNone. alTop nur, wenn das Feld in einem Panel über die ganze Breite laufen soll, z. B. ein Suchfeld nach Nummer über einer Liste.
+TPPGMaskEdit.AlignWithMargins ! Zusammen mit Align einschalten, damit das Feld nicht am Rand des Panels klebt; Abstände unter Margins.
+TPPGMaskEdit.Anchors ! Maskenfelder haben eine feste Länge; deshalb meist [akLeft, akTop] lassen statt mitzuwachsen. Nur freie Felder (ohne Maske) mit [akLeft, akTop, akRight] verbreitern.
+TPPGMaskEdit.AutoSize ! True lassen: Die Höhe folgt der Schrift. Die Breite legen Sie passend zur Maske selbst fest.
+TPPGMaskEdit.BiDiMode ! Nur für arabische oder hebräische Oberflächen; am Formular setzen und über ParentBiDiMode übernehmen. Ziffernmasken bleiben links nach rechts lesbar.
+TPPGMaskEdit.Color ! Selten nötig; die Feldfarbe kommt aus Appearance bzw. dem Preset. Für gesperrte Felder ReadOnlyStyle nehmen.
+TPPGMaskEdit.Constraints ! Z. B. MinWidth, wenn das Feld per Align oder Anchors mitwächst, damit die Maske nie abgeschnitten wird.
+TPPGMaskEdit.Cursor ! crDefault lassen; über Eingabefeldern zeigt Windows ohnehin den Textcursor (I-Balken).
+TPPGMaskEdit.CustomHint ! Für Hinweise mit Titel, z. B. „Format: TT.MM.JJJJ", einen TPPGCustomHint zuweisen. Für die ganze Anwendung ist TPPGHintManager bequemer.
+TPPGMaskEdit.DoubleBuffered ! Bei PPGlow-Feldern nicht nötig; steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGMaskEdit.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar; bei Eingabefeldern selten gebraucht.
+TPPGMaskEdit.DragKind ! dkDrag lassen; dkDock ist für Leisten und Fenster gedacht, nicht für Eingabefelder.
+TPPGMaskEdit.DragMode ! dmManual lassen, sonst startet jeder Klick ins Feld ein Ziehen statt den Cursor zu setzen.
+TPPGMaskEdit.Enabled ! Sperren Sie Felder, die gerade nicht gelten, z. B. „Abweichende Lieferadresse" nur, wenn der Haken gesetzt ist. Zum bloßen Anzeigen eines Werts besser ReadOnly, dann kann man ihn kopieren.
+TPPGMaskEdit.Font ! Für Nummern mit gleich breiten Zeichen (IBAN, Seriennummern) eine Schrift wie Consolas; sonst die Formularschrift über ParentFont übernehmen.
+TPPGMaskEdit.Height ! Mit AutoSize bestimmt die Schrift die Höhe; typisch 32 Pixel wie die übrigen Eingabefelder.
+TPPGMaskEdit.HelpContext ! Nur mit Hilfedatei: Kontext-ID der Seite, die F1 im Feld öffnet, z. B. „Aufbau der Kundennummer".
+TPPGMaskEdit.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword).
+TPPGMaskEdit.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext. Ohne Hilfedatei egal.
+TPPGMaskEdit.Hint ! Das erwartete Format nennen: „Datum im Format TT.MM.JJJJ" oder „IBAN ohne Leerzeichen eintippen, sie werden ergänzt". Anzeigen über ShowHint am Formular.
+TPPGMaskEdit.Left ! Im Designer per Maus; im Code nur bei dynamisch erzeugten Feldern, z. B. Feld.SetBounds(140, Y, 120, 32).
+TPPGMaskEdit.Margins ! Abstand zu Nachbarn bei Align; wirkt nur mit AlignWithMargins.
+TPPGMaskEdit.Name ! Sprechend benennen (edtPLZ, edtGeburtsdatum) statt PPGMaskEdit1; der Prüf- und Speichercode wird dadurch lesbar.
+TPPGMaskEdit.ParentBiDiMode ! True lassen, damit das Feld der Leserichtung des Formulars folgt.
+TPPGMaskEdit.ParentColor ! False lassen; ein Eingabefeld soll sich vom Hintergrund abheben.
+TPPGMaskEdit.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGMaskEdit.ParentDoubleBuffered ! True lassen; bei PPGlow-Feldern ohne sichtbare Wirkung.
+TPPGMaskEdit.ParentFont ! True lassen, damit alle Felder die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGMaskEdit.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten.
+TPPGMaskEdit.PopupMenu ! Für Zusatzbefehle per Rechtsklick, z. B. „Heutiges Datum einsetzen" in einem Datumsfeld. Ohne PopupMenu erscheint das Standardmenü (Kopieren, Einfügen …).
+TPPGMaskEdit.ShowHint ! Einmal am Formular einschalten statt an jedem Feld; dann bleibt ParentShowHint True.
+TPPGMaskEdit.StyleElements ! Nur bei VCL-Styles wichtig: seClient herausnehmen, wenn das Feld seine PPGlow-Farben behalten soll.
+TPPGMaskEdit.TabOrder ! So vergeben, dass Tab in Lesereihenfolge durchs Formular läuft (Kundennummer, PLZ, IBAN, dann Speichern).
+TPPGMaskEdit.Tag ! Für gleichartige Felder mit gemeinsamem Ereignis, z. B. Tag = Spaltennummer in der Datenbank.
+TPPGMaskEdit.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Feldern.
+TPPGMaskEdit.Touch ! Nur für Touch-Geräte; für Eingabefelder meist ohne Gesten lassen.
+TPPGMaskEdit.Visible ! Felder ausblenden, die für den Fall nicht gelten (z. B. „USt-IdNr." nur bei Firmenkunden); Platz dahinter mit Align oder Neuanordnung schließen.
+TPPGMaskEdit.Width ! Passend zur Maske wählen, damit alle Stellen sichtbar sind: etwa 80 Pixel für eine PLZ, 130 für ein Datum, 290 für eine IBAN. Zu breite Felder lassen eine längere Eingabe erwarten.
+TPPGMaskEdit.OnClick ! Selten gebraucht; der Klick setzt nur den Cursor. Für Aktionen beim Betreten OnEnter nehmen, dann gilt es auch für die Tastatur.
+TPPGMaskEdit.OnContextPopup ! Um Einträge des Kontextmenüs vor dem Öffnen anzupassen oder es mit Handled := True ganz zu unterdrücken.
+TPPGMaskEdit.OnDblClick ! Z. B. in einem Datumsfeld: Doppelklick setzt das heutige Datum ein.
+TPPGMaskEdit.OnDragDrop ! Wenn ein Wert aus einer Liste ins Feld gezogen werden darf, z. B. eine Kundennummer: hier Text setzen.
+TPPGMaskEdit.OnDragOver ! Zusammen mit OnDragDrop: Accept := True nur für passende Quellen.
+TPPGMaskEdit.OnEndDrag ! Nach dem Ziehen des Felds selbst; bei Eingabefeldern kaum gebraucht.
+TPPGMaskEdit.OnEnter ! Für eine Erklärung des Formats in der Statusleiste („PLZ: fünf Ziffern"), sobald das Feld den Fokus bekommt.
+TPPGMaskEdit.OnExit ! Für Prüfungen über die Maske hinaus nach dem Verlassen, z. B. ob die PLZ zum Ort passt. Die Maskenprüfung selbst läuft schon automatisch (OnValidationError).
+TPPGMaskEdit.OnGesture ! Nur auf Touch-Geräten; bei Eingabefeldern selten.
+TPPGMaskEdit.OnKeyDown ! Für Sondertasten, z. B. Pfeil hoch/runter im Uhrzeitfeld um eine Viertelstunde verstellen oder Enter als „weiter zum nächsten Feld".
+TPPGMaskEdit.OnKeyPress ! Zeichen prüft die Maske schon; hier nur für Sonderfälle, z. B. „h" in einem Datumsfeld als Kürzel für heute.
+TPPGMaskEdit.OnKeyUp ! Selten; z. B. eine Vorschlagsliste nach jeder losgelassenen Taste aktualisieren.
+TPPGMaskEdit.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster) belegen.
+TPPGMaskEdit.OnMouseDown ! Selten für Eingabefelder; Cursor und Markierung setzt das Feld selbst.
+TPPGMaskEdit.OnMouseEnter ! Um beim Überfahren eine Formaterklärung in einer Statuszeile zu zeigen.
+TPPGMaskEdit.OnMouseLeave ! Gegenstück zu OnMouseEnter: die Erklärung wieder ausblenden.
+TPPGMaskEdit.OnMouseMove ! Feuert bei jeder Mausbewegung; für Eingabefelder kaum gebraucht.
+TPPGMaskEdit.OnMouseUp ! Selten für Eingabefelder; Gegenstück zu OnMouseDown.
+TPPGMaskEdit.OnMouseWheel ! Z. B. in einem Uhrzeitfeld: Rad dreht die Minuten weiter. Handled := True verhindert dann das Scrollen des Formulars.
+TPPGMaskEdit.OnStartDrag ! Nur bei DragMode = dmAutomatic: eigenes DragObject beim Ziehen des Felds setzen.
+
+# --- Typen (gelten fuer alle Controls) ---
+TPPGElementStyle.Color ! Flächenfarbe des Bereichs, z. B. hellgrau ($00F3F3F3) für ReadOnly-Felder, damit man sie von bearbeitbaren unterscheidet. clDefault lassen, wenn das Preset passt.
+TPPGElementStyle.TextColor ! Schriftfarbe des Bereichs, z. B. clGrayText für schreibgeschützte Werte. Auf ausreichenden Kontrast zur Fläche achten.
+TPPGElementStyle.BorderColor ! Rand- bzw. Linienfarbe; bei schreibgeschützten Feldern z. B. die Flächenfarbe, damit der Rahmen verschwindet und der Wert wie Text wirkt.
+TPPGElementStyle.DarkColor ! Pflicht, sobald Sie Color selbst setzen: Sonst bleibt der Bereich im Dark Mode bei der Preset-Farbe bzw. passt nicht zum Dunkeln. Eine dunkle Variante der hellen Farbe wählen.
+TPPGElementStyle.DarkTextColor ! Gegenstück zu TextColor im Dark Mode; hell wählen, damit der Text auf dunkler Fläche lesbar bleibt.
+TPPGElementStyle.DarkBorderColor ! Gegenstück zu BorderColor im Dark Mode.
+TPPGElementStyle.ParentFont ! True lassen, dann gilt die Schrift des Controls. Nur für einen Bereich mit eigener Schrift (z. B. kleinere Fußzeile) Font ändern, das schaltet ParentFont aus.
+TPPGElementStyle.Font ! Eigene Schrift nur, wenn sich der Bereich deutlich abheben soll, z. B. Font.Size = 8 für eine Fußzeile. Für fett genügt FontStyle.
+TPPGElementStyle.FontStyle ! Einfachster Weg zur Hervorhebung ohne eigene Schrift, z. B. [fsBold] für Kopfzeilen oder [fsItalic] für schreibgeschützte Werte.

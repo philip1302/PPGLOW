@@ -1,5 +1,17 @@
 **Vorbild:** `TMaskEdit`
 
+## Wofür
+
+Das Maskenfeld nimmt Werte mit festem Aufbau entgegen: PLZ, Datum, Uhrzeit, Kunden- oder Artikelnummer, IBAN. Die `EditMask` gibt Stelle für Stelle vor, was erlaubt ist, zeigt feste Zeichen (Punkte, Bindestriche) gleich mit und lässt den Anwender nur die freien Stellen füllen. Eine unvollständige Eingabe färbt das Feld rot, statt wie `TMaskEdit` einen Fehlerdialog zu öffnen.
+
+## Wann verwenden
+
+- Für kurze Werte mit immer gleichem Aufbau, bei denen die Maske Tippfehler verhindert und das Format erklärt (PLZ, Uhrzeit, Nummernkreise).
+- Statt `TPPGEdit`, wenn feste Zeichen automatisch eingefügt werden sollen. Für freien Text oder Werte unterschiedlicher Länge (Name, E-Mail) ist `TPPGEdit` richtig, Prüfungen dort über `ValidationState` bzw. `TPPGValidator`.
+- Statt `TPPGNumberEdit` nur bei Nummern, mit denen nicht gerechnet wird. Beträge, Mengen und Prozentwerte gehören ins `TPPGNumberEdit` (Tausenderpunkte, Min/Max, Rad).
+- Für Datum und Uhrzeit nur, wenn schnelles Tippen wichtiger ist als Auswahl. `TPPGDatePicker` und `TPPGTimePicker` bieten Kalender bzw. Auswahl und prüfen, ob das Datum existiert; die Maske prüft nur Ziffern.
+- Für PINs mit fester Länge mit `PasswordChar`. Kennwörter gehören ins `TPPGPasswordEdit`.
+
 ## Unterschiede und Hinweise
 
 - Das innere Edit ist ein Nachfahre von `TCustomMaskEdit`. `EditMask`, `EditText`, `IsMasked` und die Prüfung stammen unverändert aus der VCL. DFMs eines `TMaskEdit` laden nach dem Tausch des Klassennamens.
