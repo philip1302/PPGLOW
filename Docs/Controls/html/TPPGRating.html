@@ -59,6 +59,21 @@
 <tr><td><code>ParentColor</code></td><td><code>Boolean</code></td><td></td><td>True: Color wird vom Parent &#252;bernommen.</td></tr>
 <tr><td><code>DoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>Zeichnen &#252;ber einen Puffer gegen Flackern. PPGlow-Controls puffern immer selbst; die Property ist da, damit Formulare aus der VCL laden, und bewirkt nur einen zweiten Puffer. Das innere Edit der Eingabefelder &#252;bernimmt sie nicht.</td></tr>
 <tr><td><code>ParentDoubleBuffered</code></td><td><code>Boolean</code></td><td></td><td>True: DoubleBuffered wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>AlignWithMargins</code></td><td><code>Boolean</code></td><td></td><td>True: Beim Ausrichten (Align) gelten die Abst&#228;nde aus Margins. Nutzung: <code>Edit1.AlignWithMargins := True; Edit1.Margins.SetBounds(8, 4, 8, 4);</code></td></tr>
+<tr><td><code>Left</code></td><td><code>Integer</code></td><td></td><td>Linke Kante relativ zum Parent in Pixeln.</td></tr>
+<tr><td><code>Top</code></td><td><code>Integer</code></td><td></td><td>Obere Kante relativ zum Parent in Pixeln.</td></tr>
+<tr><td><code>Width</code></td><td><code>Integer</code></td><td></td><td>Breite in Pixeln (bei hoher DPI skaliert die VCL beim Laden).</td></tr>
+<tr><td><code>Height</code></td><td><code>Integer</code></td><td></td><td>H&#246;he in Pixeln (bei hoher DPI skaliert die VCL beim Laden).</td></tr>
+<tr><td><code>Cursor</code></td><td><code>TCursor</code></td><td></td><td>Mauszeiger &#252;ber dem Control. Nutzung: <code>crHandPoint</code> f&#252;r klickbare Fl&#228;chen.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Kurzinfo beim Verweilen der Maus. Wird nur gezeigt, wenn ShowHint (oder ParentShowHint mit ShowHint am Formular) True ist. Text vor &quot;|&quot; = Tooltip, danach = Langtext f&#252;r die Statusleiste. Nutzung: <code>Button1.Hint := &#39;Dokument speichern|Speichert das Dokument unter dem bisherigen Namen&#39;;</code></td></tr>
+<tr><td><code>HelpType</code></td><td><code>THelpType</code></td><td></td><td>Ob F1 HelpContext (htContext) oder HelpKeyword (htKeyword) verwendet.</td></tr>
+<tr><td><code>HelpKeyword</code></td><td><code>string</code></td><td></td><td>Stichwort f&#252;r die Hilfe (F1), wenn HelpType = htKeyword.</td></tr>
+<tr><td><code>HelpContext</code></td><td><code>THelpContext</code></td><td></td><td>Kontext-ID f&#252;r die Hilfe (F1).</td></tr>
+<tr><td><code>Margins</code></td><td><code>TMargins</code></td><td></td><td>Au&#223;enabst&#228;nde f&#252;r das Ausrichten; wirken nur mit AlignWithMargins = True.</td></tr>
+<tr><td><code>CustomHint</code></td><td><code>TCustomHint</code></td><td></td><td>Eigenes Hint-Objekt (z. B. TBalloonHint) statt des Standard-Tooltips.</td></tr>
+<tr><td><code>ParentCustomHint</code></td><td><code>Boolean</code></td><td></td><td>True: CustomHint wird vom Parent &#252;bernommen.</td></tr>
+<tr><td><code>Name</code></td><td><code>TComponentName</code></td><td></td><td>Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein g&#252;ltiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: <code>PPGButton1.Name := &#39;btnSpeichern&#39;;</code> (meist nur im Objektinspektor &#228;ndern)</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td></td><td>Freier Ganzzahlwert f&#252;r eigene Zwecke (z. B. eine ID oder einen Zeiger).</td></tr>
 </table>
 <h2>Ereignisse</h2>
 <table>

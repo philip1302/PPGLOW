@@ -7,16 +7,16 @@
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
-<tr><td><code>Color</code></td><td><code>TColor</code></td><td></td><td>F&#252;llfarbe (Beginn des Verlaufs).</td></tr>
-<tr><td><code>ColorTo</code></td><td><code>TColor</code></td><td></td><td>Ende des Verlaufs; gleich Color = einfarbig.</td></tr>
-<tr><td><code>ColorMirror</code></td><td><code>TColor</code></td><td></td><td>Beginn der zweiten Verlaufsh&#228;lfte (Glanzkante im Preset Classic).</td></tr>
-<tr><td><code>ColorMirrorTo</code></td><td><code>TColor</code></td><td></td><td>Ende der zweiten Verlaufsh&#228;lfte.</td></tr>
-<tr><td><code>BorderColor</code></td><td><code>TColor</code></td><td></td><td>Randfarbe.</td></tr>
-<tr><td><code>GlowColor</code></td><td><code>TColor</code></td><td></td><td>Farbe des Glows (ModernFlat: &#228;u&#223;erer Schein, Classic: Lichtschein von unten).</td></tr>
-<tr><td><code>GlowAlpha</code></td><td><code>Byte</code></td><td></td><td>St&#228;rke des Glows, 0 (aus) bis 255.</td></tr>
-<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td></td><td>Textfarbe (auch Farbe von ImageTint und des Hakens bei Checked).</td></tr>
-<tr><td><code>GradientDirection</code></td><td><code>TPPGGradientDirection</code></td><td></td><td>Richtung des Verlaufs: gdVertical (oben → unten) oder gdHorizontal (links → rechts). Werte: <code>gdVertical</code>, <code>gdHorizontal</code>.</td></tr>
-<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile in diesem Zustand, z. B. [fsBold] im eingerasteten Zustand oder [fsUnderline] bei Hover. [] = Schrift des Controls.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td></td><td>F&#252;llfarbe (Beginn des Verlaufs). Praxis: Hauptfarbe der Fl&#228;che im jeweiligen Zustand. F&#252;r eine einfarbige Fl&#228;che Color, ColorTo, ColorMirror und ColorMirrorTo gleich setzen.</td></tr>
+<tr><td><code>ColorTo</code></td><td><code>TColor</code></td><td></td><td>Ende des Verlaufs; gleich Color = einfarbig. Praxis: Zweite Farbe des Verlaufs der oberen H&#228;lfte. Gleich Color f&#252;r eine flache Fl&#228;che.</td></tr>
+<tr><td><code>ColorMirror</code></td><td><code>TColor</code></td><td></td><td>Beginn der zweiten Verlaufsh&#228;lfte (Glanzkante im Preset Classic). Praxis: Startfarbe der unteren H&#228;lfte (Glanzeffekt im Classic-Stil). Gleich Color f&#252;r flache Optik.</td></tr>
+<tr><td><code>ColorMirrorTo</code></td><td><code>TColor</code></td><td></td><td>Ende der zweiten Verlaufsh&#228;lfte. Praxis: Endfarbe der unteren H&#228;lfte. Gleich Color f&#252;r flache Optik.</td></tr>
+<tr><td><code>BorderColor</code></td><td><code>TColor</code></td><td></td><td>Randfarbe. Praxis: Randfarbe. Etwas dunkler als die Fl&#228;che wirkt plastisch; gleich der Fl&#228;che wirkt flach.</td></tr>
+<tr><td><code>GlowColor</code></td><td><code>TColor</code></td><td></td><td>Farbe des Glows (ModernFlat: &#228;u&#223;erer Schein, Classic: Lichtschein von unten). Praxis: Farbe des Leuchtrands (sichtbar mit GlowSize &gt; 0), meist die Akzentfarbe.</td></tr>
+<tr><td><code>GlowAlpha</code></td><td><code>Byte</code></td><td></td><td>St&#228;rke des Glows, 0 (aus) bis 255. Praxis: Deckkraft des Leuchtrands, 0 bis 255. 60 bis 120 wirkt dezent, 255 sehr kr&#228;ftig.</td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td></td><td>Textfarbe (auch Farbe von ImageTint und des Hakens bei Checked). Praxis: Schriftfarbe im Zustand. Auf dunklen Fl&#228;chen Wei&#223;, auf hellen Schwarz; auf ausreichenden Kontrast achten (mindestens 4,5:1).</td></tr>
+<tr><td><code>GradientDirection</code></td><td><code>TPPGGradientDirection</code></td><td></td><td>Richtung des Verlaufs: gdVertical (oben → unten) oder gdHorizontal (links → rechts). Werte: <code>gdVertical</code>, <code>gdHorizontal</code>. Praxis: gdVertical f&#252;r klassische Buttons (Licht von oben), gdHorizontal f&#252;r breite Leisten-Buttons.</td></tr>
+<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile in diesem Zustand, z. B. [fsBold] im eingerasteten Zustand oder [fsUnderline] bei Hover. [] = Schrift des Controls. Praxis: Z. B. [fsBold] im Zustand Checked, damit der aktive Umschalter auch ohne Farbe erkennbar ist.</td></tr>
 </table>
 <h2>Verwendet in</h2>
 <p><a href="TPPGAppearance.html">TPPGAppearance</a></p>

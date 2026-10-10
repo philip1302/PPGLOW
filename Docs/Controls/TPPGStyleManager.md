@@ -45,6 +45,13 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ThemeColors` | [TPPGThemeColors](types/TPPGThemeColors.md) |  | Einzelne Theme-Farben (Tokens) getrennt für Hell (Light) und Dunkel (Dark) überschreiben: Akzent, Flächen, Text, Rand, Signalfarben. Nur gesetzte Werte gelten; sie gehen AccentColor vor. Speichern/Laden mit SaveToFile/LoadFromFile. Nutzung: `PPGStyleManager1.ThemeColors.Light.Danger := $002020C0;` |
 | `ChartPalette` | `TStrings` |  | Diagramm- und Kategorienfarben in dieser Reihenfolge, eine Farbe je Zeile („#RRGGBB" oder Farbname wie clNavy). Leer = Palette des Presets. Im Dunkeln werden zu dunkle Farben aufgehellt. Nutzung: `PPGStyleManager1.ChartPalette.Text := '#0F6CBD'#13#10'#C239B3'#13#10'clGreen';` |
 
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+
 Tests: `PPG.Tests.Controls` (TLifecycleTests, TResourceTests, TStyleTests); `PPG.Tests.Custom` (TCustomThemeTests); `PPG.Tests.Phase8` (TThemeTests); `PPG.Tests.Phase9a` (TPresetTargetTests); `PPG.Tests.Review` (TReviewTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---

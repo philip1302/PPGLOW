@@ -10,17 +10,17 @@ Nutzung: `PPGButton1.Appearance.Hot.Color := $00FFE8CC; PPGButton1.Appearance.Ho
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `Normal` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen im Ruhezustand. |
-| `Hot` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen, solange die Maus über dem Control ist (weich überblendet, siehe Animation). |
-| `Down` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen beim Drücken bzw. im eingerasteten Zustand (Down = True bei Toggle-Buttons). |
-| `Disabled` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen bei Enabled = False. |
-| `Checked` | [TPPGStateStyle](TPPGStateStyle.md) |  | „An"-Zustand von CheckBox, RadioButton und ToggleSwitch: Color* = Füllung des Kästchens bzw. Schalters, TextColor = Haken, Punkt bzw. Schalterknopf. |
-| `FocusColor` | `TColor` |  | Farbe des Fokusrings bzw. der Fokuslinie bei Tastaturfokus. Mit einer Markenfarbe am StyleManager (AccentColor) meist nicht nötig. |
-| `Rounding` | `Integer` |  | Eckenradius in logischen Pixeln (0 = eckig). Einzelne Ecken eckig über RoundedCorners. |
-| `BorderWidth` | `Integer` |  | Randbreite in logischen Pixeln (0 = ohne Rand). |
-| `GlowSize` | `Integer` |  | Breite des äußeren Glows (ModernFlat) in logischen Pixeln; um diesen Platz ist die Fläche kleiner als das Control. |
-| `Focused` | [TPPGStateColors](TPPGStateColors.md) |  | Eigene Farben, solange das Control den Tastaturfokus hat; nur gesetzte Werte (≠ clDefault) gelten, der Rest kommt aus dem aktuellen Zustand. Nutzung: `Edit1.Appearance.Focused.Color := $00F2FBFF;` |
-| `Dark` | [TPPGDarkColors](TPPGDarkColors.md) |  | Eigene Farben für den Dark Mode, je Zustand. Ohne Angabe gelten im Dunkeln die Farben des Presets (eigene helle Farben würden dort nicht passen). Nutzung: `PPGButton1.Appearance.Dark.Normal.Color := $00402810;` |
+| `Normal` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen im Ruhezustand. Praxis: Grundoptik in Ruhe. Für einen farbigen Button Color, ColorTo, BorderColor und TextColor gemeinsam setzen. |
+| `Hot` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen, solange die Maus über dem Control ist (weich überblendet, siehe Animation). Praxis: Optik beim Überfahren: etwas heller oder dunkler als Normal, damit der Anwender sieht, dass er klicken kann. |
+| `Down` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen beim Drücken bzw. im eingerasteten Zustand (Down = True bei Toggle-Buttons). Praxis: Optik beim Drücken: deutlich dunkler als Hot. Gibt Rückmeldung, dass der Klick angekommen ist. |
+| `Disabled` | [TPPGStateStyle](TPPGStateStyle.md) |  | Aussehen bei Enabled = False. Praxis: Optik gesperrt: blass und mit gedämpfter Schrift, damit klar ist, dass der Button gerade nicht geht. |
+| `Checked` | [TPPGStateStyle](TPPGStateStyle.md) |  | „An"-Zustand von CheckBox, RadioButton und ToggleSwitch: Color* = Füllung des Kästchens bzw. Schalters, TextColor = Haken, Punkt bzw. Schalterknopf. Praxis: Optik eingerastet (Down bei GroupIndex > 0): kräftig genug, dass der aktive Umschalter auf einen Blick erkennbar ist. |
+| `FocusColor` | `TColor` |  | Farbe des Fokusrings bzw. der Fokuslinie bei Tastaturfokus. Mit einer Markenfarbe am StyleManager (AccentColor) meist nicht nötig. Praxis: Farbe des Fokusrings. Gut sichtbar wählen (Akzentfarbe oder Schwarz), damit Tastaturbenutzer den Fokus finden. |
+| `Rounding` | `Integer` |  | Eckenradius in logischen Pixeln (0 = eckig). Einzelne Ecken eckig über RoundedCorners. Praxis: 0 für eckige Business-Optik, 4 für Windows 11, Höhe/2 für Pillen-Buttons. |
+| `BorderWidth` | `Integer` |  | Randbreite in logischen Pixeln (0 = ohne Rand). Praxis: 1 ist üblich; 2 für einen deutlich umrandeten „Outline"-Button, 0 für flache Symbolleisten-Buttons. |
+| `GlowSize` | `Integer` |  | Breite des äußeren Glows (ModernFlat) in logischen Pixeln; um diesen Platz ist die Fläche kleiner als das Control. Praxis: Leuchtrand beim Überfahren: 0 = aus (Fluent-Stil), 2 bis 4 für die typische ModernFlat-/Glow-Optik. |
+| `Focused` | [TPPGStateColors](TPPGStateColors.md) |  | Eigene Farben, solange das Control den Tastaturfokus hat; nur gesetzte Werte (≠ clDefault) gelten, der Rest kommt aus dem aktuellen Zustand. Nutzung: `Edit1.Appearance.Focused.Color := $00F2FBFF;` Praxis: Eigene Farben, solange der Button den Fokus hat. clDefault lassen, wenn die Normaloptik plus Fokusring reicht. |
+| `Dark` | [TPPGDarkColors](TPPGDarkColors.md) |  | Eigene Farben für den Dark Mode, je Zustand. Ohne Angabe gelten im Dunkeln die Farben des Presets (eigene helle Farben würden dort nicht passen). Nutzung: `PPGButton1.Appearance.Dark.Normal.Color := $00402810;` Praxis: Eigene Farben für den Dark Mode. Wichtig, wenn Sie Normal/Hot/Down selbst eingefärbt haben: sonst bleibt der Button im Dunkeln hell. |
 
 ## Verwendet in
 

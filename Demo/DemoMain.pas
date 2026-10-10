@@ -18,7 +18,7 @@ uses
   PPG.Controls.Base, PPG.Button, PPG.PageControl, PPG.Theme, PPG.Tokens,
   PPG.NavigationView, PPG.StatusBar, PPG.Notifications, PPG.ComboBox,
   PPG.DatePicker, PPG.Controls.Field, PPG.Feedback, PPG.SearchEdit,
-  DemoKit;
+  DemoKit, DemoShowcase;
 
 type
   TDemoForm = class(TForm, IDemoHost)
@@ -37,7 +37,16 @@ type
     FVclStyle: string;
     FReport: TStringList;
     FFailures: Integer;
+    // Komponentenseiten (Showcase): Klasse -> Seite, Gruppe -> Seite,
+    // Titel der Seiten hinter PgTiles
+    FShowcasePages: TDictionary<string, Integer>;
+    FGroupPages: array[TDemoGroup] of Integer;
+    FExtraCaptions: TStringList;
     procedure SelfCheck(const AName: string; AOk: Boolean);
+    procedure BuildShowcasePages;
+    function AddPage(const ACaption: string; AClass: TDemoPageClass): TDemoPage;
+    function PageCaption(Index: Integer): string;
+    function FindNavItem(AItems: TPPGNavItems; APage: Integer): TPPGNavItem;
     procedure BuildImages;
     procedure BuildPages;
     procedure BuildNavigation;
@@ -67,6 +76,16 @@ type
     procedure ApplyPreset(const AName: string);
     procedure ApplyVclStyle(const AName: string);
     procedure RegisterSpecial(const Key: string; C: TControl);
+    procedure ShowComponent(const AClassName: string);
+    /// Komponentenseite zeigen und Reiter waehlen (0 = Ausprobieren); False =
+    /// keine fertige Seite fuer die Klasse.
+    function ShowComponentTab(const AClassName: string; ATab: Integer): Boolean;
+    /// Seite der Komponente (Showcase) oder -1.
+    function ShowcasePage(const AClassName: string): Integer;
+    /// Screenshot-Modus: Komponentenseite mit Reiter, unterem Reiter,
+    /// gewaehlter Eigenschaft und eingeblendetem Beispielcode (-1/'' = Vorgabe).
+    procedure ShowShowcase(const AClassName: string; ATab, ABottomTab: Integer;
+      const ASelectPath: string; AShowCode: Boolean);
     { Screenshot-Modus }
     procedure SaveScreenshot(const FileName: string);
     procedure FocusDemoField;
@@ -408,10 +427,14 @@ begin
   Font.Size := 10;
   FPageObjects := TList<TDemoPage>.Create;
   FSpecial := TDictionary<string, TControl>.Create;
+  FShowcasePages := TDictionary<string, Integer>.Create;
+  FExtraCaptions := TStringList.Create;
   DemoPreset := PPGPresetFluent11;
   // Ein StyleManager fuer die ganze Demo: ein Preset-Wechsel ist eine
-  // Zuweisung an DemoStyles.Preset (Audit 11e)
+  // Zuweisung an DemoStyles.Preset (Audit 11e). Mit Namen, damit ihn der
+  // Inspektor der Komponentenseiten als StyleManager anbieten kann.
   DemoStyles := TPPGStyleManager.Create(Self);
+  DemoStyles.Name := 'DemoStyles';
   DemoStyles.Preset := DemoPreset;
   DemoStyler := TDemoStyler.Create(Self);
   TPPGErrorHandler.OnError := HandlePPGError;
@@ -458,6 +481,8 @@ begin
   TPPGErrorHandler.OnError := nil;
   FreeAndNil(FSpecial);
   FreeAndNil(FPageObjects);
+  FreeAndNil(FShowcasePages);
+  FreeAndNil(FExtraCaptions);
   inherited Destroy;
 end;
 
@@ -498,6 +523,8 @@ var
   IconFont: string;
 begin
   FImages := TImageList.Create(Self);
+  // Mit Namen: der Inspektor der Komponentenseiten bietet sie unter Images an
+  FImages.Name := 'DemoImages';
   FImages.ColorDepth := cd32Bit;
   FImages.Width := 16;
   FImages.Height := 16;
@@ -569,6 +596,7 @@ begin
   end;
   for I := 0 to FPages.PageCount - 1 do
     FPageObjects.Add(PageClass(I).CreatePage(Self, Self, FPages.Pages[I]));
+  BuildShowcasePages;
   FPages.ActivePageIndex := PgStart;
   // Die NavigationView navigiert: Reiter aus (die aktive Seite zuletzt,
   // sonst springt das PageControl zur Nachbarseite)
@@ -576,27 +604,154 @@ begin
     FPages.Pages[I].TabVisible := False;
 end;
 
+function TDemoForm.AddPage(const ACaption: string; AClass: TDemoPageClass): TDemoPage;
+var
+  Sheet: TPPGTabSheet;
+begin
+  Sheet := TPPGTabSheet.Create(Self);
+  Sheet.Caption := L(ACaption);
+  Sheet.PageControl := FPages;
+  FExtraCaptions.Add(L(ACaption));
+  Result := AClass.CreatePage(Self, Self, Sheet);
+  FPageObjects.Add(Result);
+end;
+
+procedure TDemoForm.BuildShowcasePages;
+var
+  G: TDemoGroup;
+  I: Integer;
+  P: TDemoPage;
+  C: TDemoComponentPageClass;
+begin
+  // Komponentenseiten hinter den bisherigen Seiten (deren Nummern fuer /page
+  // bleiben gleich): je Gruppe eine Uebersicht, je fertige Komponente eine Seite
+  for G := Low(TDemoGroup) to High(TDemoGroup) do
+  begin
+    P := AddPage(ShowcaseGroups[G].Caption, TDemoGroupPage);
+    TDemoGroupPage(P).Group := G;
+    FGroupPages[G] := FPageObjects.Count - 1;
+  end;
+  for I := 0 to High(ShowcaseEntries) do
+  begin
+    C := ShowcasePageClass(ShowcaseEntries[I].Cls);
+    if ShowcaseEntries[I].Done and (C <> nil) then
+    begin
+      AddPage(ShowcaseEntries[I].Cls, C);
+      FShowcasePages.AddOrSetValue(UpperCase(ShowcaseEntries[I].Cls), FPageObjects.Count - 1);
+    end;
+  end;
+end;
+
+function TDemoForm.PageCaption(Index: Integer): string;
+begin
+  if (Index >= 0) and (Index <= High(PageDefs)) then
+    Result := L(PageDefs[Index].Caption)
+  else if (Index > High(PageDefs)) and (Index - High(PageDefs) - 1 < FExtraCaptions.Count) then
+    Result := FExtraCaptions[Index - High(PageDefs) - 1]
+  else
+    Result := '';
+end;
+
+function TDemoForm.ShowcasePage(const AClassName: string): Integer;
+begin
+  if not FShowcasePages.TryGetValue(UpperCase(AClassName), Result) then
+    Result := -1;
+end;
+
+procedure TDemoForm.ShowComponent(const AClassName: string);
+begin
+  ShowComponentTab(AClassName, -1);
+end;
+
+function TDemoForm.ShowComponentTab(const AClassName: string; ATab: Integer): Boolean;
+var
+  Page: Integer;
+begin
+  Page := ShowcasePage(AClassName);
+  Result := Page >= 0;
+  if not Result then
+    Exit;
+  ShowPage(Page);
+  if (ATab >= 0) and (PageObject(Page) is TDemoComponentPage) then
+    TDemoComponentPage(PageObject(Page)).ShowTab(ATab);
+end;
+
+procedure TDemoForm.ShowShowcase(const AClassName: string; ATab, ABottomTab: Integer;
+  const ASelectPath: string; AShowCode: Boolean);
+var
+  P: TDemoComponentPage;
+begin
+  if not ShowComponentTab(AClassName, ATab) then
+    Exit;
+  P := TDemoComponentPage(PageObject(ShowcasePage(AClassName)));
+  if ABottomTab >= 0 then
+    P.ShowBottomTab(ABottomTab);
+  if ASelectPath <> '' then
+    P.Inspector.SelectPath(ASelectPath);
+  if AShowCode then
+    P.ShowAllCode;
+end;
+
+function TDemoForm.FindNavItem(AItems: TPPGNavItems; APage: Integer): TPPGNavItem;
+var
+  I: Integer;
+begin
+  Result := nil;
+  for I := 0 to AItems.Count - 1 do
+  begin
+    if (AItems[I].Kind = nikItem) and (AItems[I].PageIndex = APage) and not AItems[I].HasChildren then
+      Exit(AItems[I]);
+    Result := FindNavItem(AItems[I].Items, APage);
+    if Result <> nil then
+      Exit;
+  end;
+end;
+
 procedure TDemoForm.BuildNavigation;
 var
   I, N: Integer;
-  It: TPPGNavItem;
+  It, Parent: TPPGNavItem;
+  G: TDemoGroup;
+  E: TDemoShowcaseEntry;
 begin
   FNav := TPPGNavigationView.Create(Self);
   FNav.Parent := Self;
   FNav.Preset := DemoPreset;
   FNav.Align := alLeft;
-  FNav.OpenPaneLength := 260;
+  FNav.OpenPaneLength := 280;
   FNav.DisplayMode := pdmAuto;
   FNav.CompactModeThresholdWidth := 1000;
   FNav.PaneTitle := 'PPGlow';
   FNav.BeginItemsUpdate;
   try
+    FNav.Items.AddItem(L(PageDefs[PgStart].Caption), PageDefs[PgStart].Icon, PgStart);
+    // Komponenten nach Funktionsgruppen: Uebersicht und je fertige Komponente
+    // eine Unterseite
+    FNav.Items.AddHeader(L('Komponenten'));
+    for G := Low(TDemoGroup) to High(TDemoGroup) do
+    begin
+      Parent := FNav.Items.AddItem(L(ShowcaseGroups[G].Caption), ShowcaseGroups[G].Icon, -1);
+      Parent.Items.AddItem(L('{Ue}bersicht'), 0, FGroupPages[G]);
+      for I := 0 to High(ShowcaseEntries) do
+      begin
+        E := ShowcaseEntries[I];
+        if (E.Group = G) and (ShowcasePage(E.Cls) >= 0) then
+          Parent.Items.AddItem(E.Cls, 0, ShowcasePage(E.Cls));
+      end;
+    end;
+    // Die bisherigen Themen-Seiten (Szenarien), bis alle Komponenten eine
+    // eigene Seite haben
+    FNav.Items.AddHeader(L('Szenarien'));
+    Parent := FNav.Items.AddItem(L('Bisherige Demo-Seiten'), $E8F1, -1);
     for N := 0 to High(NavOrder) do
     begin
       I := NavOrder[N];
-      if PageDefs[I].Group <> '' then
-        FNav.Items.AddHeader(L(PageDefs[I].Group));
-      It := FNav.Items.AddItem(L(PageDefs[I].Caption), PageDefs[I].Icon, I);
+      if I = PgStart then
+        Continue;
+      if PageDefs[I].Footer then
+        It := FNav.Items.AddItem(L(PageDefs[I].Caption), PageDefs[I].Icon, I)
+      else
+        It := Parent.Items.AddItem(L(PageDefs[I].Caption), PageDefs[I].Icon, I);
       It.Footer := PageDefs[I].Footer;
       if I = PgEvents then
         FEventsItem := It;
@@ -671,6 +826,16 @@ begin
   S := AnsiLowerCase(Trim(SearchText));
   if S = '' then
     Exit;
+  // Komponenten mit eigener Seite: genauer Name (mit oder ohne TPPG) fuehrt dorthin
+  Result := ShowcasePage(Trim(SearchText));
+  if Result < 0 then
+    Result := ShowcasePage('TPPG' + Trim(SearchText));
+  if Result < 0 then
+    for I := 0 to High(Catalog) do
+      if (S = AnsiLowerCase(CatalogText(I))) and (ShowcasePage(Catalog[I].Name) >= 0) then
+        Result := ShowcasePage(Catalog[I].Name);
+  if Result >= 0 then
+    Exit;
   // Zuerst genauer Name (mit oder ohne TPPG), dann Teiltreffer im Katalogtext
   for I := 0 to High(Catalog) do
     if (S = AnsiLowerCase(Catalog[I].Name)) or (S = AnsiLowerCase(CatalogText(I))) or
@@ -697,7 +862,7 @@ begin
     Exit;
   end;
   ShowPage(Page);
-  Log('Suche', Format('"%s" {>} %s', [SearchText, L(PageDefs[Page].Caption)]));
+  Log('Suche', Format('"%s" {>} %s', [SearchText, PageCaption(Page)]));
 end;
 
 function TDemoForm.PageObject(Index: Integer): TDemoPage;
@@ -900,7 +1065,7 @@ end;
 
 procedure TDemoForm.ShowPage(Index: Integer);
 var
-  I: Integer;
+  It, P: TPPGNavItem;
 begin
   if (FPages = nil) or (Index < 0) or (Index >= FPages.PageCount) then
     Exit;
@@ -911,9 +1076,18 @@ begin
     if FEventsItem <> nil then
       FEventsItem.BadgeCount := 0;
   end;
-  for I := 0 to FNav.Items.Count - 1 do
-    if (FNav.Items[I].Kind = nikItem) and (FNav.Items[I].PageIndex = Index) then
-      FNav.Selected := FNav.Items[I];
+  // Eintrag auch in Unterpunkten suchen und seine Eltern aufklappen
+  It := FindNavItem(FNav.Items, Index);
+  if It <> nil then
+  begin
+    P := It.ParentItem;
+    while P <> nil do
+    begin
+      P.Expanded := True;
+      P := P.ParentItem;
+    end;
+    FNav.Selected := It;
+  end;
   PageObject(Index).Activated;
 end;
 
@@ -1385,7 +1559,8 @@ begin
     SearchSubmit(FSearch, 'TPPGTreeView');
     SelfCheck('Suche: springt zur Seite', FPages.ActivePageIndex = PgExplorer);
     // Audit 11e: jedes Paletten-Control steht im Katalog, und die Suche nach
-    // seinem Namen fuehrt zu der Seite, die es zeigt
+    // seinem Namen fuehrt zu der Seite, die es zeigt (mit eigener
+    // Komponentenseite dorthin, sonst zur Themen-Seite des Katalogs)
     Missing := '';
     for I := 0 to High(PaletteControls) do
     begin
@@ -1393,12 +1568,40 @@ begin
       for J := 0 to High(Catalog) do
         if SameText(Catalog[J].Name, PaletteControls[I]) then
           Page := Catalog[J].Page;
+      if ShowcasePage(PaletteControls[I]) >= 0 then
+        Page := ShowcasePage(PaletteControls[I]);
       if (Page < 0) or (Page >= FPages.PageCount) or
         (FindCatalogPage(PaletteControls[I]) <> Page) then
         Missing := Missing + ' ' + PaletteControls[I];
     end;
     SelfCheck(Format('Katalog: alle %d Paletten-Controls auffindbar%s',
       [Length(PaletteControls), Missing]), Missing = '');
+    // Komponentenseiten: jede Paletten-Komponente steht genau einmal in der
+    // Gruppenliste; "fertig" heisst: eine Seite ist angemeldet und erreichbar
+    Missing := '';
+    for I := 0 to High(PaletteControls) do
+    begin
+      Page := 0;
+      for J := 0 to High(ShowcaseEntries) do
+        if SameText(ShowcaseEntries[J].Cls, PaletteControls[I]) then
+          Inc(Page);
+      if Page <> 1 then
+        Missing := Missing + Format(' %s(%dx)', [PaletteControls[I], Page]);
+    end;
+    SelfCheck(Format('Komponentenseiten: %d Eintr' + #$00E4 + 'ge, jede Paletten-Komponente genau einmal%s',
+      [Length(ShowcaseEntries), Missing]), (Missing = '') and
+      (Length(ShowcaseEntries) = Length(PaletteControls)));
+    Missing := '';
+    for J := 0 to High(ShowcaseEntries) do
+      if ShowcaseEntries[J].Done <> (ShowcasePage(ShowcaseEntries[J].Cls) >= 0) then
+        Missing := Missing + ' ' + ShowcaseEntries[J].Cls;
+    SelfCheck('Komponentenseiten: Done = Seite angemeldet und in der Navigation' + Missing,
+      Missing = '');
+    SelfCheck('Suche: TPPGButton -> Komponentenseite',
+      (ShowcasePage('TPPGButton') >= 0) and (FindCatalogPage('Button') = ShowcasePage('TPPGButton')));
+    SelfCheck('Navigation: Komponentenseite erreichbar',
+      ShowComponentTab('TPPGButton', 0) and (FPages.ActivePageIndex = ShowcasePage('TPPGButton')) and
+      (FNav.Selected <> nil) and (FNav.Selected.PageIndex = ShowcasePage('TPPGButton')));
     // Die Suite-Texte sind beim Start deutsch (Audit 11e)
     SelfCheck('Sprache: Demo laeuft auf Deutsch', PPGLanguage = 'de');
     FReport.Add(Format('%d Pruefungen, %d Fehler', [FReport.Count, FFailures]));

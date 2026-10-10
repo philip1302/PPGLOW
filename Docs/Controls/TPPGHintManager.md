@@ -57,6 +57,13 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MaxWidth` | `Integer` | `360` | Größte Breite eines Hints in logischen Pixeln (80..2000); längerer Text bricht um. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus erscheinen die Hinweise in den Systemfarben für Tooltips statt in den Farben des Presets. |
 
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+
 Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Audit45` (TStreamingFixTests); `PPG.Tests.Audit7C` (THighContrastTokenTests); `PPG.Tests.Phase11b` (THintTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---

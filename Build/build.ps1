@@ -204,6 +204,16 @@ if (-not $NoRuleCheck) {
   }
 }
 
+# Texte und Beispielquellen der Demo-Komponentenseiten als Ressource
+# (Demo\Showcase\ShowcaseData.res), damit die Demo nie veraltete Texte zeigt
+if ($Projects -contains 'Demo') {
+  & (Join-Path $PSScriptRoot 'make-showcase.ps1') -Root $Root
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "make-showcase.ps1 fehlgeschlagen - Build abgebrochen" -ForegroundColor Red
+    exit 1
+  }
+}
+
 $total = 0; $failedCount = 0
 foreach ($ver in $Versions.Keys) {
   $folder = $Versions[$ver]

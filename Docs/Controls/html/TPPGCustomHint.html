@@ -52,6 +52,8 @@ Edit1.ShowHint := True;
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
 <tr><td><code>Style</code></td><td></td><td><code>bhsStandard</code></td><td>Darstellungsart (je nach Control).</td></tr>
+<tr><td><code>Name</code></td><td><code>TComponentName</code></td><td></td><td>Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein g&#252;ltiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: <code>PPGButton1.Name := &#39;btnSpeichern&#39;;</code> (meist nur im Objektinspektor &#228;ndern)</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td></td><td>Freier Ganzzahlwert f&#252;r eigene Zwecke (z. B. eine ID oder einen Zeiger).</td></tr>
 </table>
 <p>Tests: <code>PPG.Tests.Audit11C</code> (TAudit11CBehaviourTests); <code>PPG.Tests.Audit7C</code> (THighContrastTokenTests); <code>PPG.Tests.Phase11b</code> (THintTests); <code>PPG.Tests.Streaming</code>; <code>PPG.Tests.Visual</code> (TVisualTests) (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
 <hr>

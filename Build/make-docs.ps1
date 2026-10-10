@@ -21,12 +21,16 @@
         # Kommentar
         Schluessel = Wirkung
         > Nutzung (optional, auch mehrere Zeilen; `Code` in Backticks)
+        ! Praxis (optional, auch mehrere Zeilen): wann und wie man die
+          Eigenschaft im Alltag einsetzt; die Demo zeigt den Text im Inspektor
     Schluessel: "Klasse.Name" (Komponente, Typ oder deklarierende Klasse;
     die genaueste Angabe gewinnt), "VCL.Name" (aus der VCL geerbt) oder
     "Name" (gilt ueberall, nur fuer wirklich gleiche Bedeutung).
 
   Aufruf:  powershell -ExecutionPolicy Bypass -File Build\make-docs.ps1 [-Missing datei.txt]
-           -Missing: Liste aller Properties ohne Beschreibung schreiben
+           -Missing: Liste aller Properties ohne Beschreibung schreiben. Fuer
+           Komponenten, deren Demo-Seite fertig ist (Demo\Showcase\DemoShowcase.pas,
+           Done: True), fehlt auch jede Eigenschaft ohne Praxis-Text ("!").
 #>
 param(
   [string]$Root = '',
@@ -63,7 +67,7 @@ $groups = [ordered]@{
 
 # --- Beschreibungen ----------------------------------------------------------
 
-$script:Desc = @{}    # Schluessel -> @{ Text; Usage }
+$script:Desc = @{}    # Schluessel -> @{ Text; Usage; Practice }
 function Read-Descriptions {
   if (-not (Test-Path $PropsDir)) { return }
   foreach ($f in Get-ChildItem -Path $PropsDir -Filter '*.txt' -File | Sort-Object Name) {
@@ -79,36 +83,92 @@ function Read-Descriptions {
         if ($last.Usage -eq '') { $last.Usage = $u } else { $last.Usage += ' ' + $u }
         continue
       }
+      if ($t.StartsWith('!')) {
+        if ($null -eq $last) { throw "$($f.Name):${n}: Praxis ohne Eintrag" }
+        $u = $t.Substring(1).Trim()
+        if ($last.Practice -eq '') { $last.Practice = $u } else { $last.Practice += ' ' + $u }
+        continue
+      }
+      # "Klasse.Name ! Praxis": nur der Praxis-Text, die Wirkung kommt von einem
+      # allgemeineren Schluessel (z. B. TPPGButton.Height ! ... zu VCL.Height)
+      $pm = [regex]::Match($t, '^([\w.]+)\s*!\s*(.*)$')
+      if ($pm.Success) {
+        $key = $pm.Groups[1].Value
+        if (-not $script:Desc.ContainsKey($key)) { $script:Desc[$key] = @{ Text = ''; Usage = ''; Practice = '' } }
+        $last = $script:Desc[$key]
+        if ($last.Practice -ne '') { Write-Warning "$($f.Name):${n}: Praxis zu $key doppelt" }
+        $last.Practice = $pm.Groups[2].Value.Trim()
+        continue
+      }
       $p = $t.IndexOf('=')
       if ($p -le 0) { throw "$($f.Name):${n}: '=' fehlt" }
       $key = $t.Substring(0, $p).Trim()
-      $last = @{ Text = $t.Substring($p + 1).Trim(); Usage = '' }
-      if ($script:Desc.ContainsKey($key)) { Write-Warning "$($f.Name):${n}: $key doppelt" }
+      $last = @{ Text = $t.Substring($p + 1).Trim(); Usage = ''; Practice = '' }
+      if ($script:Desc.ContainsKey($key)) {
+        if ($script:Desc[$key].Text -ne '') { Write-Warning "$($f.Name):${n}: $key doppelt" }
+        $last.Practice = $script:Desc[$key].Practice
+      }
       $script:Desc[$key] = $last
     }
   }
 }
 
 $script:MissingList = New-Object System.Collections.Generic.List[string]
+# Klassen und Typen mit fertiger Demo-Seite: dort braucht jede Eigenschaft
+# auch einen Praxis-Text (wird nach dem Einlesen des Modells gefuellt)
+$script:PracticeOwners = @{}
 function Find-Description($Model, [string]$Owner, $Prop) {
-  # genaueste Angabe zuerst: Owner, dessen Vorfahren (bis zur deklarierenden
-  # Klasse), dann der Name allein, zuletzt der Quelltext-Kommentar
-  foreach ($c in (Get-ClassChain $Model $Owner)) {
-    $k = "$($c.Name).$($Prop.Name)"
-    if ($script:Desc.ContainsKey($k)) { return $script:Desc[$k] }
+  $d = Find-DescriptionCore $Model $Owner $Prop
+  if ($script:PracticeOwners.ContainsKey($Owner) -and $d.Text -ne '' -and $d.Practice -eq '') {
+    $script:MissingList.Add("$Owner.$($Prop.Name)  (Praxis-Text fehlt, Demo-Seite fertig)")
   }
+  return $d
+}
+
+function Get-ShowcaseDone([string]$File) {
+  # Komponenten mit fertiger Demo-Seite: Eintraege "(Cls: 'TPPGx'; ... Done: True)"
+  if (-not (Test-Path $File)) { return @() }
+  $text = [IO.File]::ReadAllText($File)
+  return @([regex]::Matches($text, "Cls:\s*'(\w+)'[^)]*?Done:\s*True") | ForEach-Object { $_.Groups[1].Value })
+}
+
+function Add-PracticeOwner($Model, [string]$Type) {
+  # Klasse samt aller Unterobjekt-Typen (Appearance, Shadow ...) aufnehmen
+  if ($script:PracticeOwners.ContainsKey($Type)) { return }
+  $script:PracticeOwners[$Type] = $true
+  foreach ($p in (Get-PublishedProps $Model $Type)) {
+    if ($p.Type -ne '' -and (Test-TypePage $Model $p.Type)) { Add-PracticeOwner $Model $p.Type }
+  }
+}
+
+function Find-DescriptionCore($Model, [string]$Owner, $Prop) {
+  # genaueste Angabe zuerst: Owner, dessen Vorfahren (bis zur deklarierenden
+  # Klasse), dann der Name allein, zuletzt der Quelltext-Kommentar. Wirkung
+  # (mit Nutzung) und Praxis werden getrennt gesucht: ein Eintrag
+  # "TPPGButton.Height ! ..." liefert nur die Praxis, die Wirkung kommt dann
+  # z. B. von "VCL.Height". Die Demo loest genauso auf (Demo\Showcase\DemoDocs.pas).
+  $keys = New-Object System.Collections.Generic.List[string]
+  foreach ($c in (Get-ClassChain $Model $Owner)) { $keys.Add("$($c.Name).$($Prop.Name)") }
   # "VCL.Name" nur fuer Properties, die aus der VCL geerbt sind
-  if ($null -eq $Prop.DeclClass -and $script:Desc.ContainsKey("VCL.$($Prop.Name)")) { return $script:Desc["VCL.$($Prop.Name)"] }
-  if ($script:Desc.ContainsKey($Prop.Name)) { return $script:Desc[$Prop.Name] }
+  if ($null -eq $Prop.DeclClass) { $keys.Add("VCL.$($Prop.Name)") }
+  $keys.Add($Prop.Name)
+  $found = $null; $practice = ''
+  foreach ($k in $keys) {
+    if (-not $script:Desc.ContainsKey($k)) { continue }
+    $d = $script:Desc[$k]
+    if ($null -eq $found -and $d.Text -ne '') { $found = $d }
+    if ($practice -eq '' -and $d.Practice -ne '') { $practice = $d.Practice }
+  }
+  if ($null -ne $found) { return @{ Text = $found.Text; Usage = $found.Usage; Practice = $practice } }
   $decl = $Prop.DeclClass
   if ($null -eq $decl) { $decl = 'VCL' }
   if ($Prop.Comment -ne '') {
     # nur der knappe Quelltext-Kommentar: als "noch zu beschreiben" melden
     $script:MissingList.Add("$Owner.$($Prop.Name)  (deklariert: $decl, Typ: $($Prop.Type), Kommentar: $($Prop.Comment))")
-    return @{ Text = $Prop.Comment; Usage = '' }
+    return @{ Text = $Prop.Comment; Usage = ''; Practice = '' }
   }
   $script:MissingList.Add("$Owner.$($Prop.Name)  (deklariert: $decl, Typ: $($Prop.Type))")
-  return @{ Text = ''; Usage = '' }
+  return @{ Text = ''; Usage = ''; Practice = '' }
 }
 
 # Typen der VCL fuer geerbte Properties und Ereignisse
@@ -318,6 +378,7 @@ function Build-PropRows($Model, [string]$Owner, $Props, [string]$Prefix) {
     $vals = Format-Values $Model $type
     if ($vals -ne '' -and $text -notmatch 'Werte:') { $text = ($text + ' ' + $vals).Trim() }
     if ($d.Usage -ne '') { $text += ' Nutzung: ' + $d.Usage }
+    if ($d.Practice -ne '') { $text += ' Praxis: ' + $d.Practice }
     [void]$sb.AppendLine("| ``$($p.Name)`` | $(Esc (Format-Type $Model $type $Prefix)) | $(Esc (Format-Default $p)) | $(Esc $text) |")
   }
   return $sb.ToString()
@@ -339,6 +400,7 @@ function Build-EventRows($Model, [string]$Owner, $Events) {
     $d = Find-Description $Model $Owner $p
     $text = $d.Text
     if ($d.Usage -ne '') { $text += ' Nutzung: ' + $d.Usage }
+    if ($d.Practice -ne '') { $text += ' Praxis: ' + $d.Practice }
     $cell = "``$type``"
     if ($sig -ne '') { $cell += " ``$sig``" }
     [void]$sb.AppendLine("| ``$($p.Name)`` | $(Esc $cell) | $(Esc $text) |")
@@ -529,6 +591,7 @@ function ConvertTo-Html([string]$Md, [string]$Title, [string]$IndexHref) {
 $model = Read-PPGSources (P 'Source')
 $script:TestIndex = Get-TestIndex (P 'Tests')
 Read-Descriptions
+foreach ($cls in (Get-ShowcaseDone (P 'Demo\Showcase\DemoShowcase.pas'))) { Add-PracticeOwner $model $cls }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $index = New-Object System.Text.StringBuilder
 [void]$index.AppendLine('# PPGlow - Hilfe pro Control')

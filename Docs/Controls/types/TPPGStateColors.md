@@ -10,14 +10,14 @@ Optionale Farben eines Zustands: nur Werte ≠ clDefault überschreiben, alle an
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `Color` | `TColor` | `clDefault` | Füllfarbe; clDefault = nicht überschreiben. |
-| `ColorTo` | `TColor` | `clDefault` | Ende des Verlaufs; clDefault = nicht überschreiben. |
-| `ColorMirror` | `TColor` | `clDefault` | Zweite Verlaufshälfte (Classic); clDefault = nicht überschreiben. |
-| `ColorMirrorTo` | `TColor` | `clDefault` | Ende der zweiten Verlaufshälfte; clDefault = nicht überschreiben. |
-| `BorderColor` | `TColor` | `clDefault` | Randfarbe; clDefault = nicht überschreiben. |
-| `GlowColor` | `TColor` | `clDefault` | Glow-Farbe; clDefault = nicht überschreiben. |
-| `TextColor` | `TColor` | `clDefault` | Textfarbe; clDefault = nicht überschreiben. |
-| `FontStyle` | `TFontStyles` | `[]` | Zusätzliche Schriftstile. |
+| `Color` | `TColor` | `clDefault` | Füllfarbe; clDefault = nicht überschreiben. Praxis: Wie Appearance.Normal.Color, aber nur für diesen Sonderzustand (Fokus bzw. Dark Mode). clDefault = Farbe aus dem Zustand übernehmen. |
+| `ColorTo` | `TColor` | `clDefault` | Ende des Verlaufs; clDefault = nicht überschreiben. Praxis: Zweite Verlaufsfarbe oben für den Sonderzustand; clDefault = übernehmen. |
+| `ColorMirror` | `TColor` | `clDefault` | Zweite Verlaufshälfte (Classic); clDefault = nicht überschreiben. Praxis: Startfarbe unten für den Sonderzustand; clDefault = übernehmen. |
+| `ColorMirrorTo` | `TColor` | `clDefault` | Ende der zweiten Verlaufshälfte; clDefault = nicht überschreiben. Praxis: Endfarbe unten für den Sonderzustand; clDefault = übernehmen. |
+| `BorderColor` | `TColor` | `clDefault` | Randfarbe; clDefault = nicht überschreiben. Praxis: Randfarbe im Sonderzustand, z. B. Akzentfarbe solange der Button den Fokus hat. |
+| `GlowColor` | `TColor` | `clDefault` | Glow-Farbe; clDefault = nicht überschreiben. Praxis: Leuchtfarbe im Sonderzustand; clDefault = übernehmen. |
+| `TextColor` | `TColor` | `clDefault` | Textfarbe; clDefault = nicht überschreiben. Praxis: Schriftfarbe im Sonderzustand, z. B. Weiß auf dunklen Flächen im Dark Mode. |
+| `FontStyle` | `TFontStyles` | `[]` | Zusätzliche Schriftstile. Praxis: Schriftstil im Sonderzustand, z. B. fett solange der Button den Fokus hat. |
 
 ## Verwendet in
 

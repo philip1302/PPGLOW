@@ -42,6 +42,13 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Ein- und Ausblenden der Toasts wie Animation der Controls: Enabled = False schaltet ab, Duration und Easing steuern den Verlauf. Toasts gleiten ein und aus, der Stapel rückt animiert nach (nur, wenn Windows Animationen erlaubt). |
 | `RespectQuietHours` | `Boolean` | `True` | True: Läuft eine Vollbild-Anwendung oder Präsentation, warten neue Toasts, bis sie beendet ist. |
 
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+
 ## Ereignisse
 
 | Ereignis | Typ und Parameter | Wann und wozu |

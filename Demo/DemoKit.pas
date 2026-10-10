@@ -39,6 +39,8 @@ type
     /// Control fuer den Screenshot-Modus bekannt machen ('fieldfocus',
     /// 'dropdown', 'dropdownimages', 'datepicker').
     procedure RegisterSpecial(const Key: string; C: TControl);
+    /// Komponentenseite der Klasse zeigen (Navigation "Komponenten").
+    procedure ShowComponent(const AClassName: string);
   end;
 
   /// Basis aller Demo-Seiten (eine Klasse pro Seite, Ereignisse inklusive).
@@ -134,6 +136,10 @@ function NewButton(AOwner: TComponent; AParent: TWinControl; X, Y, W: Integer;
   const ACaption: string; AOnClick: TNotifyEvent; Accent: Boolean = False): TPPGButton;
 /// Klick per Mausnachrichten (ohne den echten Mauszeiger), fuer den Selbsttest.
 procedure DemoClick(C: TControl);
+/// Alle PPGlow-Controls unter AContainer an DemoStyles haengen (Controls,
+/// die nach dem Start entstehen, z. B. auf Komponentenseiten); AExcept und
+/// seine Kinder bleiben unberuehrt.
+procedure ApplyDemoStyles(AContainer: TWinControl; AExcept: TControl = nil);
 /// Escape fuer Markup-Text (Werte aus Eingaben).
 function MarkupEscape(const S: string): string;
 /// Deutsch formatierte Zahl mit zwei Nachkommastellen und Euro.
@@ -446,6 +452,30 @@ end;
 
 procedure TDemoPage.SelfTest(Check: TDemoCheck);
 begin
+end;
+
+type
+  TStyledAccess = class(TPPGCustomControl);
+
+procedure ApplyDemoStyles(AContainer: TWinControl; AExcept: TControl);
+var
+  I: Integer;
+  C: TControl;
+begin
+  if (AContainer = nil) or (DemoStyles = nil) or (AContainer = AExcept) then
+    Exit;
+  if (AContainer is TPPGCustomControl) and (TStyledAccess(AContainer).StyleManager = nil) then
+    TStyledAccess(AContainer).StyleManager := DemoStyles;
+  for I := 0 to AContainer.ControlCount - 1 do
+  begin
+    C := AContainer.Controls[I];
+    if C = AExcept then
+      Continue;
+    if C is TWinControl then
+      ApplyDemoStyles(TWinControl(C), AExcept)
+    else if (C is TPPGCustomControl) and (TStyledAccess(C).StyleManager = nil) then
+      TStyledAccess(C).StyleManager := DemoStyles;
+  end;
 end;
 
 procedure DemoClick(C: TControl);

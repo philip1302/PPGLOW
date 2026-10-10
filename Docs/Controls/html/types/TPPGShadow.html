@@ -9,10 +9,10 @@
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
-<tr><td><code>Size</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Weichzeichnung: so weit reicht der Schatten &#252;ber die Fl&#228;che hinaus (0..64; 0 = kein Schatten).</td></tr>
-<tr><td><code>OffsetY</code></td><td><code>Integer</code></td><td><code>2</code></td><td>Versatz nach unten (negativ: nach oben), -64..64. Gr&#246;&#223;erer Versatz wirkt „h&#246;her&quot;.</td></tr>
-<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clBlack</code></td><td>Farbe des Schattens (meist Schwarz).</td></tr>
-<tr><td><code>Opacity</code></td><td><code>Integer</code></td><td><code>64</code></td><td>Deckkraft direkt an der Kante, 0..255; nach au&#223;en nimmt sie linear ab.</td></tr>
+<tr><td><code>Size</code></td><td><code>Integer</code></td><td><code>0</code></td><td>Weichzeichnung: so weit reicht der Schatten &#252;ber die Fl&#228;che hinaus (0..64; 0 = kein Schatten). Praxis: 0 = kein Schatten. 4 f&#252;r leicht schwebende Karten-Buttons, 8 f&#252;r einen deutlich schwebenden Hauptbefehl.</td></tr>
+<tr><td><code>OffsetY</code></td><td><code>Integer</code></td><td><code>2</code></td><td>Versatz nach unten (negativ: nach oben), -64..64. Gr&#246;&#223;erer Versatz wirkt „h&#246;her&quot;. Praxis: Wie weit der Schatten nach unten f&#228;llt; 2 bis 4 wirkt nat&#252;rlich (Licht von oben).</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clBlack</code></td><td>Farbe des Schattens (meist Schwarz). Praxis: Meist Schwarz; auf farbigen Hintergr&#252;nden eine dunklere Variante des Hintergrunds wirkt weicher.</td></tr>
+<tr><td><code>Opacity</code></td><td><code>Integer</code></td><td><code>64</code></td><td>Deckkraft direkt an der Kante, 0..255; nach au&#223;en nimmt sie linear ab. Praxis: Deckkraft des Schattens, 0 bis 255. 40 bis 80 wirkt dezent.</td></tr>
 </table>
 <h2>Verwendet in</h2>
 <p><a href="../TPPGButton.html">TPPGButton</a>, <a href="../TPPGPanel.html">TPPGPanel</a></p>

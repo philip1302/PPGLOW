@@ -293,6 +293,13 @@
         <DCCReference Include="DemoPages9.pas"/>
         <DCCReference Include="DemoPages10.pas"/>
         <DCCReference Include="DemoPages11.pas"/>
+        <DCCReference Include="Showcase\DemoDocs.pas"/>
+        <DCCReference Include="Showcase\DemoInspector.pas"/>
+        <DCCReference Include="Showcase\DemoCodeGen.pas"/>
+        <DCCReference Include="Showcase\DemoShowcase.pas"/>
+        <DCCReference Include="Showcase\ExButtonDialog.pas"/>
+        <DCCReference Include="Showcase\ExButtonToolbar.pas"/>
+        <DCCReference Include="Showcase\DemoShowButton.pas"/>
         <DCCReference Include="DemoMain.pas"/>
         <DCCReference Include="..\Tests\PPG.TestDesktop.pas"/>
         <BuildConfiguration Include="Base">

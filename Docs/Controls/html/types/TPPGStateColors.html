@@ -8,14 +8,14 @@
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
-<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>F&#252;llfarbe; clDefault = nicht &#252;berschreiben.</td></tr>
-<tr><td><code>ColorTo</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Ende des Verlaufs; clDefault = nicht &#252;berschreiben.</td></tr>
-<tr><td><code>ColorMirror</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Zweite Verlaufsh&#228;lfte (Classic); clDefault = nicht &#252;berschreiben.</td></tr>
-<tr><td><code>ColorMirrorTo</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Ende der zweiten Verlaufsh&#228;lfte; clDefault = nicht &#252;berschreiben.</td></tr>
-<tr><td><code>BorderColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Randfarbe; clDefault = nicht &#252;berschreiben.</td></tr>
-<tr><td><code>GlowColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Glow-Farbe; clDefault = nicht &#252;berschreiben.</td></tr>
-<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Textfarbe; clDefault = nicht &#252;berschreiben.</td></tr>
-<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile.</td></tr>
+<tr><td><code>Color</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>F&#252;llfarbe; clDefault = nicht &#252;berschreiben. Praxis: Wie Appearance.Normal.Color, aber nur f&#252;r diesen Sonderzustand (Fokus bzw. Dark Mode). clDefault = Farbe aus dem Zustand &#252;bernehmen.</td></tr>
+<tr><td><code>ColorTo</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Ende des Verlaufs; clDefault = nicht &#252;berschreiben. Praxis: Zweite Verlaufsfarbe oben f&#252;r den Sonderzustand; clDefault = &#252;bernehmen.</td></tr>
+<tr><td><code>ColorMirror</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Zweite Verlaufsh&#228;lfte (Classic); clDefault = nicht &#252;berschreiben. Praxis: Startfarbe unten f&#252;r den Sonderzustand; clDefault = &#252;bernehmen.</td></tr>
+<tr><td><code>ColorMirrorTo</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Ende der zweiten Verlaufsh&#228;lfte; clDefault = nicht &#252;berschreiben. Praxis: Endfarbe unten f&#252;r den Sonderzustand; clDefault = &#252;bernehmen.</td></tr>
+<tr><td><code>BorderColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Randfarbe; clDefault = nicht &#252;berschreiben. Praxis: Randfarbe im Sonderzustand, z. B. Akzentfarbe solange der Button den Fokus hat.</td></tr>
+<tr><td><code>GlowColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Glow-Farbe; clDefault = nicht &#252;berschreiben. Praxis: Leuchtfarbe im Sonderzustand; clDefault = &#252;bernehmen.</td></tr>
+<tr><td><code>TextColor</code></td><td><code>TColor</code></td><td><code>clDefault</code></td><td>Textfarbe; clDefault = nicht &#252;berschreiben. Praxis: Schriftfarbe im Sonderzustand, z. B. Wei&#223; auf dunklen Fl&#228;chen im Dark Mode.</td></tr>
+<tr><td><code>FontStyle</code></td><td><code>TFontStyles</code></td><td><code>[]</code></td><td>Zus&#228;tzliche Schriftstile. Praxis: Schriftstil im Sonderzustand, z. B. fett solange der Button den Fokus hat.</td></tr>
 </table>
 <h2>Verwendet in</h2>
 <p><a href="TPPGAppearance.html">TPPGAppearance</a>, <a href="TPPGDarkColors.html">TPPGDarkColors</a></p>

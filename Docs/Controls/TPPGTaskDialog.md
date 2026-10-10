@@ -87,6 +87,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Text` |  |  | Haupttext unter dem Titel. |
 | `Title` |  |  | Fett hervorgehobene Hauptanweisung (Überschrift im Dialog). Nutzung: `PPGTaskDialog1.Title := 'Änderungen speichern?';` |
 | `VerificationText` |  |  | Text eines Kontrollkästchens unten links, z. B. „Nicht mehr anzeigen"; Zustand über Flag tfVerificationFlagChecked. |
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
 
 ## Ereignisse
 

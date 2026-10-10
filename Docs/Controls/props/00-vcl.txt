@@ -150,3 +150,37 @@ TPPGTaskDialog.OnNavigated = Navigation zu einer neuen Seite im Dialog.
 TPPGTaskDialog.OnRadioButtonClicked = Ein Optionsfeld wurde gewählt.
 TPPGTaskDialog.OnTimer = Wird etwa alle 200 ms aufgerufen (braucht Flag tfCallbackTimer), z. B. um ProgressBar fortzuschreiben.
 TPPGTaskDialog.OnVerificationClicked = Das Kontrollkästchen (VerificationText) wurde umgeschaltet.
+
+# Von TComponent: Name (Tag steht oben)
+VCL.Name = Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein.
+> `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern)
+
+# Unterobjekte der VCL, die der Objektinspektor aufklappt
+TFont.Charset = Zeichensatz der Schrift. DEFAULT_CHARSET passt für Unicode-Programme fast immer.
+TFont.Color = Schriftfarbe. Bei PPGlow-Controls gilt die Textfarbe aus Appearance, solange sie gesetzt ist.
+> `PPGButton1.Font.Color := clNavy;`
+TFont.Height = Schrifthöhe in Pixeln (negativ = Zeichenhöhe ohne Innenabstand). Wird mit Size umgerechnet; meist Size verwenden.
+TFont.Name = Schriftart, z. B. „Segoe UI" (Windows-Standard) oder „Segoe UI Variable Text" (Windows 11).
+> `PPGButton1.Font.Name := 'Segoe UI';`
+TFont.Orientation = Drehung des Textes in Zehntelgrad (900 = senkrecht nach oben). Nur für besondere Beschriftungen.
+TFont.Pitch = Zeichenbreite: fpDefault, fpFixed (gleich breit wie in Code-Schriften) oder fpVariable.
+TFont.Size = Schriftgröße in Punkt; 9 bis 10 ist Windows-Standard. Skaliert mit der DPI.
+> `PPGButton1.Font.Size := 11;`
+TFont.Style = Schriftstil: fsBold (fett), fsItalic (kursiv), fsUnderline (unterstrichen), fsStrikeOut (durchgestrichen).
+> `PPGButton1.Font.Style := [fsBold];`
+TFont.Quality = Kantenglättung: fqDefault (Windows-Einstellung), fqClearType, fqAntialiased, fqNonAntialiased.
+TSizeConstraints.MaxHeight = Größte erlaubte Höhe in Pixeln; 0 = keine Grenze.
+TSizeConstraints.MaxWidth = Größte erlaubte Breite in Pixeln; 0 = keine Grenze.
+TSizeConstraints.MinHeight = Kleinste erlaubte Höhe in Pixeln; 0 = keine Grenze.
+TSizeConstraints.MinWidth = Kleinste erlaubte Breite in Pixeln; 0 = keine Grenze.
+> `PPGButton1.Constraints.MinWidth := 80;`
+TMargins.Left = Abstand links in Pixeln, wenn AlignWithMargins = True.
+TMargins.Top = Abstand oben in Pixeln, wenn AlignWithMargins = True.
+TMargins.Right = Abstand rechts in Pixeln, wenn AlignWithMargins = True.
+TMargins.Bottom = Abstand unten in Pixeln, wenn AlignWithMargins = True.
+> `PPGButton1.Margins.SetBounds(4, 4, 4, 4);`
+TTouchManager.GestureManager = Gesten-Manager (TGestureManager) mit eigenen, aufgezeichneten Gesten. Ohne Manager gibt es nur die Standardgesten.
+TTouchManager.InteractiveGestureOptions = Feineinstellungen der interaktiven Gesten (z. B. Trägheit, Ein-Finger-Schwenken).
+TTouchManager.InteractiveGestures = Erlaubte interaktive Gesten: Zoomen, Schwenken, Drehen, Zwei-Finger-Tippen, Drücken und Tippen, langes Drücken.
+TTouchManager.ParentTabletOptions = True: TabletOptions vom Parent übernehmen.
+TTouchManager.TabletOptions = Verhalten bei Stift-Eingabe (z. B. Rechtsklick durch Drücken und Halten).

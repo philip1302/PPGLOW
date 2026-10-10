@@ -44,6 +44,13 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Margins` | [TPPGPrintMargins](types/TPPGPrintMargins.md) |  | Seitenränder in Millimetern (Left, Top, Right, Bottom; je 15 mm vorgegeben). Auch im Dialog „Seite einrichten" änderbar. |
 | `PrinterName` | `string` |  | Name des Druckers; leer = Standarddrucker. Für PDF z. B. „Microsoft Print to PDF" mit PrintToFile. Nutzung: `PPGGridPrinter1.PrintToFile('Microsoft Print to PDF', 'C:\Export\Liste.pdf');` |
 
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+
 Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Custom` (TCustomRestTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---

@@ -1,7 +1,12 @@
 # PPGlow – Stand und nächste Schritte
 
 ## Stand (10.10.2026)
-- **Zuletzt fertig: Audit-Paket 11** (Tests, Build, Demo, Doku; Umsetzung und Abweichungen in `Docs\Audit-Paket11-Plan.md`, Abschnitt Umsetzung). Tests prüfen jetzt wirklich: zentrale Fehlerprüfung im TearDown, fehlende Referenzbilder sind Fehler (`/baseline`), übersprungene Tests sind rot (`/allowskip`), keine Zeitgrenzen in Unit-Tests (Benchmark `Bench11`), Regel TESTS im Regel-Prüfer. Dabei gefunden und behoben: 3 verdeckte Fehler (Kontextmenü per Shift+F10, Splitter, DB-Controls beim Zerstören), 2 Darstellungsfehler (Wizard deaktiviert, Kanban-Fokus), fehlender Fehlertext an Auswahlgruppen (`ValidationHint`).
+- **Zuletzt fertig: neue Demo mit Komponentenseiten, erste Seite `TPPGButton`** (Zweig `claude/showcase-button`, noch nicht gemergt, Bericht an den User erfolgt, weitere Komponenten erst nach OK).
+  - Konzept, Technik und Ablauf „neue Komponentenseite anlegen“ stehen in `Docs\Demo-Komponentenseiten.md`.
+  - Navigation nach 13 Funktionsgruppen; je Komponente Bühne + Objektinspektor (alle 248 Eigenschaften/Ereignisse des Buttons live änderbar und erklärt: Wirkung, Beispiel, Praxis), Ereignis-Protokoll, Pascal-Code und DFM, zwei Praxisbeispiele mit ihrem Quelltext, Überblick aus der Notiz.
+  - Praxis-Texte in `Docs\Controls\props\90-praxis.txt` (`Klasse.Name ! Text`); `make-docs.ps1 -Missing` verlangt sie für fertige Komponenten.
+  - Demo-Selbsttest 247/247, 1818 Tests grün.
+- **Davor: Audit-Paket 11** (Tests, Build, Demo, Doku; Umsetzung und Abweichungen in `Docs\Audit-Paket11-Plan.md`, Abschnitt Umsetzung). Tests prüfen jetzt wirklich: zentrale Fehlerprüfung im TearDown, fehlende Referenzbilder sind Fehler (`/baseline`), übersprungene Tests sind rot (`/allowskip`), keine Zeitgrenzen in Unit-Tests (Benchmark `Bench11`), Regel TESTS im Regel-Prüfer. Dabei gefunden und behoben: 3 verdeckte Fehler (Kontextmenü per Shift+F10, Splitter, DB-Controls beim Zerstören), 2 Darstellungsfehler (Wizard deaktiviert, Kanban-Fokus), fehlender Fehlertext an Auswahlgruppen (`ValidationHint`).
 - **Fertig:** Phasen 1–14c (ohne 14d), 17–20, Anpassbarkeit sowie die Audit-Pakete 1–8 und 11 (Plan und Fortschritt: `Docs\Audit-Plan.md`). 84 Paletten-Controls (67 PPGlow, 17 PPGlow DB), **1818 Tests Win32/Win64, 0 übersprungen**, Demo mit 20 Seiten (Selbsttest 205 Prüfungen). Phase 14d entfällt, Phase 15 ist zurückgestellt (Arbeitgeber), Phase 16 und 21 sind offen.
 - **Branch:** Arbeitszweig `claude/task-elizkl` (GitHub `philip1302/ppglow`); Pakete werden parallel in Worktrees auf eigenen Zweigen gebaut und danach dorthin gemergt. Hängt eine alte Batch-IDE (`bds.exe -rPPGlowBuild`, nur per Neustart zu beenden), scheitert `git merge` an gesperrten Artefakten; dann über `git merge-tree --write-tree` + `commit-tree` zusammenführen.
 - **Installiert:** Stand 08.10.2026 (Anpassbarkeit, alle Phasen bis 14c, inkl. DB-Pakete, Win32 und Win64). **Seit dem 08.10.2026 ist nichts installiert:** Die Property-Nacharbeiten vom 08.10., die Phasen 17–20 und die Audit-Pakete 1–8 fehlen in der IDE (Prüfliste unten).
@@ -24,6 +29,7 @@ powershell -ExecutionPolicy Bypass -File Build\make-docs.ps1 -Missing C:\pfad\fe
 ```
 
 ## Nächste Wahl (mit dem User abstimmen)
+- **Vorrang (Vorführung beim Arbeitgeber):** weitere Komponentenseiten nach `Docs\Demo-Komponentenseiten.md`, je Komponente nach OK des Users; danach Installation und IDE-Prüfung.
 - Audit-Paket 9 (Architektur) oder 10 (XE2, `Docs\Kompatibilitaet.md`) aus `Docs\Audit-Plan.md`.
 - Phase 16 (Demo-Tour, Kommando-Palette, `Docs\Phase16-Plan.md`).
 - Phase 21 (LayoutControl, Inspector, FilterBuilder) erst nach einer Inventur eines echten Projekts; `Build\inventory.ps1` ist noch zu bauen (`Docs\Umstellung-Kundenprojekt-Plan.md`).
@@ -97,6 +103,8 @@ Tests\PPGlowTests.exe /leaksuites /hidden   # Leck-Suche: Zuwachs je Testklasse 
 # /baseline (Referenzbilder bewusst neu anlegen) und /allowskip: siehe Docs\Coding-Rules.md, Abschnitt Testintegrität
 Tests\Bench\PPGlowBench.exe /hidden         # Benchmark (vorher build.ps1 -Projects Bench -Config Release)
 Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt /hidden   # Szenarien aller Demo-Seiten
+Demo\PPGlowDemo.exe /show TPPGButton /tab 1 /showcode /screenshot C:\pfad\x.png /hidden   # Komponentenseite (/bottomtab n, /select Pfad)
+powershell -ExecutionPolicy Bypass -File Build\make-showcase.ps1 [-Check]   # Demo\Showcase\ShowcaseData.res (Texte, Notizen, Beispielcode); laeuft in build.ps1 mit
 # Aufnahmen (/datepopup, /toastcapture, /ribboncapture, /busycapture, /screencapture) zeigen nur Fenster
 #   der Demo (keine fremden Fenster, keine Bildschirmpixel) und gehen auch mit /hidden.
 # Generatoren (Ergebnis wird eingecheckt):

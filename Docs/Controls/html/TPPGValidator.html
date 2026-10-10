@@ -49,6 +49,12 @@ if not PPGValidator1.Validate then
 <tr><td><code>SubmitControl</code></td><td><code>TControl</code></td><td></td><td>Control (meist der OK- oder Speichern-Knopf), das gesperrt ist, solange ein Pflichtfeld leer ist. Andere Regeln z&#228;hlen hier nicht, damit der Knopf nicht bei jedem Tastendruck flackert.</td></tr>
 <tr><td><code>Wizard</code></td><td><code>TPPGWizard</code></td><td></td><td>Assistent, dessen „Weiter“ erst geht, wenn die Felder der aktuellen Seite g&#252;ltig sind; der Validator h&#228;ngt sich in OnCanAdvance ein (ein vorhandener Handler l&#228;uft zuerst).</td></tr>
 </table>
+<h2>Eigenschaften wie in der VCL</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Name</code></td><td><code>TComponentName</code></td><td></td><td>Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein g&#252;ltiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: <code>PPGButton1.Name := &#39;btnSpeichern&#39;;</code> (meist nur im Objektinspektor &#228;ndern)</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td></td><td>Freier Ganzzahlwert f&#252;r eigene Zwecke (z. B. eine ID oder einen Zeiger).</td></tr>
+</table>
 <h2>Ereignisse</h2>
 <table>
 <tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>

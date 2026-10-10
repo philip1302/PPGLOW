@@ -1,0 +1,167 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseiten.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGButton ---
+TPPGButton.Action ! Für Befehle, die an mehreren Stellen stehen (Menü, Symbolleiste, Button): eine Action in der ActionList anlegen und allen zuweisen. Sperren Sie sie zentral über actSpeichern.Enabled, statt jeden Button einzeln zu schalten.
+TPPGButton.Align ! Für Leisten am Fensterrand: OK/Abbrechen in ein Panel mit Align = alBottom legen, die Buttons darin mit Align = alRight. Freie Buttons in Formularen bleiben alNone.
+TPPGButton.AlignWithMargins ! Zusammen mit Align einschalten, damit ausgerichtete Buttons nicht am Rand kleben. Die Abstände stellen Sie unter Margins ein (typisch 4 bis 8).
+TPPGButton.Anchors ! Für Dialoge mit veränderbarer Größe: OK/Abbrechen unten rechts bekommen [akRight, akBottom], dann bleiben sie beim Vergrößern in der Ecke.
+TPPGButton.AutoSize ! Bei übersetzten Oberflächen einschalten: Der Button wächst mit dem Text („Speichern" vs. „Save"). Bei Button-Reihen gleicher Breite ausgeschaltet lassen.
+TPPGButton.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern. Am Formular setzen und alle Controls über ParentBiDiMode folgen lassen; Bild und Text werden dann gespiegelt.
+TPPGButton.Caption ! Kurz und als Verb formulieren („Speichern", „Exportieren …"). Ein & vor einem Buchstaben vergibt die Zugriffstaste (Alt+S); drei Punkte zeigen an, dass ein Dialog folgt.
+TPPGButton.Color ! Beim Button selten nötig: Die Flächenfarben je Zustand stellen Sie in Appearance ein. Color wirkt nur auf den Hintergrund außerhalb der gerundeten Fläche.
+TPPGButton.Constraints ! Wenn ein Button mit AutoSize oder Align nicht zu schmal oder zu breit werden soll: MinWidth = 80 hält Buttons in Button-Leisten einheitlich.
+TPPGButton.Cursor ! crHandPoint für Buttons, die wie Links wirken sollen; sonst crDefault lassen, Windows-Buttons zeigen den Pfeil.
+TPPGButton.CustomHint ! Für Hinweise mit Titel und Symbol: einen TBalloonHint oder TPPGCustomHint aufs Formular legen und hier zuweisen. Für die ganze Anwendung ist TPPGHintManager bequemer.
+TPPGButton.DoubleBuffered ! Bei PPGlow-Controls nicht nötig, sie zeichnen immer flackerfrei. Steht nur da, damit alte Formulare ohne Fehler laden.
+TPPGButton.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar: z. B. crDrag beim Umsortieren von Buttons in einer Symbolleiste.
+TPPGButton.DragKind ! dkDrag für Drag & Drop (Button auf ein anderes Control ziehen), dkDock nur, wenn der Button in andockbaren Leisten verschoben werden soll.
+TPPGButton.DragMode ! Für Buttons fast immer dmManual lassen, sonst startet jeder Klick ein Ziehen. dmAutomatic nur in Editoren, in denen Buttons umgestellt werden.
+TPPGButton.Enabled ! Sperren Sie Befehle, die gerade nicht gehen, statt einen Fehler zu melden: btnSpeichern.Enabled := Dokument.Geaendert. Gesperrte Buttons bekommen keinen Fokus.
+TPPGButton.Font ! Für einen hervorgehobenen Hauptbefehl Font.Style = [fsBold] oder etwas größer. Die Textfarbe je Zustand kommt aus Appearance (TextColor), nicht aus Font.Color.
+TPPGButton.Height ! 32 Pixel ist die Windows-11-Höhe für Buttons, 24 für kompakte Symbolleisten. Bei hoher DPI skaliert die VCL selbst.
+TPPGButton.HelpContext ! Nur mit einer Hilfedatei sinnvoll: die Kontext-ID der Seite eintragen, die F1 bei fokussiertem Button öffnen soll.
+TPPGButton.HelpKeyword ! Wie HelpContext, aber über ein Stichwort (HelpType = htKeyword); praktisch bei HTML-Hilfen mit Stichwortverzeichnis.
+TPPGButton.HelpType ! htKeyword, wenn Sie Stichwörter pflegen, sonst htContext mit Kontext-IDs. Ohne Hilfedatei egal.
+TPPGButton.Hint ! Für Symbol-Buttons ohne Text Pflicht: Der Hint sagt, was der Button tut („Speichern (Strg+S)"). Zeigen Sie ihn mit ShowHint am Formular an.
+TPPGButton.Left ! Position im Designer per Maus; im Code nur bei dynamisch erzeugten Buttons setzen, z. B. Btn.SetBounds(X, Y, 100, 32).
+TPPGButton.Margins ! Abstand zu Nachbarn bei Align, z. B. Margins.Right = 8 zwischen OK und Abbrechen in einer rechts ausgerichteten Leiste. Wirkt nur mit AlignWithMargins.
+TPPGButton.ParentBackground ! True lassen: Dann sieht man hinter den gerundeten Ecken die Farbe des Panels oder der Karte, auf der der Button liegt.
+TPPGButton.ParentBiDiMode ! True lassen, damit der Button der Leserichtung des Formulars folgt.
+TPPGButton.ParentColor ! True, wenn der Bereich außerhalb der Button-Fläche die Farbe des Parents haben soll; meist zusammen mit ParentBackground.
+TPPGButton.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGButton.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGButton.ParentFont ! True lassen, damit alle Buttons die Formularschrift tragen. Ändern Sie Font, wird es automatisch False.
+TPPGButton.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten, dann zeigen alle Controls ihre Hints.
+TPPGButton.PopupMenu ! Für zusätzliche Befehle per Rechtsklick, z. B. „Als Vorlage speichern" am Speichern-Button. Für ein Menü per Klick nehmen Sie DropDownMenu.
+TPPGButton.ShowHint ! Einmal am Formular einschalten statt an jedem Button; dann bleibt ParentShowHint True.
+TPPGButton.StyleElements ! Nur bei VCL-Styles wichtig: Nehmen Sie seClient heraus, wenn ein Akzent-Button seine eigenen Farben behalten soll.
+TPPGButton.TabOrder ! In Dialogen so vergeben, dass Tab von oben nach unten durch die Felder läuft und OK/Abbrechen zuletzt kommen.
+TPPGButton.TabStop ! True lassen, damit der Button per Tastatur erreichbar ist. False nur für reine Symbol-Buttons in Symbolleisten, die auch per Tastenkürzel erreichbar sind.
+TPPGButton.Tag ! Für gleichartige Buttons mit einem gemeinsamen OnClick: Tag = 1, 2, 3 unterscheidet sie (TPPGButton(Sender).Tag).
+TPPGButton.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Buttons.
+TPPGButton.Touch ! Nur für Touch-Geräte: Gesten anhaken (z. B. Wischen) und in OnGesture auswerten. Für normale Klicks nicht nötig.
+TPPGButton.Visible ! Blenden Sie Befehle aus, die der Anwender nie nutzen darf (fehlendes Recht). Was nur gerade nicht geht, besser mit Enabled = False sperren.
+TPPGButton.Width ! 100 bis 120 Pixel für Dialog-Buttons; gleich breite Buttons in einer Reihe wirken ruhiger. Mit AutoSize bestimmt der Text die Breite.
+TPPGButton.OnClick ! Hier steht die eigentliche Aktion des Buttons. Er feuert auch bei Leertaste, Enter (Default) und Esc (Cancel), deshalb Logik nicht in OnMouseDown schreiben.
+TPPGButton.OnContextPopup ! Um das Kontextmenü vor dem Öffnen anzupassen (Einträge sperren) oder mit Handled := True ganz zu unterdrücken.
+TPPGButton.OnDragDrop ! Wenn etwas auf den Button gezogen werden darf, z. B. Dateien auf einen „Anhängen"-Button: hier das Ablegen verarbeiten.
+TPPGButton.OnDragOver ! Zusammen mit OnDragDrop: Accept := Source is TPPGListBox erlaubt das Ablegen nur für passende Quellen.
+TPPGButton.OnEndDock ! Nur bei DragKind = dkDock: melden, wo der Button angedockt wurde (z. B. Leistenposition speichern).
+TPPGButton.OnEndDrag ! Nach dem Ziehen des Buttons: Target = nil heißt abgebrochen; sonst z. B. die neue Reihenfolge speichern.
+TPPGButton.OnEnter ! Für Hilfetexte in der Statusleiste („Speichert das Dokument"), sobald der Button per Tab den Fokus bekommt.
+TPPGButton.OnExit ! Beim Button selten gebraucht; z. B. um einen Hilfetext in der Statusleiste wieder zu löschen.
+TPPGButton.OnGesture ! Auf Touch-Geräten: Wischgesten auf einem großen Button auswerten (EventInfo.GestureID).
+TPPGButton.OnKeyDown ! Für zusätzliche Tasten am fokussierten Button, z. B. Entf zum Löschen. Enter, Leertaste und Esc erledigt der Button schon selbst.
+TPPGButton.OnKeyPress ! Selten für Buttons; Zeichentasten lösen keinen Klick aus. Für Kürzel besser die Zugriffstaste (&) in Caption nehmen.
+TPPGButton.OnKeyUp ! Für Aktionen, die beim Loslassen einer Taste enden sollen, z. B. Vorschau nur solange Strg gedrückt ist.
+TPPGButton.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster, die beim Klick nicht aktiv werden sollen) ändern; sonst nicht belegen.
+TPPGButton.OnMouseDown ! Für Aktionen, die beim Drücken starten, z. B. eine Wiederholung solange gedrückt. Die normale Aktion gehört in OnClick.
+TPPGButton.OnMouseEnter ! Um beim Überfahren eine Vorschau oder Erklärung zu zeigen (z. B. in einer Statuszeile). Die Hover-Optik macht der Button selbst.
+TPPGButton.OnMouseLeave ! Gegenstück zu OnMouseEnter: Vorschau oder Erklärung wieder ausblenden.
+TPPGButton.OnMouseMove ! Selten für Buttons; feuert bei jeder Mausbewegung. Für Hover-Effekte reicht Appearance.Hot.
+TPPGButton.OnMouseUp ! Gegenstück zu OnMouseDown, z. B. die Wiederholung stoppen. Für die Aktion selbst OnClick nehmen.
+TPPGButton.OnMouseWheel ! Selten für Buttons; z. B. um mit dem Rad über einem „+/−"-Button einen Wert zu ändern. Handled := True verhindert das Scrollen des Parents.
+TPPGButton.OnStartDock ! Nur bei DragKind = dkDock: eigenes Dock-Objekt beim Beginn des Andockens setzen.
+TPPGButton.OnStartDrag ! Beim Ziehen eines Buttons (DragMode = dmAutomatic) ein eigenes DragObject setzen, z. B. mit Vorschaubild.
+TPPGButton.Preset ! Legen Sie die Optik einmal für die ganze Anwendung fest, am besten über einen TPPGStyleManager. Fluent11 passt zu Windows 11, ModernFlat zu flachen Business-Oberflächen, Classic zu älteren Office-artigen Programmen.
+TPPGButton.StyleManager ! Einen TPPGStyleManager aufs Formular (oder ein Datenmodul) legen und allen Controls zuweisen. Dann wechselt ein einziger Befehl die Optik aller Controls, auch Hell/Dunkel.
+TPPGButton.Appearance ! Für einzelne Hervorhebungen, z. B. einen roten „Löschen"-Button: Normal, Hot und Down einfärben. Für eine einheitliche Markenfarbe besser ein Preset bzw. den StyleManager anpassen.
+TPPGButton.Animation ! An lassen; die Übergänge wirken ruhiger. RespectSystemSettings = True schaltet sie aus, wenn der Anwender in Windows Animationen abgeschaltet hat.
+TPPGButton.Images ! Eine Bildliste für alle Buttons des Formulars anlegen (bei hoher DPI eine TVirtualImageList) und hier zuweisen.
+TPPGButton.ImageIndex ! Symbol des Buttons aus Images. Symbole helfen beim Wiederfinden häufiger Befehle; bei seltenen Befehlen reicht Text.
+TPPGButton.ImageName ! Ab Delphi 10.4 besser als ImageIndex: Der Name bleibt richtig, auch wenn die Bildliste umsortiert wird.
+TPPGButton.HotImageIndex ! Für ein farbiges Symbol beim Überfahren, während es in Ruhe grau ist. Meist reicht ImageTint.
+TPPGButton.DisabledImageIndex ! Nur, wenn das automatisch grau gezeichnete Symbol nicht gut aussieht; dann ein eigenes graues Bild angeben.
+TPPGButton.PressedImageIndex ! Für Umschalt-Buttons mit zwei Symbolen, z. B. „Abspielen" in Ruhe und „Pause" im eingerasteten Zustand (Down).
+TPPGButton.HotImageName ! Wie HotImageIndex, aber über den Namen des Bildes (TVirtualImageList).
+TPPGButton.DisabledImageName ! Wie DisabledImageIndex, aber über den Namen des Bildes (TVirtualImageList).
+TPPGButton.PressedImageName ! Wie PressedImageIndex, aber über den Namen des Bildes (TVirtualImageList).
+TPPGButton.ImageTint ! Für einfarbige Symbole einschalten: Das Symbol hat dann immer die Textfarbe, auch im Dark Mode und auf Akzent-Buttons, ohne zweite Bildliste.
+TPPGButton.ImagePosition ! ipLeft für normale Buttons, ipTop für große Kachel-Buttons (Symbol über dem Text, z. B. im Startbildschirm).
+TPPGButton.Spacing ! Abstand Symbol–Text; die Vorgabe 4 passt meist. Bei großen Symbolen (32 px) etwas mehr, z. B. 8.
+TPPGButton.WordWrap ! Für lange Beschriftungen in schmalen Buttons, z. B. Kachel-Buttons mit zweizeiligem Text. Höhe dann mit AutoSize oder von Hand anpassen.
+TPPGButton.ShowFocusRect ! True lassen, damit Tastaturbenutzer sehen, wo der Fokus ist (Barrierefreiheit). Abschalten nur bei Buttons ohne TabStop.
+TPPGButton.HighContrastSupport ! True lassen: Sehbehinderte Anwender mit Hochkontrast sehen dann klare Systemfarben. Nur für reine Vorschau-Flächen abschalten.
+TPPGButton.RoundedCorners ! Für Segment- und Button-Gruppen: aneinanderliegende Buttons innen eckig, außen rund. Einzelne Buttons behalten alle vier Ecken.
+TPPGButton.Shadow ! Für schwebende Hauptbefehle (z. B. ein runder „+"-Button über einer Liste) Size 4 bis 8 setzen. Normale Dialog-Buttons ohne Schatten lassen.
+TPPGButton.Alignment ! taLeftJustify für Buttons, die wie Menüeinträge untereinander stehen (Symbol und Text links bündig). Sonst taCenter.
+TPPGButton.AllowAllUp ! True für Umschalter, die auch ganz aus sein dürfen, z. B. „Fett". False, wenn genau einer der Gruppe gedrückt sein muss, z. B. die Ausrichtung links/mitte/rechts.
+TPPGButton.Cancel ! Beim Abbrechen-Button eines Dialogs auf True setzen (mit ModalResult = mrCancel). Dann schließt Esc den Dialog.
+TPPGButton.Default ! Beim Hauptbutton eines Dialogs (OK, Speichern) auf True setzen. Dann bestätigt Enter den Dialog; der Button ist optisch hervorgehoben.
+TPPGButton.Down ! Zustand eines Umschalters lesen oder setzen, z. B. btnFett.Down := Text.Fett beim Wechsel des Absatzes. Setzen im Code löst kein OnClick aus.
+TPPGButton.DropDownMenu ! Für Buttons mit Varianten: „Exportieren" mit Menü „Als PDF / Als Excel". Mit Style = pbsSplitButton führt der Hauptteil die häufigste Variante direkt aus.
+TPPGButton.GroupIndex ! Gleiche Zahl > 0 für Buttons, die sich gegenseitig ausschließen (wie Optionsfelder), z. B. 1 für die drei Ausrichtungs-Buttons einer Formatleiste.
+TPPGButton.Margin ! Für Menü-artige Buttons mit linksbündigem Inhalt einen festen Abstand vom Rand setzen, z. B. 12, damit Symbole untereinander exakt fluchten.
+TPPGButton.ModalResult ! In modalen Dialogen auf OK mrOk und Abbrechen mrCancel setzen: Der Klick schließt den Dialog ohne eigenen Code, und ShowModal liefert den Wert.
+TPPGButton.OnDropDownClick ! Um das Menü vor dem Öffnen anzupassen, z. B. die zuletzt benutzten Ziele eintragen oder Einträge sperren.
+TPPGButton.Style ! pbsSplitButton, wenn ein Befehl eine häufige Standardvariante und weitere Varianten hat; sonst pbsPushButton.
+TPPGButton.Name ! Sprechende Namen vergeben (btnSpeichern, btnAbbrechen) statt PPGButton1: Der Code in OnClick und anderen Stellen wird dadurch lesbar.
+
+# --- Typen (Appearance, Animation, Schatten) und VCL-Unterobjekte: gelten fuer alle Controls ---
+TPPGAppearance.Normal ! Grundoptik in Ruhe. Für einen farbigen Button Color, ColorTo, BorderColor und TextColor gemeinsam setzen.
+TPPGAppearance.Hot ! Optik beim Überfahren: etwas heller oder dunkler als Normal, damit der Anwender sieht, dass er klicken kann.
+TPPGAppearance.Down ! Optik beim Drücken: deutlich dunkler als Hot. Gibt Rückmeldung, dass der Klick angekommen ist.
+TPPGAppearance.Disabled ! Optik gesperrt: blass und mit gedämpfter Schrift, damit klar ist, dass der Button gerade nicht geht.
+TPPGAppearance.Checked ! Optik eingerastet (Down bei GroupIndex > 0): kräftig genug, dass der aktive Umschalter auf einen Blick erkennbar ist.
+TPPGAppearance.FocusColor ! Farbe des Fokusrings. Gut sichtbar wählen (Akzentfarbe oder Schwarz), damit Tastaturbenutzer den Fokus finden.
+TPPGAppearance.Rounding ! 0 für eckige Business-Optik, 4 für Windows 11, Höhe/2 für Pillen-Buttons.
+TPPGAppearance.BorderWidth ! 1 ist üblich; 2 für einen deutlich umrandeten „Outline"-Button, 0 für flache Symbolleisten-Buttons.
+TPPGAppearance.GlowSize ! Leuchtrand beim Überfahren: 0 = aus (Fluent-Stil), 2 bis 4 für die typische ModernFlat-/Glow-Optik.
+TPPGAppearance.Focused ! Eigene Farben, solange der Button den Fokus hat. clDefault lassen, wenn die Normaloptik plus Fokusring reicht.
+TPPGAppearance.Dark ! Eigene Farben für den Dark Mode. Wichtig, wenn Sie Normal/Hot/Down selbst eingefärbt haben: sonst bleibt der Button im Dunkeln hell.
+TPPGStateStyle.Color ! Hauptfarbe der Fläche im jeweiligen Zustand. Für eine einfarbige Fläche Color, ColorTo, ColorMirror und ColorMirrorTo gleich setzen.
+TPPGStateStyle.ColorTo ! Zweite Farbe des Verlaufs der oberen Hälfte. Gleich Color für eine flache Fläche.
+TPPGStateStyle.ColorMirror ! Startfarbe der unteren Hälfte (Glanzeffekt im Classic-Stil). Gleich Color für flache Optik.
+TPPGStateStyle.ColorMirrorTo ! Endfarbe der unteren Hälfte. Gleich Color für flache Optik.
+TPPGStateStyle.BorderColor ! Randfarbe. Etwas dunkler als die Fläche wirkt plastisch; gleich der Fläche wirkt flach.
+TPPGStateStyle.GlowColor ! Farbe des Leuchtrands (sichtbar mit GlowSize > 0), meist die Akzentfarbe.
+TPPGStateStyle.GlowAlpha ! Deckkraft des Leuchtrands, 0 bis 255. 60 bis 120 wirkt dezent, 255 sehr kräftig.
+TPPGStateStyle.TextColor ! Schriftfarbe im Zustand. Auf dunklen Flächen Weiß, auf hellen Schwarz; auf ausreichenden Kontrast achten (mindestens 4,5:1).
+TPPGStateStyle.GradientDirection ! gdVertical für klassische Buttons (Licht von oben), gdHorizontal für breite Leisten-Buttons.
+TPPGStateStyle.FontStyle ! Z. B. [fsBold] im Zustand Checked, damit der aktive Umschalter auch ohne Farbe erkennbar ist.
+TPPGStateColors.Color ! Wie Appearance.Normal.Color, aber nur für diesen Sonderzustand (Fokus bzw. Dark Mode). clDefault = Farbe aus dem Zustand übernehmen.
+TPPGStateColors.ColorTo ! Zweite Verlaufsfarbe oben für den Sonderzustand; clDefault = übernehmen.
+TPPGStateColors.ColorMirror ! Startfarbe unten für den Sonderzustand; clDefault = übernehmen.
+TPPGStateColors.ColorMirrorTo ! Endfarbe unten für den Sonderzustand; clDefault = übernehmen.
+TPPGStateColors.BorderColor ! Randfarbe im Sonderzustand, z. B. Akzentfarbe solange der Button den Fokus hat.
+TPPGStateColors.GlowColor ! Leuchtfarbe im Sonderzustand; clDefault = übernehmen.
+TPPGStateColors.TextColor ! Schriftfarbe im Sonderzustand, z. B. Weiß auf dunklen Flächen im Dark Mode.
+TPPGStateColors.FontStyle ! Schriftstil im Sonderzustand, z. B. fett solange der Button den Fokus hat.
+TPPGDarkColors.Normal ! Ruhe-Optik im Dark Mode für selbst eingefärbte Buttons, z. B. ein dunkleres Rot für „Löschen".
+TPPGDarkColors.Hot ! Hover-Optik im Dark Mode; meist etwas heller als Dark.Normal.
+TPPGDarkColors.Down ! Gedrückt-Optik im Dark Mode.
+TPPGDarkColors.Disabled ! Gesperrt-Optik im Dark Mode.
+TPPGDarkColors.Checked ! Eingerastet-Optik im Dark Mode.
+TPPGDarkColors.Focused ! Fokus-Optik im Dark Mode.
+TPPGDarkColors.FocusColor ! Farbe des Fokusrings im Dark Mode; hell wählen, damit er auf dunklem Grund sichtbar ist.
+TPPGAnimationSettings.Enabled ! An lassen. Aus nur, wenn ein Button sehr oft schnell hintereinander umgefärbt wird (z. B. Blinken).
+TPPGAnimationSettings.Duration ! 150 ms wirkt flüssig und nicht träge. Länger als 300 ms wirkt langsam.
+TPPGAnimationSettings.RespectSystemSettings ! True lassen: Anwender, die in Windows Animationen abschalten (z. B. wegen Schwindel), bekommen dann keine.
+TPPGShadow.Size ! 0 = kein Schatten. 4 für leicht schwebende Karten-Buttons, 8 für einen deutlich schwebenden Hauptbefehl.
+TPPGShadow.OffsetY ! Wie weit der Schatten nach unten fällt; 2 bis 4 wirkt natürlich (Licht von oben).
+TPPGShadow.Color ! Meist Schwarz; auf farbigen Hintergründen eine dunklere Variante des Hintergrunds wirkt weicher.
+TPPGShadow.Opacity ! Deckkraft des Schattens, 0 bis 255. 40 bis 80 wirkt dezent.
+TFont.Charset ! Nicht ändern; DEFAULT_CHARSET ist für Unicode-Programme richtig.
+TFont.Color ! Bei PPGlow-Buttons die Textfarbe lieber in Appearance (TextColor je Zustand) setzen, dann stimmt sie auch bei Hover und im Dark Mode.
+TFont.Height ! Statt Height besser Size verwenden; Height nur, wenn eine exakte Pixelhöhe gefordert ist.
+TFont.Name ! Am Formular einstellen und über ParentFont vererben, damit die ganze Oberfläche dieselbe Schrift hat.
+TFont.Orientation ! Für normale Buttons 0 lassen; gedrehter Text ist schwer lesbar.
+TFont.Pitch ! fpDefault lassen; fpFixed nur für Code- oder Tabellenschriften.
+TFont.Size ! 9 oder 10 für normale Buttons, 11 bis 12 für hervorgehobene Hauptbefehle oder Touch-Oberflächen.
+TFont.Style ! [fsBold] für den wichtigsten Befehl einer Seite; Unterstreichen vermeiden, es sieht wie ein Link aus.
+TFont.Quality ! fqDefault lassen; Windows wählt dann ClearType nach der Systemeinstellung.
+TSizeConstraints.MaxHeight ! Begrenzt das Wachsen bei AutoSize mit WordWrap, damit lange Texte den Button nicht zu hoch machen.
+TSizeConstraints.MaxWidth ! Begrenzt die Breite bei AutoSize, z. B. 240, damit übersetzte Texte nicht ausufern.
+TSizeConstraints.MinHeight ! Hält die Mindesthöhe, z. B. 32 für gut klickbare Buttons auch bei kleiner Schrift.
+TSizeConstraints.MinWidth ! Hält Buttons in einer Reihe einheitlich breit, z. B. 80 für OK/Abbrechen.
+TMargins.Left ! Abstand zum linken Nachbarn bei Align = alLeft oder alClient.
+TMargins.Top ! Abstand nach oben bei Align = alTop oder alClient.
+TMargins.Right ! Abstand zum rechten Nachbarn, z. B. 8 zwischen rechts ausgerichteten OK- und Abbrechen-Buttons.
+TMargins.Bottom ! Abstand nach unten bei Align = alBottom oder alClient.
+TTouchManager.GestureManager ! Nur bei eigenen Gesten nötig: einen TGestureManager aufs Formular legen und hier zuweisen.
+TTouchManager.InteractiveGestureOptions ! Vorgaben lassen, außer Sie werten Zoom- oder Schwenkgesten selbst aus.
+TTouchManager.InteractiveGestures ! Für Buttons meist leer lassen; interaktive Gesten sind für Bilder, Karten und Listen gedacht.
+TTouchManager.ParentTabletOptions ! True lassen, damit alle Controls das Stift-Verhalten des Formulars haben.
+TTouchManager.TabletOptions ! Vorgaben lassen; nur bei Stift-Anwendungen anpassen.

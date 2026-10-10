@@ -36,6 +36,12 @@
 <tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>Ein- und Ausblenden der Toasts wie Animation der Controls: Enabled = False schaltet ab, Duration und Easing steuern den Verlauf. Toasts gleiten ein und aus, der Stapel r&#252;ckt animiert nach (nur, wenn Windows Animationen erlaubt).</td></tr>
 <tr><td><code>RespectQuietHours</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: L&#228;uft eine Vollbild-Anwendung oder Pr&#228;sentation, warten neue Toasts, bis sie beendet ist.</td></tr>
 </table>
+<h2>Eigenschaften wie in der VCL</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Name</code></td><td><code>TComponentName</code></td><td></td><td>Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein g&#252;ltiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: <code>PPGButton1.Name := &#39;btnSpeichern&#39;;</code> (meist nur im Objektinspektor &#228;ndern)</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td></td><td>Freier Ganzzahlwert f&#252;r eigene Zwecke (z. B. eine ID oder einen Zeiger).</td></tr>
+</table>
 <h2>Ereignisse</h2>
 <table>
 <tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>

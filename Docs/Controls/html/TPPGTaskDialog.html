@@ -69,6 +69,8 @@ if PPGTaskDialog1.Execute and (PPGTaskDialog1.ModalResult = 101) then
 <tr><td><code>Text</code></td><td></td><td></td><td>Haupttext unter dem Titel.</td></tr>
 <tr><td><code>Title</code></td><td></td><td></td><td>Fett hervorgehobene Hauptanweisung (&#220;berschrift im Dialog). Nutzung: <code>PPGTaskDialog1.Title := &#39;&#196;nderungen speichern?&#39;;</code></td></tr>
 <tr><td><code>VerificationText</code></td><td></td><td></td><td>Text eines Kontrollk&#228;stchens unten links, z. B. „Nicht mehr anzeigen&quot;; Zustand &#252;ber Flag tfVerificationFlagChecked.</td></tr>
+<tr><td><code>Name</code></td><td><code>TComponentName</code></td><td></td><td>Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein g&#252;ltiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: <code>PPGButton1.Name := &#39;btnSpeichern&#39;;</code> (meist nur im Objektinspektor &#228;ndern)</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td></td><td>Freier Ganzzahlwert f&#252;r eigene Zwecke (z. B. eine ID oder einen Zeiger).</td></tr>
 </table>
 <h2>Ereignisse</h2>
 <table>

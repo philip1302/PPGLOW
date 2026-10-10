@@ -21,6 +21,11 @@ program PPGlowDemo;
     /ribboncapture <modus> <datei.png>  Ribbon: keytips, keytips2, minimized, group, groupkeys, gallery
     /busycapture <modus> <datei.png>    Bestellung: busy (Warte-Overlay) oder errors (Validator)
     /mica [/screencapture <datei.png>]  Prototyp Mica-Hintergrund
+    /show <Klasse>           Komponentenseite zeigen (z.B. TPPGButton)
+    /tab <n>                 dort Reiter n: 0 Ausprobieren, 1.. Praxisbeispiele, zuletzt Ueberblick
+    /bottomtab <n>           unten rechts: 0 Ereignisse, 1 Code (Pascal), 2 DFM
+    /showcode                in den Praxisbeispielen den Code einblenden
+    /select <Pfad>           Eigenschaft im Inspektor waehlen (z.B. Appearance.Normal.Color)
     /selftest <datei.txt>    Szenarien aller Seiten pruefen, Exit-Code = Fehlerzahl
     /hidden                  auf eigenem Windows-Desktop laufen (keine Fenster auf dem Bildschirm) }
 
@@ -189,14 +194,26 @@ uses
   DemoPages9 in 'DemoPages9.pas',
   DemoPages10 in 'DemoPages10.pas',
   DemoPages11 in 'DemoPages11.pas',
+  DemoDocs in 'Showcase\DemoDocs.pas',
+  DemoInspector in 'Showcase\DemoInspector.pas',
+  DemoCodeGen in 'Showcase\DemoCodeGen.pas',
+  DemoShowcase in 'Showcase\DemoShowcase.pas',
+  ExButtonDialog in 'Showcase\ExButtonDialog.pas',
+  ExButtonToolbar in 'Showcase\ExButtonToolbar.pas',
+  DemoShowButton in 'Showcase\DemoShowButton.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}
+// Texte und Beispielquellen der Komponentenseiten (Build\make-showcase.ps1)
+{$R 'Showcase\ShowcaseData.res'}
 
 var
   Form: TDemoForm;
   I: Integer;
   ShotFile: string;
+  ShowCls: string;
+  ShowTab, BottomTab: Integer;
+  SelectPath: string;
   Tick: Cardinal;
 begin
   // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
@@ -212,6 +229,10 @@ begin
   Application.CreateForm(TDemoForm, Form);
 
   ShotFile := '';
+  ShowCls := '';
+  ShowTab := -1;
+  BottomTab := -1;
+  SelectPath := '';
   for I := 1 to ParamCount - 1 do
   begin
     if SameText(ParamStr(I), '/screenshot') then
@@ -227,6 +248,14 @@ begin
       Form.ApplyTheme(ParamStr(I + 1));
     if SameText(ParamStr(I), '/page') then
       Form.ShowPage(StrToIntDef(ParamStr(I + 1), 0));
+    if SameText(ParamStr(I), '/show') then
+      ShowCls := ParamStr(I + 1);
+    if SameText(ParamStr(I), '/tab') then
+      ShowTab := StrToIntDef(ParamStr(I + 1), 0);
+    if SameText(ParamStr(I), '/bottomtab') then
+      BottomTab := StrToIntDef(ParamStr(I + 1), 0);
+    if SameText(ParamStr(I), '/select') then
+      SelectPath := ParamStr(I + 1);
     // /scroll y  -> aktive Seite scrollen (nach /page)
     if SameText(ParamStr(I), '/scroll') then
       Form.ScrollActivePage(StrToIntDef(ParamStr(I + 1), 0));
@@ -234,6 +263,10 @@ begin
     if SameText(ParamStr(I), '/height') then
       Form.ClientHeight := StrToIntDef(ParamStr(I + 1), Form.ClientHeight);
   end;
+
+  if ShowCls <> '' then
+    Form.ShowShowcase(ShowCls, ShowTab, BottomTab, SelectPath,
+      FindCmdLineSwitch('showcode', ['/', '-'], True));
 
   if ShotFile <> '' then
   begin

@@ -8,9 +8,9 @@ Steuert die Übergangsanimationen eines Controls (Hover, Drücken, Fokus, Aufkla
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `Enabled` | `Boolean` | `True` | False: Zustandswechsel ohne Überblendung. |
-| `Duration` | `Integer` | `PPGDefaultAnimationDuration` | Dauer einer Überblendung in Millisekunden (Standard 150). |
-| `RespectSystemSettings` | `Boolean` | `True` | True: Ist in Windows „Animationen anzeigen" aus, wird nicht animiert. |
+| `Enabled` | `Boolean` | `True` | False: Zustandswechsel ohne Überblendung. Praxis: An lassen. Aus nur, wenn ein Button sehr oft schnell hintereinander umgefärbt wird (z. B. Blinken). |
+| `Duration` | `Integer` | `PPGDefaultAnimationDuration` | Dauer einer Überblendung in Millisekunden (Standard 150). Praxis: 150 ms wirkt flüssig und nicht träge. Länger als 300 ms wirkt langsam. |
+| `RespectSystemSettings` | `Boolean` | `True` | True: Ist in Windows „Animationen anzeigen" aus, wird nicht animiert. Praxis: True lassen: Anwender, die in Windows Animationen abschalten (z. B. wegen Schwindel), bekommen dann keine. |
 
 ## Verwendet in
 

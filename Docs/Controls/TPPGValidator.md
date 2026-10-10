@@ -56,6 +56,13 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `SubmitControl` | `TControl` |  | Control (meist der OK- oder Speichern-Knopf), das gesperrt ist, solange ein Pflichtfeld leer ist. Andere Regeln zählen hier nicht, damit der Knopf nicht bei jedem Tastendruck flackert. |
 | `Wizard` | `TPPGWizard` |  | Assistent, dessen „Weiter“ erst geht, wenn die Felder der aktuellen Seite gültig sind; der Validator hängt sich in OnCanAdvance ein (ein vorhandener Handler läuft zuerst). |
 
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+
 ## Ereignisse
 
 | Ereignis | Typ und Parameter | Wann und wozu |

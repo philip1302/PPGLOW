@@ -60,6 +60,13 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Preset` | `string` |  | Optik-Vorlage der Blase ('' = Standard bzw. StyleManager). |
 | `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben. |
 
+## Eigenschaften wie in der VCL
+
+| Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
+|---|---|---|---|
+| `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
+| `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
+
 ## Ereignisse
 
 | Ereignis | Typ und Parameter | Wann und wozu |

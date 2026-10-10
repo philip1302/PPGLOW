@@ -193,6 +193,21 @@ function Get-PublishedProps($Model, [string]$Name) {
   $chain = Get-ClassChain $Model $Name
   $names = New-Object System.Collections.Generic.List[string]
   foreach ($c in $chain) { foreach ($n in $c.Published) { if (-not $names.Contains($n)) { $names.Add($n) } } }
+  # Was die VCL selbst schon published (TControl, TComponent), steht in keiner
+  # PPGlow-Unit, erscheint aber im Objektinspektor (Vcl.Controls, Delphi 13)
+  if ($chain.Count -gt 0) {
+    $root = $chain[$chain.Count - 1].Parent
+    $vclBase = @()
+    if ($root -match '^(TControl|TWinControl|TCustomControl|TGraphicControl|TCustomPanel|TScrollingWinControl|TCustomForm|TCustomTaskDialog)$' -and
+        $root -ne 'TCustomTaskDialog') {
+      $vclBase += @('AlignWithMargins', 'Left', 'Top', 'Width', 'Height', 'Cursor', 'Hint', 'HelpType',
+        'HelpKeyword', 'HelpContext', 'Margins', 'CustomHint', 'ParentCustomHint')
+    }
+    if ($root -match '^(TComponent|TControl|TWinControl|TCustomControl|TGraphicControl|TCustomPanel|TScrollingWinControl|TCustomForm|TCustomTaskDialog|TPopupMenu|TCustomHint|TMainMenu)$') {
+      $vclBase += @('Name', 'Tag')
+    }
+    foreach ($n in $vclBase) { if (-not $names.Contains($n)) { $names.Add($n) } }
+  }
   $result = New-Object System.Collections.Generic.List[object]
   foreach ($n in $names) {
     $type = ''; $decl = $null; $def = ''; $hasDef = $false; $cmt = ''; $ro = $false
