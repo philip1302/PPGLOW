@@ -747,6 +747,10 @@ begin
             if CheckNested(ControlClasses[CI], PInfo, Errors, Unchanged) then
               Inc(Checked);
           except
+            // Fehlschlag einer Pruefung sofort melden; alle anderen Fehler
+            // (auch Zugriffsverletzungen) sammeln und unten pruefen
+            on ETestFailure do
+              raise;
             on E: Exception do
               Errors.Add(Format('%s.%s: %s: %s', [ControlClasses[CI].ClassName, PName, E.ClassName,
                 E.Message]));
