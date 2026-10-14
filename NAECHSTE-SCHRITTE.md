@@ -109,6 +109,7 @@ Tests\PPGlowTests.exe /leaksuites /hidden   # Leck-Suche: Zuwachs je Testklasse 
 Tests\Bench\PPGlowBench.exe /hidden         # Benchmark (vorher build.ps1 -Projects Bench -Config Release)
 Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt /hidden   # Szenarien aller Demo-Seiten
 Demo\PPGlowDemo.exe /show TPPGButton /tab 1 /showcode /screenshot C:\pfad\x.png /hidden   # Komponentenseite (/bottomtab n, /select Pfad)
+Demo\PPGlowDemo.exe /effects C:\pfad\effects.txt /only TPPGGrid /hidden   # Wirkungstest: welche Eigenschaften das Bild nicht aendern (Docs\Wirkungstest-TPPGGrid.md)
 powershell -ExecutionPolicy Bypass -File Build\make-showcase.ps1 [-Check]   # Demo\Showcase\ShowcaseData.res (Texte, Notizen, Beispielcode); laeuft in build.ps1 mit
 # Aufnahmen (/datepopup, /toastcapture, /ribboncapture, /busycapture, /screencapture) zeigen nur Fenster
 #   der Demo (keine fremden Fenster, keine Bildschirmpixel) und gehen auch mit /hidden.

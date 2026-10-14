@@ -367,6 +367,15 @@ begin
       Exit;
     end;
 
+  // /effects datei.txt /only TPPGx: Wirkungstest einer Komponentenseite
+  for I := 1 to ParamCount - 1 do
+    if SameText(ParamStr(I), '/effects') then
+    begin
+      Form.Show;
+      ExitCode := Form.RunEffectTest(ParamStr(I + 1), OnlyCls);
+      Exit;
+    end;
+
   // /datepopup datei.png: DatePicker aufklappen, Fenster speichern
   for I := 1 to ParamCount - 1 do
     if SameText(ParamStr(I), '/datepopup') then

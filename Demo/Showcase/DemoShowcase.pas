@@ -278,6 +278,10 @@ type
     function UniqueName(const ABase: string): string;
     function MemoFor(AParent: TWinControl): TPPGMemo;
     procedure ShowExplanation(Node: TDemoPropNode; const AError: string = '');
+    /// Anderer Wert fuer eine Zeile (Rundlauf und Wirkungstest); False = keiner.
+    function ChangedValueText(N: TDemoPropNode; Row: TDemoInspRow; out AValue: string): Boolean;
+    /// Prueflinge des Rundlaufs: bearbeitbare Zeilen ohne Ausnahmen.
+    function EditablePath(N: TDemoPropNode): Boolean;
   protected
     FCommonImages: TCustomImageList;
     FMenu: TPPGPopupMenu;
@@ -301,6 +305,14 @@ type
     /// Eigenschaft im Selbsttest-Rundlauf (setzen/zuruecksetzen) auslassen;
     /// AReason erscheint im Bericht. Nur fuer fachlich begruendete Faelle.
     function SkipInRoundTrip(Node: TDemoPropNode; var AReason: string): Boolean; virtual;
+    /// Wirkungstest (/effects): Anzahl der Zustaende, in denen jede Eigenschaft
+    /// geprueft wird (z. B. ohne Fokus, mit Fokus und Maus, dunkel). Vorgabe 1.
+    function EffectStateCount: Integer; virtual;
+    /// Zustand Index einmal herstellen (nach ResetSubject: Daten, Gruppen,
+    /// Auswahl ...); Ergebnis = Name des Zustands fuer den Bericht.
+    function ApplyEffectState(Index: Integer): string; virtual;
+    /// Vor jeder Aufnahme: fluechtige Zustaende erneuern (Fokus, Maus).
+    procedure RefreshEffectState(Index: Integer); virtual;
     /// Eigenschaft, die beim Oeffnen und nach "Alles zuruecksetzen" gewaehlt
     /// ist (Erklaerung unten links). Vorgabe: Caption, sonst Text, sonst die
     /// erste Eigenschaft.
@@ -325,6 +337,10 @@ type
     destructor Destroy; override;
     procedure AppearanceChanged; override;
     procedure SelfTest(Check: TDemoCheck); override;
+    /// Wirkungstest: jede bearbeitbare Eigenschaft in jedem Zustand setzen und
+    /// pruefen, ob sich das Bild der Komponente aendert. Bericht nach Report;
+    /// Ergebnis = Anzahl Eigenschaften ohne sichtbare Wirkung.
+    function EffectTest(Report: TStrings): Integer;
     /// Buehne und Inspektor auf den Ausgangszustand (frische Komponente).
     procedure ResetSubject;
     /// Reiter waehlen: 0 = Ausprobieren, 1.. = Praxisbeispiele, danach Ueberblick.
@@ -1385,6 +1401,356 @@ begin
     V.ShowCode(True);
 end;
 
+function TDemoComponentPage.EditablePath(N: TDemoPropNode): Boolean;
+begin
+  Result := False;
+  if (N.Kind in [pkObject, pkEvent, pkOther, pkCollection, pkItem]) or N.ReadOnly then
+    Exit;
+  if (N.Parent = nil) and SameText(N.Name, 'Name') then
+    Exit;
+  // Ausgerichtete Controls (Align <> alNone) bestimmen ihre Lage selbst
+  if (N.Parent = nil) and (FSubject is TControl) and (TControl(FSubject).Align <> alNone) and
+    (SameText(N.Name, 'Left') or SameText(N.Name, 'Top') or SameText(N.Name, 'Width') or
+    SameText(N.Name, 'Height')) then
+    Exit;
+  Result := True;
+end;
+
+function TDemoComponentPage.ChangedValueText(N: TDemoPropNode; Row: TDemoInspRow;
+  out AValue: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  AValue := '';
+  case N.Kind of
+    pkBoolean:
+      if N.GetOrd(FSubject) <> 0 then AValue := 'False' else AValue := 'True';
+    pkInteger, pkInt64:
+      AValue := IntToStr(N.GetOrd(FSubject) + 1);
+    pkColor:
+      if N.GetOrd(FSubject) = clRed then AValue := 'clBlue' else AValue := 'clRed';
+    pkString:
+      if Row.Editor is TPPGEdit then
+        AValue := N.GetStr(FSubject) + 'x';
+    pkStrings:
+      AValue := N.GetStr(FSubject) + 'Neue Zeile';
+    pkSet:
+      if TPPGCheckGroup(Row.Editor).Items.Count > 0 then
+      begin
+        if TPPGCheckGroup(Row.Editor).Checked[0] then
+          AValue := ''
+        else
+          AValue := TPPGCheckGroup(Row.Editor).Items[0];
+      end;
+  end;
+  if Row.Editor is TPPGComboBox then
+  begin
+    // Einen anderen Eintrag der Liste waehlen
+    AValue := '';
+    for I := 0 to TPPGComboBox(Row.Editor).Items.Count - 1 do
+      if I <> TPPGComboBox(Row.Editor).ItemIndex then
+      begin
+        AValue := TPPGComboBox(Row.Editor).Items[I];
+        Break;
+      end;
+    if AValue = '' then
+      Exit;
+  end;
+  if N.Kind = pkFloat then
+    AValue := FloatToStr(GetFloatProp(N.OwnerIn(FSubject), N.Info) + 1,
+      TFormatSettings.Create('en-US'));
+  if N.Kind = pkChar then
+  begin
+    if N.GetOrd(FSubject) = Ord('x') then AValue := 'y' else AValue := 'x';
+  end;
+  if (N.Kind = pkString) and (AValue = '') and not (Row.Editor is TPPGComboBox) then
+    Exit;
+  Result := True;
+end;
+
+function TDemoComponentPage.EffectStateCount: Integer;
+begin
+  Result := 1;
+end;
+
+function TDemoComponentPage.ApplyEffectState(Index: Integer): string;
+begin
+  Result := 'Grundzustand';
+end;
+
+procedure TDemoComponentPage.RefreshEffectState(Index: Integer);
+begin
+end;
+
+type
+  TDemoSavedValue = record
+    Ord: Int64;
+    Str: string;
+    Flt: Extended;
+    Obj: TObject;
+  end;
+
+function SaveNodeValue(N: TDemoPropNode; ARoot: TObject): TDemoSavedValue;
+begin
+  Result.Ord := 0;
+  Result.Str := '';
+  Result.Flt := 0;
+  Result.Obj := nil;
+  case N.Kind of
+    pkString, pkStrings:
+      Result.Str := N.GetStr(ARoot);
+    pkFloat:
+      Result.Flt := GetFloatProp(N.OwnerIn(ARoot), N.Info);
+    pkComponent:
+      Result.Obj := N.GetObj(ARoot);
+  else
+    Result.Ord := N.GetOrd(ARoot);
+  end;
+end;
+
+procedure RestoreNodeValue(N: TDemoPropNode; ARoot: TObject; const V: TDemoSavedValue);
+begin
+  case N.Kind of
+    pkString, pkStrings:
+      N.SetStr(ARoot, V.Str);
+    pkFloat:
+      SetFloatProp(N.OwnerIn(ARoot), N.Info, V.Flt);
+    pkComponent:
+      N.SetObj(ARoot, V.Obj);
+  else
+    N.SetOrd(ARoot, V.Ord);
+  end;
+end;
+
+/// Bild der Komponente (Fenster-Controls ueber PaintTo, sonst die Buehne).
+procedure CaptureSubject(Subject: TComponent; Stage: TWinControl; Bmp: TBitmap);
+var
+  Host: TWinControl;
+begin
+  if Subject is TWinControl then
+    Host := TWinControl(Subject)
+  else
+    Host := Stage;
+  Bmp.PixelFormat := pf32bit;
+  Bmp.SetSize(Max(1, Host.Width), Max(1, Host.Height));
+  Bmp.Canvas.Brush.Color := clFuchsia;
+  Bmp.Canvas.FillRect(Rect(0, 0, Bmp.Width, Bmp.Height));
+  Host.HandleNeeded;
+  // Lock: sonst gibt die VCL den Bitmap-DC nach der naechsten Nachricht frei
+  Bmp.Canvas.Lock;
+  try
+    Host.PaintTo(Bmp.Canvas.Handle, 0, 0);
+  finally
+    Bmp.Canvas.Unlock;
+  end;
+end;
+
+/// Anzahl unterschiedlicher Pixel; andere Groesse = alle Pixel.
+function PixelDiff(A, B: TBitmap): Integer;
+var
+  X, Y: Integer;
+  PA, PB: PCardinal;
+begin
+  if (A.Width <> B.Width) or (A.Height <> B.Height) then
+    Exit(Max(A.Width * A.Height, B.Width * B.Height));
+  Result := 0;
+  for Y := 0 to A.Height - 1 do
+  begin
+    PA := A.ScanLine[Y];
+    PB := B.ScanLine[Y];
+    for X := 0 to A.Width - 1 do
+    begin
+      if (PA^ and $FFFFFF) <> (PB^ and $FFFFFF) then
+        Inc(Result);
+      Inc(PA);
+      Inc(PB);
+    end;
+  end;
+end;
+
+function TDemoComponentPage.EffectTest(Report: TStrings): Integer;
+var
+  S, I, Idx, Px: Integer;
+  Paths, Hits, Errs, Cur, Vals, Cands: TStringList;
+  J: Integer;
+  Hit: Boolean;
+  All: TList<TDemoPropNode>;
+  N: TDemoPropNode;
+  Row: TDemoInspRow;
+  Value, Reason, StateName: string;
+  Saved: TDemoSavedValue;
+  Before, After: TBitmap;
+  B1, B2: TRect;
+  OldMode: TPPGThemeMode;
+  Line: string;
+  Count: array[0..2] of Integer;
+begin
+  EnsureBuilt;
+  ShowTab(0);
+  OldMode := TPPGTheme.Mode;
+  Paths := TStringList.Create;
+  Hits := TStringList.Create;
+  Errs := TStringList.Create;
+  Cur := TStringList.Create;
+  Vals := TStringList.Create;
+  Cands := TStringList.Create;
+  All := TList<TDemoPropNode>.Create;
+  Before := TBitmap.Create;
+  After := TBitmap.Create;
+  Report.Add('Wirkungstest ' + SubjectClass.ClassName);
+  Report.Add('Je Eigenschaft: anderen Wert setzen (wie im Rundlauf), Bild vorher/nachher ' +
+    'vergleichen, alten Wert wiederherstellen. Gewertet wird jeder Zustand.');
+  try
+    for S := 0 to EffectStateCount - 1 do
+    begin
+      ResetSubject;
+      StateName := ApplyEffectState(S);
+      // Der Zustand kann Eintraege anlegen (Collections): Inspektor neu aufbauen
+      FInspector.Inspect(FSubject, FReference);
+      Application.ProcessMessages;
+      RefreshEffectState(S);
+      Line := Format('Zustand %d: %s', [S, StateName]);
+      if FSubject is TWinControl then
+        Line := Line + Format(' (Fokus: %s)', [BoolToStr(TWinControl(FSubject).Focused, True)]);
+      CaptureSubject(FSubject, FStage, Before);
+      RefreshEffectState(S);
+      CaptureSubject(FSubject, FStage, After);
+      Px := PixelDiff(Before, After);
+      if Px > 0 then
+        Line := Line + Format(' - ACHTUNG: Bild ohne Aenderung nicht stabil (%d px)', [Px]);
+      Report.Add(Line);
+      All.Clear;
+      FInspector.Model.GetAll(All);
+      Cur.Clear;
+      for N in All do
+        if EditablePath(N) and not SkipInRoundTrip(N, Reason) then
+          Cur.Add(N.Path);
+      for I := 0 to Cur.Count - 1 do
+      begin
+        Idx := Paths.IndexOf(Cur[I]);
+        if Idx < 0 then
+        begin
+          Idx := Paths.Add(Cur[I]);
+          Hits.Add('');
+          Errs.Add('');
+          Vals.Add('');
+        end;
+        N := FInspector.Model.Find(Cur[I]);
+        if N = nil then
+          Continue;
+        Row := FInspector.RowOf(Cur[I]);
+        if (Row = nil) or (Row.Editor = nil) then
+        begin
+          Errs[Idx] := 'ohne Editor';
+          Continue;
+        end;
+        if not ChangedValueText(N, Row, Value) then
+        begin
+          Errs[Idx] := 'kein anderer Wert';
+          Continue;
+        end;
+        // Auswahllisten: alle anderen Eintraege (bis 8) probieren, bis einer wirkt
+        Cands.Clear;
+        if Row.Editor is TPPGComboBox then
+        begin
+          for J := 0 to TPPGComboBox(Row.Editor).Items.Count - 1 do
+            if (J <> TPPGComboBox(Row.Editor).ItemIndex) and (Cands.Count < 8) then
+              Cands.Add(TPPGComboBox(Row.Editor).Items[J]);
+        end
+        else
+          Cands.Add(Value);
+        Saved := SaveNodeValue(N, FSubject);
+        for J := 0 to Cands.Count - 1 do
+        begin
+          Value := Cands[J];
+          Vals[Idx] := Value;
+          RefreshEffectState(S);
+          CaptureSubject(FSubject, FStage, Before);
+          B1 := Rect(0, 0, 0, 0);
+          if FSubject is TControl then
+            B1 := TControl(FSubject).BoundsRect;
+          FErrors.Clear;
+          if not FInspector.SetValueText(Cur[I], Value) then
+          begin
+            Errs[Idx] := 'setzen ' + Value + ': ' + Trim(FErrors.Text);
+            Break;
+          end;
+          RefreshEffectState(S);
+          CaptureSubject(FSubject, FStage, After);
+          B2 := B1;
+          if FSubject is TControl then
+            B2 := TControl(FSubject).BoundsRect;
+          Px := PixelDiff(Before, After);
+          if Pos(';' + Cur[I] + ';', ';' + GetEnvironmentVariable('PPG_EFFECTS_DUMP') + ';') > 0 then
+          begin
+            Before.SaveToFile(Format('%sfx-%d-%s-a.bmp', [ExtractFilePath(ParamStr(0)), S, Cur[I]]));
+            After.SaveToFile(Format('%sfx-%d-%s-b.bmp', [ExtractFilePath(ParamStr(0)), S, Cur[I]]));
+          end;
+          Hit := (Px > 0) or not EqualRect(B1, B2);
+          if Hit then
+            Hits[Idx] := Hits[Idx] + Format('%d:%dpx ', [S, Px]);
+          N := FInspector.Model.Find(Cur[I]);
+          if N <> nil then
+            try
+              RestoreNodeValue(N, FSubject, Saved);
+              // Groesse und Lage wie vorher (Align, Constraints aendern sie mit)
+              if (FSubject is TControl) and not EqualRect(TControl(FSubject).BoundsRect, B1) then
+                TControl(FSubject).BoundsRect := B1;
+            except
+              on E: Exception do
+                Errs[Idx] := 'wiederherstellen: ' + E.Message;
+            end;
+          Application.ProcessMessages;
+          if Hit or (N = nil) then
+            Break;
+        end;
+      end;
+    end;
+    Count[0] := 0;
+    Count[1] := 0;
+    Count[2] := 0;
+    for I := 0 to Paths.Count - 1 do
+      if Hits[I] <> '' then
+        Inc(Count[0])
+      else if Errs[I] <> '' then
+        Inc(Count[2])
+      else
+        Inc(Count[1]);
+    Report.Add('');
+    Report.Add(Format('%d Eigenschaften: %d mit sichtbarer Wirkung, %d OHNE, %d nicht geprueft',
+      [Paths.Count, Count[0], Count[1], Count[2]]));
+    Report.Add('');
+    Report.Add('== OHNE sichtbare Wirkung (in keinem Zustand) ==');
+    for I := 0 to Paths.Count - 1 do
+      if (Hits[I] = '') and (Errs[I] = '') then
+        Report.Add('OHNE    ' + Paths[I] + '  (Testwert: ' + Vals[I] + ')');
+    Report.Add('');
+    Report.Add('== Nicht geprueft ==');
+    for I := 0 to Paths.Count - 1 do
+      if (Hits[I] = '') and (Errs[I] <> '') then
+        Report.Add('PRUEF   ' + Paths[I] + ' - ' + Errs[I]);
+    Report.Add('');
+    Report.Add('== Mit Wirkung (Zustand:Pixel) ==');
+    for I := 0 to Paths.Count - 1 do
+      if Hits[I] <> '' then
+        Report.Add('WIRKT   ' + Paths[I] + '  ' + Trim(Hits[I]));
+    Result := Count[1];
+  finally
+    TPPGTheme.Mode := OldMode;
+    ResetSubject;
+    Before.Free;
+    After.Free;
+    All.Free;
+    Cur.Free;
+    Vals.Free;
+    Cands.Free;
+    Errs.Free;
+    Hits.Free;
+    Paths.Free;
+  end;
+end;
+
 procedure TDemoComponentPage.SelfTest(Check: TDemoCheck);
 var
   All: TList<TDemoPropNode>;
@@ -1432,16 +1798,9 @@ begin
     Edited := 0;
     for N in All do
     begin
-      if (N.Kind in [pkObject, pkEvent, pkOther, pkCollection, pkItem]) or N.ReadOnly then
-        Continue;
-      if (N.Parent = nil) and SameText(N.Name, 'Name') then
+      if not EditablePath(N) then
         Continue;
       Reason := '';
-      // Ausgerichtete Controls (Align <> alNone) bestimmen ihre Lage selbst
-      if (N.Parent = nil) and (FSubject is TControl) and (TControl(FSubject).Align <> alNone) and
-        (SameText(N.Name, 'Left') or SameText(N.Name, 'Top') or SameText(N.Name, 'Width') or
-        SameText(N.Name, 'Height')) then
-        Continue;
       if SkipInRoundTrip(N, Reason) then
       begin
         Skipped := Skipped + ' ' + N.Path + ' (' + Reason + ')';
@@ -1453,49 +1812,7 @@ begin
         Failed := Failed + ' ' + N.Path + '(ohne Editor)';
         Continue;
       end;
-      Value := '';
-      case N.Kind of
-        pkBoolean:
-          if N.GetOrd(FSubject) <> 0 then Value := 'False' else Value := 'True';
-        pkInteger, pkInt64:
-          Value := IntToStr(N.GetOrd(FSubject) + 1);
-        pkColor:
-          if N.GetOrd(FSubject) = clRed then Value := 'clBlue' else Value := 'clRed';
-        pkString:
-          if Row.Editor is TPPGEdit then
-            Value := N.GetStr(FSubject) + 'x';
-        pkStrings:
-          Value := N.GetStr(FSubject) + 'Neue Zeile';
-        pkSet:
-          if TPPGCheckGroup(Row.Editor).Items.Count > 0 then
-          begin
-            if TPPGCheckGroup(Row.Editor).Checked[0] then
-              Value := ''
-            else
-              Value := TPPGCheckGroup(Row.Editor).Items[0];
-          end;
-      end;
-      if Row.Editor is TPPGComboBox then
-      begin
-        // Einen anderen Eintrag der Liste waehlen
-        Value := '';
-        for I := 0 to TPPGComboBox(Row.Editor).Items.Count - 1 do
-          if I <> TPPGComboBox(Row.Editor).ItemIndex then
-          begin
-            Value := TPPGComboBox(Row.Editor).Items[I];
-            Break;
-          end;
-        if Value = '' then
-          Continue;
-      end;
-      if N.Kind = pkFloat then
-        Value := FloatToStr(GetFloatProp(N.OwnerIn(FSubject), N.Info) + 1,
-          TFormatSettings.Create('en-US'));
-      if N.Kind = pkChar then
-      begin
-        if N.GetOrd(FSubject) = Ord('x') then Value := 'y' else Value := 'x';
-      end;
-      if (N.Kind = pkString) and (Value = '') and not (Row.Editor is TPPGComboBox) then
+      if not ChangedValueText(N, Row, Value) then
         Continue;
       if not FInspector.SetValueText(N.Path, Value) then
       begin

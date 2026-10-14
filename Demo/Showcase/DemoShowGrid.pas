@@ -31,6 +31,9 @@ type
     procedure SetupSubject(ASubject: TComponent); override;
     function InitialPath: string; override;
     function SkipInRoundTrip(Node: TDemoPropNode; var AReason: string): Boolean; override;
+    function EffectStateCount: Integer; override;
+    function ApplyEffectState(Index: Integer): string; override;
+    procedure RefreshEffectState(Index: Integer); override;
     procedure BuildExamples; override;
     procedure CategoryFor(Sender: TObject; const AName: string; var ACategory: string); override;
     procedure EventOccurred(const AName, ADetail: string); override;
@@ -42,7 +45,8 @@ implementation
 
 uses
   Winapi.Windows, System.IOUtils, System.Variants, Vcl.Graphics, PPG.Grid.Columns,
-  PPG.Grid.Data, PPG.Grid.Styles, PPG.Xlsx, PPG.Edit;
+  PPG.Grid.Data, PPG.Grid.Styles, PPG.Xlsx, PPG.Edit, Winapi.Messages, System.Types, Vcl.Grids,
+  PPG.Theme;
 
 const
   // Buehne: Datenspalten
@@ -129,6 +133,68 @@ begin
     SameText(Node.Name, 'FixedCols'));
   if Result then
     AReason := 'Vorgabe-Instanz nach der Code-Erzeugung mit ColCount = 1, Geruest-Fehler';
+end;
+
+function TDemoShowGridPage.EffectStateCount: Integer;
+begin
+  Result := 4;
+end;
+
+function TDemoShowGridPage.ApplyEffectState(Index: Integer): string;
+var
+  G: TPPGGrid;
+  R: TGridRect;
+  F: TPPGGridConditionalFormat;
+begin
+  // Alle Bereiche, die Styles faerben koennen, sichtbar machen: Filterzeile,
+  // Summenzeile, Gruppenleiste, Gruppen mit Fuss, Auswahl, bedingtes Format
+  G := Subject as TPPGGrid;
+  G.Height := 420;
+  G.ShowFilterRow := True;
+  G.ShowFooter := True;
+  G.ShowGroupPanel := True;
+  G.GroupFooter := True;
+  G.GroupBy([StageState]);
+  F := G.ConditionalFormats.Add as TPPGGridConditionalFormat;
+  F.Column := StageSales;
+  F.Rule := crRange;
+  F.Value1 := '10000';
+  R.Left := 1;
+  R.Top := 3;
+  R.Right := 2;
+  R.Bottom := 4;
+  G.Selection := R;
+  case Index of
+    0: Result := 'ohne Fokus, Auswahl, Gruppen, Filter- und Summenzeile, bedingtes Format';
+    1: Result := 'wie 0, dazu Fokus und Maus ueber einer Zeile (HotRow)';
+    2:
+      begin
+        TPPGTheme.Mode := tmDark;
+        Result := 'wie 1, Dark Mode';
+      end;
+  else
+    TPPGTheme.Mode := tmDark;
+    Result := 'wie 0, Dark Mode (Auswahl ohne Fokus)';
+  end;
+end;
+
+procedure TDemoShowGridPage.RefreshEffectState(Index: Integer);
+var
+  G: TPPGGrid;
+  C: TRect;
+begin
+  G := Subject as TPPGGrid;
+  if Index in [0, 3] then
+  begin
+    if G.Focused then
+      Inspector.FilterEdit.SetFocus;
+    Exit;
+  end;
+  if not G.Focused and G.CanFocus then
+    G.SetFocus;
+  // Maus ueber der letzten sichtbaren Datenzeile (nicht in der Auswahl)
+  C := G.CellRect(2, G.RowCount - 2);
+  G.Perform(WM_MOUSEMOVE, 0, MakeLParam((C.Left + C.Right) div 2, (C.Top + C.Bottom) div 2));
 end;
 
 function TDemoShowGridPage.InitialPath: string;
