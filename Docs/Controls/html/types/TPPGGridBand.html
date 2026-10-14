@@ -7,9 +7,9 @@
 <h2>Eigenschaften</h2>
 <table>
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
-<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>&#220;berschrift des Bands &#252;ber seinen Spalten.</td></tr>
-<tr><td><code>ParentBand</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>&#220;bergeordnetes Band (Index in Grid.Bands) f&#252;r mehrstufige K&#246;pfe; -1 = oberste Ebene.</td></tr>
-<tr><td><code>Alignment</code></td><td><code>TAlignment</code></td><td><code>taCenter</code></td><td>Ausrichtung der Band-&#220;berschrift (links, zentriert, rechts).</td></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>&#220;berschrift des Bands &#252;ber seinen Spalten. Praxis: Kurzer Oberbegriff &#252;ber den Spalten: „Anschrift“, „Kontakt“, „Q1 2026“.</td></tr>
+<tr><td><code>ParentBand</code></td><td><code>Integer</code></td><td><code>-1</code></td><td>&#220;bergeordnetes Band (Index in Grid.Bands) f&#252;r mehrstufige K&#246;pfe; -1 = oberste Ebene. Praxis: F&#252;r zweistufige K&#246;pfe: „2026“ als oberes Band, darunter „Q1“ bis „Q4“ mit ParentBand = 0. Mehr als zwei Ebenen werden schnell un&#252;bersichtlich.</td></tr>
+<tr><td><code>Alignment</code></td><td><code>TAlignment</code></td><td><code>taCenter</code></td><td>Ausrichtung der Band-&#220;berschrift (links, zentriert, rechts). Praxis: Zentriert lassen, das liest sich &#252;ber mehreren Spalten am besten; links nur bei sehr breiten B&#228;ndern.</td></tr>
 </table>
 <h2>Verwendet in</h2>
 <p><a href="TPPGGridBands.html">TPPGGridBands</a></p>

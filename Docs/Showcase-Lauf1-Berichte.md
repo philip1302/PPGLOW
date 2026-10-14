@@ -63,3 +63,8 @@
 ## TPPGMaskEdit (07fb38cf) 22/0
 - KOMPONENTE (wichtig): TPPGMaskEdit.Text umgeht TCustomMaskEdit.Text (PPG.Controls.Field GetText/SetText ~1654 über TCustomEdit): Maske ";0;" wirkt nicht, Text := '' löscht Platzhalter; FieldClear/SetFieldValue(Null) betroffen. Fix: Text-Zugriff in TPPGCustomMaskEdit auf die Masken-Logik umleiten + Test.
 - VCL: ValidateInput prüft nur Pflichtstellen, nicht Zeichenart.
+## TPPGGrid (d000c2ab) 30/0 – vorgezogen aus Lauf 2 (Excel-Export)
+- Gerüst: DemoCodeGen.PascalCode (Z. 108–127, 180–183) füllt Collections der Vorgabe-Instanz auf und löscht sie wieder; beim Grid stellt ColumnsChanged dabei ColCount auf 1, FixedCols wird auf 0 geklemmt -> Zurücksetzen von ColCount falsch, FixedCols fälschlich geändert. Vorschlag: eigene temporäre Instanz für den Vergleich. Umgangen per SkipInRoundTrip ColCount/FixedCols in DemoShowGrid (danach entfernen). Betrifft vermutlich auch TPPGDBGrid.
+- KOMPONENTE (wichtig): PPG.Grid ColumnsChanged (Z. 1066) + SetColCount (Z. 1216): Columns.Add auf einem gefüllten Grid lässt ColCount 1, 2, 3 … durchlaufen -> FixedCols auf 0, Zellen rechts abgeschnitten (TPPGCellStore.SetColCount), Breiten und Filter weg. Vorschlag: ColCount nur erhöhen bzw. erst nach EndUpdate angleichen, FixedCols erhalten + Regressionstest.
+- KOMPONENTE: Strg+V (PasteText Z. 7083), Entf/Strg+X (ClearSelection/CutToClipboard ~7002) und ToggleCheck (Z. 6438) umgehen OnValidateCell. Vorschlag: gemeinsamer Weg „Zelle durch Anwender setzen mit Prüfung“ + Tests.
+- Typ-Schlüssel: TPPGGridBand.*, TPPGGridColumn.*, TPPGGridConditionalFormat.*, TPPGGridStyles.*

@@ -265,6 +265,9 @@ uses
   ExMaskEditCustomer in 'Showcase\ExMaskEditCustomer.pas',
   ExMaskEditTimeEntry in 'Showcase\ExMaskEditTimeEntry.pas',
   DemoShowMaskEdit in 'Showcase\DemoShowMaskEdit.pas',
+  ExGridExport in 'Showcase\ExGridExport.pas',
+  ExGridStock in 'Showcase\ExGridStock.pas',
+  DemoShowGrid in 'Showcase\DemoShowGrid.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}

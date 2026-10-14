@@ -12,16 +12,16 @@ Nutzung: `PPGGrid1.Styles.Header.Color := clNavy; PPGGrid1.Styles.AlternateRow.C
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `Header` | [TPPGElementStyle](TPPGElementStyle.md) |  | Kopfzeilen, feste Spalten und Bänder: Color = Fläche, TextColor = Text, BorderColor = Linien im Kopf, Font/FontStyle = Schrift. Nutzung: `Grid1.Styles.Header.Color := clNavy; Grid1.Styles.Header.TextColor := clWhite;` |
-| `Footer` | [TPPGElementStyle](TPPGElementStyle.md) |  | Summenzeile (ShowFooter) und Gruppenfuß; ohne eigene Werte wie Header. |
-| `Selection` | [TPPGElementStyle](TPPGElementStyle.md) |  | Auswahl, solange das Grid den Fokus hat. Mit gesetzter Color wird sie deckend statt halbtransparent gezeichnet. |
-| `SelectionInactive` | [TPPGElementStyle](TPPGElementStyle.md) |  | Auswahl, wenn das Grid den Fokus nicht hat. |
-| `AlternateRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Zebra: jede zweite Datenzeile. Erst Color setzen schaltet es ein. |
-| `HotRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Zeile unter der Maus. Erst Color setzen schaltet die Hervorhebung ein. |
-| `GridLine` | [TPPGElementStyle](TPPGElementStyle.md) |  | Gitterlinien: Color = Linienfarbe (Breite über GridLineWidth). |
-| `FocusedCell` | [TPPGElementStyle](TPPGElementStyle.md) |  | Die Zelle mit Tastaturfokus: BorderColor = Rahmen, Color = Fläche, TextColor = Text. |
-| `GroupRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Gruppenkopf-Zeilen beim Gruppieren. |
-| `FilterRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Die Filterzeile unter dem Kopf (ShowFilterRow). |
+| `Header` | [TPPGElementStyle](TPPGElementStyle.md) |  | Kopfzeilen, feste Spalten und Bänder: Color = Fläche, TextColor = Text, BorderColor = Linien im Kopf, Font/FontStyle = Schrift. Nutzung: `Grid1.Styles.Header.Color := clNavy; Grid1.Styles.Header.TextColor := clWhite;` Praxis: Kopf in der Hausfarbe oder fett (FontStyle = [fsBold]); bei eigener Color auch DarkColor setzen. |
+| `Footer` | [TPPGElementStyle](TPPGElementStyle.md) |  | Summenzeile (ShowFooter) und Gruppenfuß; ohne eigene Werte wie Header. Praxis: Die Summenzeile absetzen, z. B. FontStyle = [fsBold]; ohne eigene Werte sieht sie aus wie der Kopf. |
+| `Selection` | [TPPGElementStyle](TPPGElementStyle.md) |  | Auswahl, solange das Grid den Fokus hat. Mit gesetzter Color wird sie deckend statt halbtransparent gezeichnet. Praxis: Eigene Auswahlfarbe nur, wenn die Akzentfarbe des Presets nicht passt; mit Color wird die Auswahl deckend. |
+| `SelectionInactive` | [TPPGElementStyle](TPPGElementStyle.md) |  | Auswahl, wenn das Grid den Fokus nicht hat. Praxis: Auswahl ohne Fokus sichtbar halten, z. B. hellgrau, damit man beim Arbeiten in den Detailfeldern sieht, welcher Datensatz gewählt ist. |
+| `AlternateRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Zebra: jede zweite Datenzeile. Erst Color setzen schaltet es ein. Praxis: Zebra-Zeilen für breite Listen, damit das Auge in der Zeile bleibt: Color auf einen sehr hellen Ton setzen und DarkColor auf einen leicht helleren dunklen Ton. |
+| `HotRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Zeile unter der Maus. Erst Color setzen schaltet die Hervorhebung ein. Praxis: Zeile unter der Maus hervorheben, hilfreich bei breiten Listen; Color setzen schaltet es ein. |
+| `GridLine` | [TPPGElementStyle](TPPGElementStyle.md) |  | Gitterlinien: Color = Linienfarbe (Breite über GridLineWidth). Praxis: Linien heller machen, wenn die Tabelle unruhig wirkt; zusammen mit GridLineWidth. |
+| `FocusedCell` | [TPPGElementStyle](TPPGElementStyle.md) |  | Die Zelle mit Tastaturfokus: BorderColor = Rahmen, Color = Fläche, TextColor = Text. Praxis: Einen kräftigeren Rahmen (BorderColor) für die Fokuszelle in Erfassungsmasken, in denen viel per Tastatur gearbeitet wird. |
+| `GroupRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Gruppenkopf-Zeilen beim Gruppieren. Praxis: Gruppenköpfe deutlicher absetzen, z. B. mit getönter Fläche und fetter Schrift, damit Gruppen beim Scrollen erkennbar bleiben. |
+| `FilterRow` | [TPPGElementStyle](TPPGElementStyle.md) |  | Die Filterzeile unter dem Kopf (ShowFilterRow). Praxis: Die Filterzeile dezent absetzen, z. B. mit leicht getönter Fläche, damit sie nicht wie eine Datenzeile wirkt. |
 
 ## Verwendet in
 
