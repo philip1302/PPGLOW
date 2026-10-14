@@ -1,5 +1,17 @@
 **Vorbild:** TStringGrid, TMS TAdvStringGrid, DevExpress Grid (Gruppenleiste)
 
+## Wofür
+
+Das Grid zeigt Datensätze als Tabelle: Aufträge, Artikel, Buchungen, Positionen. Der Anwender filtert, sortiert, gruppiert und blendet Spalten selbst ein und aus, sieht Summen und kann Zellen direkt bearbeiten. Was er sieht, lässt sich ohne weiteren Code drucken und als Excel-, PDF-, HTML- oder CSV-Datei exportieren.
+
+## Wann verwenden
+
+- Für Listen mit mehreren Spalten, die man vergleichen, sortieren oder summieren will. Für eine einspaltige Auswahl genügt `TPPGListBox`, für Einträge mit Symbol und Zusatztext `TPPGTileView`.
+- Statt `TStringGrid` in neuen Formularen: gleiche Grundeigenschaften (`Cells`, `ColCount`, `RowCount`, `Options`), dazu Spalten, Filter, Summen, Gruppen und Export.
+- Für Daten aus einer Datenmenge (`TDataSet`) `TPPGDBGrid` nehmen; es hat dieselben Spalten- und Exportfunktionen. `TPPGGrid` passt zu Daten in eigenen Listen und Objekten, auch virtuell über `OnGetCellText`.
+- Für hierarchische Daten (Ordner, Stücklisten) ist `TPPGTreeView` klarer; das Grid gruppiert nur nach Spaltenwerten.
+- Für die Auswahl eines Datensatzes in einem Eingabefeld ist `TPPGColumnComboBox` platzsparender.
+
 ## Unterschiede und Hinweise
 
 - `Row`/`Col`/`Cells[]` arbeiten mit Daten-Indizes, `Selection`/`FocusRow`/`FocusCol`/`CellRect` mit der Anzeige (Sortierung, Filter, verschobene Spalten). Umrechnen mit `DataRow`/`VisualRow`, `DataCol`/`VisualCol`.
