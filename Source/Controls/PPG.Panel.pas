@@ -771,6 +771,11 @@ begin
   // Wie TScrollingWinControl: Bildinhalt und Kind-Fenster verschiebt Windows in
   // einem Zug, neu gezeichnet wird nur der aufgedeckte Streifen. Rahmen,
   // Rundung und Leisten (ausserhalb der Sicht) bleiben stehen.
+  // ScrollWindowEx kopiert, was gerade im Fenster steht: Steht noch Zeichnen aus
+  // (schnelles Scrollen, WM_PAINT kommt nach Timer und Mausrad), wuerde
+  // ungemalter Inhalt mitwandern und an der neuen Stelle stehen bleiben.
+  // Deshalb vorher fertig zeichnen.
+  RedrawWindow(Handle, nil, 0, RDW_UPDATENOW or RDW_ALLCHILDREN);
   View := ViewArea;
   Dirty := CreateRectRgn(0, 0, 0, 0);
   try
@@ -787,8 +792,10 @@ begin
       DeleteObject(Inner);
       DeleteObject(Ring);
     end;
-    // Samt der Kind-Fenster, die dort liegen (RDW_ALLCHILDREN)
-    RedrawWindow(Handle, nil, Dirty, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN);
+    // Samt der Kind-Fenster, die dort liegen (RDW_ALLCHILDREN), und sofort:
+    // vor dem naechsten Schritt muss der Streifen fertig sein
+    RedrawWindow(Handle, nil, Dirty, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN or
+      RDW_UPDATENOW);
   finally
     DeleteObject(Dirty);
   end;
@@ -806,31 +813,27 @@ begin
   try
     // Exposed = aufgedeckter Streifen in der Sicht
     ScrollWindowEx(Handle, DX, DY, nil, @View, Exposed, nil, SW_SCROLLCHILDREN);
-    // Fensterlose Kinder (und solche ohne Handle) nur umsetzen: ihre Pixel sind
-    // schon verschoben, das Invalidieren unterdrueckt WM_SETREDRAW
+    // Fensterlose Kinder (und solche ohne Handle) umsetzen. Kein WM_SETREDRAW
+    // wie im langsamen Weg: das nimmt dem Panel WS_VISIBLE, ausstehendes
+    // Neuzeichnen ginge verloren (alte Inhalte, schwarze Flaechen)
     Aligned := False;
-    SendMessage(Handle, WM_SETREDRAW, 0, 0);
-    try
-      for I := 0 to ControlCount - 1 do
-      begin
-        C := Controls[I];
-        if not (C.Align in [alNone, alCustom]) then
-          Aligned := True
-        else if not ((C is TWinControl) and TWinControl(C).HandleAllocated) then
-          C.SetBounds(C.Left + DX, C.Top + DY, C.Width, C.Height);
+    for I := 0 to ControlCount - 1 do
+    begin
+      C := Controls[I];
+      if not (C.Align in [alNone, alCustom]) then
+        Aligned := True
+      else if not ((C is TWinControl) and TWinControl(C).HandleAllocated) then
+        C.SetBounds(C.Left + DX, C.Top + DY, C.Width, C.Height);
+    end;
+    // Ausgerichtete Kinder folgen ueber AdjustClientRect (Fenster stehen schon richtig)
+    if Aligned then
+    begin
+      EnableAlign;
+      try
+        Realign;
+      finally
+        DisableAlign;
       end;
-      // Ausgerichtete Kinder folgen ueber AdjustClientRect (Fenster stehen schon richtig)
-      if Aligned then
-      begin
-        EnableAlign;
-        try
-          Realign;
-        finally
-          DisableAlign;
-        end;
-      end;
-    finally
-      SendMessage(Handle, WM_SETREDRAW, 1, 0);
     end;
   finally
     EnableAlign;

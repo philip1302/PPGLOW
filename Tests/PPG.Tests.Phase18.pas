@@ -11,7 +11,7 @@ uses
   System.Types, Vcl.Graphics, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
   PPG.Types, PPG.Controls.Field, PPG.RadioGroup, PPG.Items, PPG.Controls.Scroll, PPG.TileView,
   PPG.Grid.Data, PPG.Grid.Export, Data.DB, Datasnap.DBClient, MidasLib, Vcl.DBCtrls,
-  PPG.DB.Navigator, PPG.Panel, PPG.Edit, PPG.Labels, PPG.Tests.Controls;
+  PPG.DB.Navigator, PPG.Panel, PPG.Edit, PPG.Labels, PPG.CheckBox, PPG.Tests.Controls;
 
 type
   TChoiceGroupTests = class(TControlTestCase)
@@ -116,8 +116,11 @@ type
   private
     function NewPanel(AutoScroll: Boolean): TPPGPanel;
     function AddChild(P: TWinControl; X, Y: Integer): TPPGEdit;
-    function NewRowBox: TPPGScrollBox;
+    function NewRowBox(Gap: Integer): TPPGScrollBox;
     function CaptureWindow(C: TWinControl): TBitmap;
+    function DiffToFullRepaint(B: TWinControl; const ImageName: string): Integer;
+    procedure CheckMatchesFullRepaint(B: TWinControl; const ImageName: string);
+    procedure Settle;
   published
     procedure NoScrollingByDefault;
     procedure AutoScrollShowsBarForChildBelow;
@@ -132,6 +135,8 @@ type
     procedure PaintsWithBars;
     procedure FastScrollMovesAllKindsOfChildren;
     procedure FastScrollMatchesFullRepaint;
+    procedure FastScrollWithoutPaintBetweenSteps;
+    procedure FastScrollAnimatedWheel;
   end;
 
 implementation
@@ -1732,13 +1737,16 @@ begin
   CheckEquals(0, FErrors.Count, FErrors.Text);
 end;
 
-function TPanelScrollTests.NewRowBox: TPPGScrollBox;
+function TPanelScrollTests.NewRowBox(Gap: Integer): TPPGScrollBox;
 var
   I: Integer;
   Row: TPanel;
   Lbl: TPPGLabel;
+  Chk: TPPGCheckBox;
 begin
-  // Wie der Objektinspektor der Demo: Zeilen-Panels mit Kind-Controls
+  // Wie der Objektinspektor der Demo: Zeilen-Panels mit Kind-Controls.
+  // Gap > 0: Abstand zwischen den Zeilen (Hintergrund sichtbar), dazu ein
+  // Kind-Fenster je Zeile und ein fensterloses Kind direkt auf dem Panel.
   Result := TPPGScrollBox.Create(FForm);
   Result.Parent := FForm;
   Result.BorderStyle := bsNone;
@@ -1752,16 +1760,98 @@ begin
     Row.ParentBackground := True;
     Row.ShowCaption := False;
     Row.Parent := Result;
-    Row.SetBounds(0, I * 24, 270, 24);
+    Row.SetBounds(0, I * (24 + Gap), 270, 24);
     Lbl := TPPGLabel.Create(FForm);
     Lbl.Parent := Row;
-    Lbl.SetBounds(6, 4, 120, 16);
+    Lbl.SetBounds(6, 4, 100, 16);
     Lbl.Caption := 'Zeile ' + IntToStr(I);
     Lbl := TPPGLabel.Create(FForm);
     Lbl.Parent := Row;
-    Lbl.SetBounds(140, 4, 120, 16);
+    Lbl.SetBounds(110, 4, 90, 16);
     Lbl.Font.Style := [fsBold];
     Lbl.Caption := 'Wert ' + IntToStr(I * 7);
+    if Gap > 0 then
+    begin
+      // Kind-Fenster ohne Fokus (kein blinkender Cursor im Vergleich)
+      Chk := TPPGCheckBox.Create(FForm);
+      Chk.Parent := Row;
+      Chk.TabStop := False;
+      Chk.SetBounds(210, 2, 56, 20);
+      Chk.Caption := 'an';
+      Chk.Checked := Odd(I);
+    end;
+  end;
+  if Gap > 0 then
+  begin
+    Lbl := TPPGLabel.Create(FForm);
+    Lbl.Parent := Result;
+    Lbl.SetBounds(274, 300, 14, 400);
+    Lbl.Color := clNavy;
+    Lbl.Transparent := False;
+  end;
+end;
+
+function TPanelScrollTests.DiffToFullRepaint(B: TWinControl; const ImageName: string): Integer;
+var
+  Moved, Full: TBitmap;
+  X, Y: Integer;
+  Readable: Boolean;
+  First, Px: TColor;
+begin
+  // Was jetzt im Fenster steht gegen komplett neu gezeichnet; -1 = Inhalt nicht lesbar
+  Moved := CaptureWindow(B);
+  try
+    RedrawWindow(B.Handle, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN or RDW_UPDATENOW);
+    Full := CaptureWindow(B);
+    try
+      Readable := False;
+      First := Full.Canvas.Pixels[0, 0];
+      Result := 0;
+      for Y := 0 to Full.Height - 1 do
+        for X := 0 to Full.Width - 1 do
+        begin
+          Px := Full.Canvas.Pixels[X, Y];
+          if Px <> First then
+            Readable := True;
+          if Moved.Canvas.Pixels[X, Y] <> Px then
+            Inc(Result);
+        end;
+      if not Readable then
+        Result := -1
+      else if Result > 0 then
+      begin
+        SaveGalleryPng(Moved, ImageName + '-moved.png');
+        SaveGalleryPng(Full, ImageName + '-full.png');
+      end;
+    finally
+      Full.Free;
+    end;
+  finally
+    Moved.Free;
+  end;
+end;
+
+procedure TPanelScrollTests.CheckMatchesFullRepaint(B: TWinControl; const ImageName: string);
+var
+  Diff: Integer;
+begin
+  Diff := DiffToFullRepaint(B, ImageName);
+  if Diff < 0 then
+    Status('Fensterinhalt nicht lesbar (Desktop ohne Bild): Pixelvergleich ohne Aussage')
+  else
+    CheckEquals(0, Diff, 'verschoben = neu gezeichnet (abweichende Pixel, Bilder ' +
+      ImageName + '-*.png)');
+end;
+
+procedure TPanelScrollTests.Settle;
+var
+  I: Integer;
+begin
+  // Wie im echten Betrieb: Nachrichten (Timer, WM_PAINT) abarbeiten lassen
+  for I := 0 to 49 do
+  begin
+    Application.ProcessMessages;
+    Sleep(10);
   end;
 end;
 
@@ -1828,11 +1918,8 @@ end;
 procedure TPanelScrollTests.FastScrollMatchesFullRepaint;
 var
   B: TPPGScrollBox;
-  Moved, Full: TBitmap;
-  X, Y, Diff, Colors: Integer;
-  First, Px: TColor;
 begin
-  B := NewRowBox;
+  B := NewRowBox(0);
   FForm.ActiveControl := nil;
   FForm.Show;
   CheckTrue(TPanelAccess(B).CanScrollPixels, 'schneller Weg');
@@ -1844,39 +1931,57 @@ begin
   RedrawWindow(B.Handle, nil, 0, RDW_UPDATENOW or RDW_ALLCHILDREN);
   B.ScrollTo(0, 95);
   RedrawWindow(B.Handle, nil, 0, RDW_UPDATENOW or RDW_ALLCHILDREN);
-  Moved := CaptureWindow(B);
-  try
-    RedrawWindow(B.Handle, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN or RDW_UPDATENOW);
-    Full := CaptureWindow(B);
-    try
-      // Ohne sichtbare Flaeche (z. B. Desktop ohne Bild) waere der Vergleich wertlos
-      Colors := 0;
-      First := Full.Canvas.Pixels[0, 0];
-      Diff := 0;
-      for Y := 0 to Full.Height - 1 do
-        for X := 0 to Full.Width - 1 do
-        begin
-          Px := Full.Canvas.Pixels[X, Y];
-          if (Colors = 0) and (Px <> First) then
-            Colors := 1;
-          if Moved.Canvas.Pixels[X, Y] <> Px then
-            Inc(Diff);
-        end;
-      if Diff > 0 then
-      begin
-        SaveGalleryPng(Moved, 'FastScroll-moved.png');
-        SaveGalleryPng(Full, 'FastScroll-full.png');
-      end;
-      if Colors = 0 then
-        Status('Fensterinhalt nicht lesbar (Desktop ohne Bild): Pixelvergleich ohne Aussage')
-      else
-        CheckEquals(0, Diff, 'verschoben = neu gezeichnet (abweichende Pixel)');
-    finally
-      Full.Free;
-    end;
-  finally
-    Moved.Free;
+  CheckMatchesFullRepaint(B, 'FastScroll');
+end;
+
+procedure TPanelScrollTests.FastScrollWithoutPaintBetweenSteps;
+var
+  B: TPPGScrollBox;
+begin
+  // Schnelles Scrollen: die Schritte kommen schneller als WM_PAINT
+  B := NewRowBox(6);
+  FForm.ActiveControl := nil;
+  FForm.Show;
+  CheckTrue(TPanelAccess(B).CanScrollPixels, 'schneller Weg');
+  Settle;
+  B.ScrollTo(0, 37);
+  B.ScrollTo(0, 141);
+  B.ScrollTo(0, 95);
+  B.ScrollTo(0, 260);
+  B.ScrollTo(0, 251);
+  B.ScrollTo(0, 400);
+  Settle;
+  CheckMatchesFullRepaint(B, 'FastScrollNoPaint');
+end;
+
+procedure TPanelScrollTests.FastScrollAnimatedWheel;
+var
+  B: TPPGScrollBox;
+  I: Integer;
+begin
+  // Mausrad mit weichem Scrollen: Animationsschritte per Timer, zwischendurch
+  // neue Rad-Ereignisse
+  B := NewRowBox(6);
+  B.Animation.Enabled := True;
+  B.VertScrollBar.Smooth := True;
+  FForm.ActiveControl := nil;
+  FForm.Show;
+  Settle;
+  for I := 0 to 7 do
+  begin
+    B.ScrollTo(0, B.ScrollPos.Y + 90, True);
+    Application.ProcessMessages;
+    Sleep(15);
+    Application.ProcessMessages;
   end;
+  for I := 0 to 3 do
+  begin
+    B.ScrollTo(0, B.ScrollPos.Y - 70, True);
+    Application.ProcessMessages;
+    Sleep(15);
+  end;
+  Settle;
+  CheckMatchesFullRepaint(B, 'FastScrollWheel');
 end;
 
 initialization
