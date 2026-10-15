@@ -1,0 +1,111 @@
+# PPGlow - Setup und Release
+#
+# Baut Installer\PPGlow.iss (Inno Setup) und ein Quelltext-ZIP.
+# - Tag "v1.2.3" (bzw. "v1.2.3-beta1") pushen: Release mit beiden Dateien
+#   (Bindestrich im Tag = Vorabversion).
+# - Push mit Aenderungen am Installer oder manueller Start: nur bauen, die
+#   Dateien liegen dann als Artefakt am Workflow-Lauf.
+# Delphi gibt es auf den Runnern nicht: das Setup baut die Pakete erst auf dem
+# Zielrechner (Build\install.ps1). Vorher laeuft hier der Regel-Pruefer.
+
+name: Installer
+
+on:
+  push:
+    tags: ['v*']
+    branches: ['**']
+    paths:
+      - 'Installer/**'
+      - 'Build/install.ps1'
+      - 'Build/build.ps1'
+      - '.github/workflows/installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Regel-Pruefer
+        shell: pwsh
+        run: ./Build/check-rules.ps1
+
+      - name: Version bestimmen
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $v = $env:GITHUB_REF_NAME -replace '^v', ''
+          } else {
+            $v = "0.0.$($env:GITHUB_RUN_NUMBER)-$($env:GITHUB_SHA.Substring(0, 7))"
+          }
+          if ($v -notmatch '^(\d+)\.(\d+)\.(\d+)') { throw "Tag muss die Form v1.2.3 haben: $env:GITHUB_REF_NAME" }
+          $info = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "info=$info" >> $env:GITHUB_OUTPUT
+          "prerelease=$(if ($v -match '-') { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
+          Write-Host "Version $v ($info)"
+
+      - name: Dateien zusammenstellen
+        shell: pwsh
+        run: ./Installer/stage.ps1 -Out stage
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup konnte nicht installiert werden' }
+          }
+          & $iscc /Qp "/DAppVersion=${{ steps.ver.outputs.version }}" "/DVersionInfo=${{ steps.ver.outputs.info }}" `
+            "/DStageDir=$PWD\stage" "/DOutDir=$PWD\out" Installer\PPGlow.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen ($LASTEXITCODE)" }
+
+      - name: Quelltext-ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path stage\* -DestinationPath "out\PPGlow-${{ steps.ver.outputs.version }}-Quellen.zip"
+          Get-ChildItem out | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPGlow-${{ steps.ver.outputs.version }}
+          path: out/*
+
+      - name: Release anlegen
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          $notes = @"
+          ## Installation
+
+          1. RAD Studio schliessen.
+          2. **PPGlow-Setup-$v.exe** herunterladen und starten (keine Administratorrechte noetig).
+             Windows SmartScreen warnt, weil das Setup nicht signiert ist: "Weitere Informationen" > "Trotzdem ausfuehren".
+          3. Delphi-Version(en) waehlen. Das Setup baut die Pakete mit dem eigenen Delphi und registriert sie in der IDE.
+
+          Unterstuetzt: Delphi 11 Alexandria (BDS 22.0), Delphi 13 Florence (BDS 37.0).
+
+          **PPGlow-$v-Quellen.zip** enthaelt dieselben Dateien fuer die Installation von Hand:
+          ``powershell -ExecutionPolicy Bypass -File Build\install.ps1 -Version 22.0 -NoRuleCheck``
+
+          Stand und offene Punkte je Delphi-Version: Docs/Kompatibilitaet.md.
+
+          ## Lizenz
+
+          Kostenlos fuer private, nicht-kommerzielle Nutzung. Jede kommerzielle Nutzung braucht eine kostenpflichtige Lizenz (siehe LICENSE.txt).
+          "@
+          $notes | Set-Content notes.md -Encoding utf8
+          $ghArgs = @('release', 'create', $env:GITHUB_REF_NAME, (Get-ChildItem out\* | ForEach-Object FullName),
+            '--title', "PPGlow $v", '--notes-file', 'notes.md', '--verify-tag')
+          if ('${{ steps.ver.outputs.prerelease }}' -eq 'true') { $ghArgs += '--prerelease' }
+          gh @ghArgs
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create fehlgeschlagen' }

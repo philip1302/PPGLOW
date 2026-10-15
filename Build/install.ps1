@@ -26,7 +26,7 @@
   Die IDE muss geschlossen sein - sie ueberschreibt die Registry beim Beenden.
 
   Aufruf:   powershell -ExecutionPolicy Bypass -File Build\install.ps1
-            [-Version 22.0] [-Config Release] [-Platforms Win32,Win64] [-NoBuild] [-NoDB] [-LoadTest]
+            [-Version 22.0] [-Config Release] [-Platforms Win32,Win64] [-NoBuild] [-NoDB] [-LoadTest] [-NoRuleCheck]
   Entfernen: powershell -ExecutionPolicy Bypass -File Build\install.ps1 -Uninstall
              (nimmt PATH-Eintraege nur zurueck, wenn install.ps1 sie selbst gesetzt hat:
              Marker unter HKCU\Software\PPGlow\Install\<Version>)
@@ -43,7 +43,10 @@ param(
   [switch]$Uninstall,
   [switch]$NoDB,
   [switch]$NoBuild,
-  [switch]$LoadTest
+  [switch]$LoadTest,
+  # Regel-Pruefer vor dem Build auslassen (Setup aus dem Release: dort fehlen
+  # Tests/Demo, die der Pruefer erwartet; geprueft wird vor dem Release in der CI)
+  [switch]$NoRuleCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -392,7 +395,7 @@ if (-not $NoBuild) {
     Write-Host "Baue $($tp -join ', ') fuer $($t.Platform)/$Config ..." -ForegroundColor Cyan
     $global:LASTEXITCODE = 0
     try {
-      & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $tp -Platform $t.Platform -Config $Config
+      & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $tp -Platform $t.Platform -Config $Config -NoRuleCheck:$NoRuleCheck
       if ($LASTEXITCODE -ne 0) { $BuildFailed[$t.Platform] = $true }
     } catch {
       # build.ps1 wirft z.B. bei fehlender .err-Datei (Timeout) - wie ein Fehlschlag behandeln
@@ -547,3 +550,6 @@ Write-Host '  3. Palette: Kategorien "PPGlow" und "PPGlow DB" (Suchfeld oben: "T
 Write-Host '  Fehlt etwas: Komponente > Packages installieren - "PPGlow Components" muss angehakt sein.'
 Write-Host '  Meldet die IDE beim Start einen Ladefehler, install.ps1 erneut ausfuehren: es zeigt den Grund.'
 if ($Problems -gt 0) { exit 1 }
+# Ausdruecklich 0: Aufrufer (Installer\run-install.ps1) lesen $LASTEXITCODE,
+# das sonst noch vom letzten externen Programm stammen koennte
+exit 0
