@@ -46,6 +46,7 @@ type
     procedure RightToLeftMirrors;
     procedure Accessibility;
     procedure MinMaxStayOrderedAndClampDate;
+    procedure AutoSizeFitsOneMonth;
   end;
 
   TDatePickerTests = class(TPhase7bTestCase)
@@ -497,6 +498,45 @@ begin
   CheckTrue(A.AccChildState(1) and STATE_SYSTEM_UNAVAILABLE <> 0);
   CheckEquals(ROLE_SYSTEM_TABLE, TCalAccess(C).AccRole);
   CheckEquals('Donnerstag, 15. Oktober 2026', TCalAccess(C).AccValue);
+end;
+
+procedure TCalendarTests.AutoSizeFitsOneMonth;
+var
+  C: TPPGCalendar;
+  W1, H1, W2: Integer;
+  R: TRect;
+  Bmp: TBitmap;
+begin
+  C := NewCalendar;
+  C.AutoSize := True;
+  W1 := C.Width;
+  H1 := C.Height;
+  // Die Vorgabe 300 x 330 passt bei Segoe UI 9 knapp fuer einen Monat
+  CheckTrue((W1 >= 260) and (W1 <= 340), Format('Breite %d', [W1]));
+  CheckTrue((H1 >= 290) and (H1 <= 370), Format('Hoehe %d', [H1]));
+  C.View := cvYear;
+  CheckEquals(W1, C.Width, 'Ansicht aendert die Breite nicht');
+  CheckEquals(H1, C.Height, 'Ansicht aendert die Hoehe nicht');
+  C.View := cvMonth;
+  C.ShowWeekNumbers := True;
+  W2 := C.Width;
+  CheckTrue(W2 >= W1 + 30, Format('Wochennummern brauchen eine Spalte: %d -> %d', [W1, W2]));
+  C.Font.Size := 18;
+  CheckTrue(C.Width > W2, 'groessere Schrift: breiter');
+  CheckTrue(C.Height > H1, 'groessere Schrift: hoeher');
+  // Tageszahl (fett) passt in die Zelle
+  Bmp := TBitmap.Create;
+  try
+    Bmp.Canvas.Font.Assign(C.Font);
+    Bmp.Canvas.Font.Style := [fsBold];
+    R := C.CellRect(0);
+    CheckTrue(R.Right - R.Left >= Bmp.Canvas.TextWidth('88'), 'Zelle breit genug');
+  finally
+    Bmp.Free;
+  end;
+  C.AutoSize := False;
+  C.Width := 200;
+  CheckEquals(200, C.Width, 'ohne AutoSize frei');
 end;
 
 { TDatePickerTests }
