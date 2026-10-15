@@ -215,8 +215,8 @@ type
 implementation
 
 uses
-  System.SysUtils, Vcl.StdCtrls, Winapi.oleacc, PPG.Exceptions, PPG.Appearance,
-  PPG.Consts, PPG.Lang;
+  System.SysUtils, Vcl.StdCtrls, Winapi.oleacc, PPG.Accessibility, PPG.Exceptions,
+  PPG.Appearance, PPG.Consts, PPG.Lang;
 
 var
   GMsgButtonPressed: Cardinal = 0;

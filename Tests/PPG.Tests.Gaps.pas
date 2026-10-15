@@ -11,7 +11,7 @@ uses
   TestFramework, Winapi.Windows, Winapi.Messages, Winapi.ActiveX, Winapi.oleacc,
   System.Classes, System.SysUtils, System.Types, System.Variants,
   Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.StdCtrls, Vcl.ImgList, Vcl.Menus,
-  PPG.Types, PPG.Consts, PPG.Render.Registry, PPG.Controls.Base, PPG.Button,
+  PPG.Types, PPG.Consts, PPG.Accessibility, PPG.Render.Registry, PPG.Controls.Base, PPG.Button,
   PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.Tests.Controls;
 
 type

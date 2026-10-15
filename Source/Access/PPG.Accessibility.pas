@@ -152,6 +152,13 @@ const
   /// $FFFFFFFC als DWORD - ein Cast davon ist kein gueltiger Konstantenausdruck).
   PPGObjIdClient = -4;
 
+{$IFNDEF PPG_HAS_OLEACC_SPLITBUTTON}
+  /// Fehlt in Winapi.oleacc aelterer Versionen (u. a. Delphi 11); Wert aus
+  /// oleacc.h. Units, die ihn brauchen, binden PPG.Accessibility zusaetzlich
+  /// zu Winapi.oleacc ein (Reihenfolge egal: gleicher Wert).
+  ROLE_SYSTEM_SPLITBUTTON = $3E;
+{$ENDIF}
+
 /// "Alt+X" fuer eine Beschriftung mit "&X", sonst ''.
 function PPGAccShortcutFromCaption(const Caption: string): string;
 /// Beschriftung ohne Accelerator-Markierung ("&Speichern" -> "Speichern").
