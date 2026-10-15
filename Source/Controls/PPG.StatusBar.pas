@@ -230,7 +230,9 @@ type
     property OnMouseLeave;
     property OnMouseWheel;
     property OnMouseActivate;
+    {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
+    {$ENDIF}
     property DragMode;
     property DragCursor;
     property OnDragDrop;

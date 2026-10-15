@@ -235,7 +235,9 @@ type
     property OnMouseWheel;
     property OnMouseActivate;
     property OnContextPopup;
+    {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
+    {$ENDIF}
     property DragMode;
     property DragCursor;
     property OnDragDrop;
@@ -378,7 +380,9 @@ type
     property OnMouseWheel;
     property OnMouseActivate;
     property OnContextPopup;
+    {$IFDEF PPG_HAS_STYLEELEMENTS}
     property StyleElements;
+    {$ENDIF}
     property DragMode;
     property DragCursor;
     property OnDragDrop;

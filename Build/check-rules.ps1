@@ -39,8 +39,8 @@
                 DocumentProperties(...) mit nil
   - PROJECT     jede Unit steht in allen Projektlisten ihrer Gruppe, und jede
                 eingetragene Datei existiert
-  - REQUIRES    die requires-Liste jedes Pakets ist in Packages\XE2 und
-                Packages\Delphi13 gleich
+  - REQUIRES    die requires-Liste jedes Pakets ist in Packages\XE2,
+                Packages\Delphi11 und Packages\Delphi13 gleich
   - LANG        jede resourcestring ist in Lang\PPGlow.*.txt uebersetzt, die
                 Platzhalter passen, und die erzeugten PPG.Lang.*.pas sind aktuell
                 (Build\make-lang.ps1 -Check)
@@ -606,20 +606,25 @@ function Test-SourceFile([string]$File, [string]$Rel) {
 $Groups = @(
   @{ Name = 'Runtime'; Folders = @('Source\Core', 'Source\Render', 'Source\Theme', 'Source\Access', 'Source\Controls');
      Lists = @('Packages\Delphi13\PPGlowR.dpk', 'Packages\Delphi13\PPGlowR.dproj', 'Packages\XE2\PPGlowR.dpk',
+               'Packages\Delphi11\PPGlowR.dpk', 'Packages\Delphi11\PPGlowR.dproj',
                'Tests\PPGlowTests.dpr', 'Tests\PPGlowTests.dproj', 'Demo\PPGlowDemo.dpr', 'Demo\PPGlowDemo.dproj',
                'Tests\Bench\PPGlowBench.dpr') },
   @{ Name = 'Design'; Folders = @('Source\Design');
-     Lists = @('Packages\Delphi13\dclPPGlow.dpk', 'Packages\Delphi13\dclPPGlow.dproj', 'Packages\XE2\dclPPGlow.dpk') },
+     Lists = @('Packages\Delphi13\dclPPGlow.dpk', 'Packages\Delphi13\dclPPGlow.dproj', 'Packages\XE2\dclPPGlow.dpk',
+               'Packages\Delphi11\dclPPGlow.dpk', 'Packages\Delphi11\dclPPGlow.dproj') },
   @{ Name = 'Editors'; Folders = @('Source\Editors');
      Lists = @('Packages\Delphi13\dclPPGlow.dpk', 'Packages\Delphi13\dclPPGlow.dproj', 'Packages\XE2\dclPPGlow.dpk',
+               'Packages\Delphi11\dclPPGlow.dpk', 'Packages\Delphi11\dclPPGlow.dproj',
                'Tests\PPGlowTests.dpr', 'Tests\PPGlowTests.dproj') },
   @{ Name = 'Tests'; Folders = @('Tests');
      Lists = @('Tests\PPGlowTests.dpr', 'Tests\PPGlowTests.dproj') },
   @{ Name = 'DB'; Folders = @('Source\DB');
      Lists = @('Packages\Delphi13\PPGlowDBR.dpk', 'Packages\Delphi13\PPGlowDBR.dproj', 'Packages\XE2\PPGlowDBR.dpk',
+               'Packages\Delphi11\PPGlowDBR.dpk', 'Packages\Delphi11\PPGlowDBR.dproj',
                'Tests\PPGlowTests.dpr', 'Tests\PPGlowTests.dproj') },
   @{ Name = 'DesignDB'; Folders = @('Source\DesignDB');
-     Lists = @('Packages\Delphi13\dclPPGlowDB.dpk', 'Packages\Delphi13\dclPPGlowDB.dproj', 'Packages\XE2\dclPPGlowDB.dpk') }
+     Lists = @('Packages\Delphi13\dclPPGlowDB.dpk', 'Packages\Delphi13\dclPPGlowDB.dproj', 'Packages\XE2\dclPPGlowDB.dpk',
+               'Packages\Delphi11\dclPPGlowDB.dpk', 'Packages\Delphi11\dclPPGlowDB.dproj') }
 )
 
 function Join-RootPath([string]$Rel) {
@@ -684,20 +689,25 @@ function Get-Requires([string]$Dpk) {
   return @($Matches[1] -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
 }
 
-# Jedes Paket hat in XE2 und Delphi 13 dieselbe requires-Liste
+# Jedes Paket hat in allen Versionsordnern (XE2, Delphi11, Delphi13) dieselbe
+# requires-Liste. Verglichen wird jeweils mit Packages\XE2; ein Versionsordner,
+# den es nicht gibt, wird uebergangen.
 function Test-Requires {
-  $dirs = @('Packages\XE2', 'Packages\Delphi13') | ForEach-Object { Join-RootPath $_ }
-  if (-not ((Test-Path $dirs[0]) -and (Test-Path $dirs[1]))) { return }
-  $names = @($dirs | ForEach-Object { Get-ChildItem -Path $_ -Filter '*.dpk' -File } | ForEach-Object { $_.Name } | Sort-Object -Unique)
-  foreach ($name in $names) {
-    $a = Join-Path $dirs[0] $name
-    $b = Join-Path $dirs[1] $name
-    if (-not (Test-Path $a)) { Add-Finding $b 0 'REQUIRES' "Paket fehlt in Packages\XE2: $name"; continue }
-    if (-not (Test-Path $b)) { Add-Finding $a 0 'REQUIRES' "Paket fehlt in Packages\Delphi13: $name"; continue }
-    $ra = @(Get-Requires $a | Sort-Object)
-    $rb = @(Get-Requires $b | Sort-Object)
-    if (($ra -join ',') -ne ($rb -join ',')) {
-      Add-Finding $b 0 'REQUIRES' ("requires weicht von Packages\XE2\{0} ab: XE2 [{1}], Delphi13 [{2}]" -f $name, ($ra -join ', '), ($rb -join ', '))
+  $base = Join-RootPath 'Packages\XE2'
+  foreach ($other in @('Delphi11', 'Delphi13')) {
+    $dir = Join-RootPath "Packages\$other"
+    if (-not ((Test-Path $base) -and (Test-Path $dir))) { continue }
+    $names = @(@($base, $dir) | ForEach-Object { Get-ChildItem -Path $_ -Filter '*.dpk' -File } | ForEach-Object { $_.Name } | Sort-Object -Unique)
+    foreach ($name in $names) {
+      $a = Join-Path $base $name
+      $b = Join-Path $dir $name
+      if (-not (Test-Path $a)) { Add-Finding $b 0 'REQUIRES' "Paket fehlt in Packages\XE2: $name"; continue }
+      if (-not (Test-Path $b)) { Add-Finding $a 0 'REQUIRES' "Paket fehlt in Packages\$($other): $name"; continue }
+      $ra = @(Get-Requires $a | Sort-Object)
+      $rb = @(Get-Requires $b | Sort-Object)
+      if (($ra -join ',') -ne ($rb -join ',')) {
+        Add-Finding $b 0 'REQUIRES' ("requires weicht von Packages\XE2\{0} ab: XE2 [{1}], {2} [{3}]" -f $name, ($ra -join ', '), $other, ($rb -join ', '))
+      }
     }
   }
 }

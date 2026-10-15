@@ -26,7 +26,7 @@
   Die IDE muss geschlossen sein - sie ueberschreibt die Registry beim Beenden.
 
   Aufruf:   powershell -ExecutionPolicy Bypass -File Build\install.ps1
-            [-Version 37.0] [-Config Release] [-Platforms Win32,Win64] [-NoBuild] [-NoDB] [-LoadTest]
+            [-Version 22.0] [-Config Release] [-Platforms Win32,Win64] [-NoBuild] [-NoDB] [-LoadTest]
   Entfernen: powershell -ExecutionPolicy Bypass -File Build\install.ps1 -Uninstall
              (nimmt PATH-Eintraege nur zurueck, wenn install.ps1 sie selbst gesetzt hat:
              Marker unter HKCU\Software\PPGlow\Install\<Version>)
@@ -36,7 +36,8 @@
   BDSCOMMONDIR kommt aus den Umgebungsvariablen der IDE bzw. bin\rsvars.bat.
 #>
 param(
-  [string]$Version = '37.0',
+  # Standard: Delphi 11 Alexandria (22.0); 37.0 = Delphi 13, 9.0 = XE2
+  [string]$Version = '22.0',
   [ValidateSet('Debug', 'Release')][string]$Config = 'Release',
   [string[]]$Platforms = @('Win32', 'Win64'),
   [switch]$Uninstall,
@@ -50,7 +51,6 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Key = "HKCU:\Software\Embarcadero\BDS\$Version"
 $Description = 'PPGlow Components - Designtime'
 $DescriptionDB = 'PPGlow Components - Data-aware Designtime'
-$Suffix = ($Version -split '\.')[0] + '0'   # 37.0 -> 370 (LIBSUFFIX AUTO)
 # -File uebergibt Arrays als einen String ("A,B") -> aufteilen
 $Platforms = @($Platforms | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 foreach ($p in $Platforms) {
@@ -58,10 +58,15 @@ foreach ($p in $Platforms) {
 }
 if ($Platforms -notcontains 'Win32') { throw 'Win32 ist Pflicht: die IDE selbst laedt Win32-Pakete.' }
 
-# BDS-Version -> Ordner unter Packages\ (wie in build.ps1)
-$Folders = @{ '9.0' = 'XE2'; '37.0' = 'Delphi13' }
+# BDS-Version -> Ordner unter Packages\ (wie in build.ps1) und BPL-Suffix.
+# Der Suffix folgt nicht aus der BDS-Nummer: XE2 (9.0) und Delphi 11 (22.0)
+# setzen ihn fest im .dpk (LIBSUFFIX '160' bzw. '280'), Delphi 13 nimmt
+# LIBSUFFIX AUTO (370).
+$Folders = @{ '9.0' = 'XE2'; '22.0' = 'Delphi11'; '37.0' = 'Delphi13' }
+$Suffixes = @{ '9.0' = '160'; '22.0' = '280'; '37.0' = '370' }
 $Folder = $Folders[$Version]
 if (-not $Folder) { throw "Version $Version ist in install.ps1/build.ps1 nicht bekannt." }
+$Suffix = $Suffixes[$Version]
 
 if (-not (Test-Path $Key)) { throw "RAD Studio $Version ist nicht installiert ($Key fehlt)." }
 if (Get-Process bds -ErrorAction SilentlyContinue) {
@@ -380,10 +385,14 @@ if (-not $NoDB) { $Projects += @('DBRuntime', 'DBDesign') }
 $BuildFailed = @{}
 if (-not $NoBuild) {
   foreach ($t in $Targets) {
-    Write-Host "Baue $($Projects -join ', ') fuer $($t.Platform)/$Config ..." -ForegroundColor Cyan
+    # Ohne IDE dieser Bitness (z.B. Delphi 11: keine 64-Bit-IDE, kein Win64-designide)
+    # nur die Runtime-Pakete bauen
+    $tp = $Projects
+    if (-not (Test-Path (Join-Path $t.StudioBin 'bds.exe'))) { $tp = @($Projects | Where-Object { $_ -notlike '*Design' }) }
+    Write-Host "Baue $($tp -join ', ') fuer $($t.Platform)/$Config ..." -ForegroundColor Cyan
     $global:LASTEXITCODE = 0
     try {
-      & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $Projects -Platform $t.Platform -Config $Config
+      & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $tp -Platform $t.Platform -Config $Config
       if ($LASTEXITCODE -ne 0) { $BuildFailed[$t.Platform] = $true }
     } catch {
       # build.ps1 wirft z.B. bei fehlender .err-Datei (Timeout) - wie ein Fehlschlag behandeln
@@ -423,10 +432,13 @@ foreach ($t in $Targets) {
   $knownKey = "$Key\$($t.Known)"
 
   # --- 2. Vorhanden und aktuell? ----------------------------------------------
-  $files = @("PPGlowR$Suffix.bpl", "dclPPGlow$Suffix.bpl")
+  # Design-Pakete braucht nur eine IDE dieser Bitness (64-Bit-IDE: bin64\bds.exe)
+  $hasIde = Test-Path (Join-Path $t.StudioBin 'bds.exe')
+  $files = @("PPGlowR$Suffix.bpl")
+  if ($hasIde) { $files += "dclPPGlow$Suffix.bpl" }
   $withDB = (-not $NoDB) -and (Test-Path (Join-Path $src "PPGlowDBR$Suffix.bpl")) -and
-    (Test-Path (Join-Path $src "dclPPGlowDB$Suffix.bpl"))
-  if ($withDB) { $files += @("PPGlowDBR$Suffix.bpl", "dclPPGlowDB$Suffix.bpl") }
+    ((-not $hasIde) -or (Test-Path (Join-Path $src "dclPPGlowDB$Suffix.bpl")))
+  if ($withDB) { $files += "PPGlowDBR$Suffix.bpl"; if ($hasIde) { $files += "dclPPGlowDB$Suffix.bpl" } }
   $stale = @()
   foreach ($f in $files) {
     $path = Join-Path $src $f
@@ -441,8 +453,6 @@ foreach ($t in $Targets) {
     throw ($msg.Trim())
   }
   $names = $files | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) -replace ($Suffix + '$'), '' }
-  # Design-Pakete braucht nur eine IDE dieser Bitness (64-Bit-IDE: bin64\bds.exe)
-  $hasIde = Test-Path (Join-Path $t.StudioBin 'bds.exe')
   if (-not $hasIde) { Write-Host "  Keine $P-IDE installiert: nur Runtime-Pakete und Bibliothekspfad." -ForegroundColor DarkGray }
 
   # --- 3. Alte Eintraege --------------------------------------------------------

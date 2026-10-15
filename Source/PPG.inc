@@ -39,6 +39,15 @@
   {$DEFINE PPG_HAS_UIA}
 {$IFEND}
 
+// Winapi.oleacc deklariert ROLE_SYSTEM_SPLITBUTTON ($3E) erst in neueren Versionen;
+// in Delphi 11 fehlt die Konstante (E2003). Belegt ist sie ab Delphi 13, fuer
+// Delphi 12 ist das ungeprueft. Ohne den Schalter deklariert PPG.Accessibility
+// sie selbst; hat die RTL sie trotzdem, verdeckt die eigene Konstante sie nur
+// (gleicher Wert, kein Fehler). Die Schwelle ist deshalb bewusst vorsichtig.
+{$IF CompilerVersion >= 37.0}
+  {$DEFINE PPG_HAS_OLEACC_SPLITBUTTON}
+{$IFEND}
+
 // THintInfo liegt (belegt ab Delphi 13) in Vcl.Controls; Vcl.Forms.THintInfo ist dort
 // veraltet. Aeltere Versionen nehmen Vcl.Forms (auch falls der Umzug frueher war:
 // dann nur eine Veraltet-Warnung, kein Fehler).
