@@ -1,0 +1,128 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGDBGrid.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+# Wirkungen, die beim DB-Grid anders sind als beim TPPGGrid, stehen als
+# "Klasse.Name = Wirkung" am Anfang.
+
+# --- Wirkung, DB-spezifisch ---
+TPPGDBGrid.ShowFooter = True: Unten steht eine Summenzeile. Ihren Inhalt liefert die Datenmenge: je Spalte das Feld aus Column.FooterField (z. B. ein TAggregateField) oder der Text aus OnGetFooterText. Column.Aggregate wirkt im DB-Grid nicht; das Grid liest dafür nie die ganze Datenmenge.
+TPPGDBGrid.HeaderMenu = True: Rechtsklick auf den Kopf öffnet ein Menü zum Ausblenden und Wählen der Spalten und zum Anpassen der Breite. Sortieren ist im DB-Grid Sache der Datenmenge (OnTitleClick), die Sortier-Einträge sind daher gesperrt. Ergänzen lässt sich das Menü in OnHeaderMenu.
+TPPGDBGrid.Columns = Feste Spalten des DB-Grids: je Spalte ein Feld (FieldName) mit Titel, Breite, Ausrichtung, Editor, Stil und Summenfeld (FooterField). Ohne Einträge zeigt das Grid alle sichtbaren Felder der Datenmenge (Titel = DisplayLabel, Breite aus DisplayWidth).
+> `with TPPGDBGridColumn(PPGDBGrid1.Columns.Add) do begin FieldName := 'Umsatz'; Title := 'Umsatz'; Width := 100; end;`
+TPPGDBGridColumn.FieldName =Name des Felds der Datenmenge, das die Spalte zeigt und bearbeitet. Ein unbekannter Name ergibt eine leere Spalte; Titel (ohne eigenen Title das DisplayLabel), Ausrichtung und Schreibschutz kommen sonst vom Feld.
+> `TPPGDBGridColumn(PPGDBGrid1.Columns.Add).FieldName := 'Kunde';`
+TPPGDBGridColumn.FooterField = Feld der Datenmenge, dessen Text in der Summenzeile (ShowFooter) unter dieser Spalte steht, typisch ein TAggregateField wie SUM(Umsatz). Leer = keine Summe; OnGetFooterText kann den Text ersetzen.
+> `TPPGDBGridColumn(PPGDBGrid1.Columns[3]).FooterField := 'UmsatzSumme';`
+TPPGDBGridColumn.Aggregate = Im DB-Grid ohne Wirkung: Summen rechnet die Datenmenge (Column.FooterField mit einem TAggregateField) oder OnGetFooterText. Die Eigenschaft ist von TPPGGridColumn geerbt.
+TPPGDBGridColumn.FooterFormat = Im DB-Grid ohne Wirkung: Die Summenzeile zeigt den Text des Felds aus FooterField; das Format stellen Sie dort ein (DisplayFormat des TAggregateField).
+TPPGDBGridColumn.GroupIndex = Im DB-Grid ohne Wirkung: Gruppieren wird nicht unterstützt (es bräuchte die ganze Datenmenge im Speicher); Gruppen bildet die Abfrage (GROUP BY).
+TPPGDBGridColumn.Sortable = Im DB-Grid ohne Wirkung: Ein Klick auf den Titel löst nur OnTitleClick aus, sortiert wird in der Datenmenge (IndexFieldNames, ORDER BY).
+
+# --- TPPGDBGrid ---
+TPPGDBGrid.Align ! In Listenfenstern füllt das Grid meist den Platz unter einer Symbolleiste oder einem TPPGDBNavigator: Align = alClient, Navigator alTop, Statusleiste alBottom.
+TPPGDBGrid.AlignWithMargins ! Zusammen mit Align einschalten, damit die Tabelle nicht am Fensterrand klebt; die Abstände (typisch 8) stehen unter Margins.
+TPPGDBGrid.Anchors ! In Dialogen mit veränderbarer Größe [akLeft, akTop, akRight, akBottom]: Die Tabelle wächst mit und zeigt mehr Datensätze, weil der Puffer der sichtbaren Zeilen mitwächst.
+TPPGDBGrid.Animation ! An lassen; Hover und Fokus wechseln dann ruhig. RespectSystemSettings schaltet die Übergänge ab, wenn der Anwender in Windows Animationen abgeschaltet hat.
+TPPGDBGrid.Appearance ! Für Rahmen und Rundung der Tabelle als Ganzes. Kopf, Auswahl, Zebra und Linien stellen Sie gezielter in Styles ein; für die ganze Anwendung besser Preset bzw. StyleManager.
+TPPGDBGrid.Bands ! Gemeinsame Überschrift über zusammengehörige Felder, z. B. „Anschrift“ über Straße, PLZ und Ort. Dafür braucht es Columns; welche Spalten darunter stehen, legt Column.Band fest.
+TPPGDBGrid.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; am Formular setzen und über ParentBiDiMode folgen lassen.
+TPPGDBGrid.BorderStyle ! bsNone, wenn das Grid eine Karte oder ein Panel ganz ausfüllt, das schon einen Rahmen hat; sonst bsSingle lassen.
+TPPGDBGrid.Color ! Fläche der Datenzellen, wenn Sie vom Preset abweichen wollen, z. B. ein heller Ton für schreibgeschützte Listen. Zebra-Zeilen und Kopf stellen Sie unter Styles ein.
+TPPGDBGrid.Columns ! Ohne Einträge zeigt das Grid alle sichtbaren Felder; für eine feste Auswahl und Reihenfolge Spalten mit FieldName, Title und Width anlegen (im Designer „Add all fields“). Felder, die der Anwender nicht sehen soll, einfach weglassen.
+TPPGDBGrid.ConditionalFormats ! Werte ohne Code hervorheben: überfällige Rechnungen rot, wenig Bestand fett, Umsätze als Datenbalken. Die Regeln prüfen den angezeigten Text und wirken auch im Druck und im Excel-Export.
+TPPGDBGrid.Constraints ! MinHeight so wählen, dass Kopf und mindestens drei, vier Datensätze sichtbar bleiben, wenn der Anwender das Fenster verkleinert.
+TPPGDBGrid.Cursor ! Meist crDefault lassen; Links und Buttons in Zellen zeigen die Hand selbst.
+TPPGDBGrid.CustomHint ! Für Hinweise mit Titel und Symbol einen TPPGCustomHint zuweisen; abgeschnittene Zelltexte zeigt das Grid über ToolTips ohnehin.
+TPPGDBGrid.DataSource ! Die Verbindung zur Datenmenge: eine TDataSource aus dem Datenmodul zuweisen, deren DataSet die Abfrage oder Tabelle ist. Navigator, Detailfelder und Grid an derselben DataSource zeigen immer denselben Datensatz.
+TPPGDBGrid.DefaultDrawing ! Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell komplett selbst zeichnen. Für Farben und Symbole reichen ConditionalFormats und OnGetCellStyle.
+TPPGDBGrid.DoubleBuffered ! Bei PPGlow-Controls nicht nötig; das Grid zeichnet immer flackerfrei. Steht nur da, damit alte Formulare mit TDBGrid laden.
+TPPGDBGrid.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. crDrag beim Ziehen eines Datensatzes in eine andere Liste.
+TPPGDBGrid.DragKind ! dkDrag für Drag & Drop (Datensatz auf einen Ordner oder eine zweite Liste ziehen); dkDock braucht man bei Tabellen praktisch nie.
+TPPGDBGrid.DragMode ! dmManual lassen, sonst startet jeder Klick in eine Zelle ein Ziehen. Drag & Drop besser in OnMouseDown mit BeginDrag(False) starten.
+TPPGDBGrid.DrawingStyle ! gdsThemed lassen, dann kommt der Kopf vom Preset. gdsGradient nur, wenn migrierte Formulare mit Verlaufskopf genauso aussehen sollen.
+TPPGDBGrid.Enabled ! Sperren, solange die Abfrage neu geladen wird. Nur zum Lesen besser ReadOnly oder dgEditing weglassen; dann kann man weiter blättern und kopieren.
+TPPGDBGrid.ExportMaxRecords ! Schutz vor versehentlichem Export einer Millionen-Tabelle. Bei großen Abfragen lieber vorher filtern; für Auswertungen mit vielen Sätzen den Wert bewusst erhöhen.
+TPPGDBGrid.FixedColor ! Nur für Formulare, die von TDBGrid kommen. In neuem Code die Kopffarbe über Styles.Header.Color setzen, dort gibt es auch DarkColor für den Dark Mode.
+TPPGDBGrid.FixedColsRight ! Für eine Spalte ganz rechts, die bei breiten Tabellen immer sichtbar sein soll, z. B. Betrag oder Status.
+TPPGDBGrid.Font ! Die Schrift aller Zellen; meist vom Formular übernehmen. Für den Kopf TitleFont bzw. Styles.Header, für einzelne Spalten Column.Style.
+TPPGDBGrid.GradientEndColor ! Nur mit DrawingStyle = gdsGradient: Endfarbe des Kopfverlaufs, wie bei TDBGrid.
+TPPGDBGrid.GradientStartColor ! Nur mit DrawingStyle = gdsGradient: Anfangsfarbe des Kopfverlaufs.
+TPPGDBGrid.GridLineWidth ! 1 für normale Listen; 0 für ruhige Listen ohne Linien, dann am besten mit Zebra-Zeilen (Styles.AlternateRow).
+TPPGDBGrid.HeaderMenu ! True lassen: Anwender blenden Spalten selbst ein und aus und passen Breiten an. Eigene Einträge („Nach Excel exportieren“) ergänzen Sie in OnHeaderMenu.
+TPPGDBGrid.Height ! So hoch, dass Kopf, Summenzeile und eine sinnvolle Zahl an Datensätzen hineinpassen; meist besser über Align oder Anchors mitwachsen lassen.
+TPPGDBGrid.HelpContext ! Kontext-ID der Hilfeseite zur Liste, die F1 öffnet.
+TPPGDBGrid.HelpKeyword ! Wie HelpContext, aber als Stichwort (HelpType = htKeyword).
+TPPGDBGrid.HelpType ! htKeyword bei Stichwort-Hilfen, sonst htContext; ohne Hilfedatei egal.
+TPPGDBGrid.HighContrastSupport ! True lassen: Im Hochkontrastmodus nimmt die Tabelle die Systemfarben, Auswahl und Fokus bleiben sichtbar.
+TPPGDBGrid.Hint ! Ein allgemeiner Hinweis zur Liste („Doppelklick öffnet den Kunden“). Er ersetzt die automatischen Hinweise für abgeschnittene Zelltexte (ToolTips).
+TPPGDBGrid.Left ! Im Designer per Maus setzen; im Code nur bei dynamisch erzeugten Tabellen, am besten mit SetBounds.
+TPPGDBGrid.Margins ! Abstand zum Fensterrand bei Align, typisch 8 rundum; wirkt nur mit AlignWithMargins.
+TPPGDBGrid.Name ! Sprechend benennen, z. B. grdKunden oder grdPositionen, damit der Code lesbar bleibt.
+TPPGDBGrid.Options ! dgRowSelect und ohne dgEditing für reine Auswahllisten; dgEditing für Erfassung in der Tabelle (Positionen); dgConfirmDelete lassen, damit Strg+Entf nachfragt; dgIndicator zeigt, welcher Datensatz gerade bearbeitet wird.
+TPPGDBGrid.ParentBiDiMode ! True lassen, damit die Tabelle der Leserichtung des Formulars folgt.
+TPPGDBGrid.ParentColor ! False lassen: Die Datenfläche soll sich vom Formular abheben.
+TPPGDBGrid.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGDBGrid.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGDBGrid.ParentFont ! True lassen, damit die Tabelle die Formularschrift trägt; eigene Schrift nur für sehr dichte Listen.
+TPPGDBGrid.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten; dann erscheinen auch die Hinweise für abgeschnittene Zelltexte.
+TPPGDBGrid.PopupMenu ! Befehle für den gewählten Datensatz per Rechtsklick: Öffnen, Kopieren, Löschen, Exportieren. Das Kopfmenü (HeaderMenu) ist davon getrennt.
+TPPGDBGrid.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über den StyleManager; die Tabelle passt dann zu Navigator, Feldern und Buttons.
+TPPGDBGrid.ReadOnly ! Für Listen, in denen nur gesucht und gewählt wird, während die Datenmenge selbst änderbar bleibt (Bearbeiten im Detailformular). Für ganz schreibgeschützte Daten besser die Abfrage bzw. DataSource.AutoEdit.
+TPPGDBGrid.ScrollBarMode ! sbmAuto lassen (schmale Leiste bei Bedarf). sbmAlways, wenn Anwender die Leiste sehen sollen, um die Länge der Liste abzuschätzen.
+TPPGDBGrid.ShowFooter ! Einschalten, sobald die Datenmenge Summen liefert (TAggregateField wie SUM(Betrag)) und eine Spalte sie über FooterField zeigt, z. B. Bestellwert oder offene Posten.
+TPPGDBGrid.ShowHint ! Einschalten (oder am Formular), damit abgeschnittene Zelltexte und Hint erscheinen.
+TPPGDBGrid.ShowRequired ! In Erfassungstabellen einschalten: Pflichtfelder (TField.Required) bekommen ein Sternchen im Titel, bevor der Anwender beim Speichern eine Meldung bekommt.
+TPPGDBGrid.SmoothScrolling ! True lassen; bei sehr langsamen Remote-Sitzungen kann False das Scrollen direkter machen.
+TPPGDBGrid.StyleElements ! Nur bei VCL-Styles wichtig: seClient herausnehmen, wenn die Tabelle ihre eigenen Farben aus Styles behalten soll.
+TPPGDBGrid.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Controls zuweisen; dann wechselt die Tabelle mit Hell/Dunkel und Preset.
+TPPGDBGrid.Styles ! Gezielt einzelne Bereiche anpassen: Zebra-Zeilen (AlternateRow), fetter Kopf (Header.FontStyle), Summenzeile (Footer). Nur gesetzte Werte zählen, der Rest kommt vom Preset.
+TPPGDBGrid.TabOrder ! In Masken so vergeben, dass Tab nach den Kopfdaten in die Positions-Tabelle springt und danach zu den Buttons.
+TPPGDBGrid.TabStop ! True lassen, damit die Tabelle per Tastatur erreichbar ist (Pfeile blättern, Einfg fügt ein, Strg+Entf löscht).
+TPPGDBGrid.Tag ! Frei, z. B. eine Listen-ID, wenn mehrere Tabellen gemeinsame Ereignis-Handler nutzen.
+TPPGDBGrid.TitleFont ! Nur für Formulare, die von TDBGrid kommen (der Migrator überträgt Title.Font). In neuem Code Styles.Header (FontStyle, Font) nehmen.
+TPPGDBGrid.ToolTips ! True lassen (braucht ShowHint): Lange Kundennamen oder Bemerkungen sind per Maus ganz lesbar, ohne die Spalte zu verbreitern.
+TPPGDBGrid.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Tabellen.
+TPPGDBGrid.Touch ! Nur für Touch-Geräte: Gesten wie Wischen anhaken und in OnGesture auswerten; Blättern per Finger kann das Grid selbst.
+TPPGDBGrid.Visible ! Ausblenden, solange die Abfrage noch leer ist, und stattdessen einen Hinweis zeigen („Keine Kunden gefunden“).
+TPPGDBGrid.Width ! Breite so wählen, dass die wichtigen Felder ohne waagerechtes Scrollen passen; meist mit Align oder Anchors mitwachsen lassen.
+TPPGDBGrid.OnCellClick ! Auf einen Klick in eine bestimmte Spalte reagieren, z. B. bei der Spalte „E-Mail“ das Mailprogramm öffnen; Column.FieldName sagt, welche.
+TPPGDBGrid.OnClick ! Nach jedem Wechsel der Zelle durch den Anwender, z. B. eine Vorschau aktualisieren. Für den Datensatzwechsel ist DataSource.OnDataChange der bessere Ort, er meldet auch Navigator und Code.
+TPPGDBGrid.OnColEnter ! Beim Wechsel in eine Spalte z. B. einen Hinweis zum Feld in der Statusleiste zeigen (SelectedField.DisplayLabel).
+TPPGDBGrid.OnColExit ! Gegenstück zu OnColEnter: den Hinweis wieder entfernen oder eine Spalte erst beim Verlassen prüfen.
+TPPGDBGrid.OnColumnMoved ! Nach dem Verschieben einer Spalte das Layout merken (SaveLayout), damit die Reihenfolge beim nächsten Start bleibt; gemerkt wird über den Feldnamen.
+TPPGDBGrid.OnContextPopup ! Vor dem Kontextmenü Einträge passend zum Datensatz sperren, z. B. „Stornieren“ bei bereits stornierten Aufträgen.
+TPPGDBGrid.OnDblClick ! Den Datensatz im Detailformular öffnen. Bei dgEditing öffnet der Doppelklick in bearbeitbaren Zellen zusätzlich den Editor; dann ReadOnly setzen oder nur aus schreibgeschützten Spalten öffnen.
+TPPGDBGrid.OnDragDrop ! Abgelegte Elemente übernehmen, z. B. Artikel aus einer Liste als neue Positionen anhängen (Append und Post).
+TPPGDBGrid.OnDragOver ! Accept := True nur für passende Quellen, z. B. wenn Source die Artikelliste ist.
+TPPGDBGrid.OnDrawCell ! Für Zusätze, die keine Zellart kann, z. B. ein kleines Dreieck für Bemerkungen. Nur zeichnen, die Datenmenge dabei nicht bewegen.
+TPPGDBGrid.OnEditButtonClick ! Für Spalten mit ButtonStyle = cbsEllipsis: Auswahldialog öffnen (Kunde, Artikel) und den gewählten Wert ins Feld schreiben.
+TPPGDBGrid.OnEndDock ! Nur bei DragKind = dkDock; bei Tabellen praktisch nie gebraucht.
+TPPGDBGrid.OnEndDrag ! Nach dem Ziehen eines Datensatzes aufräumen; Target = nil heißt abgebrochen.
+TPPGDBGrid.OnEnter ! Beim Betreten der Tabelle z. B. die zugehörigen Befehle (Neu, Löschen) in der Symbolleiste freischalten.
+TPPGDBGrid.OnExit ! Beim Verlassen offene Änderungen buchen (DataSet.Post) oder die Befehle in der Symbolleiste wieder sperren; einen leeren neuen Satz verwirft das Grid mit dgCancelOnExit selbst.
+TPPGDBGrid.OnGesture ! Auf Touch-Geräten z. B. Wischen nach links für „Datensatz löschen“ auswerten.
+TPPGDBGrid.OnGetCellStyle ! Darstellung, die sich nicht als Regel fassen lässt, z. B. ganze Zeile grau bei gesperrtem Kunden. Kurz halten und nur den Zelltext auswerten; es läuft beim Zeichnen.
+TPPGDBGrid.OnGetFooterText ! Für Summenzeilen ohne TAggregateField: Text aus einer eigenen Abfrage (SELECT SUM ...) liefern oder „Summe“ unter die erste Spalte schreiben.
+TPPGDBGrid.OnHeaderMenu ! Das Kopfmenü um eigene Befehle ergänzen („Nach diesem Feld sortieren“, „Als Standard speichern“) oder Einträge entfernen, die nicht passen.
+TPPGDBGrid.OnKeyDown ! Eigene Tasten, z. B. Enter zum Öffnen des Datensatzes; Key := 0 verhindert die Standardbehandlung (Einfg, Strg+Entf, Pfeile).
+TPPGDBGrid.OnKeyPress ! Zeichen prüfen, bevor sie den Editor öffnen; Prüfungen der Werte gehören aber besser an das Feld (TField.OnValidate).
+TPPGDBGrid.OnKeyUp ! Selten nötig; z. B. eine Vorschau aktualisieren, nachdem die Pfeiltaste losgelassen wurde.
+TPPGDBGrid.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster) belegen; sonst leer lassen.
+TPPGDBGrid.OnMouseDown ! Startpunkt für eigenes Drag & Drop eines Datensatzes (BeginDrag) oder Rechtsklick-Auswahl vor dem Kontextmenü.
+TPPGDBGrid.OnMouseEnter ! Selten; z. B. einen Hilfetext in der Statusleiste zeigen.
+TPPGDBGrid.OnMouseLeave ! Gegenstück zu OnMouseEnter, z. B. eine Vorschau wieder ausblenden.
+TPPGDBGrid.OnMouseMove ! Für eigene Hover-Vorschauen mit MouseCoord(X, Y, Col, Row); feuert sehr oft, also nur wenig tun.
+TPPGDBGrid.OnMouseUp ! Ende eines eigenen Zieh- oder Markiervorgangs auswerten.
+TPPGDBGrid.OnMouseWheel ! Selten; das Rad blättert die Datenmenge schon selbst. Handled := True verhindert das.
+TPPGDBGrid.OnStartDock ! Nur bei DragKind = dkDock; bei Tabellen praktisch nie gebraucht.
+TPPGDBGrid.OnStartDrag ! Beim Ziehen ein eigenes DragObject mit dem Schlüssel des Datensatzes setzen.
+TPPGDBGrid.OnTitleClick ! Sortieren nach der angeklickten Spalte: ClientDataSet1.IndexFieldNames := Column.FieldName bzw. bei einer Abfrage ORDER BY setzen und neu öffnen.
+
+# --- Typen ---
+TPPGDBGridColumn.Aggregate ! Im DB-Grid nicht verwenden; die Summe als TAggregateField in der Datenmenge anlegen und über FooterField zeigen.
+TPPGDBGridColumn.ButtonStyle ! cbsEllipsis für Felder, die man über einen Dialog füllt (Kunde suchen, Datei wählen), dazu OnEditButtonClick; cbsNone, wenn eine PickList nur Vorschläge macht und Freitext erlaubt ist.
+TPPGDBGridColumn.FieldName ! Für jede Spalte genau ein Feld der Abfrage; der Titel kommt ohne eigenen Title aus DisplayLabel, deshalb DisplayLabel am Feld pflegen, dann passt er auch im Formular.
+TPPGDBGridColumn.FooterField ! Unter Beträgen und Mengen die Summe zeigen: in der Datenmenge ein TAggregateField SUM(Betrag) mit DisplayFormat anlegen und seinen Namen hier eintragen.
+TPPGDBGridColumn.FooterFormat ! Im DB-Grid nicht verwenden; das Format der Summe steht im DisplayFormat des TAggregateField.
+TPPGDBGridColumn.GroupIndex ! Im DB-Grid nicht verwenden; für Auswertungen nach Kunde oder Monat GROUP BY in der Abfrage nehmen oder die Daten in ein TPPGGrid laden.
+TPPGDBGridColumn.Sortable ! Im DB-Grid nicht verwenden; ob eine Spalte sortierbar ist, entscheidet Ihr OnTitleClick-Handler.
