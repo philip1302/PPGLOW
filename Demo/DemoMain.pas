@@ -113,6 +113,9 @@ type
     /// Selbsttest aller Seiten (/selftest datei.txt). Ergebnis = Anzahl Fehler.
     /// AOnly: nur die Komponentenseite dieser Klasse pruefen (/only TPPGx).
     function RunSelfTest(const FileName: string; const AOnly: string = ''): Integer;
+    /// Wirkungstest einer Komponentenseite (/effects datei.txt /only TPPGx).
+    /// Ergebnis = Anzahl Eigenschaften ohne sichtbare Wirkung, -1 = keine Seite.
+    function RunEffectTest(const FileName, AClassName: string): Integer;
     /// Katalog: Seite zum Suchtext (Control-Name oder Stichwort), -1 = keine.
     function FindCatalogPage(const SearchText: string): Integer;
   end;
@@ -1528,6 +1531,37 @@ begin
   end;
 end;
 
+function TDemoForm.RunEffectTest(const FileName, AClassName: string): Integer;
+var
+  Lines: TStringList;
+begin
+  Lines := TStringList.Create;
+  try
+    if not ShowComponentTab(AClassName, 0) then
+    begin
+      Lines.Add('Komponentenseite ' + AClassName + ' ist nicht angemeldet');
+      Result := -1;
+    end
+    else
+    begin
+      FNotify.Animation.Enabled := False;
+      Application.ProcessMessages;
+      try
+        Result := TDemoComponentPage(PageObject(ShowcasePage(AClassName))).EffectTest(Lines);
+      except
+        on E: Exception do
+        begin
+          Lines.Add(E.ClassName + ': ' + E.Message);
+          Result := -1;
+        end;
+      end;
+    end;
+    Lines.SaveToFile(FileName, TEncoding.UTF8);
+  finally
+    Lines.Free;
+  end;
+end;
+
 function TDemoForm.RunSelfTest(const FileName: string; const AOnly: string): Integer;
 var
   I, J, Page: Integer;
@@ -1560,7 +1594,9 @@ begin
     if AOnly = '' then
     begin
     // Katalogsuche
-    SelfCheck('Suche: DBGrid -> Datenbank', FindCatalogPage('DBGrid') = PgDatabase);
+    SelfCheck('Suche: DBEdit -> Datenbank', FindCatalogPage('DBEdit') = PgDatabase);
+    SelfCheck('Suche: DBGrid -> eigene Komponentenseite',
+      FindCatalogPage('DBGrid') = ShowcasePage('TPPGDBGrid'));
     SelfCheck('Suche: Toast -> Rueckmeldung', FindCatalogPage('toast') = PgFeedback);
     SelfCheck('Suche: Seitentitel', FindCatalogPage('Termine') = PgDates);
     SelfCheck('Suche: kein Treffer', FindCatalogPage('xyzzy') = -1);

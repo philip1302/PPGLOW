@@ -77,7 +77,9 @@
 
 **Lauf 1 (10.10.2026, fertig):** ToolBar, Ribbon, Edit, Memo, SpinEdit, NumberEdit, MaskEdit, PasswordEdit, FileEdit, SearchEdit, TagEdit, ColorPicker, CheckBox, RadioButton, ToggleSwitch, RadioGroup, CheckGroup, TrackBar, Rating, ComboBox, CheckComboBox. Dazu kam vorher der Button. Ergebnis: Demo-Selbsttest 792/792, 1818 Tests grün. Die Berichte der Agenten (gefundene Fehler in Suite, Doku und Gerüst) stehen in `Docs\Showcase-Lauf1-Berichte.md`.
 
-**Lauf 2:** ColumnComboBox, ListBox, CheckListBox, TreeView, TileView, Grid, Calendar, DatePicker, TimePicker, Planner, Kanban, Panel, ScrollBox, GroupBox, Expander, Splitter, PageControl, TabControl, NavigationView, Breadcrumb, StatusBar.
+**Vorgezogen (14./15.10.2026, User: zuerst die Komponenten mit Excel-Export):** Grid und DBGrid sind fertig (Selbsttest 857/857). TileView folgt.
+
+**Lauf 2:** ColumnComboBox, ListBox, CheckListBox, TreeView, TileView, Grid (fertig), Calendar, DatePicker, TimePicker, Planner, Kanban, Panel, ScrollBox, GroupBox, Expander, Splitter, PageControl, TabControl, NavigationView, Breadcrumb, StatusBar.
 
 **Lauf 3:** Wizard, MenuBar, PopupMenu, TaskDialog, HintManager, CustomHint, TeachingTip, Label, LinkLabel, Badge, ProgressBar, ProgressRing, InfoBar, NotificationCenter, BusyOverlay, Validator, Chart, Sparkline, Gauge, KpiTile.
 

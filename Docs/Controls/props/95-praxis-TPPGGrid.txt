@@ -1,0 +1,163 @@
+# Praxis-Texte ("Klasse.Name ! Text") fuer die Demo-Komponentenseite TPPGGrid.
+# Die Wirkung steht in den anderen Dateien; hier nur, wann und wie man die
+# Eigenschaft im Alltag einsetzt. Format: siehe Build\make-docs.ps1.
+
+# --- TPPGGrid ---
+TPPGGrid.Align ! Listen-Fenster füllt das Grid meist ganz aus: Align = alClient, darüber eine Symbolleiste (alTop) und darunter eine Statusleiste (alBottom). Freie Lage nur in kleinen Dialogen.
+TPPGGrid.AlignWithMargins ! Zusammen mit Align einschalten, damit die Tabelle nicht am Fensterrand klebt; die Abstände (typisch 8) stehen unter Margins.
+TPPGGrid.Anchors ! In Dialogen mit veränderbarer Größe [akLeft, akTop, akRight, akBottom] setzen: Die Tabelle wächst dann mit dem Fenster und zeigt mehr Zeilen.
+TPPGGrid.Animation ! An lassen; Hover und Fokus wechseln dann ruhig. RespectSystemSettings schaltet die Übergänge ab, wenn der Anwender in Windows Animationen abgeschaltet hat.
+TPPGGrid.Appearance ! Für Rahmen und Rundung der Tabelle als Ganzes. Kopf, Auswahl, Zebra und Linien stellen Sie gezielter in Styles ein; für die ganze Anwendung besser Preset bzw. StyleManager.
+TPPGGrid.Bands ! Für zusammengehörige Spalten eine gemeinsame Überschrift, z. B. „Anschrift“ über Straße, PLZ und Ort oder „Q1“ über Januar bis März. Welche Spalten darunter stehen, legt Column.Band fest.
+TPPGGrid.BiDiMode ! Nur für arabische oder hebräische Oberflächen ändern; am Formular setzen und über ParentBiDiMode folgen lassen.
+TPPGGrid.BorderStyle ! bsNone, wenn das Grid eine Karte oder ein Panel ganz ausfüllt, das schon einen Rahmen hat; sonst bsSingle lassen.
+TPPGGrid.ColCount ! Ohne Columns die Spaltenzahl einschließlich fester Spalten setzen, wie bei TStringGrid. Mit Columns ergibt sie sich aus der Zahl der Spalten; dann nicht von Hand ändern.
+TPPGGrid.Color ! Fläche der Datenzellen, wenn Sie vom Preset abweichen wollen, z. B. ein heller Ton für schreibgeschützte Listen. Zebra-Zeilen und Kopf stellen Sie unter Styles ein.
+TPPGGrid.Columns ! Für jede echte Tabelle anlegen: Titel, Breite, Ausrichtung, Editor, Summe und Zellart je Spalte. Ohne Columns bleibt das Grid ein schlichtes TStringGrid mit gleich breiten Spalten.
+TPPGGrid.ConditionalFormats ! Werte ohne Code hervorheben: überfällige Rechnungen rot, wenig Bestand fett, Umsätze als Datenbalken. Die Regeln wirken auch beim Drucken und im Excel-Export.
+TPPGGrid.Constraints ! MinHeight so wählen, dass Kopf und mindestens drei, vier Zeilen sichtbar bleiben, wenn der Anwender das Fenster verkleinert.
+TPPGGrid.Cursor ! Meist crDefault lassen; Links und Buttons in Zellen zeigen die Hand selbst.
+TPPGGrid.CustomHint ! Für Hinweise mit Titel und Symbol einen TPPGCustomHint zuweisen; abgeschnittene Zelltexte zeigt das Grid über ToolTips ohnehin.
+TPPGGrid.DefaultColWidth ! Breite für Spalten ohne eigene Breite (Column.Width = 0); bei Tabellen ohne Columns die eine Stellschraube für alle Spalten.
+TPPGGrid.DefaultDrawing ! Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell komplett selbst zeichnen. Für Farben und Symbole reichen ConditionalFormats, OnGetCellStyle und CellKind.
+TPPGGrid.DefaultRowHeight ! 24 passt zu Windows 11; 28 bis 32 für Touch oder Zellen mit Buttons, 20 für sehr dichte Listen. Einzelne Zeilen über RowHeights[].
+TPPGGrid.DoubleBuffered ! Bei PPGlow-Controls nicht nötig; das Grid zeichnet immer flackerfrei. Steht nur da, damit alte Formulare laden.
+TPPGGrid.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. crDrag beim Ziehen von Zeilen in eine andere Liste.
+TPPGGrid.DragKind ! dkDrag für Drag & Drop (Zeilen auf einen Ordner oder eine zweite Liste ziehen); dkDock braucht man bei Tabellen praktisch nie.
+TPPGGrid.DragMode ! dmManual lassen, sonst startet jeder Klick in eine Zelle ein Ziehen. Drag & Drop besser in OnMouseDown mit BeginDrag(False) starten.
+TPPGGrid.DrawingStyle ! gdsThemed lassen, dann kommt der Kopf vom Preset. gdsGradient nur, wenn alte Formulare mit Verlaufskopf genauso aussehen sollen.
+TPPGGrid.Enabled ! Sperren, solange Daten geladen werden oder ein Datensatz woanders bearbeitet wird. Nur zum Lesen besser goEditing weglassen; dann kann man weiter markieren und kopieren.
+TPPGGrid.FixedColor ! Nur für Formulare, die von TStringGrid kommen. In neuem Code die Kopffarbe über Styles.Header.Color setzen, dort gibt es auch DarkColor für den Dark Mode.
+TPPGGrid.FixedCols ! 1 für eine Nummern- oder Namensspalte, die beim waagerechten Scrollen stehen bleiben soll; 0, wenn alle Spalten Daten sind.
+TPPGGrid.FixedColsRight ! Für eine Spalte ganz rechts, die immer sichtbar sein soll, z. B. Summe oder ein Button „Öffnen“ bei breiten Tabellen.
+TPPGGrid.FixedRows ! 1 für die Kopfzeile (Normalfall). 0 nur für reine Wertetabellen ohne Überschrift; mehr als 1 besser über Bands lösen.
+TPPGGrid.Font ! Die Schrift aller Zellen; meist vom Formular übernehmen. Für einen anderen Kopf Styles.Header.Font bzw. FontStyle, für einzelne Spalten Column.Style.
+TPPGGrid.GradientEndColor ! Nur mit DrawingStyle = gdsGradient: Endfarbe des Kopfverlaufs, wie bei TStringGrid.
+TPPGGrid.GradientStartColor ! Nur mit DrawingStyle = gdsGradient: Anfangsfarbe des Kopfverlaufs.
+TPPGGrid.GridLineWidth ! 1 für normale Listen; 0 für ruhige Listen ohne Linien, dann am besten mit Zebra-Zeilen (Styles.AlternateRow).
+TPPGGrid.GroupFooter ! Einschalten, wenn jede Gruppe ihre eigene Summe zeigen soll, z. B. Umsatz je Kunde oder Bestand je Lager.
+TPPGGrid.HeaderMenu ! True lassen: Anwender sortieren, gruppieren und blenden Spalten selbst ein und aus. Eigene Einträge („Spalte drucken“) ergänzen Sie in OnHeaderMenu.
+TPPGGrid.Height ! So hoch, dass Kopf, Filterzeile, Summe und eine sinnvolle Zahl an Zeilen hineinpassen; meist besser über Align oder Anchors mitwachsen lassen.
+TPPGGrid.HelpContext ! Kontext-ID der Hilfeseite zur Liste, die F1 öffnet.
+TPPGGrid.HelpKeyword ! Wie HelpContext, aber als Stichwort (HelpType = htKeyword).
+TPPGGrid.HelpType ! htKeyword bei Stichwort-Hilfen, sonst htContext; ohne Hilfedatei egal.
+TPPGGrid.HighContrastSupport ! True lassen: Im Hochkontrastmodus nimmt die Tabelle die Systemfarben, Auswahl und Fokus bleiben sichtbar.
+TPPGGrid.Hint ! Ein allgemeiner Hinweis zur Liste („Doppelklick öffnet den Auftrag“). Er ersetzt die automatischen Hinweise für abgeschnittene Zelltexte (ToolTips).
+TPPGGrid.Images ! Bildliste für Zellen mit CellKind = ckImage (Status-Symbol je Zeile) und für Bilder im Markup.
+TPPGGrid.Left ! Im Designer per Maus setzen; im Code nur bei dynamisch erzeugten Tabellen, am besten mit SetBounds.
+TPPGGrid.Margins ! Abstand zum Fensterrand bei Align, typisch 8 rundum; wirkt nur mit AlignWithMargins.
+TPPGGrid.Name ! Sprechend benennen, z. B. grdAuftraege oder grdPositionen, damit der Code lesbar bleibt.
+TPPGGrid.Options ! goRowSelect für Listen, in denen man ganze Datensätze wählt; goEditing zum Bearbeiten in der Zelle; goColSizing und goColMoving, damit der Anwender Breite und Reihenfolge anpasst; goTabs für Eingabemasken.
+TPPGGrid.ParentBiDiMode ! True lassen, damit die Tabelle der Leserichtung des Formulars folgt.
+TPPGGrid.ParentColor ! False lassen: Die Datenfläche soll sich vom Formular abheben.
+TPPGGrid.ParentCustomHint ! True lassen, damit ein am Formular gesetzter CustomHint auch hier gilt.
+TPPGGrid.ParentDoubleBuffered ! True lassen; bei PPGlow-Controls ohne sichtbare Wirkung.
+TPPGGrid.ParentFont ! True lassen, damit die Tabelle die Formularschrift trägt; eigene Schrift nur für sehr dichte Listen.
+TPPGGrid.ParentShowHint ! True lassen und ShowHint einmal am Formular einschalten; dann erscheinen auch die Hinweise für abgeschnittene Zelltexte.
+TPPGGrid.PopupMenu ! Befehle für die gewählte Zeile per Rechtsklick: Öffnen, Kopieren, Löschen, Exportieren. Das Kopfmenü (HeaderMenu) ist davon getrennt.
+TPPGGrid.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am besten über den StyleManager; die Tabelle passt dann zu Buttons und Feldern.
+TPPGGrid.RowCount ! Zeilenzahl einschließlich Kopf vor dem Füllen setzen (RowCount := 1 + Anzahl Datensätze). Für sehr viele Zeilen nur RowCount setzen und den Text in OnGetCellText liefern.
+TPPGGrid.ScrollBarMode ! sbmAuto lassen (schmale Leiste bei Bedarf). sbmAlways, wenn Anwender die Leiste sehen sollen, um die Länge der Liste abzuschätzen.
+TPPGGrid.ScrollBars ! ssVertical, wenn alle Spalten in die Breite passen und keine waagerechte Leiste stören soll; ssNone für kurze, feste Tabellen.
+TPPGGrid.ShowFilterRow ! Für Listen mit mehr als einer Bildschirmseite: Der Anwender tippt „offen“ unter Status oder einen Namensteil unter Kunde und sieht sofort nur die passenden Zeilen.
+TPPGGrid.ShowFooter ! Einschalten, sobald eine Spalte eine Summe hat (Column.Aggregate): Offene Posten, Rechnungsbeträge, Stunden. Die Summe folgt dem Filter.
+TPPGGrid.ShowGroupPanel ! Für Auswertungen, in denen der Anwender selbst gruppieren soll (nach Kunde, Monat, Status): Spaltenkopf in die Leiste ziehen. Für feste Gruppen reicht GroupBy im Code.
+TPPGGrid.ShowHint ! Einschalten (oder am Formular), damit abgeschnittene Zelltexte und Hint erscheinen.
+TPPGGrid.SmoothScrolling ! True lassen; bei sehr langsamen Remote-Sitzungen kann False das Scrollen direkter machen.
+TPPGGrid.SortOnHeaderClick ! True lassen, das erwarten Anwender. False, wenn die Reihenfolge fachlich fest ist (Positionen einer Rechnung) oder Sie serverseitig sortieren.
+TPPGGrid.StyleElements ! Nur bei VCL-Styles wichtig: seClient herausnehmen, wenn die Tabelle ihre eigenen Farben aus Styles behalten soll.
+TPPGGrid.StyleManager ! Einen TPPGStyleManager aufs Formular legen und allen Controls zuweisen; dann wechselt die Tabelle mit Hell/Dunkel und Preset.
+TPPGGrid.Styles ! Gezielt einzelne Bereiche anpassen: Zebra-Zeilen (AlternateRow), fetter Kopf (Header.FontStyle), Hover (HotRow). Nur gesetzte Werte zählen, der Rest kommt vom Preset.
+TPPGGrid.TabOrder ! In Masken so vergeben, dass Tab nach den Kopfdaten in die Positions-Tabelle springt und danach zu den Buttons.
+TPPGGrid.TabStop ! True lassen, damit die Tabelle per Tastatur erreichbar ist (Pfeiltasten, Strg+C, F2).
+TPPGGrid.Tag ! Frei, z. B. eine Listen-ID, wenn mehrere Tabellen gemeinsame Ereignis-Handler nutzen.
+TPPGGrid.ToolTips ! True lassen (braucht ShowHint): Lange Kundennamen oder Bemerkungen sind per Maus ganz lesbar, ohne die Spalte zu verbreitern.
+TPPGGrid.Top ! Wie Left: im Designer per Maus, im Code nur bei dynamisch erzeugten Tabellen.
+TPPGGrid.Touch ! Nur für Touch-Geräte: Gesten wie Wischen anhaken und in OnGesture auswerten; Scrollen per Finger kann das Grid selbst.
+TPPGGrid.Visible ! Ausblenden, solange es noch keine Daten gibt, und stattdessen einen Hinweis zeigen („Keine Aufträge gefunden“).
+TPPGGrid.Width ! Breite so wählen, dass die wichtigen Spalten ohne waagerechtes Scrollen passen; meist mit Align oder Anchors mitwachsen lassen.
+TPPGGrid.OnCellButtonClick ! Die Aktion eines Zellen-Buttons (CellKind = ckButton), z. B. „Öffnen“ oder „Löschen“ für die Zeile ARow.
+TPPGGrid.OnClick ! Nach jeder Wahl einer Zelle oder Zeile, z. B. um Details unter der Liste anzuzeigen (Row = gewählte Datenzeile).
+TPPGGrid.OnColumnMoved ! Nach dem Verschieben einer Spalte das Layout merken (SaveLayout), damit die Reihenfolge beim nächsten Start bleibt.
+TPPGGrid.OnCompareCells ! Für Spalten, die weder Zahl noch Text sind: Datum „31.12.2026“, Status in fachlicher Reihenfolge (neu, offen, erledigt) oder Versionsnummern.
+TPPGGrid.OnContextPopup ! Vor dem Kontextmenü Einträge passend zur Zeile sperren, z. B. „Stornieren“ bei bereits stornierten Aufträgen.
+TPPGGrid.OnCustomAggregate ! Für Summen, die das Grid nicht kennt: gewichteter Durchschnitt, Anzahl „offen“, Spanne von–bis. Value für Gruppe Group setzen.
+TPPGGrid.OnDblClick ! Den Datensatz der Zeile öffnen (Detaildialog). Bei goEditing öffnet der Doppelklick in bearbeitbaren Zellen zusätzlich den Editor; den Detaildialog dann nur aus schreibgeschützten Spalten öffnen.
+TPPGGrid.OnDragDrop ! Abgelegte Elemente übernehmen, z. B. Artikel aus einer Liste als neue Positionen einfügen.
+TPPGGrid.OnDragOver ! Accept := True nur für passende Quellen, z. B. wenn Source die Artikelliste ist.
+TPPGGrid.OnDrawCell ! Für Zusätze, die keine Zellart kann, z. B. ein kleines Dreieck für Kommentare. Mit DefaultDrawing = False den ganzen Inhalt selbst zeichnen.
+TPPGGrid.OnEndDock ! Nur bei DragKind = dkDock; bei Tabellen praktisch nie gebraucht.
+TPPGGrid.OnEndDrag ! Nach dem Ziehen von Zeilen aufräumen; Target = nil heißt abgebrochen.
+TPPGGrid.OnEnter ! Beim Betreten der Tabelle z. B. die zugehörigen Befehle (Neu, Löschen) in der Symbolleiste freischalten.
+TPPGGrid.OnExit ! Beim Verlassen der Tabelle gesammelte Änderungen speichern oder die zugehörigen Befehle in der Symbolleiste wieder sperren.
+TPPGGrid.OnFixedCellClick ! Klick auf den Kopf oder eine feste Spalte, z. B. um eine eigene Sortierung oder eine Spaltenauswahl zu starten.
+TPPGGrid.OnGesture ! Auf Touch-Geräten z. B. Wischen nach links für „Zeile löschen“ auswerten.
+TPPGGrid.OnGetCellStyle ! Darstellung, die sich nicht als Regel fassen lässt: ganze Zeile grau bei storniertem Auftrag, fett beim Standardlieferanten. Kurz halten, es läuft beim Zeichnen.
+TPPGGrid.OnGetCellText ! Für große oder fremde Datenmengen (Liste von Objekten, 100 000 Zeilen): Text aus der eigenen Liste liefern statt Cells[] zu füllen. Nur lesen, nichts berechnen, was dauert.
+TPPGGrid.OnGetEditText ! Den Rohwert in den Editor geben, wenn die Anzeige formatiert ist, z. B. „1250“ statt „1.250,00 €“.
+TPPGGrid.OnGetGroupText ! Gruppenzeilen aussagekräftig machen: „<b>Mueller GmbH</b> (5 Aufträge, 12.400 €)“. Markup ist erlaubt.
+TPPGGrid.OnHeaderMenu ! Das Kopfmenü um eigene Befehle ergänzen („Spalte exportieren“, „Als Standard speichern“) oder Einträge entfernen, die nicht passen.
+TPPGGrid.OnKeyDown ! Eigene Tasten für die Zeile, z. B. Entf für „Löschen mit Rückfrage“ oder Enter zum Öffnen; Key := 0 verhindert die Standardbehandlung.
+TPPGGrid.OnKeyPress ! Zeichen prüfen, bevor sie den Editor öffnen, z. B. in Zahlenspalten nur Ziffern zulassen.
+TPPGGrid.OnKeyUp ! Selten nötig; z. B. eine Vorschau aktualisieren, nachdem die Pfeiltaste losgelassen wurde.
+TPPGGrid.OnLinkClick ! Link-Zellen und Links im Markup öffnen: Webseite, E-Mail oder den Kunden-Datensatz zur Nummer.
+TPPGGrid.OnMouseActivate ! Nur in Spezialfällen (Werkzeugfenster) belegen; sonst leer lassen.
+TPPGGrid.OnMouseDown ! Startpunkt für eigenes Drag & Drop von Zeilen (BeginDrag) oder Rechtsklick-Auswahl der Zeile vor dem Kontextmenü.
+TPPGGrid.OnMouseEnter ! Selten; z. B. einen Hilfetext in der Statusleiste zeigen.
+TPPGGrid.OnMouseLeave ! Gegenstück zu OnMouseEnter, z. B. eine Vorschau wieder ausblenden.
+TPPGGrid.OnMouseMove ! Für eigene Hover-Vorschauen mit MouseCoord(X, Y, Col, Row); feuert sehr oft, also nur wenig tun.
+TPPGGrid.OnMouseUp ! Ende eines eigenen Zieh- oder Markiervorgangs auswerten.
+TPPGGrid.OnMouseWheel ! Selten; z. B. mit Strg+Rad die Zeilenhöhe zoomen. Handled := True verhindert das normale Scrollen.
+TPPGGrid.OnScroll ! Nachladen, wenn der Anwender ans Ende einer großen Liste scrollt, oder eine Positionsanzeige („Zeile 120 von 5 000“) aktualisieren.
+TPPGGrid.OnSelectCell ! Wechsel verhindern, solange die aktuelle Zeile ungültig ist (CanSelect := False), oder Details zur neuen Zeile laden.
+TPPGGrid.OnSetEditText ! Der neue Wert steht in der Zelle: hier in die Datenbank schreiben, abhängige Spalten (Gesamtpreis) neu berechnen oder „geändert“ merken.
+TPPGGrid.OnSorted ! Nach dem Sortieren z. B. die gewählte Zeile wieder sichtbar machen oder die Sortierung im Layout speichern.
+TPPGGrid.OnStartDock ! Nur bei DragKind = dkDock; bei Tabellen praktisch nie gebraucht.
+TPPGGrid.OnStartDrag ! Beim Ziehen von Zeilen ein eigenes DragObject mit den gewählten Datensätzen setzen.
+TPPGGrid.OnTopLeftChange ! Eine zweite, synchron scrollende Tabelle oder eine Kopfzeile außerhalb des Grids nachführen.
+TPPGGrid.OnValidateCell ! Eingaben vor dem Übernehmen prüfen und vereinheitlichen: Preis > 0, Datum gültig, Text in Großbuchstaben. Accept := False lässt den Editor offen, damit der Anwender korrigieren kann.
+
+# --- Typen ---
+TPPGGridBand.Alignment ! Zentriert lassen, das liest sich über mehreren Spalten am besten; links nur bei sehr breiten Bändern.
+TPPGGridBand.Caption ! Kurzer Oberbegriff über den Spalten: „Anschrift“, „Kontakt“, „Q1 2026“.
+TPPGGridBand.ParentBand ! Für zweistufige Köpfe: „2026“ als oberes Band, darunter „Q1“ bis „Q4“ mit ParentBand = 0. Mehr als zwei Ebenen werden schnell unübersichtlich.
+TPPGGridColumn.Aggregate ! agSum für Beträge und Mengen, agCount für die Anzahl, agAvg für Durchschnittspreise. Sichtbar mit ShowFooter bzw. GroupFooter, auch im Excel-Export als Formel.
+TPPGGridColumn.Alignment ! Zahlen und Beträge rechtsbündig (taRightJustify), damit Stellen untereinander stehen; Text links, kurze Kennzeichen zentriert.
+TPPGGridColumn.Band ! Spalten unter ein gemeinsames Band stellen (Index in Bands), z. B. Straße, PLZ und Ort unter „Anschrift“. Die Spalten eines Bands nebeneinander anordnen.
+TPPGGridColumn.CellKind ! ckCheck für Ja/Nein, ckProgress für Fertigstellung, ckRating für Bewertungen, ckLink für Webseiten, ckButton für Aktionen je Zeile. Der Zelltext bleibt der Wert (z. B. „1“, „75“).
+TPPGGridColumn.CellKindName ! Nur für eigene, mit PPGRegisterCellKindName registrierte Zellarten, z. B. eine Ampel; dazu CellKind = ckCustom.
+TPPGGridColumn.DisplayIndex ! Im Code eine feste Startreihenfolge vorgeben; zur Laufzeit schreibt das Grid den Wert selbst, wenn der Anwender Spalten verschiebt. Am einfachsten über SaveLayout/LoadLayout speichern.
+TPPGGridColumn.EditorKind ! gekCombo für feste Werte (Status, Einheit), gekSpin für ganze Zahlen mit Grenzen, gekCheck für Ja/Nein, gekNone für berechnete Spalten. Wirkt nur mit goEditing.
+TPPGGridColumn.FooterFormat ! Format der Summe passend zur Spalte, z. B. „#,##0.00“ für Beträge oder „#,##0“ für Stückzahlen.
+TPPGGridColumn.Format ! Für den Excel-Export: „#,##0.00“ für Beträge, „dd.mm.yyyy“ für Datum. Dann rechnet und sortiert Excel mit echten Zahlen statt mit Text.
+TPPGGridColumn.GroupIndex ! Im Code eine feste Gruppierung vorgeben, z. B. 0 für Kunde und 1 für Monat. Für die Wahl durch den Anwender ShowGroupPanel einschalten.
+TPPGGridColumn.MaxValue ! Obergrenze für das Zahlenfeld (gekSpin), z. B. 999 Stück, oder 100 % bei ckProgress, 5 Sterne bei ckRating.
+TPPGGridColumn.MinValue ! Untergrenze für das Zahlenfeld (gekSpin), meist 0, damit keine negativen Mengen entstehen.
+TPPGGridColumn.PickList ! Die erlaubten Werte für gekCombo, eine je Zeile („offen“, „bezahlt“, „storniert“). So bleiben Filter und Gruppen sauber, weil niemand Varianten tippt.
+TPPGGridColumn.ReadOnly ! Für Schlüssel und berechnete Werte (Nummer, Gesamtpreis), damit sie im bearbeitbaren Grid nicht versehentlich überschrieben werden.
+TPPGGridColumn.Sortable ! Auf False für Spalten, deren Sortierung keinen Sinn ergibt, z. B. Buttons, Bilder oder Bemerkungen.
+TPPGGridColumn.Style ! Eine Spalte hervorheben, z. B. die Summenspalte fett oder eine schreibgeschützte Spalte mit grauer Fläche; bei eigener Color auch DarkColor setzen.
+TPPGGridColumn.Title ! Kurz und eindeutig, mit Einheit, wenn nötig („Betrag €“, „Menge Stk.“). Der Titel erscheint auch im Kopfmenü, im Druck und im Export.
+TPPGGridColumn.TitleAlignment ! gtaColumn lassen, dann steht der Titel über rechtsbündigen Zahlen ebenfalls rechts. gtaCenter für schmale Spalten wie Kästchen.
+TPPGGridColumn.TitleStyle ! Einen einzelnen Spaltenkopf hervorheben, z. B. die Pflichtspalte fett oder farbig. Für alle Köpfe Grid.Styles.Header nehmen.
+TPPGGridColumn.Visible ! Spalten mit internen Werten (ID, Kundennummer) ausblenden: Sie bleiben für den Code lesbar, erscheinen aber weder auf dem Bildschirm noch im Export.
+TPPGGridColumn.Width ! Nach dem längsten typischen Inhalt wählen; 0 nimmt DefaultColWidth. Mit goColSizing kann der Anwender nachjustieren, ein Doppelklick auf die Kopfkante passt die Breite an.
+TPPGGridConditionalFormat.Bold ! Zusätzlich zur Farbe einschalten, damit der Treffer auch ohne Farbwahrnehmung (Farbenblindheit, Schwarzweißdruck) auffällt.
+TPPGGridConditionalFormat.Color ! ccDanger für Probleme (überfällig, zu wenig Bestand), ccWarning für Hinweise, ccSuccess für Erreichtes. Theme-Farben passen in Hell und Dunkel; ccCustom nur für Hausfarben.
+TPPGGridConditionalFormat.Column ! Die Datenspalte der Regel, z. B. die Bestandsspalte. -1 nur für einfache Regeln über alle Spalten, etwa „enthält Fehler“.
+TPPGGridConditionalFormat.CustomColor ! Eigene Farbe bei Color = ccCustom, z. B. die Firmenfarbe für den eigenen Standort; auf Lesbarkeit im Dark Mode achten.
+TPPGGridConditionalFormat.Enabled ! Regeln vorübergehend abschalten, z. B. per Schalter „Hervorhebungen anzeigen“, ohne sie zu löschen.
+TPPGGridConditionalFormat.Rule ! crRange für Schwellen (Bestand 0 bis 9), crEqual für Status, crContains für Stichworte, crTop für die besten N, crDataBar und crColorScale für Vergleiche auf einen Blick.
+TPPGGridConditionalFormat.Target ! ctFill (Fläche) fällt am stärksten auf; ctText für dezentere Hinweise, z. B. negative Beträge in Rot.
+TPPGGridConditionalFormat.Value1 ! Untergrenze bzw. Vergleichswert, z. B. „0“ bei Bestand 0 bis 9, „offen“ bei crEqual oder „10“ bzw. „10%“ bei crTop.
+TPPGGridConditionalFormat.Value2 ! Obergrenze bei crRange, z. B. „9“ für „weniger als 10 Stück“; leer lassen für „ab Value1“.
+TPPGGridStyles.AlternateRow ! Zebra-Zeilen für breite Listen, damit das Auge in der Zeile bleibt: Color auf einen sehr hellen Ton setzen und DarkColor auf einen leicht helleren dunklen Ton.
+TPPGGridStyles.FilterRow ! Die Filterzeile dezent absetzen, z. B. mit leicht getönter Fläche, damit sie nicht wie eine Datenzeile wirkt.
+TPPGGridStyles.FocusedCell ! Einen kräftigeren Rahmen (BorderColor) für die Fokuszelle in Erfassungsmasken, in denen viel per Tastatur gearbeitet wird.
+TPPGGridStyles.Footer ! Die Summenzeile absetzen, z. B. FontStyle = [fsBold]; ohne eigene Werte sieht sie aus wie der Kopf.
+TPPGGridStyles.GridLine ! Linien heller machen, wenn die Tabelle unruhig wirkt; zusammen mit GridLineWidth.
+TPPGGridStyles.GroupRow ! Gruppenköpfe deutlicher absetzen, z. B. mit getönter Fläche und fetter Schrift, damit Gruppen beim Scrollen erkennbar bleiben.
+TPPGGridStyles.Header ! Kopf in der Hausfarbe oder fett (FontStyle = [fsBold]); bei eigener Color auch DarkColor setzen.
+TPPGGridStyles.HotRow ! Zeile unter der Maus hervorheben, hilfreich bei breiten Listen; Color setzen schaltet es ein.
+TPPGGridStyles.Selection ! Eigene Auswahlfarbe nur, wenn die Akzentfarbe des Presets nicht passt; mit Color wird die Auswahl deckend.
+TPPGGridStyles.SelectionInactive ! Auswahl ohne Fokus sichtbar halten, z. B. hellgrau, damit man beim Arbeiten in den Detailfeldern sieht, welcher Datensatz gewählt ist.

@@ -363,6 +363,12 @@
         <DCCReference Include="Showcase\ExMaskEditCustomer.pas"/>
         <DCCReference Include="Showcase\ExMaskEditTimeEntry.pas"/>
         <DCCReference Include="Showcase\DemoShowMaskEdit.pas"/>
+        <DCCReference Include="Showcase\ExGridExport.pas"/>
+        <DCCReference Include="Showcase\ExGridStock.pas"/>
+        <DCCReference Include="Showcase\DemoShowGrid.pas"/>
+        <DCCReference Include="Showcase\ExDBGridCustomers.pas"/>
+        <DCCReference Include="Showcase\ExDBGridOrderItems.pas"/>
+        <DCCReference Include="Showcase\DemoShowDBGrid.pas"/>
         <DCCReference Include="DemoMain.pas"/>
         <DCCReference Include="..\Tests\PPG.TestDesktop.pas"/>
         <BuildConfiguration Include="Base">

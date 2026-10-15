@@ -1,7 +1,8 @@
 # PPGlow – Stand und nächste Schritte
 
-## Stand (10.10.2026)
-- **Zuletzt fertig: Komponentenseiten Lauf 1 von 4** (10.10.2026, Zweig `claude/showcase-button`, nicht gemergt und nicht gepusht). Vom User beauftragt: alle übrigen Komponenten, je Komponente ein eigener Agent, aufgeteilt in 4 Läufe.
+## Stand (14.10.2026)
+- **Zuletzt fertig: Komponentenseite `TPPGGrid`** (14.10.2026, aus Lauf 2 vorgezogen). Vom User beauftragt: zuerst die Komponenten mit Excel-Export (Grid, DBGrid, TileView), vorerst nur das Grid. Ein Praxisbeispiel zeigt den Excel-Export. Demo-Selbsttest 822/822, 1818 Tests grün. Funde (Grid-Spalten, `OnValidateCell`, Gerüst) in `Docs\Showcase-Lauf1-Berichte.md`. Am 15.10.2026 folgte `TPPGDBGrid` (erste DB-Komponente mit eigener Seite: Kundenliste mit Excel-Export, Positionen bearbeiten; Selbsttest 857/857). Als Nächstes vorgesehen: `TPPGTileView`.
+- **Davor: Komponentenseiten Lauf 1 von 4** (10.10.2026, Zweig `claude/showcase-button`, nicht gemergt und nicht gepusht). Vom User beauftragt: alle übrigen Komponenten, je Komponente ein eigener Agent, aufgeteilt in 4 Läufe.
   - 22 Komponenten haben eine Seite (Button sowie ToolBar … CheckComboBox). Demo-Selbsttest 792/792, 1818 Tests grün.
   - Läufe 2–4, Einteilung und Ablauf: `Docs\Demo-Komponentenseiten.md`, Abschnitt „Parallele Läufe“. Werkzeuge: `Build\showcase-agents`.
   - Von den Agenten gefundene Fehler in Suite und Doku (nicht behoben, Liste für den User): `Docs\Showcase-Lauf1-Berichte.md`.
@@ -108,6 +109,7 @@ Tests\PPGlowTests.exe /leaksuites /hidden   # Leck-Suche: Zuwachs je Testklasse 
 Tests\Bench\PPGlowBench.exe /hidden         # Benchmark (vorher build.ps1 -Projects Bench -Config Release)
 Demo\PPGlowDemo.exe /selftest C:\pfad\selftest.txt /hidden   # Szenarien aller Demo-Seiten
 Demo\PPGlowDemo.exe /show TPPGButton /tab 1 /showcode /screenshot C:\pfad\x.png /hidden   # Komponentenseite (/bottomtab n, /select Pfad)
+Demo\PPGlowDemo.exe /effects C:\pfad\effects.txt /only TPPGGrid /hidden   # Wirkungstest: welche Eigenschaften das Bild nicht aendern (Docs\Wirkungstest-TPPGGrid.md)
 powershell -ExecutionPolicy Bypass -File Build\make-showcase.ps1 [-Check]   # Demo\Showcase\ShowcaseData.res (Texte, Notizen, Beispielcode); laeuft in build.ps1 mit
 # Aufnahmen (/datepopup, /toastcapture, /ribboncapture, /busycapture, /screencapture) zeigen nur Fenster
 #   der Demo (keine fremden Fenster, keine Bildschirmpixel) und gehen auch mit /hidden.

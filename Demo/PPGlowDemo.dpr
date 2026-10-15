@@ -265,6 +265,12 @@ uses
   ExMaskEditCustomer in 'Showcase\ExMaskEditCustomer.pas',
   ExMaskEditTimeEntry in 'Showcase\ExMaskEditTimeEntry.pas',
   DemoShowMaskEdit in 'Showcase\DemoShowMaskEdit.pas',
+  ExGridExport in 'Showcase\ExGridExport.pas',
+  ExGridStock in 'Showcase\ExGridStock.pas',
+  DemoShowGrid in 'Showcase\DemoShowGrid.pas',
+  ExDBGridCustomers in 'Showcase\ExDBGridCustomers.pas',
+  ExDBGridOrderItems in 'Showcase\ExDBGridOrderItems.pas',
+  DemoShowDBGrid in 'Showcase\DemoShowDBGrid.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}
@@ -361,6 +367,15 @@ begin
     begin
       Form.Show;
       ExitCode := Form.RunSelfTest(ParamStr(I + 1), OnlyCls);
+      Exit;
+    end;
+
+  // /effects datei.txt /only TPPGx: Wirkungstest einer Komponentenseite
+  for I := 1 to ParamCount - 1 do
+    if SameText(ParamStr(I), '/effects') then
+    begin
+      Form.Show;
+      ExitCode := Form.RunEffectTest(ParamStr(I + 1), OnlyCls);
       Exit;
     end;
 
