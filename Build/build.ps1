@@ -8,7 +8,8 @@
   - Community/Starter (kein dcc32 auf der Kommandozeile): IDE-Batchbuild "bds -b",
     Ausgabe in <Projekt>.err
 
-  Aufruf:  powershell -ExecutionPolicy Bypass -File Build\build.ps1 [-Only Delphi13] [-Projects Runtime,Tests]
+  Aufruf:  powershell -ExecutionPolicy Bypass -File Build\build.ps1 [-Only Delphi11] [-Projects Runtime,Tests]
+           -Only: XE2, Delphi11 oder Delphi13 (Ordner unter Packages\); ohne -Only alle installierten
            Projekte: Runtime, Design, DBRuntime, DBDesign, Tests, Demo (Standard) sowie Bench
            (Leistungsmessung, am besten -Config Release). DBRuntime/DBDesign = DB-Controls (PPGlowDBR/dclPPGlowDB)
            Vorher laeuft check-rules.ps1 (Coding-Rules); -NoRuleCheck laesst ihn aus
@@ -32,6 +33,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 # Studio-Version -> Ordnername unter Packages\
 $Versions = [ordered]@{
   '9.0'  = 'XE2'
+  '22.0' = 'Delphi11'
   '37.0' = 'Delphi13'
 }
 
