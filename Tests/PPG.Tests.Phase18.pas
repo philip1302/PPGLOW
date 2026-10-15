@@ -11,7 +11,7 @@ uses
   System.Types, Vcl.Graphics, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
   PPG.Types, PPG.Controls.Field, PPG.RadioGroup, PPG.Items, PPG.Controls.Scroll, PPG.TileView,
   PPG.Grid.Data, PPG.Grid.Export, Data.DB, Datasnap.DBClient, MidasLib, Vcl.DBCtrls,
-  PPG.DB.Navigator, PPG.Panel, PPG.Edit, PPG.Tests.Controls;
+  PPG.DB.Navigator, PPG.Panel, PPG.Edit, PPG.Labels, PPG.Tests.Controls;
 
 type
   TChoiceGroupTests = class(TControlTestCase)
@@ -116,6 +116,8 @@ type
   private
     function NewPanel(AutoScroll: Boolean): TPPGPanel;
     function AddChild(P: TWinControl; X, Y: Integer): TPPGEdit;
+    function NewRowBox: TPPGScrollBox;
+    function CaptureWindow(C: TWinControl): TBitmap;
   published
     procedure NoScrollingByDefault;
     procedure AutoScrollShowsBarForChildBelow;
@@ -128,6 +130,8 @@ type
     procedure ScrollBoxLoadsTScrollBoxDfm;
     procedure InvalidValuesRaise;
     procedure PaintsWithBars;
+    procedure FastScrollMovesAllKindsOfChildren;
+    procedure FastScrollMatchesFullRepaint;
   end;
 
 implementation
@@ -1726,6 +1730,153 @@ begin
     end;
   end;
   CheckEquals(0, FErrors.Count, FErrors.Text);
+end;
+
+function TPanelScrollTests.NewRowBox: TPPGScrollBox;
+var
+  I: Integer;
+  Row: TPanel;
+  Lbl: TPPGLabel;
+begin
+  // Wie der Objektinspektor der Demo: Zeilen-Panels mit Kind-Controls
+  Result := TPPGScrollBox.Create(FForm);
+  Result.Parent := FForm;
+  Result.BorderStyle := bsNone;
+  Result.SetBounds(0, 0, 300, 200);
+  Result.Animation.Enabled := False;
+  Result.VertScrollBar.Smooth := False;
+  for I := 0 to 39 do
+  begin
+    Row := TPanel.Create(FForm);
+    Row.BevelOuter := bvNone;
+    Row.ParentBackground := True;
+    Row.ShowCaption := False;
+    Row.Parent := Result;
+    Row.SetBounds(0, I * 24, 270, 24);
+    Lbl := TPPGLabel.Create(FForm);
+    Lbl.Parent := Row;
+    Lbl.SetBounds(6, 4, 120, 16);
+    Lbl.Caption := 'Zeile ' + IntToStr(I);
+    Lbl := TPPGLabel.Create(FForm);
+    Lbl.Parent := Row;
+    Lbl.SetBounds(140, 4, 120, 16);
+    Lbl.Font.Style := [fsBold];
+    Lbl.Caption := 'Wert ' + IntToStr(I * 7);
+  end;
+end;
+
+function TPanelScrollTests.CaptureWindow(C: TWinControl): TBitmap;
+var
+  DC: HDC;
+begin
+  // Was wirklich im Fenster steht (inklusive Kind-Fenster), nicht neu gezeichnet
+  Result := TBitmap.Create;
+  Result.PixelFormat := pf32bit;
+  Result.SetSize(C.ClientWidth, C.ClientHeight);
+  DC := GetDC(C.Handle);
+  try
+    BitBlt(Result.Canvas.Handle, 0, 0, C.ClientWidth, C.ClientHeight, DC, 0, 0, SRCCOPY);
+  finally
+    ReleaseDC(C.Handle, DC);
+  end;
+end;
+
+procedure TPanelScrollTests.FastScrollMovesAllKindsOfChildren;
+var
+  B: TPPGScrollBox;
+  Head: TPanel;
+  E: TPPGEdit;
+  Lbl: TPPGLabel;
+  HeadTop, ETop, LblTop: Integer;
+begin
+  B := TPPGScrollBox.Create(FForm);
+  B.Parent := FForm;
+  B.BorderStyle := bsNone;
+  B.SetBounds(0, 0, 300, 200);
+  B.Animation.Enabled := False;
+  Head := TPanel.Create(FForm);
+  Head.Parent := B;
+  Head.Align := alTop;
+  Head.Height := 30;
+  E := AddChild(B, 10, 300);
+  Lbl := TPPGLabel.Create(FForm);
+  Lbl.Parent := B;
+  Lbl.SetBounds(10, 360, 100, 16);
+  Lbl.Caption := 'ohne Fenster';
+  FForm.ActiveControl := nil;
+  FForm.Show;
+  B.ScrollTo(0, 0);
+  CheckTrue(TPanelAccess(B).CanScrollPixels, 'Form als Parent: einfarbig, schneller Weg');
+  HeadTop := Head.Top;
+  ETop := E.Top;
+  LblTop := Lbl.Top;
+  B.ScrollTo(0, 120);
+  CheckEquals(ETop - 120, E.Top, 'Kind-Fenster');
+  CheckEquals(LblTop - 120, Lbl.Top, 'fensterloses Kind');
+  CheckEquals(HeadTop - 120, Head.Top, 'ausgerichtetes Kind');
+  CheckEquals(ETop - 120, E.BoundsRect.Top, 'BoundsRect folgt');
+  B.ScrollTo(0, 0);
+  CheckEquals(ETop, E.Top, 'zurueck');
+  CheckEquals(LblTop, Lbl.Top, 'zurueck (fensterlos)');
+  CheckEquals(HeadTop, Head.Top, 'zurueck (ausgerichtet)');
+  // Beschriftung bzw. Verlauf: langsamer Weg
+  TPanelAccess(B).ShowCaption := True;
+  TPanelAccess(B).Caption := 'Titel';
+  CheckFalse(TPanelAccess(B).CanScrollPixels, 'Beschriftung bleibt stehen: langsamer Weg');
+end;
+
+procedure TPanelScrollTests.FastScrollMatchesFullRepaint;
+var
+  B: TPPGScrollBox;
+  Moved, Full: TBitmap;
+  X, Y, Diff, Colors: Integer;
+  First, Px: TColor;
+begin
+  B := NewRowBox;
+  FForm.ActiveControl := nil;
+  FForm.Show;
+  CheckTrue(TPanelAccess(B).CanScrollPixels, 'schneller Weg');
+  RedrawWindow(B.Handle, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN or RDW_UPDATENOW);
+  // Mehrere krumme Schritte hin und zurueck, jeder sofort gezeichnet
+  B.ScrollTo(0, 37);
+  RedrawWindow(B.Handle, nil, 0, RDW_UPDATENOW or RDW_ALLCHILDREN);
+  B.ScrollTo(0, 141);
+  RedrawWindow(B.Handle, nil, 0, RDW_UPDATENOW or RDW_ALLCHILDREN);
+  B.ScrollTo(0, 95);
+  RedrawWindow(B.Handle, nil, 0, RDW_UPDATENOW or RDW_ALLCHILDREN);
+  Moved := CaptureWindow(B);
+  try
+    RedrawWindow(B.Handle, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN or RDW_UPDATENOW);
+    Full := CaptureWindow(B);
+    try
+      // Ohne sichtbare Flaeche (z. B. Desktop ohne Bild) waere der Vergleich wertlos
+      Colors := 0;
+      First := Full.Canvas.Pixels[0, 0];
+      Diff := 0;
+      for Y := 0 to Full.Height - 1 do
+        for X := 0 to Full.Width - 1 do
+        begin
+          Px := Full.Canvas.Pixels[X, Y];
+          if (Colors = 0) and (Px <> First) then
+            Colors := 1;
+          if Moved.Canvas.Pixels[X, Y] <> Px then
+            Inc(Diff);
+        end;
+      if Diff > 0 then
+      begin
+        SaveGalleryPng(Moved, 'FastScroll-moved.png');
+        SaveGalleryPng(Full, 'FastScroll-full.png');
+      end;
+      if Colors = 0 then
+        Status('Fensterinhalt nicht lesbar (Desktop ohne Bild): Pixelvergleich ohne Aussage')
+      else
+        CheckEquals(0, Diff, 'verschoben = neu gezeichnet (abweichende Pixel)');
+    finally
+      Full.Free;
+    end;
+  finally
+    Moved.Free;
+  end;
 end;
 
 initialization

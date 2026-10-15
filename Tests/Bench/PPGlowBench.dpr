@@ -318,6 +318,56 @@ begin
   end;
 end;
 
+/// Zeilen wie im Objektinspektor der Demo: je Zeile ein TPanel (ParentBackground)
+/// mit Beschriftung, Edit und Zuruecksetzen-Label.
+procedure BuildInspectorRows(Box: TWinControl; Count: Integer);
+var
+  I: Integer;
+  Row: Vcl.ExtCtrls.TPanel;
+  Lbl: TPPGLabel;
+  Ed: TPPGEdit;
+begin
+  for I := 0 to Count - 1 do
+  begin
+    Row := Vcl.ExtCtrls.TPanel.Create(Box);
+    Row.BevelOuter := bvNone;
+    Row.ParentBackground := True;
+    Row.ShowCaption := False;
+    Row.Parent := Box;
+    Row.SetBounds(0, I * 28, 360, 28);
+    Lbl := TPPGLabel.Create(Row);
+    Lbl.Parent := Row;
+    Lbl.SetBounds(8, 6, 130, 18);
+    Lbl.Caption := 'Eigenschaft ' + IntToStr(I);
+    Ed := TPPGEdit.Create(Row);
+    Ed.Parent := Row;
+    Ed.SetBounds(150, 2, 180, 24);
+    Ed.Text := 'Wert ' + IntToStr(I);
+    Lbl := TPPGLabel.Create(Row);
+    Lbl.Parent := Row;
+    Lbl.SetBounds(338, 6, 16, 18);
+    Lbl.Caption := 'x';
+  end;
+end;
+
+/// 300 Scrollschritte zu je 12 Pixel hin und zurueck, jeder Schritt wird sofort
+/// gezeichnet (wie ein Bild der Scroll-Animation).
+procedure ScrollSteps(Box: TWinControl; const SetPos: TProc<Integer>);
+var
+  I, Y, Dir: Integer;
+begin
+  Y := 0;
+  Dir := 12;
+  for I := 0 to 299 do
+  begin
+    Inc(Y, Dir);
+    if (Y >= 2400) or (Y <= 0) then
+      Dir := -Dir;
+    SetPos(Y);
+    RedrawWindow(Box.Handle, nil, 0, RDW_UPDATENOW or RDW_ALLCHILDREN);
+  end;
+end;
+
 /// Audit 8A: Timer-Wakeups je Sekunde im Leerlauf (WM_TIMER aus einer eigenen
 /// Nachrichtenschleife gezaehlt, nicht ueber die Zeit).
 function Bench8AWakeups(Ms: Cardinal): Integer;
@@ -2123,6 +2173,52 @@ begin
             PaintToBitmap(P);
         finally
           P.Free;
+        end;
+      end);
+
+    // Scrollen mit vielen Kind-Fenstern (Objektinspektor der Demo):
+    // Vorgabe relativ zur VCL-TScrollBox
+    VclMs := Measure('Referenz VCL: TScrollBox 200 Zeilen, 300 x scrollen', High(Cardinal),
+      procedure
+      var
+        B: Vcl.Forms.TScrollBox;
+      begin
+        B := Vcl.Forms.TScrollBox.Create(Form);
+        try
+          B.Parent := Form;
+          B.SetBounds(0, 0, 400, 600);
+          BuildInspectorRows(B, 200);
+          B.HandleNeeded;
+          ScrollSteps(B,
+            procedure(Y: Integer)
+            begin
+              B.VertScrollBar.Position := Y;
+            end);
+        finally
+          B.Free;
+        end;
+      end);
+
+    // Vor dem Verschieben per ScrollWindowEx (15.10.2026): 9500 ms, danach 2500 ms
+    Measure('ScrollBox 200 Zeilen (Inspektor): 300 x scrollen', VclMs * 2 + 200,
+      procedure
+      var
+        B: TPPGScrollBox;
+      begin
+        B := TPPGScrollBox.Create(Form);
+        try
+          B.Parent := Form;
+          B.BorderStyle := bsNone;
+          B.SetBounds(0, 0, 400, 600);
+          BuildInspectorRows(B, 200);
+          B.HandleNeeded;
+          ScrollSteps(B,
+            procedure(Y: Integer)
+            begin
+              B.ScrollTo(0, Y);
+            end);
+        finally
+          B.Free;
         end;
       end);
 
