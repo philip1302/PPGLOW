@@ -10,9 +10,13 @@ unit PPG.Panel;
   aus Appearance.Normal.
 
   Scrollen (Phase 18d): AutoScroll, HorzScrollBar und VertScrollBar wie
-  TScrollingWinControl. Gescrollt werden echte Kind-Fenster (Lage wird
-  verschoben, Neuzeichnen per WM_SETREDRAW gebuendelt), Rahmen und
-  Beschriftung des Panels bleiben stehen. Die Leisten liegen in einem
+  TScrollingWinControl. Gescrollt werden echte Kind-Fenster, Rahmen und
+  Beschriftung des Panels bleiben stehen. Ist der Hintergrund in der Sicht
+  einfarbig (keine Beschriftung, kein Verlauf), verschiebt ScrollWindowEx Bild
+  und Kind-Fenster in einem Zug und nur der aufgedeckte Streifen wird neu
+  gezeichnet (wie TScrollBox; Benchmark "ScrollBox 200 Zeilen" 9,5 s -> 2,5 s).
+  Sonst wird jedes Kind verschoben und alles neu gezeichnet (WM_SETREDRAW
+  gebuendelt). Die Leisten liegen in einem
   schmalen Streifen am Rand (Kind-Fenster lassen sich nicht ueberlagern) und
   kommen vom Scroll-Renderer des Presets wie bei Liste und Grid. Mausrad (auch
   ueber Kind-Controls, die es nicht nutzen: Windows reicht es weiter),
@@ -92,11 +96,16 @@ type
     procedure SetNoFrame(const Value: Boolean);
     procedure AnimStep(Sender: TObject);
     procedure MoveContent(DX, DY: Integer);
+    procedure ScrollPixels(DX, DY: Integer);
+    procedure ScrollContent(DX, DY: Integer; const View: TRect; Exposed: HRGN);
     procedure CMFocusChanged(var Message: TCMFocusChanged); message CM_FOCUSCHANGED;
     procedure CMControlChange(var Message: TCMControlChange); message CM_CONTROLCHANGE;
     function GetContentSize: TSize;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
   protected
+    /// Schneller Weg beim Scrollen: Bildinhalt per ScrollWindowEx verschieben
+    /// (nur bei einfarbigem Hintergrund ohne Beschriftung, Fenster sichtbar).
+    function CanScrollPixels: Boolean;
     /// Ohne Fensterhandle meldet die VCL Kind-Bewegungen nicht (kein AlignControls):
     /// dann vor jeder Abfrage neu messen.
     procedure EnsureRange;
@@ -327,7 +336,7 @@ implementation
 
 uses
   System.SysUtils, System.Math, PPG.Appearance, PPG.Render.Gdi, PPG.Render.Registry, PPG.DpiUtils,
-  PPG.Accessibility, PPG.Exceptions, PPG.Lang, PPG.Consts, PPG.Controls.Base;
+  PPG.Accessibility, PPG.Exceptions, PPG.Lang, PPG.Consts, PPG.Controls.Base, Vcl.ExtCtrls;
 
 const
   CaptionPadding = 6; // logische px zwischen Rahmen und Beschriftung
@@ -696,6 +705,139 @@ begin
     UpdateScrollRange;
 end;
 
+type
+  TWinControlAccess = class(TWinControl);
+  TPPGControlAccess = class(TPPGCustomControl);
+
+/// Ist der Hintergrund, den AControl zeigt, einfarbig? Nur dann darf beim
+/// Scrollen der Bildinhalt verschoben werden (ein Verlauf oder Bild des Parents
+/// wuerde mitwandern). Unbekannte Parents: nein.
+function UniformBackground(AControl: TWinControl): Boolean;
+var
+  C, P: TWinControl;
+  CTop, CBottom: TColor;
+begin
+  C := AControl;
+  while True do
+  begin
+    if not TWinControlAccess(C).ParentBackground then
+      Exit(True); // fuellt mit Color
+    P := C.Parent;
+    if (P = nil) or (P is TCustomForm) then
+      Exit(True);
+    if P is TPPGCustomControl then
+      Exit(TPPGControlAccess(P).GetChildBackground(C, CTop, CBottom) and
+        (ColorToRGB(CTop) = ColorToRGB(CBottom)));
+    if not ((P is TCustomPanel) or (P is TCustomFrame) or (P is TScrollBox)) then
+      Exit(False);
+    C := P;
+  end;
+end;
+
+function TPPGCustomPanel.CanScrollPixels: Boolean;
+var
+  P: TWinControl;
+  Style: TPPGSurfaceStyle;
+begin
+  Result := False;
+  if not HandleAllocated or not IsWindowVisible(Handle) then
+    Exit;
+  // Beschriftung liegt hinter dem Inhalt und bleibt stehen
+  if FShowCaption and (Caption <> '') then
+    Exit;
+  // WS_EX_COMPOSITED (Doppelpuffer von Windows) vertraegt ScrollWindowEx nicht
+  P := Self;
+  while P <> nil do
+  begin
+    if P.HandleAllocated and ((GetWindowLong(P.Handle, GWL_EXSTYLE) and WS_EX_COMPOSITED) <> 0) then
+      Exit;
+    P := P.Parent;
+  end;
+  if FNoFrame then
+    Result := UniformBackground(Self)
+  else
+  begin
+    // Flaeche wie in DrawContainer: Verlauf, wenn Color <> ColorMirrorTo
+    Style := GetContainerStyle(False);
+    Result := Style.Color = Style.ColorMirrorTo;
+  end;
+end;
+
+procedure TPPGCustomPanel.ScrollPixels(DX, DY: Integer);
+var
+  View: TRect;
+  Dirty, Ring, Inner: HRGN;
+begin
+  // Wie TScrollingWinControl: Bildinhalt und Kind-Fenster verschiebt Windows in
+  // einem Zug, neu gezeichnet wird nur der aufgedeckte Streifen. Rahmen,
+  // Rundung und Leisten (ausserhalb der Sicht) bleiben stehen.
+  View := ViewArea;
+  Dirty := CreateRectRgn(0, 0, 0, 0);
+  try
+    // Dirty = aufgedeckter Streifen in der Sicht
+    ScrollContent(DX, DY, View, Dirty);
+    // Dazu der Rand ausserhalb der Sicht (Leisten mit Daumen, Kinder, die dort
+    // hineinragen): Client - Sicht
+    Ring := CreateRectRgnIndirect(ClientRect);
+    Inner := CreateRectRgnIndirect(View);
+    try
+      CombineRgn(Ring, Ring, Inner, RGN_DIFF);
+      CombineRgn(Dirty, Dirty, Ring, RGN_OR);
+    finally
+      DeleteObject(Inner);
+      DeleteObject(Ring);
+    end;
+    // Samt der Kind-Fenster, die dort liegen (RDW_ALLCHILDREN)
+    RedrawWindow(Handle, nil, Dirty, RDW_INVALIDATE or RDW_ERASE or RDW_ALLCHILDREN);
+  finally
+    DeleteObject(Dirty);
+  end;
+end;
+
+procedure TPPGCustomPanel.ScrollContent(DX, DY: Integer; const View: TRect; Exposed: HRGN);
+var
+  I: Integer;
+  C: TControl;
+  WasUpdating, Aligned: Boolean;
+begin
+  WasUpdating := FUpdatingRange;
+  FUpdatingRange := True;
+  DisableAlign;
+  try
+    // Exposed = aufgedeckter Streifen in der Sicht
+    ScrollWindowEx(Handle, DX, DY, nil, @View, Exposed, nil, SW_SCROLLCHILDREN);
+    // Fensterlose Kinder (und solche ohne Handle) nur umsetzen: ihre Pixel sind
+    // schon verschoben, das Invalidieren unterdrueckt WM_SETREDRAW
+    Aligned := False;
+    SendMessage(Handle, WM_SETREDRAW, 0, 0);
+    try
+      for I := 0 to ControlCount - 1 do
+      begin
+        C := Controls[I];
+        if not (C.Align in [alNone, alCustom]) then
+          Aligned := True
+        else if not ((C is TWinControl) and TWinControl(C).HandleAllocated) then
+          C.SetBounds(C.Left + DX, C.Top + DY, C.Width, C.Height);
+      end;
+      // Ausgerichtete Kinder folgen ueber AdjustClientRect (Fenster stehen schon richtig)
+      if Aligned then
+      begin
+        EnableAlign;
+        try
+          Realign;
+        finally
+          DisableAlign;
+        end;
+      end;
+    finally
+      SendMessage(Handle, WM_SETREDRAW, 1, 0);
+    end;
+  finally
+    EnableAlign;
+    FUpdatingRange := WasUpdating;
+  end;
+end;
+
 procedure TPPGCustomPanel.MoveContent(DX, DY: Integer);
 var
   I: Integer;
@@ -704,7 +846,13 @@ var
 begin
   if (DX = 0) and (DY = 0) then
     Exit;
-  // Alle Kinder verschieben; Neuzeichnen einmal am Ende (kein Flackern)
+  if CanScrollPixels then
+  begin
+    ScrollPixels(DX, DY);
+    Exit;
+  end;
+  // Langsamer Weg (Verlauf, Beschriftung, unbekannter Hintergrund): alle Kinder
+  // verschieben, Neuzeichnen einmal am Ende (kein Flackern)
   Redraw := HandleAllocated and IsWindowVisible(Handle);
   if Redraw then
     SendMessage(Handle, WM_SETREDRAW, 0, 0);
@@ -727,6 +875,7 @@ begin
       RedrawWindow(Handle, nil, 0, RDW_INVALIDATE or RDW_ALLCHILDREN or RDW_ERASE or RDW_FRAME);
     end;
   end;
+  Invalidate;
 end;
 
 procedure TPPGCustomPanel.ScrollTo(X, Y: Integer; Animate: Boolean);
@@ -763,7 +912,6 @@ begin
     Exit;
   FScroll := Point(X, Y);
   MoveContent(Old.X - X, Old.Y - Y);
-  Invalidate;
 end;
 
 procedure TPPGCustomPanel.AnimStep(Sender: TObject);
@@ -778,7 +926,6 @@ begin
   Old := FScroll;
   FScroll := Point(X, Y);
   MoveContent(Old.X - X, Old.Y - Y);
-  Invalidate;
 end;
 
 procedure TPPGCustomPanel.ScrollInView(AControl: TControl);
