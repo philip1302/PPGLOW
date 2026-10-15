@@ -1624,7 +1624,10 @@ begin
       FInspector.Model.GetAll(All);
       Cur.Clear;
       for N in All do
-        if EditablePath(N) and not SkipInRoundTrip(N, Reason) then
+        if (GetEnvironmentVariable('PPG_EFFECTS_ONLY') <> '') and (Pos(';' + N.Path + ';',
+          ';' + GetEnvironmentVariable('PPG_EFFECTS_ONLY') + ';') = 0) then
+          Continue
+        else if EditablePath(N) and not SkipInRoundTrip(N, Reason) then
           Cur.Add(N.Path);
       for I := 0 to Cur.Count - 1 do
       begin

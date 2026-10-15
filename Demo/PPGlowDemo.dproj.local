@@ -316,6 +316,9 @@
     <File Path="Showcase\ExRadioGroupSubscription.pas"/>
     <File Path="Showcase\ExTagEditRecipients.pas"/>
     <File Path="Showcase\ExTagEditTicket.pas"/>
+    <File Path="Showcase\DemoShowGrid.pas"/>
+    <File Path="Showcase\ExGridExport.pas"/>
+    <File Path="Showcase\ExGridStock.pas"/>
     <File Path="DemoKit.pas"/>
     <File Path="DemoMain.pas"/>
     <File Path="DemoPages1.pas"/>
