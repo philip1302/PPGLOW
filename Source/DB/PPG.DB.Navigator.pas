@@ -270,8 +270,9 @@ uses
   PPG.IconFont, PPG.Tokens, PPG.Controls.Field, PPG.Dialogs, PPG.DB.Validator;
 
 const
+  // XE2 kennt nbApplyUpdates/nbCancelUpdates nicht: dort zehn statt zwoelf Eintraege
   BtnIcons: array[TNavigateBtn] of Word = ($E892, $E76B, $E76C, $E893, $E710, $E74D, $E70F,
-    $E73E, $E711, $E72C, $E74E, $E7A7);
+    $E73E, $E711, $E72C{$IFDEF PPG_HAS_DATASETCOMMANDS}, $E74E, $E7A7{$ENDIF});
   BtnW = 36;          // logische px
   SearchW = 180;
   CounterMinW = 120;
