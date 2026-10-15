@@ -319,6 +319,9 @@
     <File Path="Showcase\DemoShowGrid.pas"/>
     <File Path="Showcase\ExGridExport.pas"/>
     <File Path="Showcase\ExGridStock.pas"/>
+    <File Path="Showcase\DemoShowDBGrid.pas"/>
+    <File Path="Showcase\ExDBGridCustomers.pas"/>
+    <File Path="Showcase\ExDBGridOrderItems.pas"/>
     <File Path="DemoKit.pas"/>
     <File Path="DemoMain.pas"/>
     <File Path="DemoPages1.pas"/>

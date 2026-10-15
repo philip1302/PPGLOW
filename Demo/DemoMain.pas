@@ -1594,7 +1594,9 @@ begin
     if AOnly = '' then
     begin
     // Katalogsuche
-    SelfCheck('Suche: DBGrid -> Datenbank', FindCatalogPage('DBGrid') = PgDatabase);
+    SelfCheck('Suche: DBEdit -> Datenbank', FindCatalogPage('DBEdit') = PgDatabase);
+    SelfCheck('Suche: DBGrid -> eigene Komponentenseite',
+      FindCatalogPage('DBGrid') = ShowcasePage('TPPGDBGrid'));
     SelfCheck('Suche: Toast -> Rueckmeldung', FindCatalogPage('toast') = PgFeedback);
     SelfCheck('Suche: Seitentitel', FindCatalogPage('Termine') = PgDates);
     SelfCheck('Suche: kein Treffer', FindCatalogPage('xyzzy') = -1);

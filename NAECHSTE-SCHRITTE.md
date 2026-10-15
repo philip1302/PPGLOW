@@ -1,7 +1,7 @@
 # PPGlow – Stand und nächste Schritte
 
 ## Stand (14.10.2026)
-- **Zuletzt fertig: Komponentenseite `TPPGGrid`** (14.10.2026, aus Lauf 2 vorgezogen). Vom User beauftragt: zuerst die Komponenten mit Excel-Export (Grid, DBGrid, TileView), vorerst nur das Grid. Ein Praxisbeispiel zeigt den Excel-Export. Demo-Selbsttest 822/822, 1818 Tests grün. Funde (Grid-Spalten, `OnValidateCell`, Gerüst) in `Docs\Showcase-Lauf1-Berichte.md`. Als Nächstes vorgesehen: `TPPGDBGrid` und `TPPGTileView`.
+- **Zuletzt fertig: Komponentenseite `TPPGGrid`** (14.10.2026, aus Lauf 2 vorgezogen). Vom User beauftragt: zuerst die Komponenten mit Excel-Export (Grid, DBGrid, TileView), vorerst nur das Grid. Ein Praxisbeispiel zeigt den Excel-Export. Demo-Selbsttest 822/822, 1818 Tests grün. Funde (Grid-Spalten, `OnValidateCell`, Gerüst) in `Docs\Showcase-Lauf1-Berichte.md`. Am 15.10.2026 folgte `TPPGDBGrid` (erste DB-Komponente mit eigener Seite: Kundenliste mit Excel-Export, Positionen bearbeiten; Selbsttest 857/857). Als Nächstes vorgesehen: `TPPGTileView`.
 - **Davor: Komponentenseiten Lauf 1 von 4** (10.10.2026, Zweig `claude/showcase-button`, nicht gemergt und nicht gepusht). Vom User beauftragt: alle übrigen Komponenten, je Komponente ein eigener Agent, aufgeteilt in 4 Läufe.
   - 22 Komponenten haben eine Seite (Button sowie ToolBar … CheckComboBox). Demo-Selbsttest 792/792, 1818 Tests grün.
   - Läufe 2–4, Einteilung und Ablauf: `Docs\Demo-Komponentenseiten.md`, Abschnitt „Parallele Läufe“. Werkzeuge: `Build\showcase-agents`.

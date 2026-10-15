@@ -268,6 +268,9 @@ uses
   ExGridExport in 'Showcase\ExGridExport.pas',
   ExGridStock in 'Showcase\ExGridStock.pas',
   DemoShowGrid in 'Showcase\DemoShowGrid.pas',
+  ExDBGridCustomers in 'Showcase\ExDBGridCustomers.pas',
+  ExDBGridOrderItems in 'Showcase\ExDBGridOrderItems.pas',
+  DemoShowDBGrid in 'Showcase\DemoShowDBGrid.pas',
   DemoMain in 'DemoMain.pas';
 
 {$R *.res}
