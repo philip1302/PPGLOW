@@ -84,6 +84,16 @@ type
     procedure ChildPaintsOnPanelBackground;
     procedure LoadsVclStyleDfms;
     procedure AccessibilityExposesChildren;
+    // AutoSize der Container (Panel, ScrollBox, GroupBox)
+    procedure PanelAutoSizeFitsFreeChild;
+    procedure PanelAutoSizeKeepsMinConstraints;
+    procedure PanelAutoSizeStacksAlignedChildren;
+    procedure PanelAutoSizeRightAnchoredChildIsStable;
+    procedure PanelAutoSizeWithoutChildrenKeepsSize;
+    procedure PanelAutoSizeAlignedPanelOnlyHeight;
+    procedure GroupBoxAutoSizeFollowsCaption;
+    procedure ScrollBoxAutoSizeNeedsNoScrollBar;
+    procedure PanelAutoSizeSurvivesDfm;
   end;
 
   TPhase3PaintTests = class(TPhase3TestCase)
@@ -1285,6 +1295,216 @@ begin
       end;
   end;
   CheckTrue(Found, 'Button auf dem Panel nicht ueber AccessibleChildren erreichbar: ' + Info);
+end;
+
+{ AutoSize der Container. Panels ohne Rahmen und Rundung (Innenabstand 0),
+  damit die Erwartungen feste Zahlen sind. }
+
+function NewFlatPanel(Owner: TForm): TPPGPanel;
+begin
+  Result := TPPGPanel.Create(Owner);
+  Result.Parent := Owner;
+  Result.SetBounds(10, 10, 200, 100);
+  Result.Caption := '';
+  Result.Preset := PPGPresetModernFlat;
+  Result.Shadow.Size := 0;
+  Result.Appearance.BorderWidth := 0;
+  Result.Appearance.Rounding := 0;
+  Result.HandleNeeded;
+end;
+
+function NewChild(Owner: TForm; AParent: TWinControl; X, Y, W, H: Integer): TPanel;
+begin
+  Result := TPanel.Create(Owner);
+  Result.Parent := AParent;
+  Result.SetBounds(X, Y, W, H);
+end;
+
+procedure TContainerTests.PanelAutoSizeFitsFreeChild;
+var
+  P: TPPGPanel;
+  C: TPanel;
+begin
+  P := NewFlatPanel(FForm);
+  P.Padding.Right := 5;
+  P.Padding.Bottom := 7;
+  C := NewChild(FForm, P, 10, 20, 120, 30);
+  P.AutoSize := True;
+  // rechte Kante 130 + Padding 5, untere Kante 50 + Padding 7
+  CheckEquals(135, P.ClientWidth, 'Breite');
+  CheckEquals(57, P.ClientHeight, 'Hoehe');
+  C.Width := 200;
+  CheckEquals(215, P.ClientWidth, 'waechst mit dem Kind');
+  C.SetBounds(10, 20, 50, 10);
+  CheckEquals(65, P.ClientWidth, 'schrumpft mit dem Kind');
+  CheckEquals(37, P.ClientHeight, 'schrumpft in der Hoehe');
+  C.Visible := False;
+  CheckEquals(65, P.ClientWidth, 'ohne sichtbares Kind bleibt die Groesse');
+end;
+
+procedure TContainerTests.PanelAutoSizeKeepsMinConstraints;
+var
+  P: TPPGPanel;
+begin
+  P := NewFlatPanel(FForm);
+  P.Constraints.MinWidth := 300;
+  P.Constraints.MinHeight := 80;
+  NewChild(FForm, P, 0, 0, 40, 20);
+  P.AutoSize := True;
+  CheckEquals(300, P.Width, 'MinWidth');
+  CheckEquals(80, P.Height, 'MinHeight');
+  P.Constraints.MaxWidth := 320;
+  NewChild(FForm, P, 0, 0, 500, 20);
+  CheckEquals(320, P.Width, 'MaxWidth');
+end;
+
+procedure TContainerTests.PanelAutoSizeStacksAlignedChildren;
+var
+  P, Q: TPPGPanel;
+  Top, Bottom, Fill: TPanel;
+begin
+  P := NewFlatPanel(FForm);
+  Top := NewChild(FForm, P, 0, 0, 10, 30);
+  Top.Align := alTop;
+  Bottom := NewChild(FForm, P, 0, 0, 10, 20);
+  Bottom.AlignWithMargins := True;
+  Bottom.Margins.SetBounds(0, 3, 0, 3);
+  Bottom.Align := alBottom;
+  Fill := NewChild(FForm, P, 0, 0, 10, 10);
+  Fill.Align := alClient;
+  P.AutoSize := True;
+  // 30 + (3 + 20 + 3); die Breite bestimmt kein Kind
+  CheckEquals(56, P.ClientHeight, 'Hoehe aus alTop + alBottom');
+  CheckEquals(200, P.ClientWidth, 'Breite unveraendert');
+  Q := NewFlatPanel(FForm);
+  NewChild(FForm, Q, 0, 0, 40, 10).Align := alLeft;
+  NewChild(FForm, Q, 0, 0, 60, 10).Align := alRight;
+  Q.AutoSize := True;
+  CheckEquals(100, Q.ClientWidth, 'Breite aus alLeft + alRight');
+  CheckEquals(100, Q.ClientHeight, 'Hoehe unveraendert');
+end;
+
+procedure TContainerTests.PanelAutoSizeRightAnchoredChildIsStable;
+var
+  P: TPPGPanel;
+  C: TPanel;
+begin
+  P := NewFlatPanel(FForm);
+  // rechts verankert, 10 px vom rechten Rand
+  C := NewChild(FForm, P, 150, 0, 40, 20);
+  C.Anchors := [akTop, akRight];
+  P.AutoSize := True;
+  CheckEquals(50, P.ClientWidth, 'Kindbreite + rechter Abstand');
+  CheckEquals(0, C.Left, 'Kind bleibt im Panel');
+  P.Realign;
+  P.Realign;
+  CheckEquals(50, P.ClientWidth, 'stabil, schrumpft nicht weiter');
+end;
+
+procedure TContainerTests.PanelAutoSizeWithoutChildrenKeepsSize;
+var
+  P: TPPGPanel;
+begin
+  P := NewFlatPanel(FForm);
+  P.Caption := 'Nur Text';
+  P.AutoSize := True;
+  CheckEquals(200, P.Width);
+  CheckEquals(100, P.Height);
+end;
+
+procedure TContainerTests.PanelAutoSizeAlignedPanelOnlyHeight;
+var
+  P: TPPGPanel;
+begin
+  P := NewFlatPanel(FForm);
+  P.Align := alTop;
+  NewChild(FForm, P, 4, 4, 50, 30);
+  P.AutoSize := True;
+  CheckEquals(FForm.ClientWidth, P.Width, 'Breite gehoert bei alTop dem Formular');
+  CheckEquals(34, P.ClientHeight, 'Hoehe aus dem Kind');
+end;
+
+procedure TContainerTests.GroupBoxAutoSizeFollowsCaption;
+var
+  G: TPPGGroupBox;
+  C: TPanel;
+  R: TRect;
+  H1: Integer;
+begin
+  G := NewGroup('Optionen');
+  C := NewChild(FForm, G, 0, 0, 10, 40);
+  C.Align := alTop;
+  G.AutoSize := True;
+  R := G.ClientRect;
+  TGroupAccess(G).AdjustClientRect(R);
+  CheckEquals(C.Top + C.Height, R.Bottom, 'Innenbereich endet am Kind');
+  H1 := G.Height;
+  G.Font.Size := 20;
+  CheckTrue(G.Height > H1, Format('groessere Plakette, Hoehe %d -> %d', [H1, G.Height]));
+  R := G.ClientRect;
+  TGroupAccess(G).AdjustClientRect(R);
+  CheckEquals(C.Top + C.Height, R.Bottom, 'auch nach dem Schriftwechsel');
+end;
+
+procedure TContainerTests.ScrollBoxAutoSizeNeedsNoScrollBar;
+var
+  B: TPPGScrollBox;
+begin
+  B := TPPGScrollBox.Create(FForm);
+  B.Parent := FForm;
+  B.BorderStyle := bsNone;
+  B.SetBounds(0, 0, 150, 100);
+  B.HandleNeeded;
+  NewChild(FForm, B, 0, 0, 120, 260);
+  CheckTrue(B.VertScrollBar.IsScrollBarVisible, 'ohne AutoSize: Leiste');
+  B.AutoSize := True;
+  CheckFalse(B.VertScrollBar.IsScrollBarVisible, 'mit AutoSize passt der Inhalt');
+  CheckTrue(B.ClientHeight >= 260, Format('Hoehe %d', [B.ClientHeight]));
+end;
+
+procedure TContainerTests.PanelAutoSizeSurvivesDfm;
+var
+  P, P2: TPPGPanel;
+  M: TMemoryStream;
+  C: TPanel;
+  R: TRect;
+begin
+  RegisterClass(TPanel);
+  P := TPPGPanel.Create(FForm);
+  P.Parent := FForm;
+  LoadDfm(
+    'object P: TPPGPanel'#13#10 +
+    '  Width = 300'#13#10 +
+    '  Height = 200'#13#10 +
+    '  AutoSize = True'#13#10 +
+    '  object C: TPanel'#13#10 +
+    '    Left = 12'#13#10 +
+    '    Top = 14'#13#10 +
+    '    Width = 100'#13#10 +
+    '    Height = 40'#13#10 +
+    '  end'#13#10 +
+    'end', P);
+  CheckTrue(P.AutoSize, 'AutoSize geladen');
+  CheckEquals(1, P.ControlCount, 'Kind geladen');
+  C := P.Controls[0] as TPanel;
+  P.HandleNeeded;
+  R := P.ClientRect;
+  TPanelAccess(P).AdjustClientRect(R);
+  CheckEquals(C.Left + C.Width, R.Right, 'nach dem Laden auf das Kind verkleinert (Breite)');
+  CheckEquals(C.Top + C.Height, R.Bottom, 'nach dem Laden auf das Kind verkleinert (Hoehe)');
+  // Rundreise: AutoSize wird gespeichert (Vorgabe False)
+  M := TMemoryStream.Create;
+  try
+    P.Controls[0].Free;
+    M.WriteComponent(P);
+    M.Position := 0;
+    P2 := TPPGPanel.Create(FForm);
+    P2.Parent := FForm;
+    M.ReadComponent(P2);
+    CheckTrue(P2.AutoSize, 'Rundreise');
+  finally
+    M.Free;
+  end;
 end;
 
 { TPhase3PaintTests }

@@ -57,6 +57,8 @@ type
     { VCL-Standard }
     property Align;
     property Anchors;
+    /// Groesse aus den Kind-Controls samt Plakette (Regeln in PPG.Controls.Container).
+    property AutoSize;
     property BiDiMode;
     property Caption;
     property Color;
