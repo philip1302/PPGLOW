@@ -1,6 +1,12 @@
 ﻿PPGlow Components – Installation
 ================================
 
+Lizenz
+------
+Kostenlos für private, nicht-kommerzielle Nutzung (Hobby, Lernen,
+nicht-kommerzielle Open-Source-Projekte). Jede kommerzielle Nutzung braucht
+eine kostenpflichtige Lizenz. Details: LICENSE.txt im Installationsordner.
+
 Was das Setup macht
 -------------------
 1. Es kopiert die Quelltexte und Paketprojekte von PPGlow in den gewählten

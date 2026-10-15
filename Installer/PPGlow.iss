@@ -44,6 +44,7 @@ OutputBaseFilename=PPGlow-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+LicenseFile=..\LICENSE.txt
 InfoBeforeFile=LIESMICH.txt
 UninstallDisplayName={#AppName} {#AppVersion}
 SetupLogging=yes

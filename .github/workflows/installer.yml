@@ -98,6 +98,10 @@ jobs:
           ``powershell -ExecutionPolicy Bypass -File Build\install.ps1 -Version 22.0 -NoRuleCheck``
 
           Stand und offene Punkte je Delphi-Version: Docs/Kompatibilitaet.md.
+
+          ## Lizenz
+
+          Kostenlos fuer private, nicht-kommerzielle Nutzung. Jede kommerzielle Nutzung braucht eine kostenpflichtige Lizenz (siehe LICENSE.txt).
           "@
           $notes | Set-Content notes.md -Encoding utf8
           $ghArgs = @('release', 'create', $env:GITHUB_REF_NAME, (Get-ChildItem out\* | ForEach-Object FullName),

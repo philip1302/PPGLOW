@@ -1,0 +1,134 @@
+﻿PPGlow Components – Lizenz
+==========================
+
+Copyright (c) 2026 [NAME DES RECHTEINHABERS]. Alle Rechte vorbehalten.
+
+PPGlow Components (im Folgenden „die Software“) umfasst die Quelltexte,
+Paketprojekte, Ressourcen, Skripte, Dokumentation und daraus erzeugte
+Kompilate (z. B. .dcu, .bpl, .dcp) dieses Repositorys bzw. Installers.
+
+Die Software wird unter zwei Bedingungen angeboten: kostenlos für die
+nicht-kommerzielle Nutzung (Abschnitt 2) und gegen Entgelt für die
+kommerzielle Nutzung (Abschnitt 3).
+
+
+1. Begriffe
+-----------
+
+1.1 Nicht-kommerzielle Nutzung ist die Nutzung durch eine natürliche
+    Person ausschließlich
+    a) zu privaten Zwecken (Hobby, eigene Projekte ohne Erwerbsabsicht),
+    b) zum Lernen und Lehren an Schulen, Hochschulen und in der eigenen
+       Weiterbildung,
+    c) in Open-Source-Projekten, die selbst nicht kommerziell genutzt
+       werden und für die kein Entgelt verlangt wird.
+
+1.2 Kommerzielle Nutzung ist jede andere Nutzung, insbesondere
+    a) durch Unternehmen, Selbstständige, Freiberufler, Vereine mit
+       wirtschaftlichem Geschäftsbetrieb und Behörden,
+    b) im Rahmen eines Arbeits- oder Auftragsverhältnisses,
+    c) in Software, die verkauft, vermietet, lizenziert, als Dienst
+       angeboten oder zusammen mit einer bezahlten Leistung ausgeliefert
+       wird,
+    d) in Software, die innerhalb eines Unternehmens oder einer Behörde
+       eingesetzt wird (auch ohne Verkauf),
+    e) in Software, die durch Werbung, Spenden-Pflicht, In-App-Käufe oder
+       Abonnements Einnahmen erzielt.
+
+1.3 Im Zweifel gilt eine Nutzung als kommerziell.
+
+
+2. Nicht-kommerzielle Nutzung (kostenlos)
+-----------------------------------------
+
+Für die nicht-kommerzielle Nutzung wird ein einfaches, nicht übertragbares,
+zeitlich unbegrenztes und kostenloses Nutzungsrecht eingeräumt. Erlaubt ist,
+
+    a) die Software zu installieren, zu kompilieren und in der
+       Delphi-Entwicklungsumgebung zu verwenden,
+    b) die Software für eigene Zwecke zu ändern,
+    c) Programme, die mit der Software erstellt wurden, in kompilierter
+       Form (z. B. .exe) kostenlos weiterzugeben, sofern sie selbst
+       nicht-kommerziell sind.
+
+
+3. Kommerzielle Nutzung (kostenpflichtig)
+-----------------------------------------
+
+3.1 Jede kommerzielle Nutzung erfordert eine kostenpflichtige kommerzielle
+    Lizenz des Rechteinhabers. Umfang, Preis und Laufzeit werden in dieser
+    Lizenz gesondert vereinbart.
+
+3.2 Zur Prüfung vor dem Kauf darf die Software 30 Tage lang kommerziell
+    erprobt werden, jedoch nicht in ausgelieferten oder produktiv
+    eingesetzten Programmen.
+
+3.3 Kontakt für kommerzielle Lizenzen: [E-MAIL ODER WEBSEITE]
+
+
+4. Einschränkungen (für alle Nutzungen)
+---------------------------------------
+
+Ohne schriftliche Zustimmung des Rechteinhabers ist es nicht erlaubt,
+
+    a) die Software oder Teile davon im Quelltext oder als Komponenten-
+       bzw. Paketbibliothek (.pas, .dcu, .bpl, .dcp) weiterzugeben,
+       zu verkaufen, zu vermieten oder zu veröffentlichen,
+    b) die Software als Grundlage einer eigenen Komponentenbibliothek
+       anzubieten, die mit ihr in Wettbewerb tritt,
+    c) Urheberrechtsvermerke und diese Lizenz zu entfernen oder zu ändern,
+    d) einen Lizenzschlüssel oder eine technische Schutzmaßnahme zu
+       umgehen, falls eine solche hinzukommt.
+
+Das Weitergeben dieses unveränderten Repositorys bzw. Installers über die
+offizielle Bezugsquelle (GitHub-Seite des Projekts) bleibt unberührt.
+
+
+5. Haftung und Gewährleistung
+-----------------------------
+
+5.1 Bei kostenloser Überlassung (Abschnitt 2) haftet der Rechteinhaber nur
+    für Vorsatz und grobe Fahrlässigkeit sowie bei arglistig
+    verschwiegenen Mängeln. Die Software wird ohne Gewähr für eine
+    bestimmte Eignung oder Fehlerfreiheit überlassen.
+
+5.2 Für kommerzielle Lizenzen gelten die dort vereinbarten Bedingungen.
+
+5.3 Die Haftung nach dem Produkthaftungsgesetz sowie für Schäden aus der
+    Verletzung des Lebens, des Körpers oder der Gesundheit bleibt
+    unberührt.
+
+
+6. Beendigung
+-------------
+
+Wer gegen diese Lizenz verstößt, verliert das Nutzungsrecht automatisch.
+Bereits erstellte Programme dürfen nach Abschluss einer kommerziellen
+Lizenz weiter genutzt werden.
+
+
+7. Schlussbestimmungen
+----------------------
+
+7.1 Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des
+    UN-Kaufrechts.
+
+7.2 Sollte eine Bestimmung unwirksam sein, bleibt der Rest der Lizenz
+    wirksam.
+
+7.3 Rechte, die nicht ausdrücklich eingeräumt werden, bleiben beim
+    Rechteinhaber.
+
+
+-----------------------------------------------------------------------
+English summary (for information only; the German text above is binding)
+
+PPGlow Components is free for non-commercial use by individuals (hobby,
+private projects, education, non-commercial open source). Any commercial
+use – by companies, freelancers, public authorities, within employment,
+in products or services that generate revenue, or in internal business
+software – requires a paid commercial license. A 30-day evaluation for
+commercial use is allowed, but not in shipped or production software.
+Redistribution of the source code or the component packages is not
+permitted. Provided without warranty to the extent permitted by law.
+Contact for commercial licenses: [E-MAIL OR WEBSITE]

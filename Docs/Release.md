@@ -41,6 +41,6 @@ Ohne Tag (Push mit Änderungen unter `Installer\`, an `build.ps1`/`install.ps1` 
 ## Grenzen
 
 - **Nicht signiert:** Windows SmartScreen warnt beim ersten Start („Weitere Informationen“ > „Trotzdem ausführen“). Für eine Signatur braucht es ein Code-Signing-Zertifikat (Phase 15).
-- **Lizenz:** Das Repository hat keine Lizenzdatei. Ein öffentliches Release macht die Komponenten zum Herunterladen verfügbar. Lizenz und Arbeitgeber sind vorher zu klären (Phase 15 ist deshalb zurückgestellt).
+- **Lizenz:** `LICENSE.txt` (kostenlos für private, nicht-kommerzielle Nutzung, kostenpflichtig für jede kommerzielle Nutzung). Das Setup zeigt sie vor der Installation zur Zustimmung an; sie liegt auch im ZIP. Platzhalter für Rechteinhaber und Kontakt sind vor dem ersten Release auszufüllen. Ob der Arbeitgeber Rechte an der Suite hat, ist vorher zu klären (Phase 15).
 - **Dauer:** Das Bauen dauert je Version und Plattform einige Minuten, bei der Community Edition über die IDE im Hintergrund (`bds -b`).
 - **Delphi 11** ist noch nicht mit einem vollständigen Build geprüft (`Docs\Kompatibilitaet.md`).

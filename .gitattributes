@@ -11,6 +11,7 @@
 *.ps1    text eol=crlf
 *.iss    text eol=crlf
 Installer/*.txt text eol=crlf
+LICENSE.txt text eol=crlf
 *.md     text
 
 # Binaerdateien nie umwandeln

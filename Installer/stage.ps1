@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $Include = @('Source', 'Packages/XE2', 'Packages/Delphi11', 'Packages/Delphi13',
   'Build/build.ps1', 'Build/install.ps1', 'Installer/run-install.ps1', 'Installer/LIESMICH.txt',
-  'Docs/Kompatibilitaet.md')
+  'Docs/Kompatibilitaet.md', 'LICENSE.txt')
 $Exclude = '\.(dcu|dcp|bpl|err|res|rsm|local|identcache|exe)$'
 
 $files = @(& git -C $Root ls-files -- $Include)
