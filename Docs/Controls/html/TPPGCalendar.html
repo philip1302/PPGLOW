@@ -8,6 +8,7 @@
 <ul>
 <li>Monat/Jahr/Dekade mit Zoom-Animation, Wochennummern nach ISO 8601, erster Wochentag aus <code>FormatSettings</code>.</li>
 <li><code>Date</code> im Code l&#246;st kein Ereignis aus.</li>
+<li><code>AutoSize</code> wie bei <code>TMonthCalendar</code>: Gr&#246;&#223;e f&#252;r genau einen Monat bei aktueller Schrift und DPI; unabh&#228;ngig von der Ansicht.</li>
 </ul>
 <h2>Anpassung</h2>
 <ul>
@@ -21,6 +22,7 @@
 <li>Auswahl: einzelner Tag, Bereich (zwei Klicks bzw. Umschalt+Klick) oder mehrere Tage (Klick schaltet um). MinDate/MaxDate und OnIsDateDisabled sperren Tage. Heute ist markiert (ShowToday).</li>
 <li>Tastatur: Pfeile (Tag/Woche), Bild auf/ab (Monat), Strg+Bild (Jahr), Pos1/Ende (Monatsanfang/-ende), Enter/Leertaste waehlen, Strg+Oben/Unten zoomen. RTL gespiegelt.</li>
 <li>Code (Date := ...) loest kein OnChange aus; der Anwender schon.</li>
+<li>AutoSize (wie TMonthCalendar): Groesse fuer genau einen Monat. Zellen mindestens so gross wie bei der Vorgabegroesse 300 x 330 (96 dpi), bei groesserer Schrift so gross, dass Tageszahlen, Wochentags- und Monatsnamen hineinpassen; breit genug fuer den laengsten Titel. Haengt nicht von der Ansicht ab (Jahr/Dekade springen nicht).</li>
 <li>Screenreader: Tabelle, Kinder sind die Tage (bzw. Monate/Jahre) mit Langdatum als Name, Zustaenden gewaehlt/fokussiert/gesperrt.</li>
 <li>Link (Phase 14a): ein verbundener Planer (IPPGCalendarLink) markiert Tage mit Terminen fett und erfaehrt die Auswahl des Anwenders.</li>
 </ul>
@@ -48,6 +50,7 @@
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
 <tr><td><code>Align</code></td><td><code>TAlign</code></td><td></td><td>Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder f&#252;llt den Rest (alClient). alNone = freie Position. Nutzung: <code>Panel1.Align := alClient;</code> Abst&#228;nde &#252;ber <code>AlignWithMargins</code> und <code>Margins</code>.</td></tr>
 <tr><td><code>Anchors</code></td><td><code>TAnchors</code></td><td></td><td>Kanten, deren Abstand zum Parent beim Vergr&#246;&#223;ern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: <code>Edit1.Anchors := [akLeft, akTop, akRight];</code></td></tr>
+<tr><td><code>AutoSize</code></td><td><code>Boolean</code></td><td></td><td>True: Der Kalender ist so gro&#223;, dass genau ein Monat hineinpasst (wie TMonthCalendar.AutoSize): Zellen mindestens wie bei der Vorgabegr&#246;&#223;e, bei gr&#246;&#223;erer Schrift oder hoher DPI entsprechend gr&#246;&#223;er, Wochennummern als zus&#228;tzliche Spalte. Die Gr&#246;&#223;e h&#228;ngt nicht von der Ansicht (Monat, Jahr, Dekade) ab.</td></tr>
 <tr><td><code>BiDiMode</code></td><td><code>TBiDiMode</code></td><td></td><td>Leserichtung. bdRightToLeft spiegelt Layout und Text f&#252;r Arabisch und Hebr&#228;isch. Nutzung: Meist &#252;ber <code>ParentBiDiMode</code> vom Formular &#252;bernehmen.</td></tr>
 <tr><td><code>Constraints</code></td><td><code>TSizeConstraints</code></td><td></td><td>Mindest- und H&#246;chstma&#223;e (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: <code>Panel1.Constraints.MinWidth := 200;</code></td></tr>
 <tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td></td><td>False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt.</td></tr>

@@ -6,7 +6,7 @@ Palette **PPGlow** - Unit `PPG.Panel` - Basis `TPPGCustomPanel`
 
 ## Unterschiede und Hinweise
 
-- Container ohne `AutoSize`.
+- `AutoSize` wie bei `TPanel`: Größe aus den Kind-Controls (Regeln unter `AutoSize`), begrenzt durch `Constraints`.
 - Kinder auf dem Panel zeichnen ihren Hintergrund über den schnellen Eltern-Hintergrund (`GetChildBackground`).
 
 ## Anpassung
@@ -25,9 +25,13 @@ hinter den abgerundeten Ecken (ParentBackground = False); die Flaeche kommt
 aus Appearance.Normal.
 
 Scrollen (Phase 18d): AutoScroll, HorzScrollBar und VertScrollBar wie
-TScrollingWinControl. Gescrollt werden echte Kind-Fenster (Lage wird
-verschoben, Neuzeichnen per WM_SETREDRAW gebuendelt), Rahmen und
-Beschriftung des Panels bleiben stehen. Die Leisten liegen in einem
+TScrollingWinControl. Gescrollt werden echte Kind-Fenster, Rahmen und
+Beschriftung des Panels bleiben stehen. Ist der Hintergrund in der Sicht
+einfarbig (keine Beschriftung, kein Verlauf), verschiebt ScrollWindowEx Bild
+und Kind-Fenster in einem Zug und nur der aufgedeckte Streifen wird neu
+gezeichnet (wie TScrollBox; Benchmark "ScrollBox 200 Zeilen" 9,5 s -> 2,5 s).
+Sonst wird jedes Kind verschoben und alles neu gezeichnet (WM_SETREDRAW
+gebuendelt). Die Leisten liegen in einem
 schmalen Streifen am Rand (Kind-Fenster lassen sich nicht ueberlagern) und
 kommen vom Scroll-Renderer des Presets wie bei Liste und Grid. Mausrad (auch
 ueber Kind-Controls, die es nicht nutzen: Windows reicht es weiter),
@@ -63,6 +67,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
 | `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
+| `AutoSize` | `Boolean` |  | True: Der Container wird so groß, dass seine sichtbaren Kind-Controls samt Rahmen, Rundung, Beschriftung und Padding hineinpassen, und wächst bzw. schrumpft mit ihnen (wie TPanel.AutoSize). Frei platzierte Kinder zählen mit ihrer rechten bzw. unteren Kante, alTop/alLeft als Stapel, alBottom/alRight addiert; alClient füllt nur aus. Ohne Kinder bleibt die Größe. Constraints (MinWidth, MinHeight, MaxWidth, MaxHeight) begrenzen das Ergebnis; mit Align bestimmt AutoSize nur die freie Kante. Nutzung: `Panel1.AutoSize := True; Panel1.Constraints.MinHeight := 40;` – Knopfleiste, die mit übersetzten Beschriftungen mitwächst (Buttons mit AutoSize und alLeft). |
 | `BevelEdges` | `TBevelEdges` |  | Kanten, an denen der VCL-Rahmen (Bevel) gezeichnet wird. Nur wirksam mit BevelKind <> bkNone. |
 | `BevelInner` | `TBevelCut` | `bvNone` | Innere VCL-Rahmenkante (bvNone, bvLowered, bvRaised, bvSpace). Meist bvNone lassen; die PPGlow-Optik kommt aus Appearance. |
 | `BevelKind` | `TBevelKind` |  | Art des zusätzlichen VCL-Rahmens. Für die PPGlow-Optik bkNone lassen. |
