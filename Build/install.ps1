@@ -385,10 +385,14 @@ if (-not $NoDB) { $Projects += @('DBRuntime', 'DBDesign') }
 $BuildFailed = @{}
 if (-not $NoBuild) {
   foreach ($t in $Targets) {
-    Write-Host "Baue $($Projects -join ', ') fuer $($t.Platform)/$Config ..." -ForegroundColor Cyan
+    # Ohne IDE dieser Bitness (z.B. Delphi 11: keine 64-Bit-IDE, kein Win64-designide)
+    # nur die Runtime-Pakete bauen
+    $tp = $Projects
+    if (-not (Test-Path (Join-Path $t.StudioBin 'bds.exe'))) { $tp = @($Projects | Where-Object { $_ -notlike '*Design' }) }
+    Write-Host "Baue $($tp -join ', ') fuer $($t.Platform)/$Config ..." -ForegroundColor Cyan
     $global:LASTEXITCODE = 0
     try {
-      & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $Projects -Platform $t.Platform -Config $Config
+      & (Join-Path $PSScriptRoot 'build.ps1') -Only $Folder -Projects $tp -Platform $t.Platform -Config $Config
       if ($LASTEXITCODE -ne 0) { $BuildFailed[$t.Platform] = $true }
     } catch {
       # build.ps1 wirft z.B. bei fehlender .err-Datei (Timeout) - wie ein Fehlschlag behandeln
@@ -428,10 +432,13 @@ foreach ($t in $Targets) {
   $knownKey = "$Key\$($t.Known)"
 
   # --- 2. Vorhanden und aktuell? ----------------------------------------------
-  $files = @("PPGlowR$Suffix.bpl", "dclPPGlow$Suffix.bpl")
+  # Design-Pakete braucht nur eine IDE dieser Bitness (64-Bit-IDE: bin64\bds.exe)
+  $hasIde = Test-Path (Join-Path $t.StudioBin 'bds.exe')
+  $files = @("PPGlowR$Suffix.bpl")
+  if ($hasIde) { $files += "dclPPGlow$Suffix.bpl" }
   $withDB = (-not $NoDB) -and (Test-Path (Join-Path $src "PPGlowDBR$Suffix.bpl")) -and
-    (Test-Path (Join-Path $src "dclPPGlowDB$Suffix.bpl"))
-  if ($withDB) { $files += @("PPGlowDBR$Suffix.bpl", "dclPPGlowDB$Suffix.bpl") }
+    ((-not $hasIde) -or (Test-Path (Join-Path $src "dclPPGlowDB$Suffix.bpl")))
+  if ($withDB) { $files += "PPGlowDBR$Suffix.bpl"; if ($hasIde) { $files += "dclPPGlowDB$Suffix.bpl" } }
   $stale = @()
   foreach ($f in $files) {
     $path = Join-Path $src $f
@@ -446,8 +453,6 @@ foreach ($t in $Targets) {
     throw ($msg.Trim())
   }
   $names = $files | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) -replace ($Suffix + '$'), '' }
-  # Design-Pakete braucht nur eine IDE dieser Bitness (64-Bit-IDE: bin64\bds.exe)
-  $hasIde = Test-Path (Join-Path $t.StudioBin 'bds.exe')
   if (-not $hasIde) { Write-Host "  Keine $P-IDE installiert: nur Runtime-Pakete und Bibliothekspfad." -ForegroundColor DarkGray }
 
   # --- 3. Alte Eintraege --------------------------------------------------------

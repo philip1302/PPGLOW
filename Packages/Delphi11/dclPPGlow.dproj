@@ -50,10 +50,10 @@
         <DCC_S>false</DCC_S>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_DcuOutput>..\..\Lib\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_BplOutput>..\..\Lib\$(ProductVersion)\$(Platform)\$(Config)</DCC_BplOutput>
-        <DCC_DcpOutput>..\..\Lib\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_UnitSearchPath>..\..\Lib\$(ProductVersion)\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_DcuOutput>..\..\Lib\22.0\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_BplOutput>..\..\Lib\22.0\$(Platform)\$(Config)</DCC_BplOutput>
+        <DCC_DcpOutput>..\..\Lib\22.0\$(Platform)\$(Config)</DCC_DcpOutput>
+        <DCC_UnitSearchPath>..\..\Lib\22.0\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1031</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=PPGlow Components - Designtime;FileVersion=1.0.0.0;InternalName=dclPPGlow;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=PPGlow;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
