@@ -1,0 +1,51 @@
+﻿PPGlow Components – Installation
+================================
+
+Was das Setup macht
+-------------------
+1. Es kopiert die Quelltexte und Paketprojekte von PPGlow in den gewählten
+   Ordner (Vorgabe: %LOCALAPPDATA%\PPGlow). Administratorrechte sind nicht
+   nötig.
+2. Für jede ausgewählte Delphi-Version baut es die Pakete mit Ihrem eigenen
+   Delphi (Win32, auf Wunsch auch Win64) und registriert sie in der IDE
+   (Build\install.ps1). Die Kompilate liegen danach unter Lib\<Version>.
+
+Voraussetzungen
+---------------
+- Delphi 11 Alexandria (BDS 22.0) und/oder Delphi 13 Florence (BDS 37.0)
+  ist installiert und wurde mindestens einmal gestartet.
+- RAD Studio ist während der Installation GESCHLOSSEN (die IDE überschreibt
+  die Registry beim Beenden).
+- Das Bauen dauert je Version einige Minuten. Dabei öffnet sich ein
+  PowerShell-Fenster mit dem Fortschritt; bitte nicht schließen.
+  Ohne Kommandozeilen-Compiler (Community Edition) baut das Skript über die
+  IDE im Hintergrund (eigenes Profil "PPGlowBuild").
+
+Was geändert wird
+-----------------
+- Die Pakete werden nach BDSCOMMONDIR\Bpl bzw. \Dcp kopiert und unter
+  "Known Packages" eingetragen; der Lib-Ordner kommt in den Bibliothekspfad.
+- Fehlt der Bpl-Ordner im PATH der IDE, wird er eingetragen.
+- Vorher sichert das Skript die betroffenen Registry-Schlüssel nach
+  Build\registry-backup (bleibt auch nach der Deinstallation erhalten).
+
+Nach der Installation
+---------------------
+RAD Studio starten, ein VCL-Formular im Designer öffnen: die Palette zeigt
+die Kategorien "PPGlow" und "PPGlow DB".
+
+Protokolle
+----------
+Je Delphi-Version schreibt das Setup ein Protokoll nach Logs\ im
+Installationsordner. Bei einem Fehler bitte diese Datei mitschicken.
+
+Deinstallation
+--------------
+Über "Apps & Features" bzw. die Systemsteuerung. Dabei werden die Pakete
+aus der IDE ausgetragen und die Dateien entfernt (RAD Studio vorher
+schließen).
+
+Stand
+-----
+Delphi 11 ist neu und noch nicht vollständig mit einem echten Build
+geprüft; siehe Docs\Kompatibilitaet.md im Installationsordner.
