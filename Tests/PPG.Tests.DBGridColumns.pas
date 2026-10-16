@@ -510,7 +510,7 @@ begin
   // Testdesktop (/hidden), nie auf dem Bildschirm
   if not PPGOnHiddenDesktop then
   begin
-    Status('nur mit /hidden');
+    Skip('Editor braucht ein angezeigtes Formular, nur mit /hidden');
     Exit;
   end;
   FForm.Show;
