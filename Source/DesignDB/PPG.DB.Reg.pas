@@ -287,12 +287,14 @@ begin
   RegisterComponents(SPPGDBPalette, [TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
     TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart, TPPGDBPlanner, TPPGDBKanban,
     TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit,
-    TPPGDBNavigator, TPPGDBRadioGroup]);
+    TPPGDBNavigator, TPPGDBRadioGroup, TPPGDBText, TPPGDBToggleSwitch]);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBRadioGroup, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBNavigator, 'SearchField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBEdit, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBMemo, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBCheckBox, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBText, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBToggleSwitch, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBComboBox, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBDatePicker, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBMaskEdit, 'DataField', TPPGDataFieldProperty);

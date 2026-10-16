@@ -63,6 +63,7 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TStringGrid | TAdvStringGrid | TPPGGrid | PPG.Grid |
 | TLabel | | TPPGLabel | PPG.Labels |
 | TLinkLabel | | TPPGLinkLabel | PPG.Labels |
+| TShape | | TPPGShape | PPG.Shape |
 | TSplitter | | TPPGSplitter | PPG.Splitter |
 | TSearchBox | | TPPGSearchEdit | PPG.SearchEdit |
 | TMonthCalendar | | TPPGCalendar | PPG.Calendar |
@@ -71,6 +72,7 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TDBEdit | | TPPGDBEdit | PPG.DB.Controls |
 | TDBMemo | | TPPGDBMemo | PPG.DB.Controls |
 | TDBCheckBox | | TPPGDBCheckBox | PPG.DB.Controls |
+| TDBText | | TPPGDBText | PPG.DB.Controls |
 | TDBComboBox | | TPPGDBComboBox | PPG.DB.Controls |
 | TDBLookupComboBox | | TPPGDBLookupComboBox | PPG.DB.Lookup |
 | TDBGrid | | TPPGDBGrid | PPG.DB.Grid |
@@ -80,6 +82,8 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TDBNavigator | | TPPGDBNavigator | PPG.DB.Navigator |
 | TScrollBox | | TPPGScrollBox | PPG.Panel |
 | TPopupMenu | | TPPGPopupMenu | PPG.Menus |
+
+`TPPGDBToggleSwitch` (Schalter an einem Ja/Nein-Feld) hat kein VCL-Gegenstück; es ersetzt von Hand ein `TDBCheckBox` (gleiche Properties `DataSource`, `DataField`, `ValueChecked`, `ValueUnchecked`, `ReadOnly`).
 
 Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTileView`, Detailansicht `vsReport` → `TPPGGrid`, beides von Hand).
 

@@ -88,6 +88,7 @@ uses
   PPG.TreeView in '..\..\Source\Controls\PPG.TreeView.pas',
   PPG.Grid in '..\..\Source\Controls\PPG.Grid.pas',
   PPG.Labels in '..\..\Source\Controls\PPG.Labels.pas',
+  PPG.Shape in '..\..\Source\Controls\PPG.Shape.pas',
   PPG.Feedback in '..\..\Source\Controls\PPG.Feedback.pas',
   PPG.Expander in '..\..\Source\Controls\PPG.Expander.pas',
   PPG.Splitter in '..\..\Source\Controls\PPG.Splitter.pas',

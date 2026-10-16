@@ -30,6 +30,7 @@ Erzeugt von `Build\make-docs.ps1` durch Suche in `Tests\*.pas`: jede Testunit, d
 | [TPPGTileView](TPPGTileView.md) | 7 | `PPG.Tests.Audit5d`; `PPG.Tests.Audit7A` (TWheelTests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Audit8A` (TAudit8APaintTests); `PPG.Tests.Phase18` (TTileViewTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGLabel](TPPGLabel.md) | 8 | `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Audit7C` (TAudit7CTests, THighContrastTokenTests); `PPG.Tests.Phase11c` (TDialogTests); `PPG.Tests.Phase18` (TPanelScrollTests); `PPG.Tests.Phase19` (TValidatorTests); `PPG.Tests.Phase7a` (TLabelTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGLinkLabel](TPPGLinkLabel.md) | 7 | `PPG.Tests.Audit45` (TEffectFixTests, TSetterFixTests, TStreamingFixTests); `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Audit7C` (TAudit7CTests, THighContrastTokenTests); `PPG.Tests.Audit7D` (TAudit7DTests); `PPG.Tests.Phase7a` (TLabelTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
+| [TPPGShape](TPPGShape.md) | 2 | `PPG.Tests.Inventur` (TShapeTests); `PPG.Tests.Streaming` |
 | [TPPGBadge](TPPGBadge.md) | 7 | `PPG.Tests.Audit45` (TNamingTests); `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Audit7C` (TAudit7CTests); `PPG.Tests.Audit7D` (TAudit7DTests); `PPG.Tests.Phase7a` (TFeedbackTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGProgressRing](TPPGProgressRing.md) | 6 | `PPG.Tests.Audit45` (TNamingTests, TSetterFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit7C` (TAudit7CTests); `PPG.Tests.Phase7a` (TFeedbackTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGInfoBar](TPPGInfoBar.md) | 9 | `PPG.Tests.Audit45` (TNamingTests, TSetterFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit7C` (THighContrastTokenTests); `PPG.Tests.Audit8D` (TAudit8DTests); `PPG.Tests.Custom` (TCustomViewTests); `PPG.Tests.Phase19` (TValidatorComfortTests); `PPG.Tests.Phase7a` (TFeedbackTests, TPhase7aPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
@@ -95,6 +96,8 @@ Erzeugt von `Build\make-docs.ps1` durch Suche in `Tests\*.pas`: jede Testunit, d
 | [TPPGDBTagEdit](TPPGDBTagEdit.md) | 6 | `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase12d` (TDBFieldTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGDBNavigator](TPPGDBNavigator.md) | 5 | `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGDBRadioGroup](TPPGDBRadioGroup.md) | 6 | `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Phase19` (TBusyOverlayTests, TChoiceValidationHintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
+| [TPPGDBText](TPPGDBText.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.Inventur` (TDBTextTests); `PPG.Tests.Streaming` |
+| [TPPGDBToggleSwitch](TPPGDBToggleSwitch.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.Inventur` (TDBToggleSwitchTests); `PPG.Tests.Streaming` |
 
 ## Ohne Testunit
 

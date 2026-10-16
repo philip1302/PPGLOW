@@ -1,0 +1,30 @@
+# Controls aus der Inventur: TPPGShape, TPPGDBText, TPPGDBToggleSwitch
+
+TPPGShape.Shape = Form: Rechteck, Quadrat, abgerundetes Rechteck/Quadrat, Ellipse oder Kreis. Quadrat und Kreis zentrieren sich im Control.
+> `Shape1.Shape := stCircle;`
+! Ein Statuspunkt ist ein kleiner Kreis (`Width = Height = 14`), dessen `Brush.Color` Sie je nach Zustand setzen.
+TPPGShape.Brush = Füllung (Farbe und Stil, wie TShape). Die Vorgabefarbe (weiß) folgt im Dark Mode dem Theme, eine eigene Farbe bleibt.
+> `Shape1.Brush.Color := clYellow;`
+! Für eine Fläche ohne Füllung `Brush.Style := bsClear`; Schraffuren (`bsCross` u. a.) zeichnet die VCL ohne Kantenglättung.
+TPPGShape.Pen = Rand (Farbe, Breite und Stil, wie TShape). Die Vorgabefarbe (schwarz) folgt im Dark Mode dem Theme, eine eigene Farbe bleibt.
+> `Shape1.Pen.Width := 2; Shape1.Pen.Color := clRed;`
+! Für eine Form ohne Rand `Pen.Style := psClear`; gestrichelte Ränder (`psDash` u. a.) zeichnet die VCL ohne Kantenglättung.
+TPPGShape.ThemeColors = True: Die Vorgabefarben von Brush und Pen folgen Dark Mode und Hochkontrast (wie TPPGLabel). False: immer die eingestellten Farben, wie TShape.
+> `Shape1.ThemeColors := False;`
+! Abschalten, wenn die Form im Dark Mode weiß bleiben soll (z. B. als Papiervorschau).
+
+TPPGDBText.DataField = Name des Felds der Datenmenge, dessen Text (Field.DisplayText) angezeigt wird.
+TPPGDBText.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBText.NullText = Text, wenn das Feld leer (Null) ist. Leer = nichts anzeigen.
+> `DBText1.NullText := '-';`
+! Zeigt in Detailansichten „-“ oder „keine Angabe“ statt einer leeren Fläche.
+TPPGDBText.DisplayFormat = Format für Zahlen- und Datumsfelder (FormatFloat bzw. FormatDateTime). Leer = DisplayText des Felds.
+> `DBText1.DisplayFormat := '#,##0.00';`
+! Für Summen und Datumsangaben, ohne jedes Feld der Datenmenge einzeln zu formatieren.
+
+TPPGDBToggleSwitch.DataField = Name des Felds der Datenmenge, das angezeigt und bearbeitet wird (Boolean-Feld oder ein Feld mit ValueChecked/ValueUnchecked).
+TPPGDBToggleSwitch.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBToggleSwitch.ReadOnly = True: Der Wert wird angezeigt, kann aber nicht geändert werden.
+TPPGDBToggleSwitch.ValueChecked = Wert(e) für „an“ bei Feldern, die kein Boolean sind; mehrere durch Semikolon getrennt, geschrieben wird der erste (wie TDBCheckBox). Vorgabe „True“.
+> `DBToggleSwitch1.ValueChecked := 'J;Ja;1'; DBToggleSwitch1.ValueUnchecked := 'N;Nein;0';`
+TPPGDBToggleSwitch.ValueUnchecked = Wert(e) für „aus“; mehrere durch Semikolon getrennt, geschrieben wird der erste. Vorgabe „False“.

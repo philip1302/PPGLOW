@@ -30,6 +30,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und
 | [TPPGTileView](TPPGTileView.md) | `PPG.TileView` | Kachel-, Karten- und Galerie-Ansicht (Phase 18b). |
 | [TPPGLabel](TPPGLabel.md) | `PPG.Labels` | TPPGLabel und TPPGLinkLabel (Phase 7a). |
 | [TPPGLinkLabel](TPPGLinkLabel.md) | `PPG.Labels` | TPPGLabel und TPPGLinkLabel (Phase 7a). |
+| [TPPGShape](TPPGShape.md) | `PPG.Shape` | Formen (Rechteck, Quadrat, abgerundet, Ellipse, Kreis). |
 | [TPPGBadge](TPPGBadge.md) | `PPG.Feedback` | Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar. |
 | [TPPGProgressRing](TPPGProgressRing.md) | `PPG.Feedback` | Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar. |
 | [TPPGInfoBar](TPPGInfoBar.md) | `PPG.Feedback` | Rueckmelde-Controls (Phase 7a): TPPGBadge, TPPGProgressRing, TPPGInfoBar. |
@@ -95,6 +96,8 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und
 | [TPPGDBTagEdit](TPPGDBTagEdit.md) | `PPG.DB.Fields` | DB-Varianten der Eingabefelder aus Phase 12 (12g): TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit. |
 | [TPPGDBNavigator](TPPGDBNavigator.md) | `PPG.DB.Navigator` | TPPGDBNavigator und TPPGDBRadioGroup (Phase 18c). |
 | [TPPGDBRadioGroup](TPPGDBRadioGroup.md) | `PPG.DB.Navigator` | TPPGDBNavigator und TPPGDBRadioGroup (Phase 18c). |
+| [TPPGDBText](TPPGDBText.md) | `PPG.DB.Controls` | Ersatz fuer TDBText: zeigt Field.DisplayText, nur lesend, folgt dem Datensatz. Mehrwert gegenueber TDBText: Farben des Themes (Dark Mode, Hochkontrast, Secondary, Markup wie TPPGLabel), NullText fuer leere Felder und DisplayFormat zum Formatieren von Zahlen und Datumsfeldern. |
+| [TPPGDBToggleSwitch](TPPGDBToggleSwitch.md) | `PPG.DB.Controls` | Schalter an einem Ja/Nein-Feld (Boolean oder ValueChecked/ValueUnchecked wie TDBCheckBox). Schreibt beim Umschalten ins Feld. |
 
 ## Typen
 

@@ -1,0 +1,20 @@
+unit Unit6;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.ExtCtrls, Vcl.DBCtrls, Data.DB,
+  PPG.Shape, PPG.DB.Controls;
+
+type
+  TForm6 = class(TForm)
+    Shape1: TPPGShape;
+    DBText1: TPPGDBText;
+    DataSource1: TDataSource;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

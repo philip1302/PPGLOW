@@ -4,6 +4,16 @@
 
 ## Übergaben und Meilensteine (neueste zuerst)
 
+### 16.10.2026
+
+**Inventur-Controls** (Zweig `claude/phase3-db-controls`): Die Inventur eines echten Projekts hat drei der in Phase 18 zurückgestellten Nachbauten fällig gemacht. Sie bleiben DFM-kompatibel zum VCL-Vorbild, damit `migrate.ps1` sie einsetzen kann, und halten die Regel „Mehrwert statt Klone“ ein.
+- `TPPGDBText` (`PPG.DB.Controls`, Ersatz für `TDBText`): Basis `TPPGLabel` (Theme-Farben, Dark Mode, Hochkontrast, `Secondary`, Markup), `NullText` für leere Felder, `DisplayFormat` für Zahlen- und Datumsfelder; zeigt `Field.DisplayText`, `Caption` wird nicht gespeichert.
+- `TPPGShape` (`PPG.Shape`, Ersatz für `TShape`): alle sechs Formen, Fläche und Rand kantengeglättet über den Renderer (GDI-Fallback wie bisher), die Vorgabefarben von `Brush` und `Pen` folgen im Dark Mode und im Hochkontrast dem Theme (`ThemeColors`), im Hellen sieht es aus wie `TShape`. Gestrichelte Stifte und Schraffuren zeichnet die VCL. `Docs\Roadmap3.md` („Shape … nicht geplant“) ist nachgetragen.
+- `TPPGDBToggleSwitch` (`PPG.DB.Controls`): Schalter an einem Ja/Nein-Feld mit `ValueChecked`/`ValueUnchecked` wie `TDBCheckBox`, `ReadOnly`, Esc setzt zurück; Null zeigt den Zwischenzustand. Die Wertelogik teilt er sich mit `TPPGDBCheckBox` (`FieldCheckState`, `WriteCheckState`).
+- `migrate.ps1`: `TShape` → `TPPGShape`, `TDBText` → `TPPGDBText` (neues Fixture `Unit6`, Selbsttest grün). Palettensymbole in `PPGlow.dcr`/`PPGlowDB.dcr` (`make-icons.ps1`). Neue Unit `PPG.Shape` in allen Paketen, Test- und Demo-Projekten.
+- Prüfung: Suite `Inventur` (`Tests\PPG.Tests.Inventur.pas`, 29 Tests: DFM-Laden, Streaming, alle Formen mit GDI+ und GDI, Dark Mode, `TClientDataSet`-Verhalten); `Streaming` und `Audit5d` führen die neuen Klassen mit. Gesamtlauf Delphi 11: 1861 Tests, nur die vier bekannten Fehlschläge.
+- Offen: keine Showcase-Seiten in der Demo (laut `Docs\Demo-Komponentenseiten.md` einzeln nach OK); kein Delphi-13- und kein Win64-Lauf.
+
 ### 09.10.2026
 
 **Stand vor Audit-Paket 11 (09.10.2026, abends):** Phase 20 und die Audit-Pakete 1–8 sind fertig und committet (Zweig `claude/task-elizkl`; gepusht bis 3bf70f7, Paket 8 noch nicht). Seit dem 08.10.2026 ist nichts installiert. Der neueste Eintrag ist „Audit-Paket 8 fertig“ weiter unten; Details in `Docs\Audit-Paket8-Plan.md` (Abschnitt Umsetzung) und `Docs\Audit-Plan.md` (Fortschritt). **Tests, Benchmark und Demo immer mit `/hidden` starten** (eigener Windows-Desktop, keine Fenster beim User). **Gewählt: Audit-Paket 11.** Der Detailplan `Docs\Audit-Paket11-Plan.md` (Befunde am 09.10.2026 neu geprüft) ist am 09.10.2026 freigegeben (Entscheidungen wie empfohlen); die Umsetzung läuft. Leitlinie des Users: Tests müssen wirklich prüfen und werden nur geändert, wenn sie fachlich falsch sind, nie nur damit sie bestehen. Danach zur Wahl: 9 (Architektur), 10 (XE2), Phase 16 (Tour, Kommando-Palette) oder Phase 21 (nur nach einer Inventur). Phase 15 bleibt zurückgestellt. Regeln: je Schritt erst ein Detailplan, dann Bericht und OK; nie installieren, die IDE nie ungefragt schließen; `Demo/PPGlowDemo.alt-204712.exe` nicht committen.

@@ -12,7 +12,8 @@ Palette **PPGlow DB** - Unit `PPG.DB.Controls` - Basis `TPPGCheckBox`
 ## Verhalten (aus dem Quelltext)
 
 Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox,
-TPPGDBComboBox, TPPGDBDatePicker.
+TPPGDBComboBox, TPPGDBDatePicker. Dazu (Inventur): TPPGDBText (Ersatz fuer
+TDBText) und TPPGDBToggleSwitch (Schalter an einem Ja/Nein-Feld).
 
 Eigenes Package (PPGlowDBR): Anwendungen ohne Datenbank linken kein Data.DB.
 Die Controls erben von den PPGlow-Controls und fuegen nur die Anbindung

@@ -1,7 +1,7 @@
 unit PPG.Tests.Streaming;
 
 { DFM-Pruefung ueber ALLE Paletten-Controls (Liste wie RegisterComponents in
-  PPG.Reg und PPG.DB.Reg, 67 + 17 = 84 Klassen):
+  PPG.Reg und PPG.DB.Reg, 68 + 19 = 87 Klassen):
   - EveryPropertySurvivesDfm: jede einfache published Property wird geaendert;
     der Setter muss den Wert uebernehmen (Wert <> vorher), danach muss er die
     DFM-Rundreise ueberstehen. Als Ablehnung eines ungueltigen Werts gilt nur
@@ -23,7 +23,7 @@ uses
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar, PPG.TrackBar,
   PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.TileView, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox, PPG.TabControl,
   PPG.PageControl, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid,
-  PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
+  PPG.Labels, PPG.Shape, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NavigationView, PPG.Breadcrumb,
   PPG.ToolBar, PPG.StatusBar, PPG.Notifications, PPG.Sparkline, PPG.Gauge, PPG.Chart,
   PPG.Planner, PPG.Ribbon, PPG.Kanban, PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip,
@@ -55,13 +55,13 @@ type
 implementation
 
 const
-  // Reihenfolge wie RegisterComponents in PPG.Reg (67) und PPG.DB.Reg (17)
-  ControlClasses: array[0..83] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
+  // Reihenfolge wie RegisterComponents in PPG.Reg (68) und PPG.DB.Reg (19)
+  ControlClasses: array[0..86] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
     TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGScrollBox, TPPGGroupBox,
     TPPGRadioGroup, TPPGCheckGroup,
     TPPGEdit, TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl,
     TPPGListBox, TPPGCheckListBox, TPPGTreeView, TPPGGrid, TPPGTileView,
-    TPPGLabel, TPPGLinkLabel, TPPGBadge, TPPGProgressRing, TPPGInfoBar, TPPGExpander,
+    TPPGLabel, TPPGLinkLabel, TPPGShape, TPPGBadge, TPPGProgressRing, TPPGInfoBar, TPPGExpander,
     TPPGSplitter, TPPGRating, TPPGSearchEdit, TPPGCalendar, TPPGDatePicker, TPPGTimePicker,
     TPPGNavigationView, TPPGBreadcrumb, TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
     TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart, TPPGPlanner, TPPGRibbon, TPPGKanban,
@@ -73,7 +73,7 @@ const
     TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
     TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart, TPPGDBPlanner, TPPGDBKanban,
     TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit,
-    TPPGDBNavigator, TPPGDBRadioGroup);
+    TPPGDBNavigator, TPPGDBRadioGroup, TPPGDBText, TPPGDBToggleSwitch);
 
   // Dokumentierte Ausnahmen (Property-Name, gilt fuer alle Klassen) mit Grund:
   SkipProps: array[0..24] of string = (
@@ -516,8 +516,8 @@ procedure TDfmStreamingTests.PaletteListIsComplete;
 var
   I, J: Integer;
 begin
-  // 84 verschiedene Klassen; doppelt eingetragene wuerden eine fehlende verdecken
-  CheckEquals(84, Length(ControlClasses));
+  // 87 verschiedene Klassen; doppelt eingetragene wuerden eine fehlende verdecken
+  CheckEquals(87, Length(ControlClasses));
   for I := 0 to High(ControlClasses) do
     for J := I + 1 to High(ControlClasses) do
       CheckFalse(ControlClasses[I] = ControlClasses[J], ControlClasses[I].ClassName + ' doppelt');

@@ -1,7 +1,8 @@
 unit PPG.DB.Controls;
 
 { Datenbank-Controls (Phase 9c): TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox,
-  TPPGDBComboBox, TPPGDBDatePicker.
+  TPPGDBComboBox, TPPGDBDatePicker. Dazu (Inventur): TPPGDBText (Ersatz fuer
+  TDBText) und TPPGDBToggleSwitch (Schalter an einem Ja/Nein-Feld).
 
   Eigenes Package (PPGlowDBR): Anwendungen ohne Datenbank linken kein Data.DB.
   Die Controls erben von den PPGlow-Controls und fuegen nur die Anbindung
@@ -37,7 +38,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, Vcl.Controls,
   Vcl.StdCtrls, Vcl.ComCtrls, Data.DB, Vcl.DBCtrls,
   PPG.Types, PPG.Controls.Field, PPG.Edit, PPG.Memo, PPG.CheckBox, PPG.ComboBox,
-  PPG.DatePicker;
+  PPG.DatePicker, PPG.Labels, PPG.ToggleSwitch;
 
 type
   /// TFieldDataLink mit Sperre gegen das Ueberschreiben waehrend der
@@ -252,6 +253,93 @@ type
     property ValueChecked: string read FValueChecked write SetValueChecked stored IsValueCheckedStored;
     property ValueUnchecked: string read FValueUnchecked write SetValueUnchecked stored IsValueUncheckedStored;
     property State stored False;
+  end;
+
+  /// Ersatz fuer TDBText: zeigt Field.DisplayText, nur lesend, folgt dem
+  /// Datensatz. Mehrwert gegenueber TDBText: Farben des Themes (Dark Mode,
+  /// Hochkontrast, Secondary, Markup wie TPPGLabel), NullText fuer leere
+  /// Felder und DisplayFormat zum Formatieren von Zahlen und Datumsfeldern.
+  TPPGDBText = class(TPPGLabel)
+  private
+    FDataLink: TFieldDataLink;
+    FNullText: string;
+    FDisplayFormat: string;
+    FText: string;
+    procedure DataChange(Sender: TObject);
+    function GetDataField: string;
+    procedure SetDataField(const Value: string);
+    function GetDataSource: TDataSource;
+    procedure SetDataSource(Value: TDataSource);
+    function GetField: TField;
+    procedure SetNullText(const Value: string);
+    procedure SetDisplayFormat(const Value: string);
+    procedure UpdateText;
+    procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
+  protected
+    function GetLabelText: string; override;
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    property Field: TField read GetField;
+  published
+    property DataField: string read GetDataField write SetDataField;
+    property DataSource: TDataSource read GetDataSource write SetDataSource;
+    /// Text, wenn das Feld leer (Null) ist; leer = nichts anzeigen.
+    property NullText: string read FNullText write SetNullText;
+    /// Format fuer Zahlen- und Datumsfelder (FormatFloat bzw. FormatDateTime);
+    /// leer = Field.DisplayText.
+    property DisplayFormat: string read FDisplayFormat write SetDisplayFormat;
+    property Caption stored False;
+    property AutoSize default False;
+    property ShowAccelChar default False;
+  end;
+
+  /// Schalter an einem Ja/Nein-Feld (Boolean oder ValueChecked/ValueUnchecked
+  /// wie TDBCheckBox). Schreibt beim Umschalten ins Feld.
+  TPPGDBToggleSwitch = class(TPPGToggleSwitch)
+  private
+    FBinding: TPPGDBBinding;
+    FValueChecked: string;
+    FValueUnchecked: string;
+    procedure ShowField(Sender: TObject);
+    procedure WriteField(Sender: TObject);
+    function GetDataField: string;
+    procedure SetDataField(const Value: string);
+    function GetDataSource: TDataSource;
+    procedure SetDataSource(Value: TDataSource);
+    function GetField: TField;
+    function GetReadOnly: Boolean;
+    procedure SetReadOnly(const Value: Boolean);
+    function IsValueCheckedStored: Boolean;
+    function IsValueUncheckedStored: Boolean;
+    procedure SetValueChecked(const Value: string);
+    procedure SetValueUnchecked(const Value: string);
+    procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
+    procedure CMExit(var Message: TCMExit); message CM_EXIT;
+  protected
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure Toggle; override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    function UpdateAction(Action: TBasicAction): Boolean; override;
+    property Field: TField read GetField;
+    /// Zustand des Schalters; cbGrayed = Feld leer oder unbekannter Wert.
+    property State;
+  published
+    property DataField: string read GetDataField write SetDataField;
+    property DataSource: TDataSource read GetDataSource write SetDataSource;
+    property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
+    /// Wert(e) fuer "an" bzw. "aus" bei Nicht-Boolean-Feldern; mehrere durch
+    /// Semikolon getrennt (der erste wird geschrieben), wie TDBCheckBox.
+    property ValueChecked: string read FValueChecked write SetValueChecked stored IsValueCheckedStored;
+    property ValueUnchecked: string read FValueUnchecked write SetValueUnchecked stored IsValueUncheckedStored;
+    property Checked stored False;
   end;
 
   TPPGDBComboBox = class(TPPGComboBox)
@@ -1186,13 +1274,13 @@ begin
     Result := Copy(Values, 1, P - 1);
 end;
 
-function TPPGDBCheckBox.FieldState: TCheckBoxState;
+/// Zustand eines Ja/Nein-Feldes (Boolean oder Werteliste); cbGrayed bei
+/// leerem Feld oder unbekanntem Wert.
+function FieldCheckState(F: TField; const VChecked, VUnchecked: string): TCheckBoxState;
 var
-  F: TField;
   S: string;
 begin
   Result := cbGrayed;
-  F := FBinding.Field;
   if (F = nil) or F.IsNull then
     Exit;
   if F.DataType = ftBoolean then
@@ -1204,10 +1292,28 @@ begin
     Exit;
   end;
   S := F.Text;
-  if MatchesValue(S, FValueChecked) then
+  if MatchesValue(S, VChecked) then
     Result := cbChecked
-  else if MatchesValue(S, FValueUnchecked) then
+  else if MatchesValue(S, VUnchecked) then
     Result := cbUnchecked;
+end;
+
+/// Schreibt einen Zustand in ein Ja/Nein-Feld (cbGrayed = leeren).
+procedure WriteCheckState(F: TField; State: TCheckBoxState; const VChecked, VUnchecked: string);
+begin
+  if State = cbGrayed then
+    F.Clear
+  else if F.DataType = ftBoolean then
+    F.AsBoolean := State = cbChecked
+  else if State = cbChecked then
+    F.Text := FirstValue(VChecked)
+  else
+    F.Text := FirstValue(VUnchecked);
+end;
+
+function TPPGDBCheckBox.FieldState: TCheckBoxState;
+begin
+  Result := FieldCheckState(FBinding.Field, FValueChecked, FValueUnchecked);
 end;
 
 procedure TPPGDBCheckBox.ShowField(Sender: TObject);
@@ -1216,18 +1322,8 @@ begin
 end;
 
 procedure TPPGDBCheckBox.WriteField(Sender: TObject);
-var
-  F: TField;
 begin
-  F := FBinding.Field;
-  if State = cbGrayed then
-    F.Clear
-  else if F.DataType = ftBoolean then
-    F.AsBoolean := State = cbChecked
-  else if State = cbChecked then
-    F.Text := FirstValue(FValueChecked)
-  else
-    F.Text := FirstValue(FValueUnchecked);
+  WriteCheckState(FBinding.Field, State, FValueChecked, FValueUnchecked);
 end;
 
 procedure TPPGDBCheckBox.Toggle;
@@ -1270,6 +1366,287 @@ begin
 end;
 
 function TPPGDBCheckBox.UpdateAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
+end;
+
+{ TPPGDBText }
+
+constructor TPPGDBText.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  AutoSize := False;
+  ShowAccelChar := False;
+  FDataLink := TFieldDataLink.Create;
+  FDataLink.Control := Self;
+  FDataLink.OnDataChange := DataChange;
+  FDataLink.OnActiveChange := DataChange;
+end;
+
+destructor TPPGDBText.Destroy;
+begin
+  FreeAndNil(FDataLink);
+  inherited Destroy;
+end;
+
+procedure TPPGDBText.Loaded;
+begin
+  inherited Loaded;
+  UpdateText;
+end;
+
+procedure TPPGDBText.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (FDataLink <> nil) and (AComponent = FDataLink.DataSource) then
+    DataSource := nil;
+end;
+
+function TPPGDBText.GetLabelText: string;
+begin
+  Result := FText;
+end;
+
+function TPPGDBText.GetDataField: string;
+begin
+  Result := FDataLink.FieldName;
+end;
+
+procedure TPPGDBText.SetDataField(const Value: string);
+begin
+  FDataLink.FieldName := Value;
+  UpdateText;
+end;
+
+function TPPGDBText.GetDataSource: TDataSource;
+begin
+  Result := FDataLink.DataSource;
+end;
+
+procedure TPPGDBText.SetDataSource(Value: TDataSource);
+begin
+  if Value = FDataLink.DataSource then
+    Exit;
+  FDataLink.DataSource := Value;
+  if Value <> nil then
+    Value.FreeNotification(Self);
+  UpdateText;
+end;
+
+function TPPGDBText.GetField: TField;
+begin
+  Result := FDataLink.Field;
+end;
+
+procedure TPPGDBText.SetNullText(const Value: string);
+begin
+  if FNullText <> Value then
+  begin
+    FNullText := Value;
+    UpdateText;
+  end;
+end;
+
+procedure TPPGDBText.SetDisplayFormat(const Value: string);
+begin
+  if FDisplayFormat <> Value then
+  begin
+    FDisplayFormat := Value;
+    UpdateText;
+  end;
+end;
+
+procedure TPPGDBText.DataChange(Sender: TObject);
+begin
+  // Nur den Text merken und neu zeichnen (Paint liest nie aus dem Feld)
+  UpdateText;
+end;
+
+procedure TPPGDBText.UpdateText;
+var
+  F: TField;
+  S: string;
+begin
+  F := FDataLink.Field;
+  if F = nil then
+  begin
+    if csDesigning in ComponentState then
+      S := Name
+    else
+      S := '';
+  end
+  else if F.IsNull and (FNullText <> '') then
+    S := FNullText
+  else if F.IsNull or (FDisplayFormat = '') then
+    S := F.DisplayText
+  else
+    case F.DataType of
+      ftSmallint, ftInteger, ftWord, ftLargeint, ftAutoInc, ftFloat, ftCurrency,
+        ftBCD, ftFMTBcd:
+        S := FormatFloat(FDisplayFormat, F.AsFloat);
+      ftDate, ftTime, ftDateTime, ftTimeStamp:
+        S := FormatDateTime(FDisplayFormat, F.AsDateTime);
+    else
+      S := F.DisplayText;
+    end;
+  if S <> FText then
+  begin
+    FText := S;
+    AdjustBounds;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGDBText.CMGetDataLink(var Message: TMessage);
+begin
+  {$WARN UNSAFE_CAST OFF}
+  Message.Result := LRESULT(FDataLink); // wie in den anderen DB-Controls
+  {$WARN UNSAFE_CAST DEFAULT}
+end;
+
+{ TPPGDBToggleSwitch }
+
+constructor TPPGDBToggleSwitch.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FValueChecked := DefValueChecked;
+  FValueUnchecked := DefValueUnchecked;
+  // Kein Feld-Control (wie TPPGDBCheckBox): Toggle prueft selbst
+  FBinding := TPPGDBBinding.Create(Self, False);
+  FBinding.OnShow := ShowField;
+  FBinding.OnWrite := WriteField;
+end;
+
+destructor TPPGDBToggleSwitch.Destroy;
+begin
+  FreeAndNil(FBinding);
+  inherited Destroy;
+end;
+
+procedure TPPGDBToggleSwitch.Loaded;
+begin
+  inherited Loaded;
+  if csDesigning in ComponentState then
+    FBinding.Reload;
+end;
+
+procedure TPPGDBToggleSwitch.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if FBinding <> nil then
+    FBinding.Notify(AComponent, Operation);
+end;
+
+function TPPGDBToggleSwitch.GetDataField: string;
+begin
+  Result := FBinding.DataField;
+end;
+
+procedure TPPGDBToggleSwitch.SetDataField(const Value: string);
+begin
+  FBinding.DataField := Value;
+end;
+
+function TPPGDBToggleSwitch.GetDataSource: TDataSource;
+begin
+  Result := FBinding.DataSource;
+end;
+
+procedure TPPGDBToggleSwitch.SetDataSource(Value: TDataSource);
+begin
+  FBinding.DataSource := Value;
+end;
+
+function TPPGDBToggleSwitch.GetField: TField;
+begin
+  Result := FBinding.Field;
+end;
+
+function TPPGDBToggleSwitch.GetReadOnly: Boolean;
+begin
+  Result := FBinding.ReadOnly;
+end;
+
+procedure TPPGDBToggleSwitch.SetReadOnly(const Value: Boolean);
+begin
+  FBinding.ReadOnly := Value;
+end;
+
+function TPPGDBToggleSwitch.IsValueCheckedStored: Boolean;
+begin
+  Result := not SameText(FValueChecked, DefValueChecked);
+end;
+
+function TPPGDBToggleSwitch.IsValueUncheckedStored: Boolean;
+begin
+  Result := not SameText(FValueUnchecked, DefValueUnchecked);
+end;
+
+procedure TPPGDBToggleSwitch.SetValueChecked(const Value: string);
+begin
+  FValueChecked := Value;
+  if FBinding <> nil then
+    FBinding.Reload;
+end;
+
+procedure TPPGDBToggleSwitch.SetValueUnchecked(const Value: string);
+begin
+  FValueUnchecked := Value;
+  if FBinding <> nil then
+    FBinding.Reload;
+end;
+
+procedure TPPGDBToggleSwitch.ShowField(Sender: TObject);
+begin
+  State := FieldCheckState(FBinding.Field, FValueChecked, FValueUnchecked);
+end;
+
+procedure TPPGDBToggleSwitch.WriteField(Sender: TObject);
+begin
+  WriteCheckState(FBinding.Field, State, FValueChecked, FValueUnchecked);
+end;
+
+procedure TPPGDBToggleSwitch.Toggle;
+begin
+  // Nur mit aenderbarem Feld; erst Bearbeiten-Modus, dann umschalten
+  if (csDesigning in ComponentState) or not FBinding.TryEdit then
+    Exit;
+  inherited Toggle;
+  FBinding.Link.Modified;
+end;
+
+procedure TPPGDBToggleSwitch.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  if FBinding.HandleEscape(Key) then
+    Exit;
+  inherited KeyDown(Key, Shift);
+end;
+
+procedure TPPGDBToggleSwitch.CMGetDataLink(var Message: TMessage);
+begin
+  {$WARN UNSAFE_CAST OFF}
+  Message.Result := LRESULT(FBinding.Link); // wie in den anderen DB-Controls
+  {$WARN UNSAFE_CAST DEFAULT}
+end;
+
+procedure TPPGDBToggleSwitch.CMExit(var Message: TCMExit);
+begin
+  // Im Destruktor ist FBinding schon frei (siehe TPPGDBCheckBox)
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
+  FBinding.Commit;
+  inherited;
+end;
+
+function TPPGDBToggleSwitch.ExecuteAction(Action: TBasicAction): Boolean;
+begin
+  Result := inherited ExecuteAction(Action) or ((FBinding <> nil) and FBinding.ExecuteAction(Action));
+end;
+
+function TPPGDBToggleSwitch.UpdateAction(Action: TBasicAction): Boolean;
 begin
   Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
 end;

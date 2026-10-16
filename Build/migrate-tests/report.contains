@@ -12,3 +12,5 @@ Unit5.pas :32: Cast 'TBitBtn('
 Unit5.pas :33: 'with OkBtn do'
 Unit5.pas :35: 'with Panel1 do'
 Unit5.pas :35: 'with CloseBtn do'
+Unit6.dfm : Shape1 TShape -> TPPGShape
+Unit6.dfm : DBText1 TDBText -> TPPGDBText
