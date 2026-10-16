@@ -74,6 +74,7 @@ Erzeugt von `Build\make-docs.ps1` durch Suche in `Tests\*.pas`: jede Testunit, d
 | [TPPGPlannerPrinter](TPPGPlannerPrinter.md) | 3 | `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Phase14aPlanner` (TPlannerTests); `PPG.Tests.Streaming` |
 | [TPPGKanbanPrinter](TPPGKanbanPrinter.md) | 3 | `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Custom` (TCustomRestTests); `PPG.Tests.Streaming` |
 | [TPPGStyleManager](TPPGStyleManager.md) | 6 | `PPG.Tests.Controls` (TLifecycleTests, TResourceTests, TStyleTests); `PPG.Tests.Custom` (TCustomThemeTests); `PPG.Tests.Phase8` (TThemeTests); `PPG.Tests.Phase9a` (TPresetTargetTests); `PPG.Tests.Review` (TReviewTests); `PPG.Tests.Streaming` |
+| [TPPGImage](TPPGImage.md) | 2 | `PPG.Tests.Image` (TImageTests); `PPG.Tests.Streaming` |
 
 ## Palette PPGlow DB
 
@@ -98,6 +99,7 @@ Erzeugt von `Build\make-docs.ps1` durch Suche in `Tests\*.pas`: jede Testunit, d
 | [TPPGDBRadioGroup](TPPGDBRadioGroup.md) | 6 | `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Phase19` (TBusyOverlayTests, TChoiceValidationHintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGDBText](TPPGDBText.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.Inventur` (TDBTextTests); `PPG.Tests.Streaming` |
 | [TPPGDBToggleSwitch](TPPGDBToggleSwitch.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.Inventur` (TDBToggleSwitchTests); `PPG.Tests.Streaming` |
+| [TPPGDBImage](TPPGDBImage.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.Image` (TDBImageTests); `PPG.Tests.Streaming` |
 
 ## Ohne Testunit
 

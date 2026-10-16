@@ -82,6 +82,8 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TDBNavigator | | TPPGDBNavigator | PPG.DB.Navigator |
 | TScrollBox | | TPPGScrollBox | PPG.Panel |
 | TPopupMenu | | TPPGPopupMenu | PPG.Menus |
+| TImage | | TPPGImage | PPG.Image |
+| TDBImage | | TPPGDBImage | PPG.DB.Controls |
 
 `TPPGDBToggleSwitch` (Schalter an einem Ja/Nein-Feld) hat kein VCL-Gegenstück; es ersetzt von Hand ein `TDBCheckBox` (gleiche Properties `DataSource`, `DataField`, `ValueChecked`, `ValueUnchecked`, `ReadOnly`).
 

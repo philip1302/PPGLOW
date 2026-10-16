@@ -6,6 +6,14 @@
 
 ### 16.10.2026
 
+**Bild-Controls** (Zweig `claude/phase3-image`): `TPPGImage` (`PPG.Image`, Ersatz für `TImage`) und `TPPGDBImage` (`PPG.DB.Controls`, Ersatz für `TDBImage`), beide DFM-kompatibel zum VCL-Vorbild.
+- `TPPGImage`: `Picture`, `Stretch`, `Proportional`, `Center`, `Transparent`, `AutoSize`, `DestRect`, `Canvas` wie `TImage`; dazu Bildliste (`Images`, `ImageIndex`, `ImageName`), Dark-Mode-Bild (`PictureDark`, `ImageIndexDark`, `ImageNameDark`), Rahmen in der Randfarbe des Themes (`BorderStyle`), `DpiScaling`, deaktiviert grau und blass (über `PPGRenderPremult`, Alpha aus Zeichnen auf Schwarz und Weiß).
+- `TPPGDBImage`: BLOB-Feld, Formaterkennung an den ersten Bytes (BMP, PNG, JPEG, GIF, TIFF, ICO, WMF/EMF), `AutoDisplay`, Strg+C/V/X, Umschalt+Einfg/Entf, Enter, Esc, `ReadOnly`, `StoreFormat`, `LoadFromFile`/`SaveToFile`, Platzhalter aus der Bildliste bei leerem Feld.
+- PNG, JPEG, GIF und TIFF laufen über `TWICImage`, nicht über `Vcl.Imaging.*`: `PPGlowR` braucht weiter kein `vclimg`. Folge: `QuickDraw` wirkt nicht (nur Kompatibilität). In der Testumgebung versagte `TPngImage.Assign(TPngImage)` (Zugriffsverletzung), auch ein Grund gegen `TPngImage`.
+- `migrate.ps1`: `TImage` → `TPPGImage`, `TDBImage` → `TPPGDBImage` (Fixture `Unit7`). Paletten-Symbole, Pakete, Doku (`Docs\Controls`).
+- Prüfung: Suite `Image` (`Tests\PPG.Tests.Image.pas`, 43 Tests); `Streaming`, `Audit5d` und `Phase9d` führen die neuen Klassen und den neuen Text mit. Gesamtlauf Delphi 11: 1922 Tests, nur die vier bekannten Fehlschläge; `/leaksuites` zeigt dieselben Meldungen wie ohne die Änderung (keine neuen).
+- Offen: `Demo\PPGlowDemo.dpr/.dproj` ohne `PPG.Image` (der Regel-Prüfer `check-rules.ps1` meldet das); keine Demo-Seite; kein Delphi-13-/XE2-Build; animierte GIFs nicht.
+
 **Inventur-Controls** (Zweig `claude/phase3-db-controls`): Die Inventur eines echten Projekts hat drei der in Phase 18 zurückgestellten Nachbauten fällig gemacht. Sie bleiben DFM-kompatibel zum VCL-Vorbild, damit `migrate.ps1` sie einsetzen kann, und halten die Regel „Mehrwert statt Klone“ ein.
 - `TPPGDBText` (`PPG.DB.Controls`, Ersatz für `TDBText`): Basis `TPPGLabel` (Theme-Farben, Dark Mode, Hochkontrast, `Secondary`, Markup), `NullText` für leere Felder, `DisplayFormat` für Zahlen- und Datumsfelder; zeigt `Field.DisplayText`, `Caption` wird nicht gespeichert.
 - `TPPGShape` (`PPG.Shape`, Ersatz für `TShape`): alle sechs Formen, Fläche und Rand kantengeglättet über den Renderer (GDI-Fallback wie bisher), die Vorgabefarben von `Brush` und `Pen` folgen im Dark Mode und im Hochkontrast dem Theme (`ThemeColors`), im Hellen sieht es aus wie `TShape`. Gestrichelte Stifte und Schraffuren zeichnet die VCL. `Docs\Roadmap3.md` („Shape … nicht geplant“) ist nachgetragen.

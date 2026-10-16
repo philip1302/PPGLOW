@@ -311,6 +311,9 @@ resourcestring
   SPPGTrackRangeFrom = 'From %d';
   SPPGTrackRangeTo = 'To %d';
 
+  // Bild (TPPGImage, TPPGDBImage)
+  SPPGImageUnknownFormat = 'Unknown or unsupported image format.';
+
 implementation
 
 end.

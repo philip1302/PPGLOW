@@ -1,0 +1,20 @@
+unit Unit7;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.ExtCtrls, Vcl.DBCtrls, Data.DB,
+  PPG.Image, PPG.DB.Controls;
+
+type
+  TForm7 = class(TForm)
+    Image1: TPPGImage;
+    DBImage1: TPPGDBImage;
+    DataSource1: TDataSource;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

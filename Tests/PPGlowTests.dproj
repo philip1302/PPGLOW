@@ -245,6 +245,7 @@
         <DCCReference Include="..\Source\Render\PPG.Render.Shapes.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Sparkline.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Gauge.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Image.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Logic.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Forms.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Controls.pas"/>
@@ -343,6 +344,7 @@
         <DCCReference Include="PPG.Tests.Phase18.pas"/>
         <DCCReference Include="PPG.Tests.Inventur.pas"/>
         <DCCReference Include="PPG.Tests.DBGridMultiSelect.pas"/>
+        <DCCReference Include="PPG.Tests.Image.pas"/>
         <DCCReference Include="PPG.Tests.Phase19.pas"/>
         <DCCReference Include="PPG.Tests.Phase20.pas"/>
         <DCCReference Include="PPG.Tests.Audit45.pas"/>

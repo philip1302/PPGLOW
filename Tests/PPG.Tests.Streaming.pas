@@ -23,7 +23,7 @@ uses
   PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch, PPG.ProgressBar, PPG.TrackBar,
   PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.TileView, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox, PPG.TabControl,
   PPG.PageControl, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.Grid,
-  PPG.Labels, PPG.Shape, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
+  PPG.Labels, PPG.Shape, PPG.Image, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
   PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.NavigationView, PPG.Breadcrumb,
   PPG.ToolBar, PPG.StatusBar, PPG.Notifications, PPG.Sparkline, PPG.Gauge, PPG.Chart,
   PPG.Planner, PPG.Ribbon, PPG.Kanban, PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip,
@@ -56,7 +56,7 @@ implementation
 
 const
   // Reihenfolge wie RegisterComponents in PPG.Reg (68) und PPG.DB.Reg (19)
-  ControlClasses: array[0..86] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
+  ControlClasses: array[0..88] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
     TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGScrollBox, TPPGGroupBox,
     TPPGRadioGroup, TPPGCheckGroup,
     TPPGEdit, TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl,
@@ -73,10 +73,10 @@ const
     TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
     TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart, TPPGDBPlanner, TPPGDBKanban,
     TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit,
-    TPPGDBNavigator, TPPGDBRadioGroup, TPPGDBText, TPPGDBToggleSwitch);
+    TPPGDBNavigator, TPPGDBRadioGroup, TPPGDBText, TPPGDBToggleSwitch, TPPGImage, TPPGDBImage);
 
   // Dokumentierte Ausnahmen (Property-Name, gilt fuer alle Klassen) mit Grund:
-  SkipProps: array[0..24] of string = (
+  SkipProps: array[0..25] of string = (
     // Name, Lage und Groesse: Sache des Formulars, nicht der Komponente
     'Name', 'Left', 'Top', 'Width', 'Height', 'Align', 'AutoSize',
     // Preset: nur bekannte Namen gueltig, eigene Tests (TStyleTests, Phase 9)
@@ -87,7 +87,8 @@ const
     // VCL-Grundklasse, nicht Gegenstand der Suite (Andocken, Hilfe, Tag)
     'HelpContext', 'DragKind', 'DragCursor', 'DockSite', 'Tag',
     // Bildnamen werden nur mit einer ImageList mit Namen gespeichert
-    'ImageName', 'HotImageName', 'DisabledImageName', 'PressedImageName');
+    'ImageName', 'HotImageName', 'DisabledImageName', 'PressedImageName',
+    'ImageNameDark');
 
   SimpleKinds: TTypeKinds = [tkInteger, tkInt64, tkChar, tkWChar, tkEnumeration, tkFloat,
     tkUString, tkLString, tkWString];
@@ -334,6 +335,13 @@ begin
     Root.Expanded := True;
     Exit;
   end;
+  if Obj is TPicture then
+  begin
+    TPicture(Obj).Bitmap.SetSize(5, 3);
+    TPicture(Obj).Bitmap.Canvas.Brush.Color := clRed;
+    TPicture(Obj).Bitmap.Canvas.FillRect(Rect(0, 0, 5, 3));
+    Exit;
+  end;
   if Obj is TIcon then
   begin
     TIcon(Obj).Handle := CopyIcon(LoadIcon(0, IDI_WARNING));
@@ -417,6 +425,15 @@ begin
         Node.Detail, Node.Badge, Node.ImageIndex, Node.SelectedIndex, Ord(Node.CheckState),
         BoolToStr(Node.Expanded, True), BoolToStr(Node.Enabled, True)]));
     end;
+    Exit;
+  end;
+  if Obj is TPicture then
+  begin
+    // TPicture hat keine published Properties: der Inhalt zaehlt
+    if TPicture(Obj).Graphic = nil then
+      Dump.Add(Path + '=nil')
+    else
+      Dump.Add(Format('%s=%dx%d', [Path, TPicture(Obj).Width, TPicture(Obj).Height]));
     Exit;
   end;
   if Obj is TGraphic then
@@ -517,7 +534,7 @@ var
   I, J: Integer;
 begin
   // 87 verschiedene Klassen; doppelt eingetragene wuerden eine fehlende verdecken
-  CheckEquals(87, Length(ControlClasses));
+  CheckEquals(89, Length(ControlClasses));
   for I := 0 to High(ControlClasses) do
     for J := I + 1 to High(ControlClasses) do
       CheckFalse(ControlClasses[I] = ControlClasses[J], ControlClasses[I].ClassName + ' doppelt');

@@ -119,6 +119,7 @@ $Icons = [ordered]@{
   'TPPGColumnComboBox' = @('rect 2 3 28 9 3 W S 1.5', 'path 1.8 D 22 6.5 24.5 9 27 6.5', 'rect 2 13 28 16 2 W S 1', 'rect 2 13 28 5 2 H', 'line 11 13.5 11 28.5 1 S', 'line 5 22 9 22 1.5 G', 'line 13 22 26 22 1.5 G', 'line 5 26 9 26 1.5 G', 'line 13 26 23 26 1.5 G')
   'TPPGTagEdit'     = $Field + @('rect 4 12 9 8 3 L A 1', 'rect 15 12 9 8 3 L A 1', 'line 26 13 26 19 1.5 D')
   'TPPGStyleManager'= @('circle 16 16 12 W S 1.5', 'circle 11 12 3 A', 'circle 19 10 3 R', 'circle 22 17 3 Y', 'circle 12 20 3 N')
+  'TPPGImage'       = @('rect 3 5 26 22 2 W S 1.5', 'circle 22 11 3 A', 'poly A 5 25 12 15 17 21 21 17 27 25')
 }
 
 $DbIcons = [ordered]@{
@@ -141,6 +142,7 @@ $DbIcons = [ordered]@{
   'TPPGDBColorPicker'    = $Icons['TPPGColorPicker'] + @('db')
   'TPPGDBCheckComboBox'  = $Icons['TPPGCheckComboBox'] + @('db')
   'TPPGDBTagEdit'        = $Icons['TPPGTagEdit'] + @('db')
+  'TPPGDBImage'          = $Icons['TPPGImage'] + @('db')
 }
 
 $Source = @'

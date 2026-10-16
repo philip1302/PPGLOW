@@ -14,3 +14,5 @@ Unit5.pas :35: 'with Panel1 do'
 Unit5.pas :35: 'with CloseBtn do'
 Unit6.dfm : Shape1 TShape -> TPPGShape
 Unit6.dfm : DBText1 TDBText -> TPPGDBText
+Unit7.dfm : Image1 TImage -> TPPGImage
+Unit7.dfm : DBImage1 TDBImage -> TPPGDBImage

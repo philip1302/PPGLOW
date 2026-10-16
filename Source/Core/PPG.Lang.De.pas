@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 260;
+  PPGLangDeCount = 261;
 
 implementation
 
@@ -542,6 +542,8 @@ begin
     'Von %d');
   PPGAddTranslation(PPGLangDeCode, @SPPGTrackRangeTo,
     'Bis %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGImageUnknownFormat,
+    'Unbekanntes oder nicht unterst'#$00FC'tztes Bildformat.');
 end;
 
 initialization

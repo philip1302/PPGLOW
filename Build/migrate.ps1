@@ -119,6 +119,8 @@ $ClassMap = [ordered]@{
   'TDBNavigator'      = @('TPPGDBNavigator', 'PPG.DB.Navigator')
   'TScrollBox'        = @('TPPGScrollBox', 'PPG.Panel')
   'TPopupMenu'        = @('TPPGPopupMenu', 'PPG.Menus')
+  'TImage'            = @('TPPGImage', 'PPG.Image')
+  'TDBImage'          = @('TPPGDBImage', 'PPG.DB.Controls')
 }
 
 # PPGlow-Klassen, die von einer VCL-Klasse erben, deren Properties das Skript

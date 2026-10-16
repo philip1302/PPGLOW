@@ -15,7 +15,7 @@
 | 21 | Nach der Inventur eines echten Kundenprojekts: `TPPGLayoutControl`, `TPPGInspector`, `TPPGFilterBuilder` | groß | Nur bauen, was die Zahlen rechtfertigen. |
 | 16 | (bestehender Plan) Demo-Tour, dazu `TPPGCommandPalette` | mittel | Kommt zuletzt, damit sie alles zeigt. Die Kommando-Palette lohnt sich für die Vorführung. |
 
-Nicht geplant (bewusst): Gantt, Pivot-Grid, Docking, RichEdit/HTML-Editor, Code-Editor, PDF-Viewer, Barcode/QR, Shape/Bevel/Image, weitere Diagrammtypen. *(Nachtrag: `TPPGShape` wurde wegen der Inventur eines echten Projekts doch nachgezogen, siehe `DocsVerlauf.md`, Inventur-Controls; Bevel und Image bleiben ungeplant.)*
+Nicht geplant (bewusst): Gantt, Pivot-Grid, Docking, RichEdit/HTML-Editor, Code-Editor, PDF-Viewer, Barcode/QR, Shape/Bevel/Image, weitere Diagrammtypen. *(Nachtrag: `TPPGShape` wurde wegen der Inventur eines echten Projekts doch nachgezogen, siehe `DocsVerlauf.md`, Inventur-Controls; Bevel bleibt ungeplant; `TPPGImage`/`TPPGDBImage` sind ebenfalls nachgezogen.)*
 
 ## Phase 17 – Ausgabe wie am Bildschirm
 Detailplan: `Docs\Phase17-Plan.md`. **Fertig (08.10.2026):** Druck/PDF und HTML mit der Grid-Optik (`PPG.Grid.Look`, `TPPGGridPrinter.UseGridLook`), Gruppenzeilen und verbundene Zellen im Druck; Umsetzung und Abweichungen im Abschnitt Umsetzung des Detailplans.
