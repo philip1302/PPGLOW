@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..260] of PResStringRec = (
+  AllTexts: array[0..262] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -40,6 +40,7 @@ const
     @SPPGSortedListMove, @SPPGTreeMoveIntoChild, @SPPGInvalidArgument, @SPPGNoTarget,
     @SPPGAccPress, @SPPGAccCheck, @SPPGAccUncheck, @SPPGAccSelect, @SPPGAccOpen, @SPPGAccClose,
     @SPPGGridFilterHint, @SPPGSortAscending, @SPPGSortDescending, @SPPGDBGridConfirmDelete, @SPPGDBGridConfirmDeleteSelected, @SPPGDBEditPending, @SPPGDBLookupMultiKey,
+    @SPPGDBGridEditForm, @SPPGDBGridEditFormApply,
     @SPPGAccJump, @SPPGAccExpand, @SPPGAccCollapse, @SPPGAccOn, @SPPGAccOff, @SPPGAccToggle,
     @SPPGNavMenu, @SPPGMoreOptions, @SPPGNotifications, @SPPGPercentFormat,
     @SPPGInvalidValueList, @SPPGChartNoData, @SPPGSparklineSummary, @SPPGGaugeRangeInvalid,

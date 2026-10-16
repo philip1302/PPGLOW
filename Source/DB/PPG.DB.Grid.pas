@@ -72,6 +72,22 @@ unit PPG.DB.Grid;
     Satz und wird bei Bedarf ausgerichtet (Puffer verschieben, Satz bleibt).
     Ohne RecNo fliessen die Karten ab dem Pufferanfang. Pfeile/Bild/Pos1/Ende
     wechseln die Karte, Tab das Feld, F2/Enter/Doppelklick bearbeiten.
+  - Bearbeitungsformular in der Zeile (EditMode = dgeForm, nur Tabelle): Enter,
+    F2, Doppelklick, Tippen bzw. ShowEditForm klappen unter der aktiven Zeile
+    einen Bereich auf (TPPGDBGridEditForm, Kind-Control des Grids). Er zeigt
+    die Felder der Spalten (Reihenfolge wie in der Anzeige, Column.
+    EditFormVisible/EditFormColSpan) als Beschriftung + Editor in
+    EditForm.ColumnCount Spalten und die Schaltflaechen Uebernehmen/Abbrechen.
+    Die Editoren sind die Zell-Editoren des Grids (Text, Auswahl, Zahl;
+    Nachschlage-Spalten mit Liste; Kaestchen als TPPGCheckBox). Die Zeile
+    wird dafuer hoeher (SetRowGap der Basis), die folgenden Zeilen ruecken
+    nach unten, der Puffer zaehlt entsprechend weniger Zeilen. Werte gehen
+    beim Uebernehmen (bzw. beim Buchen von aussen, UpdateData) in die Felder,
+    dann Post; ein Fehler (Feldwert, Pflichtfeld, BeforePost) laesst das
+    Formular offen und setzt den Fokus auf das Feld. Abbrechen (Esc) ruft
+    Cancel. Wechselt der Datensatz (Navigator, Klick auf eine andere Zeile,
+    Scrollen), bucht die Datenmenge wie ueblich und das Formular schliesst.
+    Zellen der Tabelle sind in diesem Modus nicht direkt bearbeitbar.
   - Nicht unterstuetzt: Gruppieren (braeuchte die ganze Datenmenge im Speicher;
     GROUP BY in der Abfrage nutzen), Unterspalten (ADT/Array-Felder). }
 
@@ -83,13 +99,24 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Types,
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Vcl.StdCtrls,
   Data.DB,
-  PPG.Types, PPG.Render.Intf, PPG.Grid, PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles,
-  PPG.Grid.CellKinds;
+  PPG.Types, PPG.Render.Intf, PPG.Controls.Base, PPG.Panel, PPG.Button, PPG.Grid,
+  PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds;
 
 type
   TPPGCustomDBGrid = class;
 
   TPPGDBGridColumn = class;
+
+  /// Bearbeiten im DB-Grid: dgeCells = in der Zelle (wie TDBGrid), dgeForm =
+  /// Bearbeitungsformular unter der aktiven Zeile (nur in der Tabelle).
+  TPPGDBGridEditMode = (dgeCells, dgeForm);
+
+  /// Feld einer Spalte im Bearbeitungsformular: efvAuto = wie Column.Visible,
+  /// efvShow = immer (auch bei ausgeblendeter Spalte), efvHide = nie.
+  TPPGEditFormVisibility = (efvAuto, efvShow, efvHide);
+
+  /// Bearbeitungsformular geschlossen (Accepted = uebernommen, sonst verworfen).
+  TPPGDBGridEditFormCloseEvent = procedure(Sender: TObject; Accepted: Boolean) of object;
 
   /// Verbindung einer Nachschlage-Spalte zu ihrer Listen-Datenmenge.
   TPPGDBGridListLink = class(TDataLink)
@@ -117,6 +144,10 @@ type
     FKeyField: string;
     FListField: string;
     FLookupCache: TDictionary<string, string>;
+    FEditFormVisible: TPPGEditFormVisibility;
+    FEditFormColSpan: Integer;
+    procedure SetEditFormVisible(const Value: TPPGEditFormVisibility);
+    procedure SetEditFormColSpan(const Value: Integer);
     procedure SetFieldName(const Value: string);
     procedure SetFooterField(const Value: string);
     function GetAlignment: TAlignment;
@@ -174,6 +205,13 @@ type
     property KeyField: string read FKeyField write SetKeyField;
     /// Angezeigtes Feld der Liste (weitere mit Semikolon werden ignoriert).
     property ListField: string read FListField write SetListField;
+    /// Feld im Bearbeitungsformular (EditMode = dgeForm): efvAuto = wie
+    /// Visible, efvShow = immer, efvHide = nie.
+    property EditFormVisible: TPPGEditFormVisibility read FEditFormVisible
+      write SetEditFormVisible default efvAuto;
+    /// Spalten des Formular-Rasters, die das Feld belegt (1..8; hoechstens
+    /// EditForm.ColumnCount).
+    property EditFormColSpan: Integer read FEditFormColSpan write SetEditFormColSpan default 1;
   end;
 
   /// Ausgewaehlte Datensaetze des DB-Grids (Mehrfachauswahl, dgMultiSelect)
@@ -268,6 +306,95 @@ type
     Fields: Integer; // sichtbare Felder je Karte
   end;
 
+  /// Einstellungen des Bearbeitungsformulars (TPPGCustomDBGrid.EditForm).
+  TPPGDBGridEditFormOptions = class(TPersistent)
+  private
+    FGrid: TPPGCustomDBGrid;
+    FColumnCount: Integer;
+    FLabelWidth: Integer;
+    FShowButtons: Boolean;
+    procedure SetColumnCount(const Value: Integer);
+    procedure SetLabelWidth(const Value: Integer);
+    procedure SetShowButtons(const Value: Boolean);
+    procedure Changed;
+  protected
+    function GetOwner: TPersistent; override;
+  public
+    constructor Create(AGrid: TPPGCustomDBGrid);
+    procedure Assign(Source: TPersistent); override;
+  published
+    /// Spalten des Rasters (Paare Beschriftung + Editor nebeneinander), 1..8.
+    property ColumnCount: Integer read FColumnCount write SetColumnCount default 2;
+    /// Breite der Beschriftung (logische Pixel; 0 = ohne Beschriftung).
+    /// Hoechstens die halbe Breite eines Feldes.
+    property LabelWidth: Integer read FLabelWidth write SetLabelWidth default 120;
+    /// Schaltflaechen Uebernehmen/Abbrechen unten im Formular.
+    property ShowButtons: Boolean read FShowButtons write SetShowButtons default True;
+  end;
+
+  /// Ein Feld des Bearbeitungsformulars.
+  TPPGDBGridEditFormItem = record
+    DataCol: Integer;            // Datenspalte des Grids
+    Editor: TPPGCustomControl;   // Zell-Editor bzw. TPPGCheckBox
+    Kind: TPPGGridEditorKind;
+    Editable: Boolean;
+    Dirty: Boolean;              // vom Anwender geaendert, noch nicht geschrieben
+    Original: string;            // Text beim Fuellen (Aenderung auch per Code)
+    Caption: string;
+    Cell, Row, Span: Integer;    // Lage im Raster
+    LabelR: TRect;               // Beschriftung beim Anordnen (ohne Scrollen)
+    EditorR: TRect;              // Editor beim Anordnen (ohne Scrollen)
+  end;
+
+  /// Bearbeitungsformular in der Zeile (Kind-Control des DB-Grids, wird vom
+  /// Grid erzeugt, angeordnet und gefuellt). Scrollt senkrecht, wenn es
+  /// hoeher ist als der Platz im Grid. Tab/Umschalt+Tab wechseln zwischen
+  /// den Editoren und Schaltflaechen, Enter zum naechsten Feld (im letzten:
+  /// Uebernehmen), Strg+Enter uebernimmt, Esc bricht ab.
+  TPPGDBGridEditForm = class(TPPGCustomPanel)
+  private
+    FGrid: TPPGCustomDBGrid;
+    FItems: array of TPPGDBGridEditFormItem;
+    FApply: TPPGButton;
+    FCancel: TPPGButton;
+    FCurrent: Integer;   // Fokusziel: Feld, dann Uebernehmen, Abbrechen
+    FLoading: Integer;   // > 0: Editoren werden gefuellt (kein Dirty)
+    FArrangedW: Integer;
+    FArrangedPPI: Integer;
+    procedure EditorChange(Sender: TObject);
+    procedure EditorEnter(Sender: TObject);
+    procedure EditorEllipsis(Sender: TObject);
+    procedure ApplyClick(Sender: TObject);
+    procedure CancelClick(Sender: TObject);
+    procedure CMChildKey(var Message: TCMChildKey); message CM_CHILDKEY;
+    /// Feld bzw. Ziel (Items, ItemCount = Uebernehmen, +1 = Abbrechen) eines
+    /// Controls (auch des inneren Felds eines Editors); -1 = keins.
+    function TargetOfControl(C: TControl): Integer;
+    function TargetControl(T: Integer): TWinControl;
+    procedure ClearItems;
+  protected
+    procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
+    function GetBackgroundColor: TColor; override;
+    function GetChildBackground(Child: TControl; out ColorTop, ColorBottom: TColor): Boolean; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    property Grid: TPPGCustomDBGrid read FGrid;
+    /// Felder im Formular (in der Reihenfolge der Anzeige).
+    function ItemCount: Integer;
+    /// Datenspalte bzw. Editor des Felds I.
+    function ItemDataCol(I: Integer): Integer;
+    function ItemEditor(I: Integer): TPPGCustomControl;
+    /// Lage des Felds I im Raster (Spalte, Zeile, belegte Spalten).
+    procedure ItemCell(I: Integer; out ACell, ARow, ASpan: Integer);
+    /// Beschriftung des Felds I (Client-Koordinaten, mit Scrollen).
+    function ItemLabelRect(I: Integer): TRect;
+    /// Aktuelles Fokusziel (Feld-Index, ItemCount = Uebernehmen, ItemCount + 1
+    /// = Abbrechen).
+    property Current: Integer read FCurrent;
+    property ApplyButton: TPPGButton read FApply;
+    property CancelButton: TPPGButton read FCancel;
+  end;
+
   TPPGCustomDBGrid = class(TPPGCustomGrid)
   private
     FDataLink: TPPGGridDataLink;
@@ -312,6 +439,62 @@ type
     FCardNoReveal: Integer; // > 0: Fokuswechsel scrollt nicht
     FCardKeepScroll: Integer; // > 0: Satzwechsel durch Scrollen (Lage bleibt)
     FCardPlacing: Integer; // > 0: Puffer wird gerade verschoben
+    // Bearbeitungsformular (EditMode = dgeForm)
+    FEditMode: TPPGDBGridEditMode;
+    FEditForm: TPPGDBGridEditFormOptions;
+    FEditPanel: TPPGDBGridEditForm; // nil bis zum ersten Oeffnen
+    FFormOpen: Boolean;
+    FFormBm: TBookmark;    // Satz des Formulars (leer = neuer Satz)
+    FFormGap: Integer;     // Hoehe des Formulars in der Zeile (Pixel)
+    FFormBusy: Integer;    // > 0: Formular schreibt, bucht bzw. oeffnet
+    FDownOnRow: Boolean;   // letzter Mausklick auf einer Datenzeile
+    FFormReload: Boolean;  // Bearbeitung von aussen beendet: alle Felder neu
+    FOnEditFormShow: TNotifyEvent;
+    FOnEditFormClose: TPPGDBGridEditFormCloseEvent;
+    procedure SetEditMode(const Value: TPPGDBGridEditMode);
+    procedure SetEditForm(const Value: TPPGDBGridEditFormOptions);
+    /// Bearbeitungsformular statt Zell-Editor (dgeForm in der Tabelle)?
+    function FormMode: Boolean;
+    /// Darf das Feld der Datenspalte im aktiven Satz bearbeitet werden (wie
+    /// CanEditCell ohne die Sperre der Zellen im Formular-Modus)?
+    function FormCanEdit(ACol: Integer): Boolean;
+    /// Darf das Formular geoeffnet werden (Datenmenge bearbeitbar)?
+    function FormAllowed: Boolean;
+    /// Bearbeitbare Zelle (ohne die Sperre des Formular-Modus).
+    function CellEditable(ACol, VRow: Integer): Boolean;
+    /// Hoehe eines Editors im Formular (Pixel).
+    function FormEditorHeight: Integer;
+    /// Naechstes bzw. vorheriges bedienbares Ziel (im Kreis; -1 = keins).
+    function FormNextTarget(T: Integer; Forward: Boolean): Integer;
+    /// "..."-Knopf im Editor des Felds I.
+    procedure FormEllipsis(I: Integer);
+    /// Editoren fuer die Felder anlegen (Reihenfolge, Raster).
+    procedure FormBuild;
+    /// Lage der Felder im Raster (Spalten, Spanne).
+    procedure FormLayoutCells;
+    /// Editoren aus dem aktiven Satz fuellen (OnlyClean: nur unveraenderte).
+    procedure FormLoadValues(OnlyClean: Boolean);
+    /// Editoren und Beschriftungen fuer die Breite des Formulars anordnen.
+    procedure FormArrange(Force: Boolean);
+    /// Benoetigte Hoehe des Formulars (Pixel, ohne Begrenzung).
+    function FormNeededHeight: Integer;
+    /// Hoehe der Luecke aus Bedarf und Platz im Grid.
+    procedure FormUpdateGap;
+    /// Luecke unter der aktiven Zeile und Lage des Formulars.
+    procedure FormPlace;
+    /// Geaenderte Editoren in die Felder schreiben (Fehler: Fokus aufs Feld).
+    procedure FormWriteValues;
+    /// Formular ausblenden; Refresh: Puffer und Anzeige neu.
+    procedure FormClose(Accepted, Refresh: Boolean);
+    function FormItemOfField(F: TField): Integer;
+    function FormItemText(I: Integer): string;
+    /// Feld I geaendert (Eingabe oder Wert per Code)?
+    function FormItemChanged(I: Integer): Boolean;
+    procedure FormScrollIntoView(T: Integer);
+    procedure FormEditorChanged(I: Integer);
+    /// Farben des Formulars (wie das Grid: Theme, Dunkelmodus, Hochkontrast).
+    procedure EditFormColors(out Fill, Text, Line, Accent, LabelColor: TColor);
+    procedure EditFormOptionsChanged;
     procedure SetViewStyle(const Value: TPPGDBGridViewStyle);
     procedure SetCardWidth(const Value: Integer);
     procedure SetCardSpacing(const Value: Integer);
@@ -358,6 +541,8 @@ type
     /// Spalte mit ListSource/KeyField/ListField (nicht: Nachschlagefeld).
     function ColumnLookup(ACol: Integer): TPPGDBGridColumn;
     procedure FillLookupEditor(ACol: Integer);
+    /// Auswahlliste einer Nachschlage-Spalte fuellen (Zell-Editor bzw. Formular).
+    procedure FillLookupCombo(Editor: TPPGCustomControl; ACol: Integer);
     procedure SetLookupByUser(ACol, ARow: Integer; const Value: string);
     /// Zustand eines Kaestchens im aktiven Datensatz.
     function FieldCheckState(F: TField; C: TPPGGridColumn): TCheckBoxState;
@@ -458,7 +643,19 @@ type
     procedure CustomMakeCellVisible(ACol, VRow: Integer); override;
     procedure PaintCustomLayout(const ACanvas: IPPGCanvas; const View: TRect); override;
     procedure EditorArrowMove(Down: Boolean); override;
-    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    { Bearbeitungsformular }
+    function DoubleClickEdits: Boolean; override;
+    procedure DblClick; override;
+    procedure KeyPress(var Key: Char); override;
+    /// Fokus auf ein Ziel des Formulars (Feld-Index, ItemCount = Uebernehmen,
+    /// ItemCount + 1 = Abbrechen) und ins Bild scrollen.
+    procedure FormFocusTarget(T: Integer);
+    /// Taste im Bearbeitungsformular (Tab, Enter, Strg+Enter, Esc); True =
+    /// verarbeitet. Das Formular ruft es fuer die Tasten seiner Editoren.
+    function EditFormKey(Key: Word; Shift: TShiftState): Boolean; virtual;
+    /// OnEditFormShow bzw. OnEditFormClose ausloesen.
+    procedure DoEditFormShow; virtual;
+    procedure DoEditFormClose(Accepted: Boolean); virtual;
 
     property DataLink: TPPGGridDataLink read FDataLink;
     property Options: TDBGridOptions read FDBOptions write SetDBOptions
@@ -491,6 +688,17 @@ type
     /// Breite der Beschriftung in der Karte (logische Pixel; 0 = ohne
     /// Beschriftung, der Wert nutzt die ganze Breite).
     property CardLabelWidth: Integer read FCardLabelWidth write SetCardLabelWidth default 110;
+    /// dgeCells: Bearbeiten in der Zelle; dgeForm: Bearbeitungsformular unter
+    /// der aktiven Zeile (Enter, F2, Doppelklick, Tippen, Einfg). Nur in der
+    /// Tabelle; die Kartenansicht bearbeitet immer in der Zelle.
+    property EditMode: TPPGDBGridEditMode read FEditMode write SetEditMode default dgeCells;
+    /// Spalten, Beschriftungsbreite und Schaltflaechen des Formulars.
+    property EditForm: TPPGDBGridEditFormOptions read FEditForm write SetEditForm;
+    /// Formular wurde geoeffnet (Editoren gefuellt, Fokus gesetzt).
+    property OnEditFormShow: TNotifyEvent read FOnEditFormShow write FOnEditFormShow;
+    /// Formular wurde geschlossen (Accepted = uebernommen).
+    property OnEditFormClose: TPPGDBGridEditFormCloseEvent read FOnEditFormClose
+      write FOnEditFormClose;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -519,6 +727,20 @@ type
     /// Kartenansicht: Karte der Pufferzeile ARow (0 = erster geladener Satz,
     /// wie die Datenzeilen der Tabelle) in Client-Koordinaten; leer = keine.
     function CardRect(ARow: Integer): TRect;
+    /// Bearbeitungsformular fuer den aktiven Satz oeffnen (nur EditMode =
+    /// dgeForm in der Tabelle, bearbeitbare Datenmenge; im Zustand dsInsert
+    /// fuer den neuen Satz).
+    procedure ShowEditForm;
+    /// Formular schliessen: Accept = Werte schreiben und buchen (Post; ein
+    /// Fehler wird gemeldet und das Formular bleibt offen), sonst verwerfen
+    /// (Cancel). True = geschlossen (bzw. war nicht offen).
+    function HideEditForm(Accept: Boolean = True): Boolean;
+    /// Editor des Felds einer Datenspalte im offenen Formular (nil = keiner).
+    function EditFormEditor(ACol: Integer): TPPGCustomControl;
+    /// Ist das Bearbeitungsformular offen?
+    property EditFormActive: Boolean read FFormOpen;
+    /// Das Formular (nil, solange es nie geoeffnet wurde).
+    property EditFormControl: TPPGDBGridEditForm read FEditPanel;
   end;
 
   TPPGDBGrid = class(TPPGCustomDBGrid)
@@ -539,6 +761,8 @@ type
     property CardWidth;
     property CardSpacing;
     property CardLabelWidth;
+    property EditMode;
+    property EditForm;
     property FixedColsRight;
     property HeaderMenu;
     property ShowFooter;
@@ -611,6 +835,8 @@ type
     property OnStartDrag;
     property OnTitleClick;
     property OnSelectionChanged;
+    property OnEditFormShow;
+    property OnEditFormClose;
     // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
     property OnClick;
     property OnMouseWheel;
@@ -632,7 +858,11 @@ uses
   System.Generics.Defaults,
   PPG.Consts, PPG.Appearance,
   PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls, PPG.Grid.Paint,
-  PPG.Render.Gdi;
+  PPG.Render.Gdi, PPG.Controls.Field, PPG.CheckBox, PPG.Grid.Edit;
+
+type
+  TCtrlAccess = class(TPPGCustomControl);
+  TFieldAccess = class(TPPGCustomField);
 
 const
   // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
@@ -685,7 +915,25 @@ end;
 constructor TPPGDBGridColumn.Create(Collection: TCollection);
 begin
   FListLink := TPPGDBGridListLink.Create(Self);
+  FEditFormColSpan := 1;
   inherited Create(Collection);
+end;
+
+procedure TPPGDBGridColumn.SetEditFormVisible(const Value: TPPGEditFormVisibility);
+begin
+  if FEditFormVisible <> Value then
+  begin
+    FEditFormVisible := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGDBGridColumn.SetEditFormColSpan(const Value: Integer);
+begin
+  if FEditFormColSpan = Value then
+    Exit;
+  FEditFormColSpan := PPGCheckRange(Self, 'EditFormColSpan', Value, 1, 8);
+  Changed(False);
 end;
 
 destructor TPPGDBGridColumn.Destroy;
@@ -854,6 +1102,8 @@ begin
     FValueUnchecked := TPPGDBGridColumn(Source).FValueUnchecked;
     FKeyField := TPPGDBGridColumn(Source).FKeyField;
     FListField := TPPGDBGridColumn(Source).FListField;
+    FEditFormVisible := TPPGDBGridColumn(Source).FEditFormVisible;
+    FEditFormColSpan := TPPGDBGridColumn(Source).FEditFormColSpan;
     if FLookupCache <> nil then
       FLookupCache.Clear;
     if FListLink <> nil then
@@ -1330,6 +1580,17 @@ begin
   // Datenmenge will ein Feld fokussieren (z.B. Pflichtfeld leer): Spalte waehlen
   if (FGrid = nil) or (Field = nil) or (Field^ = nil) then
     Exit;
+  // Bearbeitungsformular offen: Fokus auf den Editor des Felds
+  if FGrid.FFormOpen then
+  begin
+    I := FGrid.FormItemOfField(Field^);
+    if I >= 0 then
+    begin
+      FGrid.FormFocusTarget(I);
+      Field^ := nil;
+      Exit;
+    end;
+  end;
   for I := 0 to FGrid.DataColCount - 1 do
     if FGrid.FFields[I] = Field^ then
     begin
@@ -1356,6 +1617,7 @@ begin
   FCardSpacing := 8;
   FCardLabelWidth := 110;
   FCardActive := -1;
+  FEditForm := TPPGDBGridEditFormOptions.Create(Self);
   FDataLink := TPPGGridDataLink.Create(Self);
   FSelected := TPPGBookmarkList.Create(Self);
   // Sortieren ist Sache der Datenmenge
@@ -1369,6 +1631,11 @@ end;
 
 destructor TPPGCustomDBGrid.Destroy;
 begin
+  // Formular nicht mehr bedienen (Kinder werden mit dem Grid freigegeben)
+  FFormOpen := False;
+  FFormBm := nil;
+  if FEditPanel <> nil then
+    FEditPanel.FGrid := nil;
   if FDataLink <> nil then
     FDataLink.FGrid := nil;
   FreeAndNil(FDataLink);
@@ -1379,6 +1646,7 @@ begin
   FreeAndNil(FAutoColumns);
   FreeAndNil(FAutoState);
   inherited Destroy;
+  FreeAndNil(FEditForm);
 end;
 
 procedure TPPGCustomDBGrid.SetShowRequired(const Value: Boolean);
@@ -1479,7 +1747,8 @@ begin
   try
     HideEditor(True);
     // Leerer, unveraenderter neuer Datensatz verschwindet wieder (TDBGrid)
-    if (dgCancelOnExit in FDBOptions) and FDataLink.Active and
+    // (nicht bei offenem Formular: seine Eingaben stehen noch nicht im Satz)
+    if (dgCancelOnExit in FDBOptions) and FDataLink.Active and not FFormOpen and
       (FDataLink.DataSet.State = dsInsert) and not FDataLink.DataSet.Modified then
       FDataLink.DataSet.Cancel;
   except
@@ -1504,7 +1773,8 @@ var
   V: TRect;
 begin
   V := GridViewRect;
-  Result := ((V.Bottom - V.Top) - FixedHeight) div DataRowHeight;
+  // Offenes Bearbeitungsformular nimmt den Platz von Zeilen ein
+  Result := ((V.Bottom - V.Top) - FixedHeight - FFormGap) div DataRowHeight;
   if Result < 1 then
     Result := 1;
 end;
@@ -1654,6 +1924,12 @@ begin
     Keep.Free;
     FLayoutBusy := False;
   end;
+  // Offenes Formular folgt den Spalten (Werte neu aus dem Satz)
+  if FFormOpen and (FEditPanel <> nil) and FDataLink.Active then
+  begin
+    FormBuild;
+    FormLoadValues(False);
+  end;
   UpdateBufferCount;
   DataChanged;
 end;
@@ -1665,7 +1941,10 @@ begin
   if CardMode then
     FDataLink.BufferCount := CardBufferCount
   else
+  begin
+    FormUpdateGap;
     FDataLink.BufferCount := VisibleDataRows;
+  end;
 end;
 
 procedure TPPGCustomDBGrid.RebuildCache;
@@ -1897,6 +2176,9 @@ var
   OldBm: TBookmark;
   BaseShift: TShiftState;
 begin
+  if Button = mbLeft then
+    FDownOnRow := FDataLink.Active and MouseCoord(X, Y, C, V) and (DataRow(V) >= FixedRows) and
+      (DataRow(V) - FixedRows < FDataLink.RecordCount);
   if CardMode then
   begin
     // Linke Taste waehlt Karte und Feld; die uebrigen wie im Grid
@@ -2023,6 +2305,8 @@ begin
     FSelected.Clear;
   end;
   HideEditor(False);
+  // Formular gehoert zur alten Datenmenge bzw. zum alten Oeffnen
+  FormClose(False, False);
   BuildColumns;
 end;
 
@@ -2035,6 +2319,7 @@ end;
 procedure TPPGCustomDBGrid.DataChanged;
 var
   N: Integer;
+  DS: TDataSet;
 begin
   FSnapValid := False;
   if (csDestroying in ComponentState) or FLayoutBusy then
@@ -2048,6 +2333,33 @@ begin
   if not EditorMode then
     FEditBm := nil;
   RebuildCache;
+  // Bearbeitungsformular: Bearbeitung von aussen beendet (Navigator, Code).
+  // Anderer bzw. gebuchter neuer Satz: schliessen (die Datenmenge hat die
+  // Eingaben ueber UpdateData schon gebucht); derselbe Satz: neu lesen
+  // (Cancel von aussen)
+  if FFormOpen and (FFormBusy = 0) then
+  begin
+    DS := FDataLink.DataSet;
+    if not FDataLink.Active then
+      FormClose(False, False)
+    else if DS.State = dsBrowse then
+    begin
+      if DS.IsEmpty or (Length(FFormBm) = 0) or
+        (DS.CompareBookmarks(FFormBm, DS.Bookmark) <> 0) then
+      begin
+        FormClose(False, False);
+        UpdateBufferCount;
+        RebuildCache;
+      end
+      else
+      begin
+        // Cancel/Post von aussen: alle Felder; sonst (Groesse, Puffer) nur
+        // die unveraenderten (Werte per Code bleiben)
+        FormLoadValues(not FFormReload);
+        FFormReload := False;
+      end;
+    end;
+  end;
   // Mindestens eine (ggf. leere) Datenzeile: RowCount > FixedRows
   N := Length(FCache);
   if N < 1 then
@@ -2055,11 +2367,16 @@ begin
   if RowCount <> FixedRows + N then
     RowCount := FixedRows + N;
   SyncPosition;
+  FormPlace;
   Invalidate;
 end;
 
 procedure TPPGCustomDBGrid.EditingChanged;
 begin
+  // Bearbeitung von aussen beendet (Cancel, Post): das Formular liest beim
+  // naechsten DataChanged alle Felder neu
+  if FFormOpen and (FFormBusy = 0) and FDataLink.Active and not FDataLink.Editing then
+    FFormReload := True;
   Invalidate;
 end;
 
@@ -2069,14 +2386,19 @@ begin
     Exit;
   // Nur der aktive Datensatz hat sich geaendert: Zwischenspeicher neu
   RebuildCache;
+  // Formular: Felder, die der Anwender nicht geaendert hat, folgen dem Satz
+  if FFormOpen and (FFormBusy = 0) then
+    FormLoadValues(True);
   Invalidate;
 end;
 
 procedure TPPGCustomDBGrid.UpdateData;
 begin
-  // Datenmenge schreibt (Post): offenen Editor uebernehmen
+  // Datenmenge schreibt (Post): offenen Editor bzw. das Formular uebernehmen
   if EditorMode then
     HideEditor(True);
+  if FFormOpen and (FFormBusy = 0) then
+    FormWriteValues;
 end;
 
 { ---- Erweiterungspunkte des Grids ---- }
@@ -2406,7 +2728,7 @@ begin
   DS := FDataLink.DataSet;
   if DS.IsSequenced and (DS.RecordCount > 0) then
   begin
-    N := Int64(FixedHeight) + Int64(DS.RecordCount) * DataRowHeight;
+    N := Int64(FixedHeight) + Int64(DS.RecordCount) * DataRowHeight + FFormGap;
     if N > MaxInt then
       N := MaxInt;
     if N > Result then
@@ -2531,6 +2853,15 @@ begin
 end;
 
 function TPPGCustomDBGrid.CanEditCell(ACol, VRow: Integer): Boolean;
+begin
+  // Formular-Modus: die Zellen bearbeitet nur das Bearbeitungsformular
+  // (auch kein Kaestchen per Klick, kein Einfuegen, kein Entf)
+  if FormMode then
+    Exit(False);
+  Result := CellEditable(ACol, VRow);
+end;
+
+function TPPGCustomDBGrid.CellEditable(ACol, VRow: Integer): Boolean;
 var
   F: TField;
   C: TPPGDBGridColumn;
@@ -2749,6 +3080,11 @@ begin
 end;
 
 procedure TPPGCustomDBGrid.FillLookupEditor(ACol: Integer);
+begin
+  FillLookupCombo(InplaceEditor, ACol);
+end;
+
+procedure TPPGCustomDBGrid.FillLookupCombo(Editor: TPPGCustomControl; ACol: Integer);
 var
   C: TPPGComboBox;
   DS: TDataSet;
@@ -2757,9 +3093,9 @@ var
   S, LK, LR: string;
   Plain: Boolean;
 begin
-  if not (InplaceEditor is TPPGComboBox) then
+  if not (Editor is TPPGComboBox) then
     Exit;
-  C := TPPGComboBox(InplaceEditor);
+  C := TPPGComboBox(Editor);
   if not LookupSource(ACol, DS, LK, LR, T) then
   begin
     C.Style := csDropDown;
@@ -2982,6 +3318,27 @@ begin
   // Kartenansicht: Pfeile, Bild und Pos1/Ende bewegen zwischen den Karten
   if CardMode and CardNavigateKey(Key, Shift) then
     Exit;
+  // Formular-Modus: Enter/F2 oeffnen das Bearbeitungsformular (bzw. holen
+  // den Fokus hinein), Esc verwirft es
+  if FormMode and (Shift * [ssCtrl, ssAlt] = []) then
+    case Key of
+      VK_RETURN, VK_F2:
+        begin
+          if FFormOpen then
+            FormFocusTarget(Max(0, FEditPanel.FCurrent))
+          else
+            ShowEditForm;
+          Key := 0;
+          Exit;
+        end;
+      VK_ESCAPE:
+        if FFormOpen then
+        begin
+          HideEditForm(False);
+          Key := 0;
+          Exit;
+        end;
+    end;
   DS := FDataLink.DataSet;
   OrigKey := Key;
   RowKey := False;
@@ -3092,6 +3449,10 @@ begin
         Key := 0;
       end;
   end;
+  // Formular-Modus: neuer Satz (Einfg, Pfeil runter am Ende) im Formular
+  if FormMode and (Key = 0) and not FFormOpen and ((OrigKey = VK_INSERT) or (OrigKey = VK_DOWN)) and
+    FDataLink.Active and (DS.State = dsInsert) then
+    ShowEditForm;
   if Key <> 0 then
     inherited NavigateKey(Key, Shift)
   else if RowKey and MultiSelectActive then
@@ -3265,6 +3626,8 @@ begin
     Exit;
   // Offene Eingabe zuerst uebernehmen (lehnt die Datenmenge ab, bleibt alles)
   HideEditor(True);
+  if FFormOpen and not HideEditForm(True) then
+    Exit;
   FViewStyle := Value;
   FCardActive := -1;
   if csLoading in ComponentState then
@@ -3855,20 +4218,6 @@ begin
     DoCellAction(Act, DCol, V, NewText);
 end;
 
-procedure TPPGCustomDBGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-begin
-  // Kartenansicht: Der Doppelklick hat den Editor fuer das Feld des ersten
-  // Klicks schon geoeffnet (DblClick kommt vor dem MouseDown mit ssDouble).
-  // Der Fokus bleibt im Editor; nur OnMouseDown wird noch gemeldet.
-  if CardMode and (Button = mbLeft) and (ssDouble in Shift) and EditorMode then
-  begin
-    if Assigned(OnMouseDown) then
-      OnMouseDown(Self, Button, Shift, X, Y);
-    Exit;
-  end;
-  inherited MouseDown(Button, Shift, X, Y);
-end;
-
 procedure TPPGCustomDBGrid.EditorArrowMove(Down: Boolean);
 begin
   // Karte: Pfeil hoch/runter im Editor wechselt das Feld, nicht den Satz
@@ -4014,6 +4363,1120 @@ begin
     end;
     ACanvas.FrameRoundRect(Card, Radius, BW, BC, 255);
   end;
+end;
+
+{ ---- Bearbeitungsformular in der Zeile ---- }
+
+const
+  // Masse des Formulars (logische px)
+  FormPad = 10;        // Rand innen
+  FormVGap = 6;        // Abstand zwischen den Zeilen des Rasters
+  FormHGap = 16;       // Abstand zwischen den Spalten des Rasters
+  FormLabelGap = 8;    // Beschriftung -> Editor
+  FormEditorMinH = 28; // Mindesthoehe eines Editors
+  FormButtonW = 110;
+  FormButtonH = 30;
+  FormButtonGap = 8;
+  FormMinGap = 24;     // kleinste Hoehe im Grid (sonst scrollt das Formular)
+
+{ TPPGDBGridEditFormOptions }
+
+constructor TPPGDBGridEditFormOptions.Create(AGrid: TPPGCustomDBGrid);
+begin
+  inherited Create;
+  FGrid := AGrid;
+  FColumnCount := 2;
+  FLabelWidth := 120;
+  FShowButtons := True;
+end;
+
+function TPPGDBGridEditFormOptions.GetOwner: TPersistent;
+begin
+  Result := FGrid;
+end;
+
+procedure TPPGDBGridEditFormOptions.Assign(Source: TPersistent);
+begin
+  if Source is TPPGDBGridEditFormOptions then
+  begin
+    FColumnCount := TPPGDBGridEditFormOptions(Source).FColumnCount;
+    FLabelWidth := TPPGDBGridEditFormOptions(Source).FLabelWidth;
+    FShowButtons := TPPGDBGridEditFormOptions(Source).FShowButtons;
+    Changed;
+  end
+  else
+    inherited Assign(Source);
+end;
+
+procedure TPPGDBGridEditFormOptions.Changed;
+begin
+  if FGrid <> nil then
+    FGrid.EditFormOptionsChanged;
+end;
+
+procedure TPPGDBGridEditFormOptions.SetColumnCount(const Value: Integer);
+begin
+  if FColumnCount = Value then
+    Exit;
+  FColumnCount := PPGCheckRange(Self, 'ColumnCount', Value, 1, 8);
+  Changed;
+end;
+
+procedure TPPGDBGridEditFormOptions.SetLabelWidth(const Value: Integer);
+begin
+  if FLabelWidth = Value then
+    Exit;
+  FLabelWidth := PPGCheckRange(Self, 'LabelWidth', Value, 0, 1000);
+  Changed;
+end;
+
+procedure TPPGDBGridEditFormOptions.SetShowButtons(const Value: Boolean);
+begin
+  if FShowButtons = Value then
+    Exit;
+  FShowButtons := Value;
+  Changed;
+end;
+
+{ TPPGDBGridEditForm }
+
+constructor TPPGDBGridEditForm.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  ShowCaption := False;
+  NoFrame := True;
+  AutoScroll := True;
+  TabStop := False;
+  FCurrent := -1;
+  FArrangedW := -1;
+  // Name fuer Screenreader (gezeichnet wird die Beschriftung nicht)
+  Caption := PPGStr(@SPPGDBGridEditForm);
+  FApply := TPPGButton.Create(Self);
+  FApply.Parent := Self;
+  FApply.Caption := PPGStr(@SPPGDBGridEditFormApply);
+  FApply.OnClick := ApplyClick;
+  FCancel := TPPGButton.Create(Self);
+  FCancel.Parent := Self;
+  FCancel.Caption := PPGStr(@SPPGDlgCancel);
+  FCancel.OnClick := CancelClick;
+end;
+
+procedure TPPGDBGridEditForm.ClearItems;
+var
+  I: Integer;
+begin
+  for I := 0 to High(FItems) do
+    FItems[I].Editor.Free;
+  SetLength(FItems, 0);
+  FCurrent := -1;
+  FArrangedW := -1;
+end;
+
+function TPPGDBGridEditForm.ItemCount: Integer;
+begin
+  Result := Length(FItems);
+end;
+
+function TPPGDBGridEditForm.ItemDataCol(I: Integer): Integer;
+begin
+  if (I < 0) or (I >= Length(FItems)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FItems) - 1]);
+  Result := FItems[I].DataCol;
+end;
+
+function TPPGDBGridEditForm.ItemEditor(I: Integer): TPPGCustomControl;
+begin
+  if (I < 0) or (I >= Length(FItems)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FItems) - 1]);
+  Result := FItems[I].Editor;
+end;
+
+procedure TPPGDBGridEditForm.ItemCell(I: Integer; out ACell, ARow, ASpan: Integer);
+begin
+  if (I < 0) or (I >= Length(FItems)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FItems) - 1]);
+  ACell := FItems[I].Cell;
+  ARow := FItems[I].Row;
+  ASpan := FItems[I].Span;
+end;
+
+function TPPGDBGridEditForm.ItemLabelRect(I: Integer): TRect;
+var
+  DX, DY: Integer;
+begin
+  if (I < 0) or (I >= Length(FItems)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FItems) - 1]);
+  // Beschriftung wandert mit dem Editor (Scrollen verschiebt die Kinder)
+  Result := FItems[I].LabelR;
+  if IsRectEmpty(Result) then
+    Exit;
+  DX := FItems[I].Editor.Left - FItems[I].EditorR.Left;
+  DY := FItems[I].Editor.Top - FItems[I].EditorR.Top;
+  OffsetRect(Result, DX, DY);
+end;
+
+function TPPGDBGridEditForm.TargetOfControl(C: TControl): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  // Bis zum direkten Kind des Formulars (inneres Feld eines Editors)
+  while (C <> nil) and (C.Parent <> Self) do
+    C := C.Parent;
+  if C = nil then
+    Exit;
+  for I := 0 to High(FItems) do
+    if FItems[I].Editor = C then
+      Exit(I);
+  if C = FApply then
+    Result := Length(FItems)
+  else if C = FCancel then
+    Result := Length(FItems) + 1;
+end;
+
+function TPPGDBGridEditForm.TargetControl(T: Integer): TWinControl;
+begin
+  if (T >= 0) and (T < Length(FItems)) then
+    Result := FItems[T].Editor
+  else if T = Length(FItems) then
+    Result := FApply
+  else if T = Length(FItems) + 1 then
+    Result := FCancel
+  else
+    Result := nil;
+end;
+
+procedure TPPGDBGridEditForm.EditorChange(Sender: TObject);
+var
+  I: Integer;
+begin
+  if (FLoading > 0) or (FGrid = nil) or not (Sender is TControl) then
+    Exit;
+  I := TargetOfControl(TControl(Sender));
+  if (I >= 0) and (I < Length(FItems)) then
+    FGrid.FormEditorChanged(I);
+end;
+
+procedure TPPGDBGridEditForm.EditorEnter(Sender: TObject);
+var
+  T: Integer;
+begin
+  if Sender is TControl then
+  begin
+    T := TargetOfControl(TControl(Sender));
+    if T >= 0 then
+      FCurrent := T;
+  end;
+end;
+
+procedure TPPGDBGridEditForm.EditorEllipsis(Sender: TObject);
+var
+  I: Integer;
+begin
+  if (FGrid = nil) or not (Sender is TControl) then
+    Exit;
+  I := TargetOfControl(TControl(Sender));
+  if (I >= 0) and (I < Length(FItems)) then
+    FGrid.FormEllipsis(I);
+end;
+
+procedure TPPGDBGridEditForm.ApplyClick(Sender: TObject);
+begin
+  if FGrid <> nil then
+    FGrid.HideEditForm(True);
+end;
+
+procedure TPPGDBGridEditForm.CancelClick(Sender: TObject);
+begin
+  if FGrid <> nil then
+    FGrid.HideEditForm(False);
+end;
+
+procedure TPPGDBGridEditForm.CMChildKey(var Message: TCMChildKey);
+var
+  T: Integer;
+  Shift: TShiftState;
+begin
+  // Tab, Enter und Esc der Editoren und Schaltflaechen gehoeren dem Formular
+  // (kommen vor der Dialog-Navigation des Fensters an)
+  if (FGrid <> nil) and ((Message.CharCode = VK_TAB) or (Message.CharCode = VK_RETURN) or
+    (Message.CharCode = VK_ESCAPE)) then
+  begin
+    T := TargetOfControl(Message.Sender);
+    if T >= 0 then
+    begin
+      Shift := [];
+      if GetKeyState(VK_SHIFT) < 0 then
+        Include(Shift, ssShift);
+      if GetKeyState(VK_CONTROL) < 0 then
+        Include(Shift, ssCtrl);
+      if GetKeyState(VK_MENU) < 0 then
+        Include(Shift, ssAlt);
+      FCurrent := T;
+      if FGrid.EditFormKey(Message.CharCode, Shift) then
+      begin
+        Message.Result := 1;
+        Exit;
+      end;
+    end;
+  end;
+  inherited;
+end;
+
+function TPPGDBGridEditForm.GetBackgroundColor: TColor;
+var
+  Text, Line, Accent, LabelColor: TColor;
+begin
+  if FGrid = nil then
+    Exit(inherited GetBackgroundColor);
+  FGrid.EditFormColors(Result, Text, Line, Accent, LabelColor);
+end;
+
+function TPPGDBGridEditForm.GetChildBackground(Child: TControl; out ColorTop,
+  ColorBottom: TColor): Boolean;
+begin
+  // Ecken der Editoren: einfarbige Flaeche des Formulars
+  if FGrid = nil then
+    Exit(inherited GetChildBackground(Child, ColorTop, ColorBottom));
+  ColorTop := GetBackgroundColor;
+  ColorBottom := ColorTop;
+  Result := True;
+end;
+
+procedure TPPGDBGridEditForm.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
+var
+  Fill, Text, Line, Accent, LabelColor: TColor;
+  I, BW: Integer;
+  R: TRect;
+begin
+  if FGrid = nil then
+  begin
+    inherited DoPaint(ACanvas, ClientR);
+    Exit;
+  end;
+  FGrid.EditFormColors(Fill, Text, Line, Accent, LabelColor);
+  ACanvas.FillRoundRect(ClientR, 0, Fill, 255);
+  // Linien oben und unten, Akzent an der Seite (wie die aktive Zeile)
+  ACanvas.FillRoundRect(Rect(ClientR.Left, ClientR.Top, ClientR.Right, ClientR.Top + 1), 0,
+    Line, 255);
+  ACanvas.FillRoundRect(Rect(ClientR.Left, ClientR.Bottom - 1, ClientR.Right, ClientR.Bottom), 0,
+    Line, 255);
+  BW := Max(2, PPGScale(3, ScalePPI));
+  if UseRightToLeftAlignment then
+    R := Rect(ClientR.Right - BW, ClientR.Top, ClientR.Right, ClientR.Bottom)
+  else
+    R := Rect(ClientR.Left, ClientR.Top, ClientR.Left + BW, ClientR.Bottom);
+  ACanvas.FillRoundRect(R, 0, Accent, 255);
+  // Beschriftungen (wandern beim Scrollen mit den Editoren)
+  for I := 0 to High(FItems) do
+  begin
+    if FItems[I].Caption = '' then
+      Continue;
+    R := ItemLabelRect(I);
+    if IsRectEmpty(R) or not NeedsPaint(R) then
+      Continue;
+    ACanvas.DrawText(R, FItems[I].Caption, Font, LabelColor,
+      DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taLeftJustify)));
+  end;
+  PaintScrollBars(ACanvas);
+end;
+
+{ Bearbeitungsformular im Grid }
+
+function TPPGCustomDBGrid.FormMode: Boolean;
+begin
+  Result := (FEditMode = dgeForm) and not CardMode;
+end;
+
+function TPPGCustomDBGrid.FormAllowed: Boolean;
+begin
+  Result := FDataLink.Active and not FReadOnly and (dgEditing in FDBOptions) and
+    not FDataLink.ReadOnly and FDataLink.DataSet.CanModify and HandleAllocated and
+    not (csDesigning in ComponentState);
+end;
+
+function TPPGCustomDBGrid.FormCanEdit(ACol: Integer): Boolean;
+begin
+  Result := FDataLink.Active and CellEditable(ACol, VisualRow(FixedRows + FDataLink.ActiveRecord));
+end;
+
+procedure TPPGCustomDBGrid.SetEditMode(const Value: TPPGDBGridEditMode);
+begin
+  if FEditMode = Value then
+    Exit;
+  // Offene Eingabe uebernehmen (lehnt die Datenmenge ab, bleibt alles)
+  if FFormOpen and not HideEditForm(True) then
+    Exit;
+  HideEditor(True);
+  FEditMode := Value;
+  Invalidate;
+end;
+
+procedure TPPGCustomDBGrid.SetEditForm(const Value: TPPGDBGridEditFormOptions);
+begin
+  FEditForm.Assign(Value);
+end;
+
+procedure TPPGCustomDBGrid.EditFormOptionsChanged;
+begin
+  if not FFormOpen or (FEditPanel = nil) or (csLoading in ComponentState) then
+    Exit;
+  // Raster und Hoehe neu (Editoren und Eingaben bleiben)
+  FormLayoutCells;
+  UpdateBufferCount;
+  DataChanged;
+end;
+
+procedure TPPGCustomDBGrid.EditFormColors(out Fill, Text, Line, Accent, LabelColor: TColor);
+var
+  Base, Header: TColor;
+begin
+  // Flaeche wie der Kopf (hebt sich von den Zeilen und den Editoren ab)
+  GetGridColors(Base, Text, Header, Line, Accent);
+  Fill := Header;
+  if UseOwnColors then
+  begin
+    Line := Styles.GridLine.FillFor(UseDarkMode, Line);
+    LabelColor := PPGBlendColor(Text, Fill, 0.3);
+  end
+  else
+    LabelColor := Text;
+end;
+
+function TPPGCustomDBGrid.FormItemText(I: Integer): string;
+var
+  Ed: TPPGCustomControl;
+begin
+  Ed := FEditPanel.FItems[I].Editor;
+  if Ed is TPPGCheckBox then
+    case TPPGCheckBox(Ed).State of
+      cbChecked: Result := '1';
+      cbUnchecked: Result := '0';
+    else
+      Result := PPGGridCheckGrayed;
+    end
+  else
+    Result := PPGGridEditorText(Ed);
+end;
+
+procedure TPPGCustomDBGrid.FormBuild;
+var
+  Cols: array of Integer;
+  I, J, N, ARow: Integer;
+  C: TPPGGridColumn;
+  Show: Boolean;
+  Vis: TPPGEditFormVisibility;
+  It: TPPGDBGridEditFormItem;
+  Kind: TPPGGridEditorKind;
+  Ed: TPPGCustomControl;
+  Chk: TPPGCheckBox;
+begin
+  FEditPanel.ClearItems;
+  if not FDataLink.Active then
+    Exit;
+  ARow := FixedRows + FDataLink.ActiveRecord;
+  // Datenspalten in der Reihenfolge der Anzeige (auch ausgeblendete mit
+  // efvShow), stabil nach DisplayIndex einsortiert
+  N := DataColCount;
+  SetLength(Cols, 0);
+  for I := FixedCols to FixedCols + N - 1 do
+  begin
+    C := ColumnOf(I);
+    Vis := efvAuto;
+    if C is TPPGDBGridColumn then
+      Vis := TPPGDBGridColumn(C).EditFormVisible;
+    case Vis of
+      efvShow: Show := True;
+      efvHide: Show := False;
+    else
+      Show := (C = nil) or C.Visible;
+    end;
+    if not Show or (FieldOfCol(I) = nil) then
+      Continue;
+    J := Length(Cols);
+    SetLength(Cols, J + 1);
+    while (J > 0) and (ColumnSortKey(Cols[J - 1]) > ColumnSortKey(I)) do
+    begin
+      Cols[J] := Cols[J - 1];
+      Dec(J);
+    end;
+    Cols[J] := I;
+  end;
+  SetLength(FEditPanel.FItems, Length(Cols));
+  for I := 0 to High(Cols) do
+  begin
+    It.DataCol := Cols[I];
+    It.Caption := CardLabel(Cols[I]);
+    It.Editable := FormCanEdit(Cols[I]);
+    It.Dirty := False;
+    It.Original := '';
+    It.Cell := 0;
+    It.Row := 0;
+    It.Span := 1;
+    It.LabelR := Rect(0, 0, 0, 0);
+    It.EditorR := Rect(0, 0, 0, 0);
+    Kind := CellEditorKind(Cols[I], ARow);
+    if Kind = gekCheck then
+    begin
+      // Kaestchen (auch Null = grau); schreibgeschuetzt: deaktiviert
+      Chk := TPPGCheckBox.Create(FEditPanel);
+      Chk.Parent := FEditPanel;
+      TCtrlAccess(Chk).Preset := TCtrlAccess(FEditPanel).Preset;
+      TCtrlAccess(Chk).StyleManager := TCtrlAccess(FEditPanel).StyleManager;
+      Chk.AllowGrayed := True;
+      Chk.OnChange := FEditPanel.EditorChange;
+      Chk.Enabled := It.Editable;
+      Ed := Chk;
+    end
+    else
+    begin
+      // Zell-Editor der Spalte (Text, Auswahl, Zahl); nicht bearbeitbar:
+      // Textfeld nur zum Lesen
+      if (Kind = gekNone) or not It.Editable then
+        Kind := gekText;
+      Ed := PPGCreateGridEditor(Kind, FEditPanel, nil, nil);
+      TCtrlAccess(Ed).StyleManager := TCtrlAccess(FEditPanel).StyleManager;
+      if Ed is TPPGCustomField then
+      begin
+        TFieldAccess(Ed).OnChange := FEditPanel.EditorChange;
+        TFieldAccess(Ed).ReadOnly := not It.Editable;
+      end;
+      if Ed is TPPGGridEdit then
+        TPPGGridEdit(Ed).OnEllipsisClick := FEditPanel.EditorEllipsis;
+      Ed.Visible := True;
+    end;
+    It.Kind := Kind;
+    // Name fuer Screenreader und Hinweis: die Beschriftung
+    Ed.Hint := It.Caption;
+    TCtrlAccess(Ed).OnEnter := FEditPanel.EditorEnter;
+    Ed.TabStop := True;
+    It.Editor := Ed;
+    FEditPanel.FItems[I] := It;
+  end;
+  FormLayoutCells;
+end;
+
+procedure TPPGCustomDBGrid.FormLayoutCells;
+var
+  I, Cnt, Cell, Row, Span: Integer;
+  C: TPPGGridColumn;
+begin
+  // Raster: Felder fliessen nach rechts und brechen um (Spanne passt ganz)
+  Cnt := FEditForm.ColumnCount;
+  Cell := 0;
+  Row := 0;
+  for I := 0 to High(FEditPanel.FItems) do
+  begin
+    C := ColumnOf(FEditPanel.FItems[I].DataCol);
+    Span := 1;
+    if C is TPPGDBGridColumn then
+      Span := TPPGDBGridColumn(C).EditFormColSpan;
+    Span := EnsureRange(Span, 1, Cnt);
+    if Cell + Span > Cnt then
+    begin
+      Cell := 0;
+      Inc(Row);
+    end;
+    FEditPanel.FItems[I].Cell := Cell;
+    FEditPanel.FItems[I].Row := Row;
+    FEditPanel.FItems[I].Span := Span;
+    Inc(Cell, Span);
+  end;
+  FEditPanel.FArrangedW := -1;
+end;
+
+procedure TPPGCustomDBGrid.FormLoadValues(OnlyClean: Boolean);
+var
+  I, ARow, DC: Integer;
+  S: string;
+  Ed: TPPGCustomControl;
+begin
+  if (FEditPanel = nil) or not FDataLink.Active then
+    Exit;
+  ARow := FixedRows + FDataLink.ActiveRecord;
+  Inc(FEditPanel.FLoading);
+  try
+    for I := 0 to High(FEditPanel.FItems) do
+    begin
+      Ed := FEditPanel.FItems[I].Editor;
+      // Geaenderte (und das gerade bediente) Feld behalten ihre Eingabe
+      if OnlyClean and (FormItemChanged(I) or Ed.Focused) then
+        Continue;
+      DC := FEditPanel.FItems[I].DataCol;
+      // Bearbeitbar: Field.Text (Bearbeitungsformat); sonst die Anzeige
+      if FEditPanel.FItems[I].Editable then
+        S := GetEditText(DC, ARow)
+      else
+        S := GetCellText(DC, ARow);
+      if Ed is TPPGCheckBox then
+      begin
+        if TPPGCellPainter.IsGrayedText(S) then
+          TPPGCheckBox(Ed).State := cbGrayed
+        else if TPPGCellPainter.IsCheckedText(S) then
+          TPPGCheckBox(Ed).State := cbChecked
+        else
+          TPPGCheckBox(Ed).State := cbUnchecked;
+      end
+      else
+      begin
+        PPGGridEditorBegin(Ed, S, ColumnOf(DC));
+        if FEditPanel.FItems[I].Kind = gekCombo then
+          FillLookupCombo(Ed, DC);
+      end;
+      FEditPanel.FItems[I].Dirty := False;
+      FEditPanel.FItems[I].Original := FormItemText(I);
+    end;
+  finally
+    Dec(FEditPanel.FLoading);
+  end;
+end;
+
+function TPPGCustomDBGrid.FormItemChanged(I: Integer): Boolean;
+begin
+  // Eingabe des Anwenders oder Wert per Code (z. B. in OnEditFormShow)
+  Result := FEditPanel.FItems[I].Dirty or (FormItemText(I) <> FEditPanel.FItems[I].Original);
+end;
+
+procedure TPPGCustomDBGrid.FormEditorChanged(I: Integer);
+begin
+  if not FFormOpen or (I < 0) or (I >= FEditPanel.ItemCount) or
+    not FEditPanel.FItems[I].Editable then
+    Exit;
+  FEditPanel.FItems[I].Dirty := True;
+  // Wie im Zell-Editor: Bearbeiten-Modus beim ersten Tastendruck
+  EditorEdited;
+end;
+
+function TPPGCustomDBGrid.FormEditorHeight: Integer;
+begin
+  Result := Max(DataRowHeight, PPGScale(FormEditorMinH, ScalePPI));
+end;
+
+function TPPGCustomDBGrid.FormNeededHeight: Integer;
+var
+  I, Rows, PPI: Integer;
+begin
+  PPI := ScalePPI;
+  Rows := 0;
+  if FEditPanel <> nil then
+    for I := 0 to High(FEditPanel.FItems) do
+      Rows := Max(Rows, FEditPanel.FItems[I].Row + 1);
+  Result := 2 * PPGScale(FormPad, PPI) + Rows * FormEditorHeight +
+    Max(0, Rows - 1) * PPGScale(FormVGap, PPI);
+  if FEditForm.ShowButtons then
+  begin
+    Inc(Result, PPGScale(FormButtonH, PPI));
+    if Rows > 0 then
+      Inc(Result, 2 * PPGScale(FormVGap, PPI));
+  end;
+end;
+
+procedure TPPGCustomDBGrid.FormUpdateGap;
+var
+  V: TRect;
+  Need, Avail, MinGap: Integer;
+begin
+  if not FFormOpen or CardMode then
+  begin
+    FFormGap := 0;
+    Exit;
+  end;
+  // So hoch wie noetig, hoechstens so, dass die aktive Zeile darueber passt;
+  // reicht das nicht, scrollt das Formular selbst
+  Need := FormNeededHeight;
+  V := GridViewRect;
+  Avail := (V.Bottom - V.Top) - FixedHeight - DataRowHeight;
+  MinGap := Min(Need, PPGScale(FormMinGap, ScalePPI));
+  FFormGap := Min(Need, Avail);
+  if FFormGap < MinGap then
+    FFormGap := MinGap;
+end;
+
+procedure TPPGCustomDBGrid.FormArrange(Force: Boolean);
+var
+  P: TPPGDBGridEditForm;
+  PPI, Pad, VGap, HGap, LGap, EH, W, Cnt, CellW, LabelW, I, X, Y, IW, BW, BH, Rows: Integer;
+  LR, ER, AR, CR: TRect;
+  RTL: Boolean;
+
+  function Mirror(const R: TRect): TRect;
+  begin
+    if RTL and not IsRectEmpty(R) then
+      Result := Rect(W - R.Right, R.Top, W - R.Left, R.Bottom)
+    else
+      Result := R;
+  end;
+
+begin
+  P := FEditPanel;
+  if P = nil then
+    Exit;
+  PPI := ScalePPI;
+  if not Force and (P.FArrangedW = P.Width) and (P.FArrangedPPI = PPI) then
+    Exit;
+  Pad := PPGScale(FormPad, PPI);
+  VGap := PPGScale(FormVGap, PPI);
+  HGap := PPGScale(FormHGap, PPI);
+  LGap := PPGScale(FormLabelGap, PPI);
+  EH := FormEditorHeight;
+  // Breite ohne senkrechte Leiste, wenn das Formular scrollen muss
+  W := P.Width;
+  if FormNeededHeight > P.Height then
+    Dec(W, P.BarThickness);
+  Cnt := FEditForm.ColumnCount;
+  CellW := (W - 2 * Pad - (Cnt - 1) * HGap) div Cnt;
+  if CellW < 1 then
+    CellW := 1;
+  RTL := UseRightToLeftAlignment;
+  // Anordnen ohne Verschiebung (Scrollen verschiebt danach die Kinder)
+  P.ScrollTo(0, 0);
+  Rows := 0;
+  for I := 0 to High(P.FItems) do
+  begin
+    X := Pad + P.FItems[I].Cell * (CellW + HGap);
+    IW := P.FItems[I].Span * CellW + (P.FItems[I].Span - 1) * HGap;
+    Y := Pad + P.FItems[I].Row * (EH + VGap);
+    Rows := Max(Rows, P.FItems[I].Row + 1);
+    LabelW := PPGScale(FEditForm.LabelWidth, PPI);
+    if LabelW > IW div 2 then
+      LabelW := IW div 2;
+    if LabelW > 0 then
+    begin
+      LR := Rect(X, Y, X + LabelW, Y + EH);
+      ER := Rect(X + LabelW + LGap, Y, X + IW, Y + EH);
+    end
+    else
+    begin
+      LR := Rect(0, 0, 0, 0);
+      ER := Rect(X, Y, X + IW, Y + EH);
+    end;
+    LR := Mirror(LR);
+    ER := Mirror(ER);
+    P.FItems[I].LabelR := LR;
+    P.FItems[I].EditorR := ER;
+    P.FItems[I].Editor.BoundsRect := ER;
+  end;
+  // Schaltflaechen unten an der Endseite (Uebernehmen vor Abbrechen)
+  P.FApply.Visible := FEditForm.ShowButtons;
+  P.FCancel.Visible := FEditForm.ShowButtons;
+  if FEditForm.ShowButtons then
+  begin
+    BW := PPGScale(FormButtonW, PPI);
+    BH := PPGScale(FormButtonH, PPI);
+    Y := Pad;
+    if Rows > 0 then
+      Y := Pad + Rows * (EH + VGap) + VGap;
+    CR := Rect(W - Pad - BW, Y, W - Pad, Y + BH);
+    AR := Rect(CR.Left - PPGScale(FormButtonGap, PPI) - BW, Y,
+      CR.Left - PPGScale(FormButtonGap, PPI), Y + BH);
+    P.FApply.BoundsRect := Mirror(AR);
+    P.FCancel.BoundsRect := Mirror(CR);
+  end;
+  P.FArrangedW := P.Width;
+  P.FArrangedPPI := PPI;
+  P.Invalidate;
+end;
+
+procedure TPPGCustomDBGrid.FormPlace;
+var
+  V: Integer;
+  R, GV: TRect;
+begin
+  if not FFormOpen or (FEditPanel = nil) or not FDataLink.Active or CardMode then
+  begin
+    if RowGapRow >= 0 then
+    begin
+      Inc(FSyncing);
+      try
+        SetRowGap(-1, 0);
+      finally
+        Dec(FSyncing);
+      end;
+    end;
+    Exit;
+  end;
+  // Luecke unter der aktiven Zeile; das Formular fuellt sie ueber die ganze
+  // Breite (scrollt nicht waagerecht mit den Spalten)
+  V := VisualRow(FixedRows + FDataLink.ActiveRecord);
+  Inc(FSyncing);
+  try
+    SetRowGap(V, FFormGap);
+    EnsureGeometry;
+  finally
+    Dec(FSyncing);
+  end;
+  R := RawCellRect(0, V);
+  GV := GridViewRect;
+  FEditPanel.SetBounds(GV.Left, R.Bottom, GV.Right - GV.Left, FFormGap);
+  FormArrange(False);
+  if not FEditPanel.Visible then
+    FEditPanel.Visible := True;
+end;
+
+procedure TPPGCustomDBGrid.FormWriteValues;
+var
+  I, ARow: Integer;
+begin
+  if (FEditPanel = nil) or not FDataLink.Active then
+    Exit;
+  ARow := FixedRows + FDataLink.ActiveRecord;
+  Inc(FFormBusy);
+  try
+    for I := 0 to High(FEditPanel.FItems) do
+      if FEditPanel.FItems[I].Editable and FormItemChanged(I) then
+      begin
+        try
+          SetCellByUser(FEditPanel.FItems[I].DataCol, ARow, FormItemText(I));
+        except
+          // Ungueltiger Wert: das Formular bleibt offen, Fokus auf das Feld
+          FormFocusTarget(I);
+          raise;
+        end;
+        FEditPanel.FItems[I].Dirty := False;
+        FEditPanel.FItems[I].Original := FormItemText(I);
+      end;
+  finally
+    Dec(FFormBusy);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.FormEllipsis(I: Integer);
+begin
+  // "..."-Knopf eines Felds: wie im Zell-Editor OnEditButtonClick, die
+  // Fokusspalte ist dabei die Spalte des Felds (SelectedField)
+  Inc(FSyncing);
+  try
+    Col := FEditPanel.FItems[I].DataCol;
+  finally
+    Dec(FSyncing);
+  end;
+  EditButtonClick;
+end;
+
+function TPPGCustomDBGrid.FormItemOfField(F: TField): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  if (FEditPanel = nil) or (F = nil) then
+    Exit;
+  for I := 0 to High(FEditPanel.FItems) do
+    if FieldOfCol(FEditPanel.FItems[I].DataCol) = F then
+      Exit(I);
+end;
+
+function TPPGCustomDBGrid.FormNextTarget(T: Integer; Forward: Boolean): Integer;
+var
+  N, Total, K: Integer;
+  C: TWinControl;
+begin
+  // Ziele: Felder (bedienbare), dann Uebernehmen und Abbrechen; im Kreis
+  Result := -1;
+  if FEditPanel = nil then
+    Exit;
+  N := FEditPanel.ItemCount;
+  Total := N;
+  if FEditForm.ShowButtons then
+    Inc(Total, 2);
+  if Total = 0 then
+    Exit;
+  for K := 1 to Total do
+  begin
+    if Forward then
+      T := T + 1
+    else
+      T := T - 1;
+    if T >= Total then
+      T := 0
+    else if T < 0 then
+      T := Total - 1;
+    C := FEditPanel.TargetControl(T);
+    if (C <> nil) and C.Enabled and C.Visible then
+      Exit(T);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.FormFocusTarget(T: Integer);
+var
+  C: TWinControl;
+begin
+  if FEditPanel = nil then
+    Exit;
+  C := FEditPanel.TargetControl(T);
+  if C = nil then
+    Exit;
+  FEditPanel.FCurrent := T;
+  // Ohne angezeigtes Fenster (z. B. Tests) nur das Ziel merken
+  if C.CanFocus and HandleAllocated and IsWindowVisible(Handle) then
+    C.SetFocus;
+  FormScrollIntoView(T);
+end;
+
+procedure TPPGCustomDBGrid.FormScrollIntoView(T: Integer);
+var
+  P: TPPGDBGridEditForm;
+  C: TWinControl;
+  R, V: TRect;
+  Y, Pad: Integer;
+begin
+  // Ziel mit dem Rand ins Bild (erstes Feld: ganz oben)
+  P := FEditPanel;
+  C := P.TargetControl(T);
+  if C = nil then
+    Exit;
+  R := C.BoundsRect;
+  OffsetRect(R, P.ScrollPos.X, P.ScrollPos.Y); // Lage im Inhalt
+  Pad := PPGScale(FormPad, ScalePPI);
+  InflateRect(R, 0, Pad);
+  V := P.ViewArea;
+  Y := P.ScrollPos.Y;
+  if R.Top < Y then
+    Y := R.Top
+  else if R.Bottom > Y + (V.Bottom - V.Top) then
+    Y := R.Bottom - (V.Bottom - V.Top);
+  if Y < 0 then
+    Y := 0;
+  if Y <> P.ScrollPos.Y then
+    P.ScrollTo(P.ScrollPos.X, Y);
+end;
+
+function TPPGCustomDBGrid.EditFormKey(Key: Word; Shift: TShiftState): Boolean;
+var
+  P: TPPGDBGridEditForm;
+  T, N, Nx: Integer;
+begin
+  Result := False;
+  P := FEditPanel;
+  if not FFormOpen or (P = nil) or (ssAlt in Shift) then
+    Exit;
+  T := P.FCurrent;
+  N := P.ItemCount;
+  // Offene Auswahlliste behaelt Enter und Esc
+  if (Key <> VK_TAB) and (T >= 0) and (T < N) and (P.FItems[T].Editor is TPPGComboBox) and
+    TPPGComboBox(P.FItems[T].Editor).DroppedDown then
+    Exit;
+  case Key of
+    VK_TAB:
+      if not (ssCtrl in Shift) then
+      begin
+        FormFocusTarget(FormNextTarget(T, not (ssShift in Shift)));
+        Result := True;
+      end;
+    VK_RETURN:
+      begin
+        Result := True;
+        if (ssCtrl in Shift) or (T = N) then
+          HideEditForm(True)
+        else if T = N + 1 then
+          HideEditForm(False)
+        else
+        begin
+          // Naechstes Feld bzw. Uebernehmen; ohne Schaltflaechen uebernimmt
+          // Enter im letzten Feld
+          Nx := FormNextTarget(T, True);
+          if (Nx <= T) or (Nx < 0) then
+            HideEditForm(True)
+          else
+            FormFocusTarget(Nx);
+        end;
+      end;
+    VK_ESCAPE:
+      begin
+        Result := True;
+        HideEditForm(False);
+      end;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.ShowEditForm;
+var
+  DS: TDataSet;
+  T, I: Integer;
+begin
+  if FFormOpen or not FormMode or not FormAllowed then
+    Exit;
+  DS := FDataLink.DataSet;
+  // Leere Datenmenge: erst Einfg (neuer Satz)
+  if DS.IsEmpty and (DS.State <> dsInsert) then
+    Exit;
+  HideEditor(True);
+  if EditorMode then
+    Exit; // Zell-Editor lehnt ab (OnValidateCell)
+  if FEditPanel = nil then
+  begin
+    FEditPanel := TPPGDBGridEditForm.Create(Self);
+    FEditPanel.FGrid := Self;
+    FEditPanel.Visible := False;
+    FEditPanel.Parent := Self;
+  end;
+  TCtrlAccess(FEditPanel).Preset := Preset;
+  TCtrlAccess(FEditPanel).StyleManager := StyleManager;
+  TCtrlAccess(FEditPanel.FApply).Preset := Preset;
+  TCtrlAccess(FEditPanel.FApply).StyleManager := StyleManager;
+  TCtrlAccess(FEditPanel.FCancel).Preset := Preset;
+  TCtrlAccess(FEditPanel.FCancel).StyleManager := StyleManager;
+  Inc(FFormBusy);
+  try
+    try
+      FFormOpen := True;
+      FFormReload := False;
+      FFormBm := nil;
+      // Satz merken (neuer Satz: keiner, er schliesst nach dem Buchen)
+      if (DS.State <> dsInsert) and not DS.IsEmpty then
+        FFormBm := DS.Bookmark;
+      FormBuild;
+      FormLoadValues(False);
+      // Weniger Zeilen im Puffer, Luecke unter der aktiven Zeile
+      UpdateBufferCount;
+      DataChanged;
+    except
+      FormClose(False, True);
+      raise;
+    end;
+  finally
+    Dec(FFormBusy);
+  end;
+  // Fokus: Feld der Fokusspalte, sonst das erste bedienbare
+  T := -1;
+  for I := 0 to FEditPanel.ItemCount - 1 do
+    if (FEditPanel.FItems[I].DataCol = DataCol(FocusCol)) and FEditPanel.FItems[I].Editor.Enabled then
+    begin
+      T := I;
+      Break;
+    end;
+  if T < 0 then
+    T := FormNextTarget(-1, True);
+  FormFocusTarget(T);
+  DoEditFormShow;
+end;
+
+function TPPGCustomDBGrid.HideEditForm(Accept: Boolean): Boolean;
+var
+  DS: TDataSet;
+begin
+  Result := True;
+  if not FFormOpen then
+    Exit;
+  if not FDataLink.Active then
+  begin
+    FormClose(False, True);
+    Exit;
+  end;
+  DS := FDataLink.DataSet;
+  Inc(FFormBusy);
+  try
+    if Accept then
+    begin
+      // Ein Fehler (Feldwert, Pflichtfeld, BeforePost) laesst das Formular offen
+      FormWriteValues;
+      if DS.State in dsEditModes then
+      begin
+        if DS.Modified then
+          DS.Post
+        else
+          DS.Cancel; // unveraenderter neuer Satz verschwindet (wie TDBGrid)
+      end;
+    end
+    else if DS.State in dsEditModes then
+      DS.Cancel;
+  finally
+    Dec(FFormBusy);
+  end;
+  FormClose(Accept, True);
+end;
+
+procedure TPPGCustomDBGrid.FormClose(Accepted, Refresh: Boolean);
+var
+  HadFocus: Boolean;
+begin
+  if not FFormOpen then
+    Exit;
+  FFormOpen := False;
+  FFormBm := nil;
+  FFormGap := 0;
+  if FEditPanel <> nil then
+  begin
+    HadFocus := FEditPanel.ContainsControl(FindControl(GetFocus));
+    FEditPanel.Visible := False;
+    FEditPanel.FCurrent := -1;
+    if HadFocus and CanFocus and HandleAllocated and IsWindowVisible(Handle) then
+      SetFocus;
+  end;
+  Inc(FSyncing);
+  try
+    SetRowGap(-1, 0);
+  finally
+    Dec(FSyncing);
+  end;
+  if Refresh and FDataLink.Active and not (csDestroying in ComponentState) then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
+  if not (csDestroying in ComponentState) then
+    DoEditFormClose(Accepted);
+end;
+
+function TPPGCustomDBGrid.EditFormEditor(ACol: Integer): TPPGCustomControl;
+var
+  I: Integer;
+begin
+  Result := nil;
+  if not FFormOpen or (FEditPanel = nil) then
+    Exit;
+  for I := 0 to High(FEditPanel.FItems) do
+    if FEditPanel.FItems[I].DataCol = ACol then
+      Exit(FEditPanel.FItems[I].Editor);
+end;
+
+procedure TPPGCustomDBGrid.DoEditFormShow;
+begin
+  if Assigned(FOnEditFormShow) then
+    FOnEditFormShow(Self);
+end;
+
+procedure TPPGCustomDBGrid.DoEditFormClose(Accepted: Boolean);
+begin
+  if Assigned(FOnEditFormClose) then
+    FOnEditFormClose(Self, Accepted);
+end;
+
+function TPPGCustomDBGrid.DoubleClickEdits: Boolean;
+begin
+  Result := inherited DoubleClickEdits or FFormOpen;
+end;
+
+procedure TPPGCustomDBGrid.DblClick;
+begin
+  // OnDblClick; Zell-Editor (nicht im Formular-Modus: CanEditCell)
+  inherited DblClick;
+  // Formular-Modus: Doppelklick auf eine Datenzeile oeffnet das Formular
+  if FormMode and FDownOnRow and not FFormOpen and not EditorMode then
+    ShowEditForm;
+end;
+
+procedure TPPGCustomDBGrid.KeyPress(var Key: Char);
+var
+  K: Char;
+  I: Integer;
+  Ed: TPPGCustomControl;
+begin
+  inherited KeyPress(Key);
+  // Formular-Modus: Tippen oeffnet das Formular und beginnt im Feld der
+  // Fokusspalte (Leertaste nicht: Mehrfachauswahl, Kaestchen)
+  if not FormMode or FFormOpen or (Key <= ' ') or not FDataLink.Active then
+    Exit;
+  K := Key;
+  Key := #0;
+  ShowEditForm;
+  if not FFormOpen then
+    Exit;
+  I := FEditPanel.FCurrent;
+  if (I < 0) or (I >= FEditPanel.ItemCount) or not FEditPanel.FItems[I].Editable or
+    (FEditPanel.FItems[I].Kind <> gekText) then
+    Exit;
+  Ed := FEditPanel.FItems[I].Editor;
+  PPGGridEditorTypeChar(Ed, K);
 end;
 
 { TPPGDBGrid }

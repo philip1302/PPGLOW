@@ -204,6 +204,9 @@ type
     FPaintMaxColScroll: Integer;
     FPaintFirstRight: Integer;
     FHotV: Integer;              // Zeile unter der Maus (Styles.HotRow)
+    // Luecke unter einer Zeile (sichtbare Zeile, -1 = keine; Hoehe in Pixeln)
+    FGapRow: Integer;
+    FGapHeight: Integer;
     FGridLineWidth: Integer;
     FDrawingStyle: TGridDrawingStyle;
     FGradientStartColor: TColor;
@@ -342,6 +345,8 @@ type
     procedure InvalidateColGeometry;
     procedure EnsureGeometry;
     procedure BuildRowGeometry(PPI: Integer);
+    /// Luecke (SetRowGap) in die Zeilenhoehen einrechnen.
+    procedure ApplyRowGap;
     /// Aggregate der Spalten als Text (aendert er sich, wird neu gerechnet).
     function AggSignature: string;
     /// Zaehler fuer Tests: volle Summen-Rechnungen, Neuaufbau der Zeilen.
@@ -600,6 +605,20 @@ type
     /// Pfeil hoch/runter in einem Text-Editor (nach dem Uebernehmen): Fokus
     /// weiter. Standard: Zeile darueber/darunter.
     procedure EditorArrowMove(Down: Boolean); virtual;
+    /// Hat der Doppelklick (DblClick) bearbeitet? Dann laesst das folgende
+    /// MouseDown mit ssDouble den Fokus beim Editor. Standard: EditorMode.
+    function DoubleClickEdits: Boolean; virtual;
+    { Luecke unter einer Zeile (DB-Grid: Bearbeitungsformular). Die Zeile
+      VRow wird um AHeight Pixel hoeher, ihre Zellen behalten die normale
+      Hoehe; darunter bleibt ein freier Streifen ueber die ganze Breite (dort
+      liegt ein Kind-Control). Die folgenden Zeilen ruecken nach unten.
+      VRow < 0 bzw. AHeight <= 0 hebt die Luecke auf. }
+    procedure SetRowGap(VRow, AHeight: Integer);
+    /// Zeile mit Luecke (-1 = keine) und Hoehe der Luecke (Pixel).
+    property RowGapRow: Integer read FGapRow;
+    property RowGapHeight: Integer read FGapHeight;
+    /// Hoehe der Luecke in Zeile VRow (0 = keine).
+    function RowGapOf(VRow: Integer): Integer;
     procedure PaintRegion(const ACanvas: IPPGCanvas; ColFrom, ColTo, RowFrom, RowTo: Integer;
       const AClip: TRect; FixedArea: Boolean);
     function RawCellRect(ACol, VRow: Integer): TRect;
@@ -613,6 +632,7 @@ type
     /// Schriften der Element-Stile verwerfen (Schrift, Stil, Spalten geaendert).
     procedure FontsChanged;
     { Eingabe }
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -1019,6 +1039,7 @@ begin
   FStyles.OnChange := StylesObjChanged;
   FFontCache := TPPGFontCache.Create;
   FHotV := -1;
+  FGapRow := -1;
   FGridLineWidth := 1;
   FDrawingStyle := gdsThemed;
   FGradientStartColor := clWhite;
@@ -4338,7 +4359,10 @@ begin
   end;
   X := FColX[N];
   if not FRowGeomValid then
+  begin
     BuildRowGeometry(PPI);
+    ApplyRowGap;
+  end;
   // Baender liegen ueber dem Kopf und gehoeren zur Inhaltshoehe
   BH := BandHeight + GroupPanelHeight + FooterHeight;
   // Eigene Anordnung: ohne Baender und Summenzeile, nie waagerecht scrollen
@@ -4392,6 +4416,36 @@ begin
     FLayout.SetRowHeight(Integer(Pairs[J] shr 32), Integer(Pairs[J] and $FFFFFFFF));
 end;
 
+procedure TPPGCustomGrid.ApplyRowGap;
+begin
+  // Luecke unter einer Zeile: die Zeile wird hoeher (Zellen nicht, RawCellRect)
+  if (FGapRow >= VFixedRows) and (FGapRow < FLayout.Count) and (FGapHeight > 0) then
+    FLayout.SetRowHeight(FGapRow, FLayout.RowHeight(FGapRow) + FGapHeight);
+end;
+
+procedure TPPGCustomGrid.SetRowGap(VRow, AHeight: Integer);
+begin
+  if (VRow < 0) or (AHeight <= 0) then
+  begin
+    VRow := -1;
+    AHeight := 0;
+  end;
+  if (VRow = FGapRow) and (AHeight = FGapHeight) then
+    Exit;
+  FGapRow := VRow;
+  FGapHeight := AHeight;
+  FRowGeomValid := False;
+  InvalidateGeometry;
+end;
+
+function TPPGCustomGrid.RowGapOf(VRow: Integer): Integer;
+begin
+  if (VRow = FGapRow) and (VRow >= 0) and (VRow < FLayout.Count) then
+    Result := FGapHeight
+  else
+    Result := 0;
+end;
+
 function TPPGCustomGrid.FixedWidth: Integer;
 begin
   EnsureGeometry;
@@ -4411,7 +4465,7 @@ function TPPGCustomGrid.CellRect(ACol, VRow: Integer): TRect;
 var
   V: TRect;
   X, Y: Int64;
-  W: Integer;
+  W, H: Integer;
 begin
   Result := Rect(0, 0, 0, 0);
   EnsureGeometry;
@@ -4425,10 +4479,12 @@ begin
   if VRow >= VFixedRows then
     Y := Y - RowScrollY;
   W := FColX[ACol + 1] - FColX[ACol];
-  if (Y > V.Bottom - V.Top) or (Y + FLayout.RowHeight(VRow) < 0) then
+  // Zellen ohne die Luecke darunter (SetRowGap)
+  H := FLayout.RowHeight(VRow) - RowGapOf(VRow);
+  if (Y > V.Bottom - V.Top) or (Y + H < 0) then
     Exit;
   Result := Rect(V.Left + Integer(X), V.Top + Integer(Y), V.Left + Integer(X) + W,
-    V.Top + Integer(Y) + FLayout.RowHeight(VRow));
+    V.Top + Integer(Y) + H);
   if UseRightToLeftAlignment then
     Result := Rect(V.Left + V.Right - Result.Right, Result.Top,
       V.Left + V.Right - Result.Left, Result.Bottom);
@@ -4484,6 +4540,10 @@ begin
     Inc(CY, RowScrollY);
   if (CY < FLayout.TotalHeight64) and (FLayout.Count > 0) then
     VRow := FLayout.RowAt(CY);
+  // Luecke unter einer Zeile gehoert zu keiner Zelle
+  if (VRow >= 0) and (RowGapOf(VRow) > 0) and
+    (CY >= FLayout.RowTop(VRow) + FLayout.RowHeight(VRow) - RowGapOf(VRow)) then
+    VRow := -1;
   Result := (ACol >= 0) and (VRow >= 0);
 end;
 
@@ -4837,7 +4897,7 @@ begin
     Y := -(MaxInt div 2);
   Result := Rect(V.Left + Integer(X), V.Top + Integer(Y),
     V.Left + Integer(X) + FColX[ACol + 1] - FColX[ACol],
-    V.Top + Integer(Y) + FLayout.RowHeight(VRow));
+    V.Top + Integer(Y) + FLayout.RowHeight(VRow) - RowGapOf(VRow));
   if UseRightToLeftAlignment then
     Result := Rect(V.Left + V.Right - Result.Right, Result.Top,
       V.Left + V.Right - Result.Left, Result.Bottom);
@@ -6037,6 +6097,11 @@ begin
     MoveFocus(FFocusC, FFocusV - 1, False, True);
 end;
 
+function TPPGCustomGrid.DoubleClickEdits: Boolean;
+begin
+  Result := EditorMode;
+end;
+
 procedure TPPGCustomGrid.PaintBands(const ACanvas: IPPGCanvas; const View: TRect);
 var
   L, Levels, RH, VC, First, B, Y0, Pad: Integer;
@@ -6443,6 +6508,21 @@ begin
     end;
   end;
   inherited;
+end;
+
+procedure TPPGCustomGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  // Doppelklick: DblClick kommt vor dem MouseDown mit ssDouble und hat den
+  // Editor schon geoeffnet. Der Fokus bleibt im Editor (das SetFocus der
+  // Basis bzw. von ContentMouseDown wuerde ihn ueber EditorExit sofort
+  // wieder schliessen); nur OnMouseDown wird noch gemeldet.
+  if (Button = mbLeft) and (ssDouble in Shift) and DoubleClickEdits then
+  begin
+    if Assigned(OnMouseDown) then
+      OnMouseDown(Self, Button, Shift, X, Y);
+    Exit;
+  end;
+  inherited MouseDown(Button, Shift, X, Y);
 end;
 
 procedure TPPGCustomGrid.ContentMouseDown(Button: TMouseButton; Shift: TShiftState;

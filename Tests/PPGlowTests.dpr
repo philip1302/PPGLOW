@@ -217,6 +217,7 @@ uses
   PPG.Tests.DBGridMultiSelect in 'PPG.Tests.DBGridMultiSelect.pas',
   PPG.Tests.DBGridColumns in 'PPG.Tests.DBGridColumns.pas',
   PPG.Tests.DBGridCards in 'PPG.Tests.DBGridCards.pas',
+  PPG.Tests.DBGridEditForm in 'PPG.Tests.DBGridEditForm.pas',
   PPG.Tests.Image in 'PPG.Tests.Image.pas',
   PPG.Tests.Phase19 in 'PPG.Tests.Phase19.pas',
   PPG.Tests.Phase20 in 'PPG.Tests.Phase20.pas',
