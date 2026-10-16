@@ -219,6 +219,7 @@
         <DCCReference Include="..\..\Source\Render\PPG.Render.Shapes.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Sparkline.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Gauge.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.RichEdit.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

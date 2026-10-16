@@ -156,7 +156,8 @@ uses
   PPG.Chart.Palette in '..\..\Source\Core\PPG.Chart.Palette.pas',
   PPG.Render.Shapes in '..\..\Source\Render\PPG.Render.Shapes.pas',
   PPG.Sparkline in '..\..\Source\Controls\PPG.Sparkline.pas',
-  PPG.Gauge in '..\..\Source\Controls\PPG.Gauge.pas';
+  PPG.Gauge in '..\..\Source\Controls\PPG.Gauge.pas',
+  PPG.RichEdit in '..\..\Source\Controls\PPG.RichEdit.pas';
 
 {$R *.res}
 

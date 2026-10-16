@@ -70,6 +70,7 @@ Erzeugt von `Build\make-docs.ps1` durch Suche in `Tests\*.pas`: jede Testunit, d
 | [TPPGCheckComboBox](TPPGCheckComboBox.md) | 6 | `PPG.Tests.Audit11C` (TAudit11CBehaviourTests, TAudit11CGdiTests); `PPG.Tests.Audit45` (TNamingTests, TSetterFixTests, TStreamingFixTests); `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Phase12c` (TCheckComboTests, TFieldsGalleryTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGColumnComboBox](TPPGColumnComboBox.md) | 7 | `PPG.Tests.Audit11C` (TAudit11CBehaviourTests, TAudit11CGdiTests); `PPG.Tests.Audit45` (TNamingTests, TSetterFixTests); `PPG.Tests.Audit5d` (TVclPropsTests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Phase12c` (TColumnComboTests, TFieldsGalleryTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGTagEdit](TPPGTagEdit.md) | 8 | `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit45` (TNamingTests, TSetterFixTests, TStreamingFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Audit8D` (TAudit8DTests); `PPG.Tests.Phase12c` (TFieldsGalleryTests, TTagEditTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
+| [TPPGRichEdit](TPPGRichEdit.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.RichEdit` (TRichEditTests); `PPG.Tests.Streaming` |
 | [TPPGGridPrinter](TPPGGridPrinter.md) | 7 | `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit45` (TEffectFixTests, TStreamingFixTests); `PPG.Tests.Phase13e` (TGridPrintTests); `PPG.Tests.Phase13f` (TExportTests); `PPG.Tests.Phase13g` (TDBGridColumnTests); `PPG.Tests.Phase17` (TGridLookPrintTests); `PPG.Tests.Streaming` |
 | [TPPGPlannerPrinter](TPPGPlannerPrinter.md) | 3 | `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Phase14aPlanner` (TPlannerTests); `PPG.Tests.Streaming` |
 | [TPPGKanbanPrinter](TPPGKanbanPrinter.md) | 3 | `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Custom` (TCustomRestTests); `PPG.Tests.Streaming` |
@@ -98,6 +99,7 @@ Erzeugt von `Build\make-docs.ps1` durch Suche in `Tests\*.pas`: jede Testunit, d
 | [TPPGDBRadioGroup](TPPGDBRadioGroup.md) | 6 | `PPG.Tests.Audit45` (TDBBindingHoldTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Phase19` (TBusyOverlayTests, TChoiceValidationHintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) |
 | [TPPGDBText](TPPGDBText.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.Inventur` (TDBTextTests); `PPG.Tests.Streaming` |
 | [TPPGDBToggleSwitch](TPPGDBToggleSwitch.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.Inventur` (TDBToggleSwitchTests); `PPG.Tests.Streaming` |
+| [TPPGDBRichEdit](TPPGDBRichEdit.md) | 3 | `PPG.Tests.Audit5d`; `PPG.Tests.RichEdit` (TDBRichEditTests); `PPG.Tests.Streaming` |
 
 ## Ohne Testunit
 

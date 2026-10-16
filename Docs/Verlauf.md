@@ -6,6 +6,14 @@
 
 ### 16.10.2026
 
+**RichEdit-Controls** (Zweig `claude/phase3-richedit`): `TPPGRichEdit` (`PPG.RichEdit`, Ersatz für `TRichEdit`) und `TPPGDBRichEdit` (`PPG.DB.RichEdit`, Ersatz für `TDBRichEdit`). Natives RichEdit (`msftedit`) als inneres Edit der Feld-Basis `TPPGCustomField`: Preset, Fokusrahmen, `ValidationState`, Hochkontrast, Screenreader und Dark-Mode-Scrollbalken kommen von dort.
+- API wie `TRichEdit`: `Lines` (RTF per `LoadFromStream`/`SaveToStream`, `PlainText`), `SelAttributes`/`DefAttributes`/`Paragraph` (die VCL-Klassen), `FindText`, `Print`, `Zoom`, `EnableURLs`, `OnSelectionChange`, `OnLinkClick`. DFM-kompatibel; die Zeilen stehen als reiner Text in der DFM.
+- Theme: Hintergrund über `Color`; Text ohne eigene Farbe zeichnet das RichEdit in `COLOR_WINDOWTEXT`, daher gilt beim Zeichnen die Themefarbe als Systemfarbe (`SetSysColorsTemp`, wie die VCL bei deaktivierten RichEdits). Eigene RTF-Farben und der gespeicherte RTF-Text bleiben unverändert. Zwei VCL-Eigenheiten sind abgefangen: `CM_COLORCHANGED` und `HideSelection` erzwingen ohne Parent ein Fenster, und `CreateWnd` löst `ParentFont` des inneren Edits ab.
+- `TPPGDBRichEdit`: RTF in Memo-/BLOB-Feldern (`ftMemo`, `ftWideMemo`, `ftBlob`), Altbestand mit reinem Text wird unformatiert angezeigt, Textfelder und `PlainText` arbeiten mit reinem Text, ReadOnly folgt Feld und Datenmenge, Ablauf und Esc wie `TPPGDBMemo`.
+- `migrate.ps1`: `TRichEdit` und `TDBRichEdit` (Fixture `Unit7`, Selbsttest grün). Paletten, Symbole, Pakete, Projektlisten, Tests (Suite `RichEdit`), Doku.
+- Offen: kein Delphi-13- und kein Win64-Lauf; keine Showcase-Seite in der Demo; `Print` ist nicht automatisch getestet (kein Drucker).
+
+
 **Inventur-Controls** (Zweig `claude/phase3-db-controls`): Die Inventur eines echten Projekts hat drei der in Phase 18 zurückgestellten Nachbauten fällig gemacht. Sie bleiben DFM-kompatibel zum VCL-Vorbild, damit `migrate.ps1` sie einsetzen kann, und halten die Regel „Mehrwert statt Klone“ ein.
 - `TPPGDBText` (`PPG.DB.Controls`, Ersatz für `TDBText`): Basis `TPPGLabel` (Theme-Farben, Dark Mode, Hochkontrast, `Secondary`, Markup), `NullText` für leere Felder, `DisplayFormat` für Zahlen- und Datumsfelder; zeigt `Field.DisplayText`, `Caption` wird nicht gespeichert.
 - `TPPGShape` (`PPG.Shape`, Ersatz für `TShape`): alle sechs Formen, Fläche und Rand kantengeglättet über den Renderer (GDI-Fallback wie bisher), die Vorgabefarben von `Brush` und `Pen` folgen im Dark Mode und im Hochkontrast dem Theme (`ThemeColors`), im Hellen sieht es aus wie `TShape`. Gestrichelte Stifte und Schraffuren zeichnet die VCL. `Docs\Roadmap3.md` („Shape … nicht geplant“) ist nachgetragen.
