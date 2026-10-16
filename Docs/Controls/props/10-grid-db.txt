@@ -57,6 +57,9 @@ TPPGCustomComboBox.Style = csDropDown: freie Eingabe im Feld plus Liste (mit Aut
 TPPGCustomComboBox.Text = Der angezeigte bzw. eingegebene Text. Bei csDropDownList der Text des gewählten Eintrags.
 
 # --- TPPGCustomDBGrid ---
+TPPGCustomDBGrid.CardLabelWidth = Kartenansicht: Breite der Beschriftung links in der Karte (logische Pixel, 0..2000; Vorgabe 110). 0 = ohne Beschriftung, der Wert nutzt die ganze Breite. Der Wert behält mindestens 24 Pixel.
+TPPGCustomDBGrid.CardSpacing = Kartenansicht: Abstand zwischen den Karten und zum Rand in logischen Pixeln (0..200; Vorgabe 8).
+TPPGCustomDBGrid.CardWidth = Kartenansicht: Breite einer Karte in logischen Pixeln (60..4000; Vorgabe 280). Ist die Ansicht schmaler, wird die Karte schmaler. Die Höhe ergibt sich aus den sichtbaren Spalten (eine Zeile je Feld).
 TPPGCustomDBGrid.DataSource = Die Datenquelle, deren Datenmenge das Grid zeigt. Ohne Columns erscheinen alle sichtbaren Felder (Titel = DisplayLabel, Breite aus DisplayWidth).
 > `PPGDBGrid1.DataSource := DataSource1;`
 TPPGCustomDBGrid.ExportMaxRecords = Drucken und Export lesen höchstens so viele Datensätze (Schutz vor sehr großen Tabellen). Vorgabe 100000.
@@ -253,6 +256,8 @@ TPPGDBGridColumn.ListSource = Nachschlage-Spalte wie TDBLookupComboBox: Datenque
 TPPGDBGridColumn.KeyField = Schlüsselfeld der Liste (ListSource), dessen Wert zum Feld der Spalte (FieldName) passt. Nur ein Feld.
 TPPGDBGridColumn.ListField = Angezeigtes Feld der Liste; weitere Felder nach einem Semikolon werden ignoriert.
 TPPGCustomDBGrid.ShowRequired = True: Spalten mit Pflichtfeldern (TField.Required) zeigen im Titel ein Sternchen.
+TPPGCustomDBGrid.ViewStyle = dgvTable: Tabelle wie TDBGrid. dgvCards: Kartenansicht, je Datensatz eine Karte mit den sichtbaren Spalten als Zeilen „Beschriftung: Wert“ (Titel bzw. DisplayLabel, Kästchen und Nachschlagetexte wie in der Tabelle). Die Karten fließen nebeneinander, brechen um und werden senkrecht gescrollt; die aktuelle Karte ist der aktuelle Datensatz. Pfeile, Bild auf/ab und Pos1/Ende wechseln die Karte, Tab das Feld, F2/Enter oder Doppelklick bearbeiten das Feld, Mehrfachauswahl wie in der Tabelle.
+> `PPGDBGrid1.ViewStyle := dgvCards; PPGDBGrid1.CardWidth := 320;`
 TPPGDBLookupComboBox.KeyField = Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben.
 TPPGDBLookupComboBox.ListField = Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile.
 > `Lookup1.ListSource := dsKunden; Lookup1.KeyField := 'ID'; Lookup1.ListField := 'Name;Ort';`

@@ -555,6 +555,10 @@ type
     function FrameInset: Integer; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     procedure PaintViewport(const ACanvas: IPPGCanvas; const View: TRect); override;
+    /// Farben, Schriften und Zellart-Kontext fuer einen Zeichenvorgang
+    /// vorbereiten bzw. danach freigeben (immer paarweise, try/finally).
+    procedure BeginPaintPass(const ACanvas: IPPGCanvas);
+    procedure EndPaintPass;
     /// Owner-Draw einer Zelle (OnDrawCell); Hintergrund und Text sind gezeichnet.
     procedure DrawCell(const ACanvas: IPPGCanvas; ACol, VRow: Integer; const R: TRect); virtual;
     /// Gibt es Owner-Draw-Ereignisse (Standard: OnDrawCell)? Nur dann ruft
@@ -576,6 +580,26 @@ type
     function DefaultDrawsKinds: Boolean; virtual;
     procedure DrawCellExtras(const ACanvas: IPPGCanvas; ACol, VRow: Integer;
       const R: TRect; const S: string);
+    { Eigene Anordnung der Zellen (DB-Grid: Kartenansicht). Liefert
+      CustomCellLayout True, liegen die Zellen nicht als Tabelle: CellRect,
+      MouseCoord, MakeCellVisible und das Zeichnen gehen an die Custom-
+      Methoden. Kein waagerechtes Scrollen; Baender, Gruppenleiste und
+      Summenzeile entfallen. Spalten, Zeilen, Fokus, Editor, Zellarten und
+      Barrierefreiheit arbeiten unveraendert mit Spalte/Zeile. }
+    function CustomCellLayout: Boolean; virtual;
+    /// Zelle (Anzeige-Spalte, sichtbare Zeile) in Client-Koordinaten; leer =
+    /// nicht sichtbar.
+    function CustomCellRect(ACol, VRow: Integer): TRect; virtual;
+    function CustomMouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean; virtual;
+    procedure CustomMakeCellVisible(ACol, VRow: Integer); virtual;
+    /// Zeichnet die Ansicht; Farben (PaintColors), Schriften und Zellart-
+    /// Kontext sind vorbereitet wie fuer die Tabelle.
+    procedure PaintCustomLayout(const ACanvas: IPPGCanvas; const View: TRect); virtual;
+    /// Farben dieses Zeichenvorgangs (nur waehrend des Zeichnens gueltig).
+    property PaintColors: TPPGGridPaintColors read FPaint;
+    /// Pfeil hoch/runter in einem Text-Editor (nach dem Uebernehmen): Fokus
+    /// weiter. Standard: Zeile darueber/darunter.
+    procedure EditorArrowMove(Down: Boolean); virtual;
     procedure PaintRegion(const ACanvas: IPPGCanvas; ColFrom, ColTo, RowFrom, RowTo: Integer;
       const AClip: TRect; FixedArea: Boolean);
     function RawCellRect(ACol, VRow: Integer): TRect;
@@ -4317,6 +4341,12 @@ begin
     BuildRowGeometry(PPI);
   // Baender liegen ueber dem Kopf und gehoeren zur Inhaltshoehe
   BH := BandHeight + GroupPanelHeight + FooterHeight;
+  // Eigene Anordnung: ohne Baender und Summenzeile, nie waagerecht scrollen
+  if CustomCellLayout then
+  begin
+    BH := 0;
+    X := 0;
+  end;
   H := RowsContentHeight;
   if H > MaxInt - BH then
     H := MaxInt - BH;
@@ -4387,6 +4417,8 @@ begin
   EnsureGeometry;
   if (ACol < 0) or (ACol >= VColCount) or (VRow < 0) or (VRow >= FLayout.Count) then
     Exit;
+  if CustomCellLayout then
+    Exit(CustomCellRect(ACol, VRow));
   V := GridViewRect;
   X := ColLeft(ACol);
   Y := FLayout.RowTop(VRow);
@@ -4413,6 +4445,8 @@ begin
   ACol := -1;
   VRow := -1;
   EnsureGeometry;
+  if CustomCellLayout then
+    Exit(CustomMouseCoord(X, Y, ACol, VRow));
   V := GridViewRect;
   if not PtInRect(V, Point(X, Y)) then
     Exit;
@@ -4462,6 +4496,11 @@ begin
   EnsureGeometry;
   if (ACol < 0) or (ACol >= VColCount) or (VRow < 0) or (VRow >= FLayout.Count) then
     Exit;
+  if CustomCellLayout then
+  begin
+    CustomMakeCellVisible(ACol, VRow);
+    Exit;
+  end;
   V := GridViewRect;
   X := ScrollX;
   Y := RowScrollY;
@@ -4620,6 +4659,12 @@ begin
   EnsureGeometry;
   if VRow >= FLayout.Count then
     Exit;
+  // Eigene Anordnung: eine Zeile ist kein Streifen ueber die ganze Breite
+  if CustomCellLayout then
+  begin
+    Invalidate;
+    Exit;
+  end;
   GV := GridViewRect;
   R := RawCellRect(0, VRow);
   R.Left := GV.Left;
@@ -5815,27 +5860,19 @@ var
 
 begin
   EnsureGeometry;
+  if CustomCellLayout then
+  begin
+    BeginPaintPass(ACanvas);
+    try
+      PaintCustomLayout(ACanvas, View);
+    finally
+      EndPaintPass;
+    end;
+    Exit;
+  end;
   if (VColCount = 0) or (FLayout.Count = 0) then
     Exit;
-  // Farben einmal pro Zeichnen (nicht je Zelle)
-  GetGridColors(FPaint.Fill, FPaint.Text, FPaint.Header, FPaint.Line, FPaint.Accent);
-  // Schriften bleiben ueber Zeichenvorgaenge (Audit 8c #10); neu bei anderer
-  // DPI bzw. wenn sich zu viele angesammelt haben
-  if (FFontCachePPI <> ScalePPI) or (FFontCache.Count > 64) then
-  begin
-    FFontCache.Clear;
-    FFontCachePPI := ScalePPI;
-  end;
-  PrepareStyleColors;
-  FPaint.Hint := PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.55);
-  FPainter.Prepare(Renderer);
-  PrepareKindContext(ACanvas);
-  // Werte fuer RawCellRect/ColLeft einmal je Zeichnen (Audit 8c #8)
-  FPaintGV := GridViewRect;
-  FPaintMaxColScroll := MaxColScroll;
-  FPaintFirstRight := FirstRightCol;
-  FPaintCached := True;
-  FPainter.Painting := True;
+  BeginPaintPass(ACanvas);
   try
     GV := View;
     PH := GroupPanelHeight;
@@ -5929,12 +5966,75 @@ begin
         X + PPGScale(1, ScalePPI), GV.Top + FH), 0, FPaint.Accent, 255);
     end;
   finally
-    FPaintCached := False;
-    FPainter.Painting := False;
-    FPainter.CollectTexts := False;
-    FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
-    FPaint.HeaderFont := nil;
+    EndPaintPass;
   end;
+end;
+
+procedure TPPGCustomGrid.BeginPaintPass(const ACanvas: IPPGCanvas);
+begin
+  // Farben einmal pro Zeichnen (nicht je Zelle)
+  GetGridColors(FPaint.Fill, FPaint.Text, FPaint.Header, FPaint.Line, FPaint.Accent);
+  // Schriften bleiben ueber Zeichenvorgaenge (Audit 8c #10); neu bei anderer
+  // DPI bzw. wenn sich zu viele angesammelt haben
+  if (FFontCachePPI <> ScalePPI) or (FFontCache.Count > 64) then
+  begin
+    FFontCache.Clear;
+    FFontCachePPI := ScalePPI;
+  end;
+  PrepareStyleColors;
+  FPaint.Hint := PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.55);
+  FPainter.Prepare(Renderer);
+  PrepareKindContext(ACanvas);
+  // Werte fuer RawCellRect/ColLeft einmal je Zeichnen (Audit 8c #8)
+  FPaintGV := GridViewRect;
+  FPaintMaxColScroll := MaxColScroll;
+  FPaintFirstRight := FirstRightCol;
+  FPaintCached := True;
+  FPainter.Painting := True;
+end;
+
+procedure TPPGCustomGrid.EndPaintPass;
+begin
+  FPaintCached := False;
+  FPainter.Painting := False;
+  FPainter.CollectTexts := False;
+  FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
+  FPaint.HeaderFont := nil;
+end;
+
+function TPPGCustomGrid.CustomCellLayout: Boolean;
+begin
+  Result := False;
+end;
+
+function TPPGCustomGrid.CustomCellRect(ACol, VRow: Integer): TRect;
+begin
+  Result := Rect(0, 0, 0, 0);
+end;
+
+function TPPGCustomGrid.CustomMouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean;
+begin
+  ACol := -1;
+  VRow := -1;
+  Result := False;
+end;
+
+procedure TPPGCustomGrid.CustomMakeCellVisible(ACol, VRow: Integer);
+begin
+  // Erweiterungspunkt (DB-Grid: Kartenansicht)
+end;
+
+procedure TPPGCustomGrid.PaintCustomLayout(const ACanvas: IPPGCanvas; const View: TRect);
+begin
+  // Erweiterungspunkt (DB-Grid: Kartenansicht)
+end;
+
+procedure TPPGCustomGrid.EditorArrowMove(Down: Boolean);
+begin
+  if Down then
+    MoveFocus(FFocusC, FFocusV + 1, False, True)
+  else
+    MoveFocus(FFocusC, FFocusV - 1, False, True);
 end;
 
 procedure TPPGCustomGrid.PaintBands(const ACanvas: IPPGCanvas; const View: TRect);
@@ -7109,10 +7209,7 @@ begin
       begin
         // Text-Editor: Pfeil hoch/runter uebernimmt und wechselt die Zeile
         HideEditor(True);
-        if Key = VK_UP then
-          MoveFocus(FFocusC, FFocusV - 1, False, True)
-        else
-          MoveFocus(FFocusC, FFocusV + 1, False, True);
+        EditorArrowMove(Key = VK_DOWN);
         Key := 0;
       end;
   end;

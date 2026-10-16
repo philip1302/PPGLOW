@@ -347,6 +347,7 @@
         <DCCReference Include="PPG.Tests.Inventur.pas"/>
         <DCCReference Include="PPG.Tests.DBGridMultiSelect.pas"/>
         <DCCReference Include="PPG.Tests.DBGridColumns.pas"/>
+        <DCCReference Include="PPG.Tests.DBGridCards.pas"/>
         <DCCReference Include="PPG.Tests.Image.pas"/>
         <DCCReference Include="PPG.Tests.Phase19.pas"/>
         <DCCReference Include="PPG.Tests.Phase20.pas"/>
