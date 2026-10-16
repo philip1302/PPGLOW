@@ -75,6 +75,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und
 | [TPPGPlannerPrinter](TPPGPlannerPrinter.md) | `PPG.Planner.Print` | Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
 | [TPPGKanbanPrinter](TPPGKanbanPrinter.md) | `PPG.Kanban.Print` | Drucken des Kanban-Boards ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
 | [TPPGStyleManager](TPPGStyleManager.md) | `PPG.StyleManager` | Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster). |
+| [TPPGImage](TPPGImage.md) | `PPG.Image` | Bildanzeige (Ersatz fuer TImage), dazu die gemeinsame Zeichen- und Quellenlogik (TPPGImageView), die auch TPPGDBImage nutzt. |
 
 ## Palette PPGlow DB
 
@@ -100,6 +101,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und
 | [TPPGDBText](TPPGDBText.md) | `PPG.DB.Controls` | Ersatz fuer TDBText: zeigt Field.DisplayText, nur lesend, folgt dem Datensatz. Mehrwert gegenueber TDBText: Farben des Themes (Dark Mode, Hochkontrast, Secondary, Markup wie TPPGLabel), NullText fuer leere Felder und DisplayFormat zum Formatieren von Zahlen und Datumsfeldern. |
 | [TPPGDBToggleSwitch](TPPGDBToggleSwitch.md) | `PPG.DB.Controls` | Schalter an einem Ja/Nein-Feld (Boolean oder ValueChecked/ValueUnchecked wie TDBCheckBox). Schreibt beim Umschalten ins Feld. |
 | [TPPGDBRichEdit](TPPGDBRichEdit.md) | `PPG.DB.RichEdit` | TPPGRichEdit an einem Memo- oder BLOB-Feld (Ersatz fuer TDBRichEdit). |
+| [TPPGDBImage](TPPGDBImage.md) | `PPG.DB.Controls` | Ersatz fuer TDBImage: zeigt ein Bild aus einem BLOB-Feld (BMP, PNG, JPEG, GIF, ICO, WMF/EMF; das Format wird an den ersten Bytes erkannt) und schreibt es zurueck. Bedienung wie TDBImage: Strg+C / Strg+Einfg kopieren, Strg+V / Umschalt+Einfg einfuegen, Strg+X / Umschalt+Entf ausschneiden, Enter laedt bei AutoDisplay = False, Esc setzt zurueck. Mehrwert: Themenfarben und Rahmen (Dark Mode, Hochkontrast), Bildliste (Images/ImageName) als Platzhalter fuer leere Felder, StoreFormat, LoadFromFile/SaveToFile. |
 
 ## Typen
 

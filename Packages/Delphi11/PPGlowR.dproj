@@ -220,6 +220,7 @@
         <DCCReference Include="..\..\Source\Controls\PPG.Sparkline.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Gauge.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.RichEdit.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.Image.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

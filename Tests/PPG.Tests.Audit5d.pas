@@ -80,7 +80,7 @@ type
 
 const
   /// Alle sichtbaren Controls der Paletten (PPG.Reg, PPG.DB.Reg).
-  VisualClasses: array[0..75] of TControlClass = (
+  VisualClasses: array[0..76] of TControlClass = (
     TPPGBadge, TPPGBreadcrumb, TPPGButton, TPPGCalendar, TPPGChart, TPPGCheckBox,
     TPPGCheckComboBox, TPPGCheckGroup, TPPGCheckListBox, TPPGColorPicker, TPPGColumnComboBox,
     TPPGComboBox, TPPGDatePicker, TPPGEdit, TPPGExpander, TPPGFileEdit, TPPGGauge, TPPGGrid,
@@ -94,7 +94,7 @@ const
     TPPGDBComboBox, TPPGDBDatePicker, TPPGDBEdit, TPPGDBGrid, TPPGDBKanban,
     TPPGDBLookupComboBox, TPPGDBMaskEdit, TPPGDBMemo, TPPGDBNavigator, TPPGDBNumberEdit,
     TPPGDBPlanner, TPPGDBRadioGroup, TPPGDBTagEdit, TPPGDBText, TPPGDBToggleSwitch,
-    TPPGRichEdit, TPPGDBRichEdit);
+    TPPGRichEdit, TPPGDBRichEdit, TPPGDBImage);
 
 implementation
 

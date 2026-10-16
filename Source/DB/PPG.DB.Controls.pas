@@ -36,9 +36,10 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, Vcl.Controls,
-  Vcl.StdCtrls, Vcl.ComCtrls, Data.DB, Vcl.DBCtrls,
+  Vcl.StdCtrls, Vcl.ComCtrls, Data.DB, Vcl.DBCtrls, Vcl.Graphics, Vcl.Forms, Vcl.ImgList,
+  {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF}
   PPG.Types, PPG.Controls.Field, PPG.Edit, PPG.Memo, PPG.CheckBox, PPG.ComboBox,
-  PPG.DatePicker, PPG.Labels, PPG.ToggleSwitch;
+  PPG.DatePicker, PPG.Labels, PPG.ToggleSwitch, PPG.Image;
 
 type
   /// TFieldDataLink mit Sperre gegen das Ueberschreiben waehrend der
@@ -439,6 +440,183 @@ type
     property Checked stored False;
   end;
 
+  /// Ersatz fuer TDBImage: zeigt ein Bild aus einem BLOB-Feld (BMP, PNG, JPEG,
+  /// GIF, ICO, WMF/EMF; das Format wird an den ersten Bytes erkannt) und
+  /// schreibt es zurueck. Bedienung wie TDBImage: Strg+C / Strg+Einfg
+  /// kopieren, Strg+V / Umschalt+Einfg einfuegen, Strg+X / Umschalt+Entf
+  /// ausschneiden, Enter laedt bei AutoDisplay = False, Esc setzt zurueck.
+  /// Mehrwert: Themenfarben und Rahmen (Dark Mode, Hochkontrast), Bildliste
+  /// (Images/ImageName) als Platzhalter fuer leere Felder, StoreFormat,
+  /// LoadFromFile/SaveToFile.
+  TPPGDBImage = class(TCustomControl)
+  private
+    FView: TPPGImageView;
+    FBinding: TPPGDBBinding;
+    FAutoDisplay: Boolean;
+    FPictureLoaded: Boolean;
+    FQuickDraw: Boolean;
+    FStoreFormat: TPPGImageStoreFormat;
+    FFormat: TPPGImageFormat;
+    FQuiet: Integer;
+    procedure ViewChanged(Sender: TObject);
+    procedure PictureChanged(Sender: TObject);
+    procedure ShowField(Sender: TObject);
+    procedure WriteField(Sender: TObject);
+    procedure SetAutoDisplay(const Value: Boolean);
+    procedure SetQuickDraw(const Value: Boolean);
+    function EffectiveColor: TColor;
+    function EffectiveFontColor: TColor;
+    function GetPicture: TPicture;
+    procedure SetPicture(Value: TPicture);
+    function GetImages: TCustomImageList;
+    procedure SetImages(const Value: TCustomImageList);
+    function GetImageIndex: TPPGImageIndex;
+    procedure SetImageIndex(const Value: TPPGImageIndex);
+    function GetImageIndexDark: TPPGImageIndex;
+    procedure SetImageIndexDark(const Value: TPPGImageIndex);
+    function IsImageIndexStored: Boolean;
+    function IsImageIndexDarkStored: Boolean;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    function GetImageName: TImageName;
+    procedure SetImageName(const Value: TImageName);
+    function GetImageNameDark: TImageName;
+    procedure SetImageNameDark(const Value: TImageName);
+    function IsImageNameStored: Boolean;
+    function IsImageNameDarkStored: Boolean;
+    {$ENDIF}
+    function GetStretch: Boolean;
+    procedure SetStretch(const Value: Boolean);
+    function GetProportional: Boolean;
+    procedure SetProportional(const Value: Boolean);
+    function GetCenter: Boolean;
+    procedure SetCenter(const Value: Boolean);
+    function GetBorderStyle: TBorderStyle;
+    procedure SetBorderStyle(const Value: TBorderStyle);
+    function GetDataField: string;
+    procedure SetDataField(const Value: string);
+    function GetDataSource: TDataSource;
+    procedure SetDataSource(Value: TDataSource);
+    function GetField: TField;
+    function GetReadOnly: Boolean;
+    procedure SetReadOnly(const Value: Boolean);
+    function CanEditNow: Boolean;
+    procedure LoadBytesQuiet(Stream: TStream);
+    procedure CMGetDataLink(var Message: TMessage); message CM_GETDATALINK;
+    procedure CMEnter(var Message: TCMEnter); message CM_ENTER;
+    procedure CMExit(var Message: TCMExit); message CM_EXIT;
+    procedure CMWantSpecialKey(var Message: TMessage); message CM_WANTSPECIALKEY;
+    procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
+    procedure WMSetFocus(var Message: TWMSetFocus); message WM_SETFOCUS;
+    procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
+  protected
+    procedure Paint; override;
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure WndProc(var Message: TMessage); override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure KeyPress(var Key: Char); override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    /// Laedt das Bild aus dem Feld, wenn AutoDisplay = False ist.
+    procedure LoadPicture;
+    procedure CopyToClipboard;
+    procedure CutToClipboard;
+    procedure PasteFromClipboard;
+    /// Bild aus Datei bzw. Strom (Format wird erkannt). Unbekanntes Format:
+    /// EPPGError. Ist ein Datensatz gebunden, geht er in den Bearbeiten-Modus.
+    procedure LoadFromFile(const FileName: string);
+    procedure LoadFromStream(Stream: TStream);
+    /// Schreibt das Bild (Format: eigenes oder StoreFormat der Wahl).
+    procedure SaveToFile(const FileName: string; Format: TPPGImageStoreFormat = sfKeep);
+    procedure SaveToStream(Stream: TStream; Format: TPPGImageStoreFormat = sfKeep);
+    /// Entfernt das Bild (setzt das Feld beim Speichern auf Null).
+    procedure Clear;
+    property Field: TField read GetField;
+    /// Das angezeigte Bild (nicht gestreamt; Aenderungen gehen ins Feld).
+    property Picture: TPicture read GetPicture write SetPicture;
+    /// Format der Feldbytes beim Laden bzw. des zuletzt gesetzten Bilds;
+    /// ifNone = kein Bild, ifUnknown = Daten nicht erkannt.
+    property ImageFormat: TPPGImageFormat read FFormat;
+  published
+    property DataField: string read GetDataField write SetDataField;
+    property DataSource: TDataSource read GetDataSource write SetDataSource;
+    property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
+    /// False: das Bild wird erst bei Enter bzw. LoadPicture geladen.
+    property AutoDisplay: Boolean read FAutoDisplay write SetAutoDisplay default True;
+    /// Ohne Wirkung (Kompatibilitaet mit TDBImage; WIC dekodiert JPEG immer schnell).
+    property QuickDraw: Boolean read FQuickDraw write SetQuickDraw default True;
+    /// Format der Bytes, die ins Feld geschrieben werden (sfKeep: wie das Bild).
+    property StoreFormat: TPPGImageStoreFormat read FStoreFormat write FStoreFormat default sfKeep;
+    property Stretch: Boolean read GetStretch write SetStretch default False;
+    property Proportional: Boolean read GetProportional write SetProportional default False;
+    property Center: Boolean read GetCenter write SetCenter default False;
+    /// Bildliste fuer den Platzhalter, wenn das Feld leer ist.
+    property Images: TCustomImageList read GetImages write SetImages;
+    property ImageIndex: TPPGImageIndex read GetImageIndex write SetImageIndex
+      stored IsImageIndexStored default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    property ImageName: TImageName read GetImageName write SetImageName stored IsImageNameStored;
+    {$ENDIF}
+    property ImageIndexDark: TPPGImageIndex read GetImageIndexDark write SetImageIndexDark
+      stored IsImageIndexDarkStored default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    property ImageNameDark: TImageName read GetImageNameDark write SetImageNameDark
+      stored IsImageNameDarkStored;
+    {$ENDIF}
+    /// bsSingle: Rand in der Randfarbe des Themes.
+    property BorderStyle: TBorderStyle read GetBorderStyle write SetBorderStyle default bsSingle;
+    { wie TDBImage }
+    property Align;
+    property Anchors;
+    property Color default clWindow;
+    property Constraints;
+    property Ctl3D;
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property ParentColor default False;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    {$IFDEF PPG_HAS_STYLEELEMENTS}
+    property StyleElements;
+    {$ENDIF}
+    property TabOrder;
+    property TabStop default True;
+    property Touch;
+    property Visible;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnGesture;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseActivate;
+    property OnMouseDown;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseWheel;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
 /// DataSource eines Links setzen (mit FreeNotification wie die VCL-Controls).
 procedure PPGDBSetDataSource(Owner: TComponent; Link: TDataLink; Value: TDataSource);
 /// Schreibt den Wert ins Feld (UpdateRecord). Bei einem Fehler: Feld als
@@ -461,6 +639,9 @@ function PPGDBFirstValue(const Values: string): string;
 implementation
 
 uses
+  Vcl.Clipbrd,
+  PPG.Lang, PPG.Consts, PPG.Exceptions, PPG.DpiUtils, PPG.VclStyles, PPG.Theme, PPG.Tokens,
+  PPG.Render.Registry,
   // Feldregeln fuer TPPGValidator mitlinken (AutoFieldRules)
   PPG.DB.Validator;
 
@@ -2083,6 +2264,580 @@ end;
 function TPPGDBDatePicker.UpdateAction(Action: TBasicAction): Boolean;
 begin
   Result := inherited UpdateAction(Action) or ((FBinding <> nil) and FBinding.UpdateAction(Action));
+end;
+
+{ TPPGDBImage }
+
+constructor TPPGDBImage.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  ControlStyle := ControlStyle + [csReplicatable];
+  Width := 105;
+  Height := 105;
+  TabStop := True;
+  ParentColor := False;
+  Color := clWindow;
+  FAutoDisplay := True;
+  FQuickDraw := True;
+  FView := TPPGImageView.Create(Self, ViewChanged, bsSingle);
+  FView.OnPictureChange := PictureChanged;
+  FBinding := TPPGDBBinding.Create(Self, False);
+  FBinding.OnShow := ShowField;
+  FBinding.OnWrite := WriteField;
+  FPictureLoaded := True; // ungebunden: das Bild gilt als geladen
+  TPPGTheme.AddClient(Self);
+end;
+
+destructor TPPGDBImage.Destroy;
+begin
+  TPPGTheme.RemoveClient(Self);
+  FreeAndNil(FBinding);
+  FreeAndNil(FView);
+  inherited Destroy;
+end;
+
+procedure TPPGDBImage.Loaded;
+begin
+  inherited Loaded;
+  FView.Loaded;
+  if csDesigning in ComponentState then
+    FBinding.Reload;
+end;
+
+procedure TPPGDBImage.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if FBinding <> nil then
+    FBinding.Notify(AComponent, Operation);
+  if FView <> nil then
+    FView.Notification(AComponent, Operation);
+end;
+
+procedure TPPGDBImage.WndProc(var Message: TMessage);
+begin
+  if (PPGThemeChangedMessage <> 0) and (Message.Msg = PPGThemeChangedMessage) then
+  begin
+    Invalidate; // Hell/Dunkel gewechselt
+    Exit;
+  end;
+  inherited WndProc(Message);
+end;
+
+procedure TPPGDBImage.ViewChanged(Sender: TObject);
+begin
+  if (FView <> nil) and not (csDestroying in ComponentState) then
+    Invalidate;
+end;
+
+function TPPGDBImage.GetField: TField;
+begin
+  Result := FBinding.Field;
+end;
+
+function TPPGDBImage.CanEditNow: Boolean;
+begin
+  Result := (FBinding.Field = nil) or FBinding.CanModify;
+end;
+
+procedure TPPGDBImage.LoadBytesQuiet(Stream: TStream);
+begin
+  Inc(FQuiet);
+  try
+    if Stream = nil then
+    begin
+      FView.Picture.Graphic := nil;
+      FFormat := ifNone;
+    end
+    else if not PPGLoadPicture(FView.Picture, Stream, FFormat) then
+      FView.Picture.Graphic := nil
+  finally
+    Dec(FQuiet);
+  end;
+end;
+
+procedure TPPGDBImage.PictureChanged(Sender: TObject);
+begin
+  // Aenderung des Bilds von aussen (Picture.LoadFromFile, Einfuegen ...)
+  if (FQuiet > 0) or (FBinding = nil) or (csLoading in ComponentState) then
+    Exit;
+  FFormat := PPGGraphicFormat(FView.Picture.Graphic);
+  if FBinding.Field = nil then
+  begin
+    FPictureLoaded := True;
+    Exit;
+  end;
+  if csDesigning in ComponentState then
+    Exit;
+  if FBinding.UserChange then
+    FPictureLoaded := True;
+end;
+
+procedure TPPGDBImage.ShowField(Sender: TObject);
+begin
+  FPictureLoaded := FBinding.Field = nil;
+  FFormat := ifNone;
+  LoadBytesQuiet(nil);
+  if (FBinding.Field <> nil) and FAutoDisplay then
+    LoadPicture;
+  Invalidate;
+end;
+
+procedure TPPGDBImage.LoadPicture;
+var
+  F: TField;
+  MS: TMemoryStream;
+begin
+  F := FBinding.Field;
+  if FPictureLoaded or (F = nil) or not F.IsBlob then
+    Exit;
+  MS := TMemoryStream.Create;
+  try
+    TBlobField(F).SaveToStream(MS);
+    MS.Position := 0;
+    if MS.Size = 0 then
+      LoadBytesQuiet(nil)
+    else
+      LoadBytesQuiet(MS);
+  finally
+    MS.Free;
+  end;
+  FPictureLoaded := True;
+  Invalidate;
+end;
+
+procedure TPPGDBImage.WriteField(Sender: TObject);
+var
+  F: TField;
+  G: TGraphic;
+  MS: TMemoryStream;
+begin
+  F := FBinding.Field;
+  if not FPictureLoaded or not F.IsBlob then
+    Exit;
+  G := FView.Picture.Graphic;
+  if (G = nil) or G.Empty then
+    F.Clear
+  else
+  begin
+    MS := TMemoryStream.Create;
+    try
+      PPGSaveGraphic(G, FStoreFormat, MS);
+      MS.Position := 0;
+      TBlobField(F).LoadFromStream(MS);
+    finally
+      MS.Free;
+    end;
+  end;
+end;
+
+procedure TPPGDBImage.SetAutoDisplay(const Value: Boolean);
+begin
+  if FAutoDisplay <> Value then
+  begin
+    FAutoDisplay := Value;
+    if Value then
+      LoadPicture;
+    Invalidate;
+  end;
+end;
+
+procedure TPPGDBImage.SetQuickDraw(const Value: Boolean);
+begin
+  FQuickDraw := Value;
+end;
+
+{ Zwischenablage, Dateien }
+
+procedure TPPGDBImage.CopyToClipboard;
+begin
+  if (FView.Picture.Graphic <> nil) and not FView.Picture.Graphic.Empty then
+    Clipboard.Assign(FView.Picture);
+end;
+
+procedure TPPGDBImage.CutToClipboard;
+begin
+  if not CanEditNow then
+    Exit;
+  if (FView.Picture.Graphic <> nil) and not FView.Picture.Graphic.Empty then
+  begin
+    CopyToClipboard;
+    Clear;
+  end;
+end;
+
+procedure TPPGDBImage.PasteFromClipboard;
+var
+  I: Integer;
+  Found: Boolean;
+begin
+  if not CanEditNow then
+    Exit;
+  Found := False;
+  for I := 0 to Clipboard.FormatCount - 1 do
+    if TPicture.SupportsClipboardFormat(Clipboard.Formats[I]) then
+    begin
+      Found := True;
+      Break;
+    end;
+  if Found then
+    FView.Picture.Assign(Clipboard);
+end;
+
+procedure TPPGDBImage.LoadFromStream(Stream: TStream);
+var
+  G: TGraphic;
+  Fmt: TPPGImageFormat;
+  Pos: Int64;
+begin
+  Pos := Stream.Position;
+  // zuerst pruefen, damit ein Fehler das alte Bild nicht zerstoert
+  G := PPGLoadGraphic(Stream, Fmt);
+  if G = nil then
+    raise EPPGError.Create(PPGStr(@SPPGImageUnknownFormat));
+  G.Free;
+  Stream.Position := Pos;
+  Inc(FQuiet);
+  try
+    PPGLoadPicture(FView.Picture, Stream, FFormat);
+  finally
+    Dec(FQuiet);
+  end;
+  PictureChanged(nil);
+end;
+
+procedure TPPGDBImage.LoadFromFile(const FileName: string);
+var
+  FS: TFileStream;
+begin
+  FS := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromStream(FS);
+  finally
+    FS.Free;
+  end;
+end;
+
+procedure TPPGDBImage.SaveToStream(Stream: TStream; Format: TPPGImageStoreFormat);
+begin
+  if (FView.Picture.Graphic <> nil) and not FView.Picture.Graphic.Empty then
+    PPGSaveGraphic(FView.Picture.Graphic, Format, Stream);
+end;
+
+procedure TPPGDBImage.SaveToFile(const FileName: string; Format: TPPGImageStoreFormat);
+var
+  FS: TFileStream;
+begin
+  FS := TFileStream.Create(FileName, fmCreate);
+  try
+    SaveToStream(FS, Format);
+  finally
+    FS.Free;
+  end;
+end;
+
+procedure TPPGDBImage.Clear;
+begin
+  FView.Picture.Graphic := nil;
+end;
+
+{ Eingabe }
+
+procedure TPPGDBImage.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  inherited KeyDown(Key, Shift);
+  if Key = VK_INSERT then
+  begin
+    if ssShift in Shift then
+      PasteFromClipboard
+    else if ssCtrl in Shift then
+      CopyToClipboard;
+  end
+  else if (Key = VK_DELETE) and (ssShift in Shift) then
+    CutToClipboard
+  else
+    FBinding.HandleEscape(Key);
+end;
+
+procedure TPPGDBImage.KeyPress(var Key: Char);
+begin
+  inherited KeyPress(Key);
+  case Key of
+    ^X: CutToClipboard;
+    ^C: CopyToClipboard;
+    ^V: PasteFromClipboard;
+    #13: LoadPicture;
+  end;
+end;
+
+procedure TPPGDBImage.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  if TabStop and CanFocus then
+    SetFocus;
+  inherited MouseDown(Button, Shift, X, Y);
+end;
+
+procedure TPPGDBImage.CMGetDataLink(var Message: TMessage);
+begin
+  Message.Result := LRESULT(FBinding.Link);
+end;
+
+procedure TPPGDBImage.CMEnter(var Message: TCMEnter);
+begin
+  Invalidate;
+  inherited;
+end;
+
+procedure TPPGDBImage.CMExit(var Message: TCMExit);
+begin
+  // Im Destruktor ist FBinding schon frei (siehe TPPGDBMemo)
+  if FBinding = nil then
+  begin
+    inherited;
+    Exit;
+  end;
+  FBinding.Commit;
+  Invalidate;
+  inherited;
+end;
+
+procedure TPPGDBImage.CMWantSpecialKey(var Message: TMessage);
+begin
+  inherited;
+  if ((Message.WParam = VK_ESCAPE) and FBinding.WantsEscape) or
+    ((Message.WParam = VK_RETURN) and not FPictureLoaded) then
+    Message.Result := 1;
+end;
+
+procedure TPPGDBImage.CMEnabledChanged(var Message: TMessage);
+begin
+  inherited;
+  Invalidate;
+end;
+
+procedure TPPGDBImage.WMSetFocus(var Message: TWMSetFocus);
+begin
+  Invalidate;
+  inherited;
+end;
+
+procedure TPPGDBImage.WMKillFocus(var Message: TWMKillFocus);
+begin
+  Invalidate;
+  inherited;
+end;
+
+{ Zeichnen }
+
+function TPPGDBImage.EffectiveColor: TColor;
+var
+  HC, Dark: Boolean;
+begin
+  Result := Color;
+  HC := PPGUseHighContrast(True);
+  Dark := TPPGTheme.IsDark and not PPGVclStyleActive and not HC;
+  if (Dark or HC) and ((Result = clWindow) or (Result = clWhite)) then
+    Result := PPGPresetTokens('', Dark, HC).Surface;
+end;
+
+function TPPGDBImage.EffectiveFontColor: TColor;
+var
+  HC, Dark: Boolean;
+begin
+  Result := Font.Color;
+  HC := PPGUseHighContrast(True);
+  Dark := TPPGTheme.IsDark and not PPGVclStyleActive and not HC;
+  if (Dark or HC) and ((Result = clWindowText) or (Result = clBlack)) then
+    Result := PPGPresetTokens('', Dark, HC).TextPrimary;
+end;
+
+procedure TPPGDBImage.Paint;
+var
+  R, TR: TRect;
+  S: string;
+begin
+  R := ClientRect;
+  Canvas.Brush.Style := bsSolid;
+  Canvas.Brush.Color := EffectiveColor;
+  Canvas.FillRect(R);
+  S := '';
+  if (FBinding.Field <> nil) and not FPictureLoaded then
+    S := '(' + FBinding.Field.DisplayLabel + ')'
+  else if (FBinding.Field = nil) and (csDesigning in ComponentState) and not FView.HasImage then
+    S := Name;
+  if S <> '' then
+  begin
+    FView.PaintFrame(Canvas, R, Enabled);
+    TR := FView.ContentRect(R);
+    Canvas.Font.Assign(Font);
+    Canvas.Font.Color := EffectiveFontColor;
+    Canvas.Brush.Style := bsClear;
+    DrawText(Canvas.Handle, PChar(S), Length(S), TR, DT_CENTER or DT_VCENTER or DT_SINGLELINE or
+      DT_NOPREFIX or DT_END_ELLIPSIS);
+  end
+  else
+    FView.Paint(Canvas, R, Enabled);
+  if Focused then
+  begin
+    TR := FView.ContentRect(R);
+    InflateRect(TR, -1, -1);
+    Canvas.Brush.Style := bsSolid;
+    Canvas.Brush.Color := EffectiveColor;
+    Canvas.DrawFocusRect(TR);
+  end;
+end;
+
+{ Durchgereichte Properties }
+
+function TPPGDBImage.GetPicture: TPicture;
+begin
+  Result := FView.Picture;
+end;
+
+procedure TPPGDBImage.SetPicture(Value: TPicture);
+begin
+  FView.Picture := Value;
+end;
+
+function TPPGDBImage.GetImages: TCustomImageList;
+begin
+  Result := FView.Images;
+end;
+
+procedure TPPGDBImage.SetImages(const Value: TCustomImageList);
+begin
+  FView.Images := Value;
+end;
+
+function TPPGDBImage.GetImageIndex: TPPGImageIndex;
+begin
+  Result := FView.ImageIndex;
+end;
+
+procedure TPPGDBImage.SetImageIndex(const Value: TPPGImageIndex);
+begin
+  FView.ImageIndex := Value;
+end;
+
+function TPPGDBImage.GetImageIndexDark: TPPGImageIndex;
+begin
+  Result := FView.ImageIndexDark;
+end;
+
+procedure TPPGDBImage.SetImageIndexDark(const Value: TPPGImageIndex);
+begin
+  FView.ImageIndexDark := Value;
+end;
+
+function TPPGDBImage.IsImageIndexStored: Boolean;
+begin
+  Result := FView.IsImageIndexStored(False);
+end;
+
+function TPPGDBImage.IsImageIndexDarkStored: Boolean;
+begin
+  Result := FView.IsImageIndexStored(True);
+end;
+
+{$IFDEF PPG_HAS_IMAGENAME}
+function TPPGDBImage.GetImageName: TImageName;
+begin
+  Result := FView.ImageName;
+end;
+
+procedure TPPGDBImage.SetImageName(const Value: TImageName);
+begin
+  FView.ImageName := Value;
+end;
+
+function TPPGDBImage.GetImageNameDark: TImageName;
+begin
+  Result := FView.ImageNameDark;
+end;
+
+procedure TPPGDBImage.SetImageNameDark(const Value: TImageName);
+begin
+  FView.ImageNameDark := Value;
+end;
+
+function TPPGDBImage.IsImageNameStored: Boolean;
+begin
+  Result := FView.IsImageNameStored(False);
+end;
+
+function TPPGDBImage.IsImageNameDarkStored: Boolean;
+begin
+  Result := FView.IsImageNameStored(True);
+end;
+{$ENDIF}
+
+function TPPGDBImage.GetStretch: Boolean;
+begin
+  Result := FView.Stretch;
+end;
+
+procedure TPPGDBImage.SetStretch(const Value: Boolean);
+begin
+  FView.Stretch := Value;
+end;
+
+function TPPGDBImage.GetProportional: Boolean;
+begin
+  Result := FView.Proportional;
+end;
+
+procedure TPPGDBImage.SetProportional(const Value: Boolean);
+begin
+  FView.Proportional := Value;
+end;
+
+function TPPGDBImage.GetCenter: Boolean;
+begin
+  Result := FView.Center;
+end;
+
+procedure TPPGDBImage.SetCenter(const Value: Boolean);
+begin
+  FView.Center := Value;
+end;
+
+function TPPGDBImage.GetBorderStyle: TBorderStyle;
+begin
+  Result := FView.BorderStyle;
+end;
+
+procedure TPPGDBImage.SetBorderStyle(const Value: TBorderStyle);
+begin
+  FView.BorderStyle := Value;
+end;
+
+function TPPGDBImage.GetDataField: string;
+begin
+  Result := FBinding.DataField;
+end;
+
+procedure TPPGDBImage.SetDataField(const Value: string);
+begin
+  FBinding.DataField := Value;
+end;
+
+function TPPGDBImage.GetDataSource: TDataSource;
+begin
+  Result := FBinding.DataSource;
+end;
+
+procedure TPPGDBImage.SetDataSource(Value: TDataSource);
+begin
+  FBinding.DataSource := Value;
+end;
+
+function TPPGDBImage.GetReadOnly: Boolean;
+begin
+  Result := FBinding.ReadOnly;
+end;
+
+procedure TPPGDBImage.SetReadOnly(const Value: Boolean);
+begin
+  FBinding.ReadOnly := Value;
 end;
 
 end.

@@ -200,7 +200,7 @@ uses
   PPG.ProgressBar, PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
   PPG.TabControl, PPG.Controls.ItemList, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.TileView, PPG.Grid, PPG.Grid.Print,
   PPG.Labels, PPG.Shape, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
-  PPG.Calendar, PPG.DatePicker, PPG.TimePicker,
+  PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.Image,
   PPG.NavigationView, PPG.Breadcrumb, PPG.ToolBar, PPG.StatusBar, PPG.Notifications,
   PPG.Sparkline, PPG.Gauge, PPG.Chart,
   PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
@@ -1185,7 +1185,7 @@ begin
     TPPGTaskDialog, TPPGWizard, TPPGValidator, TPPGBusyOverlay,
     TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
     TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit, TPPGRichEdit,
-    TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager]);
+    TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager, TPPGImage]);
   // Seiten entstehen ueber den Komponenteneditor, nicht ueber die Palette
   RegisterClass(TPPGTabSheet);
   RegisterNoIcon([TPPGTabSheet]);

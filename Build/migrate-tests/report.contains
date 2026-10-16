@@ -16,3 +16,5 @@ Unit6.dfm : Shape1 TShape -> TPPGShape
 Unit6.dfm : DBText1 TDBText -> TPPGDBText
 Unit7.dfm : RichEdit1 TRichEdit -> TPPGRichEdit
 Unit7.dfm : DBRichEdit1 TDBRichEdit -> TPPGDBRichEdit
+Unit8.dfm : Image1 TImage -> TPPGImage
+Unit8.dfm : DBImage1 TDBImage -> TPPGDBImage

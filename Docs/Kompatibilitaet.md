@@ -22,7 +22,7 @@
 
 | Schalter | ab | Stellen | Was ohne ihn passiert | Prüfen |
 |---|---|---|---|---|
-| `PPG_HAS_STYLEELEMENTS` | XE3 (24.0) | 32 Stellen, je eine pro Control (published `StyleElements`), dazu 2× in `PPG.Controls.Base`, 3× in `PPG.Labels`, 1× in `PPG.Shape`, 1× in `PPG.RichEdit` sowie `PPG.Popup`, `PPG.DB.Grid` und `PPG.Editors.Forms` | Die Property fehlt, und die Controls folgen dem VCL-Style immer ganz | Unter XE2 kompiliert; DFMs aus neueren Versionen mit `StyleElements` melden beim Laden „Property existiert nicht“ (erwartet) |
+| `PPG_HAS_STYLEELEMENTS` | XE3 (24.0) | 32 Stellen, je eine pro Control (published `StyleElements`), dazu 2× in `PPG.Controls.Base`, 3× in `PPG.Labels`, 1× in `PPG.Shape`, 1× in `PPG.RichEdit`, 2× in `PPG.Image`/`PPG.DB.Controls` (Bild) sowie `PPG.Popup`, `PPG.DB.Grid` und `PPG.Editors.Forms` | Die Property fehlt, und die Controls folgen dem VCL-Style immer ganz | Unter XE2 kompiliert; DFMs aus neueren Versionen mit `StyleElements` melden beim Laden „Property existiert nicht“ (erwartet) |
 | `PPG_HAS_SYSTEM_ACTIONS` | XE3 | `PPG.ToolBar` (uses) | Die Actions kommen aus `Vcl.ActnList` | ToolBar mit Action unter XE2 |
 | `PPG_HAS_DATASETCOMMANDS` | XE3 | `PPG.DB.Navigator` (5 Stellen) | XE2 kennt `nbApplyUpdates`/`nbCancelUpdates` und `IDataSetCommandSupport` nicht; der DB-Navigator hat diese Knöpfe dann nicht | DB-Navigator unter XE2 kompilieren; eine DFM aus einer neueren Version mit diesen Knöpfen in `VisibleButtons` laden |
 | `PPG_HAS_PPI` | 10.3 (33.0) | `PPG.DpiUtils` | Skalierung über `Screen.PixelsPerInch` (system-DPI) | Verhalten auf 150 % unter 10.2: Controls skalieren einmal beim Start |

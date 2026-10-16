@@ -205,6 +205,7 @@
         <DCCReference Include="..\Source\Controls\PPG.Grid.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Labels.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Shape.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Image.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Feedback.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Expander.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Splitter.pas"/>
