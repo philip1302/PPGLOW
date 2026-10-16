@@ -8,6 +8,7 @@ Palette **PPGlow** - Unit `PPG.Calendar` - Basis `TPPGCustomCalendar`
 
 - Monat/Jahr/Dekade mit Zoom-Animation, Wochennummern nach ISO 8601, erster Wochentag aus `FormatSettings`.
 - `Date` im Code löst kein Ereignis aus.
+- `AutoSize` wie bei `TMonthCalendar`: Größe für genau einen Monat bei aktueller Schrift und DPI; unabhängig von der Ansicht.
 
 ## Anpassung
 
@@ -22,6 +23,7 @@ TPPGCalendar - Monatskalender mit Jahres- und Dekadenansicht (Phase 7b).
 - Auswahl: einzelner Tag, Bereich (zwei Klicks bzw. Umschalt+Klick) oder mehrere Tage (Klick schaltet um). MinDate/MaxDate und OnIsDateDisabled sperren Tage. Heute ist markiert (ShowToday).
 - Tastatur: Pfeile (Tag/Woche), Bild auf/ab (Monat), Strg+Bild (Jahr), Pos1/Ende (Monatsanfang/-ende), Enter/Leertaste waehlen, Strg+Oben/Unten zoomen. RTL gespiegelt.
 - Code (Date := ...) loest kein OnChange aus; der Anwender schon.
+- AutoSize (wie TMonthCalendar): Groesse fuer genau einen Monat. Zellen mindestens so gross wie bei der Vorgabegroesse 300 x 330 (96 dpi), bei groesserer Schrift so gross, dass Tageszahlen, Wochentags- und Monatsnamen hineinpassen; breit genug fuer den laengsten Titel. Haengt nicht von der Ansicht ab (Jahr/Dekade springen nicht).
 - Screenreader: Tabelle, Kinder sind die Tage (bzw. Monate/Jahre) mit Langdatum als Name, Zustaenden gewaehlt/fokussiert/gesperrt.
 - Link (Phase 14a): ein verbundener Planer (IPPGCalendarLink) markiert Tage mit Terminen fett und erfaehrt die Auswahl des Anwenders.
 
@@ -52,6 +54,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
 | `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
+| `AutoSize` | `Boolean` |  | True: Der Kalender ist so groß, dass genau ein Monat hineinpasst (wie TMonthCalendar.AutoSize): Zellen mindestens wie bei der Vorgabegröße, bei größerer Schrift oder hoher DPI entsprechend größer, Wochennummern als zusätzliche Spalte. Die Größe hängt nicht von der Ansicht (Monat, Jahr, Dekade) ab. |
 | `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. |
 | `Constraints` | `TSizeConstraints` |  | Mindest- und Höchstmaße (MinWidth, MinHeight, MaxWidth, MaxHeight); 0 = keine Grenze. Nutzung: `Panel1.Constraints.MinWidth := 200;` |
 | `Enabled` | `Boolean` |  | False: Das Control ist deaktiviert (grau, keine Eingabe, kein Fokus). Kinder eines deaktivierten Containers sind ebenfalls gesperrt. |

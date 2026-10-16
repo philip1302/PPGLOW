@@ -16,6 +16,11 @@ unit PPG.Calendar;
     Pos1/Ende (Monatsanfang/-ende), Enter/Leertaste waehlen, Strg+Oben/Unten
     zoomen. RTL gespiegelt.
   - Code (Date := ...) loest kein OnChange aus; der Anwender schon.
+  - AutoSize (wie TMonthCalendar): Groesse fuer genau einen Monat. Zellen
+    mindestens so gross wie bei der Vorgabegroesse 300 x 330 (96 dpi), bei
+    groesserer Schrift so gross, dass Tageszahlen, Wochentags- und
+    Monatsnamen hineinpassen; breit genug fuer den laengsten Titel. Haengt
+    nicht von der Ansicht ab (Jahr/Dekade springen nicht).
   - Screenreader: Tabelle, Kinder sind die Tage (bzw. Monate/Jahre) mit
     Langdatum als Name, Zustaenden gewaehlt/fokussiert/gesperrt.
   - Link (Phase 14a): ein verbundener Planer (IPPGCalendarLink) markiert Tage
@@ -146,6 +151,8 @@ type
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure WndProc(var Message: TMessage); override;
+    /// AutoSize: ein Monat bei aktueller Schrift und DPI (siehe Kopfkommentar).
+    function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
@@ -245,6 +252,8 @@ type
     property FirstDayOfWeek;
     property Align;
     property Anchors;
+    /// Groesse fuer genau einen Monat (wie TMonthCalendar.AutoSize).
+    property AutoSize;
     property BiDiMode;
     property Constraints;
     property Enabled;
@@ -312,6 +321,8 @@ const
   HeaderH = 40;
   DayNamesH = 28;
   NavBtn = 32;
+  CellMin = 40;   // logische px: Zelle bei der Vorgabegroesse 300 x 330
+  CellTextPad = 16; // logische px Luft um Tageszahl bzw. Monatsnamen
 
 var
   GMsgCalAction: Cardinal = 0;
@@ -819,6 +830,7 @@ begin
   if FShowWeekNumbers <> Value then
   begin
     FShowWeekNumbers := Value;
+    RequestAutoSize; // eine Spalte mehr bzw. weniger
     Invalidate;
   end;
 end;
@@ -1346,7 +1358,51 @@ end;
 
 procedure TPPGCustomCalendar.CalendarStylesChanged(Sender: TObject);
 begin
+  RequestAutoSize; // Schriften der Bereiche bestimmen die Wunschgroesse mit
   Invalidate;
+end;
+
+function TPPGCustomCalendar.CalcAutoSize(out AWidth, AHeight: Integer): Boolean;
+var
+  PPI, P, Pad, CW, CH, Cols, I, TitleNeed: Integer;
+  TS: TSize;
+  F: TFont;
+begin
+  PPI := ScalePPI;
+  P := PPGScale(CalPad, PPI);
+  Pad := PPGScale(CellTextPad, PPI);
+  CW := PPGScale(CellMin, PPI);
+  CH := CW;
+  // Tageszahlen (fett: heute und markierte Tage)
+  FBoldFont.Assign(Font);
+  FBoldFont.Style := FBoldFont.Style + [fsBold];
+  TS := PPGMeasureTextNoCanvas('88', FBoldFont, 0, False);
+  CW := Max(CW, TS.cx + Pad);
+  CH := Max(CH, TS.cy + Pad);
+  // Wochentagsnamen (zwei Buchstaben wie beim Zeichnen)
+  F := FFonts.ForStyle(FCalendarStyles.DayNames, Font);
+  for I := 1 to 7 do
+    CW := Max(CW, PPGMeasureTextNoCanvas(Copy(FormatSettings.ShortDayNames[I], 1, 2), F,
+      0, False).cx + Pad div 2);
+  // Jahresansicht: vier Monatsnamen teilen sich die Breite von sieben Tagen
+  for I := 1 to 12 do
+  begin
+    TS := PPGMeasureTextNoCanvas(FormatSettings.ShortMonthNames[I], Font, 0, False);
+    CW := Max(CW, ((TS.cx + Pad) * 4 + 6) div 7);
+  end;
+  Cols := 7;
+  if FShowWeekNumbers then
+    Inc(Cols); // Wochennummern: ein Achtel der Rasterbreite (GridArea)
+  // Titel: laengster Monatsname mit Jahr, daneben Zurueck/Vor (PartRect)
+  F := FFonts.ForStyle(FCalendarStyles.Header, FBoldFont);
+  TitleNeed := 0;
+  for I := 1 to 12 do
+    TitleNeed := Max(TitleNeed, PPGMeasureTextNoCanvas(FormatSettings.LongMonthNames[I] +
+      ' 0000', F, 0, False).cx);
+  Inc(TitleNeed, 2 * PPGScale(8, PPI) + 2 * PPGScale(NavBtn, PPI) + PPGScale(4, PPI));
+  AWidth := 2 * P + Max(Cols * CW, TitleNeed);
+  AHeight := 2 * P + PPGScale(HeaderH, PPI) + PPGScale(DayNamesH, PPI) + 6 * CH;
+  Result := True;
 end;
 
 procedure TPPGCustomCalendar.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);

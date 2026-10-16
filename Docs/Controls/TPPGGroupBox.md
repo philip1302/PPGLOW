@@ -7,7 +7,7 @@ Palette **PPGlow** - Unit `PPG.GroupBox` - Basis `TPPGCustomGroupBox`
 ## Unterschiede und Hinweise
 
 - Die Beschriftung ist eine Plakette auf der Rahmenlinie statt einer Lücke im Rahmen.
-- Container ohne `AutoSize`; Fokus-Glow, wenn ein Kind den Fokus hat.
+- `AutoSize`: Größe aus den Kind-Controls samt Plakette (gibt es bei `TGroupBox` nicht); Fokus-Glow, wenn ein Kind den Fokus hat.
 
 ## Verhalten (aus dem Quelltext)
 
@@ -40,6 +40,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `Align` | `TAlign` |  | Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder füllt den Rest (alClient). alNone = freie Position. Nutzung: `Panel1.Align := alClient;` Abstände über `AlignWithMargins` und `Margins`. |
 | `Anchors` | `TAnchors` |  | Kanten, deren Abstand zum Parent beim Vergrößern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: `Edit1.Anchors := [akLeft, akTop, akRight];` |
+| `AutoSize` | `Boolean` |  | True: Der Container wird so groß, dass seine sichtbaren Kind-Controls samt Rahmen, Rundung, Beschriftung und Padding hineinpassen, und wächst bzw. schrumpft mit ihnen (wie TPanel.AutoSize). Frei platzierte Kinder zählen mit ihrer rechten bzw. unteren Kante, alTop/alLeft als Stapel, alBottom/alRight addiert; alClient füllt nur aus. Ohne Kinder bleibt die Größe. Constraints (MinWidth, MinHeight, MaxWidth, MaxHeight) begrenzen das Ergebnis; mit Align bestimmt AutoSize nur die freie Kante. Nutzung: `Panel1.AutoSize := True; Panel1.Constraints.MinHeight := 40;` – Knopfleiste, die mit übersetzten Beschriftungen mitwächst (Buttons mit AutoSize und alLeft). |
 | `BiDiMode` | `TBiDiMode` |  | Leserichtung. bdRightToLeft spiegelt Layout und Text für Arabisch und Hebräisch. Nutzung: Meist über `ParentBiDiMode` vom Formular übernehmen. |
 | `Caption` | `TCaption` |  | Beschriftung. Ein & vor einem Buchstaben macht ihn zur Zugriffstaste (Alt+Buchstabe). Nutzung: `Button1.Caption := '&Speichern';` |
 | `Color` | `TColor` |  | Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Flächenfarben der Zustände stehen in Appearance. Nutzung: `clWindow`, `clBtnFace` oder eine RGB-Farbe wie `$00F0F0F0`. |

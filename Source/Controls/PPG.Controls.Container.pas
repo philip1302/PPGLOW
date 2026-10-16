@@ -13,8 +13,20 @@ unit PPG.Controls.Container;
   Hintergrund per WM_PRINTCLIENT vom Container; dessen Paint zeichnet dann
   in den DC des Kindes. Paint sendet deshalb keine Nachrichten (siehe Basis).
 
-  AutoSize wird bewusst nicht angeboten (Groesse aus den Kindern waere ein
-  eigenes, von TWinControl abweichendes Regelwerk). }
+  AutoSize (veroeffentlicht von Panel, ScrollBox und GroupBox): Der Container
+  wird so gross, dass seine sichtbaren Kinder samt Rahmen, Rundung und Padding
+  hineinpassen (CalcAutoSize). Regeln je Kind:
+  - frei platziert (alNone): rechte bzw. untere Kante zaehlt; mit Anker nur
+    rechts/unten zaehlen Groesse und Randabstand, gedehnte Kinder (Anker
+    links und rechts) nur Randabstaende und Constraints.MinWidth/MinHeight -
+    sonst wuerde der Container ihnen hinterherwachsen bzw. -schrumpfen,
+  - alTop/alLeft: Unterkante bzw. rechte Kante des Stapels,
+  - alBottom/alRight: ihre Hoehen bzw. Breiten werden addiert,
+  - alClient: fuellt nur aus und bestimmt nichts.
+  Bestimmt kein Kind eine Richtung (z.B. leeres Panel), bleibt sie, wie sie
+  ist. Constraints begrenzen das Ergebnis wie bei jedem Control. Wie in der
+  VCL wirkt AutoSize erst mit Fensterhandle vollstaendig (Kind-Bewegungen
+  meldet die VCL sonst nicht); beim Anlegen des Fensters wird nachgezogen. }
 
 {$I ..\PPG.inc}
 
@@ -28,12 +40,24 @@ uses
 type
   TPPGCustomContainer = class(TPPGCustomControl)
   private
+    FAutoSizing: Boolean;
+    /// Groesse an die Kinder anpassen (nur mit AutoSize, nicht verschachtelt).
+    procedure FitToChildren;
+    procedure CMControlChange(var Message: TCMControlChange); message CM_CONTROLCHANGE;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure CMTextChanged(var Message: TMessage); message CM_TEXTCHANGED;
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
   protected
     procedure UpdateVisualState(Animate: Boolean = True); override;
     procedure AppearanceUpdated; override;
+    procedure CreateWnd; override;
+    procedure AlignControls(AControl: TControl; var Rect: TRect); override;
+    procedure AdjustSize; override;
+    /// AutoSize: Groesse aus den Kindern (siehe Kopfkommentar).
+    function CalcAutoSize(out AWidth, AHeight: Integer): Boolean; override;
+    /// Bereich, in dem die Kinder liegen (Client-Koordinaten, ohne Verschiebung
+    /// durch Scrollen): Grundlage fuer AutoSize.
+    function AutoSizeView: TRect; virtual;
     function IsHot: Boolean; override;
     function IsDown: Boolean; override;
     procedure DoAccelerator; override;
@@ -61,7 +85,7 @@ type
 implementation
 
 uses
-  System.SysUtils, Winapi.oleacc, PPG.Appearance, PPG.DpiUtils, PPG.VclStyles,
+  System.SysUtils, System.Math, Winapi.oleacc, PPG.Appearance, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry;
 
 { TPPGCustomContainer }
@@ -108,6 +132,174 @@ begin
   if not (csLoading in ComponentState) and not (csDestroying in ComponentState) then
     Realign;
   Invalidate;
+end;
+
+{ ---- AutoSize ---- }
+
+type
+  // Constraints ist in TControl nicht in jeder Version oeffentlich
+  TContainerChildAccess = class(TControl);
+
+procedure TPPGCustomContainer.CreateWnd;
+begin
+  inherited CreateWnd;
+  // Ohne Fensterhandle meldet die VCL Kind-Bewegungen nicht: jetzt nachziehen
+  FitToChildren;
+end;
+
+procedure TPPGCustomContainer.AlignControls(AControl: TControl; var Rect: TRect);
+begin
+  inherited AlignControls(AControl, Rect);
+  // Kinder wurden ausgerichtet, verschoben oder in der Groesse geaendert
+  FitToChildren;
+end;
+
+procedure TPPGCustomContainer.AdjustSize;
+begin
+  if FAutoSizing then
+    Exit;
+  FAutoSizing := True;
+  try
+    inherited AdjustSize;
+  finally
+    FAutoSizing := False;
+  end;
+  FitToChildren;
+end;
+
+procedure TPPGCustomContainer.CMControlChange(var Message: TCMControlChange);
+begin
+  inherited;
+  // Kind eingefuegt oder entfernt
+  FitToChildren;
+end;
+
+procedure TPPGCustomContainer.FitToChildren;
+var
+  Pass, W, H: Integer;
+begin
+  if FAutoSizing or not AutoSize or (csLoading in ComponentState) or
+    (csDestroying in ComponentState) then
+    Exit;
+  FAutoSizing := True;
+  try
+    // Die eigene Groessenaenderung richtet die Kinder neu aus (Anker,
+    // Scrollleisten): hoechstens drei Durchgaenge, bis die Groesse steht
+    for Pass := 1 to 3 do
+    begin
+      W := Width;
+      H := Height;
+      RequestAutoSize;
+      if (W = Width) and (H = Height) then
+        Break;
+    end;
+  finally
+    FAutoSizing := False;
+  end;
+end;
+
+function TPPGCustomContainer.AutoSizeView: TRect;
+begin
+  // Wie TPPGCustomPanel.SafeClientRect: ClientRect legte sonst ein Handle an
+  if HandleAllocated then
+    Result := ClientRect
+  else
+  begin
+    Result := Rect(0, 0, Width, Height);
+    InflateRect(Result, -BorderWidth, -BorderWidth);
+  end;
+  // Rahmen, Rundung, Beschriftung und Padding (VCL) abziehen
+  AdjustClientRect(Result);
+end;
+
+function TPPGCustomContainer.CalcAutoSize(out AWidth, AHeight: Integer): Boolean;
+var
+  View: TRect;
+  I, ML, MT, MR, MB, ExtW, ExtH, SumR, SumB, Need: Integer;
+  C: TControl;
+  HasW, HasH: Boolean;
+begin
+  AWidth := Width;
+  AHeight := Height;
+  View := AutoSizeView;
+  ExtW := 0;
+  ExtH := 0;
+  SumR := 0;
+  SumB := 0;
+  HasW := False;
+  HasH := False;
+  for I := 0 to ControlCount - 1 do
+  begin
+    C := Controls[I];
+    if not C.Visible and not (csDesigning in ComponentState) then
+      Continue;
+    // Margins wirken in der VCL nur mit AlignWithMargins
+    if C.AlignWithMargins then
+    begin
+      ML := C.Margins.Left;
+      MT := C.Margins.Top;
+      MR := C.Margins.Right;
+      MB := C.Margins.Bottom;
+    end
+    else
+    begin
+      ML := 0;
+      MT := 0;
+      MR := 0;
+      MB := 0;
+    end;
+    case C.Align of
+      alClient:
+        Continue; // fuellt aus, bestimmt nichts
+      alTop:
+        begin
+          ExtH := Max(ExtH, C.Top + C.Height + MB - View.Top);
+          HasH := True;
+        end;
+      alBottom:
+        begin
+          Inc(SumB, MT + C.Height + MB);
+          HasH := True;
+        end;
+      alLeft:
+        begin
+          ExtW := Max(ExtW, C.Left + C.Width + MR - View.Left);
+          HasW := True;
+        end;
+      alRight:
+        begin
+          Inc(SumR, ML + C.Width + MR);
+          HasW := True;
+        end;
+    else
+      begin
+        // Frei platziert (auch alCustom): Anker entscheiden, was zaehlt
+        if not (akRight in C.Anchors) then
+          Need := C.Left + C.Width - View.Left
+        else if akLeft in C.Anchors then
+          Need := C.Left - View.Left + TContainerChildAccess(C).Constraints.MinWidth +
+            (View.Right - C.Left - C.Width)
+        else
+          Need := C.Width + (View.Right - C.Left - C.Width);
+        ExtW := Max(ExtW, Need);
+        if not (akBottom in C.Anchors) then
+          Need := C.Top + C.Height - View.Top
+        else if akTop in C.Anchors then
+          Need := C.Top - View.Top + TContainerChildAccess(C).Constraints.MinHeight +
+            (View.Bottom - C.Top - C.Height)
+        else
+          Need := C.Height + (View.Bottom - C.Top - C.Height);
+        ExtH := Max(ExtH, Need);
+        HasW := True;
+        HasH := True;
+      end;
+    end;
+  end;
+  if HasW then
+    AWidth := Width - (View.Right - View.Left) + Max(0, ExtW + SumR);
+  if HasH then
+    AHeight := Height - (View.Bottom - View.Top) + Max(0, ExtH + SumB);
+  Result := HasW or HasH;
 end;
 
 procedure TPPGCustomContainer.CMFontChanged(var Message: TMessage);

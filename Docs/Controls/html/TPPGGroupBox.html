@@ -7,7 +7,7 @@
 <h2>Unterschiede und Hinweise</h2>
 <ul>
 <li>Die Beschriftung ist eine Plakette auf der Rahmenlinie statt einer L&#252;cke im Rahmen.</li>
-<li>Container ohne <code>AutoSize</code>; Fokus-Glow, wenn ein Kind den Fokus hat.</li>
+<li><code>AutoSize</code>: Gr&#246;&#223;e aus den Kind-Controls samt Plakette (gibt es bei <code>TGroupBox</code> nicht); Fokus-Glow, wenn ein Kind den Fokus hat.</li>
 </ul>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>TPPGGroupBox - Gruppierung mit Rahmen und Beschriftung.</p>
@@ -29,6 +29,7 @@
 <tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
 <tr><td><code>Align</code></td><td><code>TAlign</code></td><td></td><td>Dockt das Control an eine Seite des Parents (alTop, alBottom, alLeft, alRight) oder f&#252;llt den Rest (alClient). alNone = freie Position. Nutzung: <code>Panel1.Align := alClient;</code> Abst&#228;nde &#252;ber <code>AlignWithMargins</code> und <code>Margins</code>.</td></tr>
 <tr><td><code>Anchors</code></td><td><code>TAnchors</code></td><td></td><td>Kanten, deren Abstand zum Parent beim Vergr&#246;&#223;ern gleich bleibt. [akLeft, akRight] dehnt das Control in der Breite mit. Nutzung: <code>Edit1.Anchors := [akLeft, akTop, akRight];</code></td></tr>
+<tr><td><code>AutoSize</code></td><td><code>Boolean</code></td><td></td><td>True: Der Container wird so gro&#223;, dass seine sichtbaren Kind-Controls samt Rahmen, Rundung, Beschriftung und Padding hineinpassen, und w&#228;chst bzw. schrumpft mit ihnen (wie TPanel.AutoSize). Frei platzierte Kinder z&#228;hlen mit ihrer rechten bzw. unteren Kante, alTop/alLeft als Stapel, alBottom/alRight addiert; alClient f&#252;llt nur aus. Ohne Kinder bleibt die Gr&#246;&#223;e. Constraints (MinWidth, MinHeight, MaxWidth, MaxHeight) begrenzen das Ergebnis; mit Align bestimmt AutoSize nur die freie Kante. Nutzung: <code>Panel1.AutoSize := True; Panel1.Constraints.MinHeight := 40;</code> – Knopfleiste, die mit &#252;bersetzten Beschriftungen mitw&#228;chst (Buttons mit AutoSize und alLeft).</td></tr>
 <tr><td><code>BiDiMode</code></td><td><code>TBiDiMode</code></td><td></td><td>Leserichtung. bdRightToLeft spiegelt Layout und Text f&#252;r Arabisch und Hebr&#228;isch. Nutzung: Meist &#252;ber <code>ParentBiDiMode</code> vom Formular &#252;bernehmen.</td></tr>
 <tr><td><code>Caption</code></td><td><code>TCaption</code></td><td></td><td>Beschriftung. Ein &amp; vor einem Buchstaben macht ihn zur Zugriffstaste (Alt+Buchstabe). Nutzung: <code>Button1.Caption := &#39;&amp;Speichern&#39;;</code></td></tr>
 <tr><td><code>Color</code></td><td><code>TColor</code></td><td></td><td>Hintergrundfarbe des Controls. Bei PPGlow-Controls gilt sie nur ohne Dark Mode, VCL-Style und Hochkontrast; die Fl&#228;chenfarben der Zust&#228;nde stehen in Appearance. Nutzung: <code>clWindow</code>, <code>clBtnFace</code> oder eine RGB-Farbe wie <code>$00F0F0F0</code>.</td></tr>

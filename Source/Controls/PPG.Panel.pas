@@ -111,6 +111,9 @@ type
     procedure EnsureRange;
     procedure AdjustClientRect(var Rect: TRect); override;
     procedure AlignControls(AControl: TControl; var Rect: TRect); override;
+    /// AutoSize: Sicht ohne Leisten (mit AutoSize passt der Inhalt hinein),
+    /// verschoben um die Scrollposition wie die Kinder.
+    function AutoSizeView: TRect; override;
     procedure Loaded; override;
     procedure Resize; override;
     procedure CreateWnd; override;
@@ -181,6 +184,9 @@ type
     { VCL-Standard }
     property Align;
     property Anchors;
+    /// Groesse aus den Kind-Controls (wie TPanel.AutoSize; Regeln in
+    /// PPG.Controls.Container). Constraints begrenzen sie.
+    property AutoSize;
     property BevelEdges;
     property BevelInner default bvNone;
     property BevelKind;
@@ -270,6 +276,8 @@ type
     { VCL-Standard }
     property Align;
     property Anchors;
+    /// Wie TScrollBox.AutoSize: Groesse aus den Kind-Controls.
+    property AutoSize;
     property BevelEdges;
     property BevelInner default bvNone;
     property BevelKind;
@@ -604,6 +612,24 @@ begin
     FScroll := SaveScroll;
     FRange := SaveRange;
   end;
+end;
+
+function TPPGCustomPanel.AutoSizeView: TRect;
+var
+  SaveH, SaveV: Boolean;
+begin
+  SaveH := FNeedH;
+  SaveV := FNeedV;
+  FNeedH := False;
+  FNeedV := False;
+  try
+    Result := ViewArea;
+  finally
+    FNeedH := SaveH;
+    FNeedV := SaveV;
+  end;
+  // Kinder liegen um die Scrollposition verschoben
+  OffsetRect(Result, -FScroll.X, -FScroll.Y);
 end;
 
 procedure TPPGCustomPanel.AlignControls(AControl: TControl; var Rect: TRect);

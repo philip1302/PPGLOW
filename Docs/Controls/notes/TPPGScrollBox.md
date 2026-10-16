@@ -6,6 +6,7 @@
 - Leisten in PPGlow-Optik mit weichem Scrollen; das Mausrad wirkt auch über Kind-Controls, die es nicht selbst nutzen.
 - Tab zu einem verdeckten Kind holt es ins Bild (`ScrollInView`), auch wenn es in einem Unter-Panel liegt.
 - `BorderStyle = bsSingle` zeichnet den dünnen Rahmen des Presets statt des 3D-Rahmens der VCL.
+- `AutoSize` wie bei `TScrollBox`: Größe aus den Kind-Controls; dann sind keine Leisten nötig, außer `Constraints` begrenzen die Größe.
 
 ## Beispiel
 

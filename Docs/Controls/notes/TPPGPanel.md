@@ -2,7 +2,7 @@
 
 ## Unterschiede und Hinweise
 
-- Container ohne `AutoSize`.
+- `AutoSize` wie bei `TPanel`: Größe aus den Kind-Controls (Regeln unter `AutoSize`), begrenzt durch `Constraints`.
 - Kinder auf dem Panel zeichnen ihren Hintergrund über den schnellen Eltern-Hintergrund (`GetChildBackground`).
 
 ## Anpassung

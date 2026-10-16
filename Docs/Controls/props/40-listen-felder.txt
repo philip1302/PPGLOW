@@ -53,6 +53,7 @@ TPPGCustomCalendar.OnViewChange = Die Ansicht (Monat, Jahr, Dekade) oder der ang
 TPPGCustomCalendar.SelectionMode = Auswahlart: ein Tag, ein Bereich (zwei Klicks bzw. Umschalt+Klick) oder mehrere einzelne Tage (Klick schaltet um).
 TPPGCustomCalendar.ShowToday = True: Der heutige Tag ist mit einem Ring markiert (Farbe über Styles.Today).
 TPPGCustomCalendar.ShowWeekNumbers = True: Links steht die Kalenderwoche nach ISO 8601.
+TPPGCustomCalendar.AutoSize = True: Der Kalender ist so groß, dass genau ein Monat hineinpasst (wie TMonthCalendar.AutoSize): Zellen mindestens wie bei der Vorgabegröße, bei größerer Schrift oder hoher DPI entsprechend größer, Wochennummern als zusätzliche Spalte. Die Größe hängt nicht von der Ansicht (Monat, Jahr, Dekade) ab.
 TPPGCustomCalendar.View = Aktuelle Ansicht: Monat (Tage), Jahr (Monate) oder Dekade (Jahre). Der Anwender zoomt per Klick auf den Titel bzw. Strg+Oben/Unten.
 
 # --- TPPGCustomCheckListBox ---
