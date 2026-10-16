@@ -665,6 +665,11 @@ begin
   end;
   FUpdatingRange := True;
   try
+    // Ohne Vorbelegung messen: Waren Leisten sichtbar, schrumpfte die Sicht und
+    // der Inhalt, der ohne Leisten genau passt (AutoSize), kippte zwischen
+    // beiden Zustaenden hin und her
+    FNeedH := False;
+    FNeedV := False;
     // Zwei Durchgaenge: eine Leiste nimmt Platz und kann die andere noetig machen
     for Pass := 0 to 1 do
     begin
