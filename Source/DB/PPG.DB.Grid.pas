@@ -31,9 +31,18 @@ unit PPG.DB.Grid;
     ganze Datenmenge (Paint-Regel aus Phase 9).
   - Drucken und Export (IPPGTableSource): die Datenmenge wird einmal mit
     DisableControls und Lesezeichen durchlaufen (hoechstens ExportMaxRecords).
+  - Mehrfachauswahl (dgMultiSelect) wie TDBGrid: SelectedRows haelt Lesezeichen
+    (sortiert nach CompareBookmarks). Strg+Klick schaltet eine Zeile um,
+    Umschalt+Klick waehlt den Bereich vom Anker, Umschalt+Pfeil erweitert,
+    Strg+A waehlt alles, Strg+Leertaste (bzw. Leertaste ausserhalb von
+    Kaestchen) schaltet um, Strg+Entf loescht die Auswahl. Klick und
+    Navigation ohne Umschalt/Strg heben die Auswahl auf (Klick waehlt dann die
+    angeklickte Zeile, wie TDBGrid). Schliessen der Datenmenge und Wechsel der
+    DataSource leeren die Auswahl. Nach einem Wechsel von Index oder
+    Sortierung SelectedRows.Refresh aufrufen (manche Datenmengen liefern dann
+    andere Lesezeichen fuer denselben Satz).
   - Nicht unterstuetzt: Gruppieren (braeuchte die ganze Datenmenge im Speicher;
-    GROUP BY in der Abfrage nutzen), dgMultiSelect, Unterspalten
-    (ADT/Array-Felder). }
+    GROUP BY in der Abfrage nutzen), Unterspalten (ADT/Array-Felder). }
 
 {$I ..\PPG.inc}
 
@@ -41,7 +50,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Types,
-  Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Data.DB,
+  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Data.DB,
   PPG.Types, PPG.Grid, PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds;
 
 type
@@ -74,6 +83,52 @@ type
     /// Wie TColumn.ButtonStyle: cbsAuto (Auswahlliste bei PickList bzw. Nachschlagefeld),
     /// cbsEllipsis (Textfeld mit "..."-Knopf: OnEditButtonClick), cbsNone (nur Text).
     property ButtonStyle: TColumnButtonStyle read FButtonStyle write FButtonStyle default cbsAuto;
+  end;
+
+  /// Ausgewaehlte Datensaetze des DB-Grids (Mehrfachauswahl, dgMultiSelect)
+  /// als Lesezeichen, wie TBookmarkList (TDBGrid.SelectedRows). Die Liste ist
+  /// nach DataSet.CompareBookmarks sortiert.
+  TPPGBookmarkList = class
+  private
+    FGrid: TPPGCustomDBGrid;
+    FList: TList<TBookmark>;
+    FUpdateCount: Integer;
+    FChanged: Boolean;
+    FCheckOrder: Boolean;
+    function DataSet: TDataSet;
+    function GetCount: Integer;
+    function GetItem(Index: Integer): TBookmark;
+    function GetCurrentRowSelected: Boolean;
+    procedure SetCurrentRowSelected(Value: Boolean);
+    procedure Changed;
+    procedure SortList;
+    procedure EnsureOrder;
+  protected
+    procedure BeginUpdate;
+    procedure EndUpdate;
+    /// Lesezeichen aufnehmen bzw. entfernen (True = Liste geaendert).
+    function AddBookmark(const Item: TBookmark): Boolean;
+    function RemoveBookmark(const Item: TBookmark): Boolean;
+    /// Lesezeichen des aktiven Datensatzes (leer = keiner, z.B. neuer Satz).
+    function CurrentBookmark: TBookmark;
+  public
+    constructor Create(AGrid: TPPGCustomDBGrid);
+    destructor Destroy; override;
+    /// Auswahl aufheben.
+    procedure Clear;
+    /// Alle Datensaetze der Datenmenge waehlen (einmal durchlaufen).
+    procedure SelectAll;
+    /// Ausgewaehlte Datensaetze loeschen (ohne Rueckfrage, wie TBookmarkList).
+    procedure Delete;
+    /// Index des Lesezeichens bzw. Einfuegeposition; True = gefunden.
+    function Find(const Item: TBookmark; var Index: Integer): Boolean;
+    function IndexOf(const Item: TBookmark): Integer;
+    /// Ungueltige Lesezeichen entfernen, die uebrigen neu lesen und sortieren
+    /// (nach einem Wechsel von Index oder Sortierung); True = entfernt.
+    function Refresh: Boolean;
+    property Count: Integer read GetCount;
+    property CurrentRowSelected: Boolean read GetCurrentRowSelected write SetCurrentRowSelected;
+    property Items[Index: Integer]: TBookmark read GetItem; default;
   end;
 
   /// Verbindung des Grids zur Datenmenge.
@@ -120,6 +175,12 @@ type
     FSnapValid: Boolean;
     // Datensatz, auf dem der Zell-Editor geoeffnet wurde
     FEditBm: TBookmark;
+    // Mehrfachauswahl: Liste, Anker fuer Bereiche, Markierung je Pufferzeile
+    FSelected: TPPGBookmarkList;
+    FAnchor: TBookmark;
+    FMarks: array of Boolean;
+    FRowBms: array of TBookmark; // Lesezeichen je Pufferzeile (nur dgMultiSelect)
+    FOnSelectionChanged: TNotifyEvent;
     function GetDataSource: TDataSource;
     procedure SetDataSource(Value: TDataSource);
     procedure SetDBOptions(const Value: TDBGridOptions);
@@ -133,7 +194,20 @@ type
     function FieldEditable(F: TField): Boolean;
     procedure FillLookupEditor(F: TField);
     procedure SetLookupByUser(F: TField; const Value: string);
+    function MultiSelectActive: Boolean;
+    /// Datensaetze vom Lesezeichen bis zum aktiven Satz waehlen (ohne Abwahl).
+    procedure SelectRangeTo(const FromBm: TBookmark);
+    /// Umschalt+Pfeil: Auswahl um den neuen Satz erweitern bzw. verkleinern.
+    procedure ExtendByStep(const OldBm: TBookmark);
   protected
+    /// Auswahl geaendert: Markierungen neu, OnSelectionChanged.
+    procedure SelectionChanged; virtual;
+    /// Markierung je Pufferzeile aus SelectedRows (ausserhalb von Paint).
+    procedure UpdateMarks;
+    function RowMarked(ARow: Integer): Boolean; override;
+    procedure ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    /// Rueckfrage vor dem Loeschen der Auswahl (dgConfirmDelete). Standard: MessageDlg.
+    function ConfirmDeleteSelected(ACount: Integer): Boolean; virtual;
     { Ereignisse des DataLinks }
     procedure LinkActive(Value: Boolean); virtual;
     procedure DataChanged; virtual;
@@ -207,6 +281,8 @@ type
     property ExportMaxRecords: Integer read FExportMaxRecords write SetExportMaxRecords default 100000;
     /// Pflichtfelder (TField.Required) mit einem Sternchen im Spaltentitel.
     property ShowRequired: Boolean read FShowRequired write SetShowRequired default False;
+    /// Auswahl der Mehrfachauswahl geaendert (SelectedRows).
+    property OnSelectionChanged: TNotifyEvent read FOnSelectionChanged write FOnSelectionChanged;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -218,6 +294,8 @@ type
     property FieldCount: Integer read GetFieldCount;
     property Fields[Index: Integer]: TField read GetField;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
+    /// Ausgewaehlte Datensaetze (nur mit dgMultiSelect), wie TDBGrid.SelectedRows.
+    property SelectedRows: TPPGBookmarkList read FSelected;
   end;
 
   TPPGDBGrid = class(TPPGCustomDBGrid)
@@ -304,6 +382,7 @@ type
     property OnStartDock;
     property OnStartDrag;
     property OnTitleClick;
+    property OnSelectionChanged;
     // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
     property OnClick;
     property OnMouseWheel;
@@ -322,6 +401,7 @@ implementation
 uses
   PPG.Lang,
   Vcl.StdCtrls, PPG.ComboBox, System.Math, System.UITypes, System.Variants, Vcl.Dialogs,
+  System.Generics.Defaults,
   PPG.Consts, PPG.Appearance,
   PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls;
 
@@ -330,6 +410,7 @@ const
   IndBrowse = #$25B6;  // Dreieck
   IndEdit = #$270E;    // Stift
   IndInsert = '*';
+  IndSelected = #$2713; // Haken: Satz der Mehrfachauswahl
   // Dreistufige Leiste ohne RecNo: Anfang, Mitte, Ende (in Zeilen)
   ThreeStateRows = 2;
 
@@ -398,6 +479,353 @@ begin
   end;
 end;
 
+type
+  TDataSetAccess = class(TDataSet);
+
+/// Zum Lesezeichen gehen und den Satz wieder an dieselbe Stelle im Puffer
+/// bringen (GotoBookmark mittet ihn sonst; die Anzeige wuerde springen).
+/// Index = Pufferzeile der Datenmenge vorher (TDataSet.ActiveRecord).
+procedure GotoBookmarkAt(DS: TDataSet; const Bm: TBookmark; Index: Integer);
+var
+  C, Moved: Integer;
+begin
+  DS.Bookmark := Bm;
+  C := TDataSetAccess(DS).ActiveRecord;
+  if C > Index then
+  begin
+    // Fenster nach unten schieben: ueber das Pufferende hinaus und zurueck
+    Moved := DS.MoveBy(TDataSetAccess(DS).BufferCount - 1 - C + (C - Index));
+    DS.MoveBy(-Moved);
+  end
+  else if C < Index then
+  begin
+    // Fenster nach oben schieben: ueber den Pufferanfang hinaus und zurueck
+    Moved := DS.MoveBy(-Index);
+    DS.MoveBy(-Moved);
+  end;
+end;
+
+{ TPPGBookmarkList }
+
+constructor TPPGBookmarkList.Create(AGrid: TPPGCustomDBGrid);
+begin
+  inherited Create;
+  FGrid := AGrid;
+  FList := TList<TBookmark>.Create;
+end;
+
+destructor TPPGBookmarkList.Destroy;
+begin
+  // Lesezeichen sind dynamische Arrays: die Liste gibt sie mit frei
+  FList.Free;
+  inherited Destroy;
+end;
+
+function TPPGBookmarkList.DataSet: TDataSet;
+begin
+  Result := nil;
+  if (FGrid <> nil) and (FGrid.FDataLink <> nil) and FGrid.FDataLink.Active then
+    Result := FGrid.FDataLink.DataSet;
+end;
+
+function TPPGBookmarkList.GetCount: Integer;
+begin
+  Result := FList.Count;
+end;
+
+function TPPGBookmarkList.GetItem(Index: Integer): TBookmark;
+begin
+  if (Index < 0) or (Index >= FList.Count) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [Index, FList.Count - 1]);
+  Result := FList[Index];
+end;
+
+procedure TPPGBookmarkList.BeginUpdate;
+begin
+  Inc(FUpdateCount);
+end;
+
+procedure TPPGBookmarkList.EndUpdate;
+begin
+  Dec(FUpdateCount);
+  if (FUpdateCount = 0) and FChanged then
+  begin
+    FChanged := False;
+    if FGrid <> nil then
+      FGrid.SelectionChanged;
+  end;
+end;
+
+procedure TPPGBookmarkList.Changed;
+begin
+  if FUpdateCount > 0 then
+    FChanged := True
+  else if FGrid <> nil then
+    FGrid.SelectionChanged;
+end;
+
+procedure TPPGBookmarkList.SortList;
+var
+  DS: TDataSet;
+begin
+  DS := DataSet;
+  if (DS = nil) or (FList.Count < 2) then
+    Exit;
+  FList.Sort(TComparer<TBookmark>.Construct(
+    function(const A, B: TBookmark): Integer
+    begin
+      Result := DS.CompareBookmarks(A, B);
+    end));
+end;
+
+procedure TPPGBookmarkList.EnsureOrder;
+var
+  DS: TDataSet;
+  I: Integer;
+begin
+  // Nach DataSetChanged (anderer Index, Refresh) einmal pruefen, ob die
+  // Reihenfolge noch zu CompareBookmarks passt; sonst neu sortieren
+  if not FCheckOrder then
+    Exit;
+  FCheckOrder := False;
+  DS := DataSet;
+  if DS = nil then
+    Exit;
+  for I := 1 to FList.Count - 1 do
+    if DS.CompareBookmarks(FList[I - 1], FList[I]) > 0 then
+    begin
+      SortList;
+      Exit;
+    end;
+end;
+
+function TPPGBookmarkList.Find(const Item: TBookmark; var Index: Integer): Boolean;
+var
+  DS: TDataSet;
+  L, H, I, C: Integer;
+begin
+  // Binaere Suche wie TBookmarkList.Find
+  Result := False;
+  Index := 0;
+  DS := DataSet;
+  if (DS = nil) or (Length(Item) = 0) then
+    Exit;
+  EnsureOrder;
+  L := 0;
+  H := FList.Count - 1;
+  while L <= H do
+  begin
+    I := (L + H) shr 1;
+    C := DS.CompareBookmarks(FList[I], Item);
+    if C < 0 then
+      L := I + 1
+    else
+    begin
+      H := I - 1;
+      if C = 0 then
+      begin
+        Result := True;
+        L := I;
+      end;
+    end;
+  end;
+  Index := L;
+end;
+
+function TPPGBookmarkList.IndexOf(const Item: TBookmark): Integer;
+begin
+  if not Find(Item, Result) then
+    Result := -1;
+end;
+
+function TPPGBookmarkList.AddBookmark(const Item: TBookmark): Boolean;
+var
+  I: Integer;
+begin
+  // Nur mit dgMultiSelect (ohne Option bleibt die Liste leer, wie TDBGrid)
+  Result := (FGrid <> nil) and FGrid.MultiSelectActive and (Length(Item) > 0) and
+    not Find(Item, I);
+  if Result then
+  begin
+    FList.Insert(I, Copy(Item));
+    Changed;
+  end;
+end;
+
+function TPPGBookmarkList.RemoveBookmark(const Item: TBookmark): Boolean;
+var
+  I: Integer;
+begin
+  Result := Find(Item, I);
+  if Result then
+  begin
+    FList.Delete(I);
+    Changed;
+  end;
+end;
+
+function TPPGBookmarkList.CurrentBookmark: TBookmark;
+var
+  DS: TDataSet;
+begin
+  Result := nil;
+  DS := DataSet;
+  // Neuer, noch nicht gebuchter Satz hat kein Lesezeichen
+  if (DS <> nil) and not DS.IsEmpty and (DS.State <> dsInsert) then
+    Result := DS.Bookmark;
+end;
+
+function TPPGBookmarkList.GetCurrentRowSelected: Boolean;
+var
+  I: Integer;
+begin
+  Result := Find(CurrentBookmark, I);
+end;
+
+procedure TPPGBookmarkList.SetCurrentRowSelected(Value: Boolean);
+var
+  B: TBookmark;
+begin
+  B := CurrentBookmark;
+  if Length(B) = 0 then
+    Exit;
+  if Value then
+    AddBookmark(B)
+  else
+    RemoveBookmark(B);
+end;
+
+procedure TPPGBookmarkList.Clear;
+begin
+  if FList.Count = 0 then
+    Exit;
+  FList.Clear;
+  Changed;
+end;
+
+procedure TPPGBookmarkList.SelectAll;
+var
+  DS: TDataSet;
+  B: TBookmark;
+  Pos: Integer;
+begin
+  DS := DataSet;
+  if (DS = nil) or not FGrid.MultiSelectActive then
+    Exit;
+  // First wuerde eine offene Bearbeitung still buchen (wie EnsureSnapshot)
+  if DS.State in dsEditModes then
+    DS.CheckBrowseMode;
+  Pos := TDataSetAccess(DS).ActiveRecord;
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    B := DS.Bookmark;
+    try
+      FList.Clear;
+      DS.First;
+      while not DS.Eof do
+      begin
+        FList.Add(DS.Bookmark);
+        DS.Next;
+      end;
+    finally
+      if (Length(B) > 0) and DS.BookmarkValid(B) then
+        GotoBookmarkAt(DS, B, Pos);
+    end;
+  finally
+    DS.EnableControls;
+    PPGDBEndRead;
+  end;
+  // Reihenfolge der Datenmenge muss nicht die von CompareBookmarks sein
+  SortList;
+  FCheckOrder := False;
+  Changed;
+end;
+
+procedure TPPGBookmarkList.Delete;
+var
+  DS: TDataSet;
+  I: Integer;
+begin
+  DS := DataSet;
+  if (DS = nil) or (FList.Count = 0) then
+    Exit;
+  DS.DisableControls;
+  try
+    // Von hinten: die uebrigen Lesezeichen bleiben gueltig
+    for I := FList.Count - 1 downto 0 do
+    begin
+      if DS.BookmarkValid(FList[I]) then
+      begin
+        DS.Bookmark := FList[I];
+        DS.Delete;
+      end;
+      FList.Delete(I);
+    end;
+  finally
+    DS.EnableControls;
+    Changed;
+  end;
+end;
+
+function TPPGBookmarkList.Refresh: Boolean;
+var
+  DS: TDataSet;
+  I, Pos: Integer;
+  B: TBookmark;
+begin
+  Result := False;
+  DS := DataSet;
+  if DS = nil then
+  begin
+    Result := FList.Count > 0;
+    FList.Clear;
+  end
+  else if FList.Count > 0 then
+  begin
+    // Ungueltige entfernen. Gueltige neu lesen: manche Datenmengen (z.B.
+    // TClientDataSet) liefern nach einem Indexwechsel andere Lesezeichen fuer
+    // denselben Satz; danach neu sortieren
+    if DS.State in dsEditModes then
+      DS.CheckBrowseMode;
+    Pos := TDataSetAccess(DS).ActiveRecord;
+    PPGDBBeginRead;
+    DS.DisableControls;
+    try
+      B := DS.Bookmark;
+      try
+        for I := FList.Count - 1 downto 0 do
+          if not DS.BookmarkValid(FList[I]) then
+          begin
+            FList.Delete(I);
+            Result := True;
+          end
+          else
+          begin
+            DS.Bookmark := FList[I];
+            FList[I] := DS.Bookmark;
+          end;
+      finally
+        if (Length(B) > 0) and DS.BookmarkValid(B) then
+          GotoBookmarkAt(DS, B, Pos);
+      end;
+    finally
+      DS.EnableControls;
+      PPGDBEndRead;
+    end;
+    SortList;
+    FCheckOrder := False;
+  end;
+  if Result then
+    Changed
+  else if FGrid <> nil then
+  begin
+    // Markierungen der sichtbaren Zeilen mit den neuen Lesezeichen
+    FGrid.UpdateMarks;
+    FGrid.Invalidate;
+  end;
+end;
+
 { TPPGGridDataLink }
 
 constructor TPPGGridDataLink.Create(AGrid: TPPGCustomDBGrid);
@@ -415,8 +843,13 @@ end;
 
 procedure TPPGGridDataLink.DataSetChanged;
 begin
-  if FGrid <> nil then
-    FGrid.DataChanged;
+  if FGrid = nil then
+    Exit;
+  // Sortierung der Datenmenge kann sich geaendert haben (Index, Refresh):
+  // Reihenfolge der Lesezeichen vor der naechsten Suche pruefen
+  if FGrid.FSelected <> nil then
+    FGrid.FSelected.FCheckOrder := True;
+  FGrid.DataChanged;
 end;
 
 procedure TPPGGridDataLink.DataSetScrolled(Distance: Integer);
@@ -479,6 +912,7 @@ begin
   FAutoState := TPPGGridColumns.Create(nil, TPPGDBGridColumn);
   FExportMaxRecords := 100000;
   FDataLink := TPPGGridDataLink.Create(Self);
+  FSelected := TPPGBookmarkList.Create(Self);
   // Sortieren ist Sache der Datenmenge
   SortOnHeaderClick := False;
   SetDBOptions(FDBOptions);
@@ -493,6 +927,10 @@ begin
   if FDataLink <> nil then
     FDataLink.FGrid := nil;
   FreeAndNil(FDataLink);
+  if FSelected <> nil then
+    FSelected.FGrid := nil;
+  FreeAndNil(FSelected);
+  FAnchor := nil;
   FreeAndNil(FAutoColumns);
   FreeAndNil(FAutoState);
   inherited Destroy;
@@ -550,6 +988,12 @@ var
   G: TGridOptions;
 begin
   FDBOptions := Value;
+  // Ohne Mehrfachauswahl keine ausgewaehlten Saetze (wie TDBGrid)
+  if not (dgMultiSelect in Value) and (FSelected <> nil) then
+  begin
+    FAnchor := nil;
+    FSelected.Clear;
+  end;
   G := [goRangeSelect];
   if dgEditing in Value then
     Include(G, goEditing);
@@ -783,15 +1227,25 @@ begin
   if not FDataLink.Active then
   begin
     SetLength(FCache, 0);
+    SetLength(FMarks, 0);
+    SetLength(FRowBms, 0);
     Exit;
   end;
   N := FDataLink.RecordCount;
   SetLength(FCache, N);
+  // Lesezeichen je Zeile fuer die Markierung der Mehrfachauswahl: so muss
+  // UpdateMarks den Satzzeiger nie bewegen (auch nicht bei DisableControls)
+  if dgMultiSelect in FDBOptions then
+    SetLength(FRowBms, N)
+  else
+    SetLength(FRowBms, 0);
   Old := FDataLink.ActiveRecord;
   try
     for R := 0 to N - 1 do
     begin
       FDataLink.ActiveRecord := R;
+      if R < Length(FRowBms) then
+        FRowBms[R] := FDataLink.DataSet.Bookmark; // leer bei neuem Satz
       SetLength(FCache[R], Length(FFields));
       for C := 0 to High(FFields) do
       begin
@@ -814,6 +1268,227 @@ begin
     end;
   finally
     FDataLink.ActiveRecord := Old;
+  end;
+  UpdateMarks;
+end;
+
+{ ---- Mehrfachauswahl ---- }
+
+function TPPGCustomDBGrid.MultiSelectActive: Boolean;
+begin
+  Result := (dgMultiSelect in FDBOptions) and FDataLink.Active and (FSelected <> nil);
+end;
+
+procedure TPPGCustomDBGrid.UpdateMarks;
+var
+  R: Integer;
+begin
+  if not FDataLink.Active or (FSelected = nil) or (FSelected.Count = 0) then
+  begin
+    SetLength(FMarks, 0);
+    Exit;
+  end;
+  // Nur Lesezeichen vergleichen (aus RebuildCache), kein Satzwechsel
+  SetLength(FMarks, Length(FRowBms));
+  for R := 0 to High(FRowBms) do
+    FMarks[R] := (Length(FRowBms[R]) > 0) and (FSelected.IndexOf(FRowBms[R]) >= 0);
+end;
+
+function TPPGCustomDBGrid.RowMarked(ARow: Integer): Boolean;
+var
+  R: Integer;
+begin
+  // Paint: nur der Zwischenspeicher (UpdateMarks)
+  R := ARow - FixedRows;
+  Result := (R >= 0) and (R < Length(FMarks)) and FMarks[R];
+end;
+
+procedure TPPGCustomDBGrid.SelectionChanged;
+begin
+  if csDestroying in ComponentState then
+    Exit;
+  // Leere Auswahl: der naechste Bereich beginnt am dann aktiven Satz
+  if FSelected.Count = 0 then
+    FAnchor := nil;
+  UpdateMarks;
+  Invalidate;
+  if Assigned(FOnSelectionChanged) then
+    FOnSelectionChanged(Self);
+end;
+
+function TPPGCustomDBGrid.ConfirmDeleteSelected(ACount: Integer): Boolean;
+begin
+  Result := MessageDlg(Format(PPGStr(@SPPGDBGridConfirmDeleteSelected), [ACount]),
+    mtConfirmation, [mbOK, mbCancel], 0) = mrOK;
+end;
+
+procedure TPPGCustomDBGrid.SelectRangeTo(const FromBm: TBookmark);
+var
+  DS: TDataSet;
+  Cur: TBookmark;
+  Found: TList<TBookmark>;
+  I, Pos: Integer;
+
+  function Walk(Forward: Boolean): Boolean;
+  begin
+    // Vom Anker in eine Richtung bis zum aktiven Satz; False = nicht erreicht
+    Result := False;
+    Found.Clear;
+    DS.Bookmark := FromBm;
+    while True do
+    begin
+      Found.Add(DS.Bookmark);
+      if DS.CompareBookmarks(DS.Bookmark, Cur) = 0 then
+      begin
+        Result := True;
+        Exit;
+      end;
+      if Forward then
+        DS.Next
+      else
+        DS.Prior;
+      if (Forward and DS.Eof) or (not Forward and DS.Bof) then
+        Exit;
+    end;
+  end;
+
+begin
+  if not MultiSelectActive then
+    Exit;
+  DS := FDataLink.DataSet;
+  Cur := FSelected.CurrentBookmark;
+  if Length(Cur) = 0 then
+    Exit;
+  if (Length(FromBm) = 0) or not DS.BookmarkValid(FromBm) then
+  begin
+    FSelected.AddBookmark(Cur);
+    Exit;
+  end;
+  Pos := TDataSetAccess(DS).ActiveRecord;
+  Found := TList<TBookmark>.Create;
+  try
+    PPGDBBeginRead;
+    DS.DisableControls;
+    try
+      try
+        // Richtung nach CompareBookmarks raten, sonst die andere versuchen
+        if DS.CompareBookmarks(FromBm, Cur) <= 0 then
+        begin
+          if not Walk(True) and not Walk(False) then
+            Found.Clear;
+        end
+        else if not Walk(False) and not Walk(True) then
+          Found.Clear;
+      finally
+        GotoBookmarkAt(DS, Cur, Pos);
+      end;
+    finally
+      DS.EnableControls;
+      PPGDBEndRead;
+    end;
+    FSelected.BeginUpdate;
+    try
+      for I := 0 to Found.Count - 1 do
+        FSelected.AddBookmark(Found[I]);
+      FSelected.AddBookmark(Cur);
+    finally
+      FSelected.EndUpdate;
+    end;
+  finally
+    Found.Free;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.ExtendByStep(const OldBm: TBookmark);
+var
+  NewBm: TBookmark;
+  DS: TDataSet;
+begin
+  // Wie TDBGrid: vom Anker weg kommt der neue Satz dazu, zum Anker hin
+  // faellt der verlassene Satz heraus
+  DS := FDataLink.DataSet;
+  NewBm := FSelected.CurrentBookmark;
+  if Length(FAnchor) = 0 then
+    FAnchor := OldBm;
+  if Length(NewBm) = 0 then
+    Exit;
+  FSelected.BeginUpdate;
+  try
+    if (Length(OldBm) = 0) or (DS.CompareBookmarks(OldBm, NewBm) = 0) then
+      FSelected.AddBookmark(NewBm)
+    else if (FSelected.IndexOf(NewBm) >= 0) and (Length(FAnchor) > 0) and
+      (DS.CompareBookmarks(OldBm, FAnchor) <> 0) then
+      FSelected.RemoveBookmark(OldBm)
+    else
+    begin
+      FSelected.AddBookmark(OldBm);
+      FSelected.AddBookmark(NewBm);
+    end;
+  finally
+    FSelected.EndUpdate;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  C, V, R: Integer;
+  OnRow: Boolean;
+  OldBm: TBookmark;
+  BaseShift: TShiftState;
+begin
+  OnRow := MultiSelectActive and (Button = mbLeft) and not (ssDouble in Shift) and
+    (SizingColAt(X, Y) < 0) and MouseCoord(X, Y, C, V) and (DataRow(V) >= FixedRows) and
+    (DataRow(V) - FixedRows < FDataLink.RecordCount);
+  if not OnRow then
+  begin
+    inherited ContentMouseDown(Button, Shift, X, Y);
+    Exit;
+  end;
+  OldBm := FSelected.CurrentBookmark;
+  R := DataRow(V) - FixedRows;
+  // Umschalt waehlt hier Datensaetze, keinen Zellbereich; Strg statt Umschalt
+  // haelt die Basis auch davon ab, ein Kaestchen per Klick umzuschalten
+  BaseShift := Shift;
+  if ssShift in BaseShift then
+    BaseShift := BaseShift - [ssShift] + [ssCtrl];
+  inherited ContentMouseDown(Button, BaseShift, X, Y);
+  if not MultiSelectActive then
+    Exit;
+  // Klick in den Indikator: Datensatz wechseln wie TDBGrid
+  if (C < FixedCols) and (R <> FDataLink.ActiveRecord) then
+    FDataLink.MoveBy(R - FDataLink.ActiveRecord);
+  // Wechsel abgelehnt (z.B. Pflichtfeld beim Buchen): Auswahl bleibt
+  if not MultiSelectActive or (FDataLink.ActiveRecord <> R) then
+    Exit;
+  if ssShift in Shift then
+  begin
+    if Length(FAnchor) = 0 then
+      FAnchor := OldBm;
+    FSelected.BeginUpdate;
+    try
+      if not (ssCtrl in Shift) then
+        FSelected.Clear;
+      SelectRangeTo(FAnchor);
+    finally
+      FSelected.EndUpdate;
+    end;
+  end
+  else if ssCtrl in Shift then
+  begin
+    FSelected.CurrentRowSelected := not FSelected.CurrentRowSelected;
+    FAnchor := FSelected.CurrentBookmark;
+  end
+  else
+  begin
+    // Wie TDBGrid: Auswahl aufheben, angeklickten Satz waehlen
+    FSelected.BeginUpdate;
+    try
+      FSelected.Clear;
+      FSelected.CurrentRowSelected := True;
+    finally
+      FSelected.EndUpdate;
+    end;
+    FAnchor := FSelected.CurrentBookmark;
   end;
 end;
 
@@ -863,6 +1538,13 @@ procedure TPPGCustomDBGrid.LinkActive(Value: Boolean);
 begin
   if (csDestroying in ComponentState) then
     Exit;
+  // Lesezeichen gehoeren zur alten Datenmenge bzw. zum alten Oeffnen
+  FAnchor := nil;
+  if FSelected <> nil then
+  begin
+    FSelected.FCheckOrder := False;
+    FSelected.Clear;
+  end;
   HideEditor(False);
   BuildColumns;
 end;
@@ -1308,7 +1990,9 @@ begin
         dsInsert: Result := IndInsert;
       else
         Result := IndBrowse;
-      end;
+      end
+    else if (R >= 0) and (R < Length(FMarks)) and FMarks[R] then
+      Result := IndSelected;
     Exit;
   end;
   if (R >= 0) and (R < Length(FCache)) and (ACol - FixedCols < Length(FCache[R])) then
@@ -1556,6 +2240,9 @@ end;
 procedure TPPGCustomDBGrid.NavigateKey(var Key: Word; Shift: TShiftState);
 var
   DS: TDataSet;
+  RowKey: Boolean;
+  OrigKey: Word;
+  OldBm: TBookmark;
 begin
   // Audit 7c #1: laeuft nach OnKeyDown (KeyDown der Grid-Basis)
   if not FDataLink.Active or EditorMode then
@@ -1564,6 +2251,54 @@ begin
     Exit;
   end;
   DS := FDataLink.DataSet;
+  OrigKey := Key;
+  RowKey := False;
+  if MultiSelectActive then
+  begin
+    case Key of
+      Ord('A'):
+        if Shift = [ssCtrl] then
+        begin
+          FSelected.SelectAll;
+          Key := 0;
+          Exit;
+        end;
+      VK_SPACE:
+        // Strg+Leertaste immer, Leertaste nur ausserhalb von Zellarten (Kaestchen)
+        if (Shift = [ssCtrl]) or ((Shift = []) and (KindOf(DataCol(FocusCol)) = nil)) then
+        begin
+          FSelected.CurrentRowSelected := not FSelected.CurrentRowSelected;
+          FAnchor := FSelected.CurrentBookmark;
+          Key := 0;
+          Exit;
+        end;
+      VK_DELETE:
+        if (ssCtrl in Shift) and (FSelected.Count > 0) and not FReadOnly and DS.CanModify then
+        begin
+          if not (dgConfirmDelete in FDBOptions) or ConfirmDeleteSelected(FSelected.Count) then
+          begin
+            FAnchor := nil;
+            FSelected.Delete;
+          end;
+          Key := 0;
+          Exit;
+        end;
+      VK_UP, VK_DOWN, VK_PRIOR, VK_NEXT:
+        RowKey := True;
+      VK_HOME, VK_END:
+        RowKey := ssCtrl in Shift;
+    end;
+    if RowKey then
+    begin
+      OldBm := FSelected.CurrentBookmark;
+      // Umschalt+Pfeil runter am Ende waehlt, haengt aber keinen Satz an
+      if (Key = VK_DOWN) and (ssShift in Shift) and (DS.State = dsBrowse) then
+      begin
+        DS.Next;
+        Key := 0;
+      end;
+    end;
+  end;
   case Key of
     VK_UP:
       begin
@@ -1626,7 +2361,29 @@ begin
       end;
   end;
   if Key <> 0 then
-    inherited NavigateKey(Key, Shift);
+    inherited NavigateKey(Key, Shift)
+  else if RowKey and MultiSelectActive then
+  begin
+    // Mehrfachauswahl nach dem Satzwechsel
+    if ssShift in Shift then
+    begin
+      if (OrigKey = VK_UP) or (OrigKey = VK_DOWN) then
+        ExtendByStep(OldBm)
+      else
+      begin
+        if Length(FAnchor) = 0 then
+          FAnchor := OldBm;
+        SelectRangeTo(FAnchor);
+      end;
+    end
+    else if (ssCtrl in Shift) and ((OrigKey = VK_UP) or (OrigKey = VK_DOWN)) then
+      // Strg+Pfeil bewegt nur (danach Strg+Leertaste)
+    else
+    begin
+      FSelected.Clear;
+      FAnchor := FSelected.CurrentBookmark;
+    end;
+  end;
 end;
 
 

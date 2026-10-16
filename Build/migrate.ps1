@@ -169,7 +169,7 @@ $ValueMap = @{
 }
 
 # DB-Grid-Optionen ohne Wirkung in TPPGDBGrid (werden gemeldet)
-$DBGridNoEffect = @('dgAlwaysShowEditor', 'dgAlwaysShowSelection', 'dgThumbTracking', 'dgMultiSelect')
+$DBGridNoEffect = @('dgAlwaysShowEditor', 'dgAlwaysShowSelection', 'dgThumbTracking')
 
 # --- Dateien mit ihrer Kodierung lesen und schreiben -------------------------
 # Kundenquellen sind oft ANSI (cp1252). Ohne Angabe wuerde .NET sie als UTF-8

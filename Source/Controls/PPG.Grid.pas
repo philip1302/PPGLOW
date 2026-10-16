@@ -420,6 +420,9 @@ type
     procedure StylesChanged;
     /// Zellart einer Datenspalte (nil = Text).
     function KindOf(ACol: Integer): IPPGCellKind; virtual;
+    /// Ganze Datenzeile zusaetzlich zur Auswahl markiert (Mehrfachauswahl
+    /// des DB-Grids). Wird beim Zeichnen gefragt: nur Zwischenspeicher lesen.
+    function RowMarked(ARow: Integer): Boolean; virtual;
     /// Kontext fuer Zellarten (Farben, Schrift ...) fuer diesen Zeichenvorgang.
     procedure PrepareKindContext(const ACanvas: IPPGCanvas);
     /// Zellart-Kontext mit dem Bereich der Spalte.
@@ -3971,6 +3974,11 @@ begin
   Invalidate;
 end;
 
+function TPPGCustomGrid.RowMarked(ARow: Integer): Boolean;
+begin
+  Result := False;
+end;
+
 function TPPGCustomGrid.KindOf(ACol: Integer): IPPGCellKind;
 var
   C: TPPGGridColumn;
@@ -4815,6 +4823,8 @@ begin
   State := [];
   if (ACol >= Sl.Left) and (ACol <= Sl.Right) and (VRow >= Sl.Top) and (VRow <= Sl.Bottom) then
     Include(State, gdSelected);
+  if (D >= FFixedRows) and (ACol >= FFixedCols) and RowMarked(D) then
+    Include(State, gdSelected);
   if (ACol = FFocusC) and (VRow = FFocusV) and Focused then
     Include(State, gdFocused);
   if (ACol < FFixedCols) or (D < FFixedRows) then
@@ -4876,6 +4886,9 @@ var
   Pts: array[0..3] of TPoint;
   LW: Integer;           // Linienbreite (px)
   HasSel: Boolean;
+  // Ganze Zeilen markiert (RowMarked, Mehrfachauswahl), je sichtbarer Zeile
+  Marked: array of Boolean;
+  HasMarks: Boolean;
   SelSt: TPPGElementStyle;
   F: TFont;
   Extra: TFontStyles;
@@ -5000,6 +5013,11 @@ var
   begin
     Result := HasSel and (AC >= Sl.Left) and (AC <= Sl.Right) and (AV >= Sl.Top) and
       (AV <= Sl.Bottom);
+  end;
+
+  function IsMarked(AV: Integer): Boolean;
+  begin
+    Result := HasMarks and Marked[AV - RowFrom];
   end;
 
   function IsZebraRow(AV: Integer): Boolean;
@@ -5164,6 +5182,19 @@ begin
       HasSel := (Sl.Top >= VFixedRows) and (Sl.Right >= ColFrom) and (Sl.Left <= ColTo) and
         (Sl.Bottom >= RowFrom) and (Sl.Top <= RowTo);
     end;
+    // Markierte Zeilen (Mehrfachauswahl): nur Datenzellen
+    HasMarks := False;
+    if not FixedArea and (ColFrom >= FFixedCols) then
+    begin
+      SetLength(Marked, RowTo - RowFrom + 1);
+      for V := RowFrom to RowTo do
+      begin
+        D := DataRow(V);
+        Marked[V - RowFrom] := (D >= FFixedRows) and RowMarked(D);
+        if Marked[V - RowFrom] then
+          HasMarks := True;
+      end;
+    end;
     if Focused then
       SelSt := FStyles.Selection
     else
@@ -5291,6 +5322,23 @@ begin
         end;
       end;
     end;
+    // 2a. Markierte Zeilen in derselben Auswahlfarbe (ganze Zeilenbreite)
+    if HasMarks then
+      for V := RowFrom to RowTo do
+        if Marked[V - RowFrom] then
+        begin
+          R := RawCellRect(ColFrom, V);
+          SR := Rect(Clip.Left, R.Top, Clip.Right, R.Bottom);
+          IntersectRect(SR, SR, Clip);
+          if IsRectEmpty(SR) then
+            Continue;
+          if FPaint.UseColors and SelSt.HasFill(FPaint.Dark) then
+            ACanvas.FillRoundRect(SR, 0, SelSt.FillFor(FPaint.Dark, FPaint.Accent), 255)
+          else if Focused then
+            ACanvas.FillRoundRect(SR, 0, FPaint.Accent, 46)
+          else
+            ACanvas.FillRoundRect(SR, 0, FPaint.Text, 22);
+        end;
     // 2b. Flaeche der Fokuszelle (Styles.FocusedCell.Color)
     if not FixedArea and Focused and FPaint.UseColors and FStyles.FocusedCell.HasFill(FPaint.Dark) and
       (FFocusC >= ColFrom) and (FFocusC <= ColTo) and (FFocusV >= RowFrom) and (FFocusV <= RowTo) and
@@ -5429,7 +5477,7 @@ begin
               else
                 Inc(TR.Left, IconW + Pad div 2);
           end;
-          if InSel(C, V) then
+          if InSel(C, V) or IsMarked(V) then
           begin
             if FPaint.UseColors then
               TC := SelSt.TextFor(FPaint.Dark, TC);

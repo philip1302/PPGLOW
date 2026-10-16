@@ -112,7 +112,8 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TPopupMenu | alle | `TPPGPopupMenu` erbt von `TPopupMenu`: Properties (Items, Images, ...) werden nicht gefiltert; `TMenuItem`-Einträge bleiben unverändert |
 | TButton | `Style = bsPushButton/bsSplitButton` | `Style = pbsPushButton/pbsSplitButton` |
 | TButton | `Style = bsCommandLink` | entfernt (gemeldet) |
-| TDBGrid | `Options`: `dgAlwaysShowEditor`, `dgAlwaysShowSelection`, `dgThumbTracking`, `dgMultiSelect` | bleiben stehen, wirken aber nicht (gemeldet) |
+| TDBGrid | `Options`: `dgAlwaysShowEditor`, `dgAlwaysShowSelection`, `dgThumbTracking` | bleiben stehen, wirken aber nicht (gemeldet) |
+| TDBGrid | `Options`: `dgMultiSelect` | bleibt und wirkt (`SelectedRows` wie in der VCL; im Code `TBookmarkList` durch `TPPGBookmarkList` ersetzen) |
 | TDBNavigator | `Kind` | entfernt (der Navigator ist immer waagerecht) |
 
 ## Abweichende Vorgaben

@@ -14,7 +14,8 @@ Das DB-Grid zeigt die Datensätze einer Datenmenge (Abfrage, Tabelle, ClientData
 ## Unterschiede und Hinweise
 
 - Nur der Puffer sichtbarer Datensätze wird gelesen; Paint greift nie auf die Datenmenge zu.
-- `Options` ist `TDBGridOptions` (DFM-kompatibel); `dgColumnResize` erlaubt auch das Verschieben der Spalten (wie `TDBGrid`). Nicht unterstützt: `dgMultiSelect`, Gruppieren (dafür `GROUP BY` in der Abfrage).
+- `Options` ist `TDBGridOptions` (DFM-kompatibel); `dgColumnResize` erlaubt auch das Verschieben der Spalten (wie `TDBGrid`). Nicht unterstützt: Gruppieren (dafür `GROUP BY` in der Abfrage).
+- Mehrfachauswahl mit `dgMultiSelect` wie bei `TDBGrid`: `SelectedRows` (`TPPGBookmarkList`) mit `Count`, `Items[]`, `CurrentRowSelected`, `Clear`, `SelectAll`, `Delete`, `Find`, `IndexOf` und `Refresh`. Strg+Klick schaltet um, Umschalt+Klick wählt den Bereich vom Anker, Umschalt+Pfeil erweitert, Strg+A wählt alles, Strg+Leertaste schaltet um, Strg+Entf löscht die Auswahl (Rückfrage bei `dgConfirmDelete`). Klick oder Pfeil ohne Taste heben die Auswahl auf. Gewählte Zeilen erscheinen in der Auswahlfarbe (`Styles.Selection`), im Indikator mit Haken. `OnSelectionChanged` meldet Änderungen. Schließen der Datenmenge oder eine andere `DataSource` leeren die Auswahl. Nach einem Wechsel von Index oder Sortierung `SelectedRows.Refresh` aufrufen; ein `TClientDataSet` liefert dann neue Lesezeichen.
 - Spalten: `FieldName`, `Title` (statt `Title.Caption` – das Migrationsskript setzt das um), `Width`, `Alignment`, `ReadOnly`, `EditorKind`, `PickList`, `ButtonStyle`, `Visible`, `DisplayIndex`, `FooterField`. Die von `TPPGGridColumn` geerbten `Aggregate`, `FooterFormat`, `GroupIndex` und `Sortable` wirken im DB-Grid nicht. Automatische Spalten behalten Position, Sichtbarkeit und Breite beim Neuaufbau. `SaveLayout`/`LoadLayout` merken sich die Spalten über den Feldnamen.
 - Summenzeile (`ShowFooter`) aus der Datenmenge: `Column.FooterField` (z. B. ein `TAggregateField`) oder `OnGetFooterText`.
 - Drucken (`TPPGGridPrinter`) und Export (`PPG.Grid.Export`) lesen die ganze Datenmenge einmal (`DisableControls`, Lesezeichen, höchstens `ExportMaxRecords`).
@@ -38,4 +39,12 @@ end;
 // Summenzeile aus einem TAggregateField 'Gesamt' (SUM(Betrag))
 TPPGDBGridColumn(PPGDBGrid1.Columns[2]).FooterField := 'Gesamt';
 PPGDBGrid1.ShowFooter := True;
+
+// Mehrfachauswahl: alle gewählten Datensätze durchlaufen (wie TDBGrid)
+PPGDBGrid1.Options := PPGDBGrid1.Options + [dgMultiSelect];
+for I := 0 to PPGDBGrid1.SelectedRows.Count - 1 do
+begin
+  ClientDataSet1.Bookmark := PPGDBGrid1.SelectedRows[I];
+  Summe := Summe + ClientDataSet1.FieldByName('Betrag').AsCurrency;
+end;
 ```

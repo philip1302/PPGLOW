@@ -45,6 +45,7 @@ resourcestring
   SPPGSortAscending = 'Sorted ascending';
   SPPGSortDescending = 'Sorted descending';
   SPPGDBGridConfirmDelete = 'Delete record?';
+  SPPGDBGridConfirmDeleteSelected = 'Delete %d selected records?';
   SPPGDBEditPending = 'The data set is being edited elsewhere. Post or cancel that edit first.';
   SPPGDBLookupMultiKey = 'Lookup with several key fields (%s) is not supported.';
   SPPGAccJump = 'Jump';

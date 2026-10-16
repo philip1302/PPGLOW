@@ -63,9 +63,12 @@ TPPGCustomDBGrid.ExportMaxRecords = Drucken und Export lesen höchstens so viele
 TPPGCustomDBGrid.OnCellClick = Klick mit der linken Maustaste auf eine Datenzelle; Column ist die angeklickte Spalte (Column.Field liefert das Feld).
 TPPGCustomDBGrid.OnGetFooterText = Text der Summenzeile (ShowFooter) für eine Spalte. Text ist mit dem Wert aus Column.FooterField vorbelegt und kann ersetzt werden; die ganze Datenmenge liest das Grid dafür nie.
 > `if Column.FieldName = 'Betrag' then Text := FormatFloat('#,##0.00 €', SummeAusAbfrage);`
+TPPGCustomDBGrid.OnSelectionChanged = Die Mehrfachauswahl (SelectedRows, nur mit dgMultiSelect) hat sich geändert: per Maus, Tastatur oder Code. Bereiche und SelectAll lösen das Ereignis einmal aus.
+> `StatusBar1.SimpleText := Format('%d ausgewählt', [PPGDBGrid1.SelectedRows.Count]);`
+! Für Zähler in der Statusleiste und zum Freischalten von Knöpfen, die mit mehreren Datensätzen arbeiten (Löschen, Exportieren, Sammelbuchung).
 TPPGCustomDBGrid.OnTitleClick = Klick auf einen Spaltentitel (mit dgTitleClick in Options). Sortieren ist Sache der Datenmenge, z. B. IndexFieldNames setzen.
 > `FDQuery1.IndexFieldNames := Column.FieldName;`
-TPPGCustomDBGrid.Options = Verhalten wie bei TDBGrid: dgEditing (bearbeiten), dgTitles (Titelzeile), dgIndicator (Datensatzzeiger links), dgColumnResize (Spaltenbreite und -position ändern), dgColLines/dgRowLines (Gitterlinien), dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete (Rückfrage bei Strg+Entf), dgCancelOnExit, dgTitleClick, dgTitleHotTrack. dgMultiSelect wird nicht unterstützt.
+TPPGCustomDBGrid.Options = Verhalten wie bei TDBGrid: dgEditing (bearbeiten), dgTitles (Titelzeile), dgIndicator (Datensatzzeiger links), dgColumnResize (Spaltenbreite und -position ändern), dgColLines/dgRowLines (Gitterlinien), dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete (Rückfrage bei Strg+Entf), dgCancelOnExit, dgTitleClick, dgTitleHotTrack, dgMultiSelect (Mehrfachauswahl von Datensätzen, siehe SelectedRows).
 TPPGCustomDBGrid.ReadOnly = True: Keine Bearbeitung im Grid, auch wenn die Datenmenge änderbar ist.
 
 # --- TPPGCustomDatePicker ---

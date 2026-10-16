@@ -31,6 +31,7 @@ SPPGGridFilterHint=Filter
 SPPGSortAscending=Aufsteigend sortiert
 SPPGSortDescending=Absteigend sortiert
 SPPGDBGridConfirmDelete=Datensatz löschen?
+SPPGDBGridConfirmDeleteSelected=%d ausgewählte Datensätze löschen?
 SPPGDBEditPending=Die Datenmenge wird gerade an anderer Stelle bearbeitet. Diese Bearbeitung zuerst speichern oder verwerfen.
 SPPGDBLookupMultiKey=Nachschlagen mit mehreren Schlüsselfeldern (%s) wird nicht unterstützt.
 SPPGAccJump=Springen
