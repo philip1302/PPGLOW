@@ -15,6 +15,7 @@ uses
   System.SysUtils,
   PPG.TestDesktop in 'PPG.TestDesktop.pas',
   System.Classes,
+  System.Rtti,
   Vcl.Forms,
   TestFramework,
   TextTestRunner,
@@ -269,33 +270,135 @@ begin
   end;
 end;
 
-/// Leck-Suche (/leaksuites): nach einem Lauf aller Tests (Caches fuellen)
-/// jede Test-Klasse einzeln noch einmal; gemeldet wird jede Klasse, nach der
-/// mehr als 1 KB mehr belegt ist ("LEAKSUITE Klasse Bytes").
-procedure LeakSuites;
+/// DUnit haengt jede Status-Meldung (Status(...), auch Skip) an eine Liste des
+/// Testobjekts, die erst mit dem Objekt freigegeben wird. Da die Testobjekte
+/// fuer Wiederholungslaeufe bestehen bleiben, waechst diese Liste je Lauf -
+/// ein Artefakt des Frameworks, kein Leck der Komponenten. Vor jeder Messung
+/// wird sie daher geleert.
+procedure ClearStatusLists(T: ITest);
 var
-  Root, Grp, S: ITest;
-  I, J: Integer;
+  Ctx: TRttiContext;
+  Fld: TRttiField;
+  Obj: TObject;
+  I: Integer;
+begin
+  Obj := T as TAbstractTest;
+  Fld := Ctx.GetType(TAbstractTest).GetField('FStatusStrings');
+  if (Fld <> nil) and (Fld.GetValue(Obj).AsObject is TStrings) then
+    TStrings(Fld.GetValue(Obj).AsObject).Clear;
+  for I := 0 to T.Tests.Count - 1 do
+    ClearStatusLists(T.Tests[I] as ITest);
+end;
+
+/// Ein Test wird dreimal hintereinander gelaufen; D1..D3 = Speicherzuwachs
+/// je Lauf (nach ProcessMessages). Mit /leaksizes werden zusaetzlich die
+/// Blockgroessen (Small-Block-Pools) ausgegeben, deren Blockzahl nach dem
+/// dritten Lauf von der davor abweicht ("SIZES Name: block Groesse delta n").
+procedure MeasureRuns(T: ITest; out D1, D2, D3: Int64);
+var
   B, A: Int64;
   R: TTestResult;
+  K, N: Integer;
+  S0, S1: TMemoryManagerState;
+  D: array[1..3] of Int64;
 begin
-  RunAll;
-  Root := RegisteredTests;
-  for I := 0 to Root.Tests.Count - 1 do
+  for K := 1 to 3 do
   begin
-    Grp := Root.Tests[I] as ITest;
-    for J := 0 to Grp.Tests.Count - 1 do
+    ClearStatusLists(T);
+    Application.ProcessMessages;
+    B := AllocatedBytes;
+    GetMemoryManagerState(S0);
+    R := TextTestRunner.RunTest(T, rxbContinue);
+    R.Free;
+    ClearStatusLists(T);
+    Application.ProcessMessages;
+    A := AllocatedBytes;
+    D[K] := A - B;
+    if (K = 3) and FindCmdLineSwitch('leaksizes', ['/', '-'], True) then
     begin
-      S := Grp.Tests[J] as ITest;
-      Application.ProcessMessages;
-      B := AllocatedBytes;
-      R := TextTestRunner.RunTest(S, rxbContinue);
-      R.Free;
-      Application.ProcessMessages;
-      A := AllocatedBytes;
-      if A - B > 1024 then
-        WriteLn(Format('LEAKSUITE %s.%s %d', [Grp.Name, S.Name, A - B]));
+      GetMemoryManagerState(S1);
+      for N := Low(S0.SmallBlockTypeStates) to High(S0.SmallBlockTypeStates) do
+        if S1.SmallBlockTypeStates[N].AllocatedBlockCount <>
+          S0.SmallBlockTypeStates[N].AllocatedBlockCount then
+          WriteLn(Format('SIZES %s: block %d delta %d', [T.Name,
+            S0.SmallBlockTypeStates[N].UseableBlockSize,
+            Integer(S1.SmallBlockTypeStates[N].AllocatedBlockCount) -
+            Integer(S0.SmallBlockTypeStates[N].AllocatedBlockCount)]));
     end;
+  end;
+  D1 := D[1];
+  D2 := D[2];
+  D3 := D[3];
+end;
+
+/// Test-Klassen mit bekanntem, belegtem Restwachstum ausserhalb der
+/// Komponenten (siehe Kommentar an LeakSuites).
+function IsKnownRemainder(const GroupName, SuiteName: string): Boolean;
+begin
+  // UI Automation: Das Testfenster beantwortet WM_GETOBJECT selbst
+  // (SendMessage). Windows haelt die Referenz auf die Wurzel, bis ein Client
+  // das zurueckgegebene LRESULT abholt; einen Client gibt es im Test nicht
+  // (ObjectFromLresult liefert E_FAIL, UiaDisconnectProvider und ein
+  // nil-Provider geben die Wurzel nicht frei). Gemessen: Wurzeln erzeugt 141,
+  // freigegeben 0, eine ohne UiaReturnRawElementProvider angelegte Wurzel
+  // wird dagegen sofort freigegeben. Je Test bleibt eine Wurzel (rund 250 Byte).
+  Result := GroupName = 'Phase9b';
+end;
+
+/// Leck-Suche (/leaksuites): nach einem Lauf aller Tests (Caches fuellen)
+/// wird jede Test-Klasse dreimal einzeln gelaufen. Einmalige Caches (Klassen-
+/// variablen, Schrift-/Glyph-/UIA-Provider, die erst beim ersten Durchlauf der
+/// Klasse entstehen und bis Programmende leben) wachsen nur im ersten Lauf;
+/// ein echtes Leck waechst in jedem Lauf. Gemeldet wird daher nur, wenn der
+/// zweite UND der dritte Lauf je mehr als 1 KB mehr belegen
+/// ("LEAKSUITE Klasse Lauf1 Lauf2 Lauf3"). Mit /leakmethods wird jede
+/// Testmethode einzeln so gemessen ("LEAKTEST Klasse.Methode ..."), mit
+/// /suite nur die genannten Gruppen bzw. Klassen. Die Status-Listen von DUnit
+/// werden vor jeder Messung geleert (ClearStatusLists).
+procedure LeakSuites(const Filter: string);
+var
+  Root, Grp, S, M: ITest;
+  I, J, K: Integer;
+  D1, D2, D3: Int64;
+  Methods: Boolean;
+  Names: TStringList;
+begin
+  Names := TStringList.Create;
+  try
+    Names.CommaText := Filter;
+    Names.CaseSensitive := False;
+    Methods := FindCmdLineSwitch('leakmethods', ['/', '-'], True);
+    RunAll;
+    Root := RegisteredTests;
+    for I := 0 to Root.Tests.Count - 1 do
+    begin
+      Grp := Root.Tests[I] as ITest;
+      for J := 0 to Grp.Tests.Count - 1 do
+      begin
+        S := Grp.Tests[J] as ITest;
+        if (Filter <> '') and (Names.IndexOf(Grp.Name) < 0) and
+          (Names.IndexOf(S.Name) < 0) then
+          Continue;
+        MeasureRuns(S, D1, D2, D3);
+        if (D2 > 1024) and (D3 > 1024) then
+          if IsKnownRemainder(Grp.Name, S.Name) then
+            WriteLn(Format('LEAKSUITE-BEKANNT %s.%s %d %d %d (Windows-UIA, siehe IsKnownRemainder)',
+              [Grp.Name, S.Name, D1, D2, D3]))
+          else
+            WriteLn(Format('LEAKSUITE %s.%s %d %d %d', [Grp.Name, S.Name, D1, D2, D3]));
+        if Methods then
+          for K := 0 to S.Tests.Count - 1 do
+          begin
+            M := S.Tests[K] as ITest;
+            MeasureRuns(M, D1, D2, D3);
+            if (D2 > 1024) and (D3 > 1024) then
+              WriteLn(Format('LEAKTEST %s.%s.%s %d %d %d',
+                [Grp.Name, S.Name, M.Name, D1, D2, D3]));
+          end;
+      end;
+    end;
+  finally
+    Names.Free;
   end;
 end;
 
@@ -384,15 +487,15 @@ begin
     GUITestRunner.RunRegisteredTests;
     Exit;
   end;
+  if FindCmdLineSwitch('leaksuites', ['/', '-'], True) then
+  begin
+    LeakSuites(SuiteFilter);
+    Exit;
+  end;
   if SuiteFilter <> '' then
   begin
     ExitCode := RunFiltered(SuiteFilter);
     ReportSkips;
-    Exit;
-  end;
-  if FindCmdLineSwitch('leaksuites', ['/', '-'], True) then
-  begin
-    LeakSuites;
     Exit;
   end;
   if FindCmdLineSwitch('leaks', ['/', '-'], True) then
