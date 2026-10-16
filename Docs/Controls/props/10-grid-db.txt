@@ -66,6 +66,9 @@ TPPGCustomDBGrid.OnGetFooterText = Text der Summenzeile (ShowFooter) für eine S
 TPPGCustomDBGrid.OnSelectionChanged = Die Mehrfachauswahl (SelectedRows, nur mit dgMultiSelect) hat sich geändert: per Maus, Tastatur oder Code. Bereiche und SelectAll lösen das Ereignis einmal aus.
 > `StatusBar1.SimpleText := Format('%d ausgewählt', [PPGDBGrid1.SelectedRows.Count]);`
 ! Für Zähler in der Statusleiste und zum Freischalten von Knöpfen, die mit mehreren Datensätzen arbeiten (Löschen, Exportieren, Sammelbuchung).
+TPPGCustomDBGrid.OnDrawColumnCell = Wie TDBGrid.OnDrawColumnCell: nach dem Zeichnen einer Datenzelle (nach OnDrawCell) selbst auf Canvas zeichnen. DataCol ist der Index der Spalte in Columns, Column die Spalte, State enthält gdSelected (Auswahl und Mehrfachauswahl) und gdFocused. Canvas ist mit Schrift, Textfarbe und Pinselfarbe der Zelle vorbereitet (Theme, Dunkelmodus); die Datenmenge steht auf dem gezeichneten Satz, Column.Field liefert dessen Werte. DefaultDrawColumnCell zeichnet den Standardinhalt.
+> `if Column.Field.AsCurrency < 0 then PPGDBGrid1.Canvas.Font.Color := clRed; PPGDBGrid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);`
+! Für Einfärbungen, die vom ganzen Datensatz abhängen (überfällig, gesperrt), und für migrierte TDBGrid-Handler. Für reine Werteregeln reichen ConditionalFormats und OnGetCellStyle. Die Datenmenge im Ereignis nicht bewegen.
 TPPGCustomDBGrid.OnTitleClick = Klick auf einen Spaltentitel (mit dgTitleClick in Options). Sortieren ist Sache der Datenmenge, z. B. IndexFieldNames setzen.
 > `FDQuery1.IndexFieldNames := Column.FieldName;`
 TPPGCustomDBGrid.Options = Verhalten wie bei TDBGrid: dgEditing (bearbeiten), dgTitles (Titelzeile), dgIndicator (Datensatzzeiger links), dgColumnResize (Spaltenbreite und -position ändern), dgColLines/dgRowLines (Gitterlinien), dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete (Rückfrage bei Strg+Entf), dgCancelOnExit, dgTitleClick, dgTitleHotTrack, dgMultiSelect (Mehrfachauswahl von Datensätzen, siehe SelectedRows).
@@ -239,6 +242,16 @@ TPPGDBEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
 TPPGDBEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBGrid.TitleFont = Wie TDBGrid.TitleFont: Schrift der Titelzeile. Ist ein Alias für Styles.Header.Font und wird nicht eigens gespeichert.
 TPPGDBGridColumn.ButtonStyle = Wie TColumn.ButtonStyle: cbsAuto (Auswahlliste bei PickList oder Nachschlagefeld), cbsEllipsis (Textfeld mit „…“-Knopf, löst OnEditButtonClick aus), cbsNone (immer Textfeld).
+TPPGDBGridColumn.ValueChecked = Kästchen-Spalte (Boolean-Feld, EditorKind = gekCheck oder CellKind = ckCheck): Wert für „an“ wie TDBCheckBox.ValueChecked, mehrere durch Semikolon (geschrieben wird der erste). Leer: 1, True und Ja gelten als an, geschrieben wird 1. Bei Boolean-Feldern ohne Wirkung.
+> `Column.EditorKind := gekCheck; Column.ValueChecked := 'J;Ja'; Column.ValueUnchecked := 'N;Nein';`
+! Für Ja/Nein-Spalten, die in der Datenbank als Text oder Zahl liegen (J/N, 1/0, T/F).
+TPPGDBGridColumn.ValueUnchecked = Wert für „aus“ (mehrere durch Semikolon, geschrieben wird der erste). Leer: jeder andere Wert ist aus, geschrieben wird 0. Gesetzt: unbekannte Werte erscheinen grau (unbestimmt), ebenso Null.
+! Setzen, wenn das Feld nur bestimmte Werte haben darf; Fremdwerte fallen dann grau auf.
+TPPGDBGridColumn.ListSource = Nachschlage-Spalte wie TDBLookupComboBox: Datenquelle der Liste. Zusammen mit KeyField und ListField zeigt die Spalte statt des Schlüssels aus FieldName den Text aus der Liste und bietet beim Bearbeiten eine Auswahlliste; geschrieben wird der Schlüssel.
+> `Column.FieldName := 'KundeID'; Column.ListSource := dsKunden; Column.KeyField := 'ID'; Column.ListField := 'Name';`
+! Statt eines Nachschlagefelds in der Datenmenge, wenn die Zuordnung nur in dieser Tabelle gebraucht wird. Die Liste wird beim Öffnen des Editors ganz gelesen; für sehr große Tabellen vorher filtern.
+TPPGDBGridColumn.KeyField = Schlüsselfeld der Liste (ListSource), dessen Wert zum Feld der Spalte (FieldName) passt. Nur ein Feld.
+TPPGDBGridColumn.ListField = Angezeigtes Feld der Liste; weitere Felder nach einem Semikolon werden ignoriert.
 TPPGCustomDBGrid.ShowRequired = True: Spalten mit Pflichtfeldern (TField.Required) zeigen im Titel ein Sternchen.
 TPPGDBLookupComboBox.KeyField = Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben.
 TPPGDBLookupComboBox.ListField = Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile.

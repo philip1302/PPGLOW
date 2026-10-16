@@ -519,6 +519,9 @@ type
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); virtual;
     /// Editor ist sichtbar geworden (ARow = Datenzeile, FilterRowMark = Filter).
     procedure EditorOpened(ACol, ARow: Integer); virtual;
+    /// Editor ist gefuellt, aber noch nicht sichtbar/fokussiert (z.B. Liste
+    /// einer Auswahl fuellen; Stilwechsel nach dem Fokus kostet den Fokus).
+    procedure EditorPrepare(ACol, ARow: Integer); virtual;
     /// Der Anwender hat den Text im Editor einer Datenzeile geaendert (DB-Grid:
     /// Bearbeiten-Modus beim ersten Tastendruck).
     procedure EditorEdited; virtual;
@@ -554,6 +557,23 @@ type
     procedure PaintViewport(const ACanvas: IPPGCanvas; const View: TRect); override;
     /// Owner-Draw einer Zelle (OnDrawCell); Hintergrund und Text sind gezeichnet.
     procedure DrawCell(const ACanvas: IPPGCanvas; ACol, VRow: Integer; const R: TRect); virtual;
+    /// Gibt es Owner-Draw-Ereignisse (Standard: OnDrawCell)? Nur dann ruft
+    /// das Zeichnen DrawCell je Zelle.
+    function OwnerDrawAssigned: Boolean; virtual;
+    /// Owner-Draw-Ereignisse einer Zelle; Canvas ist vorbereitet (Schrift und
+    /// Farben der Zelle). ACol = Anzeige-Spalte, ARow = Datenzeile.
+    procedure OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
+      State: TGridDrawState); virtual;
+    /// Canvas (Owner-Draw) fuer eine Zelle vorbereiten: Schrift der Spalte,
+    /// Font.Color = Textfarbe wie gezeichnet, Brush.Style = bsClear.
+    procedure PrepareItemCanvas(ACol, VRow: Integer; State: TGridDrawState); virtual;
+    /// Flaeche und Textfarbe einer Zelle wie beim Zeichnen (Theme, Dunkelmodus,
+    /// Spalten-/Zeilenstile, Auswahl). Nur waehrend des Zeichnens gueltig.
+    procedure CellDrawColors(ACol, VRow: Integer; State: TGridDrawState;
+      out AFill, AText: TColor);
+    /// Zeichnet das Grid Zellarten (Kaestchen ...) selbst? Standard: immer;
+    /// das DB-Grid nur mit DefaultDrawing (wie der Text).
+    function DefaultDrawsKinds: Boolean; virtual;
     procedure DrawCellExtras(const ACanvas: IPPGCanvas; ACol, VRow: Integer;
       const R: TRect; const S: string);
     procedure PaintRegion(const ACanvas: IPPGCanvas; ColFrom, ColTo, RowFrom, RowTo: Integer;
@@ -4580,7 +4600,7 @@ begin
   if FStyles.HotRow.HasFill(UseDarkMode) or FStyles.HotRow.HasText(UseDarkMode) or
     (FStyles.HotRow.FontStyle <> []) then
   begin
-    if Assigned(FOnDrawCell) or Assigned(FOnGetCellStyle) or MergesActive then
+    if OwnerDrawAssigned or Assigned(FOnGetCellStyle) or MergesActive then
       Invalidate
     else
     begin
@@ -4817,7 +4837,7 @@ begin
   // Linien und (bei DefaultDrawing) Text sind schon gezeichnet. ACol ist die
   // Anzeige-Spalte; das Ereignis bekommt Daten-Spalte und -Zeile.
   D := DataRow(VRow);
-  if not Assigned(FOnDrawCell) or (D < 0) then
+  if not OwnerDrawAssigned or (D < 0) then
     Exit;
   Sl := GetSelection;
   State := [];
@@ -4833,12 +4853,10 @@ begin
   try
     FItemCanvas.Handle := DC;
     try
-      FItemCanvas.Font := Font;
-      FItemCanvas.Font.Color := FPaint.Text;
-      FItemCanvas.Brush.Style := bsClear;
+      PrepareItemCanvas(ACol, VRow, State);
       FInOwnerDraw := True;
       try
-        FOnDrawCell(Self, DataCol(ACol), D, R, State);
+        OwnerDrawCell(ACol, VRow, D, R, State);
       finally
         FInOwnerDraw := False;
       end;
@@ -4848,6 +4866,106 @@ begin
   finally
     ACanvas.EndGdi(DC);
   end;
+end;
+
+function TPPGCustomGrid.OwnerDrawAssigned: Boolean;
+begin
+  Result := Assigned(FOnDrawCell);
+end;
+
+procedure TPPGCustomGrid.OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
+  State: TGridDrawState);
+begin
+  if Assigned(FOnDrawCell) then
+    FOnDrawCell(Self, DataCol(ACol), ARow, R, State);
+end;
+
+function TPPGCustomGrid.DefaultDrawsKinds: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TPPGCustomGrid.CellDrawColors(ACol, VRow: Integer; State: TGridDrawState;
+  out AFill, AText: TColor);
+var
+  Col: TPPGGridColumn;
+  SelSt: TPPGElementStyle;
+  Dk: Boolean;
+begin
+  // Dieselbe Reihenfolge wie PaintRegion: Spalte -> Zebra -> Hover ->
+  // Auswahl -> Fokuszelle (bedingte Formate/OnGetCellStyle nicht: das
+  // Ereignis soll beim Owner-Draw nicht ein zweites Mal laufen)
+  Dk := FPaint.Dark;
+  if gdFixed in State then
+  begin
+    AFill := FPaint.Header;
+    AText := FPaint.HeaderText;
+    Exit;
+  end;
+  AFill := FPaint.Fill;
+  AText := FPaint.Text;
+  if not FPaint.UseColors then
+  begin
+    if gdSelected in State then
+      AFill := PPGBlendColor(AFill, FPaint.Accent, 46 / 255);
+    Exit;
+  end;
+  Col := ColumnOf(DataCol(ACol));
+  if Col <> nil then
+  begin
+    if Col.Style.HasFill(Dk) then
+      AFill := Col.Style.FillFor(Dk, AFill);
+    AText := Col.Style.TextFor(Dk, AText);
+  end;
+  if FStyles.AlternateRow.HasFill(Dk) and Odd(VRow - VFixedRows) then
+  begin
+    AFill := FStyles.AlternateRow.FillFor(Dk, AFill);
+    AText := FStyles.AlternateRow.TextFor(Dk, AText);
+  end;
+  if VRow = FHotV then
+  begin
+    if FStyles.HotRow.HasFill(Dk) then
+      AFill := FStyles.HotRow.FillFor(Dk, AFill);
+    AText := FStyles.HotRow.TextFor(Dk, AText);
+  end;
+  if gdSelected in State then
+  begin
+    if Focused then
+      SelSt := FStyles.Selection
+    else
+      SelSt := FStyles.SelectionInactive;
+    if SelSt.HasFill(Dk) then
+      AFill := SelSt.FillFor(Dk, FPaint.Accent)
+    else if Focused then
+      AFill := PPGBlendColor(AFill, FPaint.Accent, 46 / 255)
+    else
+      AFill := PPGBlendColor(AFill, FPaint.Text, 22 / 255);
+    AText := SelSt.TextFor(Dk, AText);
+  end;
+  if (gdFocused in State) and FStyles.FocusedCell.HasFill(Dk) then
+  begin
+    AFill := FStyles.FocusedCell.FillFor(Dk, AFill);
+    AText := FStyles.FocusedCell.TextFor(Dk, AText);
+  end;
+end;
+
+procedure TPPGCustomGrid.PrepareItemCanvas(ACol, VRow: Integer; State: TGridDrawState);
+var
+  Fill, Txt: TColor;
+  St: TPPGGridCellStyle;
+begin
+  CellDrawColors(ACol, VRow, State, Fill, Txt);
+  if gdFixed in State then
+    FItemCanvas.Font := Font
+  else
+  begin
+    St.Reset;
+    FItemCanvas.Font := CellFont(ColumnOf(DataCol(ACol)), St, []);
+  end;
+  FItemCanvas.Font.Color := Txt;
+  // Pinsel ohne Fuellung (TBrush setzt dabei Color auf clWhite): Ausgaben
+  // wie TextRect uebermalen die gezeichnete Flaeche nicht
+  FItemCanvas.Brush.Style := bsClear;
 end;
 
 function TPPGCustomGrid.GetCanvas: TCanvas;
@@ -5138,8 +5256,10 @@ begin
   SetLength(KindArr, ColTo - ColFrom + 1);
   SetLength(KindCtxArr, ColTo - ColFrom + 1);
   SetLength(HaveCtx, ColTo - ColFrom + 1);
-  for C := ColFrom to ColTo do
-    KindArr[C - ColFrom] := KindOf(FVisCols[C]);
+  // Ohne DefaultDrawing (DB-Grid) zeichnet das Grid auch keine Zellarten
+  if DefaultDrawsKinds then
+    for C := ColFrom to ColTo do
+      KindArr[C - ColFrom] := KindOf(FVisCols[C]);
   NF := 0;
   ACanvas.PushClipRoundRect(Clip, 0);
   try
@@ -5658,7 +5778,7 @@ begin
       InflateRect(LR, -1, -1);
       ACanvas.FrameRoundRect(LR, PPGScale(2, PPI), PPGScale(2, PPI), FPaint.FocusFrame, 255);
     end;
-    if Assigned(FOnDrawCell) then
+    if OwnerDrawAssigned then
       for V := RowFrom to RowTo do
         for C := ColFrom to ColTo do
           DrawCell(ACanvas, C, V, RawCellRect(C, V));
@@ -6081,7 +6201,7 @@ begin
   // alte und die neue Zeile neu zeichnen (Fokusrahmen, Auswahl, Fokuszelle)
   NewSel := GetSelection;
   if (SX = ScrollX) and (SY = ScrollY) and (OldSel.Top = OldSel.Bottom) and
-    (NewSel.Top = NewSel.Bottom) and not Assigned(FOnDrawCell) and
+    (NewSel.Top = NewSel.Bottom) and not OwnerDrawAssigned and
     not Assigned(FOnGetCellStyle) and not MergesActive then
   begin
     InvalidateViewRow(OldV);
@@ -6851,6 +6971,8 @@ begin
   if FEditor is TPPGCustomField then
     TGridEditorFieldAccess(FEditor).OnChange := EditorChange;
   FEditCanceled := False;
+  if D <> FilterRowMark then
+    EditorPrepare(DataCol(FEditC), D);
   FEditor.Visible := True;
   if FEditor.CanFocus then
     FEditor.SetFocus;
@@ -6860,6 +6982,11 @@ end;
 procedure TPPGCustomGrid.EditorOpened(ACol, ARow: Integer);
 begin
   // Erweiterungspunkt (DB-Grid merkt sich den Datensatz)
+end;
+
+procedure TPPGCustomGrid.EditorPrepare(ACol, ARow: Integer);
+begin
+  // Erweiterungspunkt (DB-Grid: Auswahlliste der Nachschlage-Spalten)
 end;
 
 procedure TPPGCustomGrid.EditorEdited;
@@ -7843,6 +7970,8 @@ begin
   S := UiaValue(Id);
   if TPPGCellPainter.IsCheckedText(S) then
     Result := ToggleState_On
+  else if TPPGCellPainter.IsGrayedText(S) then
+    Result := ToggleState_Indeterminate
   else
     Result := ToggleState_Off;
 end;

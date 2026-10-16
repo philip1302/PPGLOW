@@ -37,7 +37,8 @@
   - Properties, die die PPGlow-Klasse nicht hat, werden entfernt und im
     Bericht genannt. Die erlaubten Properties liest das Skript aus den
     PPGlow-Quelltexten (published-Abschnitte).
-  - Ereignis-Handler mit anderem Parametertyp (TDBGrid OnTitleClick/OnCellClick)
+  - Ereignis-Handler mit anderem Parametertyp (TDBGrid OnTitleClick/OnCellClick/
+    OnDrawColumnCell: Column: TColumn -> TPPGDBGridColumn)
     werden in der .pas angepasst.
   - Vorher Sicherung als *.bak (ausser -NoBackup); Bericht migrate-report.txt
     im Zielordner. -WhatIf schreibt nichts, zeigt nur den Bericht.
@@ -593,7 +594,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         continue
       }
       # Ereignisse merken (Signatur ggf. anpassen)
-      if ($prop -like 'On*' -and $cur.Old -eq 'TDBGrid' -and ($prop -eq 'OnTitleClick' -or $prop -eq 'OnCellClick')) {
+      if ($prop -like 'On*' -and $cur.Old -eq 'TDBGrid' -and ($prop -eq 'OnTitleClick' -or $prop -eq 'OnCellClick' -or $prop -eq 'OnDrawColumnCell')) {
         $Handlers[$value.Trim()] = 'TPPGDBGridColumn'
       }
       if (-not $cur.NoFilter -and -not $cur.Allowed.Contains($top)) {

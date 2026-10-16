@@ -20,7 +20,11 @@ Das DB-Grid zeigt die Datensätze einer Datenmenge (Abfrage, Tabelle, ClientData
 - Nur der Puffer sichtbarer Datensätze wird gelesen; Paint greift nie auf die Datenmenge zu.
 - `Options` ist `TDBGridOptions` (DFM-kompatibel); `dgColumnResize` erlaubt auch das Verschieben der Spalten (wie `TDBGrid`). Nicht unterstützt: Gruppieren (dafür `GROUP BY` in der Abfrage).
 - Mehrfachauswahl mit `dgMultiSelect` wie bei `TDBGrid`: `SelectedRows` (`TPPGBookmarkList`) mit `Count`, `Items[]`, `CurrentRowSelected`, `Clear`, `SelectAll`, `Delete`, `Find`, `IndexOf` und `Refresh`. Strg+Klick schaltet um, Umschalt+Klick wählt den Bereich vom Anker, Umschalt+Pfeil erweitert, Strg+A wählt alles, Strg+Leertaste schaltet um, Strg+Entf löscht die Auswahl (Rückfrage bei `dgConfirmDelete`). Klick oder Pfeil ohne Taste heben die Auswahl auf. Gewählte Zeilen erscheinen in der Auswahlfarbe (`Styles.Selection`), im Indikator mit Haken. `OnSelectionChanged` meldet Änderungen. Schließen der Datenmenge oder eine andere `DataSource` leeren die Auswahl. Nach einem Wechsel von Index oder Sortierung `SelectedRows.Refresh` aufrufen; ein `TClientDataSet` liefert dann neue Lesezeichen.
-- Spalten: `FieldName`, `Title` (statt `Title.Caption` – das Migrationsskript setzt das um), `Width`, `Alignment`, `ReadOnly`, `EditorKind`, `PickList`, `ButtonStyle`, `Visible`, `DisplayIndex`, `FooterField`. Die von `TPPGGridColumn` geerbten `Aggregate`, `FooterFormat`, `GroupIndex` und `Sortable` wirken im DB-Grid nicht. Automatische Spalten behalten Position, Sichtbarkeit und Breite beim Neuaufbau. `SaveLayout`/`LoadLayout` merken sich die Spalten über den Feldnamen.
+- Spalten: `FieldName`, `Title` (statt `Title.Caption` – das Migrationsskript setzt das um), `Width`, `Alignment`, `ReadOnly`, `EditorKind`, `PickList`, `ButtonStyle`, `Visible`, `DisplayIndex`, `FooterField`, `ValueChecked`/`ValueUnchecked`, `ListSource`/`KeyField`/`ListField`; zur Laufzeit `Column.Field` wie bei `TColumn`. Die von `TPPGGridColumn` geerbten `Aggregate`, `FooterFormat`, `GroupIndex` und `Sortable` wirken im DB-Grid nicht. Automatische Spalten behalten Position, Sichtbarkeit und Breite beim Neuaufbau. `SaveLayout`/`LoadLayout` merken sich die Spalten über den Feldnamen.
+- Kästchen-Spalten: Boolean-Felder erscheinen als Kästchen im Theme (auch in eigenen Spalten ohne `EditorKind`). Text- und Zahlfelder werden mit `EditorKind = gekCheck` oder `CellKind = ckCheck` zum Kästchen; `ValueChecked`/`ValueUnchecked` legen die Werte fest wie bei `TDBCheckBox` (mehrere mit Semikolon, geschrieben wird der erste, Groß-/Kleinschreibung egal). Ohne Werte gelten `1`/`True`/`Ja` als an, alles andere als aus; geschrieben wird `1`/`0`. Null und ein unbekannter Wert erscheinen grau (unbestimmt). Klick auf das Kästchen und Leertaste schalten um, nur mit `dgEditing` und ohne `ReadOnly` (Grid, Spalte, Feld).
+- Nachschlagen: Nachschlagefelder (`FieldKind = fkLookup`) zeigen den Text aus `LookupDataSet` und werden über eine Auswahlliste bearbeitet; geschrieben wird das Schlüsselfeld. Ohne Nachschlagefeld löst eine Spalte mit `ListSource`, `KeyField` und `ListField` (wie `TDBLookupComboBox`) den Schlüssel aus `FieldName` als Text auf. Bearbeitbar nur mit offener Liste und einem Schlüsselfeld; unbekannte Texte ändern nichts. Aufgelöste Texte merkt sich die Spalte, bis sich die Liste ändert.
+- Owner-Draw wie `TDBGrid`: `OnDrawColumnCell(Sender, Rect, DataCol, Column, State)` und `DefaultDrawColumnCell`. Während des Ereignisses steht die Datenmenge auf dem gezeichneten Satz (`Column.Field` liefert dessen Werte; die Datenmenge nicht bewegen). `Canvas` ist vorbereitet: Schrift der Spalte, `Font.Color` und `Brush.Color` in den Farben der Zelle (Theme, Dunkelmodus, Auswahl und Mehrfachauswahl mit `gdSelected`). `DefaultDrawColumnCell` zeichnet Text bzw. Kästchen; eine geänderte `Brush.Color` füllt vorher die Zelle. `DefaultDrawing = False` lässt Texte und Kästchen weg (Flächen, Stile und Auswahl zeichnet das Grid weiter).
+- Reihenfolge je Datenzelle: bedingte Formate und `OnGetCellStyle` (Fläche, Textfarbe, Balken, Symbol) → Auswahl/Mehrfachauswahl → Text bzw. Kästchen (nur mit `DefaultDrawing`) → Fokusrahmen → `OnDrawCell` → `OnDrawColumnCell`.
 - Summenzeile (`ShowFooter`) aus der Datenmenge: `Column.FooterField` (z. B. ein `TAggregateField`) oder `OnGetFooterText`.
 - Drucken (`TPPGGridPrinter`) und Export (`PPG.Grid.Export`) lesen die ganze Datenmenge einmal (`DisableControls`, Lesezeichen, höchstens `ExportMaxRecords`).
 - `OnTitleClick(Column)`/`OnCellClick(Column)` ohne Sender wie `TDBGrid`; Sortieren ist Sache der Datenmenge (im Kopfmenü sind die Sortier-Einträge gesperrt).
@@ -51,6 +55,33 @@ begin
   ClientDataSet1.Bookmark := PPGDBGrid1.SelectedRows[I];
   Summe := Summe + ClientDataSet1.FieldByName('Betrag').AsCurrency;
 end;
+
+// Kästchen für ein Textfeld mit J/N
+with TPPGDBGridColumn(PPGDBGrid1.Columns.Add) do
+begin
+  FieldName := 'Aktiv';
+  EditorKind := gekCheck;
+  ValueChecked := 'J';
+  ValueUnchecked := 'N';
+end;
+
+// Schlüssel als Text aus einer zweiten Datenmenge
+with TPPGDBGridColumn(PPGDBGrid1.Columns.Add) do
+begin
+  FieldName := 'KundeID';
+  ListSource := dsKunden;
+  KeyField := 'ID';
+  ListField := 'Name';
+end;
+
+// Zeilen einfärben wie bei TDBGrid
+procedure TForm1.PPGDBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
+  DataCol: Integer; Column: TPPGDBGridColumn; State: TGridDrawState);
+begin
+  if not (gdSelected in State) and (ClientDataSet1.FieldByName('Offen').AsCurrency > 0) then
+    PPGDBGrid1.Canvas.Brush.Color := $00D0D0FF;
+  PPGDBGrid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);
+end;
 ```
 
 ## Verhalten (aus dem Quelltext)
@@ -64,6 +95,9 @@ Aufbau:
 - Die senkrechte Leiste zeigt die Lage in der Datenmenge: bei IsSequenced nach RecNo/RecordCount, sonst dreistufig (Anfang, Mitte, Ende) wie TDBGrid. Ziehen, Mausrad und Blaettern bewegen die Datenmenge.
 - Spalten: ohne Columns alle sichtbaren Felder (Titel = DisplayLabel, Breite aus DisplayWidth); mit Columns (FieldName je Spalte) genau diese.
 - Bearbeiten mit den Grid-Editoren; der Editor zeigt Field.Text, Schreiben setzt Field.Text (Boolean-Felder: Kaestchen-Spalte).
+- Kaestchen-Spalten: Boolean-Felder sowie Spalten mit EditorKind = gekCheck bzw. CellKind = ckCheck. ValueChecked/ValueUnchecked (wie TDBCheckBox, Listen mit Semikolon) fuer Text- und Zahlfelder. Null bzw. ein unbekannter Wert erscheint grau (unbestimmt). Klick und Leertaste schalten um (nur mit dgEditing, ohne ReadOnly).
+- Nachschlagen: Nachschlagefelder (FieldKind = fkLookup) und Spalten mit ListSource/KeyField/ListField (wie TDBLookupComboBox) zeigen den Text aus der Liste; bearbeitet wird per Auswahlliste, geschrieben wird der Schluessel. Aufgeloeste Texte werden je Spalte zwischengespeichert und verworfen, sobald sich die Listen-Datenmenge aendert.
+- Owner-Draw wie TDBGrid: OnDrawColumnCell (Rect, DataCol, Column, State) nach OnDrawCell; waehrend des Ereignisses steht die Datenmenge auf dem gezeichneten Satz (Column.Field liefert dessen Werte, die Datenmenge darf nicht bewegt werden). DefaultDrawColumnCell zeichnet Text bzw. Kaestchen mit Canvas (Brush/Font). DefaultDrawing = False: das Grid zeichnet nur Flaechen (Theme, Stile, Auswahl), keine Texte und Kaestchen. Reihenfolge je Zelle: bedingte Formate und OnGetCellStyle (Flaeche, Textfarbe) -> Auswahl/Mehrfachauswahl -> Text/Kaestchen (DefaultDrawing) -> Fokusrahmen -> OnDrawCell -> OnDrawColumnCell.
 - Tastatur wie TDBGrid: Pfeile/Bild/Strg+Pos1/Ende bewegen die Datenmenge, Pfeil runter am Ende haengt an (dgEditing), Einfg fuegt ein, Strg+Entf loescht (mit Rueckfrage bei dgConfirmDelete), Esc bricht ab.
 - Sortieren ist Sache der Datenmenge: Klick auf den Titel loest OnTitleClick aus (dgTitleClick).
 - Spalten verschieben (dgColumnResize, wie TDBGrid), ausblenden, Layout speichern (Schluessel = Feldname) wie im Grid (Phase 13g); automatische Spalten behalten Position, Sichtbarkeit und Breite beim Neuaufbau.
@@ -104,7 +138,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `GradientStartColor` | `TColor` | `clWhite` | Anfangsfarbe des Kopf-Verlaufs bei DrawingStyle = gdsGradient. Praxis: Nur mit DrawingStyle = gdsGradient: Anfangsfarbe des Kopfverlaufs. |
 | `TitleFont` | `TFont` |  | Wie TDBGrid.TitleFont: Schrift der Titelzeile. Ist ein Alias für Styles.Header.Font und wird nicht eigens gespeichert. Praxis: Nur für Formulare, die von TDBGrid kommen (der Migrator überträgt Title.Font). In neuem Code Styles.Header (FontStyle, Font) nehmen. |
 | `BorderStyle` | `TBorderStyle` | `bsSingle` | bsSingle: Rahmen nach Appearance; bsNone: ohne Rahmen. Praxis: bsNone, wenn das Grid eine Karte oder ein Panel ganz ausfüllt, das schon einen Rahmen hat; sonst bsSingle lassen. |
-| `DefaultDrawing` | `Boolean` | `True` | False: Der Zelltext wird nicht gezeichnet (Hintergrund, Linien und Auswahl schon); den Inhalt zeichnet man in OnDrawCell selbst. Praxis: Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell komplett selbst zeichnen. Für Farben und Symbole reichen ConditionalFormats und OnGetCellStyle. |
+| `DefaultDrawing` | `Boolean` | `True` | False: Der Zelltext wird nicht gezeichnet (Hintergrund, Linien und Auswahl schon); den Inhalt zeichnet man in OnDrawCell selbst. Praxis: Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell bzw. OnDrawColumnCell komplett selbst zeichnen (DefaultDrawColumnCell zeichnet bei Bedarf Text und Kästchen). Für Farben und Symbole reichen ConditionalFormats und OnGetCellStyle. |
 | `ToolTips` | `Boolean` | `True` | Wie TTreeView.ToolTips: Ein abgeschnittener Zelltext (auch im Spaltenkopf) erscheint ganz als Hinweis, solange die Maus auf der Zelle steht. Nicht bei Zellarten wie Haken oder Fortschritt; nur ohne eigenen Hint; braucht ShowHint = True. Praxis: True lassen (braucht ShowHint): Lange Kundennamen oder Bemerkungen sind per Maus ganz lesbar, ohne die Spalte zu verbreitern. |
 
 ## Eigenschaften wie in der VCL
@@ -162,6 +196,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnDragDrop` | `TDragDropEvent` `(Sender, Source: TObject; X, Y: Integer)` | Ein gezogenes Objekt wurde über dem Control losgelassen. Nutzung: Source ist das gezogene Control; X, Y die Position im Control. Praxis: Abgelegte Elemente übernehmen, z. B. Artikel aus einer Liste als neue Positionen anhängen (Append und Post). |
 | `OnDragOver` | `TDragOverEvent` `(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean)` | Ein Objekt wird über dem Control gezogen; Accept := True erlaubt das Ablegen. Praxis: Accept := True nur für passende Quellen, z. B. wenn Source die Artikelliste ist. |
 | `OnDrawCell` | `TDrawCellEvent` `(Sender: TObject; ACol, ARow: Longint; Rect: TRect; State: TGridDrawState)` | Nach dem Standardzeichnen einer Zelle zusätzlich auf Canvas zeichnen (Rect, State mit gdSelected, gdFocused, gdFixed). Mit DefaultDrawing = False zeichnet man so den ganzen Zellinhalt selbst. ACol und ARow sind Datenspalte und -zeile. Praxis: Für Zusätze, die keine Zellart kann, z. B. ein kleines Dreieck für Bemerkungen. Nur zeichnen, die Datenmenge dabei nicht bewegen. |
+| `OnDrawColumnCell` | `TPPGDrawColumnCellEvent` `(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TPPGDBGridColumn; State: TGridDrawState)` | Wie TDBGrid.OnDrawColumnCell: nach dem Zeichnen einer Datenzelle (nach OnDrawCell) selbst auf Canvas zeichnen. DataCol ist der Index der Spalte in Columns, Column die Spalte, State enthält gdSelected (Auswahl und Mehrfachauswahl) und gdFocused. Canvas ist mit Schrift, Textfarbe und Pinselfarbe der Zelle vorbereitet (Theme, Dunkelmodus); die Datenmenge steht auf dem gezeichneten Satz, Column.Field liefert dessen Werte. DefaultDrawColumnCell zeichnet den Standardinhalt. Nutzung: `if Column.Field.AsCurrency < 0 then PPGDBGrid1.Canvas.Font.Color := clRed; PPGDBGrid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);` Praxis: Für Einfärbungen, die vom ganzen Datensatz abhängen (überfällig, gesperrt), und für migrierte TDBGrid-Handler. Für reine Werteregeln reichen ConditionalFormats und OnGetCellStyle. Die Datenmenge im Ereignis nicht bewegen. |
 | `OnEndDock` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Andock-Vorgang dieses Controls beendet. Praxis: Nur bei DragKind = dkDock; bei Tabellen praktisch nie gebraucht. |
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). Praxis: Nach dem Ziehen eines Datensatzes aufräumen; Target = nil heißt abgebrochen. |
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. Praxis: Beim Betreten der Tabelle z. B. die zugehörigen Befehle (Neu, Löschen) in der Symbolleiste freischalten. |
@@ -188,7 +223,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnColExit` | `TNotifyEvent` `(Sender: TObject)` | Die Fokusspalte wird verlassen; die alte Spalte ist noch aktiv (wie TDBGrid.OnColExit). Praxis: Gegenstück zu OnColEnter: den Hinweis wieder entfernen oder eine Spalte erst beim Verlassen prüfen. |
 | `OnEditButtonClick` | `TNotifyEvent` `(Sender: TObject)` | Der „…“-Knopf im Editor einer Spalte mit ButtonStyle = cbsEllipsis wurde geklickt oder Strg+Enter gedrückt (wie TDBGrid.OnEditButtonClick). Typisch: Auswahldialog öffnen und den Wert ins Feld schreiben. Nutzung: `procedure TForm1.Grid1EditButtonClick(Sender: TObject); begin if KundeWaehlen(Nr) then Table1.FieldByName('KundeNr').AsInteger := Nr; end;` Praxis: Für Spalten mit ButtonStyle = cbsEllipsis: Auswahldialog öffnen (Kunde, Artikel) und den gewählten Wert ins Feld schreiben. |
 
-Tests: `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit45` (TDBFix2Tests, TDBFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Custom` (TCustomGridTests); `PPG.Tests.DBGridMultiSelect` (TDBGridMultiSelectTests); `PPG.Tests.Phase13g` (TDBGridColumnTests); `PPG.Tests.Phase9c` (TDBGridTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit45` (TDBFix2Tests, TDBFixTests); `PPG.Tests.Audit5d` (TStage3Tests, TVclPropsTests); `PPG.Tests.Audit7B` (TAudit7BTests); `PPG.Tests.Custom` (TCustomGridTests); `PPG.Tests.DBGridColumns` (TDBGridColumnsTests); `PPG.Tests.DBGridMultiSelect` (TDBGridMultiSelectTests); `PPG.Tests.Phase13g` (TDBGridColumnTests); `PPG.Tests.Phase9c` (TDBGridTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBGrid.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

@@ -18,6 +18,25 @@ unit PPG.DB.Grid;
     Breite aus DisplayWidth); mit Columns (FieldName je Spalte) genau diese.
   - Bearbeiten mit den Grid-Editoren; der Editor zeigt Field.Text, Schreiben
     setzt Field.Text (Boolean-Felder: Kaestchen-Spalte).
+  - Kaestchen-Spalten: Boolean-Felder sowie Spalten mit EditorKind = gekCheck
+    bzw. CellKind = ckCheck. ValueChecked/ValueUnchecked (wie TDBCheckBox,
+    Listen mit Semikolon) fuer Text- und Zahlfelder. Null bzw. ein unbekannter
+    Wert erscheint grau (unbestimmt). Klick und Leertaste schalten um
+    (nur mit dgEditing, ohne ReadOnly).
+  - Nachschlagen: Nachschlagefelder (FieldKind = fkLookup) und Spalten mit
+    ListSource/KeyField/ListField (wie TDBLookupComboBox) zeigen den Text aus
+    der Liste; bearbeitet wird per Auswahlliste, geschrieben wird der
+    Schluessel. Aufgeloeste Texte werden je Spalte zwischengespeichert und
+    verworfen, sobald sich die Listen-Datenmenge aendert.
+  - Owner-Draw wie TDBGrid: OnDrawColumnCell (Rect, DataCol, Column, State)
+    nach OnDrawCell; waehrend des Ereignisses steht die Datenmenge auf dem
+    gezeichneten Satz (Column.Field liefert dessen Werte, die Datenmenge darf
+    nicht bewegt werden). DefaultDrawColumnCell zeichnet Text bzw. Kaestchen
+    mit Canvas (Brush/Font). DefaultDrawing = False: das Grid zeichnet nur
+    Flaechen (Theme, Stile, Auswahl), keine Texte und Kaestchen.
+    Reihenfolge je Zelle: bedingte Formate und OnGetCellStyle (Flaeche,
+    Textfarbe) -> Auswahl/Mehrfachauswahl -> Text/Kaestchen (DefaultDrawing)
+    -> Fokusrahmen -> OnDrawCell -> OnDrawColumnCell.
   - Tastatur wie TDBGrid: Pfeile/Bild/Strg+Pos1/Ende bewegen die Datenmenge,
     Pfeil runter am Ende haengt an (dgEditing), Einfg fuegt ein, Strg+Entf
     loescht (mit Rueckfrage bei dgConfirmDelete), Esc bricht ab.
@@ -50,11 +69,27 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Types,
-  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Data.DB,
+  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Vcl.StdCtrls,
+  Data.DB,
   PPG.Types, PPG.Grid, PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds;
 
 type
   TPPGCustomDBGrid = class;
+
+  TPPGDBGridColumn = class;
+
+  /// Verbindung einer Nachschlage-Spalte zu ihrer Listen-Datenmenge.
+  TPPGDBGridListLink = class(TDataLink)
+  private
+    FColumn: TPPGDBGridColumn;
+  protected
+    procedure ActiveChanged; override;
+    procedure DataSetChanged; override;
+    procedure LayoutChanged; override;
+    procedure RecordChanged(Field: TField); override;
+  public
+    constructor Create(AColumn: TPPGDBGridColumn);
+  end;
 
   /// Spalte mit Feldname (Columns des DB-Grids).
   TPPGDBGridColumn = class(TPPGGridColumn)
@@ -63,17 +98,46 @@ type
     FFooterField: string;
     FAlignmentSet: Boolean;
     FButtonStyle: TColumnButtonStyle;
+    FValueChecked: string;
+    FValueUnchecked: string;
+    FListLink: TPPGDBGridListLink;
+    FKeyField: string;
+    FListField: string;
+    FLookupCache: TDictionary<string, string>;
     procedure SetFieldName(const Value: string);
     procedure SetFooterField(const Value: string);
     function GetAlignment: TAlignment;
     procedure SetAlignment(const Value: TAlignment);
+    procedure SetValueChecked(const Value: string);
+    procedure SetValueUnchecked(const Value: string);
+    function GetListSource: TDataSource;
+    procedure SetListSource(Value: TDataSource);
+    procedure SetKeyField(const Value: string);
+    procedure SetListField(const Value: string);
+    function Grid: TPPGCustomDBGrid;
+    function GetField: TField;
   protected
     function GetDisplayName: string; override;
+    /// Listen-Datenmenge geaendert: aufgeloeste Texte verwerfen.
+    procedure ListChanged;
   public
+    constructor Create(Collection: TCollection); override;
+    destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
     function ShowsEllipsis: Boolean; override;
     /// Ausrichtung aus dem Feld, solange die Spalte keine eigene hat.
     procedure ApplyFieldAlignment(F: TField);
+    /// Nachschlage-Spalte (ListSource mit DataSet, KeyField und ListField gesetzt)?
+    function IsLookup: Boolean;
+    /// Datenmenge der Liste (nil = keine bzw. ListSource ohne DataSet).
+    function ListDataSet: TDataSet;
+    /// Erstes Feld aus ListField (das angezeigte).
+    function ListResultField: string;
+    /// Anzeigetext zum Schluessel (aus der Liste, zwischengespeichert);
+    /// '' = Null oder nicht gefunden.
+    function LookupText(const Key: Variant): string;
+    /// Feld der Spalte in der offenen Datenmenge (nil = keins), wie TColumn.Field.
+    property Field: TField read GetField;
   published
     property FieldName: string read FFieldName write SetFieldName;
     /// Feld fuer die Summenzeile (z.B. TAggregateField der Datenmenge).
@@ -83,6 +147,20 @@ type
     /// Wie TColumn.ButtonStyle: cbsAuto (Auswahlliste bei PickList bzw. Nachschlagefeld),
     /// cbsEllipsis (Textfeld mit "..."-Knopf: OnEditButtonClick), cbsNone (nur Text).
     property ButtonStyle: TColumnButtonStyle read FButtonStyle write FButtonStyle default cbsAuto;
+    /// Kaestchen-Spalte: Wert(e) fuer "an" (wie TDBCheckBox.ValueChecked,
+    /// mehrere mit Semikolon; geschrieben wird der erste). Leer = '1'/'True'/
+    /// 'Ja' gelten als an, geschrieben wird '1'. Boolean-Felder: ohne Wirkung.
+    property ValueChecked: string read FValueChecked write SetValueChecked;
+    /// Wert(e) fuer "aus". Leer = jeder andere Wert ist aus (geschrieben: '0');
+    /// gesetzt = andere Werte erscheinen grau (unbestimmt).
+    property ValueUnchecked: string read FValueUnchecked write SetValueUnchecked;
+    /// Nachschlage-Spalte (wie TDBLookupComboBox): Liste mit den Eintraegen.
+    /// FieldName ist das Schluesselfeld der Datenmenge.
+    property ListSource: TDataSource read GetListSource write SetListSource;
+    /// Schluesselfeld in der Liste (passt zum Wert von FieldName).
+    property KeyField: string read FKeyField write SetKeyField;
+    /// Angezeigtes Feld der Liste (weitere mit Semikolon werden ignoriert).
+    property ListField: string read FListField write SetListField;
   end;
 
   /// Ausgewaehlte Datensaetze des DB-Grids (Mehrfachauswahl, dgMultiSelect)
@@ -153,6 +231,11 @@ type
   /// Text der Summenzeile fuer eine Spalte (nach FooterField).
   TPPGDBGridFooterEvent = procedure(Sender: TObject; Column: TPPGDBGridColumn;
     var Text: string) of object;
+  /// Wie TDrawColumnCellEvent (Column als TPPGDBGridColumn): Owner-Draw einer
+  /// Datenzelle. DataCol = Index der Spalte in Columns (bzw. den automatischen
+  /// Spalten), unabhaengig von der Anzeige-Reihenfolge.
+  TPPGDrawColumnCellEvent = procedure(Sender: TObject; const Rect: TRect; DataCol: Integer;
+    Column: TPPGDBGridColumn; State: TGridDrawState) of object;
 
   TPPGCustomDBGrid = class(TPPGCustomGrid)
   private
@@ -181,6 +264,11 @@ type
     FMarks: array of Boolean;
     FRowBms: array of TBookmark; // Lesezeichen je Pufferzeile (nur dgMultiSelect)
     FOnSelectionChanged: TNotifyEvent;
+    FOnDrawColumnCell: TPPGDrawColumnCellEvent;
+    // Owner-Draw: gezeichnete Pufferzeile (-1 = ausserhalb von OnDrawColumnCell)
+    FDrawRow: Integer;
+    FDrawBrush: TColor; // vorbereitete Pinselfarbe (DefaultDrawColumnCell)
+    FListBusy: Boolean;
     function GetDataSource: TDataSource;
     procedure SetDataSource(Value: TDataSource);
     procedure SetDBOptions(const Value: TDBGridOptions);
@@ -192,14 +280,37 @@ type
     procedure SetExportMaxRecords(const Value: Integer);
     procedure SetShowRequired(const Value: Boolean);
     function FieldEditable(F: TField): Boolean;
-    procedure FillLookupEditor(F: TField);
-    procedure SetLookupByUser(F: TField; const Value: string);
+    /// Nachschlage-Quelle einer Datenspalte (Nachschlagefeld oder Spalte mit
+    /// ListSource): Liste, deren Schluessel- und Anzeigefeld, Zielfeld.
+    function LookupSource(ACol: Integer; out ListDS: TDataSet; out ListKey,
+      ListResult: string; out Target: TField): Boolean;
+    /// Spalte mit ListSource/KeyField/ListField (nicht: Nachschlagefeld).
+    function ColumnLookup(ACol: Integer): TPPGDBGridColumn;
+    procedure FillLookupEditor(ACol: Integer);
+    procedure SetLookupByUser(ACol, ARow: Integer; const Value: string);
+    /// Zustand eines Kaestchens im aktiven Datensatz.
+    function FieldCheckState(F: TField; C: TPPGGridColumn): TCheckBoxState;
+    function CheckStateText(State: TCheckBoxState): string;
+    /// Text einer Datenzelle im aktiven Datensatz (wie im Zwischenspeicher).
+    function FieldCellText(ACol: Integer; F: TField): string;
     function MultiSelectActive: Boolean;
     /// Datensaetze vom Lesezeichen bis zum aktiven Satz waehlen (ohne Abwahl).
     procedure SelectRangeTo(const FromBm: TBookmark);
     /// Umschalt+Pfeil: Auswahl um den neuen Satz erweitern bzw. verkleinern.
     procedure ExtendByStep(const OldBm: TBookmark);
   protected
+    /// Kaestchen-Spalte (Boolean-Feld, gekCheck oder ckCheck)?
+    function IsCheckColumn(ACol: Integer): Boolean;
+    /// Listen-Datenmenge einer Nachschlage-Spalte geaendert.
+    procedure ListDataChanged; virtual;
+    { Owner-Draw }
+    function OwnerDrawAssigned: Boolean; override;
+    procedure OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
+      State: TGridDrawState); override;
+    function DefaultDrawsKinds: Boolean; override;
+    /// OnDrawColumnCell ausloesen (Datenmenge steht auf dem Satz).
+    procedure DrawColumnCell(const Rect: TRect; DataCol: Integer; Column: TPPGDBGridColumn;
+      State: TGridDrawState); virtual;
     /// Auswahl geaendert: Markierungen neu, OnSelectionChanged.
     procedure SelectionChanged; virtual;
     /// Markierung je Pufferzeile aus SelectedRows (ausserhalb von Paint).
@@ -255,6 +366,7 @@ type
     function GetEditText(ACol, ARow: Integer): string; override;
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); override;
     procedure EditorOpened(ACol, ARow: Integer); override;
+    procedure EditorPrepare(ACol, ARow: Integer); override;
     procedure EditorEdited; override;
     function CanEditCell(ACol, VRow: Integer): Boolean; override;
     function CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind; override;
@@ -283,6 +395,12 @@ type
     property ShowRequired: Boolean read FShowRequired write SetShowRequired default False;
     /// Auswahl der Mehrfachauswahl geaendert (SelectedRows).
     property OnSelectionChanged: TNotifyEvent read FOnSelectionChanged write FOnSelectionChanged;
+    /// Owner-Draw einer Datenzelle wie TDBGrid.OnDrawColumnCell (nach
+    /// OnDrawCell). Canvas ist vorbereitet wie bei TDBGrid: Schrift der
+    /// Spalte, Font.Color und Brush.Color (bsSolid) in den Farben der Zelle
+    /// (Theme, Dunkelmodus, Auswahl). Die Datenmenge steht auf dem
+    /// gezeichneten Satz.
+    property OnDrawColumnCell: TPPGDrawColumnCellEvent read FOnDrawColumnCell write FOnDrawColumnCell;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -296,6 +414,14 @@ type
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     /// Ausgewaehlte Datensaetze (nur mit dgMultiSelect), wie TDBGrid.SelectedRows.
     property SelectedRows: TPPGBookmarkList read FSelected;
+    /// Wie TDBGrid.DefaultDrawColumnCell: zeichnet den Inhalt der Zelle (Text
+    /// bzw. Kaestchen/Zellart) in Rect, Text in Canvas.Font. Wurde
+    /// Canvas.Brush.Color gegenueber der vorbereiteten Farbe geaendert, wird
+    /// Rect vorher damit gefuellt (sonst bleibt die gezeichnete Flaeche mit
+    /// Stilen und Auswahl). Fuer OnDrawColumnCell gedacht (sonst: aktiver
+    /// Datensatz, Fuellung bei Brush.Style <> bsClear).
+    procedure DefaultDrawColumnCell(const Rect: TRect; DataCol: Integer;
+      Column: TPPGDBGridColumn; State: TGridDrawState);
   end;
 
   TPPGDBGrid = class(TPPGCustomDBGrid)
@@ -364,6 +490,7 @@ type
     property OnDragDrop;
     property OnDragOver;
     property OnDrawCell;
+    property OnDrawColumnCell;
     property OnEndDock;
     property OnEndDrag;
     property OnEnter;
@@ -400,10 +527,11 @@ implementation
 
 uses
   PPG.Lang,
-  Vcl.StdCtrls, PPG.ComboBox, System.Math, System.UITypes, System.Variants, Vcl.Dialogs,
+  PPG.ComboBox, System.Math, System.UITypes, System.Variants, Vcl.Dialogs,
   System.Generics.Defaults,
   PPG.Consts, PPG.Appearance,
-  PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls;
+  PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls, PPG.Grid.Paint, PPG.Render.Intf,
+  PPG.Render.Gdi;
 
 const
   // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
@@ -413,8 +541,206 @@ const
   IndSelected = #$2713; // Haken: Satz der Mehrfachauswahl
   // Dreistufige Leiste ohne RecNo: Anfang, Mitte, Ende (in Zeilen)
   ThreeStateRows = 2;
+  // Text-Abstand links/rechts (logische px, wie im Grid)
+  CellPad = 6;
+
+{ TPPGDBGridListLink }
+
+constructor TPPGDBGridListLink.Create(AColumn: TPPGDBGridColumn);
+begin
+  inherited Create;
+  FColumn := AColumn;
+end;
+
+procedure TPPGDBGridListLink.ActiveChanged;
+begin
+  if FColumn <> nil then
+    FColumn.ListChanged;
+end;
+
+procedure TPPGDBGridListLink.DataSetChanged;
+begin
+  if FColumn <> nil then
+    FColumn.ListChanged;
+end;
+
+procedure TPPGDBGridListLink.LayoutChanged;
+begin
+  // Nicht inherited: TDataLink.LayoutChanged ruft DataSetChanged (doppelt)
+  if FColumn <> nil then
+    FColumn.ListChanged;
+end;
+
+procedure TPPGDBGridListLink.RecordChanged(Field: TField);
+begin
+  // Aenderungen eines Satzes in Bearbeitung zaehlen erst nach Post
+  // (DataSetChanged); ListChanged prueft den Zustand
+  if FColumn <> nil then
+    FColumn.ListChanged;
+end;
 
 { TPPGDBGridColumn }
+
+constructor TPPGDBGridColumn.Create(Collection: TCollection);
+begin
+  FListLink := TPPGDBGridListLink.Create(Self);
+  inherited Create(Collection);
+end;
+
+destructor TPPGDBGridColumn.Destroy;
+begin
+  if FListLink <> nil then
+    FListLink.FColumn := nil;
+  FreeAndNil(FListLink);
+  FreeAndNil(FLookupCache);
+  inherited Destroy;
+end;
+
+function TPPGDBGridColumn.Grid: TPPGCustomDBGrid;
+begin
+  Result := nil;
+  if (Collection <> nil) and (Collection.Owner is TPPGCustomDBGrid) then
+    Result := TPPGCustomDBGrid(Collection.Owner);
+end;
+
+function TPPGDBGridColumn.GetField: TField;
+var
+  G: TPPGCustomDBGrid;
+begin
+  Result := nil;
+  G := Grid;
+  if (G <> nil) and (FFieldName <> '') and G.FDataLink.Active then
+    Result := G.FDataLink.DataSet.FindField(FFieldName);
+end;
+
+procedure TPPGDBGridColumn.SetValueChecked(const Value: string);
+begin
+  if FValueChecked <> Value then
+  begin
+    FValueChecked := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGDBGridColumn.SetValueUnchecked(const Value: string);
+begin
+  if FValueUnchecked <> Value then
+  begin
+    FValueUnchecked := Value;
+    Changed(False);
+  end;
+end;
+
+function TPPGDBGridColumn.GetListSource: TDataSource;
+begin
+  if FListLink <> nil then
+    Result := FListLink.DataSource
+  else
+    Result := nil;
+end;
+
+procedure TPPGDBGridColumn.SetListSource(Value: TDataSource);
+begin
+  if (FListLink = nil) or (FListLink.DataSource = Value) then
+    Exit;
+  // Freigabe der DataSource trennt den Link selbst (TDataSource.Destroy)
+  FListLink.DataSource := Value;
+  ListChanged;
+  Changed(False);
+end;
+
+procedure TPPGDBGridColumn.SetKeyField(const Value: string);
+begin
+  if FKeyField <> Value then
+  begin
+    FKeyField := Value;
+    ListChanged;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGDBGridColumn.SetListField(const Value: string);
+begin
+  if FListField <> Value then
+  begin
+    FListField := Value;
+    ListChanged;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGDBGridColumn.ListChanged;
+var
+  G: TPPGCustomDBGrid;
+  DS: TDataSet;
+begin
+  // Liste wird bearbeitet: alte Texte behalten, neu gelesen wird nach Post
+  // bzw. Cancel (Lookup wuerde die offene Bearbeitung buchen)
+  DS := ListDataSet;
+  if (DS <> nil) and DS.Active and (DS.State in dsEditModes) then
+    Exit;
+  if FLookupCache <> nil then
+    FLookupCache.Clear;
+  // Waehrend ein PPGlow-Control die Liste liest, aendert sich nichts
+  G := Grid;
+  if (G <> nil) and not PPGDBReading then
+    G.ListDataChanged;
+end;
+
+function TPPGDBGridColumn.IsLookup: Boolean;
+begin
+  // Ohne Datenmenge (auch waehrend die DataSource freigegeben wird) keine Liste
+  Result := (ListDataSet <> nil) and (FKeyField <> '') and (FListField <> '');
+end;
+
+function TPPGDBGridColumn.ListDataSet: TDataSet;
+begin
+  Result := nil;
+  if GetListSource <> nil then
+    Result := GetListSource.DataSet;
+end;
+
+function TPPGDBGridColumn.ListResultField: string;
+begin
+  Result := Trim(PPGDBFirstValue(FListField));
+end;
+
+function TPPGDBGridColumn.LookupText(const Key: Variant): string;
+var
+  DS: TDataSet;
+  K: string;
+  V: Variant;
+begin
+  Result := '';
+  if VarIsNull(Key) or VarIsEmpty(Key) or not IsLookup then
+    Exit;
+  DS := ListDataSet;
+  if (DS = nil) or not DS.Active or (Pos(';', FKeyField) > 0) or
+    (DS.FindField(ListResultField) = nil) then
+    Exit;
+  K := VarToStr(Key);
+  if FLookupCache = nil then
+    FLookupCache := TDictionary<string, string>.Create;
+  if FLookupCache.TryGetValue(K, Result) then
+    Exit;
+  // Lookup (z.B. TClientDataSet) bucht eine offene Bearbeitung der Liste:
+  // dann lieber leer anzeigen (nicht merken)
+  if DS.State <> dsBrowse then
+    Exit('');
+  // Lookup bewegt den Satzzeiger der Liste nicht; die Klammer haelt
+  // Meldungen anderer Datenmengen-Arten von den PPGlow-Links fern
+  PPGDBBeginRead;
+  try
+    V := DS.Lookup(FKeyField, Key, ListResultField);
+  finally
+    PPGDBEndRead;
+  end;
+  if VarIsNull(V) or VarIsEmpty(V) then
+    Result := ''
+  else
+    Result := VarToStr(V);
+  FLookupCache.AddOrSetValue(K, Result);
+end;
 
 procedure TPPGDBGridColumn.Assign(Source: TPersistent);
 begin
@@ -423,6 +749,14 @@ begin
     FFieldName := TPPGDBGridColumn(Source).FFieldName;
     FFooterField := TPPGDBGridColumn(Source).FFooterField;
     FButtonStyle := TPPGDBGridColumn(Source).FButtonStyle;
+    FValueChecked := TPPGDBGridColumn(Source).FValueChecked;
+    FValueUnchecked := TPPGDBGridColumn(Source).FValueUnchecked;
+    FKeyField := TPPGDBGridColumn(Source).FKeyField;
+    FListField := TPPGDBGridColumn(Source).FListField;
+    if FLookupCache <> nil then
+      FLookupCache.Clear;
+    if FListLink <> nil then
+      FListLink.DataSource := TPPGDBGridColumn(Source).GetListSource;
   end;
   inherited Assign(Source);
   if Source is TPPGDBGridColumn then
@@ -911,6 +1245,7 @@ begin
   FAutoColumns := TPPGGridColumns.Create(Self, TPPGDBGridColumn);
   FAutoState := TPPGGridColumns.Create(nil, TPPGDBGridColumn);
   FExportMaxRecords := 100000;
+  FDrawRow := -1;
   FDataLink := TPPGGridDataLink.Create(Self);
   FSelected := TPPGBookmarkList.Create(Self);
   // Sortieren ist Sache der Datenmenge
@@ -1250,20 +1585,9 @@ begin
       for C := 0 to High(FFields) do
       begin
         F := FFields[C];
-        if F = nil then
-          FCache[R][C] := ''
-        else if F.DataType = ftBoolean then
-        begin
-          // Kaestchen-Spalte: 1/0 wie im Grid; leer = kein Wert
-          if F.IsNull then
-            FCache[R][C] := ''
-          else if F.AsBoolean then
-            FCache[R][C] := '1'
-          else
-            FCache[R][C] := '0';
-        end
-        else
-          FCache[R][C] := F.DisplayText;
+        // Kaestchen: 1/0, grau = PPGGridCheckGrayed; Nachschlage-Spalte: Text
+        // aus der Liste; sonst DisplayText
+        FCache[R][C] := FieldCellText(FixedCols + C, F);
       end;
     end;
   finally
@@ -1640,17 +1964,11 @@ begin
 end;
 
 function TPPGCustomDBGrid.KindOf(ACol: Integer): IPPGCellKind;
-var
-  F: TField;
 begin
   // Boolean-Felder als Kaestchen, auch in eigenen Columns ohne EditorKind
   Result := inherited KindOf(ACol);
-  if Result = nil then
-  begin
-    F := FieldOfCol(ACol);
-    if (F <> nil) and (F.DataType = ftBoolean) then
-      Result := PPGCellKind(ckCheck);
-  end;
+  if (Result = nil) and IsCheckColumn(ACol) then
+    Result := PPGCellKind(ckCheck);
 end;
 
 function TPPGCustomDBGrid.ColumnCollection: TPPGGridColumns;
@@ -1693,8 +2011,9 @@ procedure TPPGCustomDBGrid.EnsureSnapshot;
 var
   DS: TDataSet;
   BM: TBookmark;
-  N, C, Cols: Integer;
+  N, C, Cols, DC: Integer;
   F: TField;
+  St: TCheckBoxState;
 begin
   if FSnapValid then
     Exit;
@@ -1732,11 +2051,34 @@ begin
       SetLength(FSnapText[N], Cols);
       for C := 0 to Cols - 1 do
       begin
-        F := FieldOfCol(DataCol(C + FixedCols));
+        DC := DataCol(C + FixedCols);
+        F := FieldOfCol(DC);
         if (F = nil) or F.IsNull then
         begin
           FSnap[N][C] := Null;
           FSnapText[N][C] := '';
+        end
+        else if IsCheckColumn(DC) then
+        begin
+          // Kaestchen: Wahrheitswert; Text bei Boolean wie bisher DisplayText,
+          // sonst 1/0 bzw. grau (Druck zeichnet daraus das Kaestchen)
+          St := FieldCheckState(F, ColumnOf(DC));
+          if St = cbGrayed then
+            FSnap[N][C] := Null
+          else
+            FSnap[N][C] := St = cbChecked;
+          if F.DataType = ftBoolean then
+            FSnapText[N][C] := F.DisplayText
+          else
+            FSnapText[N][C] := CheckStateText(St);
+        end
+        else if ColumnLookup(DC) <> nil then
+        begin
+          FSnapText[N][C] := FieldCellText(DC, F);
+          if FSnapText[N][C] = '' then
+            FSnap[N][C] := Null
+          else
+            FSnap[N][C] := FSnapText[N][C];
         end
         else
         begin
@@ -1838,17 +2180,11 @@ begin
 end;
 
 function TPPGCustomDBGrid.ExportColumnLook(ACol: Integer): TPPGTableColumnLook;
-var
-  F: TField;
 begin
-  // Boolean-Felder als Kaestchen (wie KindOf)
+  // Kaestchen-Spalten (Boolean-Felder ...) als Kaestchen (wie KindOf)
   Result := inherited ExportColumnLook(ACol);
-  if Result.Kind = ckText then
-  begin
-    F := FieldOfCol(TableDataCol(ACol));
-    if (F <> nil) and (F.DataType = ftBoolean) then
-      Result.Kind := ckCheck;
-  end;
+  if (Result.Kind = ckText) and IsCheckColumn(TableDataCol(ACol)) then
+    Result.Kind := ckCheck;
 end;
 
 function TPPGCustomDBGrid.TableDataCol(ACol: Integer): Integer;
@@ -2006,7 +2342,7 @@ begin
   // Der Editor bearbeitet den aktiven Datensatz: Field.Text (Bearbeitungsformat)
   F := FieldOfCol(ACol);
   if (F <> nil) and FDataLink.Active and (ARow - FixedRows = FDataLink.ActiveRecord) and
-    (F.DataType <> ftBoolean) then
+    not IsCheckColumn(ACol) and (ColumnLookup(ACol) = nil) then
     Result := F.Text
   else
     Result := GetCellText(ACol, ARow);
@@ -2015,12 +2351,24 @@ end;
 function TPPGCustomDBGrid.CanEditCell(ACol, VRow: Integer): Boolean;
 var
   F: TField;
+  C: TPPGDBGridColumn;
+  L: TDataSet;
 begin
   F := FieldOfCol(ACol);
   Result := not FReadOnly and (dgEditing in FDBOptions) and FDataLink.Active and
     not FDataLink.ReadOnly and FDataLink.DataSet.CanModify and (F <> nil) and
     FieldEditable(F) and (VRow - VisualRow(FixedRows) < Length(FCache)) and
     inherited CanEditCell(ACol, VRow);
+  if Result then
+  begin
+    // Nachschlage-Spalte: nur mit offener Liste und einem Schluesselfeld
+    C := ColumnLookup(ACol);
+    if C <> nil then
+    begin
+      L := C.ListDataSet;
+      Result := (L <> nil) and L.Active and (Pos(';', C.KeyField) = 0);
+    end;
+  end;
 end;
 
 /// Nachschlagefeld mit einem Schluesselfeld (Mehrfachschluessel: nur lesen).
@@ -2049,10 +2397,15 @@ end;
 
 function TPPGCustomDBGrid.CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind;
 var
-  F: TField;
   C: TPPGGridColumn;
+  L: TDataSet;
+  LK, LR: string;
+  T: TField;
 begin
   Result := inherited CellEditorKind(ACol, ARow);
+  // Kaestchen-Spalte (auch Boolean-Feld in einer eigenen Spalte ohne EditorKind)
+  if IsCheckColumn(ACol) then
+    Exit(gekCheck);
   // ButtonStyle cbsEllipsis/cbsNone: Textfeld statt Auswahlliste
   C := ColumnOf(ACol);
   if (C is TPPGDBGridColumn) and (TPPGDBGridColumn(C).ButtonStyle <> cbsAuto) then
@@ -2061,34 +2414,183 @@ begin
       Result := gekText;
     Exit;
   end;
-  F := FieldOfCol(ACol);
-  // Nachschlagefeld: Auswahl aus der Nachschlage-Datenmenge statt Freitext
-  if (Result = gekText) and (LookupKeyField(F) <> nil) then
+  // Nachschlagefeld bzw. -Spalte: Auswahl aus der Liste statt Freitext
+  if (Result = gekText) and LookupSource(ACol, L, LK, LR, T) then
     Result := gekCombo;
 end;
 
-procedure TPPGCustomDBGrid.FillLookupEditor(F: TField);
+function TPPGCustomDBGrid.ColumnLookup(ACol: Integer): TPPGDBGridColumn;
+var
+  C: TPPGGridColumn;
+  F: TField;
+begin
+  // Spalte mit ListSource/KeyField/ListField an einem gewoehnlichen Feld
+  Result := nil;
+  C := ColumnOf(ACol);
+  if not (C is TPPGDBGridColumn) or not TPPGDBGridColumn(C).IsLookup then
+    Exit;
+  F := FieldOfCol(ACol);
+  if (F <> nil) and (F.FieldKind <> fkLookup) then
+    Result := TPPGDBGridColumn(C);
+end;
+
+function TPPGCustomDBGrid.LookupSource(ACol: Integer; out ListDS: TDataSet; out ListKey,
+  ListResult: string; out Target: TField): Boolean;
+var
+  F: TField;
+  C: TPPGDBGridColumn;
+begin
+  ListDS := nil;
+  ListKey := '';
+  ListResult := '';
+  Target := nil;
+  F := FieldOfCol(ACol);
+  if F = nil then
+    Exit(False);
+  if F.FieldKind = fkLookup then
+  begin
+    Target := LookupKeyField(F);
+    if Target <> nil then
+    begin
+      ListDS := F.LookupDataSet;
+      ListKey := F.LookupKeyFields;
+      ListResult := F.LookupResultField;
+    end;
+  end
+  else
+  begin
+    C := ColumnLookup(ACol);
+    if (C <> nil) and (Pos(';', C.KeyField) = 0) then
+    begin
+      ListDS := C.ListDataSet;
+      ListKey := C.KeyField;
+      ListResult := C.ListResultField;
+      Target := F;
+    end;
+  end;
+  Result := ListDS <> nil;
+end;
+
+function TPPGCustomDBGrid.IsCheckColumn(ACol: Integer): Boolean;
+var
+  F: TField;
+  C: TPPGGridColumn;
+begin
+  F := FieldOfCol(ACol);
+  if F = nil then
+    Exit(False);
+  if F.DataType = ftBoolean then
+    Exit(True);
+  C := ColumnOf(ACol);
+  Result := (C <> nil) and ((C.EditorKind = gekCheck) or (C.CellKind = ckCheck));
+end;
+
+function TPPGCustomDBGrid.FieldCheckState(F: TField; C: TPPGGridColumn): TCheckBoxState;
+var
+  S, VC, VU: string;
+  On: Boolean;
+begin
+  // Wie TDBCheckBox: Null = grau; Boolean nach AsBoolean; sonst Field.Text
+  // gegen ValueChecked/ValueUnchecked (leer: 1/True/Ja = an, Rest = aus)
+  if (F = nil) or F.IsNull then
+    Exit(cbGrayed);
+  if F.DataType = ftBoolean then
+  begin
+    if F.AsBoolean then
+      Result := cbChecked
+    else
+      Result := cbUnchecked;
+    Exit;
+  end;
+  VC := '';
+  VU := '';
+  if C is TPPGDBGridColumn then
+  begin
+    VC := TPPGDBGridColumn(C).ValueChecked;
+    VU := TPPGDBGridColumn(C).ValueUnchecked;
+  end;
+  S := F.Text;
+  if VC <> '' then
+    On := PPGDBMatchesValue(S, VC)
+  else
+    On := TPPGCellPainter.IsCheckedText(S);
+  if On then
+    Result := cbChecked
+  else if (VU = '') or PPGDBMatchesValue(S, VU) then
+    Result := cbUnchecked
+  else
+    Result := cbGrayed;
+end;
+
+function TPPGCustomDBGrid.CheckStateText(State: TCheckBoxState): string;
+begin
+  case State of
+    cbChecked: Result := '1';
+    cbUnchecked: Result := '0';
+  else
+    Result := PPGGridCheckGrayed;
+  end;
+end;
+
+function TPPGCustomDBGrid.FieldCellText(ACol: Integer; F: TField): string;
+var
+  C: TPPGDBGridColumn;
+begin
+  if F = nil then
+    Exit('');
+  if IsCheckColumn(ACol) then
+    Exit(CheckStateText(FieldCheckState(F, ColumnOf(ACol))));
+  C := ColumnLookup(ACol);
+  if C <> nil then
+  begin
+    if F.IsNull then
+      Result := ''
+    else
+      Result := C.LookupText(F.Value);
+  end
+  else
+    Result := F.DisplayText;
+end;
+
+procedure TPPGCustomDBGrid.ListDataChanged;
+begin
+  if FListBusy or (csDestroying in ComponentState) or (csLoading in ComponentState) then
+    Exit;
+  FListBusy := True;
+  try
+    FSnapValid := False;
+    RebuildCache;
+    Invalidate;
+  finally
+    FListBusy := False;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.FillLookupEditor(ACol: Integer);
 var
   C: TPPGComboBox;
   DS: TDataSet;
-  RF: TField;
+  RF, T: TField;
   B: TBookmark;
-  S: string;
+  S, LK, LR: string;
+  Plain: Boolean;
 begin
   if not (InplaceEditor is TPPGComboBox) then
     Exit;
   C := TPPGComboBox(InplaceEditor);
-  if LookupKeyField(F) = nil then
+  if not LookupSource(ACol, DS, LK, LR, T) then
   begin
     C.Style := csDropDown;
     Exit;
   end;
-  S := F.DisplayText;
+  // Nachschlage-Spalte: Texte wie LookupText (Wert als Text), Nachschlagefeld:
+  // DisplayText wie das Feld
+  Plain := ColumnLookup(ACol) <> nil;
+  S := FieldCellText(ACol, FieldOfCol(ACol));
   C.Items.BeginUpdate;
   try
     C.Items.Clear;
-    DS := F.LookupDataSet;
-    RF := DS.FindField(F.LookupResultField);
+    RF := DS.FindField(LR);
     if (RF <> nil) and DS.Active then
     begin
       PPGDBBeginRead;
@@ -2099,7 +2601,10 @@ begin
           DS.First;
           while not DS.Eof do
           begin
-            C.Items.Add(RF.DisplayText);
+            if Plain then
+              C.Items.Add(RF.AsString)
+            else
+              C.Items.Add(RF.DisplayText);
             DS.Next;
           end;
         finally
@@ -2129,56 +2634,98 @@ end;
 procedure TPPGCustomDBGrid.SetCellByUser(ACol, ARow: Integer; const Value: string);
 var
   F: TField;
+  C: TPPGGridColumn;
+  NewSt: TCheckBoxState;
+  VC, VU: string;
 begin
   F := FieldOfCol(ACol);
   if (F = nil) or not FDataLink.Active or (ARow - FixedRows <> FDataLink.ActiveRecord) then
     Exit;
-  if F.FieldKind = fkLookup then
+  if (F.FieldKind = fkLookup) or (ColumnLookup(ACol) <> nil) then
   begin
-    SetLookupByUser(F, Value);
+    SetLookupByUser(ACol, ARow, Value);
     Exit;
   end;
-  if F.DataType = ftBoolean then
+  if IsCheckColumn(ACol) then
   begin
-    if not F.IsNull and (F.AsBoolean = (Value = '1')) then
+    C := ColumnOf(ACol);
+    if TPPGCellPainter.IsCheckedText(Value) then
+      NewSt := cbChecked
+    else if TPPGCellPainter.IsGrayedText(Value) then
+      NewSt := cbGrayed
+    else
+      NewSt := cbUnchecked;
+    if FieldCheckState(F, C) = NewSt then
       Exit;
-  end
-  else if F.Text = Value then
+    if not FDataLink.Editing and not FDataLink.Edit then
+      Exit;
+    VC := '';
+    VU := '';
+    if C is TPPGDBGridColumn then
+    begin
+      VC := Trim(PPGDBFirstValue(TPPGDBGridColumn(C).ValueChecked));
+      VU := Trim(PPGDBFirstValue(TPPGDBGridColumn(C).ValueUnchecked));
+    end;
+    if VC = '' then
+      VC := '1';
+    if VU = '' then
+      VU := '0';
+    if NewSt = cbGrayed then
+      F.Clear
+    else if F.DataType = ftBoolean then
+      F.AsBoolean := NewSt = cbChecked
+    else if NewSt = cbChecked then
+      F.Text := VC
+    else
+      F.Text := VU;
+    Exit;
+  end;
+  if F.Text = Value then
     Exit;
   if not FDataLink.Editing and not FDataLink.Edit then
     Exit;
-  if F.DataType = ftBoolean then
-    F.AsBoolean := Value = '1'
-  else
-    F.Text := Value;
+  F.Text := Value;
 end;
 
-procedure TPPGCustomDBGrid.SetLookupByUser(F: TField; const Value: string);
+procedure TPPGCustomDBGrid.SetLookupByUser(ACol, ARow: Integer; const Value: string);
 var
-  K: TField;
+  DS: TDataSet;
+  T: TField;
+  LK, LR: string;
   Key: Variant;
 begin
-  K := LookupKeyField(F);
-  if (K = nil) or (F.DisplayText = Value) then
+  if not LookupSource(ACol, DS, LK, LR, T) or
+    (FieldCellText(ACol, FieldOfCol(ACol)) = Value) then
     Exit;
   if Value = '' then
     Key := Null
   else
   begin
-    Key := F.LookupDataSet.Lookup(F.LookupResultField, Value, F.LookupKeyFields);
+    PPGDBBeginRead;
+    try
+      Key := DS.Lookup(LR, Value, LK);
+    finally
+      PPGDBEndRead;
+    end;
     // Unbekannter Text: nichts aendern (vorher wurde der Schluessel still Null)
     if VarIsNull(Key) or VarIsEmpty(Key) then
       Exit;
   end;
   if not FDataLink.Editing and not FDataLink.Edit then
     Exit;
-  K.Value := Key;
+  T.Value := Key;
+end;
+
+procedure TPPGCustomDBGrid.EditorPrepare(ACol, ARow: Integer);
+begin
+  inherited EditorPrepare(ACol, ARow);
+  // Vor dem Fokus: der Stilwechsel der Auswahl blendet das innere Feld aus
+  FillLookupEditor(ACol);
 end;
 
 procedure TPPGCustomDBGrid.EditorOpened(ACol, ARow: Integer);
 begin
   inherited EditorOpened(ACol, ARow);
-  FillLookupEditor(FieldOfCol(ACol));
   FEditBm := nil;
   if FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
     FEditBm := FDataLink.DataSet.Bookmark;
@@ -2386,6 +2933,133 @@ begin
   end;
 end;
 
+{ ---- Owner-Draw ---- }
+
+function TPPGCustomDBGrid.OwnerDrawAssigned: Boolean;
+begin
+  Result := inherited OwnerDrawAssigned or Assigned(FOnDrawColumnCell);
+end;
+
+function TPPGCustomDBGrid.DefaultDrawsKinds: Boolean;
+begin
+  // Wie TDBGrid: ohne DefaultDrawing zeichnet das Ereignis den Inhalt
+  // (DefaultDrawColumnCell zeichnet bei Bedarf Text bzw. Kaestchen)
+  Result := DefaultDrawing;
+end;
+
+procedure TPPGCustomDBGrid.OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
+  State: TGridDrawState);
+var
+  DCol, Old, B: Integer;
+  Col: TPPGGridColumn;
+  Fill, Txt: TColor;
+begin
+  inherited OwnerDrawCell(ACol, VRow, ARow, R, State);
+  if not Assigned(FOnDrawColumnCell) or (gdFixed in State) or not FDataLink.Active then
+    Exit;
+  // Nur echte Datensaetze (keine leere Fuellzeile)
+  B := ARow - FixedRows;
+  if (B < 0) or (B >= FDataLink.RecordCount) or (B >= Length(FCache)) then
+    Exit;
+  DCol := DataCol(ACol);
+  Col := ColumnOf(DCol);
+  if not (Col is TPPGDBGridColumn) then
+    Exit;
+  // Wie TDBGrid: Schrift und Pinsel in den Farben der Zelle (auch nach
+  // Aenderungen in OnDrawCell)
+  PrepareItemCanvas(ACol, VRow, State);
+  CellDrawColors(ACol, VRow, State, Fill, Txt);
+  Canvas.Brush.Color := Fill; // bsSolid
+  FDrawBrush := ColorToRGB(Canvas.Brush.Color);
+  // Wie TDBGrid: die Datenmenge steht waehrend des Ereignisses auf dem
+  // gezeichneten Satz (ActiveRecord des Puffers, ohne Satzwechsel)
+  Old := FDataLink.ActiveRecord;
+  FDrawRow := B;
+  try
+    FDataLink.ActiveRecord := B;
+    try
+      DrawColumnCell(R, DCol - FixedCols, TPPGDBGridColumn(Col), State);
+    finally
+      FDataLink.ActiveRecord := Old;
+    end;
+  finally
+    FDrawRow := -1;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.DrawColumnCell(const Rect: TRect; DataCol: Integer;
+  Column: TPPGDBGridColumn; State: TGridDrawState);
+begin
+  if Assigned(FOnDrawColumnCell) then
+    FOnDrawColumnCell(Self, Rect, DataCol, Column, State);
+end;
+
+procedure TPPGCustomDBGrid.DefaultDrawColumnCell(const Rect: TRect; DataCol: Integer;
+  Column: TPPGDBGridColumn; State: TGridDrawState);
+var
+  Cv: TCanvas;
+  ACol, R: Integer;
+  S: string;
+  K: IPPGCellKind;
+  Ctx: TPPGCellKindContext;
+  GC: IPPGCanvas;
+  TR: TRect;
+  Fmt: TTextFormat;
+  Al: TAlignment;
+begin
+  Cv := Canvas;
+  // Nur eine geaenderte Pinselfarbe fuellt: die vorbereitete Farbe ist die
+  // Flaeche der Zelle, das Grid hat sie (mit bedingten Formaten, Balken,
+  // halbtransparenter Auswahl) schon genauer gezeichnet
+  if (Cv.Brush.Style <> bsClear) and
+    ((FDrawRow < 0) or (ColorToRGB(Cv.Brush.Color) <> FDrawBrush)) then
+    Cv.FillRect(Rect);
+  ACol := FixedCols + DataCol;
+  if FDrawRow >= 0 then
+    R := FDrawRow
+  else if FDataLink.Active then
+    R := FDataLink.ActiveRecord
+  else
+    R := -1;
+  S := '';
+  // Text aus dem Zwischenspeicher (Paint-Regel: kein Feldzugriff)
+  if (R >= 0) and (R < Length(FCache)) and (DataCol >= 0) and (DataCol < Length(FCache[R])) then
+    S := FCache[R][DataCol];
+  K := KindOf(ACol);
+  if K <> nil then
+  begin
+    // Kaestchen bzw. Zellart im Theme (auch im Dunkelmodus)
+    Ctx := KindContext(ACol);
+    if Ctx.Painter = nil then
+      Exit;
+    GC := TPPGGdiCanvas.Create(Cv.Handle);
+    Ctx.Canvas := GC;
+    K.PaintCell(Ctx, Rect, S);
+    Exit;
+  end;
+  if S = '' then
+    Exit;
+  TR := Rect;
+  InflateRect(TR, -PPGScale(CellPad, ScalePPI), 0);
+  if Column <> nil then
+    Al := Column.Alignment
+  else
+    Al := taLeftJustify;
+  if UseRightToLeftAlignment then
+    case Al of
+      taLeftJustify: Al := taRightJustify;
+      taRightJustify: Al := taLeftJustify;
+    end;
+  Fmt := [tfSingleLine, tfVerticalCenter, tfEndEllipsis, tfNoPrefix];
+  case Al of
+    taRightJustify: Include(Fmt, tfRight);
+    taCenter: Include(Fmt, tfCenter);
+  end;
+  if UseRightToLeftReading then
+    Include(Fmt, tfRtlReading);
+  Cv.Brush.Style := bsClear;
+  Cv.TextRect(TR, S, Fmt);
+end;
 
 { TPPGDBGrid }
 

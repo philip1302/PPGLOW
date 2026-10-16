@@ -452,6 +452,11 @@ procedure PPGDBCommitField(Ctrl: TPPGCustomField; Link: TFieldDataLink);
 procedure PPGDBBeginRead;
 procedure PPGDBEndRead;
 function PPGDBReading: Boolean;
+/// True, wenn S (ohne Gross-/Kleinschreibung) einem der durch Semikolon
+/// getrennten Werte entspricht (ValueChecked/ValueUnchecked).
+function PPGDBMatchesValue(const S, Values: string): Boolean;
+/// Erster Wert einer durch Semikolon getrennten Liste (zum Schreiben).
+function PPGDBFirstValue(const Values: string): string;
 
 implementation
 
@@ -1248,7 +1253,7 @@ begin
 end;
 
 /// True, wenn S einem der durch Semikolon getrennten Werte entspricht.
-function MatchesValue(const S, Values: string): Boolean;
+function PPGDBMatchesValue(const S, Values: string): Boolean;
 var
   P, Start: Integer;
 begin
@@ -1263,7 +1268,7 @@ begin
     end;
 end;
 
-function FirstValue(const Values: string): string;
+function PPGDBFirstValue(const Values: string): string;
 var
   P: Integer;
 begin
@@ -1292,9 +1297,9 @@ begin
     Exit;
   end;
   S := F.Text;
-  if MatchesValue(S, VChecked) then
+  if PPGDBMatchesValue(S, VChecked) then
     Result := cbChecked
-  else if MatchesValue(S, VUnchecked) then
+  else if PPGDBMatchesValue(S, VUnchecked) then
     Result := cbUnchecked;
 end;
 
@@ -1306,9 +1311,9 @@ begin
   else if F.DataType = ftBoolean then
     F.AsBoolean := State = cbChecked
   else if State = cbChecked then
-    F.Text := FirstValue(VChecked)
+    F.Text := PPGDBFirstValue(VChecked)
   else
-    F.Text := FirstValue(VUnchecked);
+    F.Text := PPGDBFirstValue(VUnchecked);
 end;
 
 function TPPGDBCheckBox.FieldState: TCheckBoxState;

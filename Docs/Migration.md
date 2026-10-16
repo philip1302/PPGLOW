@@ -114,6 +114,7 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TButton | `Style = bsCommandLink` | entfernt (gemeldet) |
 | TDBGrid | `Options`: `dgAlwaysShowEditor`, `dgAlwaysShowSelection`, `dgThumbTracking` | bleiben stehen, wirken aber nicht (gemeldet) |
 | TDBGrid | `Options`: `dgMultiSelect` | bleibt und wirkt (`SelectedRows` wie in der VCL; im Code `TBookmarkList` durch `TPPGBookmarkList` ersetzen) |
+| TDBGrid | `OnDrawColumnCell`, `DefaultDrawing` | bleiben und wirken; im Handler wird `Column: TColumn` zu `TPPGDBGridColumn`, `DefaultDrawColumnCell` und `Column.Field` gibt es gleichnamig |
 | TDBNavigator | `Kind` | entfernt (der Navigator ist immer waagerecht) |
 
 ## Abweichende Vorgaben

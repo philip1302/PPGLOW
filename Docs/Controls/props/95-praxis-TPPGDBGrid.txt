@@ -34,7 +34,7 @@ TPPGDBGrid.Constraints ! MinHeight so wählen, dass Kopf und mindestens drei, vi
 TPPGDBGrid.Cursor ! Meist crDefault lassen; Links und Buttons in Zellen zeigen die Hand selbst.
 TPPGDBGrid.CustomHint ! Für Hinweise mit Titel und Symbol einen TPPGCustomHint zuweisen; abgeschnittene Zelltexte zeigt das Grid über ToolTips ohnehin.
 TPPGDBGrid.DataSource ! Die Verbindung zur Datenmenge: eine TDataSource aus dem Datenmodul zuweisen, deren DataSet die Abfrage oder Tabelle ist. Navigator, Detailfelder und Grid an derselben DataSource zeigen immer denselben Datensatz.
-TPPGDBGrid.DefaultDrawing ! Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell komplett selbst zeichnen. Für Farben und Symbole reichen ConditionalFormats und OnGetCellStyle.
+TPPGDBGrid.DefaultDrawing ! Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell bzw. OnDrawColumnCell komplett selbst zeichnen (DefaultDrawColumnCell zeichnet bei Bedarf Text und Kästchen). Für Farben und Symbole reichen ConditionalFormats und OnGetCellStyle.
 TPPGDBGrid.DoubleBuffered ! Bei PPGlow-Controls nicht nötig; das Grid zeichnet immer flackerfrei. Steht nur da, damit alte Formulare mit TDBGrid laden.
 TPPGDBGrid.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. crDrag beim Ziehen eines Datensatzes in eine andere Liste.
 TPPGDBGrid.DragKind ! dkDrag für Drag & Drop (Datensatz auf einen Ordner oder eine zweite Liste ziehen); dkDock braucht man bei Tabellen praktisch nie.

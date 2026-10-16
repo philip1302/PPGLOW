@@ -47,6 +47,7 @@ object Form1: TForm1
     FixedColor = clSkyBlue
     TitleFont.Name = 'Segoe UI'
     OnTitleClick = Grid1TitleClick
+    OnDrawColumnCell = Grid1DrawColumnCell
     Columns = <
       item
         FieldName = 'Name'

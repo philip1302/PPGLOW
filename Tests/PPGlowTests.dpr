@@ -212,6 +212,7 @@ uses
   PPG.Tests.Phase18 in 'PPG.Tests.Phase18.pas',
   PPG.Tests.Inventur in 'PPG.Tests.Inventur.pas',
   PPG.Tests.DBGridMultiSelect in 'PPG.Tests.DBGridMultiSelect.pas',
+  PPG.Tests.DBGridColumns in 'PPG.Tests.DBGridColumns.pas',
   PPG.Tests.Phase19 in 'PPG.Tests.Phase19.pas',
   PPG.Tests.Phase20 in 'PPG.Tests.Phase20.pas',
   PPG.Tests.Audit45 in 'PPG.Tests.Audit45.pas',

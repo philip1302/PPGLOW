@@ -18,6 +18,8 @@ type
     Memo1: TPPGMemo;
     DataSource1: TDataSource;
     procedure Grid1TitleClick(Column: TPPGDBGridColumn);
+    procedure Grid1DrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer;
+      Column: TPPGDBGridColumn; State: TGridDrawState);
   end;
 
 implementation
@@ -26,6 +28,12 @@ implementation
 
 procedure TForm1.Grid1TitleClick(Column: TPPGDBGridColumn);
 begin
+end;
+
+procedure TForm1.Grid1DrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer;
+  Column: TPPGDBGridColumn; State: TGridDrawState);
+begin
+  Grid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);
 end;
 
 end.
