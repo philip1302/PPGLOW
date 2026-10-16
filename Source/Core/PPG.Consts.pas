@@ -48,6 +48,8 @@ resourcestring
   SPPGDBGridConfirmDeleteSelected = 'Delete %d selected records?';
   SPPGDBEditPending = 'The data set is being edited elsewhere. Post or cancel that edit first.';
   SPPGDBLookupMultiKey = 'Lookup with several key fields (%s) is not supported.';
+  SPPGDBGridEditForm = 'Edit form';
+  SPPGDBGridEditFormApply = 'Apply';
   SPPGAccJump = 'Jump';
   SPPGAccExpand = 'Expand';
   SPPGAccCollapse = 'Collapse';

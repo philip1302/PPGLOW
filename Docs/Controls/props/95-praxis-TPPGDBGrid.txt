@@ -129,4 +129,13 @@ TPPGDBGridColumn.Sortable ! Im DB-Grid nicht verwenden; ob eine Spalte sortierba
 TPPGDBGrid.CardLabelWidth ! So breit wie die längste übliche Beschriftung wählen; bei kurzen Werten (Kennzeichen, Beträge) lieber eine schmalere Karte als eine schmale Beschriftung.
 TPPGDBGrid.CardSpacing ! Vorgabe lassen; 0 für dicht gepackte Karten in kleinen Fenstern, größer für Übersichtsseiten.
 TPPGDBGrid.CardWidth ! Nach dem längsten Wert wählen; bei vielen Feldern je Datensatz (z. B. 30 und mehr) sind 300 bis 400 Pixel übersichtlich, die Karte wird dann senkrecht gescrollt.
+TPPGDBGrid.EditMode ! dgeForm, wenn Datensätze mehr Felder haben als in die Breite passen oder Eingaben zusammen geprüft werden (Pflichtfelder, Abhängigkeiten); die Tabelle bleibt zum Vergleichen und Suchen, bearbeitet wird im Formular. Für schnelle Einzelkorrekturen in wenigen Spalten dgeCells lassen.
+TPPGDBGrid.EditForm ! ColumnCount nach der Breite des Grids wählen (2 bis 3 bei normalen Fenstern); lange Felder per Column.EditFormColSpan über mehrere Spalten legen statt ColumnCount zu senken.
+TPPGDBGrid.OnEditFormShow ! Zum Vorbelegen neuer Datensätze lieber OnNewRecord der Datenmenge nehmen; das Ereignis eignet sich für Hinweise und zum Ein- und Ausschalten anderer Bedienelemente.
+TPPGDBGrid.OnEditFormClose ! Accepted prüfen, um nach dem Speichern z. B. eine Summe oder Detailansicht zu aktualisieren.
+TPPGDBGridColumn.EditFormVisible ! Technische Spalten (IDs, Zeitstempel) mit efvHide ausblenden; Felder, die in der Tabelle keinen Platz haben (Bemerkung, Adresse), mit Visible = False und efvShow nur im Formular zeigen.
+TPPGDBGridColumn.EditFormColSpan ! Für Text- und Bemerkungsfelder die ganze Formularbreite (= EditForm.ColumnCount) wählen.
+TPPGDBGridEditFormOptions.ColumnCount ! 2 für normale Fenster, 3 bis 4 für breite Grids mit vielen kurzen Feldern (Kennzeichen, Beträge, Datum); mehr als 4 wird schnell unübersichtlich.
+TPPGDBGridEditFormOptions.LabelWidth ! So breit wie die längste übliche Beschriftung; 0 nur, wenn die Felder ohnehin selbsterklärend sind (z. B. mit TextHint).
+TPPGDBGridEditFormOptions.ShowButtons ! Eingeschaltet lassen; ohne Schaltflächen bleibt nur die Tastatur (Strg+Enter, Esc), das kennen Gelegenheitsnutzer nicht.
 TPPGDBGrid.ViewStyle ! dgvCards für Datensätze mit vielen Feldern, die man einzeln liest statt zu vergleichen (Stammdaten, Adressen, Geräte); ein Schalter in der Oberfläche kann zwischen Tabelle und Karten wechseln, Spalten, Auswahl und Datensatz bleiben erhalten.
