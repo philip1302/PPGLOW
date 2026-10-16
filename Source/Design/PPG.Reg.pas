@@ -206,7 +206,7 @@ uses
   PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
   PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator, PPG.Controls.Field, PPG.BusyOverlay,
-  PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
+  PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban, PPG.RichEdit,
   PPG.Editors.Logic, PPG.Editors.Forms, Vcl.ImgList, System.Math, PPG.Types;
 
 const
@@ -1184,7 +1184,7 @@ begin
     TPPGPopupMenu, TPPGMenuBar, TPPGHintManager, TPPGCustomHint, TPPGTeachingTip,
     TPPGTaskDialog, TPPGWizard, TPPGValidator, TPPGBusyOverlay,
     TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
-    TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit,
+    TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit, TPPGRichEdit,
     TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager]);
   // Seiten entstehen ueber den Komponenteneditor, nicht ueber die Palette
   RegisterClass(TPPGTabSheet);

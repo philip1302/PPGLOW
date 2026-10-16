@@ -95,6 +95,7 @@
         <DCCReference Include="..\..\Source\DB\PPG.DB.Navigator.pas"/>
         <DCCReference Include="..\..\Source\DB\PPG.DB.Validator.pas"/>
         <DCCReference Include="..\..\Source\DB\PPG.DB.Fields.pas"/>
+        <DCCReference Include="..\..\Source\DB\PPG.DB.RichEdit.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

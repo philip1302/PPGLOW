@@ -45,6 +45,7 @@ contains
   PPG.DB.Kanban in '..\..\Source\DB\PPG.DB.Kanban.pas',
   PPG.DB.Navigator in '..\..\Source\DB\PPG.DB.Navigator.pas',
   PPG.DB.Validator in '..\..\Source\DB\PPG.DB.Validator.pas',
-  PPG.DB.Fields in '..\..\Source\DB\PPG.DB.Fields.pas';
+  PPG.DB.Fields in '..\..\Source\DB\PPG.DB.Fields.pas',
+  PPG.DB.RichEdit in '..\..\Source\DB\PPG.DB.RichEdit.pas';
 
 end.

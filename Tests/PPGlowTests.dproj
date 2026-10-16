@@ -245,6 +245,7 @@
         <DCCReference Include="..\Source\Render\PPG.Render.Shapes.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Sparkline.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Gauge.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.RichEdit.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Logic.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Forms.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Controls.pas"/>
@@ -256,6 +257,7 @@
         <DCCReference Include="..\Source\DB\PPG.DB.Navigator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Validator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Fields.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.RichEdit.pas"/>
         <DCCReference Include="..\Source\Render\PPG.Render.Fluent11.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.Presets.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.StyleManager.pas"/>
@@ -369,6 +371,7 @@
         <DCCReference Include="PPG.Tests.Phase14cDB.pas"/>
         <DCCReference Include="PPG.Tests.Review.pas"/>
         <DCCReference Include="PPG.Tests.Custom.pas"/>
+        <DCCReference Include="PPG.Tests.RichEdit.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

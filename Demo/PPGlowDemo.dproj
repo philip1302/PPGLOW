@@ -273,6 +273,7 @@
         <DCCReference Include="..\Source\Render\PPG.Render.Shapes.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Sparkline.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Gauge.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.RichEdit.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Controls.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Lookup.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Grid.pas"/>
@@ -282,6 +283,7 @@
         <DCCReference Include="..\Source\DB\PPG.DB.Navigator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Validator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Fields.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.RichEdit.pas"/>
         <DCCReference Include="DemoKit.pas"/>
         <DCCReference Include="DemoPages1.pas"/>
         <DCCReference Include="DemoPages2.pas"/>

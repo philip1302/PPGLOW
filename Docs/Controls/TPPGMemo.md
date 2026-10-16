@@ -11,7 +11,7 @@ Das Memo nimmt mehrzeiligen Freitext auf: Bemerkungen, Beschreibungen, Notizen, 
 ## Wann verwenden
 
 - Für Texte, die mehr als eine Zeile brauchen oder Zeilenumbrüche enthalten dürfen. Für einzeilige Angaben (Name, Ort, Suchbegriff) ist `TPPGEdit` richtig.
-- Für reinen Text ohne Formatierung. Fett, Farben oder Listen im Text brauchen ein `TRichEdit` (in PPGlow nicht enthalten); zur reinen Anzeige formatierter Texte genügt `TPPGLabel` mit `AllowMarkup`.
+- Für reinen Text ohne Formatierung. Fett, Farben oder Listen im Text brauchen ein `TPPGRichEdit`; zur reinen Anzeige formatierter Texte genügt `TPPGLabel` mit `AllowMarkup`.
 - Als schreibgeschützte Anzeige (`ReadOnly`) für Verläufe und Protokolle, die man markieren und kopieren können soll. Für kurze, feste Hinweise ist `TPPGLabel` schlanker.
 - Für einzelne Einträge, die der Anwender getrennt auswählen oder bearbeiten soll, besser `TPPGListBox` oder ein Grid statt Zeilen in einem Memo.
 - An ein Datenfeld gebunden (Memo- oder Textspalte): `TPPGDBMemo`.

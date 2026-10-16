@@ -1,7 +1,7 @@
 unit PPG.Tests.Streaming;
 
 { DFM-Pruefung ueber ALLE Paletten-Controls (Liste wie RegisterComponents in
-  PPG.Reg und PPG.DB.Reg, 68 + 19 = 87 Klassen):
+  PPG.Reg und PPG.DB.Reg, 69 + 20 = 89 Klassen):
   - EveryPropertySurvivesDfm: jede einfache published Property wird geaendert;
     der Setter muss den Wert uebernehmen (Wert <> vorher), danach muss er die
     DFM-Rundreise ueberstehen. Als Ablehnung eines ungueltigen Werts gilt nur
@@ -31,7 +31,7 @@ uses
   PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker, PPG.CheckComboBox, PPG.ColumnComboBox,
   PPG.TagEdit, PPG.Grid.Print, PPG.Planner.Print, PPG.Kanban.Print, PPG.StyleManager,
   PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Planner, PPG.DB.Kanban,
-  PPG.DB.Fields, PPG.DB.Navigator,
+  PPG.DB.Fields, PPG.DB.Navigator, PPG.RichEdit, PPG.DB.RichEdit,
   PPG.Tests.Controls;
 
 type
@@ -55,8 +55,8 @@ type
 implementation
 
 const
-  // Reihenfolge wie RegisterComponents in PPG.Reg (68) und PPG.DB.Reg (19)
-  ControlClasses: array[0..86] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
+  // Reihenfolge wie RegisterComponents in PPG.Reg (69) und PPG.DB.Reg (20)
+  ControlClasses: array[0..88] of TComponentClass = (TPPGButton, TPPGCheckBox, TPPGRadioButton,
     TPPGToggleSwitch, TPPGProgressBar, TPPGTrackBar, TPPGPanel, TPPGScrollBox, TPPGGroupBox,
     TPPGRadioGroup, TPPGCheckGroup,
     TPPGEdit, TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl,
@@ -68,12 +68,12 @@ const
     TPPGPopupMenu, TPPGMenuBar, TPPGHintManager, TPPGCustomHint, TPPGTeachingTip,
     TPPGTaskDialog, TPPGWizard, TPPGValidator, TPPGBusyOverlay,
     TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
-    TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit,
+    TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit, TPPGRichEdit,
     TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager,
     TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
     TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart, TPPGDBPlanner, TPPGDBKanban,
     TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit,
-    TPPGDBNavigator, TPPGDBRadioGroup, TPPGDBText, TPPGDBToggleSwitch);
+    TPPGDBNavigator, TPPGDBRadioGroup, TPPGDBText, TPPGDBToggleSwitch, TPPGDBRichEdit);
 
   // Dokumentierte Ausnahmen (Property-Name, gilt fuer alle Klassen) mit Grund:
   SkipProps: array[0..24] of string = (
@@ -516,8 +516,8 @@ procedure TDfmStreamingTests.PaletteListIsComplete;
 var
   I, J: Integer;
 begin
-  // 87 verschiedene Klassen; doppelt eingetragene wuerden eine fehlende verdecken
-  CheckEquals(87, Length(ControlClasses));
+  // 89 verschiedene Klassen; doppelt eingetragene wuerden eine fehlende verdecken
+  CheckEquals(89, Length(ControlClasses));
   for I := 0 to High(ControlClasses) do
     for J := I + 1 to High(ControlClasses) do
       CheckFalse(ControlClasses[I] = ControlClasses[J], ControlClasses[I].ClassName + ' doppelt');

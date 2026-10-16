@@ -156,6 +156,7 @@ uses
   PPG.Render.Shapes in '..\Source\Render\PPG.Render.Shapes.pas',
   PPG.Sparkline in '..\Source\Controls\PPG.Sparkline.pas',
   PPG.Gauge in '..\Source\Controls\PPG.Gauge.pas',
+  PPG.RichEdit in '..\Source\Controls\PPG.RichEdit.pas',
   PPG.Editors.Logic in '..\Source\Editors\PPG.Editors.Logic.pas',
   PPG.Editors.Forms in '..\Source\Editors\PPG.Editors.Forms.pas',
   PPG.DB.Controls in '..\Source\DB\PPG.DB.Controls.pas',
@@ -167,6 +168,7 @@ uses
   PPG.DB.Navigator in '..\Source\DB\PPG.DB.Navigator.pas',
   PPG.DB.Validator in '..\Source\DB\PPG.DB.Validator.pas',
   PPG.DB.Fields in '..\Source\DB\PPG.DB.Fields.pas',
+  PPG.DB.RichEdit in '..\Source\DB\PPG.DB.RichEdit.pas',
   PPG.Tests.Core in 'PPG.Tests.Core.pas',
   PPG.Tests.Controls in 'PPG.Tests.Controls.pas',
   PPG.Tests.Check in 'PPG.Tests.Check.pas',
@@ -236,7 +238,8 @@ uses
   PPG.Tests.Phase14cKanban in 'PPG.Tests.Phase14cKanban.pas',
   PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas',
   PPG.Tests.Review in 'PPG.Tests.Review.pas',
-  PPG.Tests.Custom in 'PPG.Tests.Custom.pas';
+  PPG.Tests.Custom in 'PPG.Tests.Custom.pas',
+  PPG.Tests.RichEdit in 'PPG.Tests.RichEdit.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;

@@ -70,6 +70,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und
 | [TPPGCheckComboBox](TPPGCheckComboBox.md) | `PPG.CheckComboBox` | Mehrfachauswahl im Aufklappfeld (Phase 12e, Vorbild TMS TCheckListEdit). |
 | [TPPGColumnComboBox](TPPGColumnComboBox.md) | `PPG.ColumnComboBox` | mehrspaltige Auswahl mit Kopfzeile (Phase 12e, Vorbild TMS TAdvMultiColumnComboBox). |
 | [TPPGTagEdit](TPPGTagEdit.md) | `PPG.TagEdit` | Stichwoerter als Chips (Phase 12f, Vorbild Outlook-Empfaenger, WinUI TokenizingTextBox). |
+| [TPPGRichEdit](TPPGRichEdit.md) | `PPG.RichEdit` | mehrzeiliges Eingabefeld mit Formatierung (Ersatz fuer TRichEdit). |
 | [TPPGGridPrinter](TPPGGridPrinter.md) | `PPG.Grid.Print` | Drucken von Tabellen (Phase 13e, Optik wie im Grid seit Phase 17). |
 | [TPPGPlannerPrinter](TPPGPlannerPrinter.md) | `PPG.Planner.Print` | Drucken des Terminplaners (Phase 14a) ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
 | [TPPGKanbanPrinter](TPPGKanbanPrinter.md) | `PPG.Kanban.Print` | Drucken des Kanban-Boards ueber den gemeinsamen Druck-Weg (TPPGCustomPrinter: Vorschau, PDF, Seite einrichten). |
@@ -98,6 +99,7 @@ Erzeugt von `Build\make-docs.ps1` aus den Quelltexten, `Docs\Controls\notes` und
 | [TPPGDBRadioGroup](TPPGDBRadioGroup.md) | `PPG.DB.Navigator` | TPPGDBNavigator und TPPGDBRadioGroup (Phase 18c). |
 | [TPPGDBText](TPPGDBText.md) | `PPG.DB.Controls` | Ersatz fuer TDBText: zeigt Field.DisplayText, nur lesend, folgt dem Datensatz. Mehrwert gegenueber TDBText: Farben des Themes (Dark Mode, Hochkontrast, Secondary, Markup wie TPPGLabel), NullText fuer leere Felder und DisplayFormat zum Formatieren von Zahlen und Datumsfeldern. |
 | [TPPGDBToggleSwitch](TPPGDBToggleSwitch.md) | `PPG.DB.Controls` | Schalter an einem Ja/Nein-Feld (Boolean oder ValueChecked/ValueUnchecked wie TDBCheckBox). Schreibt beim Umschalten ins Feld. |
+| [TPPGDBRichEdit](TPPGDBRichEdit.md) | `PPG.DB.RichEdit` | TPPGRichEdit an einem Memo- oder BLOB-Feld (Ersatz fuer TDBRichEdit). |
 
 ## Typen
 
