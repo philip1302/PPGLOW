@@ -1,0 +1,19 @@
+object FormG: TFormG
+  Left = 0
+  Top = 0
+  Caption = 'FormG'
+  object BtnA: TPPGButton
+    Left = 8
+    Top = 8
+    Width = 75
+    Height = 25
+    Caption = 'Mit Bild'
+    TabOrder = 0
+  end
+  object BtnB: TPPGButton
+    Left = 100
+    Top = 8
+    Width = 25
+    Height = 25
+  end
+end

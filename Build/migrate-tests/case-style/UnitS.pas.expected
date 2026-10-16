@@ -1,0 +1,23 @@
+unit UnitS;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.Menus, Data.DB,
+  PPG.Panel, PPG.Edit, PPG.Button, PPG.Menus;
+
+type
+  TFormS = class(TForm)
+    Panel1: TPPGPanel;
+    Edit1: TPPGEdit;
+    Button1: TPPGButton;
+    Menu1: TPPGPopupMenu;
+    Item1: TMenuItem;
+    Src1: TDataSource;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

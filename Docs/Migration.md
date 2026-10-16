@@ -13,6 +13,16 @@ powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path C:\Projekte\Mei
 powershell -ExecutionPolicy Bypass -File Build\migrate.ps1 -Path .\Main.dfm -Only TButton,TEdit
 ```
 
+Weitere Parameter:
+
+| Parameter | Wirkung |
+|---|---|
+| `-Map <datei.psd1>` | Zusätzliche Zuordnungen aus einer PowerShell-Datendatei: `@{ ClassMap = @{ 'TAlt' = @('TNeu','Unit') }; Renames = @{ 'TAlt' = @{ 'AltProp' = 'NeuProp' } }; ReportOnly = @{ 'TX' = 'Hinweis' }; InheritsVcl = @('TNeu') }`. Wird in die eingebauten Tabellen gemischt, die Map gewinnt. `InheritsVcl` (optional): Klassen, deren Properties nicht gefiltert werden (Ableitung einer VCL-Klasse). |
+| `-ExtraSource <Ordner[]>` | Weitere Quellordner, deren published-Properties gelesen werden (eigene Ableitungen außerhalb von `Source`). Ist die neue Klasse nirgends zu finden, werden ihre Properties nicht gefiltert (Hinweis im Bericht). |
+| `-StyleManager <Name>` | Schreibt bei jedem migrierten Objekt, dessen neue Klasse `StyleManager` veröffentlicht, `StyleManager = <Name>` (sofern nicht schon vorhanden). `DM.PPGStyle` verweist auf ein Datenmodul; dessen Unit muss in der `uses`-Liste stehen. |
+| `-GlyphDir <Ordner>` | Sichert `Glyph` von TBitBtn/TSpeedButton als PNG (siehe „Was von Hand bleibt“). |
+| `-Project <datei.dpr>` | Migriert nur Formulare, deren Unit in der `uses`-Liste der `.dpr` steht; andere werden mit „Unit gehört nicht zum Projekt – übersprungen“ gemeldet und nicht angefasst. |
+
 Voraussetzungen: Die Formulare sind als **Text** gespeichert (in der IDE: Rechtsklick aufs Formular → „Text-DFM“), und die PPGlow-Packages sind installiert. Danach das Projekt öffnen, kompilieren und den Bericht durchgehen.
 
 ## Was das Skript macht
@@ -69,6 +79,7 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TDBRadioGroup | | TPPGDBRadioGroup | PPG.DB.Navigator |
 | TDBNavigator | | TPPGDBNavigator | PPG.DB.Navigator |
 | TScrollBox | | TPPGScrollBox | PPG.Panel |
+| TPopupMenu | | TPPGPopupMenu | PPG.Menus |
 
 Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTileView`, Detailansicht `vsReport` → `TPPGGrid`, beides von Hand).
 
@@ -89,8 +100,12 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TDBGrid-Spalten | `Expanded` … | entfernt |
 | TDBGrid-Spalten | `ButtonStyle` | bleibt (`cbsEllipsis`: „…“-Knopf, `OnEditButtonClick`) |
 | TDBGrid | `TitleFont`, `FixedColor` | bleiben (gleichnamig bei `TPPGDBGrid`) |
-| TBitBtn | `Kind`, `Glyph`, `NumGlyphs`, `Layout` | entfernt (Bilder über `Images`/`ImageIndex`) |
-| TSpeedButton | `Glyph`, `NumGlyphs`, `Flat`, `Layout` | entfernt |
+| TBitBtn | `Kind` | übersetzt: `bkOK` → `ModalResult = 1` + `Default = True`, `bkCancel` → `2` + `Cancel = True`, `bkYes` → `6` + `Default = True`, `bkNo` → `7`, `bkAbort` → `3`, `bkRetry` → `4`, `bkIgnore` → `5`, `bkAll` → `8` (nur, was nicht ausdrücklich in der DFM steht; je Übersetzung eine Zeile im Bericht). `bkClose`, `bkHelp`: entfernt und gemeldet (von Hand), `bkCustom`: nichts |
+| TBitBtn | `Glyph`, `NumGlyphs`, `Layout` | entfernt; `Glyph` mit `-GlyphDir` als PNG gesichert (siehe unten) |
+| TSpeedButton | `Glyph`, `NumGlyphs`, `Flat`, `Layout` | entfernt; `Glyph` mit `-GlyphDir` als PNG gesichert |
+| alle Controls | `DesignSize` | bleibt (jedes `TWinControl` liest es; wichtig für `Anchors`) |
+| TPanel, TScrollBox, TGroupBox, TMonthCalendar | `AutoSize` | bleibt (die PPGlow-Klassen veröffentlichen `AutoSize`) |
+| TPopupMenu | alle | `TPPGPopupMenu` erbt von `TPopupMenu`: Properties (Items, Images, ...) werden nicht gefiltert; `TMenuItem`-Einträge bleiben unverändert |
 | TButton | `Style = bsPushButton/bsSplitButton` | `Style = pbsPushButton/pbsSplitButton` |
 | TButton | `Style = bsCommandLink` | entfernt (gemeldet) |
 | TDBGrid | `Options`: `dgAlwaysShowEditor`, `dgAlwaysShowSelection`, `dgThumbTracking`, `dgMultiSelect` | bleiben stehen, wirken aber nicht (gemeldet) |
@@ -115,7 +130,9 @@ Die Splitter-Breite (VCL 3, PPGlow 6) bleibt, weil die IDE `Width` immer speiche
 
 ## Was von Hand bleibt
 
-- **Bilder:** `Glyph` gibt es nicht; eine ImageList (bzw. ab 10.4 `TVirtualImageList`) zuweisen und `ImageIndex`/`ImageName` setzen.
+- **Bilder:** `Glyph` gibt es nicht; eine ImageList (bzw. ab 10.4 `TVirtualImageList`) zuweisen und `ImageIndex`/`ImageName` setzen. Mit `-GlyphDir <Ordner>` sichert das Skript die Glyphs vorher als `<Form>_<Komponente>.png` (nur das erste Teilbild, Pixel unten links = transparent, wie in der VCL); die PNGs in eine `TImageCollection` aufnehmen und am Button `Images`/`ImageName` setzen. Ohne `-GlyphDir` wird der Glyph entfernt (der Bericht sagt es).
+- **Code-Stellen:** Der Bericht nennt mit Zeilennummer `as`/`is TAlteKlasse`, harte Casts `TAlteKlasse(...)` und `with <Komponente> do` in der Unit (nichts wird geändert).
+- **`bkClose`/`bkHelp`:** Schließen bzw. Hilfe-Aufruf im `OnClick` von Hand.
 - **TTreeView-Knoten:** sind in der DFM binär gespeichert und gehen verloren; im Designer über „Edit nodes...“ neu anlegen (oder im Code füllen).
 - **TToolBar/TToolButton:** andere Struktur (Einträge statt Kind-Buttons) – `TPPGToolBar` von Hand aufbauen.
 - **TListView:** API zu verschieden für eine automatische Umstellung. Symbol- und Kachelansichten werden zu `TPPGTileView` (Einträge über `Items` oder virtuell über `OnGetItem`), Detailansichten zu `TPPGGrid`.
@@ -134,3 +151,14 @@ Die Splitter-Breite (VCL 3, PPGlow 6) bleibt, weil die IDE `Width` immer speiche
 - `TPPGRadioGroup` löst `OnClick` nur bei einer Auswahl durch den Benutzer aus, nicht beim Setzen von `ItemIndex` im Code (wie bei den übrigen PPGlow-Controls).
 
 Die vollständige Liste je Control steht in der Hilfe: `Docs\Controls\README.md`.
+
+## Inventur (inventory.ps1)
+
+`Build\inventory.ps1` zaehlt vor und nach der Migration die Komponentenklassen eines Projekts. Es liest die uses-Liste der .dpr, nimmt alle Formulare, Frames und Datenmodule mit DFM (binaere DFMs werden gemeldet und uebersprungen) und ordnet jede Klasse einer Rubrik zu: PPGlow, migrierbar (steht in der `$ClassMap` von `migrate.ps1`), bleibt (KeepList) oder offen.
+
+```powershell
+.\Build\inventory.ps1 -Project C:\Pfad\App.dpr -OutFile Inventur.md
+.\Build\inventory.ps1 -Project C:\Pfad\App.dpr -Format csv -KeepList TDBText,TMenuItem
+```
+
+Parameter: `-Format text|csv|md` (Standard md), `-KeepList` (Klassenliste oder .psd1/Textdatei mit Klassen, die bewusst bleiben duerfen), `-Root` (PPGlow-Repo). Die Ausgabe enthaelt die Uebersicht je Formular, die Summe je Klasse und die Formulare, die schon vollstaendig PPGlow sind.

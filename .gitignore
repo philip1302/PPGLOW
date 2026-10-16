@@ -6,3 +6,6 @@ __recovery/
 Build/registry-backup/
 # Compilierte Units (je Delphi-Version verschieden, entstehen beim Build)
 *.dcu
+
+# lokale Testlaeufe (Delphi 11)
+Tests/Out22/

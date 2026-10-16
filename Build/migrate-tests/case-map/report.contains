@@ -1,0 +1,5 @@
+UnitM.dfm : Old1 TOldEdit -> TMyEdit
+UnitM.dfm :   Old1.Dropped entfernt
+UnitM.dfm :   Old1.Bogus entfernt (gibt es bei TMyEdit nicht)
+UnitM.dfm : Grid1 TOldGrid nicht umgestellt - Testhinweis aus der Map
+UnitM.dfm :   Edit2.Bogus entfernt

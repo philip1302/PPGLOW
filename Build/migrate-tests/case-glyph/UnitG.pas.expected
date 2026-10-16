@@ -1,0 +1,19 @@
+unit UnitG;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.Buttons,
+  PPG.Button;
+
+type
+  TFormG = class(TForm)
+    BtnA: TPPGButton;
+    BtnB: TPPGButton;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

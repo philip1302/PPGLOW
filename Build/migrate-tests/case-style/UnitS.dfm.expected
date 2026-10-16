@@ -1,0 +1,32 @@
+object FormS: TFormS
+  Left = 0
+  Top = 0
+  object Panel1: TPPGPanel
+    Left = 8
+    Top = 8
+    TabOrder = 0
+    StyleManager = DM.PPGStyle
+    object Edit1: TPPGEdit
+      Left = 8
+      Top = 8
+      TabOrder = 0
+      StyleManager = DM.PPGStyle
+    end
+  end
+  object Button1: TPPGButton
+    Left = 8
+    Top = 100
+    StyleManager = OtherStyle
+    TabOrder = 1
+  end
+  object Menu1: TPPGPopupMenu
+    Left = 100
+    StyleManager = DM.PPGStyle
+    object Item1: TMenuItem
+      Caption = 'A'
+    end
+  end
+  object Src1: TDataSource
+    Left = 200
+  end
+end

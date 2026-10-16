@@ -9,6 +9,21 @@
            [-Recurse] [-WhatIf] [-Only TButton,TEdit] [-NoBackup]
            -SelfTest: prueft das Skript an Build\migrate-tests (Soll: *.expected)
 
+  Weitere Parameter:
+    -Map <datei.psd1>     zusaetzliche Zuordnungen (PowerShell-Datendatei):
+                          @{ ClassMap = @{ 'TAlt' = @('TNeu','Unit') }; Renames = @{ 'TAlt' = @{ 'A' = 'B' } };
+                             ReportOnly = @{ 'TX' = 'Hinweis' }; InheritsVcl = @('TNeu') }
+                          Die Eintraege werden in die Tabellen gemischt (Map gewinnt).
+    -ExtraSource <ordner[]>  weitere Quellordner, deren published-Properties gelesen werden
+                          (eigene Ableitungen ausserhalb von Source)
+    -StyleManager <name>  setzt an jedem migrierten Objekt mit published StyleManager
+                          "StyleManager = <name>" (auch "DM.PPGStyle" fuer ein Datenmodul)
+    -GlyphDir <ordner>    sichert TBitBtn/TSpeedButton-Glyphs als <Form>_<Komponente>.png
+                          (erstes Teilbild, Transparenz = Pixel unten links); ohne: entfernt
+    -Project <datei.dpr>  nur Formulare migrieren, deren Unit in der uses-Liste der .dpr steht
+    TBitBtn.Kind wird in ModalResult/Default/Cancel uebersetzt. Code-Stellen, die durch den
+    Klassenwechsel brechen koennen (as/is/Cast/with), werden nur gemeldet.
+
   Was passiert je Formular (.dfm + gleichnamige .pas):
   - "object X: TButton" -> "object X: TPPGButton" (Tabelle unten), ebenso die
     Felder in der .pas ("X: TButton;") und fehlende PPGlow-Units in der
@@ -40,7 +55,12 @@ param(
   [switch]$WhatIf,
   [switch]$NoBackup,
   [string[]]$Only = @(),
-  [string]$Root = ''
+  [string]$Root = '',
+  [string]$Map = '',
+  [string[]]$ExtraSource = @(),
+  [string]$StyleManager = '',
+  [string]$GlyphDir = '',
+  [string]$Project = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -96,7 +116,12 @@ $ClassMap = [ordered]@{
   'TDBRadioGroup'     = @('TPPGDBRadioGroup', 'PPG.DB.Navigator')
   'TDBNavigator'      = @('TPPGDBNavigator', 'PPG.DB.Navigator')
   'TScrollBox'        = @('TPPGScrollBox', 'PPG.Panel')
+  'TPopupMenu'        = @('TPPGPopupMenu', 'PPG.Menus')
 }
+
+# PPGlow-Klassen, die von einer VCL-Klasse erben, deren Properties das Skript
+# nicht kennt (z. B. TPopupMenu: Items, Images, ...): hier wird nicht gefiltert
+$InheritsVcl = @('TPPGPopupMenu')
 
 # Klassen, die nicht automatisch umgestellt werden (API zu verschieden),
 # aber im Bericht mit einem Hinweis erscheinen
@@ -183,7 +208,8 @@ function Backup-File([string]$File) {
 # Eigenschaften, die TControl/TComponent immer veroeffentlichen bzw. die IDE schreibt
 $AlwaysAllowed = @('Left', 'Top', 'Width', 'Height', 'Tag', 'Hint', 'Cursor', 'HelpType',
   'HelpKeyword', 'HelpContext', 'Margins', 'AlignWithMargins', 'CustomHint', 'ExplicitLeft',
-  'ExplicitTop', 'ExplicitWidth', 'ExplicitHeight', 'Padding', 'Touch')
+  'ExplicitTop', 'ExplicitWidth', 'ExplicitHeight', 'Padding', 'Touch',
+  'DesignSize')  # DesignSize: jedes TWinControl liest es (wichtig fuer Anchors)
 
 $report = New-Object System.Collections.Generic.List[string]
 
@@ -192,8 +218,11 @@ $report = New-Object System.Collections.Generic.List[string]
 $script:ClassInfo = @{}  # Klasse -> @{ Parent = '...'; Props = HashSet }
 
 function Read-PPGlowClasses {
-  $src = Join-Path $Root 'Source'
-  foreach ($f in Get-ChildItem -Path $src -Recurse -Filter '*.pas' -File) {
+  $dirs = @(Join-Path $Root 'Source') + @($ExtraSource | Where-Object { $_ })
+  foreach ($d in $dirs) {
+    if (-not (Test-Path $d)) { throw "Quellordner nicht gefunden: $d" }
+  }
+  foreach ($f in ($dirs | ForEach-Object { Get-ChildItem -Path $_ -Recurse -Filter '*.pas' -File })) {
     $lines = [IO.File]::ReadAllLines($f.FullName)
     $current = $null
     $section = ''
@@ -258,6 +287,58 @@ function Get-ValueEnd([string[]]$Lines, [int]$Start, [string]$Value) {
   return $Start
 }
 
+# Wert einer Property im selben Objekt suchen (vor und nach Zeile $At, gleiche
+# Einrueckung; Kind-Objekte und das Objektende begrenzen die Suche)
+function Find-DfmProp([string[]]$Lines, [int]$At, [string]$Name) {
+  $indent = $Lines[$At].Length - $Lines[$At].TrimStart().Length
+  foreach ($dir in @(-1, 1)) {
+    for ($k = $At + $dir; $k -ge 0 -and $k -lt $Lines.Count; $k += $dir) {
+      $l = $Lines[$k]
+      $ind = $l.Length - $l.TrimStart().Length
+      $tt = $l.Trim()
+      if ($tt -eq '') { continue }
+      if ($ind -lt $indent) { break }
+      if ($ind -eq $indent -and $tt -match '^(object|inherited|inline)\s') { break }
+      if ($ind -eq $indent -and $tt -match "^$([regex]::Escape($Name))\s*=\s*(.*)$") { return $Matches[1].Trim() }
+    }
+  }
+  return $null
+}
+
+# Glyph.Data (DFM-Hex: 4 Byte Laenge LE + BMP-Datei) als PNG sichern: nur das
+# erste Teilbild, Transparenzfarbe = Pixel unten links (VCL-Regel)
+function Save-Glyph([string[]]$HexLines, [int]$NumGlyphs, [string]$OutFile) {
+  Add-Type -AssemblyName System.Drawing
+  $hex = ($HexLines -join '') -replace '[^0-9A-Fa-f]', ''
+  if ($hex.Length -lt 16 -or ($hex.Length % 2) -ne 0) { return 'Glyph-Daten unlesbar' }
+  $bytes = New-Object byte[] ($hex.Length / 2)
+  for ($b = 0; $b -lt $bytes.Length; $b++) { $bytes[$b] = [Convert]::ToByte($hex.Substring(2 * $b, 2), 16) }
+  $len = [BitConverter]::ToInt32($bytes, 0)
+  if ($len -le 0 -or $len -gt ($bytes.Length - 4)) { $len = $bytes.Length - 4 }
+  if ($bytes[4] -ne 0x42 -or $bytes[5] -ne 0x4D) { return 'Glyph-Daten unlesbar (keine BMP-Daten)' }
+  $ms = New-Object System.IO.MemoryStream($bytes, 4, $len)
+  $src = $null; $frame = $null
+  try {
+    $src = New-Object System.Drawing.Bitmap($ms)
+    if ($NumGlyphs -lt 1) { $NumGlyphs = 1 }
+    $w = [int][Math]::Floor($src.Width / $NumGlyphs)
+    if ($w -lt 1) { $w = $src.Width }
+    $trans = $src.GetPixel(0, $src.Height - 1)
+    $rect = New-Object System.Drawing.Rectangle(0, 0, $w, $src.Height)
+    $frame = $src.Clone($rect, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $frame.MakeTransparent($trans)
+    $dir = Split-Path -Parent $OutFile
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
+    $frame.Save($OutFile, [System.Drawing.Imaging.ImageFormat]::Png)
+  }
+  finally {
+    if ($frame) { $frame.Dispose() }
+    if ($src) { $src.Dispose() }
+    $ms.Dispose()
+  }
+  return $null
+}
+
 function Convert-Dfm([string]$File, [hashtable]$Handlers) {
   $bytes = [IO.File]::ReadAllBytes($File)
   if ($bytes.Length -gt 0 -and $bytes[0] -eq 0xFF) {
@@ -274,16 +355,41 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
   function Add-VclDefaults($e) {
     if ($null -eq $e -or $e.Done) { return }
     $e.Done = $true
-    if ($null -eq $e.Allowed -or -not $VclDefaults.ContainsKey($e.Old)) { return }
-    foreach ($p in $VclDefaults[$e.Old].Keys) {
-      if (-not $e.Seen.Contains($p)) {
-        $out.Add((' ' * ($e.Indent + 2)) + "$p = $($VclDefaults[$e.Old][$p])")
-        $report.Add("$File :   $($e.Name).$p = $($VclDefaults[$e.Old][$p]) (VCL-Vorgabe, bei $($e.New) anders)")
+    if ($null -eq $e.Allowed) { return }
+    $sp = ' ' * ($e.Indent + 2)
+    if ($VclDefaults.ContainsKey($e.Old)) {
+      foreach ($p in $VclDefaults[$e.Old].Keys) {
+        if (-not $e.Seen.Contains($p)) {
+          $out.Add($sp + "$p = $($VclDefaults[$e.Old][$p])")
+          $report.Add("$File :   $($e.Name).$p = $($VclDefaults[$e.Old][$p]) (VCL-Vorgabe, bei $($e.New) anders)")
+          $script:changedByDefaults = $true
+        }
+      }
+    }
+    # TBitBtn.Kind -> ModalResult/Default/Cancel (nur, was nicht ausdruecklich in der DFM steht)
+    if ($e.Pending.Count -gt 0) {
+      $done = @(); $manual = @()
+      foreach ($pe in $e.Pending) {
+        if ($e.Seen.Contains($pe[0])) { continue }
+        if (-not $e.Allowed.Contains($pe[0])) { $manual += $pe[0]; continue }
+        $out.Add($sp + "$($pe[0]) = $($pe[1])")
+        $done += "$($pe[0]) = $($pe[1])"
         $script:changedByDefaults = $true
       }
+      if ($done.Count -gt 0) { $report.Add("$File :   $($e.Name) Kind = $($e.Kind) -> $($done -join ', ')") }
+      if ($manual.Count -gt 0) { $report.Add("$File :   $($e.Name) Kind = $($e.Kind): $($manual -join ', ') bei $($e.New) nicht veroeffentlicht - von Hand setzen") }
+    }
+    if ($StyleManager -ne '' -and $e.Allowed.Contains('StyleManager') -and -not $e.Seen.Contains('StyleManager')) {
+      $out.Add($sp + "StyleManager = $StyleManager")
+      $report.Add("$File :   $($e.Name).StyleManager = $StyleManager")
+      $script:changedByDefaults = $true
+      $script:styleManagerUsed = $true
     }
   }
   $script:changedByDefaults = $false
+  $script:styleManagerUsed = $false
+  $migrated = New-Object System.Collections.Generic.List[object]
+  $rootName = ''
   # Stapel der Objekte: alte Klasse, neue Klasse, erlaubte Properties
   $stack = New-Object System.Collections.Generic.List[object]
   $usedUnits = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -299,13 +405,21 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
     if ($t -match '^(object|inherited|inline)\s+(\w+)\s*:\s*(\w+)(.*)$') {
       $kw = $Matches[1]; $name = $Matches[2]; $cls = $Matches[3]; $rest = $Matches[4]
       if ($stack.Count -gt 0) { Add-VclDefaults $stack[$stack.Count - 1] }
+      if ($rootName -eq '') { $rootName = $name }
       $entry = @{ Old = $cls; New = $cls; Allowed = $null; Name = $name; Indent = $indent; Done = $false
+        NoFilter = $false; Kind = ''; Pending = (New-Object System.Collections.Generic.List[object])
         Seen = (New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)) }
       if ($ClassMap.Contains($cls) -and (($Only.Count -eq 0) -or ($Only -contains $cls))) {
         $new = $ClassMap[$cls][0]
         [void]$usedUnits.Add($ClassMap[$cls][1])
         $entry.New = $new
         $entry.Allowed = Get-AllowedProps $new
+        $migrated.Add(@{ Name = $name; Old = $cls })
+        if ($InheritsVcl -contains $new) { $entry.NoFilter = $true }
+        elseif (-not $script:ClassInfo.ContainsKey($new)) {
+          $entry.NoFilter = $true
+          $report.Add("$File :   $name - $new nicht in den Quellen gefunden (-ExtraSource?): Properties werden nicht gefiltert")
+        }
         $line = (' ' * $indent) + "$kw ${name}: $new$rest"
         $report.Add("$File : $name $cls -> $new")
         if ($Renames.ContainsKey($cls)) { $script:CodeRenames[$name] = $Renames[$cls] }
@@ -382,6 +496,49 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
       $prop = $Matches[1]
       $value = $Matches[2]
       $top = ($prop -split '\.')[0]
+      # TBitBtn.Kind -> ModalResult/Default/Cancel (geschrieben beim Objektende)
+      if ($cur.Old -eq 'TBitBtn' -and $prop -eq 'Kind') {
+        $kind = $value.Trim()
+        $modal = @{ bkOK = 1; bkCancel = 2; bkAbort = 3; bkRetry = 4; bkIgnore = 5; bkYes = 6; bkNo = 7; bkAll = 8 }
+        $cur.Kind = $kind
+        if ($modal.ContainsKey($kind)) {
+          [void]$cur.Pending.Add(@('ModalResult', [string]$modal[$kind]))
+          if ($kind -eq 'bkOK' -or $kind -eq 'bkYes') { [void]$cur.Pending.Add(@('Default', 'True')) }
+          if ($kind -eq 'bkCancel') { [void]$cur.Pending.Add(@('Cancel', 'True')) }
+        }
+        elseif ($kind -eq 'bkClose') {
+          $report.Add("$File :   $($cur.Name) Kind = bkClose entfernt - Schliessen-Verhalten von Hand (Form schliessen, z. B. im OnClick)")
+        }
+        elseif ($kind -eq 'bkHelp') {
+          $report.Add("$File :   $($cur.Name) Kind = bkHelp entfernt - Hilfe-Aufruf von Hand (z. B. Application.HelpContext im OnClick)")
+        }
+        $changed = $true
+        continue
+      }
+      # Glyphs (TBitBtn/TSpeedButton): als PNG sichern oder entfernen
+      if (($cur.Old -eq 'TBitBtn' -or $cur.Old -eq 'TSpeedButton') -and $prop -eq 'Glyph.Data') {
+        $end = Get-ValueEnd $lines $i $value
+        if ($GlyphDir -ne '') {
+          $ng = Find-DfmProp $lines $i 'NumGlyphs'
+          $n = 1
+          if ($null -ne $ng) { [void][int]::TryParse($ng, [ref]$n) }
+          $png = "${rootName}_$($cur.Name).png" -replace '[^\w.\-]', '_'
+          $hexLines = @($value) + @($lines[($i + 1)..$end] | Where-Object { $_ -ne $null })
+          if ($end -eq $i) { $hexLines = @($value) }
+          if ($WhatIf) { $err = $null }
+          else { $err = Save-Glyph $hexLines $n (Join-Path $GlyphDir $png) }
+          if ($err) { $report.Add("$File :   $($cur.Name).Glyph entfernt - $err") }
+          else {
+            $report.Add("$File :   $($cur.Name).Glyph entfernt, gesichert als $png - in eine TImageCollection aufnehmen und am Button Images/ImageName setzen")
+          }
+        }
+        else {
+          $report.Add("$File :   $($cur.Name).Glyph entfernt (mit -GlyphDir als PNG sichern)")
+        }
+        $i = $end
+        $changed = $true
+        continue
+      }
       # Umbenennungen
       if ($Renames.ContainsKey($cur.Old) -and $Renames[$cur.Old].ContainsKey($prop)) {
         $newName = $Renames[$cur.Old][$prop]
@@ -437,7 +594,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
       if ($prop -like 'On*' -and $cur.Old -eq 'TDBGrid' -and ($prop -eq 'OnTitleClick' -or $prop -eq 'OnCellClick')) {
         $Handlers[$value.Trim()] = 'TPPGDBGridColumn'
       }
-      if (-not $cur.Allowed.Contains($top)) {
+      if (-not $cur.NoFilter -and -not $cur.Allowed.Contains($top)) {
         $report.Add("$File :   $($cur.Name).$prop entfernt (gibt es bei $($cur.New) nicht)")
         $i = Get-ValueEnd $lines $i $value
         $changed = $true
@@ -455,14 +612,39 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
     }
     $out.Add($line)
   }
-  return @{ Lines = $out; Units = $usedUnits; Changed = ($changed -or $script:changedByDefaults); Encoding = $src.Encoding }
+  return @{ Lines = $out; Units = $usedUnits; Migrated = $migrated; Changed = ($changed -or $script:changedByDefaults); Encoding = $src.Encoding }
 }
 
 # --- PAS ---------------------------------------------------------------------
 
-function Convert-Pas([string]$File, $Units, [hashtable]$Handlers) {
+# Code-Stellen melden, die durch den Klassenwechsel brechen koennen (aendert nichts)
+function Test-PasCode([string]$File, [string]$Text, $Migrated) {
+  $classes = @($Migrated | ForEach-Object { $_.Old } | Sort-Object -Unique)
+  $names = @($Migrated | ForEach-Object { $_.Name } | Sort-Object -Unique)
+  if ($classes.Count -eq 0) { return }
+  $codeLines = [regex]::Split($Text, "`r?`n")
+  for ($n = 0; $n -lt $codeLines.Count; $n++) {
+    $l = $codeLines[$n] -replace '//.*$', '' -replace "'[^']*'", "''"
+    if ($l.Trim() -eq '') { continue }
+    foreach ($c in $classes) {
+      $e = [regex]::Escape($c)
+      if ($l -match "(?i)\bas\s+$e\b") { $report.Add("$File :$($n + 1): 'as $c' - Klasse wurde umgestellt, Code pruefen") }
+      if ($l -match "(?i)\bis\s+$e\b") { $report.Add("$File :$($n + 1): 'is $c' - Klasse wurde umgestellt, Code pruefen") }
+      if ($l -match "(?i)(?<![\w.])$e\s*\(") { $report.Add("$File :$($n + 1): Cast '$c(' - Klasse wurde umgestellt, Code pruefen") }
+    }
+    foreach ($m in [regex]::Matches($l, '(?i)\bwith\s+([\w\s,.]+?)\s+do\b')) {
+      foreach ($part in ($m.Groups[1].Value -split ',')) {
+        $nm = $part.Trim()
+        if ($names -contains $nm) { $report.Add("$File :$($n + 1): 'with $nm do' - Komponente wurde umgestellt (Eigenschaftsnamen in with-Block pruefen)") }
+      }
+    }
+  }
+}
+
+function Convert-Pas([string]$File, $Units, [hashtable]$Handlers, $Migrated) {
   $text = (Read-SourceFile $File).Text
   $orig = $text
+  Test-PasCode $File $orig $Migrated
   foreach ($cls in $ClassMap.Keys) {
     if (($Only.Count -gt 0) -and ($Only -notcontains $cls)) { continue }
     $new = $ClassMap[$cls][0]
@@ -503,33 +685,110 @@ function Convert-Pas([string]$File, $Units, [hashtable]$Handlers) {
 # --- Lauf --------------------------------------------------------------------
 
 if ($SelfTest) {
+  # Fall 1: die Dateien in migrate-tests selbst; weitere Faelle: Unterordner mit
+  # eigenen Fixtures und optional args.psd1 (Map, ExtraSource, StyleManager,
+  # GlyphDir, Project - relativ zum Fallordner; ExpectPng = Pruefung der PNGs).
+  # Je Fall: *.expected = Soll-Dateien, report.contains = Textstuecke, die im
+  # Bericht stehen muessen (je Zeile; Pfade sind weggelassen).
   $fixtures = Join-Path $PSScriptRoot 'migrate-tests'
-  $tmp = Join-Path ([IO.Path]::GetTempPath()) ('ppg-migrate-' + [Guid]::NewGuid().ToString('N'))
-  New-Item -ItemType Directory -Path $tmp | Out-Null
+  $tmpRoot = Join-Path ([IO.Path]::GetTempPath()) ('ppg-migrate-' + [Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $tmpRoot | Out-Null
   try {
-    Get-ChildItem $fixtures -File | Where-Object { $_.Extension -in '.dfm', '.pas' } |
-      ForEach-Object { Copy-Item $_.FullName $tmp }
-    & $PSCommandPath -Path $tmp -NoBackup -Root $Root | Out-Null
+    $cases = @($fixtures) + @(Get-ChildItem $fixtures -Directory | ForEach-Object { $_.FullName })
     $failed = 0
-    foreach ($exp in Get-ChildItem $fixtures -Filter '*.expected' -File) {
-      $actual = Join-Path $tmp ($exp.Name -replace '\.expected$', '')
-      $a = ([IO.File]::ReadAllText($actual)) -replace "`r`n", "`n"
-      $e = ([IO.File]::ReadAllText($exp.FullName)) -replace "`r`n", "`n"
-      if ($a.TrimEnd() -ne $e.TrimEnd()) {
-        Write-Output "FEHLER $($exp.Name): Ergebnis weicht ab"
-        $failed++
+    foreach ($caseDir in $cases) {
+      $isTop = ($caseDir -eq $fixtures)
+      $label = if ($isTop) { '' } else { (Split-Path -Leaf $caseDir) + '\' }
+      $tmp = Join-Path $tmpRoot ([Guid]::NewGuid().ToString('N'))
+      New-Item -ItemType Directory -Path $tmp | Out-Null
+      if ($isTop) {
+        Get-ChildItem $caseDir -File | Where-Object { $_.Extension -in '.dfm', '.pas' } |
+          ForEach-Object { Copy-Item $_.FullName $tmp }
       }
       else {
-        Write-Output "ok     $($exp.Name)"
+        Copy-Item (Join-Path $caseDir '*') $tmp -Recurse
+      }
+      $splat = @{ Path = $tmp; NoBackup = $true; Root = $Root }
+      $argsFile = Join-Path $caseDir 'args.psd1'
+      $caseArgs = @{}
+      if (Test-Path $argsFile) {
+        $caseArgs = Import-PowerShellDataFile $argsFile
+        foreach ($k in 'Map', 'GlyphDir', 'Project') { if ($caseArgs.ContainsKey($k)) { $splat[$k] = Join-Path $tmp $caseArgs[$k] } }
+        if ($caseArgs.ContainsKey('ExtraSource')) { $splat['ExtraSource'] = @($caseArgs['ExtraSource'] | ForEach-Object { Join-Path $tmp $_ }) }
+        if ($caseArgs.ContainsKey('StyleManager')) { $splat['StyleManager'] = $caseArgs['StyleManager'] }
+      }
+      & $PSCommandPath @splat | Out-Null
+      foreach ($exp in Get-ChildItem $caseDir -Filter '*.expected' -File) {
+        $actual = Join-Path $tmp ($exp.Name -replace '\.expected$', '')
+        $a = ([IO.File]::ReadAllText($actual)) -replace "`r`n", "`n"
+        $e = ([IO.File]::ReadAllText($exp.FullName)) -replace "`r`n", "`n"
+        if ($a.TrimEnd() -ne $e.TrimEnd()) {
+          Write-Output "FEHLER $label$($exp.Name): Ergebnis weicht ab"
+          $failed++
+        }
+        else {
+          Write-Output "ok     $label$($exp.Name)"
+        }
+      }
+      $contains = Join-Path $caseDir 'report.contains'
+      if (Test-Path $contains) {
+        $rep = ([IO.File]::ReadAllText((Join-Path $tmp 'migrate-report.txt'))).Replace($tmp + '\', '')
+        $miss = 0
+        foreach ($want in [IO.File]::ReadAllLines($contains)) {
+          if ($want.Trim() -eq '') { continue }
+          if (-not $rep.Contains($want.Trim())) { Write-Output "FEHLER ${label}report.contains: fehlt '$($want.Trim())'"; $miss++ }
+        }
+        if ($miss -eq 0) { Write-Output "ok     ${label}report.contains" } else { $failed += $miss }
+      }
+      if ($caseArgs.ContainsKey('ExpectPng')) {
+        Add-Type -AssemblyName System.Drawing
+        foreach ($pn in $caseArgs['ExpectPng'].Keys) {
+          $want = $caseArgs['ExpectPng'][$pn]
+          $pf = Join-Path (Join-Path $tmp $caseArgs['GlyphDir']) $pn
+          $ok = $true
+          if (-not (Test-Path $pf)) { $ok = $false }
+          else {
+            $bmp = New-Object System.Drawing.Bitmap($pf)
+            try {
+              if ($bmp.Width -ne $want.Width -or $bmp.Height -ne $want.Height) { $ok = $false }
+              foreach ($pt in @($want.Transparent)) {
+                $xy = $pt -split ','
+                if ($bmp.GetPixel([int]$xy[0], [int]$xy[1]).A -ne 0) { $ok = $false }
+              }
+              foreach ($pt in @($want.Opaque)) {
+                $parts = $pt -split '='
+                $xy = $parts[0] -split ','
+                $c = $bmp.GetPixel([int]$xy[0], [int]$xy[1])
+                if ($c.A -ne 255 -or ('{0:X2}{1:X2}{2:X2}' -f $c.R, $c.G, $c.B) -ne $parts[1]) { $ok = $false }
+              }
+            }
+            finally { $bmp.Dispose() }
+          }
+          if ($ok) { Write-Output "ok     $label$pn" } else { Write-Output "FEHLER $label${pn}: PNG fehlt oder weicht ab"; $failed++ }
+        }
       }
     }
     exit $failed
   }
   finally {
-    Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
   }
 }
 if ($Path -eq '') { throw 'Bitte -Path angeben (Ordner oder .dfm).' }
+
+# Zusaetzliche Zuordnungen (-Map): in die Tabellen mischen, Map gewinnt
+if ($Map -ne '') {
+  $m = Import-PowerShellDataFile -Path $Map
+  if ($m.ContainsKey('ClassMap')) { foreach ($k in $m.ClassMap.Keys) { $ClassMap[$k] = @($m.ClassMap[$k]) } }
+  if ($m.ContainsKey('Renames')) {
+    foreach ($k in $m.Renames.Keys) {
+      if (-not $Renames.ContainsKey($k)) { $Renames[$k] = @{} }
+      foreach ($p in $m.Renames[$k].Keys) { $Renames[$k][$p] = $m.Renames[$k][$p] }
+    }
+  }
+  if ($m.ContainsKey('ReportOnly')) { foreach ($k in $m.ReportOnly.Keys) { $ReportOnly[$k] = $m.ReportOnly[$k] } }
+  if ($m.ContainsKey('InheritsVcl')) { $InheritsVcl = @($InheritsVcl) + @($m.InheritsVcl) }
+}
 
 Read-PPGlowClasses
 $item = Get-Item $Path
@@ -542,14 +801,37 @@ else {
   $reportDir = $item.DirectoryName
 }
 
+# Projektdatei: Text der uses-Liste ohne Kommentare
+$projectUses = $null
+if ($Project -ne '') {
+  $dpr = [IO.File]::ReadAllText($Project)
+  $dpr = [regex]::Replace($dpr, '(?s)\(\*.*?\*\)|\{[^}]*\}|//[^\r\n]*', ' ')
+  $um = [regex]::Match($dpr, '(?is)\buses\b(.*?);')
+  $projectUses = if ($um.Success) { $um.Groups[1].Value } else { '' }
+}
+
 foreach ($dfm in $dfms) {
   $handlers = @{}
   $script:CodeRenames = @{}
+  $pas = [IO.Path]::ChangeExtension($dfm.FullName, '.pas')
+  if ($null -ne $projectUses) {
+    $unitName = $dfm.BaseName
+    if (Test-Path $pas) {
+      $uh = [regex]::Match((Read-SourceFile $pas).Text, '(?im)^\s*unit\s+([\w.]+)\s*;')
+      if ($uh.Success) { $unitName = $uh.Groups[1].Value }
+    }
+    if ($projectUses -notmatch ('(?i)(?<![\w.])' + [regex]::Escape($unitName) + '(?![\w.])')) {
+      $report.Add("$($dfm.FullName) : Unit $unitName gehoert nicht zum Projekt - uebersprungen")
+      continue
+    }
+  }
   $res = Convert-Dfm $dfm.FullName $handlers
   if ($null -eq $res -or -not $res.Changed) { continue }
-  $pas = [IO.Path]::ChangeExtension($dfm.FullName, '.pas')
+  if ($script:styleManagerUsed -and $StyleManager.Contains('.')) {
+    $report.Add("$($dfm.FullName) :   StyleManager = $StyleManager verweist auf ein anderes Datenmodul - dessen Unit muss in der uses-Liste der Unit stehen")
+  }
   $newPas = $null
-  if (Test-Path $pas) { $newPas = Convert-Pas $pas $res.Units $handlers }
+  if (Test-Path $pas) { $newPas = Convert-Pas $pas $res.Units $handlers $res.Migrated }
   if (-not $WhatIf) {
     if (-not $NoBackup) {
       Backup-File $dfm.FullName

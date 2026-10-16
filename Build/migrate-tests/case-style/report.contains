@@ -1,0 +1,4 @@
+UnitS.dfm :   Panel1.StyleManager = DM.PPGStyle
+UnitS.dfm :   Edit1.StyleManager = DM.PPGStyle
+UnitS.dfm :   Menu1.StyleManager = DM.PPGStyle
+anderes Datenmodul

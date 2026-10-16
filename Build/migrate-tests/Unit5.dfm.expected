@@ -1,0 +1,84 @@
+object Form5: TForm5
+  Left = 0
+  Top = 0
+  Caption = 'Form5'
+  ClientHeight = 300
+  ClientWidth = 500
+  DesignSize = (
+    500
+    300)
+  PixelsPerInch = 96
+  object Panel1: TPPGPanel
+    Left = 8
+    Top = 8
+    Width = 300
+    Height = 100
+    Anchors = [akLeft, akTop, akRight]
+    AutoSize = True
+    Caption = 'Panel1'
+    TabOrder = 0
+    DesignSize = (
+      300
+      100)
+    object Edit1: TPPGEdit
+      Left = 8
+      Top = 8
+      Width = 100
+      Height = 21
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 0
+    end
+  end
+  object OkBtn: TPPGButton
+    Left = 8
+    Top = 120
+    Caption = 'OK'
+    TabOrder = 1
+    ModalResult = 1
+    Default = True
+  end
+  object CancelBtn: TPPGButton
+    Left = 100
+    Top = 120
+    Caption = 'Abbrechen'
+    ModalResult = 2
+    TabOrder = 2
+    Cancel = True
+  end
+  object YesBtn: TPPGButton
+    Left = 200
+    Top = 120
+    TabOrder = 3
+    ModalResult = 6
+    Default = True
+  end
+  object NoBtn: TPPGButton
+    Left = 300
+    Top = 120
+    TabOrder = 4
+    ModalResult = 7
+  end
+  object CloseBtn: TPPGButton
+    Left = 8
+    Top = 160
+    TabOrder = 5
+  end
+  object CustomBtn: TPPGButton
+    Left = 100
+    Top = 160
+    TabOrder = 6
+  end
+  object PopupMenu1: TPPGPopupMenu
+    AutoPopup = False
+    Left = 400
+    Top = 8
+    object Item1: TMenuItem
+      Caption = 'Eins'
+      ShortCut = 16433
+      OnClick = Item1Click
+    end
+    object Item2: TMenuItem
+      Caption = '-'
+    end
+  end
+end

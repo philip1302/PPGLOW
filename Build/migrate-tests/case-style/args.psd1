@@ -1,0 +1,3 @@
+@{
+  StyleManager = 'DM.PPGStyle'
+}

@@ -1,0 +1,18 @@
+object FormM: TFormM
+  Left = 0
+  Top = 0
+  object Old1: TMyEdit
+    Left = 8
+    Top = 8
+    Special = 'abc'
+    Text = 'x'
+  end
+  object Grid1: TOldGrid
+    Left = 8
+    Top = 40
+  end
+  object Edit2: TPPGEdit
+    Left = 8
+    Top = 80
+  end
+end
