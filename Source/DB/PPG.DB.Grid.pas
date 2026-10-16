@@ -60,6 +60,18 @@ unit PPG.DB.Grid;
     DataSource leeren die Auswahl. Nach einem Wechsel von Index oder
     Sortierung SelectedRows.Refresh aufrufen (manche Datenmengen liefern dann
     andere Lesezeichen fuer denselben Satz).
+  - Kartenansicht (ViewStyle = dgvCards): je Datensatz eine Karte mit den
+    sichtbaren Spalten als Zeilen "Beschriftung: Wert" (Columns wie in der
+    Tabelle: Titel, Reihenfolge, Visible, Kaestchen, Nachschlagetexte, Stile).
+    Das Grid legt seine Zellen ueber die Erweiterungspunkte der Basis
+    (CustomCellLayout): Zeile = Datensatz des Puffers, Spalte = Feld; Fokus,
+    Editor, Zellarten, Owner-Draw und UIA arbeiten so unveraendert. Karten
+    fliessen nebeneinander (CardWidth, CardSpacing), brechen um und werden
+    senkrecht pixelgenau gescrollt. Mit RecNo (IsSequenced) steht jede Karte
+    nach ihrer Satznummer; der Puffer haelt die Kartenzeilen um den aktiven
+    Satz und wird bei Bedarf ausgerichtet (Puffer verschieben, Satz bleibt).
+    Ohne RecNo fliessen die Karten ab dem Pufferanfang. Pfeile/Bild/Pos1/Ende
+    wechseln die Karte, Tab das Feld, F2/Enter/Doppelklick bearbeiten.
   - Nicht unterstuetzt: Gruppieren (braeuchte die ganze Datenmenge im Speicher;
     GROUP BY in der Abfrage nutzen), Unterspalten (ADT/Array-Felder). }
 
@@ -71,7 +83,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Types,
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Vcl.StdCtrls,
   Data.DB,
-  PPG.Types, PPG.Grid, PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds;
+  PPG.Types, PPG.Render.Intf, PPG.Grid, PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles,
+  PPG.Grid.CellKinds;
 
 type
   TPPGCustomDBGrid = class;
@@ -237,6 +250,24 @@ type
   TPPGDrawColumnCellEvent = procedure(Sender: TObject; const Rect: TRect; DataCol: Integer;
     Column: TPPGDBGridColumn; State: TGridDrawState) of object;
 
+  /// Darstellung des DB-Grids: Tabelle (wie TDBGrid) oder Karten (je
+  /// Datensatz eine Karte mit "Beschriftung: Wert" je sichtbarer Spalte).
+  TPPGDBGridViewStyle = (dgvTable, dgvCards);
+
+  /// Masse der Kartenansicht in Pixeln (aus Properties, Schrift und DPI).
+  TPPGDBGridCardMetrics = record
+    View: TRect;     // Bereich der Karten (Client-Koordinaten)
+    Gap: Integer;    // Abstand zwischen den Karten und zum Rand
+    Pad: Integer;    // Innenabstand der Karte
+    LineH: Integer;  // Hoehe einer Feldzeile
+    CardW: Integer;
+    CardH: Integer;
+    LabelW: Integer; // Breite der Beschriftung (0 = keine)
+    PerRow: Integer; // Karten je Zeile (mindestens 1)
+    RowH: Integer;   // Kartenhoehe + Abstand
+    Fields: Integer; // sichtbare Felder je Karte
+  end;
+
   TPPGCustomDBGrid = class(TPPGCustomGrid)
   private
     FDataLink: TPPGGridDataLink;
@@ -269,6 +300,46 @@ type
     FDrawRow: Integer;
     FDrawBrush: TColor; // vorbereitete Pinselfarbe (DefaultDrawColumnCell)
     FListBusy: Boolean;
+    // Kartenansicht (ViewStyle = dgvCards)
+    FViewStyle: TPPGDBGridViewStyle;
+    FCardWidth: Integer;
+    FCardSpacing: Integer;
+    FCardLabelWidth: Integer;
+    FCardTop: Integer;     // Satz (0-basiert) der ersten Pufferzeile in der Datenmenge
+    FCardTotal: Integer;   // Saetze fuer die Anordnung (RecordCount bzw. Puffer)
+    FCardSeq: Boolean;     // Datenmenge mit RecNo (IsSequenced)
+    FCardActive: Integer;  // zuletzt angezeigter aktiver Satz (-1 = keiner)
+    FCardNoReveal: Integer; // > 0: Fokuswechsel scrollt nicht
+    FCardKeepScroll: Integer; // > 0: Satzwechsel durch Scrollen (Lage bleibt)
+    FCardPlacing: Integer; // > 0: Puffer wird gerade verschoben
+    procedure SetViewStyle(const Value: TPPGDBGridViewStyle);
+    procedure SetCardWidth(const Value: Integer);
+    procedure SetCardSpacing(const Value: Integer);
+    procedure SetCardLabelWidth(const Value: Integer);
+    /// Kartenansicht aktiv?
+    function CardMode: Boolean;
+    /// Hoechstens so viele Kartenzeilen beruehren die Ansicht.
+    function CardVisibleRows(const M: TPPGDBGridCardMetrics): Integer;
+    function CardBufferCount: Integer;
+    /// Karte eines Satzes (Index in der Anordnung) in Client-Koordinaten.
+    function CardClientRect(const M: TPPGDBGridCardMetrics; Slot: Integer): TRect;
+    /// Feldzeile Index einer Karte: ganze Zeile, Beschriftung und Wert.
+    function CardFieldRects(const M: TPPGDBGridCardMetrics; const Card: TRect; Index: Integer;
+      out LabelR, ValueR: TRect): TRect;
+    /// Beschriftung einer Datenspalte (Titel bzw. DisplayLabel).
+    function CardLabel(ACol: Integer): string;
+    /// Fokus und Lage nach einem Datensatzwechsel (statt SyncPosition).
+    procedure CardSync;
+    /// Beruehrt die Karte des aktiven Satzes die Ansicht?
+    function CardActiveInView: Boolean;
+    /// Puffer so legen, dass die Kartenzeilen um den aktiven Satz geladen sind.
+    procedure CardPlaceWindow;
+    /// Anwender hat gescrollt: aktive Karte aus dem Bild -> Satz nachziehen.
+    procedure CardScrolled;
+    function CardNavigateKey(var Key: Word; Shift: TShiftState): Boolean;
+    procedure CardMouseDown(Shift: TShiftState; X, Y: Integer);
+    /// Mehrfachauswahl nach Klick bzw. Taste (wie in der Tabelle).
+    procedure CardSelectAfterMove(const OldBm: TBookmark; Shift: TShiftState; Step: Boolean);
     function GetDataSource: TDataSource;
     procedure SetDataSource(Value: TDataSource);
     procedure SetDBOptions(const Value: TDBGridOptions);
@@ -380,6 +451,14 @@ type
     procedure ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     /// Rueckfrage vor dem Loeschen (dgConfirmDelete). Standard: MessageDlg.
     function ConfirmDelete: Boolean; virtual;
+    { Kartenansicht (Anordnung der Zellen in Karten) }
+    function CustomCellLayout: Boolean; override;
+    function CustomCellRect(ACol, VRow: Integer): TRect; override;
+    function CustomMouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean; override;
+    procedure CustomMakeCellVisible(ACol, VRow: Integer); override;
+    procedure PaintCustomLayout(const ACanvas: IPPGCanvas; const View: TRect); override;
+    procedure EditorArrowMove(Down: Boolean); override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
 
     property DataLink: TPPGGridDataLink read FDataLink;
     property Options: TDBGridOptions read FDBOptions write SetDBOptions
@@ -401,6 +480,17 @@ type
     /// (Theme, Dunkelmodus, Auswahl). Die Datenmenge steht auf dem
     /// gezeichneten Satz.
     property OnDrawColumnCell: TPPGDrawColumnCellEvent read FOnDrawColumnCell write FOnDrawColumnCell;
+    /// dgvTable: Tabelle; dgvCards: je Datensatz eine Karte mit den sichtbaren
+    /// Spalten als Zeilen "Beschriftung: Wert", Karten fliessen nebeneinander
+    /// und brechen um, senkrecht wird gescrollt.
+    property ViewStyle: TPPGDBGridViewStyle read FViewStyle write SetViewStyle default dgvTable;
+    /// Breite einer Karte (logische Pixel; schmaler, wenn die Ansicht nicht reicht).
+    property CardWidth: Integer read FCardWidth write SetCardWidth default 280;
+    /// Abstand zwischen den Karten und zum Rand (logische Pixel).
+    property CardSpacing: Integer read FCardSpacing write SetCardSpacing default 8;
+    /// Breite der Beschriftung in der Karte (logische Pixel; 0 = ohne
+    /// Beschriftung, der Wert nutzt die ganze Breite).
+    property CardLabelWidth: Integer read FCardLabelWidth write SetCardLabelWidth default 110;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -422,6 +512,13 @@ type
     /// Datensatz, Fuellung bei Brush.Style <> bsClear).
     procedure DefaultDrawColumnCell(const Rect: TRect; DataCol: Integer;
       Column: TPPGDBGridColumn; State: TGridDrawState);
+    /// Kartenansicht: Masse fuer die aktuelle Groesse, Schrift und DPI.
+    function CardMetrics: TPPGDBGridCardMetrics;
+    /// Kartenansicht: Karten je Zeile (Tabelle: 0).
+    function CardsPerRow: Integer;
+    /// Kartenansicht: Karte der Pufferzeile ARow (0 = erster geladener Satz,
+    /// wie die Datenzeilen der Tabelle) in Client-Koordinaten; leer = keine.
+    function CardRect(ARow: Integer): TRect;
   end;
 
   TPPGDBGrid = class(TPPGCustomDBGrid)
@@ -438,6 +535,10 @@ type
     property ConditionalFormats;
     property ExportMaxRecords;
     property ShowRequired;
+    property ViewStyle;
+    property CardWidth;
+    property CardSpacing;
+    property CardLabelWidth;
     property FixedColsRight;
     property HeaderMenu;
     property ShowFooter;
@@ -530,7 +631,7 @@ uses
   PPG.ComboBox, System.Math, System.UITypes, System.Variants, Vcl.Dialogs,
   System.Generics.Defaults,
   PPG.Consts, PPG.Appearance,
-  PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls, PPG.Grid.Paint, PPG.Render.Intf,
+  PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls, PPG.Grid.Paint,
   PPG.Render.Gdi;
 
 const
@@ -819,11 +920,10 @@ type
 /// Zum Lesezeichen gehen und den Satz wieder an dieselbe Stelle im Puffer
 /// bringen (GotoBookmark mittet ihn sonst; die Anzeige wuerde springen).
 /// Index = Pufferzeile der Datenmenge vorher (TDataSet.ActiveRecord).
-procedure GotoBookmarkAt(DS: TDataSet; const Bm: TBookmark; Index: Integer);
+procedure MoveToBufferIndex(DS: TDataSet; Index: Integer);
 var
   C, Moved: Integer;
 begin
-  DS.Bookmark := Bm;
   C := TDataSetAccess(DS).ActiveRecord;
   if C > Index then
   begin
@@ -837,6 +937,12 @@ begin
     Moved := DS.MoveBy(-Index);
     DS.MoveBy(-Moved);
   end;
+end;
+
+procedure GotoBookmarkAt(DS: TDataSet; const Bm: TBookmark; Index: Integer);
+begin
+  DS.Bookmark := Bm;
+  MoveToBufferIndex(DS, Index);
 end;
 
 { TPPGBookmarkList }
@@ -1246,6 +1352,10 @@ begin
   FAutoState := TPPGGridColumns.Create(nil, TPPGDBGridColumn);
   FExportMaxRecords := 100000;
   FDrawRow := -1;
+  FCardWidth := 280;
+  FCardSpacing := 8;
+  FCardLabelWidth := 110;
+  FCardActive := -1;
   FDataLink := TPPGGridDataLink.Create(Self);
   FSelected := TPPGBookmarkList.Create(Self);
   // Sortieren ist Sache der Datenmenge
@@ -1550,7 +1660,11 @@ end;
 
 procedure TPPGCustomDBGrid.UpdateBufferCount;
 begin
-  if FDataLink.Active then
+  if not FDataLink.Active then
+    Exit;
+  if CardMode then
+    FDataLink.BufferCount := CardBufferCount
+  else
     FDataLink.BufferCount := VisibleDataRows;
 end;
 
@@ -1568,6 +1682,29 @@ begin
   end;
   N := FDataLink.RecordCount;
   SetLength(FCache, N);
+  // Kartenansicht: Lage des Puffers in der Datenmenge (Karten stehen nach
+  // ihrer Satznummer, damit die Spalten beim Blaettern nicht springen)
+  if CardMode then
+  begin
+    FCardSeq := FDataLink.DataSet.IsSequenced;
+    if FCardSeq then
+    begin
+      // Neuer Satz (dsInsert) hat keine Nummer: Lage behalten
+      R := FDataLink.DataSet.RecNo;
+      if R > 0 then
+        FCardTop := R - 1 - FDataLink.ActiveRecord;
+      if FCardTop < 0 then
+        FCardTop := 0;
+      FCardTotal := FDataLink.DataSet.RecordCount;
+    end
+    else
+    begin
+      FCardTop := 0;
+      FCardTotal := 0;
+    end;
+    if FCardTotal < FCardTop + N then
+      FCardTotal := FCardTop + N;
+  end;
   // Lesezeichen je Zeile fuer die Markierung der Mehrfachauswahl: so muss
   // UpdateMarks den Satzzeiger nie bewegen (auch nicht bei DisableControls)
   if dgMultiSelect in FDBOptions then
@@ -1760,6 +1897,15 @@ var
   OldBm: TBookmark;
   BaseShift: TShiftState;
 begin
+  if CardMode then
+  begin
+    // Linke Taste waehlt Karte und Feld; die uebrigen wie im Grid
+    if Button = mbLeft then
+      CardMouseDown(Shift, X, Y)
+    else
+      inherited ContentMouseDown(Button, Shift, X, Y);
+    Exit;
+  end;
   OnRow := MultiSelectActive and (Button = mbLeft) and not (ssDouble in Shift) and
     (SizingColAt(X, Y) < 0) and MouseCoord(X, Y, C, V) and (DataRow(V) >= FixedRows) and
     (DataRow(V) - FixedRows < FDataLink.RecordCount);
@@ -1823,6 +1969,11 @@ var
 begin
   if not FDataLink.Active then
     Exit;
+  if CardMode then
+  begin
+    CardSync;
+    Exit;
+  end;
   DS := FDataLink.DataSet;
   Inc(FSyncing);
   try
@@ -1864,6 +2015,8 @@ begin
     Exit;
   // Lesezeichen gehoeren zur alten Datenmenge bzw. zum alten Oeffnen
   FAnchor := nil;
+  FCardActive := -1;
+  FCardTop := 0;
   if FSelected <> nil then
   begin
     FSelected.FCheckOrder := False;
@@ -2208,6 +2361,14 @@ begin
   RebuildColumnMap;
   InvalidateGeometry;
   Invalidate;
+  // Kartenansicht: Kartenhoehe folgt den sichtbaren Spalten (erst nach
+  // RebuildColumnMap bekannt), damit auch der Puffer
+  if CardMode and FDataLink.Active and not (csLoading in ComponentState) and
+    not FLayoutBusy and (FDataLink.BufferCount <> CardBufferCount) then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
 end;
 
 function TPPGCustomDBGrid.RowScrollY: Integer;
@@ -2221,7 +2382,23 @@ var
   DS: TDataSet;
   N: Int64;
   V: TRect;
+  M: TPPGDBGridCardMetrics;
 begin
+  if CardMode then
+  begin
+    // Alle Kartenzeilen der Datenmenge (ohne RecNo: die geladenen)
+    V := ViewRect;
+    Result := V.Bottom - V.Top;
+    if not FDataLink.Active or (FCardTotal <= 0) then
+      Exit;
+    M := CardMetrics;
+    N := Int64(M.Gap) + Int64((FCardTotal + M.PerRow - 1) div M.PerRow) * M.RowH;
+    if N > MaxInt then
+      N := MaxInt;
+    if N > Result then
+      Result := Integer(N);
+    Exit;
+  end;
   V := GridViewRect;
   Result := V.Bottom - V.Top;
   if not FDataLink.Active then
@@ -2253,6 +2430,11 @@ begin
   inherited Scrolled;
   if (FSyncing > 0) or not FDataLink.Active then
     Exit;
+  if CardMode then
+  begin
+    CardScrolled;
+    Exit;
+  end;
   DS := FDataLink.DataSet;
   RowH := DataRowHeight;
   Inc(FSyncing);
@@ -2797,6 +2979,9 @@ begin
     inherited NavigateKey(Key, Shift);
     Exit;
   end;
+  // Kartenansicht: Pfeile, Bild und Pos1/Ende bewegen zwischen den Karten
+  if CardMode and CardNavigateKey(Key, Shift) then
+    Exit;
   DS := FDataLink.DataSet;
   OrigKey := Key;
   RowKey := False;
@@ -3059,6 +3244,776 @@ begin
     Include(Fmt, tfRtlReading);
   Cv.Brush.Style := bsClear;
   Cv.TextRect(TR, S, Fmt);
+end;
+
+{ ---- Kartenansicht ---- }
+
+const
+  // Innenabstand der Karte und Mindestbreite des Werts (logische px)
+  CardPad = 8;
+  CardMinValue = 24;
+  CardRadius = 6;
+
+function TPPGCustomDBGrid.CardMode: Boolean;
+begin
+  Result := FViewStyle = dgvCards;
+end;
+
+procedure TPPGCustomDBGrid.SetViewStyle(const Value: TPPGDBGridViewStyle);
+begin
+  if FViewStyle = Value then
+    Exit;
+  // Offene Eingabe zuerst uebernehmen (lehnt die Datenmenge ab, bleibt alles)
+  HideEditor(True);
+  FViewStyle := Value;
+  FCardActive := -1;
+  if csLoading in ComponentState then
+    Exit;
+  // Lage gehoert zur alten Ansicht (Tabelle: Lage in der Datenmenge)
+  Inc(FSyncing);
+  try
+    ScrollTo(0, 0);
+  finally
+    Dec(FSyncing);
+  end;
+  InvalidateGeometry;
+  UpdateBufferCount;
+  DataChanged;
+  Invalidate;
+end;
+
+procedure TPPGCustomDBGrid.SetCardWidth(const Value: Integer);
+begin
+  if FCardWidth = Value then
+    Exit;
+  FCardWidth := PPGCheckRange(Self, 'CardWidth', Value, 60, 4000);
+  if CardMode and not (csLoading in ComponentState) then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.SetCardSpacing(const Value: Integer);
+begin
+  if FCardSpacing = Value then
+    Exit;
+  FCardSpacing := PPGCheckRange(Self, 'CardSpacing', Value, 0, 200);
+  if CardMode and not (csLoading in ComponentState) then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.SetCardLabelWidth(const Value: Integer);
+begin
+  if FCardLabelWidth = Value then
+    Exit;
+  FCardLabelWidth := PPGCheckRange(Self, 'CardLabelWidth', Value, 0, 2000);
+  if CardMode then
+    Invalidate;
+end;
+
+function TPPGCustomDBGrid.CardMetrics: TPPGDBGridCardMetrics;
+var
+  PPI, W, MaxLabel: Integer;
+begin
+  PPI := ScalePPI;
+  Result.View := ViewRect;
+  Result.Gap := PPGScale(FCardSpacing, PPI);
+  Result.Pad := PPGScale(CardPad, PPI);
+  Result.LineH := DataRowHeight;
+  Result.Fields := VisibleColCount - FixedCols;
+  if Result.Fields < 0 then
+    Result.Fields := 0;
+  // Breite: hoechstens die Ansicht (schmale Fenster: eine schmalere Karte)
+  W := (Result.View.Right - Result.View.Left) - 2 * Result.Gap;
+  Result.CardW := PPGScale(FCardWidth, PPI);
+  if Result.CardW > W then
+    Result.CardW := W;
+  if Result.CardW < 2 * Result.Pad + 1 then
+    Result.CardW := 2 * Result.Pad + 1;
+  Result.CardH := 2 * Result.Pad + Max(1, Result.Fields) * Result.LineH;
+  Result.PerRow := ((Result.View.Right - Result.View.Left) - Result.Gap) div
+    (Result.CardW + Result.Gap);
+  if Result.PerRow < 1 then
+    Result.PerRow := 1;
+  Result.RowH := Result.CardH + Result.Gap;
+  // Beschriftung: der Wert behaelt mindestens CardMinValue
+  Result.LabelW := PPGScale(FCardLabelWidth, PPI);
+  MaxLabel := Result.CardW - 2 * Result.Pad - PPGScale(CardMinValue, PPI);
+  if Result.LabelW > MaxLabel then
+    Result.LabelW := MaxLabel;
+  if Result.LabelW < 0 then
+    Result.LabelW := 0;
+end;
+
+function TPPGCustomDBGrid.CardsPerRow: Integer;
+begin
+  if CardMode then
+    Result := CardMetrics.PerRow
+  else
+    Result := 0;
+end;
+
+function TPPGCustomDBGrid.CardVisibleRows(const M: TPPGDBGridCardMetrics): Integer;
+begin
+  // Angeschnittene Zeilen oben und unten mitgezaehlt
+  Result := ((M.View.Bottom - M.View.Top) + M.RowH - 1) div M.RowH + 1;
+  if Result < 1 then
+    Result := 1;
+end;
+
+function TPPGCustomDBGrid.CardBufferCount: Integer;
+var
+  M: TPPGDBGridCardMetrics;
+begin
+  // Kartenzeilen um den aktiven Satz: so viele darueber und darunter, wie
+  // die Ansicht zeigen kann, und eine Reserve (CardPlaceWindow)
+  M := CardMetrics;
+  Result := M.PerRow * (2 * CardVisibleRows(M) + 2);
+  if Result > 4096 then
+    Result := 4096;
+  if Result < 1 then
+    Result := 1;
+end;
+
+function TPPGCustomDBGrid.CardClientRect(const M: TPPGDBGridCardMetrics; Slot: Integer): TRect;
+var
+  X, Y: Int64;
+begin
+  X := M.View.Left + M.Gap + Int64(Slot mod M.PerRow) * (M.CardW + M.Gap);
+  Y := Int64(M.View.Top) + M.Gap + Int64(Slot div M.PerRow) * M.RowH - ScrollY;
+  if Y > MaxInt div 2 then
+    Y := MaxInt div 2;
+  if Y < -(MaxInt div 2) then
+    Y := -(MaxInt div 2);
+  Result := Rect(Integer(X), Integer(Y), Integer(X) + M.CardW, Integer(Y) + M.CardH);
+  if UseRightToLeftAlignment then
+    Result := Rect(M.View.Left + M.View.Right - Result.Right, Result.Top,
+      M.View.Left + M.View.Right - Result.Left, Result.Bottom);
+end;
+
+function TPPGCustomDBGrid.CardFieldRects(const M: TPPGDBGridCardMetrics; const Card: TRect;
+  Index: Integer; out LabelR, ValueR: TRect): TRect;
+var
+  Y: Integer;
+begin
+  Y := Card.Top + M.Pad + Index * M.LineH;
+  Result := Rect(Card.Left + M.Pad, Y, Card.Right - M.Pad, Y + M.LineH);
+  if UseRightToLeftAlignment then
+  begin
+    LabelR := Rect(Result.Right - M.LabelW, Y, Result.Right, Result.Bottom);
+    ValueR := Rect(Result.Left, Y, Result.Right - M.LabelW, Result.Bottom);
+  end
+  else
+  begin
+    LabelR := Rect(Result.Left, Y, Result.Left + M.LabelW, Result.Bottom);
+    ValueR := Rect(Result.Left + M.LabelW, Y, Result.Right, Result.Bottom);
+  end;
+end;
+
+function TPPGCustomDBGrid.CardRect(ARow: Integer): TRect;
+begin
+  Result := Rect(0, 0, 0, 0);
+  if not CardMode or not FDataLink.Active or (ARow < 0) or (ARow >= Length(FCache)) or
+    (ARow >= FDataLink.RecordCount) then
+    Exit;
+  Result := CardClientRect(CardMetrics, FCardTop + ARow);
+end;
+
+function TPPGCustomDBGrid.CardLabel(ACol: Integer): string;
+var
+  C: TPPGGridColumn;
+  F: TField;
+begin
+  // Wie der Spaltentitel der Tabelle (auch ohne dgTitles)
+  C := ColumnOf(ACol);
+  F := FieldOfCol(ACol);
+  if (C <> nil) and (C.Title <> '') then
+    Result := C.Title
+  else if F <> nil then
+    Result := F.DisplayLabel
+  else if C is TPPGDBGridColumn then
+    Result := TPPGDBGridColumn(C).FieldName
+  else
+    Result := '';
+  if FShowRequired and (F <> nil) and F.Required then
+    Result := Result + ' *';
+end;
+
+function TPPGCustomDBGrid.CustomCellLayout: Boolean;
+begin
+  Result := CardMode;
+end;
+
+function TPPGCustomDBGrid.CustomCellRect(ACol, VRow: Integer): TRect;
+var
+  M: TPPGDBGridCardMetrics;
+  R: Integer;
+  Card, LabelR, ValueR, Tmp: TRect;
+begin
+  // Spalten vor den Datenspalten (Indikator): die ganze Karte; Datenspalte:
+  // der Wert in ihrer Feldzeile; Kopfzeilen gibt es nicht
+  Result := Rect(0, 0, 0, 0);
+  R := DataRow(VRow) - FixedRows;
+  if not FDataLink.Active or (R < 0) or (R >= Length(FCache)) or
+    (R >= FDataLink.RecordCount) then
+    Exit;
+  M := CardMetrics;
+  Card := CardClientRect(M, FCardTop + R);
+  if ACol < FixedCols then
+    Tmp := Card
+  else
+  begin
+    if ACol - FixedCols >= M.Fields then
+      Exit;
+    CardFieldRects(M, Card, ACol - FixedCols, LabelR, ValueR);
+    Tmp := ValueR;
+  end;
+  if IntersectRect(Card, Tmp, M.View) then
+    Result := Tmp;
+end;
+
+function TPPGCustomDBGrid.CustomMouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean;
+var
+  M: TPPGDBGridCardMetrics;
+  CX, CY, C, Row, Slot, R, Idx: Integer;
+begin
+  Result := False;
+  ACol := -1;
+  VRow := -1;
+  if not FDataLink.Active then
+    Exit;
+  M := CardMetrics;
+  if (M.Fields = 0) or not PtInRect(M.View, Point(X, Y)) then
+    Exit;
+  // Gerechnet wird links -> rechts (Karten bei RTL gespiegelt)
+  if UseRightToLeftAlignment then
+    X := M.View.Left + M.View.Right - X - 1;
+  CX := X - M.View.Left - M.Gap;
+  CY := Y - M.View.Top + ScrollY - M.Gap;
+  if (CX < 0) or (CY < 0) then
+    Exit;
+  C := CX div (M.CardW + M.Gap);
+  if (C >= M.PerRow) or (CX mod (M.CardW + M.Gap) >= M.CardW) then
+    Exit; // Abstand zwischen den Karten
+  Row := CY div M.RowH;
+  if CY mod M.RowH >= M.CardH then
+    Exit;
+  Slot := Row * M.PerRow + C;
+  R := Slot - FCardTop;
+  if (R < 0) or (R >= Length(FCache)) or (R >= FDataLink.RecordCount) then
+    Exit;
+  // Feldzeile unter der Maus (Innenabstand zaehlt zur naechsten Zeile)
+  Idx := (CY mod M.RowH - M.Pad) div M.LineH;
+  if CY mod M.RowH < M.Pad then
+    Idx := 0;
+  if Idx >= M.Fields then
+    Idx := M.Fields - 1;
+  ACol := FixedCols + Idx;
+  VRow := VisualRow(FixedRows + R);
+  Result := VRow >= 0;
+end;
+
+procedure TPPGCustomDBGrid.CustomMakeCellVisible(ACol, VRow: Integer);
+var
+  M: TPPGDBGridCardMetrics;
+  R, ViewH, Top, Bottom, Y: Integer;
+begin
+  if (FCardNoReveal > 0) or not FDataLink.Active then
+    Exit;
+  R := DataRow(VRow) - FixedRows;
+  if (R < 0) or (R >= FDataLink.RecordCount) then
+    Exit;
+  M := CardMetrics;
+  ViewH := M.View.Bottom - M.View.Top;
+  Top := M.Gap + ((FCardTop + R) div M.PerRow) * M.RowH;
+  Bottom := Top + M.CardH;
+  // Hoehere Karte als die Ansicht: nur die Feldzeile zeigen
+  if (M.CardH + 2 * M.Gap > ViewH) and (ACol >= FixedCols) and (ACol - FixedCols < M.Fields) then
+  begin
+    Top := Top + M.Pad + (ACol - FixedCols) * M.LineH;
+    Bottom := Top + M.LineH;
+    if ACol = FixedCols then
+      Dec(Top, M.Pad);
+  end;
+  Y := ScrollY;
+  if Top - M.Gap < Y then
+    Y := Top - M.Gap
+  else if Bottom + M.Gap > Y + ViewH then
+    Y := Min(Bottom + M.Gap - ViewH, Top - M.Gap);
+  if Y < 0 then
+    Y := 0;
+  if Y = ScrollY then
+    Exit;
+  // Kein Satzwechsel durch dieses Scrollen (Scrolled)
+  Inc(FSyncing);
+  try
+    ScrollTo(0, Y);
+  finally
+    Dec(FSyncing);
+  end;
+end;
+
+function TPPGCustomDBGrid.CardActiveInView: Boolean;
+var
+  M: TPPGDBGridCardMetrics;
+  Tmp: TRect;
+begin
+  M := CardMetrics;
+  Result := IntersectRect(Tmp, CardClientRect(M, FCardTop + FDataLink.ActiveRecord), M.View);
+end;
+
+procedure TPPGCustomDBGrid.CardSync;
+var
+  A, VR: Integer;
+  Quiet: Boolean;
+begin
+  if not FDataLink.Active then
+    Exit;
+  Inc(FSyncing);
+  try
+    // Inhaltshoehe neu (Anzahl Saetze, Kartengroesse)
+    InvalidateGeometry;
+    EnsureGeometry;
+    A := FCardTop + FDataLink.ActiveRecord;
+    // Nur ein anderer Satz holt seine Karte ins Bild, und nicht, wenn der
+    // Wechsel vom Scrollen kommt (die Lage hat der Anwender bestimmt). Ist die
+    // aktive Karte ganz aus dem Bild (andere Groesse, weniger Saetze), kommt
+    // sie ebenfalls zurueck.
+    Quiet := (FCardKeepScroll > 0) or ((A = FCardActive) and CardActiveInView);
+    FCardActive := A;
+    if FixedRows + FDataLink.ActiveRecord < RowCount then
+    begin
+      VR := VisualRow(FixedRows + FDataLink.ActiveRecord);
+      if Quiet then
+        Inc(FCardNoReveal);
+      try
+        MoveFocus(FocusCol, VR, False, False);
+      finally
+        if Quiet then
+          Dec(FCardNoReveal);
+      end;
+    end;
+  finally
+    Dec(FSyncing);
+  end;
+  CardPlaceWindow;
+end;
+
+procedure TPPGCustomDBGrid.CardPlaceWindow;
+var
+  DS: TDataSet;
+  M: TPPGDBGridCardMetrics;
+  N, Cnt, A, ARow, VisRows, LastRow, NeedFirst, NeedLast, FirstFull, LastFull, WantTop: Integer;
+begin
+  // Nur mit RecNo und ausserhalb einer Bearbeitung (MoveBy wuerde buchen)
+  if (FCardPlacing > 0) or not FDataLink.Active or not FCardSeq then
+    Exit;
+  DS := FDataLink.DataSet;
+  if DS.State <> dsBrowse then
+    Exit;
+  Cnt := FDataLink.RecordCount;
+  if Cnt >= FCardTotal then
+    Exit; // alle Saetze geladen
+  N := FDataLink.BufferCount;
+  M := CardMetrics;
+  VisRows := CardVisibleRows(M);
+  A := FCardTop + FDataLink.ActiveRecord;
+  ARow := A div M.PerRow;
+  LastRow := (FCardTotal - 1) div M.PerRow;
+  // Geladen sein muessen alle Kartenzeilen, die mit der aktiven Karte im Bild
+  // stehen koennen, und zwar vollstaendig (sonst fehlen Karten in der Zeile)
+  NeedFirst := Max(0, ARow - VisRows);
+  NeedLast := Min(LastRow, ARow + VisRows);
+  FirstFull := (FCardTop + M.PerRow - 1) div M.PerRow;
+  if FCardTop + Cnt >= FCardTotal then
+    LastFull := LastRow
+  else
+    LastFull := (FCardTop + Cnt) div M.PerRow - 1;
+  if (FirstFull <= NeedFirst) and (LastFull >= NeedLast) then
+    Exit;
+  WantTop := NeedFirst * M.PerRow;
+  if WantTop + N > FCardTotal then
+    WantTop := Max(0, FCardTotal - N);
+  if (WantTop = FCardTop) or (A - WantTop < 0) or (A - WantTop >= N) then
+    Exit;
+  // Puffer verschieben, der Satz bleibt: fuer andere PPGlow-Controls nur Lesen
+  Inc(FCardPlacing);
+  try
+    PPGDBBeginRead;
+    DS.DisableControls;
+    try
+      MoveToBufferIndex(DS, A - WantTop);
+    finally
+      DS.EnableControls; // loest DataChanged aus (neue Lage)
+      PPGDBEndRead;
+    end;
+  finally
+    Dec(FCardPlacing);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.CardScrolled;
+var
+  M: TPPGDBGridCardMetrics;
+  A, Col, Top, Bottom, ViewH, Y, R, NewA: Integer;
+begin
+  // Ohne RecNo bleibt die Ansicht bei den geladenen Karten
+  if not FCardSeq or (FCardTotal <= 0) or (FDataLink.RecordCount = 0) then
+    Exit;
+  M := CardMetrics;
+  ViewH := M.View.Bottom - M.View.Top;
+  Y := ScrollY;
+  A := FCardTop + FDataLink.ActiveRecord;
+  Col := A mod M.PerRow;
+  Top := M.Gap + (A div M.PerRow) * M.RowH;
+  Bottom := Top + M.CardH;
+  if (Bottom > Y) and (Top < Y + ViewH) then
+    Exit; // aktive Karte noch im Bild
+  if Bottom <= Y then
+  begin
+    // Nach unten gescrollt: oberste ganz sichtbare Kartenzeile
+    R := (Y - M.Gap + M.RowH - 1) div M.RowH;
+    if (Y < M.Gap) or (M.Gap + R * M.RowH + M.CardH > Y + ViewH) then
+      R := Max(0, (Y - M.Gap) div M.RowH);
+  end
+  else
+  begin
+    // Nach oben gescrollt: unterste ganz sichtbare Kartenzeile
+    R := (Y + ViewH - M.Gap - M.CardH) div M.RowH;
+    if (R < 0) or (M.Gap + R * M.RowH < Y) then
+      R := Max(0, (Y + ViewH - 1 - M.Gap) div M.RowH);
+  end;
+  R := EnsureRange(R, 0, (FCardTotal - 1) div M.PerRow);
+  NewA := Min(R * M.PerRow + Col, FCardTotal - 1);
+  if NewA = A then
+    Exit;
+  Inc(FCardKeepScroll);
+  try
+    if Abs(NewA - A) > FDataLink.BufferCount then
+      FDataLink.DataSet.RecNo := NewA + 1
+    else
+      FDataLink.MoveBy(NewA - A);
+  finally
+    Dec(FCardKeepScroll);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.CardSelectAfterMove(const OldBm: TBookmark; Shift: TShiftState;
+  Step: Boolean);
+begin
+  if not MultiSelectActive then
+    Exit;
+  if ssShift in Shift then
+  begin
+    // Nachbarsatz: erweitern bzw. verkleinern; sonst Bereich vom Anker
+    if Step then
+      ExtendByStep(OldBm)
+    else
+    begin
+      if Length(FAnchor) = 0 then
+        FAnchor := OldBm;
+      FSelected.BeginUpdate;
+      try
+        if not (ssCtrl in Shift) then
+          FSelected.Clear;
+        SelectRangeTo(FAnchor);
+      finally
+        FSelected.EndUpdate;
+      end;
+    end;
+  end
+  else if ssCtrl in Shift then
+    // Strg+Pfeil bewegt nur (danach Strg+Leertaste)
+  else
+  begin
+    FSelected.Clear;
+    FAnchor := FSelected.CurrentBookmark;
+  end;
+end;
+
+function TPPGCustomDBGrid.CardNavigateKey(var Key: Word; Shift: TShiftState): Boolean;
+var
+  DS: TDataSet;
+  M: TPPGDBGridCardMetrics;
+  K: Word;
+  A, Page: Integer;
+  OldBm: TBookmark;
+begin
+  Result := False;
+  K := Key;
+  if UseRightToLeftAlignment then
+    case K of
+      VK_LEFT: K := VK_RIGHT;
+      VK_RIGHT: K := VK_LEFT;
+    end;
+  if (ssAlt in Shift) or not ((K = VK_LEFT) or (K = VK_RIGHT) or (K = VK_UP) or
+    (K = VK_DOWN) or (K = VK_PRIOR) or (K = VK_NEXT) or (K = VK_HOME) or (K = VK_END)) then
+    Exit;
+  Result := True;
+  Key := 0;
+  DS := FDataLink.DataSet;
+  // Neuer, unveraenderter Satz verschwindet beim Verlassen (wie die Tabelle)
+  if (DS.State = dsInsert) and not DS.Modified then
+  begin
+    DS.Cancel;
+    Exit;
+  end;
+  M := CardMetrics;
+  A := FCardTop + FDataLink.ActiveRecord;
+  Page := Max(1, (M.View.Bottom - M.View.Top) div M.RowH) * M.PerRow;
+  OldBm := nil;
+  if MultiSelectActive then
+    OldBm := FSelected.CurrentBookmark;
+  case K of
+    VK_LEFT: DS.Prior;
+    VK_RIGHT: DS.Next;
+    VK_UP:
+      // Nur, wenn es darueber eine Karte gibt
+      if not FCardSeq or (A >= M.PerRow) then
+        FDataLink.MoveBy(-M.PerRow);
+    VK_DOWN:
+      if not FCardSeq or (A + M.PerRow < FCardTotal) then
+        FDataLink.MoveBy(M.PerRow)
+      else if A div M.PerRow < (FCardTotal - 1) div M.PerRow then
+        DS.Last; // Zeile darunter ist kuerzer: letzte Karte
+    VK_PRIOR: FDataLink.MoveBy(-Page);
+    VK_NEXT: FDataLink.MoveBy(Page);
+    VK_HOME: DS.First;
+    VK_END: DS.Last;
+  end;
+  CardSelectAfterMove(OldBm, Shift, (K = VK_LEFT) or (K = VK_RIGHT));
+end;
+
+procedure TPPGCustomDBGrid.CardMouseDown(Shift: TShiftState; X, Y: Integer);
+var
+  C, V, R, Target, DCol: Integer;
+  OldBm: TBookmark;
+  K: IPPGCellKind;
+  Act: TPPGCellAction;
+  NewText: string;
+  CR: TRect;
+begin
+  if CanFocus and not Focused and HandleAllocated and IsWindowVisible(Handle) and
+    IsWindowEnabled(Handle) and not (csDesigning in ComponentState) then
+    SetFocus;
+  if not FDataLink.Active or not MouseCoord(X, Y, C, V) then
+    Exit;
+  R := DataRow(V) - FixedRows;
+  if (R < 0) or (R >= FDataLink.RecordCount) then
+    Exit;
+  OldBm := nil;
+  if MultiSelectActive then
+    OldBm := FSelected.CurrentBookmark;
+  // Satz der Karte (Lage in der Anordnung: der Puffer kann sich verschieben)
+  Target := FCardTop + R;
+  if R <> FDataLink.ActiveRecord then
+    FDataLink.MoveBy(R - FDataLink.ActiveRecord);
+  if FCardTop + FDataLink.ActiveRecord <> Target then
+    Exit; // Wechsel abgelehnt (z.B. Pflichtfeld beim Buchen)
+  // Feld unter der Maus wird Fokusfeld (wie die Fokuszelle der Tabelle)
+  V := VisualRow(FixedRows + FDataLink.ActiveRecord);
+  MoveFocus(C, V, False, True);
+  // Mehrfachauswahl wie in der Tabelle (Strg schaltet um, Umschalt: Bereich)
+  if MultiSelectActive and not (ssDouble in Shift) then
+  begin
+    if ssShift in Shift then
+      CardSelectAfterMove(OldBm, Shift, False)
+    else if ssCtrl in Shift then
+    begin
+      FSelected.CurrentRowSelected := not FSelected.CurrentRowSelected;
+      FAnchor := FSelected.CurrentBookmark;
+    end
+    else
+    begin
+      // Wie TDBGrid: Auswahl aufheben, angeklickten Satz waehlen
+      FSelected.BeginUpdate;
+      try
+        FSelected.Clear;
+        FSelected.CurrentRowSelected := True;
+      finally
+        FSelected.EndUpdate;
+      end;
+      FAnchor := FSelected.CurrentBookmark;
+    end;
+  end;
+  // Zellart (Kaestchen, Link ...): Klick auf den Wert bedient sie
+  if Shift * [ssShift, ssCtrl] <> [] then
+    Exit;
+  DCol := DataCol(C);
+  K := KindOf(DCol);
+  if K = nil then
+    Exit;
+  CR := CellRect(C, V);
+  if not PtInRect(CR, Point(X, Y)) then
+    Exit;
+  Act := K.CellClick(KindContext(DCol), CR, Point(X, Y), GetCellText(DCol, DataRow(V)), NewText);
+  if Act <> caNone then
+    DoCellAction(Act, DCol, V, NewText);
+end;
+
+procedure TPPGCustomDBGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  // Kartenansicht: Der Doppelklick hat den Editor fuer das Feld des ersten
+  // Klicks schon geoeffnet (DblClick kommt vor dem MouseDown mit ssDouble).
+  // Der Fokus bleibt im Editor; nur OnMouseDown wird noch gemeldet.
+  if CardMode and (Button = mbLeft) and (ssDouble in Shift) and EditorMode then
+  begin
+    if Assigned(OnMouseDown) then
+      OnMouseDown(Self, Button, Shift, X, Y);
+    Exit;
+  end;
+  inherited MouseDown(Button, Shift, X, Y);
+end;
+
+procedure TPPGCustomDBGrid.EditorArrowMove(Down: Boolean);
+begin
+  // Karte: Pfeil hoch/runter im Editor wechselt das Feld, nicht den Satz
+  if not CardMode then
+  begin
+    inherited EditorArrowMove(Down);
+    Exit;
+  end;
+  if Down then
+    MoveFocus(FocusCol + 1, FocusRow, False, True)
+  else
+    MoveFocus(FocusCol - 1, FocusRow, False, True);
+end;
+
+procedure TPPGCustomDBGrid.PaintCustomLayout(const ACanvas: IPPGCanvas; const View: TRect);
+var
+  PC: TPPGGridPaintColors;
+  M: TPPGDBGridCardMetrics;
+  I, J, N, VC, DC, VR, D, Radius, BW, Margin, TextPad: Integer;
+  Card, RowR, LabelR, ValueR, TR: TRect;
+  CardFill, CardText, VFill, VText, LabelColor, LineColor, BC: TColor;
+  State, FState: TGridDrawState;
+  St: TPPGGridCellStyle;
+  S: string;
+  Col: TPPGGridColumn;
+  K: IPPGCellKind;
+  Ctx: TPPGCellKindContext;
+  Al: TAlignment;
+  HasStyles, Active: Boolean;
+begin
+  // Paint liest nur den Zwischenspeicher (Texte, Markierungen); Farben aus
+  // dem Theme wie in der Tabelle (Dunkelmodus, Hochkontrast, Styles)
+  PC := PaintColors;
+  ACanvas.FillRoundRect(View, 0, PC.Header, 255);
+  if not FDataLink.Active then
+    Exit;
+  M := CardMetrics;
+  Radius := PPGScale(CardRadius, ScalePPI);
+  Margin := PPGScale(4, ScalePPI);
+  TextPad := PPGScale(CellPad, ScalePPI);
+  HasStyles := (ConditionalFormats.Count > 0) or Assigned(OnGetCellStyle);
+  N := Min(Length(FCache), FDataLink.RecordCount);
+  for I := 0 to N - 1 do
+  begin
+    Card := CardClientRect(M, FCardTop + I);
+    if not NeedsPaint(Card, Margin) then
+      Continue;
+    VR := VisualRow(FixedRows + I);
+    D := FixedRows + I;
+    Active := I = FDataLink.ActiveRecord;
+    State := [];
+    if (I < Length(FMarks)) and FMarks[I] then
+      Include(State, gdSelected);
+    // Flaeche der Karte ohne Spaltenstil (Zebra, Hover, Mehrfachauswahl)
+    CellDrawColors(-1, VR, State, CardFill, CardText);
+    ACanvas.FillRoundRect(Card, Radius, CardFill, 255);
+    if PC.UseColors then
+    begin
+      LabelColor := PPGBlendColor(CardText, CardFill, 0.38);
+      LineColor := PPGBlendColor(PC.Line, CardFill, 0.4);
+    end
+    else
+    begin
+      LabelColor := CardText;
+      LineColor := PC.Line;
+    end;
+    for J := 0 to M.Fields - 1 do
+    begin
+      VC := FixedCols + J;
+      DC := DataCol(VC);
+      RowR := CardFieldRects(M, Card, J, LabelR, ValueR);
+      if not NeedsPaint(RowR, Margin) then
+        Continue;
+      FState := State;
+      if Active and (VC = FocusCol) and Focused then
+        Include(FState, gdFocused);
+      CellDrawColors(VC, VR, FState, VFill, VText);
+      S := '';
+      if (DC - FixedCols >= 0) and (DC - FixedCols < Length(FCache[I])) then
+        S := FCache[I][DC - FixedCols];
+      St.Reset;
+      if HasStyles then
+        St := CellStyle(DC, D, S);
+      if St.Fill <> clNone then
+        VFill := St.Fill;
+      if St.TextColor <> clNone then
+        VText := St.TextColor;
+      if VFill <> CardFill then
+        ACanvas.FillRoundRect(ValueR, 0, VFill, 255);
+      // Beschriftung
+      if (M.LabelW > 0) and not IsRectEmpty(LabelR) then
+        ACanvas.DrawText(LabelR, CardLabel(DC), Font, LabelColor,
+          DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taLeftJustify)));
+      // Wert: Zellart (Kaestchen ...) bzw. Text, nur mit DefaultDrawing
+      Col := ColumnOf(DC);
+      K := nil;
+      if DefaultDrawing then
+        K := KindOf(DC);
+      if K <> nil then
+      begin
+        Ctx := KindContext(DC);
+        Ctx.Canvas := ACanvas;
+        Ctx.TextColor := VText;
+        Ctx.FillColor := VFill;
+        K.PaintCell(Ctx, ValueR, S);
+      end
+      else if DefaultDrawing and (S <> '') then
+      begin
+        TR := ValueR;
+        InflateRect(TR, -TextPad, 0);
+        if Col <> nil then
+          Al := Col.Alignment
+        else
+          Al := taLeftJustify;
+        ACanvas.DrawText(TR, S, CellFont(Col, St, []), VText,
+          DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(Al)));
+      end;
+      // Linie zwischen den Feldzeilen (dgRowLines)
+      if (dgRowLines in FDBOptions) and (J < M.Fields - 1) then
+        ACanvas.FillRoundRect(Rect(RowR.Left, RowR.Bottom - 1, RowR.Right, RowR.Bottom), 0,
+          LineColor, 255);
+      // Fokusfeld der aktiven Karte
+      if gdFocused in FState then
+        ACanvas.FrameRoundRect(ValueR, PPGScale(3, ScalePPI), Max(1, PPGScale(1, ScalePPI)),
+          PC.FocusFrame, 255);
+      // Owner-Draw (OnDrawCell, OnDrawColumnCell) mit dem Wert als Zelle
+      if OwnerDrawAssigned then
+        DrawCell(ACanvas, VC, VR, ValueR);
+    end;
+    // Rand: aktive Karte in der Akzentfarbe (ohne Fokus gedaempft)
+    if Active then
+    begin
+      BW := Max(2, PPGScale(2, ScalePPI));
+      if Focused or not PC.UseColors then
+        BC := PC.Accent
+      else
+        BC := PPGBlendColor(PC.Line, PC.Accent, 0.5);
+    end
+    else
+    begin
+      BW := Max(1, PPGScale(1, ScalePPI));
+      BC := PC.Line;
+    end;
+    ACanvas.FrameRoundRect(Card, Radius, BW, BC, 255);
+  end;
 end;
 
 { TPPGDBGrid }

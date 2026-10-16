@@ -126,3 +126,7 @@ TPPGDBGridColumn.FooterField ! Unter Beträgen und Mengen die Summe zeigen: in d
 TPPGDBGridColumn.FooterFormat ! Im DB-Grid nicht verwenden; das Format der Summe steht im DisplayFormat des TAggregateField.
 TPPGDBGridColumn.GroupIndex ! Im DB-Grid nicht verwenden; für Auswertungen nach Kunde oder Monat GROUP BY in der Abfrage nehmen oder die Daten in ein TPPGGrid laden.
 TPPGDBGridColumn.Sortable ! Im DB-Grid nicht verwenden; ob eine Spalte sortierbar ist, entscheidet Ihr OnTitleClick-Handler.
+TPPGDBGrid.CardLabelWidth ! So breit wie die längste übliche Beschriftung wählen; bei kurzen Werten (Kennzeichen, Beträge) lieber eine schmalere Karte als eine schmale Beschriftung.
+TPPGDBGrid.CardSpacing ! Vorgabe lassen; 0 für dicht gepackte Karten in kleinen Fenstern, größer für Übersichtsseiten.
+TPPGDBGrid.CardWidth ! Nach dem längsten Wert wählen; bei vielen Feldern je Datensatz (z. B. 30 und mehr) sind 300 bis 400 Pixel übersichtlich, die Karte wird dann senkrecht gescrollt.
+TPPGDBGrid.ViewStyle ! dgvCards für Datensätze mit vielen Feldern, die man einzeln liest statt zu vergleichen (Stammdaten, Adressen, Geräte); ein Schalter in der Oberfläche kann zwischen Tabelle und Karten wechseln, Spalten, Auswahl und Datensatz bleiben erhalten.
