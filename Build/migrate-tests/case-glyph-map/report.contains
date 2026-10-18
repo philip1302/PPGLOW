@@ -1,0 +1,15 @@
+UnitGM.dfm : Link1 TOldLinkButton -> TMyLinkButton
+UnitGM.dfm :   Link1.Glyph entfernt, gesichert als FormGM_Link1.png
+UnitGM.dfm :   Link1.NumGlyphs entfernt
+UnitGM.dfm :   Link1.Layout = blGlyphTop -> ImagePosition = ipTop
+UnitGM.dfm :   Print1.Layout = blGlyphLeft -> ImagePosition = ipLeft
+UnitGM.dfm :   Print1.Glyph entfernt, gesichert als FormGM_Print1.png
+UnitGM.dfm :   Print1.NumGlyphs entfernt
+UnitGM.dfm :   Own1.Glyph entfernt, gesichert als FormGM_Own1.png
+UnitGM.dfm :   Ext1 - TExternalButton nicht in den Quellen gefunden
+UnitGM.dfm :   Ext1.Glyph entfernt, gesichert als FormGM_Ext1.png
+UnitGM.dfm :   Ext1.Layout = blGlyphRight -> ImagePosition = ipRight
+UnitGM.dfm :   Thing1.Glyph bleibt stehen - TExternalThing unbekannt
+UnitGM.dfm :   Edit1.Glyph.Data entfernt (gibt es bei TMyGlyphEdit nicht)
+UnitGM.dfm :   Edit1.NumGlyphs entfernt (gibt es bei TMyGlyphEdit nicht)
+Glyphs als PNG gesichert: 4

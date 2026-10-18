@@ -8,6 +8,7 @@ object FormG: TFormG
     Width = 75
     Height = 25
     Caption = 'Mit Bild'
+    ImagePosition = ipBottom
     TabOrder = 0
   end
   object BtnB: TPPGButton

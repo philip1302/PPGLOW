@@ -1,0 +1,34 @@
+object FormGM: TFormGM
+  Left = 0
+  Top = 0
+  object Link1: TMyLinkButton
+    Left = 8
+    Caption = 'Link'
+    ImagePosition = ipTop
+    Url = 'x'
+  end
+  object Print1: TMyPrintButton
+    Left = 100
+    ImagePosition = ipLeft
+  end
+  object Own1: TMyLayoutButton
+    Left = 200
+    Layout = 3
+  end
+  object Ext1: TExternalButton
+    Left = 300
+    ImagePosition = ipRight
+  end
+  object Thing1: TExternalThing
+    Left = 400
+    Glyph.Data = {
+      96000000424D9600000000000000360000002800000008000000040000000100
+      18000000000000000000C40E0000C40E00000000000000000000FF00FFFF00FF
+      FF00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00
+      FFFF00FFFF0000FF00FFFF00FF0000FF0000FFFF00FFFF00FFFF0000FF00FFFF
+      00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00FFFF00FF}
+  end
+  object Edit1: TMyGlyphEdit
+    Left = 500
+  end
+end

@@ -1,2 +1,4 @@
 UnitG.dfm :   BtnA.Glyph entfernt, gesichert als FormG_BtnA.png - in eine TImageCollection aufnehmen und am Button Images/ImageName setzen
 UnitG.dfm :   BtnB.Glyph entfernt, gesichert als FormG_BtnB.png
+UnitG.dfm :   BtnA.Layout = blGlyphBottom -> ImagePosition = ipBottom
+UnitG.dfm :   BtnA.NumGlyphs entfernt

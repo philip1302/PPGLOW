@@ -12,14 +12,24 @@
   Weitere Parameter:
     -Map <datei.psd1>     zusaetzliche Zuordnungen (PowerShell-Datendatei):
                           @{ ClassMap = @{ 'TAlt' = @('TNeu','Unit') }; Renames = @{ 'TAlt' = @{ 'A' = 'B' } };
-                             ReportOnly = @{ 'TX' = 'Hinweis' }; InheritsVcl = @('TNeu') }
+                             ReportOnly = @{ 'TX' = 'Hinweis' }; InheritsVcl = @('TNeu');
+                             GlyphClasses = @('TAlt'); GridClasses = @('TAlt');
+                             HandlerTypes = @{ 'TAltTyp' = 'TNeuTyp' } }
                           Die Eintraege werden in die Tabellen gemischt (Map gewinnt).
+                          GlyphClasses: alte Klassen, deren Glyph wie bei TBitBtn behandelt wird,
+                          auch wenn die Zielklasse nicht in den Quellen steht (sonst automatisch,
+                          siehe -GlyphDir).
     -ExtraSource <ordner[]>  weitere Quellordner, deren published-Properties gelesen werden
                           (eigene Ableitungen ausserhalb von Source)
     -StyleManager <name>  setzt an jedem migrierten Objekt mit published StyleManager
                           "StyleManager = <name>" (auch "DM.PPGStyle" fuer ein Datenmodul)
-    -GlyphDir <ordner>    sichert TBitBtn/TSpeedButton-Glyphs als <Form>_<Komponente>.png
-                          (erstes Teilbild, Transparenz = Pixel unten links); ohne: entfernt
+    -GlyphDir <ordner>    sichert Glyphs als <Form>_<Komponente>.png (erstes Teilbild,
+                          Transparenz = Pixel unten links); ohne: entfernt. Gilt fuer TBitBtn,
+                          TSpeedButton und jede alte Klasse, deren Zielklasse von TPPGCustomButton
+                          erbt (Vererbung aus Source und -ExtraSource, z. B. eigene Ableitungen
+                          von TPPGButton) oder die in GlyphClasses der -Map steht. Dabei faellt
+                          NumGlyphs weg und Layout (blGlyphLeft ...) wird zu ImagePosition (ipLeft ...),
+                          sofern die Zielklasse diese Properties nicht selbst veroeffentlicht.
     -Project <datei.dpr>  nur Formulare migrieren, deren Unit in der uses-Liste der .dpr steht
     TBitBtn.Kind wird in ModalResult/Default/Cancel uebersetzt. Code-Stellen, die durch den
     Klassenwechsel brechen koennen (as/is/Cast/with), werden nur gemeldet.
@@ -37,9 +47,14 @@
   - Properties, die die PPGlow-Klasse nicht hat, werden entfernt und im
     Bericht genannt. Die erlaubten Properties liest das Skript aus den
     PPGlow-Quelltexten (published-Abschnitte).
-  - Ereignis-Handler mit anderem Parametertyp (TDBGrid OnTitleClick/OnCellClick/
-    OnDrawColumnCell: Column: TColumn -> TPPGDBGridColumn)
-    werden in der .pas angepasst.
+  - Ereignis-Handler mit anderem Parametertyp (DB-Grid: TColumn -> TPPGDBGridColumn
+    in jedem Ereignis, z. B. OnCellClick/OnDrawColumnCell) werden in der .pas
+    angepasst (Deklaration und Implementierung).
+  - DB-Grid-Behandlung (Spalten, Optionen, Handler) gilt fuer TDBGrid und jede
+    alte Klasse, deren Zielklasse von TPPGDBGrid erbt (Source/-ExtraSource)
+    oder die in GridClasses der -Map steht; PPG.DB.Grid kommt dann in die uses.
+    HandlerTypes der -Map (@{ 'TAltTyp' = 'TNeuTyp' }) ersetzt weitere
+    Parametertypen in den Handlern aller migrierten Objekte.
   - Vorher Sicherung als *.bak (ausser -NoBackup); Bericht migrate-report.txt
     im Zielordner. -WhatIf schreibt nichts, zeigt nur den Bericht.
 
@@ -130,6 +145,22 @@ $ClassMap = [ordered]@{
 # nicht kennt (z. B. TPopupMenu: Items, Images, ...): hier wird nicht gefiltert
 $InheritsVcl = @('TPPGPopupMenu')
 
+# Glyph-Behandlung (Glyph.Data -> PNG, NumGlyphs, Layout -> ImagePosition):
+# alte Klassen, die immer dazugehoeren, und die PPGlow-Basisklasse, deren
+# Nachfolger als Ziel die Behandlung ebenfalls ausloesen
+$GlyphClasses = @('TBitBtn', 'TSpeedButton')
+$GlyphTargetBase = 'TPPGCustomButton'
+# Dasselbe fuer DB-Grids: Spalten (Title.Caption -> Title usw.), Optionen und
+# Handler-Signaturen (TColumn -> TPPGDBGridColumn)
+$GridClasses = @('TDBGrid')
+$GridTargetBase = 'TPPGDBGrid'
+$GridUnit = 'PPG.DB.Grid'   # TPPGDBGridColumn in den Handlern
+# Parametertypen in Ereignis-Handlern: gilt fuer jedes Ereignis eines Grid-Objekts
+# (-Map HandlerTypes ergaenzt weitere, die fuer alle migrierten Objekte gelten)
+$GridHandlerTypes = @{ 'TColumn' = 'TPPGDBGridColumn' }
+$HandlerTypes = @{}
+$LayoutMap = @{ 'blGlyphLeft' = 'ipLeft'; 'blGlyphRight' = 'ipRight'; 'blGlyphTop' = 'ipTop'; 'blGlyphBottom' = 'ipBottom' }
+
 # Klassen, die nicht automatisch umgestellt werden (API zu verschieden),
 # aber im Bericht mit einem Hinweis erscheinen
 $ReportOnly = @{
@@ -140,8 +171,9 @@ $ReportOnly = @{
 $Renames = @{
   'TAdvEdit'     = @{ 'EmptyText' = 'TextHint' }
   'TAdvComboBox' = @{ 'EmptyText' = 'TextHint' }
-  'TBitBtn'      = @{ 'Kind' = '' ; 'Glyph.Data' = ''; 'NumGlyphs' = ''; 'Layout' = '' }
-  'TSpeedButton' = @{ 'Glyph.Data' = ''; 'NumGlyphs' = ''; 'Flat' = ''; 'Layout' = '' }
+  # Glyph.Data, NumGlyphs, Layout: Glyph-Behandlung (siehe $GlyphClasses)
+  'TBitBtn'      = @{ 'Kind' = '' }
+  'TSpeedButton' = @{ 'Flat' = '' }
   'TSearchBox'   = @{ 'OnInvokeSearch' = 'OnSearch' }
   # Audit 5c: einheitliche Namen in PPGlow (Min/Max, ShowSlider, On...Change)
   'TSpinEdit'      = @{ 'MinValue' = 'Min'; 'MaxValue' = 'Max' }
@@ -262,6 +294,21 @@ function Get-AllowedProps([string]$Class) {
     $guard++
   }
   return $set
+}
+
+# Sonderbehandlung (Glyph, Grid) fuer diese Zuordnung? Alte Klasse in $Classes
+# oder Zielklasse erbt (laut Source/-ExtraSource) von $Base
+function Test-Target([string]$Old, [string]$New, $Classes, [string]$Base) {
+  if ($Classes -contains $Old) { return $true }
+  $c = $New
+  $guard = 0
+  while ($c -and $guard -lt 20) {
+    if ($c -eq $Base) { return $true }
+    if (-not $script:ClassInfo.ContainsKey($c)) { break }
+    $c = $script:ClassInfo[$c].Parent
+    $guard++
+  }
+  return $false
 }
 
 # --- DFM ---------------------------------------------------------------------
@@ -414,13 +461,16 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
       if ($stack.Count -gt 0) { Add-VclDefaults $stack[$stack.Count - 1] }
       if ($rootName -eq '') { $rootName = $name }
       $entry = @{ Old = $cls; New = $cls; Allowed = $null; Name = $name; Indent = $indent; Done = $false
-        NoFilter = $false; Kind = ''; Pending = (New-Object System.Collections.Generic.List[object])
+        NoFilter = $false; Kind = ''; Glyph = $false; Grid = $false; Pending =(New-Object System.Collections.Generic.List[object])
         Seen = (New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)) }
       if ($ClassMap.Contains($cls) -and (($Only.Count -eq 0) -or ($Only -contains $cls))) {
         $new = $ClassMap[$cls][0]
         [void]$usedUnits.Add($ClassMap[$cls][1])
         $entry.New = $new
         $entry.Allowed = Get-AllowedProps $new
+        $entry.Glyph = Test-Target $cls $new $GlyphClasses $GlyphTargetBase
+        $entry.Grid = Test-Target $cls $new $GridClasses $GridTargetBase
+        if ($entry.Grid) { [void]$usedUnits.Add($GridUnit) }
         $migrated.Add(@{ Name = $name; Old = $cls })
         if ($InheritsVcl -contains $new) { $entry.NoFilter = $true }
         elseif (-not $script:ClassInfo.ContainsKey($new)) {
@@ -522,8 +572,33 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         $changed = $true
         continue
       }
-      # Glyphs (TBitBtn/TSpeedButton): als PNG sichern oder entfernen
-      if (($cur.Old -eq 'TBitBtn' -or $cur.Old -eq 'TSpeedButton') -and $prop -eq 'Glyph.Data') {
+      # Glyph-Klassen: NumGlyphs entfaellt, Layout -> ImagePosition (nur wenn
+      # die Zielklasse die Property nicht selbst hat; Renames der Map gewinnen)
+      $ownRename = $Renames.ContainsKey($cur.Old) -and $Renames[$cur.Old].ContainsKey($prop)
+      if ($cur.Glyph -and -not $ownRename -and -not $cur.Allowed.Contains($prop)) {
+        if ($prop -eq 'NumGlyphs') {
+          $report.Add("$File :   $($cur.Name).NumGlyphs entfernt")
+          $changed = $true
+          continue
+        }
+        if ($prop -eq 'Layout') {
+          $lv = $value.Trim()
+          # Ziel unbekannt (nur ueber GlyphClasses): ImagePosition wie bei TPPGButton annehmen
+          $hasImgPos = $cur.Allowed.Contains('ImagePosition') -or -not $script:ClassInfo.ContainsKey($cur.New)
+          if ($LayoutMap.ContainsKey($lv) -and $hasImgPos) {
+            $out.Add((' ' * $indent) + "ImagePosition = $($LayoutMap[$lv])")
+            [void]$cur.Seen.Add('ImagePosition')
+            $report.Add("$File :   $($cur.Name).Layout = $lv -> ImagePosition = $($LayoutMap[$lv])")
+          }
+          else {
+            $report.Add("$File :   $($cur.Name).Layout entfernt")
+          }
+          $changed = $true
+          continue
+        }
+      }
+      # Glyphs (TBitBtn/TSpeedButton und Klassen mit Ziel TPPGCustomButton): als PNG sichern oder entfernen
+      if ($cur.Glyph -and $prop -eq 'Glyph.Data' -and -not $cur.Allowed.Contains('Glyph')) {
         $end = Get-ValueEnd $lines $i $value
         if ($GlyphDir -ne '') {
           $ng = Find-DfmProp $lines $i 'NumGlyphs'
@@ -537,6 +612,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
           if ($err) { $report.Add("$File :   $($cur.Name).Glyph entfernt - $err") }
           else {
             $report.Add("$File :   $($cur.Name).Glyph entfernt, gesichert als $png - in eine TImageCollection aufnehmen und am Button Images/ImageName setzen")
+            $script:glyphCount++
           }
         }
         else {
@@ -545,6 +621,9 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         $i = $end
         $changed = $true
         continue
+      }
+      if ($prop -eq 'Glyph.Data' -and -not $cur.Glyph -and $cur.NoFilter -and -not ($InheritsVcl -contains $cur.New)) {
+        $report.Add("$File :   $($cur.Name).Glyph bleibt stehen - $($cur.New) unbekannt; mit -ExtraSource (Ableitung von TPPGButton) oder GlyphClasses in der -Map als PNG sichern")
       }
       # Umbenennungen
       if ($Renames.ContainsKey($cur.Old) -and $Renames[$cur.Old].ContainsKey($prop)) {
@@ -574,7 +653,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         }
       }
       # DB-Grid-Optionen ohne Wirkung melden (bleiben stehen)
-      if ($cur.Old -eq 'TDBGrid' -and $prop -eq 'Options') {
+      if ($cur.Grid -and $prop -eq 'Options') {
         $optText = $value
         $k = $i
         while ($optText -notmatch '\]' -and ($k + 1) -lt $lines.Count) { $k++; $optText += $lines[$k] }
@@ -592,14 +671,22 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         continue
       }
       # DB-Grid-Spalten
-      if ($cur.Old -eq 'TDBGrid' -and $prop -eq 'Columns') {
+      if ($cur.Grid -and $prop -eq 'Columns') {
         $collection = 'DBGridColumns'
         $out.Add($line)
         continue
       }
       # Ereignisse merken (Signatur ggf. anpassen)
-      if ($prop -like 'On*' -and $cur.Old -eq 'TDBGrid' -and ($prop -eq 'OnTitleClick' -or $prop -eq 'OnCellClick' -or $prop -eq 'OnDrawColumnCell')) {
-        $Handlers[$value.Trim()] = 'TPPGDBGridColumn'
+      # (Grid: TColumn -> TPPGDBGridColumn; HandlerTypes der Map fuer alle)
+      if ($prop -like 'On*' -and $value.Trim() -match '^\w+$') {
+        $types = @{}
+        foreach ($k in $HandlerTypes.Keys) { $types[$k] = $HandlerTypes[$k] }
+        if ($cur.Grid) { foreach ($k in $GridHandlerTypes.Keys) { $types[$k] = $GridHandlerTypes[$k] } }
+        if ($types.Count -gt 0) {
+          $h = $value.Trim()
+          if (-not $Handlers.ContainsKey($h)) { $Handlers[$h] = @{} }
+          foreach ($k in $types.Keys) { $Handlers[$h][$k] = $types[$k] }
+        }
       }
       if (-not $cur.NoFilter -and -not $cur.Allowed.Contains($top)) {
         $report.Add("$File :   $($cur.Name).$prop entfernt (gibt es bei $($cur.New) nicht)")
@@ -671,9 +758,16 @@ function Convert-Pas([string]$File, $Units, [hashtable]$Handlers, $Migrated) {
       }
     }
   }
-  # Handler-Signaturen (TColumn -> TPPGDBGridColumn)
+  # Handler-Signaturen: Parametertypen in Deklaration und Implementierung
+  # (z. B. TColumn -> TPPGDBGridColumn)
   foreach ($h in $Handlers.Keys) {
-    $text = [regex]::Replace($text, "(procedure\s+(\w+\.)?$h\s*\([^)]*Column\s*:\s*)TColumn", "`${1}$($Handlers[$h])")
+    $types = $Handlers[$h]
+    $text = [regex]::Replace($text, "(?i)(procedure\s+(\w+\.)?$h\s*\()([^)]*)(\))", {
+        param($hm)
+        $params = $hm.Groups[3].Value
+        foreach ($k in $types.Keys) { $params = [regex]::Replace($params, "(:\s*)$([regex]::Escape($k))\b", "`${1}$($types[$k])") }
+        $hm.Groups[1].Value + $params + $hm.Groups[4].Value
+      }.GetNewClosure())
   }
   # Units in den interface-uses
   $m = [regex]::Match($text, '(?is)\binterface\b.*?\buses\b(.*?);')
@@ -795,7 +889,11 @@ if ($Map -ne '') {
   }
   if ($m.ContainsKey('ReportOnly')) { foreach ($k in $m.ReportOnly.Keys) { $ReportOnly[$k] = $m.ReportOnly[$k] } }
   if ($m.ContainsKey('InheritsVcl')) { $InheritsVcl = @($InheritsVcl) + @($m.InheritsVcl) }
+  if ($m.ContainsKey('GlyphClasses')) { $GlyphClasses = @($GlyphClasses) + @($m.GlyphClasses) }
+  if ($m.ContainsKey('GridClasses')) { $GridClasses = @($GridClasses) + @($m.GridClasses) }
+  if ($m.ContainsKey('HandlerTypes')) { foreach ($k in $m.HandlerTypes.Keys) { $HandlerTypes[$k] = $m.HandlerTypes[$k] } }
 }
+$script:glyphCount = 0
 
 Read-PPGlowClasses
 $item = Get-Item $Path
@@ -850,6 +948,7 @@ foreach ($dfm in $dfms) {
   }
 }
 
+if ($GlyphDir -ne '') { $report.Add("Glyphs als PNG gesichert: $($script:glyphCount)") }
 $report.Insert(0, ('PPGlow-Migration {0} ({1})' -f (Get-Date -Format 'yyyy-MM-dd HH:mm'), $(if ($WhatIf) { 'nur Vorschau' } else { 'ausgefuehrt' })))
 $report | ForEach-Object { Write-Output $_ }
 if (-not $WhatIf) {

@@ -17,10 +17,10 @@ Weitere Parameter:
 
 | Parameter | Wirkung |
 |---|---|
-| `-Map <datei.psd1>` | Zusätzliche Zuordnungen aus einer PowerShell-Datendatei: `@{ ClassMap = @{ 'TAlt' = @('TNeu','Unit') }; Renames = @{ 'TAlt' = @{ 'AltProp' = 'NeuProp' } }; ReportOnly = @{ 'TX' = 'Hinweis' }; InheritsVcl = @('TNeu') }`. Wird in die eingebauten Tabellen gemischt, die Map gewinnt. `InheritsVcl` (optional): Klassen, deren Properties nicht gefiltert werden (Ableitung einer VCL-Klasse). |
+| `-Map <datei.psd1>` | Zusätzliche Zuordnungen aus einer PowerShell-Datendatei: `@{ ClassMap = @{ 'TAlt' = @('TNeu','Unit') }; Renames = @{ 'TAlt' = @{ 'AltProp' = 'NeuProp' } }; ReportOnly = @{ 'TX' = 'Hinweis' }; InheritsVcl = @('TNeu') }`. Wird in die eingebauten Tabellen gemischt, die Map gewinnt. `InheritsVcl` (optional): Klassen, deren Properties nicht gefiltert werden (Ableitung einer VCL-Klasse). `GlyphClasses` / `GridClasses` (optional): alte Klassen, die wie TBitBtn (Glyph) bzw. TDBGrid (Spalten, Handler) behandelt werden, auch wenn die Zielklasse in keiner Quelle steht (siehe „Eigene Ableitungen“). `HandlerTypes` (optional): `@{ 'TAltTyp' = 'TNeuTyp' }` ersetzt Parametertypen in den Ereignis-Handlern migrierter Objekte. |
 | `-ExtraSource <Ordner[]>` | Weitere Quellordner, deren published-Properties gelesen werden (eigene Ableitungen außerhalb von `Source`). Ist die neue Klasse nirgends zu finden, werden ihre Properties nicht gefiltert (Hinweis im Bericht). |
 | `-StyleManager <Name>` | Schreibt bei jedem migrierten Objekt, dessen neue Klasse `StyleManager` veröffentlicht, `StyleManager = <Name>` (sofern nicht schon vorhanden). `DM.PPGStyle` verweist auf ein Datenmodul; dessen Unit muss in der `uses`-Liste stehen. |
-| `-GlyphDir <Ordner>` | Sichert `Glyph` von TBitBtn/TSpeedButton als PNG (siehe „Was von Hand bleibt“). |
+| `-GlyphDir <Ordner>` | Sichert `Glyph` von TBitBtn/TSpeedButton und von Klassen, die auf eine Ableitung von `TPPGButton` abgebildet werden, als PNG (siehe „Was von Hand bleibt“ und „Eigene Ableitungen“). |
 | `-Project <datei.dpr>` | Migriert nur Formulare, deren Unit in der `uses`-Liste der `.dpr` steht; andere werden mit „Unit gehört nicht zum Projekt – übersprungen“ gemeldet und nicht angefasst. |
 
 Voraussetzungen: Die Formulare sind als **Text** gespeichert (in der IDE: Rechtsklick aufs Formular → „Text-DFM“), und die PPGlow-Packages sind installiert. Danach das Projekt öffnen, kompilieren und den Bericht durchgehen.
@@ -32,7 +32,7 @@ Voraussetzungen: Die Formulare sind als **Text** gespeichert (in der IDE: Rechts
 3. **Properties umbenennen**, wo die Bedeutung gleich ist (Tabelle unten).
 4. **Properties entfernen**, die die PPGlow-Klasse nicht hat. Welche es gibt, liest das Skript aus den PPGlow-Quelltexten (published-Abschnitte), damit es immer zum aktuellen Stand passt. Jede Entfernung steht im Bericht.
    Umbenannte Properties werden auch im Code der Unit angepasst, wenn der Komponentenname davorsteht (`Spin1.MinValue` → `Spin1.Min`). In `with`-Blöcken erkennt das Skript sie nicht; dort meldet der Compiler den alten Namen.
-5. **Ereignis-Handler** anpassen, deren Parametertyp sich ändert (DB-Grid: `TColumn` → `TPPGDBGridColumn`).
+5. **Ereignis-Handler** anpassen, deren Parametertyp sich ändert (DB-Grid: `TColumn` → `TPPGDBGridColumn` in jedem Ereignis des Grids, in Deklaration und Implementierung; weitere Typen über `HandlerTypes` der Map).
 6. **Abweichende Vorgaben** ausdrücklich schreiben: Wo PPGlow eine andere Vorgabe hat als die VCL, fehlt der Wert in der alten DFM (die IDE speichert Vorgaben nicht). Das Skript trägt dann den VCL-Wert ein, damit sich das Verhalten nicht still ändert (Tabelle unten).
 7. **Sicherung** jeder geänderten Datei als `*.bak`; eine vorhandene `*.bak` wird nie überschrieben (ein zweiter Lauf behält das Original). Bericht `migrate-report.txt` im Zielordner.
 8. **Kodierung** bleibt erhalten: ANSI-Dateien (cp1252, Umlaute) bleiben ANSI, UTF-8 bleibt UTF-8, ein vorhandenes BOM bleibt.
@@ -109,8 +109,9 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TDBGrid-Spalten | `ButtonStyle` | bleibt (`cbsEllipsis`: „…“-Knopf, `OnEditButtonClick`) |
 | TDBGrid | `TitleFont`, `FixedColor` | bleiben (gleichnamig bei `TPPGDBGrid`) |
 | TBitBtn | `Kind` | übersetzt: `bkOK` → `ModalResult = 1` + `Default = True`, `bkCancel` → `2` + `Cancel = True`, `bkYes` → `6` + `Default = True`, `bkNo` → `7`, `bkAbort` → `3`, `bkRetry` → `4`, `bkIgnore` → `5`, `bkAll` → `8` (nur, was nicht ausdrücklich in der DFM steht; je Übersetzung eine Zeile im Bericht). `bkClose`, `bkHelp`: entfernt und gemeldet (von Hand), `bkCustom`: nichts |
-| TBitBtn | `Glyph`, `NumGlyphs`, `Layout` | entfernt; `Glyph` mit `-GlyphDir` als PNG gesichert (siehe unten) |
-| TSpeedButton | `Glyph`, `NumGlyphs`, `Flat`, `Layout` | entfernt; `Glyph` mit `-GlyphDir` als PNG gesichert |
+| TBitBtn | `Glyph`, `NumGlyphs` | entfernt; `Glyph` mit `-GlyphDir` als PNG gesichert (siehe unten) |
+| TBitBtn, TSpeedButton | `Layout` | `ImagePosition` (`blGlyphLeft`/`Right`/`Top`/`Bottom` → `ipLeft`/`ipRight`/`ipTop`/`ipBottom`) |
+| TSpeedButton | `Glyph`, `NumGlyphs`, `Flat` | entfernt; `Glyph` mit `-GlyphDir` als PNG gesichert |
 | alle Controls | `DesignSize` | bleibt (jedes `TWinControl` liest es; wichtig für `Anchors`) |
 | TPanel, TScrollBox, TGroupBox, TMonthCalendar | `AutoSize` | bleibt (die PPGlow-Klassen veröffentlichen `AutoSize`) |
 | TPopupMenu | alle | `TPPGPopupMenu` erbt von `TPopupMenu`: Properties (Items, Images, ...) werden nicht gefiltert; `TMenuItem`-Einträge bleiben unverändert |
@@ -120,6 +121,25 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TDBGrid | `Options`: `dgMultiSelect` | bleibt und wirkt (`SelectedRows` wie in der VCL; im Code `TBookmarkList` durch `TPPGBookmarkList` ersetzen) |
 | TDBGrid | `OnDrawColumnCell`, `DefaultDrawing` | bleiben und wirken; im Handler wird `Column: TColumn` zu `TPPGDBGridColumn`, `DefaultDrawColumnCell` und `Column.Field` gibt es gleichnamig |
 | TDBNavigator | `Kind` | entfernt (der Navigator ist immer waagerecht) |
+
+## Eigene Ableitungen (-Map mit -ExtraSource)
+
+Bildet die Map eine fremde Klasse auf eine eigene PPGlow-Ableitung ab, behandelt das Skript sie wie das VCL-Vorbild, sobald es die Vererbung kennt. Die Vererbung liest es aus `Source` und den `-ExtraSource`-Ordnern (`TMyLinkButton = class(TPPGButton)`, auch über mehrere Stufen):
+
+| Zielklasse erbt von | Behandlung wie | Was passiert |
+|---|---|---|
+| `TPPGCustomButton` (z. B. `TPPGButton`) | TBitBtn/TSpeedButton | `Glyph` → PNG (mit `-GlyphDir`) bzw. entfernt, `NumGlyphs` entfällt, `Layout` → `ImagePosition`; veröffentlicht die Zielklasse `NumGlyphs`, `Layout` oder `Glyph` selbst, bleiben diese stehen |
+| `TPPGDBGrid` | TDBGrid | Spalten (`Title.Caption` → `Title`, `Title.Font.*` → `TitleStyle.*`, `Expanded` entfernt …), wirkungslose `Options` gemeldet, `TColumn` → `TPPGDBGridColumn` in allen Grid-Handlern, `PPG.DB.Grid` in die `uses` |
+
+Steht die Zielklasse in keiner Quelle, hilft die Map: `GlyphClasses = @('TMyOldButton')` bzw. `GridClasses = @('TMyOldGrid')` nennt die **alten** Klassen ausdrücklich. Ohne beides bleibt `Glyph.Data` einer unbekannten Zielklasse stehen (Hinweis im Bericht), weil ihre Properties nicht gefiltert werden. Eigene Parametertypen in Handlern (z. B. ein Grid-Ereignis mit `Grid: TMyOldGridBase`) ersetzt `HandlerTypes = @{ 'TMyOldGridBase' = 'TPPGDBGrid' }`. Renames der Map gehen der Glyph-Behandlung vor. Mit `-GlyphDir` nennt die letzte Berichtszeile die Zahl der gesicherten PNGs.
+
+```powershell
+@{
+  ClassMap     = @{ 'TMyOldLinkButton' = @('TMyLinkButton', 'My.Buttons'); 'TMyOldGrid' = @('TMyGrid', 'My.Grid') }
+  GlyphClasses = @()   # nur fuer Zielklassen ohne Quelle
+  HandlerTypes = @{ 'TMyOldGridBase' = 'TPPGDBGrid' }
+}
+```
 
 ## Abweichende Vorgaben
 
@@ -140,7 +160,7 @@ Die Splitter-Breite (VCL 3, PPGlow 6) bleibt, weil die IDE `Width` immer speiche
 
 ## Was von Hand bleibt
 
-- **Bilder:** `Glyph` gibt es nicht; eine ImageList (bzw. ab 10.4 `TVirtualImageList`) zuweisen und `ImageIndex`/`ImageName` setzen. Mit `-GlyphDir <Ordner>` sichert das Skript die Glyphs vorher als `<Form>_<Komponente>.png` (nur das erste Teilbild, Pixel unten links = transparent, wie in der VCL); die PNGs in eine `TImageCollection` aufnehmen und am Button `Images`/`ImageName` setzen. Ohne `-GlyphDir` wird der Glyph entfernt (der Bericht sagt es).
+- **Bilder:** `Glyph` gibt es nicht; eine ImageList (bzw. ab 10.4 `TVirtualImageList`) zuweisen und `ImageIndex`/`ImageName` setzen. Mit `-GlyphDir <Ordner>` sichert das Skript die Glyphs (auch eigener `TPPGButton`-Ableitungen, siehe oben) vorher als `<Form>_<Komponente>.png` (nur das erste Teilbild, Pixel unten links = transparent, wie in der VCL); die PNGs in eine `TImageCollection` aufnehmen und am Button `Images`/`ImageName` setzen. Ohne `-GlyphDir` wird der Glyph entfernt (der Bericht sagt es).
 - **Code-Stellen:** Der Bericht nennt mit Zeilennummer `as`/`is TAlteKlasse`, harte Casts `TAlteKlasse(...)` und `with <Komponente> do` in der Unit (nichts wird geändert).
 - **`bkClose`/`bkHelp`:** Schließen bzw. Hilfe-Aufruf im `OnClick` von Hand.
 - **TTreeView-Knoten:** sind in der DFM binär gespeichert und gehen verloren; im Designer über „Edit nodes...“ neu anlegen (oder im Code füllen).
