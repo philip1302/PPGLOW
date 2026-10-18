@@ -117,6 +117,12 @@ type
     FThemeColors: TPPGThemeColors;
     FChartPalette: TStrings;
     FSilent: Boolean; // Hilfsobjekt beim Laden: keine globalen Wirkungen
+    // Streaming: nur Abweichungen vom Preset (wie TPPGCustomControl)
+    FStoreMinimal: Boolean;
+    FReadPass: Integer;
+    FAppearanceRead: Boolean;
+    FApplyingStreamDefaults: Boolean;
+    function IsPresetStored: Boolean;
     procedure SetThemeMode(const Value: TPPGThemeMode);
     procedure SetStyleForms(const Value: Boolean);
     procedure SetPreset(const Value: string);
@@ -136,6 +142,8 @@ type
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Loaded; override;
+    procedure WriteState(Writer: TWriter); override;
+    procedure ReadState(Reader: TReader); override;
     procedure Changed; virtual;
   public
     constructor Create(AOwner: TComponent); override;
@@ -155,7 +163,8 @@ type
     procedure SaveToStream(Stream: TStream);
     procedure LoadFromStream(Stream: TStream);
   published
-    property Preset: string read FPreset write SetPreset;
+    property Preset: string read FPreset write SetPreset stored IsPresetStored;
+    /// In der DFM stehen nur die Abweichungen von den Vorgaben des Presets.
     property Appearance: TPPGAppearance read FAppearance write SetAppearance;
     property Animation: TPPGAnimationSettings read FAnimation write SetAnimation;
     /// Hell/Dunkel/System fuer ALLE PPGlow-Controls der Anwendung (TPPGTheme.Mode),
@@ -423,6 +432,8 @@ end;
 
 procedure TPPGStyleManager.Loaded;
 begin
+  FReadPass := 0;
+  FAppearanceRead := False;
   inherited Loaded;
   // Marke aus der DFM anwendungsweit setzen (die Farben der Appearance kommen
   // dabei aus der DFM, sie werden nicht neu abgeleitet)
@@ -484,7 +495,50 @@ end;
 
 procedure TPPGStyleManager.SubObjectChanged(Sender: TObject);
 begin
+  if (Sender = FAppearance) and (csReading in ComponentState) and not FApplyingStreamDefaults then
+    FAppearanceRead := True;
   Changed;
+end;
+
+function TPPGStyleManager.IsPresetStored: Boolean;
+begin
+  Result := not (FStoreMinimal and SameText(FPreset, TPPGRendererRegistry.DefaultName));
+end;
+
+procedure TPPGStyleManager.WriteState(Writer: TWriter);
+var
+  R: IPPGRenderer;
+  Defaults: TPPGAppearance;
+begin
+  // Ohne Vorfahr nur, was vom Preset abweicht; mit Vorfahr vergleicht der
+  // Writer mit dessen Werten. Die Vergleichswerte enthalten keine Marke
+  // (AccentColor/ThemeColors): davon abgeleitete Farben bleiben gespeichert.
+  R := TPPGRendererRegistry.Find(FPreset);
+  if (Writer.Ancestor <> nil) or (R = nil) then
+  begin
+    inherited WriteState(Writer);
+    Exit;
+  end;
+  Defaults := TPPGAppearance.Create(nil);
+  try
+    PPGApplyStreamDefaults(R, Defaults);
+    FAppearance.StreamDefaults := Defaults;
+    FStoreMinimal := True;
+    try
+      inherited WriteState(Writer);
+    finally
+      FStoreMinimal := False;
+      FAppearance.StreamDefaults := nil;
+    end;
+  finally
+    Defaults.Free;
+  end;
+end;
+
+procedure TPPGStyleManager.ReadState(Reader: TReader);
+begin
+  Inc(FReadPass);
+  inherited ReadState(Reader);
 end;
 
 procedure TPPGStyleManager.ResetToPresetDefaults;
@@ -535,11 +589,23 @@ begin
   if SameText(FPreset, NewName) and (FPreset <> '') then
     Exit;
   FPreset := NewName;
-  // Beim Laden kommen die Farben aus der DFM, nicht aus dem Preset
   if (R <> nil) and not (csLoading in ComponentState) then
     R.ApplyDefaults(FAppearance)
   else
+  begin
+    // Laden: erst die Vorgaben (ohne Marke), dann die Abweichungen aus der
+    // DFM (Appearance steht nach Preset; siehe TPPGCustomControl.SetPreset)
+    if (R <> nil) and (FReadPass <= 1) and not FAppearanceRead then
+    begin
+      FApplyingStreamDefaults := True;
+      try
+        PPGApplyStreamDefaults(R, FAppearance);
+      finally
+        FApplyingStreamDefaults := False;
+      end;
+    end;
     Changed;
+  end;
 end;
 
 procedure TPPGStyleManager.SetAppearance(const Value: TPPGAppearance);

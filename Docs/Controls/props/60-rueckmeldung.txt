@@ -152,7 +152,7 @@ TPPGNotificationCenter.ToastWidth = Breite eines Toasts in logischen Pixeln (160
 TPPGStyleManager.AccentColor = Markenfarbe der Anwendung: Akzent für Fokus, Auswahl, Fortschritt, Schalter, Links und Diagramme in allen Presets und in Hell und Dunkel (Hover-/Gedrückt-Varianten werden mit Kontrastprüfung abgeleitet). clDefault = Akzent des Presets bzw. des Systems (Fluent11).
 > `PPGStyleManager1.AccentColor := $00B05A8E;`
 TPPGStyleManager.Animation = Animationseinstellungen für alle verbundenen Controls (an/aus, Dauer, Systemeinstellung beachten).
-TPPGStyleManager.Appearance = Gemeinsame Appearance aller verbundenen Controls; wird beim Preset-Wechsel und bei geänderten Theme-Farben neu abgeleitet.
+TPPGStyleManager.Appearance = Gemeinsame Appearance aller verbundenen Controls; wird beim Preset-Wechsel und bei geänderten Theme-Farben neu abgeleitet. In der DFM stehen nur die Werte, die vom Preset abweichen (aus einer Markenfarbe abgeleitete Farben gehören dazu).
 TPPGStyleManager.ChartPalette = Diagramm- und Kategorienfarben in dieser Reihenfolge, eine Farbe je Zeile („#RRGGBB" oder Farbname wie clNavy). Leer = Palette des Presets. Im Dunkeln werden zu dunkle Farben aufgehellt.
 > `PPGStyleManager1.ChartPalette.Text := '#0F6CBD'#13#10'#C239B3'#13#10'clGreen';`
 TPPGStyleManager.Preset = Optik-Vorlage aller verbundenen Controls (Classic, ModernFlat, Fluent11).

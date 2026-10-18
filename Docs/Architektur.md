@@ -101,6 +101,7 @@ Alle Maße (Rounding, GlowSize, BorderWidth, Spacing) werden **logisch in 96 DPI
 | `TImageIndex` ist ab 10.4 in `Vcl.ImgList` deprecated | Alias `TPPGImageIndex` (gleiche RTTI, Bildauswahl im Object Inspector funktioniert) |
 | `DesignIntf` in Runtime-Code | Nur in `Source\Design`, nur im Package `dclPPGlow` |
 | Streaming-Reihenfolge | `Preset` vor `Appearance`, `GroupIndex` vor `Down`. `Down` wird beim Laden nicht korrigiert. |
+| DFM voller Preset-Farben (früher ~50 `Appearance.*`-Zeilen je Control, auch ohne Änderung) | In der DFM stehen nur Abweichungen vom Preset (siehe „Speichern nur der Abweichungen“) |
 | IDE schreibt `.dpk`-Dateien beim Speichern neu (Conditionals gehen verloren) | Ein Package-Ordner je Delphi-Version statt `{$IF}` im `.dpk` |
 
 ## Auswahl-Controls (CheckBox, RadioButton, ToggleSwitch)
@@ -460,7 +461,18 @@ Jedes Preset beschreibt seine Farben, Maße und Bewegungsdauern als **Design-Tok
   - Ungeeignete Farben werden nachgedunkelt bzw. aufgehellt, bis Weiß auf dem hellen Akzent 4,5:1 und Schwarz auf dem dunklen 7:1 erreicht.
   - Der Systemwert wird zwischengespeichert; `PPGRefreshSystemAccent` verwirft ihn (automatisch bei `WM_SETTINGCHANGE` über das Hilfsfenster von `PPG.Theme`, dort aber nur, solange `TPPGTheme.Mode = tmSystem` ist).
 - **Symbole:** Haken, Chevrons, Löschen, Schließen und Blätterpfeile kommen aus der Fluent-Symbolschrift (`PPG.IconFont`). Ohne Schrift zeichnet die Basis ihre Linien. Der Aufklapp-Pfeil dreht sich dann nicht, sondern wechselt ab halber Animation auf „oben“; deaktivierte Blätterpfeile bleiben Linien, weil Text keine Transparenz kennt.
-  - **Achtung DFM:** Wie alle Preset-Farben landet der Akzent beim Anwenden des Presets in der `Appearance` und damit in der DFM. Ein im Designer abgelegtes Control behält also den Akzent des Entwicklungsrechners. Zur Laufzeit erzeugte Controls und Controls am StyleManager bekommen den Akzent des Anwenders.
+  - **DFM:** In der DFM stehen nur Werte, die vom Preset abweichen (siehe „Speichern nur der Abweichungen“). Der unveränderte Systemakzent wird deshalb nicht gespeichert; ein im Designer abgelegtes Control bekommt beim Laden den Akzent des Anwenders. Bis Oktober 2026 landeten alle Preset-Farben in der DFM; solche DFMs behalten den Akzent des Entwicklungsrechners, bis das Formular neu gespeichert wird und die Farben dem Preset entsprechen (z. B. nach „Reset to preset defaults“).
+
+## Speichern nur der Abweichungen (Preset, Appearance)
+
+Ein Control ohne StyleManager schreibt `Preset` und `Appearance` nur, soweit sie vom Preset abweichen. Ein unverändertes Control im Standard-Preset hat also keine `Preset`- und keine `Appearance`-Zeile (vorher 49 `Appearance.*`-Zeilen und `Preset`), ein Classic-Button nur `Preset = 'Classic'`. Am StyleManager gebundene Controls speichern beides weiterhin gar nicht.
+
+- **Speichern:** `TPPGCustomControl.WriteState` legt bei einem Schreiben **ohne Vorfahr** eine Vergleichs-Appearance an (`PPGApplyStreamDefaults`: Vorgaben des Presets) und hängt sie als `Appearance.StreamDefaults` an. Die `stored`-Funktionen von `TPPGStateStyle` (Farben, `GlowAlpha`, `GradientDirection`) und `TPPGAppearance` (`FocusColor`, `Rounding`, `BorderWidth`, `GlowSize`) vergleichen damit. `Preset` fällt weg, wenn es das Standard-Preset ist (das setzt schon der Konstruktor). `FontStyle`, `Focused` und `Dark` haben feste Vorgaben (`[]`, `clDefault`), die kein Preset ändert. Außerhalb von `WriteState` (Objektinspektor, Code) gilt `stored` wie bisher.
+- **Mit Vorfahr** (geerbtes Formular, Frame) gibt es keine Vergleichswerte: Der Writer vergleicht dann selbst mit den Werten des Vorfahren. Eine `stored`-Funktion, die `False` liefert, würde sonst eine Rückkehr zum Preset-Wert gegenüber einem abweichenden Vorfahren verschlucken.
+- **Laden:** Beim Lesen von `Preset` (steht in der DFM vor `Appearance`) setzt `SetPreset` zuerst die Vorgaben, dann kommen die Werte der DFM. Das geschieht nur, solange für das Control noch kein `Appearance`-Wert gelesen wurde (alte DFMs mit anderer Reihenfolge) und nur beim ersten `ReadState` seit `Loaded` (die DFM eines geerbten Formulars enthält die Abweichungen vom Vorfahren, nicht vom Preset). Alte DFMs, die alle Werte enthalten, überschreiben die Vorgaben vollständig und sehen gleich aus.
+- **Marke:** `PPGApplyStreamDefaults` rechnet ohne `TPPGTokenOverrides` (`Suspend`/`Resume`). Farben, die aus einer Markenfarbe (`AccentColor`, `ThemeColors`) eines StyleManagers stammen, weichen deshalb vom Preset ab und werden gespeichert; Speichern und Laden hängen nicht davon ab, ob gerade ein Manager mit Marke existiert.
+- **TPPGStyleManager** speichert seine eigene `Appearance` und `Preset` nach denselben Regeln (`WriteState`, `ReadState`, `SetPreset`).
+- Tests: `TPresetStreamingTests` (alle Klassen × alle Presets, geänderte Werte, alte DFMs mit allen Werten und anderer Reihenfolge, geerbtes Formular, Marke, StyleManager).
 
 ## Dark Mode ohne VCL-Style (Phase 8.3)
 

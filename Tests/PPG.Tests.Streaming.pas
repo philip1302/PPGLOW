@@ -32,24 +32,49 @@ uses
   PPG.TagEdit, PPG.Grid.Print, PPG.Planner.Print, PPG.Kanban.Print, PPG.StyleManager,
   PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Planner, PPG.DB.Kanban,
   PPG.DB.Fields, PPG.DB.Navigator, PPG.RichEdit, PPG.DB.RichEdit,
+  PPG.Types, PPG.Appearance, PPG.Tokens, PPG.Render.Intf, PPG.Render.Registry,
   PPG.Tests.Controls;
 
 type
-  TDfmStreamingTests = class(TControlTestCase)
-  private
+  /// Gemeinsame Hilfen: Attrappen-DataSource, Komponente anlegen, Rundreise
+  TStreamingTestCase = class(TControlTestCase)
+  protected
     FData: TClientDataSet;
     FSource: TDataSource;
     function RoundTrip(C: TComponent): TComponent;
     function NewComponent(Cls: TComponentClass): TComponent;
-    function CheckNested(Cls: TComponentClass; PInfo: PPropInfo; Errors, Unchanged: TStrings): Boolean;
-  protected
     procedure SetUp; override;
+  end;
+
+  TDfmStreamingTests = class(TStreamingTestCase)
+  private
+    function CheckNested(Cls: TComponentClass; PInfo: PPropInfo; Errors, Unchanged: TStrings): Boolean;
   published
     procedure PaletteListIsComplete;
     procedure EveryPropertySurvivesDfm;
     procedure NestedPropertiesSurviveDfm;
     procedure RatingHalfValueSurvivesDfm;
     procedure StatusBarOwnFontSurvivesDfm;
+  end;
+
+  /// In der DFM stehen nur Abweichungen vom Preset (Preset, Appearance), und
+  /// die Rundreise Speichern -> Laden ergibt dieselben Werte: fuer alle
+  /// Klassen und Presets, geaenderte Werte, alte DFMs mit allen Werten,
+  /// geerbte Formulare (Vorfahr), Marke eines StyleManagers und den
+  /// StyleManager selbst.
+  TPresetStreamingTests = class(TStreamingTestCase)
+  private
+    function DfmText(C: TComponent): string;
+    function LoadText(Cls: TComponentClass; const Text: string): TComponent;
+  published
+    procedure DefaultsWriteNoPresetOrAppearance;
+    procedure EveryPresetWritesOnlyPresetAndSurvives;
+    procedure ChangedValuesAreStoredAndSurvive;
+    procedure ValueResetToPresetIsNotStored;
+    procedure OldDfmWithAllValuesLoadsUnchanged;
+    procedure BrandingDoesNotChangeStreaming;
+    procedure InheritedFormKeepsAncestorValues;
+    procedure StyleManagerWritesOnlyDifferences;
   end;
 
 implementation
@@ -471,9 +496,9 @@ begin
   end;
 end;
 
-{ TDfmStreamingTests }
+{ TStreamingTestCase }
 
-procedure TDfmStreamingTests.SetUp;
+procedure TStreamingTestCase.SetUp;
 begin
   inherited SetUp;
   FData := TClientDataSet.Create(FForm);
@@ -496,7 +521,7 @@ begin
   FSource.DataSet := FData;
 end;
 
-function TDfmStreamingTests.NewComponent(Cls: TComponentClass): TComponent;
+function TStreamingTestCase.NewComponent(Cls: TComponentClass): TComponent;
 var
   PInfo: PPropInfo;
 begin
@@ -508,7 +533,7 @@ begin
     SetObjectProp(Result, PInfo, FSource);
 end;
 
-function TDfmStreamingTests.RoundTrip(C: TComponent): TComponent;
+function TStreamingTestCase.RoundTrip(C: TComponent): TComponent;
 var
   M: TMemoryStream;
 begin
@@ -528,6 +553,8 @@ begin
     M.Free;
   end;
 end;
+
+{ TDfmStreamingTests }
 
 procedure TDfmStreamingTests.PaletteListIsComplete;
 var
@@ -833,7 +860,586 @@ begin
   end;
 end;
 
+{ TPresetStreamingTests }
+
+const
+  StateNames: array[0..4] of string = ('Normal', 'Hot', 'Down', 'Disabled', 'Checked');
+  StateProps: array[0..7] of string = ('Color', 'ColorTo', 'ColorMirror', 'ColorMirrorTo',
+    'BorderColor', 'GlowColor', 'GlowAlpha', 'TextColor');
+
+function AppearanceOf(C: TObject): TPPGAppearance;
+var
+  PInfo: PPropInfo;
+begin
+  Result := nil;
+  PInfo := GetPropInfo(C, 'Appearance');
+  if (PInfo <> nil) and (PInfo^.PropType^.Kind = tkClass) and
+    (GetObjectProp(C, PInfo) is TPPGAppearance) then
+    Result := TPPGAppearance(GetObjectProp(C, PInfo));
+end;
+
+function BinaryToText(M: TStream): string;
+var
+  T: TStringStream;
+begin
+  M.Position := 0;
+  T := TStringStream.Create('', TEncoding.UTF8);
+  try
+    ObjectBinaryToText(M, T);
+    Result := T.DataString;
+  finally
+    T.Free;
+  end;
+end;
+
+{ Zeilen, die (ohne Einrueckung) mit Prefix beginnen }
+function DfmLines(const Text, Prefix: string): TStringList;
+var
+  All: TStringList;
+  I: Integer;
+  L: string;
+begin
+  Result := TStringList.Create;
+  All := TStringList.Create;
+  try
+    All.Text := Text;
+    for I := 0 to All.Count - 1 do
+    begin
+      L := Trim(All[I]);
+      if SameText(Copy(L, 1, Length(Prefix)), Prefix) then
+        Result.Add(L);
+    end;
+  finally
+    All.Free;
+  end;
+end;
+
+function LineIndex(const Text, Prefix: string): Integer;
+var
+  All: TStringList;
+  I: Integer;
+begin
+  Result := -1;
+  All := TStringList.Create;
+  try
+    All.Text := Text;
+    for I := 0 to All.Count - 1 do
+      if SameText(Copy(Trim(All[I]), 1, Length(Prefix)), Prefix) then
+        Exit(I);
+  finally
+    All.Free;
+  end;
+end;
+
+function OtherColor(C: TColor): TColor;
+begin
+  if C = $00123456 then
+    Result := $00654321
+  else
+    Result := $00123456;
+end;
+
+{ Alle Appearance-Werte so, wie fruehere Versionen sie geschrieben haben
+  (jede Farbe, jede Glow-Staerke, Richtung und die Masse) }
+procedure AddAllAppearanceLines(A: TPPGAppearance; Lines: TStrings);
+var
+  S, P: Integer;
+  St: TObject;
+begin
+  for S := 0 to High(StateNames) do
+  begin
+    St := GetObjectProp(A, StateNames[S]);
+    for P := 0 to High(StateProps) do
+      Lines.Add(Format('  Appearance.%s.%s = %d', [StateNames[S], StateProps[P],
+        GetOrdProp(St, StateProps[P])]));
+    Lines.Add(Format('  Appearance.%s.GradientDirection = %s', [StateNames[S],
+      GetEnumProp(St, 'GradientDirection')]));
+  end;
+  Lines.Add(Format('  Appearance.FocusColor = %d', [Integer(A.FocusColor)]));
+  Lines.Add(Format('  Appearance.Rounding = %d', [A.Rounding]));
+  Lines.Add(Format('  Appearance.BorderWidth = %d', [A.BorderWidth]));
+  Lines.Add(Format('  Appearance.GlowSize = %d', [A.GlowSize]));
+end;
+
+function TPresetStreamingTests.DfmText(C: TComponent): string;
+var
+  M: TMemoryStream;
+begin
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(C);
+    Result := BinaryToText(M);
+  finally
+    M.Free;
+  end;
+end;
+
+function TPresetStreamingTests.LoadText(Cls: TComponentClass; const Text: string): TComponent;
+var
+  T: TStringStream;
+  M: TMemoryStream;
+begin
+  T := TStringStream.Create(Text, TEncoding.UTF8);
+  M := TMemoryStream.Create;
+  try
+    ObjectTextToBinary(T, M);
+    M.Position := 0;
+    Result := NewComponent(Cls);
+    try
+      M.ReadComponent(Result);
+    except
+      Result.Free;
+      raise;
+    end;
+  finally
+    M.Free;
+    T.Free;
+  end;
+end;
+
+procedure TPresetStreamingTests.DefaultsWriteNoPresetOrAppearance;
+var
+  CI, Count: Integer;
+  C: TComponent;
+  Text: string;
+  L, Errors: TStringList;
+begin
+  Errors := TStringList.Create;
+  try
+    Count := 0;
+    for CI := 0 to High(ControlClasses) do
+    begin
+      RegisterClass(TPersistentClass(ControlClasses[CI]));
+      C := NewComponent(ControlClasses[CI]);
+      try
+        if AppearanceOf(C) = nil then
+          Continue;
+        Inc(Count);
+        Text := DfmText(C);
+        if (C is TPPGButton) or (C is TPPGDBNavigator) then
+          Status(Format('%s: %d DFM-Zeilen', [C.ClassName, Length(Text.Split([#10])) - 1]));
+        L := DfmLines(Text, 'Appearance.');
+        try
+          if L.Count > 0 then
+            Errors.Add(Format('%s: %d Appearance-Zeilen (%s)', [C.ClassName, L.Count, L[0]]));
+        finally
+          L.Free;
+        end;
+        if LineIndex(Text, 'Preset ') >= 0 then
+          Errors.Add(C.ClassName + ': Standard-Preset gespeichert');
+      finally
+        C.Free;
+      end;
+    end;
+    Status(Format('%d Klassen mit Appearance: ohne Preset- und Appearance-Zeilen', [Count]));
+    CheckTrue(Count > 60, 'zu wenige Klassen mit Appearance');
+    CheckEquals('', Errors.Text, Errors.Text);
+  finally
+    Errors.Free;
+  end;
+end;
+
+procedure TPresetStreamingTests.EveryPresetWritesOnlyPresetAndSurvives;
+var
+  Names, Errors, L: TStringList;
+  N, CI, Checked: Integer;
+  C, C2: TComponent;
+  Text: string;
+begin
+  Names := TStringList.Create;
+  Errors := TStringList.Create;
+  try
+    TPPGRendererRegistry.GetNames(Names);
+    CheckTrue(Names.Count >= 3, 'Presets Classic, ModernFlat, Fluent11');
+    Checked := 0;
+    for N := 0 to Names.Count - 1 do
+      for CI := 0 to High(ControlClasses) do
+      begin
+        RegisterClass(TPersistentClass(ControlClasses[CI]));
+        C := NewComponent(ControlClasses[CI]);
+        try
+          if AppearanceOf(C) = nil then
+            Continue;
+          SetStrProp(C, 'Preset', Names[N]);
+          Text := DfmText(C);
+          L := DfmLines(Text, 'Appearance.');
+          try
+            if L.Count > 0 then
+              Errors.Add(Format('%s/%s: %d Appearance-Zeilen (%s)', [C.ClassName, Names[N],
+                L.Count, L[0]]));
+          finally
+            L.Free;
+          end;
+          if not SameText(Names[N], TPPGRendererRegistry.DefaultName) and
+            (Pos('Preset = ''' + Names[N] + '''', Text) = 0) then
+            Errors.Add(Format('%s/%s: Preset fehlt in der DFM', [C.ClassName, Names[N]]));
+          C2 := RoundTrip(C);
+          try
+            Inc(Checked);
+            if GetStrProp(C2, 'Preset') <> Names[N] then
+              Errors.Add(Format('%s/%s: geladen Preset %s', [C.ClassName, Names[N],
+                GetStrProp(C2, 'Preset')]));
+            if not AppearanceOf(C2).Equals(AppearanceOf(C)) then
+              Errors.Add(Format('%s/%s: Appearance nach dem Laden anders', [C.ClassName, Names[N]]));
+          finally
+            C2.Free;
+          end;
+        finally
+          C.Free;
+        end;
+      end;
+    Status(Format('%d Rundreisen (Klasse x Preset)', [Checked]));
+    CheckEquals('', Errors.Text, Errors.Text);
+  finally
+    Errors.Free;
+    Names.Free;
+  end;
+end;
+
+procedure TPresetStreamingTests.ChangedValuesAreStoredAndSurvive;
+var
+  Names, Errors, L, Want: TStringList;
+  N, CI, I: Integer;
+  C, C2: TComponent;
+  A, D: TPPGAppearance;
+  Text: string;
+begin
+  Names := TStringList.Create;
+  Errors := TStringList.Create;
+  Want := TStringList.Create;
+  D := TPPGAppearance.Create(nil);
+  try
+    TPPGRendererRegistry.GetNames(Names);
+    Want.Add('Appearance.Normal.Color');
+    Want.Add('Appearance.Hot.GlowAlpha');
+    Want.Add('Appearance.Checked.GradientDirection');
+    Want.Add('Appearance.Rounding');
+    Want.Add('Appearance.FocusColor');
+    Want.Add('Appearance.Focused.Color');
+    Want.Add('Appearance.Dark.Normal.TextColor');
+    Want.Sort;
+    for N := 0 to Names.Count - 1 do
+    begin
+      PPGApplyStreamDefaults(TPPGRendererRegistry.Get(Names[N]), D);
+      for CI := 0 to High(ControlClasses) do
+      begin
+        RegisterClass(TPersistentClass(ControlClasses[CI]));
+        C := NewComponent(ControlClasses[CI]);
+        try
+          A := AppearanceOf(C);
+          if A = nil then
+            Continue;
+          SetStrProp(C, 'Preset', Names[N]);
+          // Vom Anwender geaenderte Werte (je eine Art: Farbe, Glow, Richtung,
+          // Mass, Fokusfarbe, eigene Fokus- und Dunkel-Farbe)
+          A.Normal.Color := OtherColor(D.Normal.Color);
+          A.Hot.GlowAlpha := (D.Hot.GlowAlpha + 1) mod 256;
+          A.Checked.GradientDirection := gdHorizontal;
+          A.Rounding := D.Rounding + 5;
+          A.FocusColor := OtherColor(D.FocusColor);
+          A.Focused.Color := clRed;
+          A.Dark.Normal.TextColor := clYellow;
+          Text := DfmText(C);
+          L := DfmLines(Text, 'Appearance.');
+          try
+            for I := 0 to L.Count - 1 do
+              L[I] := Trim(Copy(L[I], 1, Pos('=', L[I]) - 1));
+            L.Sort;
+            if L.Text <> Want.Text then
+              Errors.Add(Format('%s/%s: gespeichert %s, erwartet %s', [C.ClassName, Names[N],
+                L.CommaText, Want.CommaText]));
+          finally
+            L.Free;
+          end;
+          if not SameText(Names[N], TPPGRendererRegistry.DefaultName) and
+            (LineIndex(Text, 'Preset ') > LineIndex(Text, 'Appearance.')) then
+            Errors.Add(Format('%s/%s: Preset steht nach Appearance', [C.ClassName, Names[N]]));
+          C2 := RoundTrip(C);
+          try
+            if not AppearanceOf(C2).Equals(A) then
+              Errors.Add(Format('%s/%s: Appearance nach dem Laden anders', [C.ClassName, Names[N]]));
+          finally
+            C2.Free;
+          end;
+        finally
+          C.Free;
+        end;
+      end;
+    end;
+    CheckEquals('', Errors.Text, Errors.Text);
+  finally
+    D.Free;
+    Want.Free;
+    Errors.Free;
+    Names.Free;
+  end;
+end;
+
+procedure TPresetStreamingTests.ValueResetToPresetIsNotStored;
+var
+  B, B2: TPPGButton;
+  Text: string;
+begin
+  B := NewButton;
+  B.Preset := 'Classic';
+  // Vorgaben eines ANDEREN Presets (ModernFlat: Rundung 6, Glow 5) weichen
+  // von Classic ab und muessen gespeichert werden
+  B.Appearance.Rounding := 6;
+  B.Appearance.GlowSize := 5;
+  Text := DfmText(B);
+  CheckTrue(Pos('Appearance.Rounding = 6', Text) > 0, Text);
+  CheckTrue(Pos('Appearance.GlowSize = 5', Text) > 0, Text);
+  B2 := RoundTrip(B) as TPPGButton;
+  try
+    CheckEquals(6, B2.Appearance.Rounding);
+    CheckEquals(5, B2.Appearance.GlowSize);
+    CheckTrue(B2.Appearance.Equals(B.Appearance));
+  finally
+    B2.Free;
+  end;
+  // Zurueck auf die Classic-Werte: nichts mehr gespeichert
+  B.Appearance.Rounding := 3;
+  B.Appearance.GlowSize := 0;
+  Text := DfmText(B);
+  CheckEquals(-1, LineIndex(Text, 'Appearance.'), Text);
+  // ResetToPresetDefaults ebenso
+  B.Appearance.Hot.Color := clLime;
+  B.ResetToPresetDefaults;
+  CheckEquals(-1, LineIndex(DfmText(B), 'Appearance.'));
+end;
+
+procedure TPresetStreamingTests.OldDfmWithAllValuesLoadsUnchanged;
+var
+  Ref, B: TPPGButton;
+  Lines: TStringList;
+  Header: string;
+
+  procedure CheckLoad(const Variant, WantPreset: string);
+  begin
+    B := LoadText(TPPGButton, Lines.Text) as TPPGButton;
+    try
+      CheckEquals(WantPreset, B.Preset, Variant);
+      CheckTrue(B.Appearance.Equals(Ref.Appearance), Variant + ': Appearance anders');
+    finally
+      B.Free;
+    end;
+  end;
+
+begin
+  Ref := NewButton;
+  Header := 'object ' + Ref.ClassName;
+  Lines := TStringList.Create;
+  try
+    // Wie fruehere Versionen: Preset und ALLE Werte, teils eigene, teils die
+    // eines anderen Presets
+    Ref.Preset := 'Classic';
+    Ref.Appearance.Normal.Color := $00102030;
+    Ref.Appearance.Hot.GradientDirection := gdHorizontal;
+    Ref.Appearance.Down.TextColor := clRed;
+    Ref.Appearance.Rounding := 6;
+    Ref.Appearance.GlowSize := 5;
+    Lines.Add(Header);
+    Lines.Add('  Preset = ''Classic''');
+    AddAllAppearanceLines(Ref.Appearance, Lines);
+    Lines.Add('end');
+    CheckLoad('Preset vor Appearance', 'Classic');
+    // Andere Reihenfolge (Appearance vor Preset): die gelesenen Werte bleiben
+    Lines.Clear;
+    Lines.Add(Header);
+    AddAllAppearanceLines(Ref.Appearance, Lines);
+    Lines.Add('  Preset = ''Classic''');
+    Lines.Add('end');
+    CheckLoad('Appearance vor Preset', 'Classic');
+    // Fluent11 mit allen Werten von ModernFlat in der DFM: die DFM gewinnt
+    // gegen die Fluent-Vorgaben
+    Ref.Preset := 'ModernFlat';
+    Ref.ResetToPresetDefaults;
+    Lines.Clear;
+    Lines.Add(Header);
+    Lines.Add('  Preset = ''Fluent11''');
+    AddAllAppearanceLines(Ref.Appearance, Lines);
+    Lines.Add('end');
+    CheckLoad('Fluent11 mit ModernFlat-Werten', 'Fluent11');
+    // Standard-Preset ausdruecklich und alle Werte
+    Lines.Clear;
+    Lines.Add(Header);
+    Lines.Add('  Preset = ''ModernFlat''');
+    AddAllAppearanceLines(Ref.Appearance, Lines);
+    Lines.Add('end');
+    CheckLoad('ModernFlat ausdruecklich', 'ModernFlat');
+  finally
+    Lines.Free;
+  end;
+end;
+
+procedure TPresetStreamingTests.BrandingDoesNotChangeStreaming;
+var
+  SM, SM2: TPPGStyleManager;
+  B, B2, Plain: TPPGButton;
+begin
+  SM := TPPGStyleManager.Create(nil);
+  try
+    SM.AccentColor := $00804020;
+    // Unter der Marke angelegt: die Akzentfarben weichen vom reinen Preset ab
+    B := NewButton;
+    CheckTrue(LineIndex(DfmText(B), 'Appearance.') >= 0, 'Markenfarben muessen gespeichert werden');
+  finally
+    SM.Free;
+  end;
+  CheckFalse(TPPGTokenOverrides.Active, 'Marke nach Free des Managers entfernt');
+  // Laden ohne Marke: dieselben Farben
+  B2 := RoundTrip(B) as TPPGButton;
+  try
+    CheckTrue(B2.Appearance.Equals(B.Appearance), 'Markenfarben nach dem Laden');
+  finally
+    B2.Free;
+  end;
+  // Ohne Marke angelegt, mit aktiver Marke gespeichert und geladen: reines Preset
+  Plain := NewButton;
+  Plain.Preset := 'Fluent11';
+  SM2 := TPPGStyleManager.Create(nil);
+  try
+    SM2.AccentColor := $00206040;
+    CheckEquals(-1, LineIndex(DfmText(Plain), 'Appearance.'), 'reines Preset: nichts zu speichern');
+    B2 := RoundTrip(Plain) as TPPGButton;
+    try
+      CheckTrue(B2.Appearance.Equals(Plain.Appearance), 'aktive Marke aendert das Laden nicht');
+    finally
+      B2.Free;
+    end;
+  finally
+    SM2.Free;
+  end;
+  CheckFalse(TPPGTokenOverrides.Active);
+end;
+
+procedure TPresetStreamingTests.InheritedFormKeepsAncestorValues;
+var
+  A, D, C: TPPGButton;
+  MA, MD: TMemoryStream;
+  Text: string;
+
+  function Load: TPPGButton;
+  begin
+    Result := NewButton;
+    try
+      // wie ein geerbtes Formular: erst die DFM des Vorfahren, dann die eigene,
+      // Loaded einmal am Ende
+      BeginGlobalLoading;
+      try
+        MA.Position := 0;
+        MA.ReadComponent(Result);
+        MD.Position := 0;
+        MD.ReadComponent(Result);
+        NotifyGlobalLoading;
+      finally
+        EndGlobalLoading;
+      end;
+    except
+      Result.Free;
+      raise;
+    end;
+  end;
+
+begin
+  MA := TMemoryStream.Create;
+  MD := TMemoryStream.Create;
+  try
+    // 1) Vorfahr ModernFlat, Nachfahr Classic mit Rundung 6 (= Vorfahr, nicht Classic)
+    A := NewButton;
+    D := NewButton;
+    D.Preset := 'Classic';
+    D.Appearance.Rounding := 6;
+    MA.WriteComponent(A);
+    MD.WriteDescendent(D, A);
+    Text := BinaryToText(MD);
+    CheckTrue(Pos('Preset = ''Classic''', Text) > 0, Text);
+    CheckEquals(-1, LineIndex(Text, 'Appearance.Rounding'), 'gleich dem Vorfahren: nicht gespeichert');
+    C := Load;
+    try
+      CheckEquals('Classic', C.Preset);
+      CheckTrue(C.Appearance.Equals(D.Appearance), 'Nachfahr 1 nach dem Laden');
+    finally
+      C.Free;
+    end;
+    // 2) Vorfahr Classic mit Rundung 9, Nachfahr Classic mit der Vorgabe 3
+    MA.Clear;
+    MD.Clear;
+    A.Preset := 'Classic';
+    A.Appearance.Rounding := 9;
+    D.Appearance.Rounding := 3;
+    MA.WriteComponent(A);
+    MD.WriteDescendent(D, A);
+    Text := BinaryToText(MD);
+    CheckTrue(Pos('Appearance.Rounding = 3', Text) > 0, 'Abweichung vom Vorfahren gespeichert: ' + Text);
+    C := Load;
+    try
+      CheckEquals(3, C.Appearance.Rounding);
+      CheckTrue(C.Appearance.Equals(D.Appearance), 'Nachfahr 2 nach dem Laden');
+    finally
+      C.Free;
+    end;
+  finally
+    MD.Free;
+    MA.Free;
+  end;
+end;
+
+procedure TPresetStreamingTests.StyleManagerWritesOnlyDifferences;
+var
+  SM, SM2: TPPGStyleManager;
+  B: TPPGButton;
+  Text: string;
+  L: TStringList;
+begin
+  SM := TPPGStyleManager.Create(nil);
+  try
+    Text := DfmText(SM);
+    CheckEquals(-1, LineIndex(Text, 'Appearance.'), Text);
+    CheckEquals(-1, LineIndex(Text, 'Preset '), Text);
+    SM.Preset := 'Fluent11';
+    SM.Appearance.Rounding := 11;
+    Text := DfmText(SM);
+    L := DfmLines(Text, 'Appearance.');
+    try
+      CheckEquals(1, L.Count, Text);
+      CheckEquals('Appearance.Rounding = 11', L[0]);
+    finally
+      L.Free;
+    end;
+    CheckTrue(LineIndex(Text, 'Preset ') >= 0, Text);
+    SM2 := RoundTrip(SM) as TPPGStyleManager;
+    try
+      CheckEquals('Fluent11', SM2.Preset);
+      CheckTrue(SM2.Appearance.Equals(SM.Appearance), 'StyleManager nach dem Laden');
+    finally
+      SM2.Free;
+    end;
+    // Am Manager: weder Preset noch Appearance im Control
+    B := NewButton;
+    B.StyleManager := SM;
+    Text := DfmText(B);
+    CheckEquals(-1, LineIndex(Text, 'Appearance.'), Text);
+    CheckEquals(-1, LineIndex(Text, 'Preset '), Text);
+    B.StyleManager := nil;
+    // Marke: die davon abgeleiteten Farben des Managers bleiben gespeichert
+    SM.AccentColor := $00406080;
+    Text := DfmText(SM);
+    CheckTrue(LineIndex(Text, 'Appearance.') >= 0, Text);
+    SM2 := RoundTrip(SM) as TPPGStyleManager;
+    try
+      CheckTrue(SM2.Appearance.Equals(SM.Appearance), 'StyleManager mit Marke nach dem Laden');
+    finally
+      SM2.Free;
+    end;
+  finally
+    SM.Free;
+  end;
+  CheckFalse(TPPGTokenOverrides.Active, 'Marke nach Free der Manager entfernt');
+end;
+
 initialization
   RegisterTest('Streaming', TDfmStreamingTests.Suite);
+  RegisterTest('Streaming', TPresetStreamingTests.Suite);
 
 end.

@@ -208,6 +208,6 @@ Eine neue Unit muss in **alle** Projektlisten eingetragen werden: `Packages\Delp
   - Fluent11-Aufklapp-Pfeil mit Symbolschrift dreht sich nicht, sondern wechselt ab halber Animation.
 - Phase 8.2 (eigene Entscheidungen, vom User noch zu bestätigen):
   - Fluent11-Druckzustand: dunkler Text plus kräftigerer Rand statt blasserem Text (WinUI), damit eingerastete Toggle-Buttons lesbar und erkennbar bleiben. Ein eingerasteter Toggle in Akzentfarbe (wie WinUI) bräuchte eine Änderung am Button.
-  - Der Systemakzent landet wie alle Preset-Farben in der DFM (Akzent des Entwicklungsrechners). Alternative wäre ein „Akzent folgt System“-Merker in der Appearance.
+  - Seit Oktober 2026 stehen in der DFM nur Abweichungen vom Preset; der unveränderte Systemakzent wird nicht mehr gespeichert und folgt beim Laden dem Rechner des Anwenders (`Docs\Architektur.md`, „Speichern nur der Abweichungen“). Ältere DFMs mit allen Farben behalten den Akzent des Entwicklungsrechners bis zum nächsten Speichern.
   - Der gemischte Zustand der CheckBox ist ein Akzent-Strich auf heller Fläche (WinUI: weißer Strich auf Akzent).
 - Phase 3 (eigene Entscheidungen, vom User noch zu bestätigen): `Position` wird wie in der VCL still geklemmt, `Min > Max` wirft. Die GroupBox-Beschriftung ist eine Plakette statt einer Lücke im Rahmen. Container bieten kein `AutoSize`.

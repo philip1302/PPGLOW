@@ -80,6 +80,7 @@ type
     class var FColors: array[Boolean, TPPGTokenColor] of TColor;
     class var FChartPalette: TArray<TColor>;
     class var FVersion: Integer;
+    class var FSuspended: Integer;
     class procedure SetAccentBase(const Value: TColor); static;
     class function GetColor(Dark: Boolean; Kind: TPPGTokenColor): TColor; static;
     class procedure SetColor(Dark: Boolean; Kind: TPPGTokenColor; const Value: TColor); static;
@@ -99,6 +100,11 @@ type
     class property ChartPalette: TArray<TColor> read GetChartPalette write SetChartPalette;
     /// Zaehlt jede Aenderung (fuer Zwischenspeicher).
     class property Version: Integer read FVersion;
+    /// Ueberschreibungen voruebergehend nicht anwenden (verschachtelbar):
+    /// Preset-Vorgaben fuer das DFM-Streaming sollen nicht von einer gerade
+    /// aktiven Marke abhaengen (PPGApplyStreamDefaults).
+    class procedure Suspend; static;
+    class procedure Resume; static;
   end;
 
 /// Tokens des Standard-Presets OHNE anwendungsweite Ueberschreibungen
@@ -478,6 +484,8 @@ var
   K: TPPGTokenColor;
   C: TColor;
 begin
+  if TPPGTokenOverrides.FSuspended > 0 then
+    Exit;
   if TPPGTokenOverrides.FAccentBase <> clDefault then
   begin
     // Wie der Fluent-Systemakzent: Hover/Druck = Akzent mit 90/80 % Deckung
@@ -513,6 +521,18 @@ begin
 end;
 
 { TPPGTokenOverrides }
+
+class procedure TPPGTokenOverrides.Suspend;
+begin
+  Inc(FSuspended);
+end;
+
+class procedure TPPGTokenOverrides.Resume;
+begin
+  Assert(FSuspended > 0, 'TPPGTokenOverrides.Resume without Suspend');
+  if FSuspended > 0 then
+    Dec(FSuspended);
+end;
 
 class procedure TPPGTokenOverrides.Clear;
 var

@@ -10,7 +10,11 @@ unit PPG.Appearance;
   - GetOwner ist implementiert, damit Object Inspector und Meldungen den
     vollen Pfad kennen ("Button1.Appearance.Hot").
   - Masse werden logisch (96 DPI) gespeichert und erst beim Zeichnen skaliert.
-    Dadurch gibt es keine Doppelskalierung bei Per-Monitor-DPI-Wechseln. }
+    Dadurch gibt es keine Doppelskalierung bei Per-Monitor-DPI-Wechseln.
+  - Nur Abweichungen vom Preset kommen in die DFM: Waehrend das Control sich
+    schreibt, stehen in StreamDefaults die Vorgaben seines Presets; gleiche
+    Werte sind dann "stored False". Beim Laden setzt das Preset (steht in der
+    DFM vor Appearance) zuerst seine Vorgaben, danach kommen die Abweichungen. }
 
 {$I ..\PPG.inc}
 
@@ -25,6 +29,8 @@ const
   PPGMaxGlowSize = 30;
 
 type
+  TPPGAppearance = class;
+
   TPPGStateStyle = class(TPersistent)
   private
     FOwner: TPersistent;
@@ -49,6 +55,17 @@ type
     procedure SetGlowAlpha(const Value: Byte);
     procedure SetDirection(const Value: TPPGGradientDirection);
     procedure SetFontStyle(const Value: TFontStyles);
+    /// Gleicher Zustand in TPPGAppearance.StreamDefaults (nil = keine Vergleichswerte).
+    function StreamDefault: TPPGStateStyle;
+    function IsColorStored: Boolean;
+    function IsColorToStored: Boolean;
+    function IsColorMirrorStored: Boolean;
+    function IsColorMirrorToStored: Boolean;
+    function IsBorderColorStored: Boolean;
+    function IsGlowColorStored: Boolean;
+    function IsGlowAlphaStored: Boolean;
+    function IsTextColorStored: Boolean;
+    function IsDirectionStored: Boolean;
   protected
     procedure Changed; virtual;
     function GetOwner: TPersistent; override;
@@ -60,15 +77,18 @@ type
       AGlowAlpha: Byte);
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
-    property Color: TColor read FColor write SetColor;
-    property ColorTo: TColor read FColorTo write SetColorTo;
-    property ColorMirror: TColor read FColorMirror write SetColorMirror;
-    property ColorMirrorTo: TColor read FColorMirrorTo write SetColorMirrorTo;
-    property BorderColor: TColor read FBorderColor write SetBorderColor;
-    property GlowColor: TColor read FGlowColor write SetGlowColor;
-    property GlowAlpha: Byte read FGlowAlpha write SetGlowAlpha;
-    property TextColor: TColor read FTextColor write SetTextColor;
-    property GradientDirection: TPPGGradientDirection read FDirection write SetDirection;
+    // stored: beim Speichern eines Controls nur, was vom Preset abweicht
+    // (TPPGAppearance.StreamDefaults); ohne Vergleichswerte immer
+    property Color: TColor read FColor write SetColor stored IsColorStored;
+    property ColorTo: TColor read FColorTo write SetColorTo stored IsColorToStored;
+    property ColorMirror: TColor read FColorMirror write SetColorMirror stored IsColorMirrorStored;
+    property ColorMirrorTo: TColor read FColorMirrorTo write SetColorMirrorTo stored IsColorMirrorToStored;
+    property BorderColor: TColor read FBorderColor write SetBorderColor stored IsBorderColorStored;
+    property GlowColor: TColor read FGlowColor write SetGlowColor stored IsGlowColorStored;
+    property GlowAlpha: Byte read FGlowAlpha write SetGlowAlpha stored IsGlowAlphaStored;
+    property TextColor: TColor read FTextColor write SetTextColor stored IsTextColorStored;
+    property GradientDirection: TPPGGradientDirection read FDirection write SetDirection
+      stored IsDirectionStored;
     /// Zusaetzliche Schriftstile in diesem Zustand (z.B. fett bei Hover oder
     /// eingerastet); [] = Schrift des Controls.
     property FontStyle: TFontStyles read FFontStyle write SetFontStyle default [];
@@ -159,7 +179,12 @@ type
     FGlowSize: Integer;
     FUpdateCount: Integer;
     FChangedDuringUpdate: Boolean;
+    FStreamDefaults: TPPGAppearance;
     FOnChange: TNotifyEvent;
+    function IsFocusColorStored: Boolean;
+    function IsRoundingStored: Boolean;
+    function IsBorderWidthStored: Boolean;
+    function IsGlowSizeStored: Boolean;
     procedure SetNormal(const Value: TPPGStateStyle);
     procedure SetHot(const Value: TPPGStateStyle);
     procedure SetDown(const Value: TPPGStateStyle);
@@ -188,6 +213,11 @@ type
     function Resolve(State: TPPGVisualState; PPI: Integer; AFocused: Boolean): TPPGSurfaceStyle;
     /// Wie Resolve, aber fuer einen beliebigen Zustandsstil (z.B. Checked).
     function ResolveStyle(S: TPPGStateStyle; PPI: Integer; AFocused: Boolean): TPPGSurfaceStyle;
+    /// Vergleichswerte fuer das Speichern (nicht besessen, wird nicht
+    /// kopiert): Werte, die ihnen gleichen, kommen nicht in die DFM. Das
+    /// Control setzt hier waehrend WriteState die Vorgaben seines Presets
+    /// (PPGApplyStreamDefaults); nil = alles speichern.
+    property StreamDefaults: TPPGAppearance read FStreamDefaults write FStreamDefaults;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
     property Normal: TPPGStateStyle read FNormal write SetNormal;
@@ -197,10 +227,10 @@ type
     /// "An"-Zustand von CheckBox, RadioButton und ToggleSwitch:
     /// Color* = Fuellung, TextColor = Haken/Punkt/Schalterknopf.
     property Checked: TPPGStateStyle read FChecked write SetChecked;
-    property FocusColor: TColor read FFocusColor write SetFocusColor;
-    property Rounding: Integer read FRounding write SetRounding;
-    property BorderWidth: Integer read FBorderWidth write SetBorderWidth;
-    property GlowSize: Integer read FGlowSize write SetGlowSize;
+    property FocusColor: TColor read FFocusColor write SetFocusColor stored IsFocusColorStored;
+    property Rounding: Integer read FRounding write SetRounding stored IsRoundingStored;
+    property BorderWidth: Integer read FBorderWidth write SetBorderWidth stored IsBorderWidthStored;
+    property GlowSize: Integer read FGlowSize write SetGlowSize stored IsGlowSizeStored;
     /// Eigene Farben im Fokus (nach der Fokusfarbe); clDefault = keine.
     property Focused: TPPGStateColors read FFocused write SetFocused;
     /// Eigene Farben im Dark Mode (sonst gelten dort die Preset-Farben).
@@ -328,6 +358,101 @@ end;
 function TPPGStateStyle.GetOwner: TPersistent;
 begin
   Result := FOwner;
+end;
+
+function TPPGStateStyle.StreamDefault: TPPGStateStyle;
+var
+  A, D: TPPGAppearance;
+begin
+  Result := nil;
+  if not (FOwner is TPPGAppearance) then
+    Exit;
+  A := TPPGAppearance(FOwner);
+  D := A.FStreamDefaults;
+  if D = nil then
+    Exit;
+  if Self = A.FNormal then
+    Result := D.FNormal
+  else if Self = A.FHot then
+    Result := D.FHot
+  else if Self = A.FDown then
+    Result := D.FDown
+  else if Self = A.FDisabled then
+    Result := D.FDisabled
+  else if Self = A.FChecked then
+    Result := D.FChecked;
+end;
+
+function TPPGStateStyle.IsColorStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FColor <> D.FColor);
+end;
+
+function TPPGStateStyle.IsColorToStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FColorTo <> D.FColorTo);
+end;
+
+function TPPGStateStyle.IsColorMirrorStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FColorMirror <> D.FColorMirror);
+end;
+
+function TPPGStateStyle.IsColorMirrorToStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FColorMirrorTo <> D.FColorMirrorTo);
+end;
+
+function TPPGStateStyle.IsBorderColorStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FBorderColor <> D.FBorderColor);
+end;
+
+function TPPGStateStyle.IsGlowColorStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FGlowColor <> D.FGlowColor);
+end;
+
+function TPPGStateStyle.IsGlowAlphaStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FGlowAlpha <> D.FGlowAlpha);
+end;
+
+function TPPGStateStyle.IsTextColorStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FTextColor <> D.FTextColor);
+end;
+
+function TPPGStateStyle.IsDirectionStored: Boolean;
+var
+  D: TPPGStateStyle;
+begin
+  D := StreamDefault;
+  Result := (D = nil) or (FDirection <> D.FDirection);
 end;
 
 procedure TPPGStateStyle.Changed;
@@ -778,6 +903,26 @@ end;
 function TPPGAppearance.GetOwner: TPersistent;
 begin
   Result := FOwner;
+end;
+
+function TPPGAppearance.IsFocusColorStored: Boolean;
+begin
+  Result := (FStreamDefaults = nil) or (FFocusColor <> FStreamDefaults.FFocusColor);
+end;
+
+function TPPGAppearance.IsRoundingStored: Boolean;
+begin
+  Result := (FStreamDefaults = nil) or (FRounding <> FStreamDefaults.FRounding);
+end;
+
+function TPPGAppearance.IsBorderWidthStored: Boolean;
+begin
+  Result := (FStreamDefaults = nil) or (FBorderWidth <> FStreamDefaults.FBorderWidth);
+end;
+
+function TPPGAppearance.IsGlowSizeStored: Boolean;
+begin
+  Result := (FStreamDefaults = nil) or (FGlowSize <> FStreamDefaults.FGlowSize);
 end;
 
 procedure TPPGAppearance.BeginUpdate;
