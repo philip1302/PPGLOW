@@ -12,11 +12,13 @@ program PPGlowTests;
 {$APPTYPE CONSOLE}
 
 uses
+  Winapi.Windows,
   System.SysUtils,
   PPG.TestDesktop in 'PPG.TestDesktop.pas',
   System.Classes,
   System.Rtti,
   Vcl.Forms,
+  Vcl.Graphics,
   TestFramework,
   TextTestRunner,
   GUITestRunner,
@@ -451,6 +453,28 @@ begin
   end;
 end;
 
+/// Die Referenzbilder und Groessen-Pruefungen gelten fuer die Standard-Systemschrift
+/// (Segoe UI 9 pt). Steuerelemente nehmen Hint-, Menue- und Meldungsschrift aus
+/// Windows (Einstellung "Textgroesse" = Schriftgroesse ohne DPI-Aenderung); damit
+/// die Suite nicht von dieser Benutzereinstellung abhaengt, setzt der Lauf die
+/// Systemschriften der VCL fest auf den Standard.
+procedure PinSystemFonts;
+
+  procedure Pin(F: TFont);
+  begin
+    F.Name := 'Segoe UI';
+    F.Height := -MulDiv(9, Screen.PixelsPerInch, 72);
+    F.Style := [];
+  end;
+
+begin
+  Pin(Screen.HintFont);
+  Pin(Screen.MenuFont);
+  Pin(Screen.MessageFont);
+  Pin(Screen.IconFont);
+  Pin(Screen.CaptionFont);
+end;
+
 /// Anzahl und Liste der uebersprungenen Tests (PPGSkip) ausgeben.
 procedure ReportSkips;
 var
@@ -475,12 +499,17 @@ var
   Errors: Integer;
   Before, After: Int64;
 begin
+  // Nie ein Windows-Fehlerfenster (Absturz, fehlende DLL, Laufwerk): ein
+  // automatischer Lauf darf nicht auf einen Dialog warten; das Kind auf dem
+  // Testdesktop erbt den Modus.
+  SetErrorMode(SEM_FAILCRITICALERRORS or SEM_NOGPFAULTERRORBOX);
   // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
   if PPGRunOnHiddenDesktop then
     Exit;
   // Leak-Meldung beim Beenden (FastMM): nur im GUI-Modus, sonst blockiert
   // die MessageBox einen automatischen Lauf.
   Application.Initialize;
+  PinSystemFonts;
   PPGTestBaseline := FindCmdLineSwitch('baseline', ['/', '-'], True);
   PPGTestAllowSkip := FindCmdLineSwitch('allowskip', ['/', '-'], True);
   if FindCmdLineSwitch('gui', ['/', '-'], True) then
