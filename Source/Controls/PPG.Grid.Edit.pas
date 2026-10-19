@@ -18,7 +18,7 @@ interface
 uses
   Winapi.Windows, System.Classes, System.SysUtils, System.Variants, Vcl.Controls,
   PPG.Controls.Base, PPG.Edit, PPG.ComboBox, PPG.SpinEdit, PPG.Grid.Columns,
-  PPG.Controls.Field, PPG.Render.Intf;
+  PPG.Controls.Field, PPG.Render.Intf, PPG.ColumnComboBox;
 
 type
   IPPGGridCellEditor = interface
@@ -70,6 +70,20 @@ type
     function CellEditorArrowsLeave: Boolean;
   end;
 
+  /// Mehrspaltige Auswahl als Zell-Editor (z. B. Nachschlage-Spalte mit
+  /// mehreren Listenfeldern im DB-Grid). Der Text ist die Anzeigespalte,
+  /// KeyValue der Schluessel der gewaehlten Zeile. Nicht in der Registry:
+  /// das Grid waehlt die Klasse ueber CellEditorClass.
+  TPPGGridColumnCombo = class(TPPGColumnComboBox, IPPGGridCellEditor)
+  protected
+    function WantSpecialKey(Key: Word): Boolean; override;
+  public
+    procedure CellEditorBegin(const Text: string; Column: TPPGGridColumn);
+    function CellEditorText: string;
+    procedure CellEditorTypeChar(C: Char);
+    function CellEditorArrowsLeave: Boolean;
+  end;
+
   TPPGGridEditorClass = class of TPPGCustomControl;
 
 /// Editor-Klasse fuer eine Art festlegen (ersetzt eine fruehere Zuordnung).
@@ -79,6 +93,9 @@ function PPGGridEditorClass(Kind: TPPGGridEditorKind): TPPGGridEditorClass;
 
 /// Editor erzeugen und an das Grid haengen (Parent, Preset, Ereignisse).
 function PPGCreateGridEditor(Kind: TPPGGridEditorKind; Grid: TPPGCustomControl;
+  OnKeyDown: TKeyEvent; OnExit: TNotifyEvent): TPPGCustomControl;
+/// Wie PPGCreateGridEditor, aber mit einer bestimmten Klasse (nil = Textfeld).
+function PPGCreateGridEditorOf(AClass: TPPGGridEditorClass; Grid: TPPGCustomControl;
   OnKeyDown: TKeyEvent; OnExit: TNotifyEvent): TPPGCustomControl;
 procedure PPGGridEditorBegin(Editor: TPPGCustomControl; const Text: string;
   Column: TPPGGridColumn);
@@ -106,10 +123,16 @@ end;
 
 function PPGCreateGridEditor(Kind: TPPGGridEditorKind; Grid: TPPGCustomControl;
   OnKeyDown: TKeyEvent; OnExit: TNotifyEvent): TPPGCustomControl;
+begin
+  Result := PPGCreateGridEditorOf(GEditors[Kind], Grid, OnKeyDown, OnExit);
+end;
+
+function PPGCreateGridEditorOf(AClass: TPPGGridEditorClass; Grid: TPPGCustomControl;
+  OnKeyDown: TKeyEvent; OnExit: TNotifyEvent): TPPGCustomControl;
 var
   Cls: TPPGGridEditorClass;
 begin
-  Cls := GEditors[Kind];
+  Cls := AClass;
   if Cls = nil then
     Cls := GEditors[gekText];
   Result := Cls.Create(Grid);
@@ -302,6 +325,47 @@ end;
 function TPPGGridSpin.CellEditorArrowsLeave: Boolean;
 begin
   Result := False; // Pfeile aendern den Wert
+end;
+
+{ TPPGGridColumnCombo }
+
+function TPPGGridColumnCombo.WantSpecialKey(Key: Word): Boolean;
+begin
+  Result := GridWantsKey(Key) or inherited WantSpecialKey(Key);
+end;
+
+procedure TPPGGridColumnCombo.CellEditorBegin(const Text: string; Column: TPPGGridColumn);
+var
+  I: Integer;
+begin
+  // Zeilen fuellt der Besitzer (z. B. DB-Grid in EditorPrepare); hier nur die
+  // Zeile mit dem Text der Zelle waehlen
+  for I := 0 to RowCount - 1 do
+    if CellText(I, DisplayColumn) = Text then
+    begin
+      ItemIndex := I;
+      Exit;
+    end;
+  ItemIndex := -1;
+end;
+
+function TPPGGridColumnCombo.CellEditorText: string;
+begin
+  Result := DisplayText;
+end;
+
+procedure TPPGGridColumnCombo.CellEditorTypeChar(C: Char);
+var
+  I: Integer;
+begin
+  I := FindRow(C, 0);
+  if I >= 0 then
+    ItemIndex := I;
+end;
+
+function TPPGGridColumnCombo.CellEditorArrowsLeave: Boolean;
+begin
+  Result := False; // Pfeile blaettern in der Liste
 end;
 
 initialization

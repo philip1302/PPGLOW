@@ -196,6 +196,7 @@ uses
   PPG.Tests.Phase9b in 'PPG.Tests.Phase9b.pas',
   PPG.Tests.Phase9c in 'PPG.Tests.Phase9c.pas',
   PPG.Tests.Phase9d in 'PPG.Tests.Phase9d.pas',
+  PPG.Tests.GridFilterSearch in 'PPG.Tests.GridFilterSearch.pas',
   PPG.Tests.Phase10a in 'PPG.Tests.Phase10a.pas',
   PPG.Tests.Phase10b in 'PPG.Tests.Phase10b.pas',
   PPG.Tests.Phase10c in 'PPG.Tests.Phase10c.pas',

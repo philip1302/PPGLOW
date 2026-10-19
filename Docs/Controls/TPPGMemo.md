@@ -132,7 +132,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. Praxis: Nur wenn das Memo selbst gezogen wird (DragMode = dmAutomatic); beim Memo selten gebraucht. |
 | `OnMouseActivate` | `TMouseActivateEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y, HitTest: Integer; var MouseActivate: TMouseActivate)` | Mausklick auf ein noch inaktives Fenster; legt fest, ob es aktiviert wird. Praxis: Nur in Spezialfällen (Werkzeugfenster) belegen; sonst leer lassen. |
 
-Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Phase12a` (TFieldBaseTests); `PPG.Tests.Phase4a` (TMemoFieldTests, TPhase4aPaintTests); `PPG.Tests.Phase8` (TFluent11Tests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit5d`; `PPG.Tests.GridFilterSearch` (TDBGridFilterSearchTests); `PPG.Tests.Phase12a` (TFieldBaseTests); `PPG.Tests.Phase4a` (TMemoFieldTests, TPhase4aPaintTests); `PPG.Tests.Phase8` (TFluent11Tests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGMemo.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

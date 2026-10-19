@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..262] of PResStringRec = (
+  AllTexts: array[0..277] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -41,6 +41,10 @@ const
     @SPPGAccPress, @SPPGAccCheck, @SPPGAccUncheck, @SPPGAccSelect, @SPPGAccOpen, @SPPGAccClose,
     @SPPGGridFilterHint, @SPPGSortAscending, @SPPGSortDescending, @SPPGDBGridConfirmDelete, @SPPGDBGridConfirmDeleteSelected, @SPPGDBEditPending, @SPPGDBLookupMultiKey,
     @SPPGDBGridEditForm, @SPPGDBGridEditFormApply,
+    @SPPGFilterDescContains, @SPPGFilterDescBeginsWith, @SPPGFilterDescEndsWith,
+    @SPPGFilterDescCompare, @SPPGFilterDescBetween, @SPPGFilterDescEmpty, @SPPGFilterDescNotEmpty,
+    @SPPGFilterDescJoin, @SPPGFilterBarText, @SPPGFilterBarClear, @SPPGGridFindHint,
+    @SPPGGridFindNext, @SPPGGridFindPrevious, @SPPGGridFindClose, @SPPGDBFieldNotFound,
     @SPPGAccJump, @SPPGAccExpand, @SPPGAccCollapse, @SPPGAccOn, @SPPGAccOff, @SPPGAccToggle,
     @SPPGNavMenu, @SPPGMoreOptions, @SPPGNotifications, @SPPGPercentFormat,
     @SPPGInvalidValueList, @SPPGChartNoData, @SPPGSparklineSummary, @SPPGGaugeRangeInvalid,

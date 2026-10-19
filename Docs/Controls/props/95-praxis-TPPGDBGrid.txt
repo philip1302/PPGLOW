@@ -139,3 +139,18 @@ TPPGDBGridEditFormOptions.ColumnCount ! 2 für normale Fenster, 3 bis 4 für bre
 TPPGDBGridEditFormOptions.LabelWidth ! So breit wie die längste übliche Beschriftung; 0 nur, wenn die Felder ohnehin selbsterklärend sind (z. B. mit TextHint).
 TPPGDBGridEditFormOptions.ShowButtons ! Eingeschaltet lassen; ohne Schaltflächen bleibt nur die Tastatur (Strg+Enter, Esc), das kennen Gelegenheitsnutzer nicht.
 TPPGDBGrid.ViewStyle ! dgvCards für Datensätze mit vielen Feldern, die man einzeln liest statt zu vergleichen (Stammdaten, Adressen, Geräte); ein Schalter in der Oberfläche kann zwischen Tabelle und Karten wechseln, Spalten, Auswahl und Datensatz bleiben erhalten.
+TPPGDBGrid.ShowFilterRow ! Für Listen aus einer schon geladenen Datenmenge (ClientDataSet, kleine Abfrage). Bei großen Tabellen besser serverseitig filtern (WHERE), denn OnFilterRecord liest jeden Satz.
+TPPGDBGrid.FilterImmediate ! Einschalten bei Datenmengen bis einige tausend Sätze; darüber False, damit erst Enter filtert.
+TPPGDBGrid.ShowFilterBar ! Einschalten, wenn die Filterzeile benutzt wird: Die Leiste zeigt, warum Sätze fehlen.
+TPPGDBGrid.FindPanel ! fpmManual für Strg+F-Suche in geladenen Datenmengen; die Suche durchläuft die Datenmenge, bei sehr großen Tabellen lieber eine Abfrage.
+TPPGDBGrid.IncrementalSearch ! Für schreibgeschützte Listen, die nach der Fokusspalte sortiert sind (IndexFieldNames).
+TPPGDBGrid.SortOnHeaderClick ! Einschalten und in OnTitleClick IndexFieldNames setzen; der Pfeil zeigt dann die Sortierung und kommt mit LoadLayout zurück.
+TPPGDBGrid.OnFilterChanged ! Trefferzahl (DataSet.RecordCount) in der Statusleiste anzeigen.
+TPPGDBGrid.OnFocusedRecordChanged ! Detailbereiche nachladen (Positionen, Vorschau), statt DataSource.OnDataChange auszuwerten, das auch bei jeder Feldänderung kommt.
+TPPGDBGrid.OnCanSelectRecord ! Sätze von einer Sammelaktion ausschließen, z. B. bereits gebuchte Rechnungen beim Markieren zum Buchen.
+TPPGDBGrid.OnSelectCell ! Wechsel verhindern, solange der aktuelle Satz ungültig ist; mit RowValue die Zielzeile prüfen (z. B. gesperrte Sätze nicht betreten).
+TPPGDBGridColumn.ListFieldIndex ! Bei ListField 'Nummer;Name' mit 1 den Namen in der Zelle zeigen, während die Auswahl beide Spalten hat.
+TPPGDBGridColumn.EditFormEditor ! Meist efeAuto lassen; efeMemo für lange Textfelder (Bemerkung), efeText, wenn ein Memo-Feld nur kurze Texte hat.
+TPPGDBGridColumn.EditFormRows ! 3 bis 5 Zeilen für Bemerkungen; mit EditFormColSpan über die ganze Breite.
+TPPGDBGridColumn.EditFormGroup ! Formulare ab etwa acht Feldern in Abschnitte teilen (Anschrift, Kontakt, Konditionen).
+TPPGDBGrid.OnSorted ! Mit SortOnHeaderClick: die Sortierung in der Statusleiste anzeigen oder in den Einstellungen merken; sortiert hat die Datenmenge schon in OnTitleClick.

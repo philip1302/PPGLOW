@@ -100,7 +100,8 @@ uses
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Vcl.StdCtrls,
   Data.DB,
   PPG.Types, PPG.Render.Intf, PPG.Controls.Base, PPG.Panel, PPG.Button, PPG.Grid,
-  PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds;
+  PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds, PPG.Grid.View,
+  PPG.Grid.Edit, PPG.ColumnComboBox;
 
 type
   TPPGCustomDBGrid = class;
@@ -114,6 +115,19 @@ type
   /// Feld einer Spalte im Bearbeitungsformular: efvAuto = wie Column.Visible,
   /// efvShow = immer (auch bei ausgeblendeter Spalte), efvHide = nie.
   TPPGEditFormVisibility = (efvAuto, efvShow, efvHide);
+
+  /// Editor eines Felds im Bearbeitungsformular: efeAuto = nach dem Feld
+  /// (Memo-Felder mehrzeilig, Datumsfelder mit Kalender, sonst wie in der
+  /// Zelle), efeText = wie in der Zelle, efeMemo = mehrzeilig (EditFormRows),
+  /// efeDate = Datumsauswahl (nur Datums-/Zeitfelder, sonst wie efeText).
+  TPPGEditFormEditor = (efeAuto, efeText, efeMemo, efeDate);
+
+  /// Aufruf je ausgewaehltem Datensatz (ForEachSelected): die Datenmenge steht
+  /// auf dem Satz.
+  TPPGDBGridRecordProc = reference to procedure(DataSet: TDataSet);
+
+  /// Darf der aktive Satz der Datenmenge in die Mehrfachauswahl (Allow)?
+  TPPGDBGridCanSelectEvent = procedure(Sender: TObject; var Allow: Boolean) of object;
 
   /// Bearbeitungsformular geschlossen (Accepted = uebernommen, sonst verworfen).
   TPPGDBGridEditFormCloseEvent = procedure(Sender: TObject; Accepted: Boolean) of object;
@@ -146,8 +160,16 @@ type
     FLookupCache: TDictionary<string, string>;
     FEditFormVisible: TPPGEditFormVisibility;
     FEditFormColSpan: Integer;
+    FListFieldIndex: Integer;
+    FEditFormEditor: TPPGEditFormEditor;
+    FEditFormRows: Integer;
+    FEditFormGroup: string;
     procedure SetEditFormVisible(const Value: TPPGEditFormVisibility);
     procedure SetEditFormColSpan(const Value: Integer);
+    procedure SetListFieldIndex(const Value: Integer);
+    procedure SetEditFormEditor(const Value: TPPGEditFormEditor);
+    procedure SetEditFormRows(const Value: Integer);
+    procedure SetEditFormGroup(const Value: string);
     procedure SetFieldName(const Value: string);
     procedure SetFooterField(const Value: string);
     function GetAlignment: TAlignment;
@@ -175,8 +197,11 @@ type
     function IsLookup: Boolean;
     /// Datenmenge der Liste (nil = keine bzw. ListSource ohne DataSet).
     function ListDataSet: TDataSet;
-    /// Erstes Feld aus ListField (das angezeigte).
+    /// Angezeigtes Feld aus ListField (nach ListFieldIndex; ausserhalb der
+    /// Liste das erste).
     function ListResultField: string;
+    /// Felder aus ListField (Semikolon-Liste, ohne Leerzeichen).
+    function ListFieldNames: TArray<string>;
     /// Anzeigetext zum Schluessel (aus der Liste, zwischengespeichert);
     /// '' = Null oder nicht gefunden.
     function LookupText(const Key: Variant): string;
@@ -203,8 +228,13 @@ type
     property ListSource: TDataSource read GetListSource write SetListSource;
     /// Schluesselfeld in der Liste (passt zum Wert von FieldName).
     property KeyField: string read FKeyField write SetKeyField;
-    /// Angezeigtes Feld der Liste (weitere mit Semikolon werden ignoriert).
+    /// Felder der Liste, mehrere mit Semikolon ("Name;Ort"): die Zelle zeigt
+    /// das Feld nach ListFieldIndex, die Auswahlliste (Zelle und Formular)
+    /// zeigt alle als Spalten.
     property ListField: string read FListField write SetListField;
+    /// Index des in der Zelle angezeigten Felds aus ListField (0-basiert, wie
+    /// TDBLookupComboBox.ListFieldIndex; 0..31).
+    property ListFieldIndex: Integer read FListFieldIndex write SetListFieldIndex default 0;
     /// Feld im Bearbeitungsformular (EditMode = dgeForm): efvAuto = wie
     /// Visible, efvShow = immer, efvHide = nie.
     property EditFormVisible: TPPGEditFormVisibility read FEditFormVisible
@@ -212,6 +242,15 @@ type
     /// Spalten des Formular-Rasters, die das Feld belegt (1..8; hoechstens
     /// EditForm.ColumnCount).
     property EditFormColSpan: Integer read FEditFormColSpan write SetEditFormColSpan default 1;
+    /// Editor im Bearbeitungsformular (efeAuto: nach dem Feld).
+    property EditFormEditor: TPPGEditFormEditor read FEditFormEditor write SetEditFormEditor
+      default efeAuto;
+    /// Hoehe eines mehrzeiligen Felds im Formular in Rasterzeilen (1..20).
+    property EditFormRows: Integer read FEditFormRows write SetEditFormRows default 3;
+    /// Abschnitt im Formular: ein neuer Wert beginnt eine neue Zeile mit der
+    /// Ueberschrift (leer = ohne Ueberschrift). Felder eines Abschnitts
+    /// stehen in der Anzeige-Reihenfolge hintereinander.
+    property EditFormGroup: string read FEditFormGroup write SetEditFormGroup;
   end;
 
   /// Ausgewaehlte Datensaetze des DB-Grids (Mehrfachauswahl, dgMultiSelect)
@@ -342,8 +381,17 @@ type
     Original: string;            // Text beim Fuellen (Aenderung auch per Code)
     Caption: string;
     Cell, Row, Span: Integer;    // Lage im Raster
+    RowSpan: Integer;            // belegte Rasterzeilen (mehrzeilig > 1)
     LabelR: TRect;               // Beschriftung beim Anordnen (ohne Scrollen)
     EditorR: TRect;              // Editor beim Anordnen (ohne Scrollen)
+  end;
+
+  /// Abschnitt des Bearbeitungsformulars (Column.EditFormGroup).
+  TPPGDBGridEditFormGroup = record
+    Caption: string;
+    Row: Integer;                // Rasterzeile der Ueberschrift
+    FirstItem: Integer;          // erstes Feld des Abschnitts
+    R: TRect;                    // Ueberschrift beim Anordnen (ohne Scrollen)
   end;
 
   /// Bearbeitungsformular in der Zeile (Kind-Control des DB-Grids, wird vom
@@ -355,6 +403,7 @@ type
   private
     FGrid: TPPGCustomDBGrid;
     FItems: array of TPPGDBGridEditFormItem;
+    FGroups: array of TPPGDBGridEditFormGroup;
     FApply: TPPGButton;
     FCancel: TPPGButton;
     FCurrent: Integer;   // Fokusziel: Feld, dann Uebernehmen, Abbrechen
@@ -388,6 +437,14 @@ type
     procedure ItemCell(I: Integer; out ACell, ARow, ASpan: Integer);
     /// Beschriftung des Felds I (Client-Koordinaten, mit Scrollen).
     function ItemLabelRect(I: Integer): TRect;
+    /// Belegte Rasterzeilen des Felds I (mehrzeilige Felder > 1).
+    function ItemRowSpan(I: Integer): Integer;
+    /// Abschnitte mit Ueberschrift (Column.EditFormGroup).
+    function GroupCount: Integer;
+    function GroupCaption(I: Integer): string;
+    /// Rasterzeile bzw. Flaeche der Ueberschrift (Client-Koordinaten, mit Scrollen).
+    function GroupRow(I: Integer): Integer;
+    function GroupRect(I: Integer): TRect;
     /// Aktuelles Fokusziel (Feld-Index, ItemCount = Uebernehmen, ItemCount + 1
     /// = Abbrechen).
     property Current: Integer read FCurrent;
@@ -451,6 +508,43 @@ type
     FFormReload: Boolean;  // Bearbeitung von aussen beendet: alle Felder neu
     FOnEditFormShow: TNotifyEvent;
     FOnEditFormClose: TPPGDBGridEditFormCloseEvent;
+    FWriteEditor: TPPGCustomControl; // Formular schreibt gerade aus diesem Editor
+    // Filterzeile ueber die Datenmenge (OnFilterRecord, vorheriger Zustand)
+    FFltDS: TDataSet;
+    FFltOldEvent: TFilterRecordEvent;
+    FFltOldFiltered: Boolean;
+    FFltOldText: string;
+    FFltTextCleared: Boolean;
+    FFltCols: array of Integer;
+    FFltNames: array of string;
+    FFltConds: array of TPPGFilterCondition;
+    // Zeile fuer RowValue (OnGetCellStyle, OnSelectCell): Pufferzeile bzw.
+    // Satz im Schnappschuss (Druck/Export); beide -1 = aktiver Satz
+    FCtxRow: Integer;
+    FCtxSnap: Integer;
+    FSnapAll: array of array of Variant; // Werte aller Felder (nur mit OnGetCellStyle)
+    // Fokussierter Datensatz (OnFocusedRecordChanged)
+    FLastRecBm: TBookmark;
+    FLastRecIns: Boolean;
+    FOnFocusedRecordChanged: TNotifyEvent;
+    FOnCanSelectRecord: TPPGDBGridCanSelectEvent;
+    FNoVeto: Integer;
+    procedure FilterRecordHook(DataSet: TDataSet; var Accept: Boolean);
+    procedure FilterHook(DS: TDataSet);
+    procedure FilterUnhook;
+    function FilterFieldMatches(const Cond: TPPGFilterCondition; ACol: Integer; F: TField): Boolean;
+    procedure CheckFocusedRecord;
+    /// OnCanSelectRecord fuer den aktiven Satz der Datenmenge.
+    function AllowSelectCurrent: Boolean;
+    /// OnCanSelectRecord fuer ein Lesezeichen (bewegt die Datenmenge kurz).
+    function AllowSelectBookmark(const B: TBookmark): Boolean;
+    /// Editor des Formulars fuer ein Feld (Memo, Datum, sonst wie die Zelle).
+    function FormEditorOf(ACol: Integer): TPPGEditFormEditor;
+    /// Nachschlage-Spalte mit mehreren Listenfeldern (mehrspaltige Auswahl)?
+    function LookupHasColumns(ACol: Integer): Boolean;
+    procedure FillLookupColumns(Combo: TPPGColumnComboBox; ACol: Integer);
+    /// Memo- bzw. Datumsfeld des Formulars in den Satz schreiben.
+    procedure FormWriteSpecial(I: Integer);
     procedure SetEditMode(const Value: TPPGDBGridEditMode);
     procedure SetEditForm(const Value: TPPGDBGridEditFormOptions);
     /// Bearbeitungsformular statt Zell-Editor (dgeForm in der Tabelle)?
@@ -656,6 +750,28 @@ type
     /// OnEditFormShow bzw. OnEditFormClose ausloesen.
     procedure DoEditFormShow; virtual;
     procedure DoEditFormClose(Accepted: Boolean); virtual;
+    { Filterzeile, Suche, Stile (ueber die Datenmenge) }
+    function FiltersInView: Boolean; override;
+    function SortsInView: Boolean; override;
+    function FilterValueKind(ACol: Integer): TPPGFilterValueKind; override;
+    procedure ApplyFilters; override;
+    procedure BarsChanged; override;
+    function FindFrom(Forward, IncludeCurrent: Boolean): Boolean; override;
+    function IncrementalFind(const S: string; FromNext: Boolean): Boolean; override;
+    procedure DoGetCellStyle(ACol, ARow: Integer; Purpose: TPPGGridStylePurpose;
+      var Style: TPPGGridCellStyle); override;
+    function CellEditorClass(ACol, ARow: Integer; Kind: TPPGGridEditorKind): TPPGGridEditorClass; override;
+    /// OnFocusedRecordChanged ausloesen.
+    procedure DoFocusedRecordChanged; virtual;
+    /// Anderer Datensatz im Fokus (Navigation, Klick, Suche, Code; auch der
+    /// neue Satz bei Einfuegen).
+    property OnFocusedRecordChanged: TNotifyEvent read FOnFocusedRecordChanged
+      write FOnFocusedRecordChanged;
+    /// Veto fuer die Mehrfachauswahl: vor dem Aufnehmen eines Satzes steht die
+    /// Datenmenge auf ihm (Felder lesen, Allow := False lehnt ab). Gilt fuer
+    /// Klick, Tasten, Bereiche und SelectAll.
+    property OnCanSelectRecord: TPPGDBGridCanSelectEvent read FOnCanSelectRecord
+      write FOnCanSelectRecord;
 
     property DataLink: TPPGGridDataLink read FDataLink;
     property Options: TDBGridOptions read FDBOptions write SetDBOptions
@@ -741,6 +857,20 @@ type
     property EditFormActive: Boolean read FFormOpen;
     /// Das Formular (nil, solange es nie geoeffnet wurde).
     property EditFormControl: TPPGDBGridEditForm read FEditPanel;
+    /// Wert eines Felds im Satz der gerade gefragten Zeile: in OnGetCellStyle
+    /// (Bildschirm, Druck, Export) und OnSelectCell der Satz dieser Zeile,
+    /// sonst der aktive Satz. Null bei leerem Feld; unbekanntes Feld: EPPGError.
+    function RowValue(const FieldName: string): Variant;
+    /// Anzahl der ausgewaehlten Saetze (SelectedRows.Count).
+    function SelectedCount: Integer;
+    /// Proc fuer jeden ausgewaehlten Satz (in der Reihenfolge der Lesezeichen),
+    /// die Datenmenge steht dabei auf dem Satz; ohne Anzeige-Aktualisierung
+    /// (DisableControls), danach wieder auf dem vorherigen Satz. Ergebnis:
+    /// Anzahl der Aufrufe (ungueltige Lesezeichen werden uebersprungen).
+    function ForEachSelected(const Proc: TPPGDBGridRecordProc): Integer;
+    /// Werte eines Felds aller ausgewaehlten Saetze (Reihenfolge wie
+    /// ForEachSelected). Unbekanntes Feld: EPPGError.
+    function SelectedValues(const FieldName: string): TArray<Variant>;
   end;
 
   TPPGDBGrid = class(TPPGCustomDBGrid)
@@ -766,6 +896,12 @@ type
     property FixedColsRight;
     property HeaderMenu;
     property ShowFooter;
+    property ShowFilterRow;
+    property FilterImmediate;
+    property ShowFilterBar;
+    property FindPanel;
+    property IncrementalSearch;
+    property SortOnHeaderClick default False;
     property DataSource;
     property Options;
     property ReadOnly;
@@ -837,6 +973,11 @@ type
     property OnSelectionChanged;
     property OnEditFormShow;
     property OnEditFormClose;
+    property OnFilterChanged;
+    property OnSelectCell;
+    property OnSorted;
+    property OnFocusedRecordChanged;
+    property OnCanSelectRecord;
     // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
     property OnClick;
     property OnMouseWheel;
@@ -858,11 +999,12 @@ uses
   System.Generics.Defaults,
   PPG.Consts, PPG.Appearance,
   PPG.Controls.Scroll, PPG.Exceptions, PPG.DB.Controls, PPG.Grid.Paint,
-  PPG.Render.Gdi, PPG.Controls.Field, PPG.CheckBox, PPG.Grid.Edit;
+  PPG.Render.Gdi, PPG.Controls.Field, PPG.CheckBox, PPG.Memo, PPG.DatePicker;
 
 type
   TCtrlAccess = class(TPPGCustomControl);
   TFieldAccess = class(TPPGCustomField);
+  TDateAccess = class(TPPGCustomDatePicker);
 
 const
   // Indikator (Zeichen der Schrift, im Quelltext als Zeichencode: ASCII-Regel)
@@ -916,7 +1058,43 @@ constructor TPPGDBGridColumn.Create(Collection: TCollection);
 begin
   FListLink := TPPGDBGridListLink.Create(Self);
   FEditFormColSpan := 1;
+  FEditFormRows := 3;
   inherited Create(Collection);
+end;
+
+procedure TPPGDBGridColumn.SetListFieldIndex(const Value: Integer);
+begin
+  if FListFieldIndex = Value then
+    Exit;
+  FListFieldIndex := PPGCheckRange(Self, 'ListFieldIndex', Value, 0, 31);
+  ListChanged;
+  Changed(False);
+end;
+
+procedure TPPGDBGridColumn.SetEditFormEditor(const Value: TPPGEditFormEditor);
+begin
+  if FEditFormEditor <> Value then
+  begin
+    FEditFormEditor := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGDBGridColumn.SetEditFormRows(const Value: Integer);
+begin
+  if FEditFormRows = Value then
+    Exit;
+  FEditFormRows := PPGCheckRange(Self, 'EditFormRows', Value, 1, 20);
+  Changed(False);
+end;
+
+procedure TPPGDBGridColumn.SetEditFormGroup(const Value: string);
+begin
+  if FEditFormGroup <> Value then
+  begin
+    FEditFormGroup := Value;
+    Changed(False);
+  end;
 end;
 
 procedure TPPGDBGridColumn.SetEditFormVisible(const Value: TPPGEditFormVisibility);
@@ -1049,9 +1227,39 @@ begin
     Result := GetListSource.DataSet;
 end;
 
-function TPPGDBGridColumn.ListResultField: string;
+function TPPGDBGridColumn.ListFieldNames: TArray<string>;
+var
+  L: TStringList;
+  I: Integer;
 begin
-  Result := Trim(PPGDBFirstValue(FListField));
+  SetLength(Result, 0);
+  L := TStringList.Create;
+  try
+    L.StrictDelimiter := True;
+    L.Delimiter := ';';
+    L.DelimitedText := FListField;
+    for I := 0 to L.Count - 1 do
+      if Trim(L[I]) <> '' then
+      begin
+        SetLength(Result, Length(Result) + 1);
+        Result[High(Result)] := Trim(L[I]);
+      end;
+  finally
+    L.Free;
+  end;
+end;
+
+function TPPGDBGridColumn.ListResultField: string;
+var
+  N: TArray<string>;
+begin
+  N := ListFieldNames;
+  if Length(N) = 0 then
+    Result := ''
+  else if FListFieldIndex < Length(N) then
+    Result := N[FListFieldIndex]
+  else
+    Result := N[0];
 end;
 
 function TPPGDBGridColumn.LookupText(const Key: Variant): string;
@@ -1104,6 +1312,10 @@ begin
     FListField := TPPGDBGridColumn(Source).FListField;
     FEditFormVisible := TPPGDBGridColumn(Source).FEditFormVisible;
     FEditFormColSpan := TPPGDBGridColumn(Source).FEditFormColSpan;
+    FListFieldIndex := TPPGDBGridColumn(Source).FListFieldIndex;
+    FEditFormEditor := TPPGDBGridColumn(Source).FEditFormEditor;
+    FEditFormRows := TPPGDBGridColumn(Source).FEditFormRows;
+    FEditFormGroup := TPPGDBGridColumn(Source).FEditFormGroup;
     if FLookupCache <> nil then
       FLookupCache.Clear;
     if FListLink <> nil then
@@ -1334,7 +1546,7 @@ var
 begin
   // Nur mit dgMultiSelect (ohne Option bleibt die Liste leer, wie TDBGrid)
   Result := (FGrid <> nil) and FGrid.MultiSelectActive and (Length(Item) > 0) and
-    not Find(Item, I);
+    not Find(Item, I) and FGrid.AllowSelectBookmark(Item);
   if Result then
   begin
     FList.Insert(I, Copy(Item));
@@ -1415,7 +1627,9 @@ begin
       DS.First;
       while not DS.Eof do
       begin
-        FList.Add(DS.Bookmark);
+        // Veto der Anwendung je Satz (OnCanSelectRecord)
+        if FGrid.AllowSelectCurrent then
+          FList.Add(DS.Bookmark);
         DS.Next;
       end;
     finally
@@ -1617,6 +1831,8 @@ begin
   FCardSpacing := 8;
   FCardLabelWidth := 110;
   FCardActive := -1;
+  FCtxRow := -1;
+  FCtxSnap := -1;
   FEditForm := TPPGDBGridEditFormOptions.Create(Self);
   FDataLink := TPPGGridDataLink.Create(Self);
   FSelected := TPPGBookmarkList.Create(Self);
@@ -1631,6 +1847,8 @@ end;
 
 destructor TPPGCustomDBGrid.Destroy;
 begin
+  // Filter der Datenmenge zuruecksetzen (OnFilterRecord, Filtered, Filter)
+  FilterUnhook;
   // Formular nicht mehr bedienen (Kinder werden mit dem Grid freigegeben)
   FFormOpen := False;
   FFormBm := nil;
@@ -1677,6 +1895,12 @@ end;
 procedure TPPGCustomDBGrid.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (AComponent = FFltDS) and (FFltDS <> nil) then
+  begin
+    // Datenmenge wird freigegeben: nichts mehr zuruecksetzen
+    FFltDS := nil;
+    FFltOldEvent := nil;
+  end;
   if (Operation = opRemove) and (FDataLink <> nil) and (AComponent = DataSource) then
     DataSource := nil;
 end;
@@ -2077,7 +2301,9 @@ var
     DS.Bookmark := FromBm;
     while True do
     begin
-      Found.Add(DS.Bookmark);
+      // Veto je Satz hier (die Datenmenge steht schon darauf)
+      if AllowSelectCurrent then
+        Found.Add(DS.Bookmark);
       if DS.CompareBookmarks(DS.Bookmark, Cur) = 0 then
       begin
         Result := True;
@@ -2127,9 +2353,14 @@ begin
       PPGDBEndRead;
     end;
     FSelected.BeginUpdate;
+    Inc(FNoVeto); // schon beim Durchlaufen gefragt
     try
       for I := 0 to Found.Count - 1 do
         FSelected.AddBookmark(Found[I]);
+    finally
+      Dec(FNoVeto);
+    end;
+    try
       FSelected.AddBookmark(Cur);
     finally
       FSelected.EndUpdate;
@@ -2307,7 +2538,13 @@ begin
   HideEditor(False);
   // Formular gehoert zur alten Datenmenge bzw. zum alten Oeffnen
   FormClose(False, False);
+  // Filter hingen an einer anderen Datenmenge: dort zuruecksetzen
+  if (FFltDS <> nil) and (FFltDS <> FDataLink.DataSet) then
+    FilterUnhook;
   BuildColumns;
+  // Aktive Filter gelten auch fuer die neue bzw. wieder geoeffnete Datenmenge
+  if Value and (FFltDS = nil) and FiltersActive then
+    ApplyFilters;
 end;
 
 procedure TPPGCustomDBGrid.LayoutChanged;
@@ -2369,6 +2606,43 @@ begin
   SyncPosition;
   FormPlace;
   Invalidate;
+  CheckFocusedRecord;
+end;
+
+procedure TPPGCustomDBGrid.CheckFocusedRecord;
+var
+  DS: TDataSet;
+  B: TBookmark;
+  Ins, Changed: Boolean;
+begin
+  if csDestroying in ComponentState then
+    Exit;
+  B := nil;
+  Ins := False;
+  DS := nil;
+  if FDataLink.Active then
+  begin
+    DS := FDataLink.DataSet;
+    Ins := DS.State = dsInsert;
+    if not Ins and not DS.IsEmpty then
+      B := DS.Bookmark;
+  end;
+  if Ins <> FLastRecIns then
+    Changed := True
+  else if (Length(B) = 0) or (Length(FLastRecBm) = 0) then
+    Changed := Length(B) <> Length(FLastRecBm)
+  else
+    Changed := DS.CompareBookmarks(B, FLastRecBm) <> 0;
+  FLastRecBm := B;
+  FLastRecIns := Ins;
+  if Changed then
+    DoFocusedRecordChanged;
+end;
+
+procedure TPPGCustomDBGrid.DoFocusedRecordChanged;
+begin
+  if Assigned(FOnFocusedRecordChanged) then
+    FOnFocusedRecordChanged(Self);
 end;
 
 procedure TPPGCustomDBGrid.EditingChanged;
@@ -2494,6 +2768,7 @@ begin
     Exit;
   FSnap := nil;
   FSnapText := nil;
+  FSnapAll := nil;
   if not FDataLink.Active then
   begin
     FSnapValid := True;
@@ -2524,6 +2799,15 @@ begin
       end;
       SetLength(FSnap[N], Cols);
       SetLength(FSnapText[N], Cols);
+      // Fuer RowValue in OnGetCellStyle (Druck/Export): alle Felder des Satzes
+      if Assigned(OnGetCellStyle) then
+      begin
+        if N >= Length(FSnapAll) then
+          SetLength(FSnapAll, Length(FSnap));
+        SetLength(FSnapAll[N], DS.FieldCount);
+        for C := 0 to DS.FieldCount - 1 do
+          FSnapAll[N][C] := DS.Fields[C].Value;
+      end;
       for C := 0 to Cols - 1 do
       begin
         DC := DataCol(C + FixedCols);
@@ -2577,6 +2861,8 @@ begin
     end;
     SetLength(FSnap, N);
     SetLength(FSnapText, N);
+    if Length(FSnapAll) > N then
+      SetLength(FSnapAll, N);
   finally
     if DS.BookmarkValid(BM) then
       DS.GotoBookmark(BM);
@@ -2630,8 +2916,73 @@ begin
   Result.Reset;
   if ConditionalFormats.Count > 0 then
     ConditionalFormats.Apply(DataCol(ACol + FixedCols), Text, Tokens, clWhite, Result);
-  if Assigned(OnGetCellStyle) then
-    OnGetCellStyle(Self, DataCol(ACol + FixedCols), ARow, Result);
+  DoGetCellStyle(DataCol(ACol + FixedCols), ARow, gspPrint, Result);
+end;
+
+procedure TPPGCustomDBGrid.DoGetCellStyle(ACol, ARow: Integer; Purpose: TPPGGridStylePurpose;
+  var Style: TPPGGridCellStyle);
+var
+  OldRow, OldSnap: Integer;
+begin
+  if not Assigned(OnGetCellStyle) then
+    Exit;
+  // RowValue liest den Satz der gefragten Zeile: Bildschirm = Pufferzeile,
+  // Druck/Export = Satz im Schnappschuss
+  OldRow := FCtxRow;
+  OldSnap := FCtxSnap;
+  if Purpose = gspScreen then
+  begin
+    FCtxRow := ARow - FixedRows;
+    FCtxSnap := -1;
+  end
+  else
+  begin
+    FCtxRow := -1;
+    FCtxSnap := ARow;
+  end;
+  try
+    inherited DoGetCellStyle(ACol, ARow, Purpose, Style);
+  finally
+    FCtxRow := OldRow;
+    FCtxSnap := OldSnap;
+  end;
+end;
+
+function TPPGCustomDBGrid.RowValue(const FieldName: string): Variant;
+var
+  DS: TDataSet;
+  F: TField;
+  Old, I: Integer;
+begin
+  Result := Null;
+  if not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  F := DS.FindField(FieldName);
+  if F = nil then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGDBFieldNotFound), [FieldName]);
+  if FCtxSnap >= 0 then
+  begin
+    // Druck/Export: Werte aus dem Schnappschuss (Datenmenge steht woanders)
+    I := DS.Fields.IndexOf(F);
+    if (FCtxSnap < Length(FSnapAll)) and (I >= 0) and (I < Length(FSnapAll[FCtxSnap])) then
+      Result := FSnapAll[FCtxSnap][I];
+    Exit;
+  end;
+  if (FCtxRow >= 0) and (FCtxRow < FDataLink.RecordCount) and
+    (FCtxRow <> FDataLink.ActiveRecord) then
+  begin
+    // Bildschirm: Pufferzeile ohne Satzwechsel (wie beim Owner-Draw)
+    Old := FDataLink.ActiveRecord;
+    FDataLink.ActiveRecord := FCtxRow;
+    try
+      Result := F.Value;
+    finally
+      FDataLink.ActiveRecord := Old;
+    end;
+  end
+  else
+    Result := F.Value;
 end;
 
 function TPPGCustomDBGrid.PrintCellKind(ACol: Integer; out Ctx: TPPGCellKindContext): IPPGCellKind;
@@ -2854,6 +3205,10 @@ end;
 
 function TPPGCustomDBGrid.CanEditCell(ACol, VRow: Integer): Boolean;
 begin
+  // Filterzeile: Filtertext je Feldspalte (auch ohne dgEditing und im
+  // Formular-Modus; die Datenmenge wird nicht bearbeitet)
+  if ShowFilterRow and (VRow = VFixedRows - 1) then
+    Exit((ACol >= FixedCols) and (FieldOfCol(ACol) <> nil));
   // Formular-Modus: die Zellen bearbeitet nur das Bearbeitungsformular
   // (auch kein Kaestchen per Klick, kein Einfuegen, kein Entf)
   if FormMode then
@@ -3084,6 +3439,109 @@ begin
   FillLookupCombo(InplaceEditor, ACol);
 end;
 
+function TPPGCustomDBGrid.LookupHasColumns(ACol: Integer): Boolean;
+var
+  C: TPPGDBGridColumn;
+begin
+  C := ColumnLookup(ACol);
+  Result := (C <> nil) and (Length(C.ListFieldNames) > 1);
+end;
+
+procedure TPPGCustomDBGrid.FillLookupColumns(Combo: TPPGColumnComboBox; ACol: Integer);
+var
+  Col: TPPGDBGridColumn;
+  DS: TDataSet;
+  KF, F: TField;
+  Names: TArray<string>;
+  Flds: array of TField;
+  B: TBookmark;
+  S, Key: string;
+  I, W, Disp: Integer;
+  CC: TPPGComboColumn;
+  Target: TField;
+begin
+  Col := ColumnLookup(ACol);
+  Target := FieldOfCol(ACol);
+  if (Col = nil) or (Target = nil) then
+    Exit;
+  DS := Col.ListDataSet;
+  Names := Col.ListFieldNames;
+  Combo.Items.BeginUpdate;
+  try
+    Combo.Items.Clear;
+    Combo.Columns.Clear;
+    Combo.Delimiter := #9;
+    // Spalte 0: Schluessel (ausgeblendet), dann die Felder aus ListField
+    CC := Combo.Columns.Add;
+    CC.Title := Col.KeyField;
+    CC.Visible := False;
+    SetLength(Flds, 0);
+    KF := nil;
+    if (DS <> nil) and DS.Active then
+    begin
+      KF := DS.FindField(Col.KeyField);
+      for I := 0 to High(Names) do
+      begin
+        F := DS.FindField(Names[I]);
+        if F = nil then
+          Continue;
+        SetLength(Flds, Length(Flds) + 1);
+        Flds[High(Flds)] := F;
+        CC := Combo.Columns.Add;
+        CC.Title := F.DisplayLabel;
+        W := F.DisplayWidth * 7 + 12;
+        if W < 40 then
+          W := 40;
+        if W > 300 then
+          W := 300;
+        CC.Width := W;
+        CC.Alignment := F.Alignment;
+      end;
+    end;
+    if (KF <> nil) and (Length(Flds) > 0) then
+    begin
+      PPGDBBeginRead;
+      DS.DisableControls;
+      try
+        B := DS.Bookmark;
+        try
+          DS.First;
+          while not DS.Eof do
+          begin
+            S := KF.AsString;
+            for I := 0 to High(Flds) do
+              S := S + #9 + StringReplace(Flds[I].AsString, #9, ' ', [rfReplaceAll]);
+            Combo.Items.Add(S);
+            DS.Next;
+          end;
+        finally
+          if (Length(B) > 0) and DS.BookmarkValid(B) then
+            DS.Bookmark := B;
+        end;
+      finally
+        DS.EnableControls;
+        PPGDBEndRead;
+      end;
+    end;
+  finally
+    Combo.Items.EndUpdate;
+  end;
+  // Angezeigt wird das Feld nach ListFieldIndex (wie in der Zelle)
+  Disp := 1;
+  for I := 0 to High(Flds) do
+    if SameText(Flds[I].FieldName, Col.ListResultField) then
+      Disp := I + 1;
+  Combo.KeyColumn := 0;
+  Combo.DisplayColumn := Disp;
+  if Target.IsNull then
+    Combo.ItemIndex := -1
+  else
+  begin
+    Key := Target.AsString;
+    Combo.KeyValue := Key;
+  end;
+end;
+
 procedure TPPGCustomDBGrid.FillLookupCombo(Editor: TPPGCustomControl; ACol: Integer);
 var
   C: TPPGComboBox;
@@ -3093,6 +3551,11 @@ var
   S, LK, LR: string;
   Plain: Boolean;
 begin
+  if Editor is TPPGColumnComboBox then
+  begin
+    FillLookupColumns(TPPGColumnComboBox(Editor), ACol);
+    Exit;
+  end;
   if not (Editor is TPPGComboBox) then
     Exit;
   C := TPPGComboBox(Editor);
@@ -3211,9 +3674,25 @@ var
   T: TField;
   LK, LR: string;
   Key: Variant;
+  Ed: TPPGCustomControl;
 begin
-  if not LookupSource(ACol, DS, LK, LR, T) or
-    (FieldCellText(ACol, FieldOfCol(ACol)) = Value) then
+  if not LookupSource(ACol, DS, LK, LR, T) then
+    Exit;
+  // Mehrspaltige Auswahl: der Schluessel der gewaehlten Zeile (eindeutig,
+  // auch bei gleichen Texten)
+  Ed := FWriteEditor;
+  if Ed = nil then
+    Ed := InplaceEditor;
+  if (Ed is TPPGColumnComboBox) and (TPPGColumnComboBox(Ed).ItemIndex >= 0) then
+  begin
+    if T.AsString = TPPGColumnComboBox(Ed).KeyValue then
+      Exit;
+    if not FDataLink.Editing and not FDataLink.Edit then
+      Exit;
+    T.AsString := TPPGColumnComboBox(Ed).KeyValue;
+    Exit;
+  end;
+  if FieldCellText(ACol, FieldOfCol(ACol)) = Value then
     Exit;
   if Value = '' then
     Key := Null
@@ -3245,19 +3724,40 @@ procedure TPPGCustomDBGrid.EditorOpened(ACol, ARow: Integer);
 begin
   inherited EditorOpened(ACol, ARow);
   FEditBm := nil;
-  if FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
+  // Filterzeile (ARow < 0) gehoert zu keinem Datensatz
+  if (ARow >= 0) and FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
     FEditBm := FDataLink.DataSet.Bookmark;
+end;
+
+function TPPGCustomDBGrid.CellEditorClass(ACol, ARow: Integer;
+  Kind: TPPGGridEditorKind): TPPGGridEditorClass;
+begin
+  // Nachschlage-Spalte mit mehreren Listenfeldern: mehrspaltige Auswahl
+  if (Kind = gekCombo) and LookupHasColumns(ACol) then
+    Result := TPPGGridColumnCombo
+  else
+    Result := inherited CellEditorClass(ACol, ARow, Kind);
 end;
 
 function TPPGCustomDBGrid.SelectCell(ACol, ARow: Integer): Boolean;
 var
-  R: Integer;
+  R, OldCtx: Integer;
 begin
   if (FSyncing = 0) and FDataLink.Active and (ARow >= FixedRows) then
   begin
     R := ARow - FixedRows;
     if R >= FDataLink.RecordCount then
       Exit(False); // leere Fuellzeile
+    // OnSelectCell vor dem Satzwechsel (Veto); RowValue liest die Zielzeile
+    OldCtx := FCtxRow;
+    FCtxRow := R;
+    try
+      Result := inherited SelectCell(ACol, ARow);
+    finally
+      FCtxRow := OldCtx;
+    end;
+    if not Result then
+      Exit;
     if R <> FDataLink.ActiveRecord then
     begin
       Inc(FSyncing);
@@ -3267,6 +3767,7 @@ begin
         Dec(FSyncing);
       end;
     end;
+    Exit;
   end;
   Result := inherited SelectCell(ACol, ARow);
 end;
@@ -3280,6 +3781,10 @@ begin
   C := ColumnOf(ACol);
   if Assigned(FOnTitleClick) and (C is TPPGDBGridColumn) then
     FOnTitleClick(TPPGDBGridColumn(C));
+  // Sortierpfeil (SortOnHeaderClick): nur die Anzeige; sortieren muss die
+  // Datenmenge (OnSorted, z. B. IndexFieldNames)
+  if SortOnHeaderClick then
+    inherited HeaderClicked(ACol, VRow);
 end;
 
 procedure TPPGCustomDBGrid.ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -4468,6 +4973,7 @@ begin
   for I := 0 to High(FItems) do
     FItems[I].Editor.Free;
   SetLength(FItems, 0);
+  SetLength(FGroups, 0);
   FCurrent := -1;
   FArrangedW := -1;
 end;
@@ -4513,6 +5019,47 @@ begin
   DX := FItems[I].Editor.Left - FItems[I].EditorR.Left;
   DY := FItems[I].Editor.Top - FItems[I].EditorR.Top;
   OffsetRect(Result, DX, DY);
+end;
+
+function TPPGDBGridEditForm.ItemRowSpan(I: Integer): Integer;
+begin
+  if (I < 0) or (I >= Length(FItems)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FItems) - 1]);
+  Result := FItems[I].RowSpan;
+end;
+
+function TPPGDBGridEditForm.GroupCount: Integer;
+begin
+  Result := Length(FGroups);
+end;
+
+function TPPGDBGridEditForm.GroupCaption(I: Integer): string;
+begin
+  if (I < 0) or (I >= Length(FGroups)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FGroups) - 1]);
+  Result := FGroups[I].Caption;
+end;
+
+function TPPGDBGridEditForm.GroupRow(I: Integer): Integer;
+begin
+  if (I < 0) or (I >= Length(FGroups)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FGroups) - 1]);
+  Result := FGroups[I].Row;
+end;
+
+function TPPGDBGridEditForm.GroupRect(I: Integer): TRect;
+var
+  F: Integer;
+begin
+  if (I < 0) or (I >= Length(FGroups)) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGIndexOutOfRange), [I, Length(FGroups) - 1]);
+  // Ueberschrift wandert mit den Editoren (Scrollen verschiebt die Kinder)
+  Result := FGroups[I].R;
+  F := FGroups[I].FirstItem;
+  if IsRectEmpty(Result) or (F < 0) or (F >= Length(FItems)) then
+    Exit;
+  OffsetRect(Result, FItems[F].Editor.Left - FItems[F].EditorR.Left,
+    FItems[F].Editor.Top - FItems[F].EditorR.Top);
 end;
 
 function TPPGDBGridEditForm.TargetOfControl(C: TControl): Integer;
@@ -4603,6 +5150,10 @@ begin
     (Message.CharCode = VK_ESCAPE)) then
   begin
     T := TargetOfControl(Message.Sender);
+    // Mehrzeiliges Feld: Enter ist ein Zeilenumbruch (Strg+Enter uebernimmt)
+    if (T >= 0) and (T < Length(FItems)) and (FItems[T].Editor is TPPGCustomMemo) and
+      (Message.CharCode = VK_RETURN) and (GetKeyState(VK_CONTROL) >= 0) then
+      T := -1;
     if T >= 0 then
     begin
       Shift := [];
@@ -4667,6 +5218,16 @@ begin
   else
     R := Rect(ClientR.Left, ClientR.Top, ClientR.Left + BW, ClientR.Bottom);
   ACanvas.FillRoundRect(R, 0, Accent, 255);
+  // Abschnitts-Ueberschriften: Text in der Akzentfarbe, Linie darunter
+  for I := 0 to High(FGroups) do
+  begin
+    R := GroupRect(I);
+    if IsRectEmpty(R) or not NeedsPaint(R) then
+      Continue;
+    ACanvas.DrawText(R, FGroups[I].Caption, Font, Accent,
+      DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taLeftJustify)));
+    ACanvas.FillRoundRect(Rect(R.Left, R.Bottom - 1, R.Right, R.Bottom), 0, Line, 255);
+  end;
   // Beschriftungen (wandern beim Scrollen mit den Editoren)
   for I := 0 to High(FItems) do
   begin
@@ -4746,6 +5307,7 @@ end;
 function TPPGCustomDBGrid.FormItemText(I: Integer): string;
 var
   Ed: TPPGCustomControl;
+  DP: TDateAccess;
 begin
   Ed := FEditPanel.FItems[I].Editor;
   if Ed is TPPGCheckBox then
@@ -4755,8 +5317,46 @@ begin
     else
       Result := PPGGridCheckGrayed;
     end
+  else if Ed is TPPGCustomDatePicker then
+  begin
+    DP := TDateAccess(Ed);
+    if (DP.ShowCheckbox and not DP.Checked) or (DP.DateTime = 0) then
+      Result := ''
+    else
+      Result := DateTimeToStr(DP.DateTime);
+  end
+  else if Ed is TPPGCustomMemo then
+    Result := TPPGCustomMemo(Ed).Text
   else
     Result := PPGGridEditorText(Ed);
+end;
+
+function TPPGCustomDBGrid.FormEditorOf(ACol: Integer): TPPGEditFormEditor;
+var
+  C: TPPGGridColumn;
+  F: TField;
+begin
+  Result := efeAuto;
+  C := ColumnOf(ACol);
+  if C is TPPGDBGridColumn then
+    Result := TPPGDBGridColumn(C).EditFormEditor;
+  F := FieldOfCol(ACol);
+  // Kaestchen und Nachschlagen behalten ihren Editor
+  if (F = nil) or IsCheckColumn(ACol) or (ColumnLookup(ACol) <> nil) or
+    (F.FieldKind = fkLookup) then
+    Exit(efeText);
+  if Result = efeAuto then
+  begin
+    if F.DataType in [ftMemo, ftWideMemo, ftFmtMemo] then
+      Result := efeMemo
+    else if F.DataType in [ftDate, ftDateTime, ftTimeStamp] then
+      Result := efeDate
+    else
+      Result := efeText;
+  end;
+  // Datumsauswahl nur fuer Datumsfelder
+  if (Result = efeDate) and not (F.DataType in [ftDate, ftDateTime, ftTimeStamp]) then
+    Result := efeText;
 end;
 
 procedure TPPGCustomDBGrid.FormBuild;
@@ -4770,6 +5370,9 @@ var
   Kind: TPPGGridEditorKind;
   Ed: TPPGCustomControl;
   Chk: TPPGCheckBox;
+  Mode: TPPGEditFormEditor;
+  Memo: TPPGMemo;
+  DP: TPPGDatePicker;
 begin
   FEditPanel.ClearItems;
   if not FDataLink.Active then
@@ -4813,10 +5416,41 @@ begin
     It.Cell := 0;
     It.Row := 0;
     It.Span := 1;
+    It.RowSpan := 1;
     It.LabelR := Rect(0, 0, 0, 0);
     It.EditorR := Rect(0, 0, 0, 0);
     Kind := CellEditorKind(Cols[I], ARow);
-    if Kind = gekCheck then
+    Mode := efeText;
+    if Kind <> gekCheck then
+      Mode := FormEditorOf(Cols[I]);
+    if Mode = efeMemo then
+    begin
+      // Mehrzeilig: Enter bricht um (Strg+Enter uebernimmt)
+      Memo := TPPGMemo.Create(FEditPanel);
+      Memo.Parent := FEditPanel;
+      TCtrlAccess(Memo).Preset := TCtrlAccess(FEditPanel).Preset;
+      TCtrlAccess(Memo).StyleManager := TCtrlAccess(FEditPanel).StyleManager;
+      Memo.ScrollBars := ssVertical;
+      Memo.OnChange := FEditPanel.EditorChange;
+      TFieldAccess(Memo).ReadOnly := not It.Editable;
+      Ed := Memo;
+      Kind := gekText;
+    end
+    else if Mode = efeDate then
+    begin
+      // Datum mit Kalender; leerer Wert ueber das Kaestchen (nicht bei Pflichtfeldern)
+      DP := TPPGDatePicker.Create(FEditPanel);
+      DP.Parent := FEditPanel;
+      TCtrlAccess(DP).Preset := TCtrlAccess(FEditPanel).Preset;
+      TCtrlAccess(DP).StyleManager := TCtrlAccess(FEditPanel).StyleManager;
+      TCtrlAccess(DP).AutoSize := False;
+      DP.ShowCheckbox := not FieldOfCol(Cols[I]).Required;
+      DP.OnChange := FEditPanel.EditorChange;
+      TFieldAccess(DP).ReadOnly := not It.Editable;
+      Ed := DP;
+      Kind := gekText;
+    end
+    else if Kind = gekCheck then
     begin
       // Kaestchen (auch Null = grau); schreibgeschuetzt: deaktiviert
       Chk := TPPGCheckBox.Create(FEditPanel);
@@ -4834,7 +5468,8 @@ begin
       // Textfeld nur zum Lesen
       if (Kind = gekNone) or not It.Editable then
         Kind := gekText;
-      Ed := PPGCreateGridEditor(Kind, FEditPanel, nil, nil);
+      // Nachschlage-Spalte mit mehreren Listenfeldern: mehrspaltige Auswahl
+      Ed := PPGCreateGridEditorOf(CellEditorClass(Cols[I], ARow, Kind), FEditPanel, nil, nil);
       TCtrlAccess(Ed).StyleManager := TCtrlAccess(FEditPanel).StyleManager;
       if Ed is TPPGCustomField then
       begin
@@ -4858,31 +5493,124 @@ end;
 
 procedure TPPGCustomDBGrid.FormLayoutCells;
 var
-  I, Cnt, Cell, Row, Span: Integer;
+  I, K, Cnt, Cell, Row, Span, RS, Used, G: Integer;
   C: TPPGGridColumn;
+  Occ: array of Cardinal; // belegte Zellen je Rasterzeile (Bit je Spalte)
+  Group, CurGroup: string;
+
+  function Free(ARow, ACell: Integer): Boolean;
+  var
+    R, X: Integer;
+  begin
+    for R := ARow to ARow + RS - 1 do
+    begin
+      if R >= Length(Occ) then
+        Continue;
+      for X := ACell to ACell + Span - 1 do
+        if Occ[R] and (Cardinal(1) shl X) <> 0 then
+          Exit(False);
+    end;
+    Result := True;
+  end;
+
+  procedure Mark(ARow, ACell, ASpan, ARows: Integer);
+  var
+    R, X: Integer;
+  begin
+    if Length(Occ) < ARow + ARows then
+      SetLength(Occ, ARow + ARows);
+    for R := ARow to ARow + ARows - 1 do
+      for X := ACell to ACell + ASpan - 1 do
+        Occ[R] := Occ[R] or (Cardinal(1) shl X);
+    if Used < ARow + ARows then
+      Used := ARow + ARows;
+  end;
+
 begin
-  // Raster: Felder fliessen nach rechts und brechen um (Spanne passt ganz)
+  // Raster: Felder fliessen nach rechts und brechen um (Spanne passt ganz);
+  // mehrzeilige Felder belegen mehrere Zeilen, ein neuer Abschnitt
+  // (EditFormGroup) beginnt unter allem Belegten mit seiner Ueberschrift
   Cnt := FEditForm.ColumnCount;
   Cell := 0;
   Row := 0;
+  Used := 0;
+  SetLength(Occ, 0);
+  SetLength(FEditPanel.FGroups, 0);
+  CurGroup := '';
   for I := 0 to High(FEditPanel.FItems) do
   begin
     C := ColumnOf(FEditPanel.FItems[I].DataCol);
     Span := 1;
+    RS := 1;
+    Group := '';
     if C is TPPGDBGridColumn then
-      Span := TPPGDBGridColumn(C).EditFormColSpan;
-    Span := EnsureRange(Span, 1, Cnt);
-    if Cell + Span > Cnt then
     begin
+      Span := TPPGDBGridColumn(C).EditFormColSpan;
+      Group := TPPGDBGridColumn(C).EditFormGroup;
+      if FEditPanel.FItems[I].Editor is TPPGCustomMemo then
+        RS := TPPGDBGridColumn(C).EditFormRows;
+    end
+    else if FEditPanel.FItems[I].Editor is TPPGCustomMemo then
+      RS := 3;
+    Span := EnsureRange(Span, 1, Cnt);
+    if Group <> CurGroup then
+    begin
+      CurGroup := Group;
+      Row := Used;
       Cell := 0;
-      Inc(Row);
+      if Group <> '' then
+      begin
+        G := Length(FEditPanel.FGroups);
+        SetLength(FEditPanel.FGroups, G + 1);
+        FEditPanel.FGroups[G].Caption := Group;
+        FEditPanel.FGroups[G].Row := Row;
+        FEditPanel.FGroups[G].FirstItem := I;
+        FEditPanel.FGroups[G].R := Rect(0, 0, 0, 0);
+        Mark(Row, 0, Cnt, 1);
+        Inc(Row);
+      end;
     end;
+    // Naechste freie Stelle ab (Row, Cell)
+    K := 0;
+    while True do
+    begin
+      if Cell + Span > Cnt then
+      begin
+        Cell := 0;
+        Inc(Row);
+      end;
+      if Free(Row, Cell) then
+        Break;
+      Inc(Cell);
+      Inc(K);
+      if K > 10000 then
+        Break; // Schutz (kann bei Cnt <= 32 nicht eintreten)
+    end;
+    Mark(Row, Cell, Span, RS);
     FEditPanel.FItems[I].Cell := Cell;
     FEditPanel.FItems[I].Row := Row;
     FEditPanel.FItems[I].Span := Span;
+    FEditPanel.FItems[I].RowSpan := RS;
     Inc(Cell, Span);
   end;
   FEditPanel.FArrangedW := -1;
+end;
+
+procedure FormLoadDate(DP: TDateAccess; F: TField);
+begin
+  // Wie TPPGDBDatePicker: Null = Kaestchen aus (bzw. leer); nur das Datum
+  if (F = nil) or F.IsNull then
+  begin
+    if DP.ShowCheckbox then
+      DP.Checked := False
+    else
+      DP.DateTime := 0;
+  end
+  else
+  begin
+    DP.Date := Int(F.AsDateTime);
+    DP.Checked := True;
+  end;
 end;
 
 procedure TPPGCustomDBGrid.FormLoadValues(OnlyClean: Boolean);
@@ -4890,6 +5618,7 @@ var
   I, ARow, DC: Integer;
   S: string;
   Ed: TPPGCustomControl;
+  F: TField;
 begin
   if (FEditPanel = nil) or not FDataLink.Active then
     Exit;
@@ -4908,7 +5637,17 @@ begin
         S := GetEditText(DC, ARow)
       else
         S := GetCellText(DC, ARow);
-      if Ed is TPPGCheckBox then
+      if Ed is TPPGCustomDatePicker then
+        FormLoadDate(TDateAccess(Ed), FieldOfCol(DC))
+      else if Ed is TPPGCustomMemo then
+      begin
+        F := FieldOfCol(DC);
+        if (F = nil) or F.IsNull then
+          TPPGCustomMemo(Ed).Text := ''
+        else
+          TPPGCustomMemo(Ed).Text := F.AsString;
+      end
+      else if Ed is TPPGCheckBox then
       begin
         if TPPGCellPainter.IsGrayedText(S) then
           TPPGCheckBox(Ed).State := cbGrayed
@@ -4960,7 +5699,7 @@ begin
   Rows := 0;
   if FEditPanel <> nil then
     for I := 0 to High(FEditPanel.FItems) do
-      Rows := Max(Rows, FEditPanel.FItems[I].Row + 1);
+      Rows := Max(Rows, FEditPanel.FItems[I].Row + Max(1, FEditPanel.FItems[I].RowSpan));
   Result := 2 * PPGScale(FormPad, PPI) + Rows * FormEditorHeight +
     Max(0, Rows - 1) * PPGScale(FormVGap, PPI);
   if FEditForm.ShowButtons then
@@ -4996,6 +5735,7 @@ procedure TPPGCustomDBGrid.FormArrange(Force: Boolean);
 var
   P: TPPGDBGridEditForm;
   PPI, Pad, VGap, HGap, LGap, EH, W, Cnt, CellW, LabelW, I, X, Y, IW, BW, BH, Rows: Integer;
+  RS, EB: Integer;
   LR, ER, AR, CR: TRect;
   RTL: Boolean;
 
@@ -5031,24 +5771,30 @@ begin
   // Anordnen ohne Verschiebung (Scrollen verschiebt danach die Kinder)
   P.ScrollTo(0, 0);
   Rows := 0;
+  for I := 0 to High(P.FGroups) do
+    P.FGroups[I].R := Mirror(Rect(Pad, Pad + P.FGroups[I].Row * (EH + VGap), W - Pad,
+      Pad + P.FGroups[I].Row * (EH + VGap) + EH));
   for I := 0 to High(P.FItems) do
   begin
     X := Pad + P.FItems[I].Cell * (CellW + HGap);
     IW := P.FItems[I].Span * CellW + (P.FItems[I].Span - 1) * HGap;
     Y := Pad + P.FItems[I].Row * (EH + VGap);
-    Rows := Max(Rows, P.FItems[I].Row + 1);
+    RS := Max(1, P.FItems[I].RowSpan);
+    Rows := Max(Rows, P.FItems[I].Row + RS);
     LabelW := PPGScale(FEditForm.LabelWidth, PPI);
     if LabelW > IW div 2 then
       LabelW := IW div 2;
+    // Mehrzeilig: Editor ueber RS Rasterzeilen, Beschriftung in der ersten
+    EB := Y + RS * EH + (RS - 1) * VGap;
     if LabelW > 0 then
     begin
       LR := Rect(X, Y, X + LabelW, Y + EH);
-      ER := Rect(X + LabelW + LGap, Y, X + IW, Y + EH);
+      ER := Rect(X + LabelW + LGap, Y, X + IW, EB);
     end
     else
     begin
       LR := Rect(0, 0, 0, 0);
-      ER := Rect(X, Y, X + IW, Y + EH);
+      ER := Rect(X, Y, X + IW, EB);
     end;
     LR := Mirror(LR);
     ER := Mirror(ER);
@@ -5125,8 +5871,16 @@ begin
     for I := 0 to High(FEditPanel.FItems) do
       if FEditPanel.FItems[I].Editable and FormItemChanged(I) then
       begin
+        FWriteEditor := FEditPanel.FItems[I].Editor;
         try
-          SetCellByUser(FEditPanel.FItems[I].DataCol, ARow, FormItemText(I));
+          try
+            if (FWriteEditor is TPPGCustomDatePicker) or (FWriteEditor is TPPGCustomMemo) then
+              FormWriteSpecial(I)
+            else
+              SetCellByUser(FEditPanel.FItems[I].DataCol, ARow, FormItemText(I));
+          finally
+            FWriteEditor := nil;
+          end;
         except
           // Ungueltiger Wert: das Formular bleibt offen, Fokus auf das Feld
           FormFocusTarget(I);
@@ -5137,6 +5891,52 @@ begin
       end;
   finally
     Dec(FFormBusy);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.FormWriteSpecial(I: Integer);
+var
+  F: TField;
+  Ed: TPPGCustomControl;
+  DP: TDateAccess;
+  T: Double;
+  S: string;
+begin
+  F := FieldOfCol(FEditPanel.FItems[I].DataCol);
+  Ed := FEditPanel.FItems[I].Editor;
+  if (F = nil) or not FDataLink.Active then
+    Exit;
+  if Ed is TPPGCustomMemo then
+  begin
+    S := TPPGCustomMemo(Ed).Text;
+    if not F.IsNull and (F.AsString = S) then
+      Exit;
+    if not FDataLink.Editing and not FDataLink.Edit then
+      Exit;
+    if S = '' then
+      F.Clear
+    else
+      F.AsString := S;
+    Exit;
+  end;
+  if not (Ed is TPPGCustomDatePicker) then
+    Exit;
+  DP := TDateAccess(Ed);
+  // Getippter, noch nicht uebernommener Text zaehlt mit
+  DP.CommitText(False);
+  if not FDataLink.Editing and not FDataLink.Edit then
+    Exit;
+  // Wie TPPGDBDatePicker: Kaestchen aus bzw. kein Datum = leer; die Uhrzeit
+  // eines Datum/Zeit-Felds bleibt erhalten
+  if (DP.ShowCheckbox and not DP.Checked) or (DP.DateTime = 0) then
+    F.Clear
+  else
+  begin
+    if F.IsNull then
+      T := 0
+    else
+      T := Frac(F.AsDateTime);
+    F.AsDateTime := Int(DP.Date) + T;
   end;
 end;
 
@@ -5477,6 +6277,530 @@ begin
     Exit;
   Ed := FEditPanel.FItems[I].Editor;
   PPGGridEditorTypeChar(Ed, K);
+end;
+
+{ ---- Filterzeile ueber die Datenmenge ---- }
+
+function TPPGCustomDBGrid.FiltersInView: Boolean;
+begin
+  // Der Puffer zeigt nur einen Ausschnitt: gefiltert wird die Datenmenge
+  Result := False;
+end;
+
+function TPPGCustomDBGrid.SortsInView: Boolean;
+begin
+  // Sortieren ist Sache der Datenmenge (der Pfeil zeigt nur an)
+  Result := False;
+end;
+
+function IsNumberField(F: TField): Boolean;
+begin
+  Result := F.DataType in [ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency, ftBCD,
+    ftAutoInc, ftLargeint, ftFMTBcd, ftShortint, ftByte, ftLongWord, ftExtended, ftSingle];
+end;
+
+function IsDateField(F: TField): Boolean;
+begin
+  Result := F.DataType in [ftDate, ftTime, ftDateTime, ftTimeStamp];
+end;
+
+function TPPGCustomDBGrid.FilterValueKind(ACol: Integer): TPPGFilterValueKind;
+var
+  F: TField;
+begin
+  F := FieldOfCol(ACol);
+  if F = nil then
+    Result := fvkAuto
+  else if IsCheckColumn(ACol) or (ColumnLookup(ACol) <> nil) or (F.FieldKind = fkLookup) then
+    Result := fvkText
+  else if IsNumberField(F) then
+    Result := fvkNumber
+  else if IsDateField(F) then
+    Result := fvkDate
+  else
+    Result := fvkText;
+end;
+
+function TPPGCustomDBGrid.FilterFieldMatches(const Cond: TPPGFilterCondition; ACol: Integer;
+  F: TField): Boolean;
+begin
+  if F = nil then
+    Exit(True);
+  // Kaestchen und Nachschlage-Spalten: der angezeigte Text (1/0 bzw. Listentext)
+  if IsCheckColumn(ACol) or (ColumnLookup(ACol) <> nil) then
+    Exit(Cond.MatchPlainText(FieldCellText(ACol, F)));
+  if F.IsNull then
+    Exit(Cond.MatchNull);
+  if Cond.Compares then
+  begin
+    if IsNumberField(F) and Cond.NumOk then
+      Exit(Cond.MatchNumber(F.AsFloat));
+    if IsDateField(F) and Cond.DateOk then
+      Exit(Cond.MatchDate(F.AsDateTime));
+  end;
+  Result := Cond.MatchPlainText(F.DisplayText);
+end;
+
+procedure TPPGCustomDBGrid.FilterRecordHook(DataSet: TDataSet; var Accept: Boolean);
+var
+  I: Integer;
+begin
+  // Filter der Anwendung zuerst (OnFilterRecord vor dem Grid)
+  if Assigned(FFltOldEvent) then
+  begin
+    FFltOldEvent(DataSet, Accept);
+    if not Accept then
+      Exit;
+  end;
+  for I := 0 to High(FFltConds) do
+    if not FilterFieldMatches(FFltConds[I], FFltCols[I], DataSet.FindField(FFltNames[I])) then
+    begin
+      Accept := False;
+      Exit;
+    end;
+end;
+
+procedure TPPGCustomDBGrid.FilterHook(DS: TDataSet);
+begin
+  if DS = nil then
+    Exit;
+  if FFltDS <> DS then
+  begin
+    FilterUnhook;
+    // Zustand der Anwendung merken: OnFilterRecord laeuft weiter, Filter-Text
+    // nur, wenn er aktiv war (Filtered = True schaltet ihn sonst mit ein)
+    FFltDS := DS;
+    FFltOldEvent := DS.OnFilterRecord;
+    FFltOldFiltered := DS.Filtered;
+    FFltOldText := DS.Filter;
+    FFltTextCleared := not DS.Filtered and (DS.Filter <> '');
+    DS.FreeNotification(Self);
+    DS.OnFilterRecord := FilterRecordHook;
+    if FFltTextCleared then
+      DS.Filter := '';
+  end;
+  // Neu filtern (OnFilterRecord wirkt erst beim Einschalten)
+  if DS.Filtered then
+    DS.Filtered := False;
+  DS.Filtered := True;
+end;
+
+procedure TPPGCustomDBGrid.FilterUnhook;
+var
+  DS: TDataSet;
+  M: TFilterRecordEvent;
+begin
+  DS := FFltDS;
+  if DS = nil then
+    Exit;
+  FFltDS := nil;
+  if not (csDestroying in DS.ComponentState) then
+  begin
+    DS.RemoveFreeNotification(Self);
+    M := DS.OnFilterRecord;
+    if (TMethod(M).Data = Pointer(Self)) and
+      (TMethod(M).Code = @TPPGCustomDBGrid.FilterRecordHook) then
+      DS.OnFilterRecord := FFltOldEvent;
+    if FFltOldFiltered then
+    begin
+      // Filter der Anwendung wieder allein (neu auswerten)
+      DS.Filtered := False;
+      DS.Filtered := True;
+    end
+    else
+    begin
+      DS.Filtered := False;
+      if FFltTextCleared then
+        DS.Filter := FFltOldText;
+    end;
+  end;
+  FFltOldEvent := nil;
+  FFltTextCleared := False;
+end;
+
+procedure TPPGCustomDBGrid.ApplyFilters;
+var
+  C, N: Integer;
+  Cond: TPPGFilterCondition;
+  F: TField;
+begin
+  // Bedingungen je Spalte lesen (Feld nach Namen: Spalten koennen sich aendern)
+  N := 0;
+  SetLength(FFltCols, ColCount);
+  SetLength(FFltNames, ColCount);
+  SetLength(FFltConds, ColCount);
+  for C := FixedCols to ColCount - 1 do
+  begin
+    if Trim(Filters[C]) = '' then
+      Continue;
+    F := FieldOfCol(C);
+    Cond := FilterCondition(C);
+    if (F = nil) or not Cond.Active then
+      Continue;
+    FFltCols[N] := C;
+    FFltNames[N] := F.FieldName;
+    FFltConds[N] := Cond;
+    Inc(N);
+  end;
+  SetLength(FFltCols, N);
+  SetLength(FFltNames, N);
+  SetLength(FFltConds, N);
+  if N > 0 then
+    FilterHook(FDataLink.DataSet)
+  else
+    FilterUnhook;
+  inherited ApplyFilters;
+end;
+
+procedure TPPGCustomDBGrid.BarsChanged;
+begin
+  inherited BarsChanged;
+  // Suchfeld und Filterleiste nehmen Platz von Datenzeilen
+  if not (csLoading in ComponentState) and not (csDestroying in ComponentState) and
+    (FDataLink <> nil) and FDataLink.Active and not FLayoutBusy then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
+end;
+
+{ ---- Suche ueber die Datenmenge ---- }
+
+function TPPGCustomDBGrid.FindFrom(Forward, IncludeCurrent: Boolean): Boolean;
+var
+  DS: TDataSet;
+  Cols: array of Integer;
+  NC, CI, I, Pos0, FoundCol, Skip: Integer;
+  U: string;
+  Start: TBookmark;
+  Wrapped: Boolean;
+
+  function Match(VC: Integer): Boolean;
+  var
+    DC: Integer;
+    F: TField;
+  begin
+    DC := DataCol(VC);
+    F := FieldOfCol(DC);
+    Result := (F <> nil) and (Pos(U, AnsiUpperCase(FieldCellText(DC, F))) > 0);
+  end;
+
+  function ScanRange(AFrom, ATo: Integer): Boolean;
+  var
+    K: Integer;
+  begin
+    // Spalten des aktuellen Satzes in Suchrichtung
+    Result := False;
+    if Forward then
+    begin
+      for K := Max(AFrom, 0) to Min(ATo, NC - 1) do
+        if Match(Cols[K]) then
+        begin
+          FoundCol := Cols[K];
+          Exit(True);
+        end;
+    end
+    else
+      for K := Min(AFrom, NC - 1) downto Max(ATo, 0) do
+        if Match(Cols[K]) then
+        begin
+          FoundCol := Cols[K];
+          Exit(True);
+        end;
+  end;
+
+begin
+  Result := False;
+  U := AnsiUpperCase(FindText);
+  if (U = '') or not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  if DS.IsEmpty then
+    Exit;
+  SetLength(Cols, VColCount);
+  NC := 0;
+  for I := FixedCols to VColCount - 1 do
+    if FindSearchColumn(DataCol(I)) then
+    begin
+      Cols[NC] := I;
+      Inc(NC);
+    end;
+  if NC = 0 then
+    Exit;
+  CI := 0;
+  for I := 0 to NC - 1 do
+    if Cols[I] <= FocusCol then
+      CI := I;
+  // Eine offene Bearbeitung wird gebucht (wie beim Blaettern)
+  if DS.State in dsEditModes then
+    DS.CheckBrowseMode;
+  Skip := Ord(not IncludeCurrent);
+  FoundCol := -1;
+  Pos0 := TDataSetAccess(DS).ActiveRecord;
+  Start := DS.Bookmark;
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    try
+      // 1. Aktueller Satz ab der Fokusspalte
+      if Forward then
+        ScanRange(CI + Skip, NC - 1)
+      else
+        ScanRange(CI - Skip, 0);
+      // 2. Die anderen Saetze im Kreis, zuletzt der Rest des Startsatzes
+      Wrapped := False;
+      while FoundCol < 0 do
+      begin
+        if Forward then
+        begin
+          DS.Next;
+          if DS.Eof then
+          begin
+            if Wrapped then
+              Break;
+            Wrapped := True;
+            DS.First;
+          end;
+        end
+        else
+        begin
+          DS.Prior;
+          if DS.Bof then
+          begin
+            if Wrapped then
+              Break;
+            Wrapped := True;
+            DS.Last;
+          end;
+        end;
+        if DS.CompareBookmarks(DS.Bookmark, Start) = 0 then
+        begin
+          if Forward then
+            ScanRange(0, CI - 1 + Skip)
+          else
+            ScanRange(NC - 1, CI + 1 - Skip);
+          Break;
+        end;
+        if Forward then
+          ScanRange(0, NC - 1)
+        else
+          ScanRange(NC - 1, 0);
+      end;
+    finally
+      if FoundCol < 0 then
+        GotoBookmarkAt(DS, Start, Pos0);
+    end;
+  finally
+    // Treffer: die anderen Controls sollen den neuen Satz sehen
+    if FoundCol >= 0 then
+    begin
+      PPGDBEndRead;
+      DS.EnableControls;
+    end
+    else
+    begin
+      DS.EnableControls;
+      PPGDBEndRead;
+    end;
+  end;
+  if FoundCol >= 0 then
+  begin
+    MoveFocus(FoundCol, FocusRow, False, True);
+    Invalidate;
+    Result := True;
+  end;
+end;
+
+function TPPGCustomDBGrid.IncrementalFind(const S: string; FromNext: Boolean): Boolean;
+var
+  DS: TDataSet;
+  DC, Pos0: Integer;
+  F: TField;
+  U: string;
+  Start: TBookmark;
+  Found, Wrapped: Boolean;
+
+  function Match: Boolean;
+  begin
+    Result := Copy(AnsiUpperCase(FieldCellText(DC, F)), 1, Length(U)) = U;
+  end;
+
+begin
+  Result := False;
+  U := AnsiUpperCase(S);
+  DC := DataCol(FocusCol);
+  F := FieldOfCol(DC);
+  if (U = '') or (F = nil) or not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  if DS.IsEmpty then
+    Exit;
+  if DS.State in dsEditModes then
+    DS.CheckBrowseMode;
+  Found := not FromNext and Match;
+  if Found then
+    Exit(True);
+  Pos0 := TDataSetAccess(DS).ActiveRecord;
+  Start := DS.Bookmark;
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    try
+      Wrapped := False;
+      while not Found do
+      begin
+        DS.Next;
+        if DS.Eof then
+        begin
+          if Wrapped then
+            Break;
+          Wrapped := True;
+          DS.First;
+        end;
+        if DS.CompareBookmarks(DS.Bookmark, Start) = 0 then
+        begin
+          Found := FromNext and Match;
+          Break;
+        end;
+        Found := Match;
+      end;
+    finally
+      if not Found then
+        GotoBookmarkAt(DS, Start, Pos0);
+    end;
+  finally
+    if Found then
+    begin
+      PPGDBEndRead;
+      DS.EnableControls;
+    end
+    else
+    begin
+      DS.EnableControls;
+      PPGDBEndRead;
+    end;
+  end;
+  Result := Found;
+end;
+
+{ ---- Mehrfachauswahl: Helfer ---- }
+
+function TPPGCustomDBGrid.AllowSelectCurrent: Boolean;
+begin
+  Result := True;
+  if (FNoVeto = 0) and Assigned(FOnCanSelectRecord) then
+    FOnCanSelectRecord(Self, Result);
+end;
+
+function TPPGCustomDBGrid.AllowSelectBookmark(const B: TBookmark): Boolean;
+var
+  DS: TDataSet;
+  Cur: TBookmark;
+  Pos0: Integer;
+begin
+  Result := True;
+  if (FNoVeto > 0) or not Assigned(FOnCanSelectRecord) or not FDataLink.Active or
+    (Length(B) = 0) then
+    Exit;
+  DS := FDataLink.DataSet;
+  Cur := nil;
+  if not DS.IsEmpty and (DS.State <> dsInsert) then
+    Cur := DS.Bookmark;
+  if (Length(Cur) > 0) and (DS.CompareBookmarks(Cur, B) = 0) then
+    Exit(AllowSelectCurrent);
+  if not DS.BookmarkValid(B) then
+    Exit(False);
+  // Kurz auf den Satz (ohne Anzeige), dann zurueck an dieselbe Pufferstelle
+  Pos0 := TDataSetAccess(DS).ActiveRecord;
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    DS.Bookmark := B;
+    try
+      Result := AllowSelectCurrent;
+    finally
+      if (Length(Cur) > 0) and DS.BookmarkValid(Cur) then
+        GotoBookmarkAt(DS, Cur, Pos0);
+    end;
+  finally
+    DS.EnableControls;
+    PPGDBEndRead;
+  end;
+end;
+
+function TPPGCustomDBGrid.SelectedCount: Integer;
+begin
+  if FSelected = nil then
+    Result := 0
+  else
+    Result := FSelected.Count;
+end;
+
+function TPPGCustomDBGrid.ForEachSelected(const Proc: TPPGDBGridRecordProc): Integer;
+var
+  DS: TDataSet;
+  L: array of TBookmark;
+  B: TBookmark;
+  I, Pos0: Integer;
+begin
+  Result := 0;
+  if not Assigned(Proc) or not MultiSelectActive or (FSelected.Count = 0) then
+    Exit;
+  DS := FDataLink.DataSet;
+  // Lesezeichen erst kopieren: Proc darf die Auswahl aendern
+  SetLength(L, FSelected.Count);
+  for I := 0 to High(L) do
+    L[I] := FSelected[I];
+  if DS.State in dsEditModes then
+    DS.CheckBrowseMode;
+  Pos0 := TDataSetAccess(DS).ActiveRecord;
+  DS.DisableControls;
+  try
+    B := nil;
+    if not DS.IsEmpty then
+      B := DS.Bookmark;
+    try
+      for I := 0 to High(L) do
+        if DS.BookmarkValid(L[I]) then
+        begin
+          DS.Bookmark := L[I];
+          Proc(DS);
+          Inc(Result);
+        end;
+    finally
+      if (Length(B) > 0) and DS.BookmarkValid(B) then
+        GotoBookmarkAt(DS, B, Pos0);
+    end;
+  finally
+    DS.EnableControls;
+  end;
+end;
+
+function TPPGCustomDBGrid.SelectedValues(const FieldName: string): TArray<Variant>;
+var
+  Vals: TArray<Variant>;
+  N: Integer;
+begin
+  SetLength(Result, 0);
+  if not FDataLink.Active then
+    Exit;
+  if FDataLink.DataSet.FindField(FieldName) = nil then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGDBFieldNotFound), [FieldName]);
+  SetLength(Vals, SelectedCount);
+  N := 0;
+  PPGDBBeginRead;
+  try
+    ForEachSelected(
+      procedure(DataSet: TDataSet)
+      begin
+        Vals[N] := DataSet.FieldByName(FieldName).Value;
+        Inc(N);
+      end);
+  finally
+    PPGDBEndRead;
+  end;
+  SetLength(Vals, N);
+  Result := Vals;
 end;
 
 { TPPGDBGrid }

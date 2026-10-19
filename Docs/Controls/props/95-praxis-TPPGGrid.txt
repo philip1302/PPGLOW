@@ -161,3 +161,8 @@ TPPGGridStyles.Header ! Kopf in der Hausfarbe oder fett (FontStyle = [fsBold]); 
 TPPGGridStyles.HotRow ! Zeile unter der Maus hervorheben, hilfreich bei breiten Listen; Color setzen schaltet es ein.
 TPPGGridStyles.Selection ! Eigene Auswahlfarbe nur, wenn die Akzentfarbe des Presets nicht passt; mit Color wird die Auswahl deckend.
 TPPGGridStyles.SelectionInactive ! Auswahl ohne Fokus sichtbar halten, z. B. hellgrau, damit man beim Arbeiten in den Detailfeldern sieht, welcher Datensatz gewählt ist.
+TPPGGrid.FilterImmediate ! Einschalten bei Listen bis einige tausend Zeilen: Der Anwender sieht beim Tippen sofort, was übrig bleibt. Bei sehr großen virtuellen Listen False lassen.
+TPPGGrid.ShowFilterBar ! Einschalten, wenn die Filterzeile benutzt wird: Die Leiste zeigt, warum Zeilen fehlen, und löscht alle Filter mit einem Klick.
+TPPGGrid.FindPanel ! fpmManual für Listen, in denen man gelegentlich etwas sucht (Strg+F wie im Browser); fpmAlways, wenn Suchen die Hauptaufgabe ist.
+TPPGGrid.IncrementalSearch ! Für schreibgeschützte, sortierte Listen (Kunden, Artikel): Anfangsbuchstaben tippen springt zum Eintrag.
+TPPGGrid.OnFilterChanged ! Trefferzahl in der Statusleiste anzeigen oder den Filter im Layout bzw. in den Einstellungen merken.

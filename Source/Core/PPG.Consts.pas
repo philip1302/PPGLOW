@@ -50,6 +50,22 @@ resourcestring
   SPPGDBLookupMultiKey = 'Lookup with several key fields (%s) is not supported.';
   SPPGDBGridEditForm = 'Edit form';
   SPPGDBGridEditFormApply = 'Apply';
+  // Filterleiste und Suchfeld der Grids
+  SPPGFilterDescContains = '%s contains "%s"';
+  SPPGFilterDescBeginsWith = '%s begins with "%s"';
+  SPPGFilterDescEndsWith = '%s ends with "%s"';
+  SPPGFilterDescCompare = '%s %s %s';
+  SPPGFilterDescBetween = '%s between %s and %s';
+  SPPGFilterDescEmpty = '%s is empty';
+  SPPGFilterDescNotEmpty = '%s is not empty';
+  SPPGFilterDescJoin = '%s and %s';
+  SPPGFilterBarText = 'Filter: %s';
+  SPPGFilterBarClear = 'Clear filter';
+  SPPGGridFindHint = 'Search';
+  SPPGGridFindNext = 'Next';
+  SPPGGridFindPrevious = 'Previous';
+  SPPGGridFindClose = 'Close search';
+  SPPGDBFieldNotFound = 'Field "%s" not found';
   SPPGAccJump = 'Jump';
   SPPGAccExpand = 'Expand';
   SPPGAccCollapse = 'Collapse';
