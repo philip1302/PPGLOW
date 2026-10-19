@@ -10,7 +10,7 @@ TPPGCustomControl.Appearance = Aussehen je Zustand: Farben, Verläufe, Rand, Glo
 > `PPGButton1.Appearance.Normal.Color := $00F0E0D0; PPGButton1.Appearance.Rounding := 8;`
 TPPGCustomControl.Animation = Übergänge zwischen den Zuständen (Hover, Drücken, Fokus): an/aus, Dauer und ob die Windows-Einstellung „Animationen anzeigen" beachtet wird.
 TPPGCustomControl.Images = Bildliste für ImageIndex bzw. ImageName (TImageList, TVirtualImageList, SVG-Bildlisten).
-TPPGCustomControl.ImageIndex = Index des Bildes in Images; -1 = kein Bild.
+TPPGCustomControl.ImageIndex = Index des Bildes in Images; -1 = kein Bild. Ist ImageName gesetzt (Liste mit Namen), wird nur ImageName gespeichert, sonst der Index (TImageList, Bild ohne Namen).
 > `PPGButton1.Images := ImageList1; PPGButton1.ImageIndex := 3;`
 TPPGCustomControl.ImageName = Name des Bildes in einer TVirtualImageList bzw. TImageCollection (ab Delphi 10.4). Robust gegen Umsortieren; ein unbekannter Name ergibt „kein Bild".
 TPPGCustomControl.HotImageIndex = Bild, solange die Maus über dem Control ist; -1 = wie ImageIndex.

@@ -122,7 +122,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. Praxis: Selten gebraucht; Zeichentasten lösen keine Befehle aus. Tastenkürzel für Befehle besser über Actions (ShortCut) vergeben. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. Praxis: Selten gebraucht, z. B. um eine Vorschau zu beenden, wenn eine Taste losgelassen wird. |
 
-Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests, TStreamingFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit8A` (TAudit8APaintTests, TAudit8ARepaintCountTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.Phase7c` (TBreadcrumbTests, TPhase7cPaintTests, TToolBarTests); `PPG.Tests.Streaming`; `PPG.Tests.ToolBarDropdown` (TToolBarDropdownTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests, TStreamingFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit8A` (TAudit8APaintTests, TAudit8ARepaintCountTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.ImageStored` (TImageStoredTests); `PPG.Tests.Phase7c` (TBreadcrumbTests, TPhase7cPaintTests, TToolBarTests); `PPG.Tests.Streaming`; `PPG.Tests.ToolBarDropdown` (TToolBarDropdownTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGToolBar.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

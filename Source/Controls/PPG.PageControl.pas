@@ -342,6 +342,10 @@ begin
   if FImageIndex <> Value then
   begin
     FImageIndex := Value;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    // Wie VCL: Name folgt dem Index (sonst gewinnt beim Laden ein veralteter Name)
+    PPGSyncItemImageName(Self, Value, FImageName);
+    {$ENDIF}
     if PageControl <> nil then
       PageControl.PageChanged(Self);
   end;

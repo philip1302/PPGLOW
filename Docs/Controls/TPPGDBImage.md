@@ -154,7 +154,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 
-Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Image` (TDBImageTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit5d`; `PPG.Tests.Image` (TDBImageTests); `PPG.Tests.ImageStored` (TImageStoredTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBImage.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.
