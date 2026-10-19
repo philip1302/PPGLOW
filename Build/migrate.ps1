@@ -14,7 +14,12 @@
                           @{ ClassMap = @{ 'TAlt' = @('TNeu','Unit') }; Renames = @{ 'TAlt' = @{ 'A' = 'B' } };
                              ReportOnly = @{ 'TX' = 'Hinweis' }; InheritsVcl = @('TNeu');
                              GlyphClasses = @('TAlt'); GridClasses = @('TAlt');
-                             HandlerTypes = @{ 'TAltTyp' = 'TNeuTyp' } }
+                             HandlerTypes = @{ 'TAltTyp' = 'TNeuTyp' };
+                             ValueMap/Inject/PropNotes = @{ 'TAlt' = @{ 'Prop' = ... } };
+                             Ignore/Drop = @{ 'TAlt' = @('Muster*') } }
+                          (Ignore: ohne Meldung entfernen, Drop: entfernen und melden,
+                          Inject: Property dazuschreiben, PropNotes: Hinweis im Bericht.
+                          DevExpress/JVCL-Controls sind eingebaut, siehe Docs\Migration.md)
                           Die Eintraege werden in die Tabellen gemischt (Map gewinnt).
                           GlyphClasses: alte Klassen, deren Glyph wie bei TBitBtn behandelt wird,
                           auch wenn die Zielklasse nicht in den Quellen steht (sonst automatisch,
@@ -139,6 +144,18 @@ $ClassMap = [ordered]@{
   'TDBRichEdit'       = @('TPPGDBRichEdit', 'PPG.DB.RichEdit')
   'TImage'            = @('TPPGImage', 'PPG.Image')
   'TDBImage'          = @('TPPGDBImage', 'PPG.DB.Controls')
+  # DevExpress (cx/dx) und JVCL: einfache Controls (Eigenschaften: Renames/ValueMap/Ignore/PropNotes)
+  'TcxButton'         = @('TPPGButton', 'PPG.Button')
+  'TcxCheckBox'       = @('TPPGCheckBox', 'PPG.CheckBox')
+  'TcxDBLookupComboBox' = @('TPPGDBLookupComboBox', 'PPG.DB.Lookup')
+  'TdxDBToggleSwitch' = @('TPPGDBToggleSwitch', 'PPG.DB.Controls')
+  'TcxPageControl'    = @('TPPGPageControl', 'PPG.PageControl')
+  'TcxTabSheet'       = @('TPPGTabSheet', 'PPG.PageControl')
+  'TcxCheckComboBox'  = @('TPPGCheckComboBox', 'PPG.CheckComboBox')
+  'TJvDirectoryEdit'  = @('TPPGFileEdit', 'PPG.FileEdit')
+  'TJvFilenameEdit'   = @('TPPGFileEdit', 'PPG.FileEdit')
+  'TJvCheckBox'       = @('TPPGCheckBox', 'PPG.CheckBox')
+  'TJvComboBox'       = @('TPPGComboBox', 'PPG.ComboBox')
 }
 
 # PPGlow-Klassen, die von einer VCL-Klasse erben, deren Properties das Skript
@@ -165,6 +182,7 @@ $LayoutMap = @{ 'blGlyphLeft' = 'ipLeft'; 'blGlyphRight' = 'ipRight'; 'blGlyphTo
 # aber im Bericht mit einem Hinweis erscheinen
 $ReportOnly = @{
   'TListView' = 'nicht umgestellt - Symbol-/Kachelansicht: TPPGTileView, Detailansicht (vsReport): TPPGGrid (von Hand)'
+  'TcxNavigator' = 'nicht umgestellt - cxNavigator ist ueber Control an ein cxGrid/eine cxGrid-Ansicht gebunden, TPPGDBNavigator an eine TDataSource (DataSource, VisibleButtons, Hints); zusammen mit dem Grid von Hand umstellen'
 }
 
 # Umbenennungen je ALTER Klasse: alter Name -> neuer Name ('' = entfernen)
@@ -180,6 +198,33 @@ $Renames = @{
   'TTrackBar'      = @{ 'SliderVisible' = 'ShowSlider' }
   'TStringGrid'    = @{ 'OnTopLeftChanged' = 'OnTopLeftChange' }
   'TAdvStringGrid' = @{ 'OnTopLeftChanged' = 'OnTopLeftChange' }
+  # DevExpress / JVCL: Properties.* und DataBinding.* liegen bei PPGlow direkt am Control
+  # (Glyph.Data, OptionsImage.NumGlyphs: Glyph-Behandlung, ListColumns/Items: Sonderfaelle im Code)
+  'TcxButton'    = @{ 'OptionsImage.ImageIndex' = 'ImageIndex'; 'OptionsImage.Images' = 'Images'
+                      'OptionsImage.Margin' = 'Margin'; 'OptionsImage.Spacing' = 'Spacing'
+                      'OptionsImage.Layout' = 'ImagePosition' }
+  'TcxCheckBox'  = @{ 'Properties.OnChange' = 'OnChange'; 'Properties.AllowGrayed' = 'AllowGrayed'
+                      'Properties.MultiLine' = 'WordWrap'; 'Properties.OnEditValueChanged' = 'OnChange' }
+  'TJvCheckBox'  = @{ 'Checked' = 'State' }
+  'TcxDBLookupComboBox' = @{ 'DataBinding.DataField' = 'DataField'; 'DataBinding.DataSource' = 'DataSource'
+                      'Properties.KeyFieldNames' = 'KeyField'; 'Properties.ListFieldNames' = 'ListField'
+                      'Properties.ListFieldIndex' = 'ListFieldIndex'; 'Properties.ListSource' = 'ListSource'
+                      'Properties.DropDownRows' = 'DropDownRows'; 'Properties.DropDownWidth' = 'DropDownWidth'
+                      'Properties.NullValueKey' = 'NullValueKey'; 'Properties.ReadOnly' = 'ReadOnly'
+                      'Properties.OnChange' = 'OnChange'; 'Properties.OnEditValueChanged' = 'OnChange'; 'Properties.OnCloseUp' = 'OnCloseUp' }
+  'TdxDBToggleSwitch' = @{ 'DataBinding.DataField' = 'DataField'; 'DataBinding.DataSource' = 'DataSource'
+                      'Properties.ValueChecked' = 'ValueChecked'; 'Properties.ValueUnchecked' = 'ValueUnchecked'
+                      'Properties.ReadOnly' = 'ReadOnly'; 'Properties.OnChange' = 'OnChange'; 'Properties.OnEditValueChanged' = 'OnChange' }
+  'TcxPageControl' = @{ 'Properties.ActivePage' = 'ActivePage'; 'Properties.MultiLine' = 'MultiLine'
+                      'Properties.TabPosition' = 'TabPosition'; 'Properties.Images' = 'Images'
+                      'Properties.HotTrack' = 'HotTrack'; 'Properties.TabHeight' = 'TabHeight'
+                      'Properties.TabWidth' = 'TabWidth'; 'Properties.RaggedRight' = 'RaggedRight'
+                      'Properties.OnChange' = 'OnChange'; 'Properties.OnPageChanging' = 'OnChanging' }
+  'TcxCheckComboBox' = @{ 'Properties.Delimiter' = 'Delimiter'; 'Properties.ReadOnly' = 'ReadOnly'
+                      'Properties.DropDownRows' = 'DropDownCount'; 'Properties.OnChange' = 'OnChange'; 'Properties.OnEditValueChanged' = 'OnChange'
+                      'Properties.OnCloseUp' = 'OnCloseUp' }
+  'TJvDirectoryEdit' = @{ 'AcceptFiles' = 'AcceptDrop' }
+  'TJvFilenameEdit'  = @{ 'AcceptFiles' = 'AcceptDrop'; 'DialogKind' = 'Kind' }
 }
 
 # VCL-Vorgaben, die bei PPGlow anders sind. Die IDE schreibt Vorgabewerte
@@ -203,6 +248,88 @@ $VclDefaults = @{
 # ('' = entfernen und melden)
 $ValueMap = @{
   'TButton' = @{ 'Style' = @{ 'bsPushButton' = 'pbsPushButton'; 'bsSplitButton' = 'pbsSplitButton'; 'bsCommandLink' = '' } }
+  'TcxButton' = @{ 'ImagePosition' = @{ 'blGlyphLeft' = 'ipLeft'; 'blGlyphRight' = 'ipRight'; 'blGlyphTop' = 'ipTop'; 'blGlyphBottom' = 'ipBottom' } }
+  'TcxCheckBox' = @{ 'State' = @{ 'cbsChecked' = 'cbChecked'; 'cbsUnchecked' = 'cbUnchecked'; 'cbsGrayed' = 'cbGrayed' } }
+  'TJvCheckBox' = @{ 'State' = @{ 'True' = 'cbChecked'; 'False' = 'cbUnchecked' } }
+  'TJvFilenameEdit' = @{ 'Kind' = @{ 'dkOpen' = 'fkOpenFile'; 'dkOpenPicture' = 'fkOpenFile'; 'dkSave' = 'fkSaveFile'; 'dkSavePicture' = 'fkSaveFile' } }
+}
+
+# Properties, die ohne Meldung wegfallen (Aussehen/Entwurfszeit-Werte ohne Gegenstueck):
+# Klasse -> Muster (-like). Alles andere, was die PPGlow-Klasse nicht hat, wird entfernt UND gemeldet.
+# Leere Collections ("= <>") fallen bei nicht vorhandenen Properties immer ohne Meldung weg.
+$Ignore = @{
+  'TcxButton'           = @('OptionsImage.Glyph.SourceDPI', 'LookAndFeel.*', 'SpeedButtonOptions.*')
+  'TcxCheckBox'         = @('LookAndFeel.*', '*.LookAndFeel.*')
+  'TcxDBLookupComboBox' = @('LookAndFeel.*', '*.LookAndFeel.*', 'Properties.ListOptions.GridLines',
+                           'Style.BorderStyle', 'Style.ButtonStyle', 'Style.Edges', 'Style.HotTrack', 'Style.Shadow',
+                           'StyleHot.BorderStyle', 'StyleFocused.BorderStyle')
+  'TdxDBToggleSwitch'   = @('Style.TransparentBorder')
+  'TcxCheckComboBox'    = @('LookAndFeel.*', '*.LookAndFeel.*')
+  'TcxPageControl'      = @('LookAndFeel.*', 'ClientRect*', 'Properties.TabSlants.*')
+  'TJvDirectoryEdit'    = @('Flat', 'ParentFlat', 'DisabledColor', 'DialogKind', 'ButtonWidth')
+  'TJvFilenameEdit'     = @('Flat', 'ParentFlat', 'DisabledColor', 'ButtonWidth')
+  'TJvComboBox'         = @('Flat', 'ParentFlat')
+
+}
+
+# Properties, die bei PPGlow unter demselben Anfang etwas anderes sind (z. B. Style = TComboBoxStyle) und
+# nicht uebersetzt werden: entfernt UND gemeldet (sonst bliebe z. B. "Style.BorderStyle" stehen).
+# Wird nach Ignore geprueft.
+$Drop = @{
+  'TcxButton'           = @('Style.*')
+  'TcxCheckBox'         = @('Style.*', 'StyleHot.*', 'StyleFocused.*', 'StyleDisabled.*')
+  'TcxDBLookupComboBox' = @('Style.*', 'StyleHot.*', 'StyleFocused.*', 'StyleDisabled.*')
+  'TdxDBToggleSwitch'   = @('Style.*', 'StyleHot.*', 'StyleFocused.*', 'StyleDisabled.*')
+  'TcxCheckComboBox'    = @('Style.*', 'StyleHot.*', 'StyleFocused.*', 'StyleDisabled.*')
+}
+
+# Eigenschaften, die dazugeschrieben werden, wenn die DFM sie (auch nach Umbenennung) nicht enthaelt
+$Inject = @{
+  'TJvDirectoryEdit' = [ordered]@{ 'Kind' = 'fkFolder' }
+  'TJvFilenameEdit'  = [ordered]@{ 'Kind' = 'fkOpenFile' }
+}
+
+# Hinweise im Bericht zu Properties, die nicht (sicher) uebersetzbar sind: Klasse -> Property -> Text.
+# Die Property selbst wird wie ueblich behandelt (uebernommen/umbenannt oder, wenn es sie nicht gibt, entfernt).
+$PropNotes = @{
+  'TcxDBLookupComboBox' = @{
+    'Properties.DropDownListStyle' = 'TPPGDBLookupComboBox ist immer eine Auswahlliste (csDropDownList, Tippsuche); freie Eingabe (lsEditList) entfaellt'
+    'Properties.ImmediatePost' = 'ImmediatePost gibt es nicht - der Wert wird beim Auswaehlen ins Feld geschrieben, Post wie bei TDBLookupComboBox'
+    'Properties.DropDownAutoSize' = 'Listenbreite: DropDownWidth von Hand setzen (0 = Breite des Feldes)'
+    'Properties.DropDownSizeable' = 'Liste ist in der Groesse nicht verstellbar'
+  }
+  'TdxDBToggleSwitch' = @{
+    'Properties.ImmediatePost' = 'ImmediatePost gibt es nicht'
+    'Properties.DisplayChecked' = 'Text je Zustand gibt es nicht - Caption/Label daneben von Hand'
+    'Properties.DisplayUnchecked' = 'Text je Zustand gibt es nicht - Caption/Label daneben von Hand'
+    'Properties.StateIndicator.OnText' = 'Text im Schalter gibt es nicht - Caption/Label daneben von Hand'
+    'Properties.StateIndicator.OffText' = 'Text im Schalter gibt es nicht - Caption/Label daneben von Hand'
+  }
+  'TcxPageControl' = @{
+    'Properties.CustomButtons.Buttons' = 'eigene Schaltflaechen in der Reiterleiste gibt es nicht'
+    'Properties.Style' = 'Reiterstil: Preset/Appearance von Hand'
+    'Properties.HideTabs' = 'HideTabs gibt es nicht: Reiter ueber TabVisible von Hand ausblenden'
+  }
+  'TcxCheckBox' = @{
+    'Properties.Alignment' = 'Ausrichtung: Alignment des TPPGCheckBox von Hand pruefen'
+    'Properties.ValueChecked' = 'ValueChecked/ValueUnchecked kennt nur die DB-Variante (TPPGDBCheckBox)'
+    'Properties.ValueUnchecked' = 'ValueChecked/ValueUnchecked kennt nur die DB-Variante (TPPGDBCheckBox)'
+    'Properties.NullStyle' = 'NullStyle gibt es nicht'
+  }
+  'TcxButton' = @{
+    'Kind' = 'Kind (cxbkDropDown/cxbkDropDownButton): DropDownMenu + Style = pbsSplitButton des TPPGButton von Hand'
+    'DropDownMenu' = 'DropDownMenu: TPPGButton hat DropDownMenu + Style = pbsSplitButton (von Hand pruefen)'
+  }
+  'TJvDirectoryEdit' = @{
+    'OnBeforeDialog' = 'Signatur anders: Jv (Sender; var AName: string; var AAction: Boolean), PPGlow (Sender; var Allow: Boolean) - Handler von Hand anpassen'
+    'OnAfterDialog'  = 'Signatur anders: Jv (Sender; var AName: string; var AAction: Boolean), PPGlow (Sender; var FileName: string; var Accept: Boolean) - Parameter pruefen'
+  }
+  'TJvFilenameEdit' = @{
+    'OnBeforeDialog' = 'Signatur anders: Jv (Sender; var AName: string; var AAction: Boolean), PPGlow (Sender; var Allow: Boolean) - Handler von Hand anpassen'
+    'OnAfterDialog'  = 'Signatur anders: Jv (Sender; var AName: string; var AAction: Boolean), PPGlow (Sender; var FileName: string; var Accept: Boolean) - Parameter pruefen'
+    'AddQuotes'      = 'AddQuotes gibt es nicht - der Dateiname hat keine Anfuehrungszeichen'
+    'DialogKind'     = 'dkOpenPicture/dkSavePicture: Bildvorschau gibt es nicht (nur Open/Save)'
+  }
 }
 
 # DB-Grid-Optionen ohne Wirkung in TPPGDBGrid (werden gemeldet)
@@ -393,6 +520,69 @@ function Save-Glyph([string[]]$HexLines, [int]$NumGlyphs, [string]$OutFile) {
   return $null
 }
 
+# DevExpress-Glyph (TdxSmartGlyph, OptionsImage.Glyph.Data): rohe Bilddaten ohne Laengenvorspann
+# (PNG oder BMP, 32 Bit BMP mit Alpha). Erstes Teilbild als PNG; Alpha bleibt erhalten, ohne
+# Alpha-Kanal gilt wie bei Save-Glyph das Pixel unten links als Transparenzfarbe.
+function Save-SmartGlyph([string[]]$HexLines, [int]$NumGlyphs, [string]$OutFile) {
+  Add-Type -AssemblyName System.Drawing
+  $hex = ($HexLines -join '') -replace '[^0-9A-Fa-f]', ''
+  if ($hex.Length -lt 16 -or ($hex.Length % 2) -ne 0) { return 'Glyph-Daten unlesbar' }
+  $bytes = New-Object byte[] ($hex.Length / 2)
+  for ($b = 0; $b -lt $bytes.Length; $b++) { $bytes[$b] = [Convert]::ToByte($hex.Substring(2 * $b, 2), 16) }
+  $isBmp = ($bytes[0] -eq 0x42 -and $bytes[1] -eq 0x4D)
+  $isPng = ($bytes[0] -eq 0x89 -and $bytes[1] -eq 0x50)
+  if (-not $isBmp -and -not $isPng) { return 'Glyph-Daten unlesbar (weder BMP noch PNG)' }
+  $src = $null; $frame = $null; $ms = $null
+  try {
+    $hasAlpha = $true
+    if ($isBmp -and $bytes.Length -gt 54 -and [BitConverter]::ToUInt16($bytes, 28) -eq 32 -and [BitConverter]::ToInt32($bytes, 30) -eq 0) {
+      # 32 Bit BMP: GDI+ wuerde den Alpha-Kanal ignorieren -> von Hand lesen
+      $off = [BitConverter]::ToInt32($bytes, 10)
+      $w = [BitConverter]::ToInt32($bytes, 18); $h = [BitConverter]::ToInt32($bytes, 22)
+      $up = $true
+      if ($h -lt 0) { $h = -$h; $up = $false }
+      if ($w -lt 1 -or $h -lt 1 -or ($off + 4 * $w * $h) -gt $bytes.Length) { return 'Glyph-Daten unlesbar (BMP)' }
+      $src = New-Object System.Drawing.Bitmap($w, $h, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+      $any = $false
+      for ($y = 0; $y -lt $h; $y++) {
+        $row = if ($up) { $h - 1 - $y } else { $y }
+        for ($x = 0; $x -lt $w; $x++) {
+          $p = $off + 4 * ($row * $w + $x)
+          if ($bytes[$p + 3] -ne 0) { $any = $true }
+        }
+      }
+      for ($y = 0; $y -lt $h; $y++) {
+        $row = if ($up) { $h - 1 - $y } else { $y }
+        for ($x = 0; $x -lt $w; $x++) {
+          $p = $off + 4 * ($row * $w + $x)
+          $a = if ($any) { $bytes[$p + 3] } else { 255 }
+          $src.SetPixel($x, $y, [System.Drawing.Color]::FromArgb($a, $bytes[$p + 2], $bytes[$p + 1], $bytes[$p]))
+        }
+      }
+    }
+    else {
+      $ms = New-Object System.IO.MemoryStream(, $bytes)
+      $src = New-Object System.Drawing.Bitmap($ms)
+      $hasAlpha = ([System.Drawing.Image]::IsAlphaPixelFormat($src.PixelFormat))
+    }
+    if ($NumGlyphs -lt 1) { $NumGlyphs = 1 }
+    $fw = [int][Math]::Floor($src.Width / $NumGlyphs)
+    if ($fw -lt 1) { $fw = $src.Width }
+    $rect = New-Object System.Drawing.Rectangle(0, 0, $fw, $src.Height)
+    $frame = $src.Clone($rect, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    if (-not $hasAlpha) { $frame.MakeTransparent($src.GetPixel(0, $src.Height - 1)) }
+    $dir = Split-Path -Parent $OutFile
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
+    $frame.Save($OutFile, [System.Drawing.Imaging.ImageFormat]::Png)
+  }
+  finally {
+    if ($frame) { $frame.Dispose() }
+    if ($src) { $src.Dispose() }
+    if ($ms) { $ms.Dispose() }
+  }
+  return $null
+}
+
 function Convert-Dfm([string]$File, [hashtable]$Handlers) {
   $bytes = [IO.File]::ReadAllBytes($File)
   if ($bytes.Length -gt 0 -and $bytes[0] -eq 0xFF) {
@@ -416,6 +606,16 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         if (-not $e.Seen.Contains($p)) {
           $out.Add($sp + "$p = $($VclDefaults[$e.Old][$p])")
           $report.Add("$File :   $($e.Name).$p = $($VclDefaults[$e.Old][$p]) (VCL-Vorgabe, bei $($e.New) anders)")
+          $script:changedByDefaults = $true
+        }
+      }
+    }
+    # Zuordnungen, die eine Eigenschaft dazuschreiben (z. B. TJvDirectoryEdit -> Kind = fkFolder)
+    if ($Inject.ContainsKey($e.Old)) {
+      foreach ($p in $Inject[$e.Old].Keys) {
+        if (-not $e.Seen.Contains($p) -and $e.Allowed.Contains($p)) {
+          $out.Add($sp + "$p = $($Inject[$e.Old][$p])")
+          $report.Add("$File :   $($e.Name).$p = $($Inject[$e.Old][$p]) (Zuordnung $($e.Old) -> $($e.New))")
           $script:changedByDefaults = $true
         }
       }
@@ -471,7 +671,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         $entry.Glyph = Test-Target $cls $new $GlyphClasses $GlyphTargetBase
         $entry.Grid = Test-Target $cls $new $GridClasses $GridTargetBase
         if ($entry.Grid) { [void]$usedUnits.Add($GridUnit) }
-        $migrated.Add(@{ Name = $name; Old = $cls })
+        $migrated.Add(@{ Name = $name; Old = $cls; New = $new })
         if ($InheritsVcl -contains $new) { $entry.NoFilter = $true }
         elseif (-not $script:ClassInfo.ContainsKey($new)) {
           $entry.NoFilter = $true
@@ -553,6 +753,56 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
       $prop = $Matches[1]
       $value = $Matches[2]
       $top = ($prop -split '\.')[0]
+      # Hinweise zu nicht (sicher) uebersetzbaren Properties
+      if ($PropNotes.ContainsKey($cur.Old) -and $PropNotes[$cur.Old].ContainsKey($prop) -and $value.Trim() -ne '<>') {
+        $report.Add("$File :   $($cur.Name).$prop : $($PropNotes[$cur.Old][$prop])")
+      }
+      # cxDBLookupComboBox: Properties.ListColumns (Collection) -> ListField = 'Feld1;Feld2'
+      if ($cur.Old -eq 'TcxDBLookupComboBox' -and $prop -eq 'Properties.ListColumns') {
+        $end = Get-ValueEnd $lines $i $value
+        $names = @(); $extra = $false
+        for ($k = $i; $k -le $end; $k++) {
+          if ($lines[$k] -match "^\s*FieldName\s*=\s*'([^']*)'") { $names += $Matches[1] }
+          elseif ($lines[$k] -match '^\s*(Width|MinWidth|Caption|HeaderAlignment|SortOrder|Alignment)\s*=') { $extra = $true }
+        }
+        if ($names.Count -gt 0) {
+          if ($null -ne (Find-DfmProp $lines $i 'Properties.ListFieldNames')) {
+            $report.Add("$File :   $($cur.Name).Properties.ListColumns entfernt (ListFieldNames ist gesetzt)")
+          }
+          else {
+            $out.Add((' ' * $indent) + "ListField = '" + ($names -join ';') + "'")
+            [void]$cur.Seen.Add('ListField')
+            $report.Add("$File :   $($cur.Name).Properties.ListColumns -> ListField = '$($names -join ';')'")
+            if ($names.Count -gt 1) { $report.Add("$File :   $($cur.Name).ListField mit $($names.Count) Feldern: erstes Feld im Feld, weitere als Detailzeile (ListFieldIndex pruefen)") }
+          }
+          if ($extra) { $report.Add("$File :   $($cur.Name).ListColumns: Spaltenbreiten/Titel/Ausrichtung entfallen") }
+        }
+        elseif ($end -gt $i) { $report.Add("$File :   $($cur.Name).Properties.ListColumns ohne FieldName entfernt") }
+        $i = $end
+        $changed = $true
+        continue
+      }
+      # cxCheckComboBox: Properties.Items (Collection, Description) -> Items.Strings
+      if ($cur.Old -eq 'TcxCheckComboBox' -and $prop -eq 'Properties.Items') {
+        $end = Get-ValueEnd $lines $i $value
+        $texts = @(); $n = 0; $lost = $false
+        for ($k = $i; $k -le $end; $k++) {
+          if ($lines[$k].Trim() -eq 'item') { $n++ }
+          if ($lines[$k] -match "^\s*Description\s*=\s*(.+)$") { $texts += $Matches[1].Trim() }
+          elseif ($lines[$k] -match '^\s*(ShortDescription|Tag)\s*=') { $lost = $true }
+        }
+        if ($texts.Count -gt 0) {
+          $sp0 = ' ' * $indent
+          $out.Add($sp0 + 'Items.Strings = (')
+          for ($k = 0; $k -lt $texts.Count; $k++) { $out.Add($sp0 + '  ' + $texts[$k] + $(if ($k -eq $texts.Count - 1) { ')' } else { '' })) }
+          $report.Add("$File :   $($cur.Name).Properties.Items -> Items.Strings ($($texts.Count) Eintraege)")
+        }
+        if ($n -gt $texts.Count) { $report.Add("$File :   $($cur.Name).Properties.Items: $($n - $texts.Count) Eintrag/Eintraege ohne Description entfernt (zur Laufzeit fuellen: Items.Add)") }
+        if ($lost) { $report.Add("$File :   $($cur.Name).Properties.Items: ShortDescription/Tag der Eintraege entfallen") }
+        $i = $end
+        $changed = $true
+        continue
+      }
       # TBitBtn.Kind -> ModalResult/Default/Cancel (geschrieben beim Objektende)
       if ($cur.Old -eq 'TBitBtn' -and $prop -eq 'Kind') {
         $kind = $value.Trim()
@@ -576,7 +826,7 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
       # die Zielklasse die Property nicht selbst hat; Renames der Map gewinnen)
       $ownRename = $Renames.ContainsKey($cur.Old) -and $Renames[$cur.Old].ContainsKey($prop)
       if ($cur.Glyph -and -not $ownRename -and -not $cur.Allowed.Contains($prop)) {
-        if ($prop -eq 'NumGlyphs') {
+        if ($prop -eq 'NumGlyphs' -or $prop -eq 'OptionsImage.NumGlyphs') {
           $report.Add("$File :   $($cur.Name).NumGlyphs entfernt")
           $changed = $true
           continue
@@ -598,16 +848,18 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         }
       }
       # Glyphs (TBitBtn/TSpeedButton und Klassen mit Ziel TPPGCustomButton): als PNG sichern oder entfernen
-      if ($cur.Glyph -and $prop -eq 'Glyph.Data' -and -not $cur.Allowed.Contains('Glyph')) {
+      if ($cur.Glyph -and ($prop -eq 'Glyph.Data' -or $prop -eq 'OptionsImage.Glyph.Data') -and -not $cur.Allowed.Contains('Glyph')) {
+        $smart = ($prop -eq 'OptionsImage.Glyph.Data')   # DevExpress TdxSmartGlyph: rohe Bilddaten
         $end = Get-ValueEnd $lines $i $value
         if ($GlyphDir -ne '') {
-          $ng = Find-DfmProp $lines $i 'NumGlyphs'
+          $ng = Find-DfmProp $lines $i $(if ($smart) { 'OptionsImage.NumGlyphs' } else { 'NumGlyphs' })
           $n = 1
           if ($null -ne $ng) { [void][int]::TryParse($ng, [ref]$n) }
           $png = "${rootName}_$($cur.Name).png" -replace '[^\w.\-]', '_'
           $hexLines = @($value) + @($lines[($i + 1)..$end] | Where-Object { $_ -ne $null })
           if ($end -eq $i) { $hexLines = @($value) }
           if ($WhatIf) { $err = $null }
+          elseif ($smart) { $err = Save-SmartGlyph $hexLines $n (Join-Path $GlyphDir $png) }
           else { $err = Save-Glyph $hexLines $n (Join-Path $GlyphDir $png) }
           if ($err) { $report.Add("$File :   $($cur.Name).Glyph entfernt - $err") }
           else {
@@ -625,6 +877,27 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
       if ($prop -eq 'Glyph.Data' -and -not $cur.Glyph -and $cur.NoFilter -and -not ($InheritsVcl -contains $cur.New)) {
         $report.Add("$File :   $($cur.Name).Glyph bleibt stehen - $($cur.New) unbekannt; mit -ExtraSource (Ableitung von TPPGButton) oder GlyphClasses in der -Map als PNG sichern")
       }
+      # Ohne Meldung wegfallende Properties (Aussehen/Entwurfszeit)
+      if ($Ignore.ContainsKey($cur.Old)) {
+        $hit = $false
+        foreach ($pat in $Ignore[$cur.Old]) { if ($prop -like $pat) { $hit = $true; break } }
+        if ($hit) {
+          $i = Get-ValueEnd $lines $i $value
+          $changed = $true
+          continue
+        }
+      }
+      # Entfernen und melden (Name wuerde sonst als andere PPGlow-Property durchgehen)
+      if ($Drop.ContainsKey($cur.Old)) {
+        $hit = $false
+        foreach ($pat in $Drop[$cur.Old]) { if ($prop -like $pat) { $hit = $true; break } }
+        if ($hit) {
+          $report.Add("$File :   $($cur.Name).$prop entfernt (DevExpress-Stil, bei $($cur.New) nicht uebersetzt)")
+          $i = Get-ValueEnd $lines $i $value
+          $changed = $true
+          continue
+        }
+      }
       # Umbenennungen
       if ($Renames.ContainsKey($cur.Old) -and $Renames[$cur.Old].ContainsKey($prop)) {
         $newName = $Renames[$cur.Old][$prop]
@@ -634,9 +907,17 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
           $changed = $true
           continue
         }
+        # Ziel steht schon in der DFM (z. B. Checked und State): nicht doppelt schreiben
+        if ($null -ne (Find-DfmProp $lines $i $newName)) {
+          $report.Add("$File :   $($cur.Name).$prop entfernt ($newName ist ausdruecklich gesetzt)")
+          $i = Get-ValueEnd $lines $i $value
+          $changed = $true
+          continue
+        }
         $line = $line.Replace("$prop =", "$newName =")
         $prop = $newName
         $top = ($prop -split '\.')[0]
+        [void]$cur.Seen.Add($top)
         $changed = $true
       }
       # Werte mit anderem Namen (z. B. TButton.Style bsSplitButton)
@@ -689,6 +970,10 @@ function Convert-Dfm([string]$File, [hashtable]$Handlers) {
         }
       }
       if (-not $cur.NoFilter -and -not $cur.Allowed.Contains($top)) {
+        if ($value.Trim() -eq '<>') {   # leere Collection: nichts geht verloren
+          $changed = $true
+          continue
+        }
         $report.Add("$File :   $($cur.Name).$prop entfernt (gibt es bei $($cur.New) nicht)")
         $i = Get-ValueEnd $lines $i $value
         $changed = $true
@@ -725,6 +1010,12 @@ function Test-PasCode([string]$File, [string]$Text, $Migrated) {
       if ($l -match "(?i)\bas\s+$e\b") { $report.Add("$File :$($n + 1): 'as $c' - Klasse wurde umgestellt, Code pruefen") }
       if ($l -match "(?i)\bis\s+$e\b") { $report.Add("$File :$($n + 1): 'is $c' - Klasse wurde umgestellt, Code pruefen") }
       if ($l -match "(?i)(?<![\w.])$e\s*\(") { $report.Add("$File :$($n + 1): Cast '$c(' - Klasse wurde umgestellt, Code pruefen") }
+    }
+    # DevExpress-API (Properties.*, EditValue, DataBinding ...) gibt es bei den PPGlow-Pendants nicht
+    foreach ($mg in $Migrated) {
+      if ($mg.Old -notmatch '^T(cx|dx)') { continue }
+      $mm = [regex]::Match($l, "(?i)(?<![\w.])$([regex]::Escape($mg.Name))\.(Properties|EditValue|DataBinding|ActiveProperties|Style|LookAndFeel|OptionsImage|Buttons)\b")
+      if ($mm.Success) { $report.Add("$File :$($n + 1): '$($mg.Name).$($mm.Groups[1].Value)' - DevExpress-API, bei $($mg.New) nicht vorhanden (Code von Hand umstellen)") }
     }
     foreach ($m in [regex]::Matches($l, '(?i)\bwith\s+([\w\s,.]+?)\s+do\b')) {
       foreach ($part in ($m.Groups[1].Value -split ',')) {
@@ -888,6 +1179,17 @@ if ($Map -ne '') {
     }
   }
   if ($m.ContainsKey('ReportOnly')) { foreach ($k in $m.ReportOnly.Keys) { $ReportOnly[$k] = $m.ReportOnly[$k] } }
+  if ($m.ContainsKey('Drop')) { foreach ($k in $m.Drop.Keys) { $Drop[$k] = @($Drop[$k]) + @($m.Drop[$k]) } }
+  foreach ($tn in 'ValueMap', 'Inject', 'PropNotes') {
+    if ($m.ContainsKey($tn)) {
+      $tbl = Get-Variable -Name $tn -ValueOnly
+      foreach ($k in $m[$tn].Keys) {
+        if (-not $tbl.ContainsKey($k)) { $tbl[$k] = @{} }
+        foreach ($p in $m[$tn][$k].Keys) { $tbl[$k][$p] = $m[$tn][$k][$p] }
+      }
+    }
+  }
+  if ($m.ContainsKey('Ignore')) { foreach ($k in $m.Ignore.Keys) { $Ignore[$k] = @($Ignore[$k]) + @($m.Ignore[$k]) } }
   if ($m.ContainsKey('InheritsVcl')) { $InheritsVcl = @($InheritsVcl) + @($m.InheritsVcl) }
   if ($m.ContainsKey('GlyphClasses')) { $GlyphClasses = @($GlyphClasses) + @($m.GlyphClasses) }
   if ($m.ContainsKey('GridClasses')) { $GridClasses = @($GridClasses) + @($m.GridClasses) }

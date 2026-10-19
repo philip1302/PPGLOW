@@ -1,0 +1,25 @@
+UnitCX.dfm : BtnGlyph TcxButton -> TPPGButton
+UnitCX.dfm :   BtnGlyph.Glyph entfernt, gesichert als FormCX_BtnGlyph.png
+UnitCX.dfm :   BtnGlyph.NumGlyphs entfernt
+UnitCX.dfm :   BtnDrop.Kind : Kind (cxbkDropDown/cxbkDropDownButton)
+UnitCX.dfm : CheckA TcxCheckBox -> TPPGCheckBox
+UnitCX.dfm :   CheckA.Properties.Alignment : Ausrichtung
+UnitCX.dfm :   LookupA.Properties.ListColumns -> ListField = 'Name;Ort'
+UnitCX.dfm :   LookupA.ListColumns: Spaltenbreiten/Titel/Ausrichtung entfallen
+UnitCX.dfm :   LookupA.Properties.DropDownListStyle : TPPGDBLookupComboBox ist immer eine Auswahlliste
+UnitCX.dfm :   LookupA.Properties.ImmediatePost entfernt
+UnitCX.dfm :   ToggleA.Properties.StateIndicator.OnText entfernt
+UnitCX.dfm : SheetA TcxTabSheet -> TPPGTabSheet
+UnitCX.dfm : NavA TcxNavigator nicht umgestellt
+UnitCX.dfm :   CheckCombo.Properties.Items -> Items.Strings (2 Eintraege)
+UnitCX.dfm :   CheckCombo.Properties.Items: 1 Eintrag/Eintraege ohne Description entfernt
+UnitCX.dfm :   CheckCombo.Properties.Items: ShortDescription/Tag der Eintraege entfallen
+UnitCX.dfm :   DirEdit.OnAfterDialog : Signatur anders
+UnitCX.dfm :   DirEdit.Kind = fkFolder
+UnitCX.dfm :   FileEdit.AddQuotes entfernt
+UnitCX.dfm :   FileEditOpen.Kind = fkOpenFile
+UnitCX.dfm :   JvChkBoth.Checked entfernt (State ist ausdruecklich gesetzt)
+UnitCX.pas :36: Cast 'TcxCheckBox(' - Klasse wurde umgestellt
+UnitCX.pas :37: 'CheckA.Properties' - DevExpress-API
+UnitCX.pas :38: 'CheckA.EditValue' - DevExpress-API
+UnitCX.dfm :   LookupA.Style.Color entfernt (DevExpress-Stil

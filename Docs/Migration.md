@@ -86,6 +86,14 @@ Der Selbsttest `Build\migrate.ps1 -SelfTest` prüft das Skript an `Build\migrate
 | TDBRichEdit | | TPPGDBRichEdit | PPG.DB.RichEdit |
 | TImage | | TPPGImage | PPG.Image |
 | TDBImage | | TPPGDBImage | PPG.DB.Controls |
+| | TcxButton (DevExpress) | TPPGButton | PPG.Button |
+| | TcxCheckBox (DevExpress), TJvCheckBox (JVCL) | TPPGCheckBox | PPG.CheckBox |
+| | TcxDBLookupComboBox (DevExpress) | TPPGDBLookupComboBox | PPG.DB.Lookup |
+| | TdxDBToggleSwitch (DevExpress) | TPPGDBToggleSwitch | PPG.DB.Controls |
+| | TcxPageControl, TcxTabSheet (DevExpress) | TPPGPageControl, TPPGTabSheet | PPG.PageControl |
+| | TcxCheckComboBox (DevExpress) | TPPGCheckComboBox | PPG.CheckComboBox |
+| | TJvDirectoryEdit, TJvFilenameEdit (JVCL) | TPPGFileEdit (`Kind = fkFolder` bzw. `fkOpenFile`/`fkSaveFile`) | PPG.FileEdit |
+| | TJvComboBox (JVCL) | TPPGComboBox | PPG.ComboBox |
 
 `TPPGDBToggleSwitch` (Schalter an einem Ja/Nein-Feld) hat kein VCL-Gegenstück; es ersetzt von Hand ein `TDBCheckBox` (gleiche Properties `DataSource`, `DataField`, `ValueChecked`, `ValueUnchecked`, `ReadOnly`).
 
@@ -121,6 +129,36 @@ Nur gemeldet, nicht umgestellt: `TListView` (Symbol-/Kachelansicht → `TPPGTile
 | TDBGrid | `Options`: `dgMultiSelect` | bleibt und wirkt (`SelectedRows` wie in der VCL; im Code `TBookmarkList` durch `TPPGBookmarkList` ersetzen) |
 | TDBGrid | `OnDrawColumnCell`, `DefaultDrawing` | bleiben und wirken; im Handler wird `Column: TColumn` zu `TPPGDBGridColumn`, `DefaultDrawColumnCell` und `Column.Field` gibt es gleichnamig |
 | TDBNavigator | `Kind` | entfernt (der Navigator ist immer waagerecht) |
+
+## DevExpress- und JVCL-Controls (cx/dx/Jv)
+
+Einfache Controls dieser Bibliotheken ordnet das Skript wie die VCL-Klassen zu (Tabelle oben). Die Properties werden übersetzt, nicht nur gefiltert:
+
+| Klasse | Alt | Neu |
+|---|---|---|
+| TcxButton | `OptionsImage.Glyph.Data`, `OptionsImage.NumGlyphs` | wie bei TBitBtn: entfernt, mit `-GlyphDir` erstes Teilbild als PNG gesichert (DevExpress-Bilddaten ohne Längenvorspann, 32-Bit-BMP/PNG mit Alpha bleibt erhalten) |
+| TcxButton | `OptionsImage.ImageIndex`, `.Images`, `.Margin`, `.Spacing`, `.Layout` | `ImageIndex`, `Images`, `Margin`, `Spacing`, `ImagePosition` (`blGlyphLeft` … → `ipLeft` …) |
+| TcxButton | `LookAndFeel.*`, `SpeedButtonOptions.*`, `OptionsImage.Glyph.SourceDPI` | entfallen ohne Meldung (Aussehen); `Style.*` entfernt und gemeldet; `Kind`/`DropDownMenu`: gemeldet (`DropDownMenu` + `Style = pbsSplitButton` von Hand) |
+| TcxCheckBox | `State = cbsChecked/cbsUnchecked/cbsGrayed` | `State = cbChecked/cbUnchecked/cbGrayed` |
+| TcxCheckBox | `Properties.OnChange`, `Properties.OnEditValueChanged`, `Properties.AllowGrayed`, `Properties.MultiLine` | `OnChange`, `OnChange`, `AllowGrayed`, `WordWrap` |
+| TJvCheckBox | `Checked = True` | `State = cbChecked` (steht `State` schon in der DFM, entfällt `Checked`); `LinkedControls = <>` entfällt, nicht leer: gemeldet |
+| TcxDBLookupComboBox | `DataBinding.DataField`, `DataBinding.DataSource` | `DataField`, `DataSource` |
+| TcxDBLookupComboBox | `Properties.KeyFieldNames`, `.ListSource`, `.ListFieldIndex`, `.DropDownRows`, `.NullValueKey`, `.ReadOnly`, `.OnChange`/`.OnEditValueChanged`/`.OnCloseUp` | `KeyField`, `ListSource`, `ListFieldIndex`, `DropDownRows`, `NullValueKey`, `ReadOnly`, `OnChange`/`OnChange`/`OnCloseUp` |
+| TcxDBLookupComboBox | `Properties.ListColumns` (Collection) oder `.ListFieldNames` | `ListField = 'Feld1;Feld2'` (erstes Feld im Feld, weitere als Detailzeile; Spaltenbreiten/Titel entfallen, gemeldet) |
+| TcxDBLookupComboBox | `Properties.DropDownListStyle`, `.ImmediatePost`, `.DropDownAutoSize`, `Style.*` | entfernt und gemeldet (`TPPGDBLookupComboBox` ist immer eine Auswahlliste mit Tippsuche, `lsEditList` entfällt) |
+| TdxDBToggleSwitch | `DataBinding.*`, `Properties.ValueChecked`/`ValueUnchecked`/`ReadOnly`/`OnChange` | `DataField`, `DataSource`, `ValueChecked`, `ValueUnchecked`, `ReadOnly`, `OnChange` |
+| TdxDBToggleSwitch | `Properties.DisplayChecked/-Unchecked`, `StateIndicator.*`, `ImmediatePost` | entfernt und gemeldet (Texte je Zustand gibt es nicht: Caption/Label daneben) |
+| TcxPageControl | `Properties.ActivePage`, `.MultiLine`, `.TabPosition`, `.Images`, `.HotTrack`, `.TabHeight`, `.TabWidth`, `.RaggedRight`, `.OnChange`, `.OnPageChanging` | `ActivePage`, `MultiLine`, `TabPosition`, `Images`, `HotTrack`, `TabHeight`, `TabWidth`, `RaggedRight`, `OnChange`, `OnChanging` |
+| TcxPageControl | `LookAndFeel.*`, `ClientRect*`, `Properties.TabSlants.*`, leeres `Properties.CustomButtons.Buttons` | entfallen ohne Meldung |
+| TcxCheckComboBox | `Properties.Items` (Collection mit `Description`) | `Items.Strings` (Einträge ohne `Description`, `ShortDescription`, `Tag`: gemeldet); `Properties.Delimiter`/`ReadOnly`/`DropDownRows`/`OnChange`/`OnCloseUp` → `Delimiter`/`ReadOnly`/`DropDownCount`/`OnChange`/`OnCloseUp` |
+| TJvDirectoryEdit | – | `Kind = fkFolder` dazugeschrieben; `AcceptFiles` → `AcceptDrop`; `Flat`, `ParentFlat`, `DisabledColor`, `DialogKind`, `ButtonWidth` entfallen ohne Meldung |
+| TJvFilenameEdit | `DialogKind = dkOpen/dkSave` | `Kind = fkOpenFile/fkSaveFile` (fehlt `DialogKind`: `Kind = fkOpenFile` dazugeschrieben); `Filter`, `DefaultExt`, `DialogTitle`, `InitialDir` bleiben; `AddQuotes` entfernt und gemeldet |
+| TJvDirectoryEdit, TJvFilenameEdit | `OnBeforeDialog`, `OnAfterDialog` | bleiben stehen, aber **andere Signatur** (`Allow`, `FileName`/`Accept`): im Bericht gemeldet, Handler von Hand anpassen |
+| TJvComboBox | `Flat`, `ParentFlat` | entfallen ohne Meldung |
+
+Nicht umgestellt, nur gemeldet: `TcxNavigator` (hängt über `Control` an ein cxGrid; `TPPGDBNavigator` an eine `TDataSource`: mit dem Grid zusammen von Hand). Im Code der `.pas` meldet das Skript außerdem DevExpress-API an umgestellten Komponenten (`Name.Properties`, `.EditValue`, `.DataBinding`, `.Style` …), weil es sie bei den PPGlow-Pendants nicht gibt.
+
+Eigene Zuordnungen in der `-Map` können dieselben Tabellen ergänzen: `ValueMap`, `Inject` (Eigenschaft dazuschreiben), `Ignore` (ohne Meldung entfernen), `Drop` (entfernen und melden), `PropNotes` (Hinweis im Bericht), je Klasse → Property → Wert bzw. Klasse → Muster.
 
 ## Eigene Ableitungen (-Map mit -ExtraSource)
 

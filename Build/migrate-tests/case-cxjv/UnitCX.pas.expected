@@ -1,0 +1,43 @@
+unit UnitCX;
+
+interface
+
+uses
+  Winapi.Windows, System.Classes, Vcl.Forms, cxButtons, cxCheckBox, cxDBLookupComboBox, cxPC,
+  cxNavigator, cxCheckComboBox, JvToolEdit, JvCheckBox, JvComboBox,
+  PPG.Button, PPG.CheckBox, PPG.DB.Lookup, PPG.DB.Controls, PPG.PageControl, PPG.CheckComboBox, PPG.FileEdit, PPG.ComboBox;
+
+type
+  TFormCX = class(TForm)
+    BtnGlyph: TPPGButton;
+    BtnIndex: TPPGButton;
+    BtnDrop: TPPGButton;
+    CheckA: TPPGCheckBox;
+    LookupA: TPPGDBLookupComboBox;
+    ToggleA: TPPGDBToggleSwitch;
+    Pages: TPPGPageControl;
+    SheetA, SheetB: TPPGTabSheet;
+    NavA: TcxNavigator;
+    CheckCombo: TPPGCheckComboBox;
+    CheckComboLeer: TPPGCheckComboBox;
+    DirEdit: TPPGFileEdit;
+    FileEdit: TPPGFileEdit;
+    FileEditOpen: TPPGFileEdit;
+    JvChkBoth: TPPGCheckBox;
+    JvChkOnly: TPPGCheckBox;
+    JvChkOff: TPPGCheckBox;
+    JvCombo: TPPGComboBox;
+    procedure BtnGlyphClick(Sender: TObject);
+  end;
+
+implementation
+
+procedure TFormCX.BtnGlyphClick(Sender: TObject);
+begin
+  if TcxCheckBox(Sender).Checked then
+    CheckA.Properties.Alignment := taLeftJustify;
+  if CheckA.EditValue = True then
+    Exit;
+end;
+
+end.
