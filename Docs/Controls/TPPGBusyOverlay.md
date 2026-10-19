@@ -64,7 +64,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MinDisplayTime` | `Integer` | `500` | Ist die Karte einmal erschienen, bleibt sie mindestens so viele Millisekunden stehen (0 … 60 000), damit sie nicht nur aufflackert. |
 | `DimOpacity` | `Byte` | `96` | Deckkraft der Abdunklung (0 … 255, Vorgabe 96). 0 = keine sichtbare Abdunklung; Maus und Tastatur bleiben trotzdem gesperrt. |
 | `Preset` | `string` |  | Preset der Karte ('' = wie der StyleManager bzw. die Vorgabe). |
-| `StyleManager` | `TPPGStyleManager` |  | StyleManager für Preset und Farben der Karte. |
+| `StyleManager` | `TPPGStyleManager` |  | StyleManager für Preset und Farben der Karte. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert. |
 
 ## Eigenschaften wie in der VCL
 

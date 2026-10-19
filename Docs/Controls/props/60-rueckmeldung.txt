@@ -31,7 +31,7 @@ TPPGCustomButton.Style = pbsPushButton = normaler Button; pbsSplitButton = Butto
 TPPGCustomHint.AllowMarkup = True: Titel und Beschreibung dürfen Mini-Markup enthalten (<b>, <i>, <color=...>).
 TPPGCustomHint.MaxWidth = Größte Breite des Hint-Fensters in logischen Pixeln (80..2000); längerer Text bricht um.
 TPPGCustomHint.Preset = Optik-Vorlage des Hints ('' = Standard bzw. StyleManager).
-TPPGCustomHint.StyleManager = Zentrale Stilquelle; gesetzt kommt das Preset vom Manager.
+TPPGCustomHint.StyleManager = Zentrale Stilquelle; gesetzt kommt das Preset vom Manager. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert.
 
 # --- TPPGInfoBar ---
 TPPGCustomInfoBar.ActionCaption = Beschriftung eines Aktions-Buttons in der Leiste; leer = kein Button. Ein Klick löst OnActionClick aus.
@@ -126,7 +126,7 @@ TPPGHintManager.MaxWidth = Größte Breite eines Hints in logischen Pixeln (80..
 TPPGHintManager.Preset = Optik-Vorlage der Hints; '' = Standard bzw. StyleManager.
 TPPGHintManager.ShowTitle = True: Besteht ein Hint aus Titel und Text, getrennt durch einen senkrechten Strich (wie bei der VCL), erscheint der Titel fett und der Text darunter; False: nur der kurze Teil wie bei der VCL.
 > Hint-Text im Format der VCL: kurzer Titel, senkrechter Strich, ausführlicher Text.
-TPPGHintManager.StyleManager = Zentrale Stilquelle für Preset und Farben der Hints.
+TPPGHintManager.StyleManager = Zentrale Stilquelle für Preset und Farben der Hints. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert.
 
 # --- TPPGLabel ---
 TPPGLabel.AllowMarkup = True: Caption darf Mini-Markup enthalten (fett, kursiv, Farbe, Bilder). Links werden nur dargestellt; klickbare Links bietet TPPGLinkLabel.
@@ -145,7 +145,7 @@ TPPGNotificationCenter.OnToastClick = Der Anwender hat auf die Fläche eines Toa
 TPPGNotificationCenter.Position = Bildschirmecke, in der die Toasts gestapelt werden (auf dem Monitor des Formulars).
 TPPGNotificationCenter.Preset = Optik-Vorlage der Toasts ('' = Standard bzw. StyleManager).
 TPPGNotificationCenter.RespectQuietHours = True: Läuft eine Vollbild-Anwendung oder Präsentation, warten neue Toasts, bis sie beendet ist.
-TPPGNotificationCenter.StyleManager = Zentrale Stilquelle für Preset und Farben der Toasts.
+TPPGNotificationCenter.StyleManager = Zentrale Stilquelle für Preset und Farben der Toasts. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert.
 TPPGNotificationCenter.ToastWidth = Breite eines Toasts in logischen Pixeln (160..1000).
 
 # --- TPPGStyleManager ---
@@ -166,7 +166,7 @@ TPPGTaskDialog.AllowMarkup = True: Text, Fußzeile und Zusatztexte dürfen Mini-
 TPPGTaskDialog.ContentControl = Eigenes Control, das im Dialog unter dem Text eingebettet wird (z. B. ein Panel mit Eingabefeldern). Es wird für die Dauer des Dialogs umgehängt.
 > `PPGTaskDialog1.ContentControl := pnlOptionen;`
 TPPGTaskDialog.Preset = Optik-Vorlage des Dialogs ('' = Standard bzw. StyleManager).
-TPPGTaskDialog.StyleManager = Zentrale Stilquelle für Preset und Farben des Dialogs.
+TPPGTaskDialog.StyleManager = Zentrale Stilquelle für Preset und Farben des Dialogs. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert.
 
 # --- TPPGTeachingTip ---
 TPPGTeachingTip.ActionButtonText = Beschriftung des Aktions-Buttons (Akzentfarbe); leer = kein Button. Ein Klick löst OnActionClick aus, schließt aber nicht selbst.
@@ -182,7 +182,7 @@ TPPGTeachingTip.OnLinkClick = Ein Link im Text (<a href="...">) wurde geklickt; 
 TPPGTeachingTip.Placement = Seite des Ziels, an der die Blase erscheint: ttpAuto wählt die erste Seite (oben, unten, links, rechts), auf die sie ganz passt.
 TPPGTeachingTip.Preset = Optik-Vorlage der Blase ('' = Standard bzw. StyleManager).
 TPPGTeachingTip.ShowCloseButton = True: Kreuz oben rechts (nur ohne CloseButtonText, wie WinUI).
-TPPGTeachingTip.StyleManager = Zentrale Stilquelle für Preset und Farben.
+TPPGTeachingTip.StyleManager = Zentrale Stilquelle für Preset und Farben. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert.
 TPPGTeachingTip.Subtitle = Untertitel unter dem Titel.
 TPPGTeachingTip.Target = Control, an das die Blase mit Pfeil geheftet wird; sie folgt ihm beim Verschieben. Ohne Target: unten rechts im Formular, ohne Pfeil.
 > `PPGTeachingTip1.Target := btnExport; PPGTeachingTip1.Show;`

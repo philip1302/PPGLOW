@@ -110,7 +110,7 @@ type
     property PPI: Integer read GetPPI;
   end;
 
-  TPPGHintManager = class(TComponent)
+  TPPGHintManager = class(TComponent, IPPGStyleManagedHost)
   private
     FActive: Boolean;
     FPreset: string;
@@ -125,6 +125,10 @@ type
     procedure SetPreset(const Value: string);
     procedure SetActive(const Value: Boolean);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    { IPPGStyleManagedHost: mit StyleManager kommt das Preset vom Manager }
+    function GetStyleManager: TPPGStyleManager;
+    function StyleManagedProperties: TArray<string>;
+    function IsPresetStored: Boolean;
     procedure SetMaxWidth(const Value: Integer);
     procedure Apply;
     procedure Revert;
@@ -145,7 +149,7 @@ type
   published
     property Active: Boolean read FActive write SetActive default True;
     /// Preset der Hints ('' = Standard bzw. StyleManager).
-    property Preset: string read FPreset write SetPreset;
+    property Preset: string read FPreset write SetPreset stored IsPresetStored;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// "Titel|Text": Titel fett, Text darunter (sonst nur der kurze Teil).
     property ShowTitle: Boolean read FShowTitle write FShowTitle default True;
@@ -157,7 +161,7 @@ type
   end;
 
   /// Fuer die CustomHint-Property einzelner Controls (wie TBalloonHint).
-  TPPGCustomHint = class(TCustomHint)
+  TPPGCustomHint = class(TCustomHint, IPPGStyleManagedHost)
   private
     FContent: TPPGHintContent;
     FPaintErrorReported: Boolean;
@@ -168,6 +172,10 @@ type
     FHighContrastSupport: Boolean;
     procedure SetPreset(const Value: string);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    { IPPGStyleManagedHost: mit StyleManager kommt das Preset vom Manager }
+    function GetStyleManager: TPPGStyleManager;
+    function StyleManagedProperties: TArray<string>;
+    function IsPresetStored: Boolean;
     procedure SetMaxWidth(const Value: Integer);
     function PrepareFor(HintWindow: TCustomHintWindow; APPI: Integer): TSize;
   protected
@@ -179,7 +187,7 @@ type
     procedure SetHintSize(HintWindow: TCustomHintWindow); override;
     function EffectivePreset: string;
   published
-    property Preset: string read FPreset write SetPreset;
+    property Preset: string read FPreset write SetPreset stored IsPresetStored;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     property AllowMarkup: Boolean read FAllowMarkup write FAllowMarkup default False;
     property MaxWidth: Integer read FMaxWidth write SetMaxWidth default 360;
@@ -690,6 +698,22 @@ begin
     Revert;
 end;
 
+function TPPGHintManager.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGHintManager.StyleManagedProperties: TArray<string>;
+begin
+  // Wie bei den Controls: gesetzt bestimmt der Manager das Preset
+  Result := PPGStyleManagedNames(['Preset']);
+end;
+
+function TPPGHintManager.IsPresetStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset');
+end;
+
 procedure TPPGHintManager.SetStyleManager(const Value: TPPGStyleManager);
 begin
   if FStyleManager = Value then
@@ -759,6 +783,22 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (AComponent = FStyleManager) then
     FStyleManager := nil;
+end;
+
+function TPPGCustomHint.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGCustomHint.StyleManagedProperties: TArray<string>;
+begin
+  // Wie bei den Controls: gesetzt bestimmt der Manager das Preset
+  Result := PPGStyleManagedNames(['Preset']);
+end;
+
+function TPPGCustomHint.IsPresetStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset');
 end;
 
 procedure TPPGCustomHint.SetStyleManager(const Value: TPPGStyleManager);

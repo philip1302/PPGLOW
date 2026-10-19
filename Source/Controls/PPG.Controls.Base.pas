@@ -39,7 +39,8 @@ uses
   PPG.Render.Intf, PPG.StyleManager, PPG.Accessibility, PPG.UIA, PPG.ElementStyle;
 
 type
-  TPPGCustomControl = class(TCustomControl, IPPGStyleClient, IPPGAccessibleHost)
+  TPPGCustomControl = class(TCustomControl, IPPGStyleClient, IPPGAccessibleHost,
+    IPPGStyleManagedHost)
   private
     FAppearance: TPPGAppearance;
     FAnimation: TPPGAnimationSettings;
@@ -152,10 +153,13 @@ type
     procedure WMGetObject(var Message: TMessage); message WM_GETOBJECT;
     procedure CMShowingChanged(var Message: TMessage); message CM_SHOWINGCHANGED;
   public
-    /// Streaming: Optik wird nur ohne StyleManager lokal gespeichert.
+    /// Streaming: Optik wird nur ohne StyleManager lokal gespeichert
+    /// (Regel: PPGIsStyleManagedProperty). IsStyleStored gilt fuer Appearance,
+    /// IsAnimationStored fuer Animation.
     /// (Vor den Properties deklariert - Delphi verlangt das fuer "stored".)
     function IsPresetStored: Boolean;
     function IsStyleStored: Boolean;
+    function IsAnimationStored: Boolean;
     /// True, wenn die ImageList Bilder per Name verwaltet (TVirtualImageList, ab 10.4).
     function ImageNameAvailable: Boolean;
     function IsImageIndexStoredByName: Boolean;
@@ -302,6 +306,11 @@ type
 
     { IPPGStyleClient }
     procedure StyleManagerChanged(Sender: TObject);
+    { IPPGStyleManagedHost }
+    function GetStyleManager: TPPGStyleManager;
+    /// Vom StyleManager verwaltet (solange gesetzt): Preset, Appearance,
+    /// Animation - genau, was ApplyStyleManager ueberschreibt.
+    function StyleManagedProperties: TArray<string>; virtual;
 
     property MouseInside: Boolean read FMouseInside;
     property MousePressed: Boolean read FMousePressed;
@@ -311,7 +320,7 @@ type
     property Preset: string read FPreset write SetPreset stored IsPresetStored;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     property Appearance: TPPGAppearance read FAppearance write SetAppearance stored IsStyleStored;
-    property Animation: TPPGAnimationSettings read FAnimation write SetAnimation stored IsStyleStored;
+    property Animation: TPPGAnimationSettings read FAnimation write SetAnimation stored IsAnimationStored;
     property Images: TCustomImageList read FImages write SetImages;
     property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex
       stored IsImageIndexStoredByName default -1;
@@ -957,7 +966,7 @@ end;
 function TPPGCustomControl.IsPresetStored: Boolean;
 begin
   // Das Standard-Preset setzt schon der Konstruktor
-  Result := (FStyleManager = nil) and
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset') and
     not (FStoreMinimal and SameText(FPreset, TPPGRendererRegistry.DefaultName));
 end;
 
@@ -997,7 +1006,22 @@ end;
 function TPPGCustomControl.IsStyleStored: Boolean;
 begin
   // Mit StyleManager kommt die Optik vom Manager -> nicht doppelt speichern
-  Result := FStyleManager = nil;
+  Result := not PPGIsStyleManagedProperty(Self, 'Appearance');
+end;
+
+function TPPGCustomControl.IsAnimationStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Animation');
+end;
+
+function TPPGCustomControl.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGCustomControl.StyleManagedProperties: TArray<string>;
+begin
+  Result := PPGStyleManagedNames(['Preset', 'Appearance', 'Animation']);
 end;
 
 procedure TPPGCustomControl.SetPreset(const Value: string);

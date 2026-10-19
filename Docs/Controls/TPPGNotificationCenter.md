@@ -38,7 +38,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `MaxVisible` | `Integer` | `3` | Höchstzahl gleichzeitig sichtbarer Toasts (1..20); weitere warten in einer Schlange. |
 | `ToastWidth` | `Integer` | `360` | Breite eines Toasts in logischen Pixeln (160..1000). |
 | `Preset` | `string` |  | Optik-Vorlage der Toasts ('' = Standard bzw. StyleManager). |
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben der Toasts. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben der Toasts. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert. |
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Ein- und Ausblenden der Toasts wie Animation der Controls: Enabled = False schaltet ab, Duration und Easing steuern den Verlauf. Toasts gleiten ein und aus, der Stapel rückt animiert nach (nur, wenn Windows Animationen erlaubt). |
 | `RespectQuietHours` | `Boolean` | `True` | True: Läuft eine Vollbild-Anwendung oder Präsentation, warten neue Toasts, bis sie beendet ist. |
 
@@ -58,7 +58,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnShow` | `TPPGToastEvent` `(Sender: TObject; Toast: TPPGToast)` | Ein Toast ist erschienen (nach Warteschlange bzw. Ruhezeit). |
 | `OnToastClick` | `TPPGToastEvent` `(Sender: TObject; Toast: TPPGToast)` | Der Anwender hat auf die Fläche eines Toasts geklickt (nicht auf Buttons), z. B. um zum Vorgang zu springen. |
 
-Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Audit8A` (TAudit8AAnimatorTests); `PPG.Tests.Phase7d` (TNotificationTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Audit8A` (TAudit8AAnimatorTests); `PPG.Tests.Phase7d` (TNotificationTests); `PPG.Tests.Streaming` (TStyleManagedPropertyTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGNotificationCenter.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

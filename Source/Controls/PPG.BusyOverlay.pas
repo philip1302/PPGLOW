@@ -97,7 +97,7 @@ type
     property Compact: Boolean read FCompact;
   end;
 
-  TPPGBusyOverlay = class(TComponent)
+  TPPGBusyOverlay = class(TComponent, IPPGStyleManagedHost)
   private
     FTarget: TWinControl;
     FText: string;
@@ -142,6 +142,10 @@ type
     procedure SetMinDisplayTime(const Value: Integer);
     procedure SetDimOpacity(const Value: Byte);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    { IPPGStyleManagedHost: mit StyleManager kommt das Preset vom Manager }
+    function GetStyleManager: TPPGStyleManager;
+    function StyleManagedProperties: TArray<string>;
+    function IsPresetStored: Boolean;
     function GetActive: Boolean;
     function GetVisible: Boolean;
     function TargetForm: TCustomForm;
@@ -204,7 +208,7 @@ type
     property MinDisplayTime: Integer read FMinDisplayTime write SetMinDisplayTime default 500;
     /// Deckkraft der Abdunklung (0 = keine, Eingaben bleiben gesperrt).
     property DimOpacity: Byte read FDimOpacity write SetDimOpacity default 96;
-    property Preset: string read FPreset write FPreset;
+    property Preset: string read FPreset write FPreset stored IsPresetStored;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     property OnCancel: TNotifyEvent read FOnCancel write FOnCancel;
     /// Karte erscheint bzw. verschwindet.
@@ -983,6 +987,22 @@ begin
   FDimOpacity := Value;
   if (FDim <> nil) and FCardShown then
     FDim.Opacity := Value;
+end;
+
+function TPPGBusyOverlay.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGBusyOverlay.StyleManagedProperties: TArray<string>;
+begin
+  // Wie bei den Controls: gesetzt bestimmt der Manager das Preset
+  Result := PPGStyleManagedNames(['Preset']);
+end;
+
+function TPPGBusyOverlay.IsPresetStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset');
 end;
 
 procedure TPPGBusyOverlay.SetStyleManager(const Value: TPPGStyleManager);

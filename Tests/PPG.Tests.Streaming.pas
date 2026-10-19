@@ -32,8 +32,8 @@ uses
   PPG.TagEdit, PPG.Grid.Print, PPG.Planner.Print, PPG.Kanban.Print, PPG.StyleManager,
   PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Planner, PPG.DB.Kanban,
   PPG.DB.Fields, PPG.DB.Navigator, PPG.RichEdit, PPG.DB.RichEdit,
-  PPG.Types, PPG.Appearance, PPG.Tokens, PPG.Render.Intf, PPG.Render.Registry,
-  PPG.Tests.Controls;
+  PPG.Types, PPG.Appearance, PPG.Animation, PPG.Tokens, PPG.Render.Intf, PPG.Render.Registry,
+  PPG.Controls.Base, PPG.Tests.Controls;
 
 type
   /// Gemeinsame Hilfen: Attrappen-DataSource, Komponente anlegen, Rundreise
@@ -75,6 +75,22 @@ type
     procedure BrandingDoesNotChangeStreaming;
     procedure InheritedFormKeepsAncestorValues;
     procedure StyleManagerWritesOnlyDifferences;
+  end;
+
+  /// Vom StyleManager verwaltete Properties (PPGIsStyleManagedProperty):
+  /// Regel fuer alle Klassen mit StyleManager (Controls: Preset, Appearance,
+  /// Animation; Komponenten: Preset), Mehrfachauswahl wie im Objektinspektor,
+  /// Streaming (mit Manager nicht in der DFM, ohne unveraendert), alte DFMs
+  /// mit solchen Werten laden weiter, Laufzeitverhalten unveraendert.
+  TStyleManagedPropertyTests = class(TStreamingTestCase)
+  private
+    function NonDefaultPreset: string;
+  published
+    procedure RuleCoversEveryClassWithStyleManager;
+    procedure RuleForSelectionNeedsAllManaged;
+    procedure ManagedPropertiesAreNotStoredWithStyleManager;
+    procedure OldDfmWithManagedValuesLoadsAndDropsThem;
+    procedure RuntimeBehaviourUnchanged;
   end;
 
 implementation
@@ -1438,8 +1454,382 @@ begin
   CheckFalse(TPPGTokenOverrides.Active, 'Marke nach Free der Manager entfernt');
 end;
 
+{ TStyleManagedPropertyTests }
+
+function TStyleManagedPropertyTests.NonDefaultPreset: string;
+begin
+  // Ein Preset, das NICHT das Standard-Preset ist (das wuerde nie gespeichert)
+  if SameText(TPPGRendererRegistry.DefaultName, 'Classic') then
+    Result := 'ModernFlat'
+  else
+    Result := 'Classic';
+end;
+
+function ComponentDfm(C: TComponent): string;
+var
+  M: TMemoryStream;
+begin
+  M := TMemoryStream.Create;
+  try
+    M.WriteComponent(C);
+    Result := BinaryToText(M);
+  finally
+    M.Free;
+  end;
+end;
+
+{ Erwartete verwaltete Properties: Controls alles, was ApplyStyleManager
+  ueberschreibt; Komponenten nur das Preset (das NotificationCenter nutzt seine
+  Animation selbst fuer das Einblenden, der Manager ersetzt sie nicht). }
+function ExpectedManaged(C: TComponent): string;
+begin
+  if C is TPPGCustomControl then
+    Result := 'Preset,Appearance,Animation'
+  else
+    Result := 'Preset';
+end;
+
+procedure TStyleManagedPropertyTests.RuleCoversEveryClassWithStyleManager;
+const
+  Probe: array[0..7] of string = ('Preset', 'Appearance', 'Animation', 'StyleManager',
+    'Name', 'Font', 'Styles', '');
+var
+  SM: TPPGStyleManager;
+  CI, PI, Hosts, Comps: Integer;
+  C: TComponent;
+  Host: IPPGStyleManagedHost;
+  Expected: TStringList;
+  Errors: TStringList;
+  PInfo: PPropInfo;
+begin
+  SM := TPPGStyleManager.Create(FForm);
+  Expected := TStringList.Create;
+  Errors := TStringList.Create;
+  try
+    Hosts := 0;
+    Comps := 0;
+    for CI := 0 to High(ControlClasses) do
+    begin
+      C := NewComponent(ControlClasses[CI]);
+      try
+        PInfo := GetPropInfo(C, 'StyleManager');
+        if not Supports(C, IPPGStyleManagedHost, Host) then
+        begin
+          if PInfo <> nil then
+            Errors.Add(C.ClassName + ': published StyleManager ohne IPPGStyleManagedHost');
+          CheckFalse(PPGHasStyleManager(C), C.ClassName);
+          CheckFalse(PPGIsStyleManagedProperty(C, 'Preset'), C.ClassName);
+          Continue;
+        end;
+        Host := nil;
+        Inc(Hosts);
+        if not (C is TPPGCustomControl) then
+          Inc(Comps);
+        if PInfo = nil then
+        begin
+          Errors.Add(C.ClassName + ': IPPGStyleManagedHost ohne published StyleManager');
+          Continue;
+        end;
+        Expected.CommaText := ExpectedManaged(C);
+        // Ohne Manager: nichts verwaltet
+        CheckFalse(PPGHasStyleManager(C), C.ClassName + ' ohne Manager');
+        for PI := 0 to High(Probe) do
+          if PPGIsStyleManagedProperty(C, Probe[PI]) then
+            Errors.Add(Format('%s ohne Manager: %s verwaltet', [C.ClassName, Probe[PI]]));
+        SetObjectProp(C, 'StyleManager', SM);
+        CheckTrue(PPGHasStyleManager(C), C.ClassName + ' mit Manager');
+        for PI := 0 to High(Probe) do
+          if PPGIsStyleManagedProperty(C, Probe[PI]) <> (Expected.IndexOf(Probe[PI]) >= 0) then
+            Errors.Add(Format('%s mit Manager: %s erwartet %s', [C.ClassName, Probe[PI],
+              BoolToStr(Expected.IndexOf(Probe[PI]) >= 0)]));
+        // Gross/Klein egal (Namen aus dem Objektinspektor)
+        CheckTrue(PPGIsStyleManagedProperty(C, 'preset'), C.ClassName + ' preset');
+        // Preset ist ueberall published; Appearance/Animation veroeffentlichen
+        // nicht alle Controls (z.B. GroupBox ohne Animation) - verwaltet sind
+        // sie trotzdem, ApplyStyleManager ueberschreibt sie immer
+        if GetPropInfo(C, 'Preset') = nil then
+          Errors.Add(C.ClassName + ': Preset nicht published');
+        SetObjectProp(C, 'StyleManager', nil);
+        CheckFalse(PPGIsStyleManagedProperty(C, 'Preset'), C.ClassName + ' Manager wieder leer');
+      finally
+        C.Free;
+      end;
+    end;
+    Status(Format('%d Klassen mit StyleManager, davon %d Komponenten ohne Fenster', [Hosts, Comps]));
+    CheckEquals('', Errors.Text, Errors.Text);
+    // Liste wie RegisterComponents: 7 Komponenten (PopupMenu, HintManager,
+    // CustomHint, TeachingTip, TaskDialog, NotificationCenter, BusyOverlay)
+    CheckEquals(7, Comps, 'Komponenten mit StyleManager');
+    CheckTrue(Hosts > 70, 'zu wenige Klassen mit StyleManager');
+    // Kein Host, kein Objekt
+    CheckFalse(PPGIsStyleManagedProperty(nil, 'Preset'), 'nil');
+    CheckFalse(PPGIsStyleManagedProperty(SM, 'Preset'), 'der Manager selbst');
+    CheckFalse(PPGHasStyleManager(nil), 'nil');
+  finally
+    Errors.Free;
+    Expected.Free;
+  end;
+end;
+
+procedure TStyleManagedPropertyTests.RuleForSelectionNeedsAllManaged;
+var
+  SM: TPPGStyleManager;
+  B1, B2: TPPGButton;
+  PM: TPPGPopupMenu;
+begin
+  SM := TPPGStyleManager.Create(FForm);
+  B1 := NewButton;
+  B2 := NewButton;
+  PM := TPPGPopupMenu.Create(FForm);
+  CheckFalse(PPGIsStyleManagedPropertyForAll([], 'Preset'), 'leere Auswahl');
+  CheckFalse(PPGIsStyleManagedPropertyForAll([B1, B2], 'Appearance'), 'keiner mit Manager');
+  B1.StyleManager := SM;
+  CheckTrue(PPGIsStyleManagedPropertyForAll([B1], 'Appearance'), 'einer mit Manager');
+  CheckFalse(PPGIsStyleManagedPropertyForAll([B1, B2], 'Appearance'), 'gemischt: sichtbar lassen');
+  B2.StyleManager := SM;
+  CheckTrue(PPGIsStyleManagedPropertyForAll([B1, B2], 'Appearance'), 'alle mit Manager');
+  CheckTrue(PPGIsStyleManagedPropertyForAll([B1, B2], 'Animation'), 'alle mit Manager');
+  CheckFalse(PPGIsStyleManagedPropertyForAll([B1, B2], 'Caption'), 'nicht verwaltet');
+  // Control und Menue: gemeinsam verwaltet ist nur das Preset
+  PM.StyleManager := SM;
+  CheckTrue(PPGIsStyleManagedPropertyForAll([B1, PM], 'Preset'), 'Control und Menue');
+  CheckFalse(PPGIsStyleManagedPropertyForAll([B1, PM], 'Appearance'), 'Menue ohne Appearance');
+  CheckFalse(PPGIsStyleManagedPropertyForAll([B1, nil], 'Preset'), 'nil in der Auswahl');
+  // Manager freigeben: FreeNotification leert die Referenzen, nichts mehr verwaltet
+  SM.Free;
+  CheckFalse(PPGIsStyleManagedPropertyForAll([B1], 'Preset'), 'Manager freigegeben');
+  CheckFalse(PPGIsStyleManagedProperty(PM, 'Preset'), 'Manager freigegeben (Menue)');
+end;
+
+procedure TStyleManagedPropertyTests.ManagedPropertiesAreNotStoredWithStyleManager;
+var
+  SM: TPPGStyleManager;
+  CI, Checked: Integer;
+  C: TComponent;
+  P, Text: string;
+  Errors: TStringList;
+  A: TPPGAppearance;
+  AnimInfo: PPropInfo;
+
+  procedure Expect(Present: Boolean; const Prefix, Step: string);
+  begin
+    if (LineIndex(Text, Prefix) >= 0) <> Present then
+      Errors.Add(Format('%s %s: "%s" erwartet %s', [C.ClassName, Step, Prefix,
+        BoolToStr(Present)]));
+  end;
+
+begin
+  P := NonDefaultPreset;
+  SM := TPPGStyleManager.Create(FForm);
+  SM.Name := 'SMStreamTest';
+  SM.Preset := P;
+  Errors := TStringList.Create;
+  try
+    Checked := 0;
+    for CI := 0 to High(ControlClasses) do
+    begin
+      C := NewComponent(ControlClasses[CI]);
+      try
+        if not Supports(C, IPPGStyleManagedHost) or (GetPropInfo(C, 'StyleManager') = nil) then
+          Continue;
+        Inc(Checked);
+        // 1) Ohne Manager: Preset, Appearance und Animation stehen in der DFM
+        SetStrProp(C, 'Preset', P);
+        AnimInfo := GetPropInfo(C, 'Animation');
+        if AnimInfo <> nil then
+          (GetObjectProp(C, AnimInfo) as TPPGAnimationSettings).Enabled := False;
+        A := AppearanceOf(C);
+        if A <> nil then
+          A.Rounding := 17;
+        Text := ComponentDfm(C);
+        Expect(True, 'Preset ', 'ohne Manager');
+        if AnimInfo <> nil then
+          Expect(True, 'Animation.Enabled', 'ohne Manager');
+        if A <> nil then
+          Expect(True, 'Appearance.Rounding', 'ohne Manager');
+        // 2) Mit Manager: verwaltete Properties fehlen, die uebrigen bleiben
+        SetObjectProp(C, 'StyleManager', SM);
+        Text := ComponentDfm(C);
+        Expect(True, 'StyleManager ', 'mit Manager');
+        Expect(False, 'Preset ', 'mit Manager');
+        Expect(False, 'Appearance.', 'mit Manager');
+        if C is TPPGCustomControl then
+          Expect(False, 'Animation.', 'mit Manager')
+        else if AnimInfo <> nil then
+          Expect(True, 'Animation.Enabled', 'mit Manager (nicht verwaltet)');
+        // 3) Manager wieder leer: Preset wird wieder gespeichert
+        SetObjectProp(C, 'StyleManager', nil);
+        Text := ComponentDfm(C);
+        Expect(True, 'Preset ', 'Manager wieder leer');
+        Expect(False, 'StyleManager ', 'Manager wieder leer');
+      finally
+        C.Free;
+      end;
+    end;
+    Status(Format('%d Klassen mit StyleManager geprueft', [Checked]));
+    CheckTrue(Checked > 70, 'zu wenige Klassen geprueft');
+    CheckEquals('', Errors.Text, Errors.Text);
+  finally
+    Errors.Free;
+  end;
+end;
+
+procedure TStyleManagedPropertyTests.OldDfmWithManagedValuesLoadsAndDropsThem;
+const
+  Dfm =
+    'object PPGSmhRoot: TForm'#13#10 +
+    '  object SM1: TPPGStyleManager'#13#10 +
+    '    Preset = ''%0:s'''#13#10 +
+    '  end'#13#10 +
+    '  object B1: TPPGButton'#13#10 +
+    '    Preset = ''%1:s'''#13#10 +
+    '    StyleManager = SM1'#13#10 +
+    '    Appearance.Rounding = 17'#13#10 +
+    '    Animation.Enabled = False'#13#10 +
+    '  end'#13#10 +
+    '  object PM1: TPPGPopupMenu'#13#10 +
+    '    StyleManager = SM1'#13#10 +
+    '    Preset = ''%1:s'''#13#10 +
+    '  end'#13#10 +
+    '  object NC1: TPPGNotificationCenter'#13#10 +
+    '    Preset = ''%1:s'''#13#10 +
+    '    StyleManager = SM1'#13#10 +
+    '    Animation.Enabled = False'#13#10 +
+    '  end'#13#10 +
+    'end'#13#10;
+var
+  Root: TForm;
+  T: TStringStream;
+  M: TMemoryStream;
+  SMPreset, CompPreset, Text: string;
+  SM: TPPGStyleManager;
+  B: TPPGButton;
+  PM: TPPGPopupMenu;
+  NC: TPPGNotificationCenter;
+
+  function Count(const Sub: string): Integer;
+  var
+    S: string;
+    I: Integer;
+  begin
+    Result := 0;
+    S := Text;
+    I := Pos(Sub, S);
+    while I > 0 do
+    begin
+      Inc(Result);
+      S := Copy(S, I + Length(Sub), MaxInt);
+      I := Pos(Sub, S);
+    end;
+  end;
+
+  function SaveRoot: string;
+  var
+    MS: TMemoryStream;
+  begin
+    MS := TMemoryStream.Create;
+    try
+      MS.WriteComponent(Root);
+      Result := BinaryToText(MS);
+    finally
+      MS.Free;
+    end;
+  end;
+
+begin
+  RegisterClasses([TPPGStyleManager, TPPGButton, TPPGPopupMenu, TPPGNotificationCenter]);
+  SMPreset := NonDefaultPreset;
+  if not SameText(TPPGRendererRegistry.DefaultName, 'ModernFlat') and
+    not SameText(SMPreset, 'ModernFlat') then
+    CompPreset := 'ModernFlat'
+  else
+    CompPreset := 'Fluent11';
+  CheckFalse(SameText(SMPreset, CompPreset), 'zwei verschiedene Presets');
+  CheckFalse(SameText(TPPGRendererRegistry.DefaultName, CompPreset), 'kein Standard-Preset');
+  Root := TForm.CreateNew(nil);
+  try
+    T := TStringStream.Create(Format(Dfm, [SMPreset, CompPreset]), TEncoding.UTF8);
+    M := TMemoryStream.Create;
+    try
+      ObjectTextToBinary(T, M);
+      M.Position := 0;
+      M.ReadComponent(Root);
+    finally
+      M.Free;
+      T.Free;
+    end;
+    SM := Root.FindComponent('SM1') as TPPGStyleManager;
+    B := Root.FindComponent('B1') as TPPGButton;
+    PM := Root.FindComponent('PM1') as TPPGPopupMenu;
+    NC := Root.FindComponent('NC1') as TPPGNotificationCenter;
+    CheckNotNull(SM, 'SM1');
+    CheckNotNull(B, 'B1');
+    CheckNotNull(PM, 'PM1');
+    CheckNotNull(NC, 'NC1');
+    // Wie bisher: der Manager ueberschreibt die Werte aus der alten DFM
+    CheckSame(SM, B.StyleManager, 'B1.StyleManager');
+    CheckEquals(SMPreset, B.Preset, 'B1.Preset vom Manager');
+    CheckTrue(B.Appearance.Equals(SM.Appearance), 'B1.Appearance vom Manager');
+    CheckTrue(B.Animation.Enabled, 'B1.Animation vom Manager');
+    // Komponenten behalten ihr gelesenes Preset (wirksam ist das des Managers)
+    CheckSame(SM, PM.StyleManager, 'PM1.StyleManager');
+    CheckEquals(CompPreset, PM.Preset, 'PM1.Preset gelesen');
+    CheckSame(SM, NC.StyleManager, 'NC1.StyleManager');
+    CheckFalse(NC.Animation.Enabled, 'NC1.Animation ist nicht verwaltet');
+    // Speichern: die verwalteten Werte fallen heraus
+    Text := SaveRoot;
+    CheckEquals(3, Count('StyleManager = SM1'), Text);
+    CheckEquals(0, Count('Appearance.Rounding = 17'), Text);
+    CheckEquals(0, Count('''' + CompPreset + ''''), Text);
+    CheckEquals(1, Count('''' + SMPreset + ''''), 'nur das Preset des Managers: ' + Text);
+    CheckEquals(1, Count('Animation.Enabled = False'), 'nur NC1: ' + Text);
+    // Manager entfernen: Werte bleiben, das Preset wird wieder gespeichert
+    PM.StyleManager := nil;
+    B.StyleManager := nil;
+    CheckEquals(SMPreset, B.Preset, 'B1 behaelt das Preset des Managers');
+    CheckTrue(B.Appearance.Equals(SM.Appearance), 'B1 behaelt die Appearance');
+    Text := SaveRoot;
+    CheckEquals(1, Count('StyleManager = SM1'), Text);
+    CheckEquals(1, Count('''' + CompPreset + ''''), 'PM1.Preset wieder gespeichert: ' + Text);
+    CheckEquals(2, Count('''' + SMPreset + ''''), 'B1.Preset wieder gespeichert: ' + Text);
+  finally
+    Root.Free;
+  end;
+end;
+
+procedure TStyleManagedPropertyTests.RuntimeBehaviourUnchanged;
+var
+  SM: TPPGStyleManager;
+  B: TPPGButton;
+  PM: TPPGPopupMenu;
+begin
+  SM := TPPGStyleManager.Create(FForm);
+  SM.Preset := NonDefaultPreset;
+  SM.Appearance.Rounding := 13;
+  B := NewButton;
+  B.StyleManager := SM;
+  CheckEquals(NonDefaultPreset, B.Preset);
+  CheckEquals(13, B.Appearance.Rounding);
+  // Eigene Werte zur Laufzeit bleiben moeglich (bis zur naechsten Aenderung am Manager)
+  B.Appearance.Rounding := 5;
+  CheckEquals(5, B.Appearance.Rounding, 'Laufzeit-Zuweisung trotz Manager');
+  B.Animation.Enabled := False;
+  CheckFalse(B.Animation.Enabled, 'Laufzeit-Zuweisung trotz Manager');
+  SM.Appearance.Rounding := 7;
+  CheckEquals(7, B.Appearance.Rounding, 'Manager ueberschreibt wie bisher');
+  CheckTrue(B.Animation.Enabled, 'Manager ueberschreibt die Animation wie bisher');
+  // Preset an der Komponente: gespeichert wird es nicht, gesetzt schon
+  PM := TPPGPopupMenu.Create(FForm);
+  PM.Preset := 'Classic';
+  PM.StyleManager := SM;
+  CheckEquals('Classic', PM.Preset, 'Feld bleibt');
+  PM.StyleManager := nil;
+  CheckEquals('Classic', PM.Preset, 'nach dem Leeren wieder wirksam');
+end;
+
 initialization
   RegisterTest('Streaming', TDfmStreamingTests.Suite);
   RegisterTest('Streaming', TPresetStreamingTests.Suite);
+  RegisterTest('Streaming', TStyleManagedPropertyTests.Suite);
 
 end.

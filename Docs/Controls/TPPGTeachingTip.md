@@ -58,7 +58,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Placement` | `TPPGTipPlacementMode` | `ttpAuto` | Seite des Ziels, an der die Blase erscheint: ttpAuto wählt die erste Seite (oben, unten, links, rechts), auf die sie ganz passt. Werte: `ttpAuto`, `ttpTop`, `ttpBottom`, `ttpLeft`, `ttpRight`. |
 | `MaxWidth` | `Integer` | `320` | Breite der Blase in logischen Pixeln (120..2000). |
 | `Preset` | `string` |  | Optik-Vorlage der Blase ('' = Standard bzw. StyleManager). |
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert. |
 
 ## Eigenschaften wie in der VCL
 

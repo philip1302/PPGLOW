@@ -185,6 +185,33 @@ type
     property ChartPalette: TStrings read FChartPalette write SetChartPalette;
   end;
 
+  /// Komponente mit StyleManager-Property (alle Controls, PopupMenu, Hints,
+  /// TaskDialog, TeachingTip, NotificationCenter, BusyOverlay). Solange der
+  /// StyleManager gesetzt ist, verwaltet er die Properties aus
+  /// StyleManagedProperties: Der Objektinspektor zeigt sie dann nicht, und sie
+  /// werden nicht in die DFM geschrieben. Abgefragt wird nur ueber
+  /// PPGIsStyleManagedProperty (gemeinsame Regel fuer Designer und Streaming).
+  IPPGStyleManagedHost = interface
+    ['{7D3B5E21-4A9C-4E6F-B0D8-2C1F5A8E3B97}']
+    /// Der gesetzte StyleManager (nil = keiner).
+    function GetStyleManager: TPPGStyleManager;
+    /// Namen der published Properties, die der StyleManager verwaltet.
+    function StyleManagedProperties: TArray<string>;
+  end;
+
+/// Hilfe fuer StyleManagedProperties: die Namen als dynamisches Array.
+function PPGStyleManagedNames(const Names: array of string): TArray<string>;
+/// True, wenn Instance eine Komponente mit gesetztem StyleManager ist.
+function PPGHasStyleManager(Instance: TObject): Boolean;
+/// True, wenn PropName an Instance gerade vom StyleManager verwaltet wird:
+/// StyleManager gesetzt und PropName (Gross/Klein egal) steht in
+/// StyleManagedProperties. Ohne StyleManager immer False.
+function PPGIsStyleManagedProperty(Instance: TObject; const PropName: string): Boolean;
+/// Mehrfachauswahl: True nur, wenn Instances nicht leer ist und PropName an
+/// JEDEM Objekt vom StyleManager verwaltet wird.
+function PPGIsStyleManagedPropertyForAll(const Instances: array of TObject;
+  const PropName: string): Boolean;
+
 implementation
 
 uses
@@ -198,6 +225,59 @@ const
 var
   // Manager, dessen Marke gerade in TPPGTokenOverrides steht
   GBrandingOwner: TPPGStyleManager = nil;
+
+{ ---- Vom StyleManager verwaltete Properties ---- }
+
+function PPGStyleManagedNames(const Names: array of string): TArray<string>;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(Names));
+  for I := 0 to High(Names) do
+    Result[I] := Names[I];
+end;
+
+function StyleManagedHost(Instance: TObject; out Host: IPPGStyleManagedHost): Boolean;
+begin
+  // Nur Komponenten: TComponent zaehlt keine Referenzen. Ein Objekt mit
+  // Referenzzaehlung (TInterfacedObject) wuerde Supports sonst freigeben.
+  Result := (Instance is TComponent) and
+    Supports(Instance, IPPGStyleManagedHost, Host);
+end;
+
+function PPGHasStyleManager(Instance: TObject): Boolean;
+var
+  Host: IPPGStyleManagedHost;
+begin
+  Result := StyleManagedHost(Instance, Host) and (Host.GetStyleManager <> nil);
+end;
+
+function PPGIsStyleManagedProperty(Instance: TObject; const PropName: string): Boolean;
+var
+  Host: IPPGStyleManagedHost;
+  Names: TArray<string>;
+  I: Integer;
+begin
+  Result := False;
+  if (PropName = '') or not StyleManagedHost(Instance, Host) or
+    (Host.GetStyleManager = nil) then
+    Exit;
+  Names := Host.StyleManagedProperties;
+  for I := 0 to High(Names) do
+    if SameText(Names[I], PropName) then
+      Exit(True);
+end;
+
+function PPGIsStyleManagedPropertyForAll(const Instances: array of TObject;
+  const PropName: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := Length(Instances) > 0;
+  for I := 0 to High(Instances) do
+    if not PPGIsStyleManagedProperty(Instances[I], PropName) then
+      Exit(False);
+end;
 
 { TPPGTokenColorSet }
 

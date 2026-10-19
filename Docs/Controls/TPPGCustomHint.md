@@ -49,7 +49,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
 | `Preset` | `string` |  | Optik-Vorlage des Hints ('' = Standard bzw. StyleManager). |
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle; gesetzt kommt das Preset vom Manager. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle; gesetzt kommt das Preset vom Manager. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert. |
 | `AllowMarkup` | `Boolean` | `False` | True: Titel und Beschreibung dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). |
 | `MaxWidth` | `Integer` | `360` | Größte Breite des Hint-Fensters in logischen Pixeln (80..2000); längerer Text bricht um. |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus erscheint dieser Hinweis in den Systemfarben für Tooltips. |
