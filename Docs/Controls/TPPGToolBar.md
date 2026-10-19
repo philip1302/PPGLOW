@@ -36,6 +36,7 @@ TPPGToolBar - Befehlsleiste (Phase 7c, wie WinUI CommandBar).
 - Tastatur: Links/Rechts, Pos1/Ende, Enter/Leertaste.
 - Code (Down := ...) loest kein Ereignis aus; ein Klick loest Item.OnClick (bzw. Action.Execute) und danach OnItemClick aus.
 - Screenreader: Symbolleiste; Kinder Buttons/Umschalt-Buttons/Trenner und der Ueberlauf-Knopf.
+- Aufklappmenue je Eintrag (DropdownMenu): Pfeil rechts im Eintrag; tdsMenu klappt bei jedem Klick auf, tdsSplit nur ueber den Pfeilteil (der Rest loest OnClick/Action aus). OnDropdown kann das Menue vorher tauschen oder fuellen. Im Ueberlauf wird daraus ein Untermenue (Kopien der Menuepunkte, die das Original ausloesen).
 
 ## PPGlow-Eigenschaften
 
@@ -103,6 +104,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. Praxis: Z. B. einen Hinweis in der Statusleiste zeigen („Pfeiltasten wählen den Befehl, Enter führt ihn aus"). |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. Praxis: Gegenstück zu OnEnter: den Hinweis in der Statusleiste wieder löschen. |
 | `OnItemClick` | `TPPGToolItemEvent` `(Sender: TObject; Item: TPPGToolItem)` | Ein Item wurde ausgelöst (nach Item.OnClick bzw. Action.Execute); Item ist der Befehl. Praxis: Ein Handler für alle Befehle: Item.Tag als Befehls-ID nutzen und per case verteilen. Läuft nach Items[].OnClick bzw. der Action, eignet sich also auch zum Protokollieren oder für einen Zähler „zuletzt benutzt". |
+| `OnDropdown` | `TPPGToolDropdownEvent` `(Sender: TObject; Item: TPPGToolItem; var Menu: TPopupMenu)` | Vor dem Aufklappen des Menüs eines Befehls (Item.DropdownMenu, auch im „…"-Menü); Menu lässt sich durch ein anderes ersetzen oder mit nil das Aufklappen verhindern. Nutzung: `procedure TForm1.tbDropdown(Sender: TObject; Item: TPPGToolItem; var Menu: TPopupMenu); begin miZuletzt.Enabled := FZuletzt.Count > 0; end;` Praxis: Menüpunkte erst beim Aufklappen anpassen, z. B. „Zuletzt geöffnet" füllen oder Punkte sperren; mit Menu := nil bleibt das Menü zu, etwa ohne Recht. |
 | `OnClick` | `TNotifyEvent` `(Sender: TObject)` | Klick mit der linken Maustaste, Leertaste/Enter bei Buttons oder Auslösen per Zugriffstaste. Bei Listen, Baum, Grid, Auswahlgruppen und Aufklapp-Auswahlfeldern (ComboBox, ColorPicker, ColumnComboBox, CheckComboBox) meldet OnClick wie in der VCL die Auswahl durch den Anwender. Praxis: Selten gebraucht: feuert bei jedem Klick auf die Leiste, auch neben die Befehle. Für Befehle Items[].OnClick oder OnItemClick nehmen. |
 | `OnMouseDown` | `TMouseEvent` `(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer)` | Maustaste über dem Control gedrückt. Praxis: Selten gebraucht; die Befehle lösen beim Loslassen aus. Mit PartAt(X, Y) erfahren Sie, welcher Befehl unter der Maus liegt. |
 | `OnMouseMove` | `TMouseMoveEvent` `(Sender: TObject; Shift: TShiftState; X, Y: Integer)` | Maus über dem Control bewegt. Praxis: Mit PartAt(X, Y) den Befehl unter der Maus bestimmen, z. B. um seinen Langtext in der Statusleiste zu zeigen. |
@@ -120,7 +122,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. Praxis: Selten gebraucht; Zeichentasten lösen keine Befehle aus. Tastenkürzel für Befehle besser über Actions (ShortCut) vergeben. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. Praxis: Selten gebraucht, z. B. um eine Vorschau zu beenden, wenn eine Taste losgelassen wird. |
 
-Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests, TStreamingFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit8A` (TAudit8APaintTests, TAudit8ARepaintCountTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.Phase7c` (TBreadcrumbTests, TPhase7cPaintTests, TToolBarTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CBehaviourTests); `PPG.Tests.Audit45` (TEffectFixTests, TNamingTests, TStreamingFixTests); `PPG.Tests.Audit5d`; `PPG.Tests.Audit8A` (TAudit8APaintTests, TAudit8ARepaintCountTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.Phase7c` (TBreadcrumbTests, TPhase7cPaintTests, TToolBarTests); `PPG.Tests.Streaming`; `PPG.Tests.ToolBarDropdown` (TToolBarDropdownTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGToolBar.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.
