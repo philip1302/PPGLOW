@@ -378,6 +378,7 @@
         <DCCReference Include="PPG.Tests.Review.pas"/>
         <DCCReference Include="PPG.Tests.Custom.pas"/>
         <DCCReference Include="PPG.Tests.RichEdit.pas"/>
+        <DCCReference Include="PPG.Tests.ToolBarDropdown.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

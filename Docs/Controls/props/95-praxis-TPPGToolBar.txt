@@ -35,6 +35,7 @@ TPPGToolBar.OnContextPopup ! Um ein Kontextmenü der Leiste anzupassen, z. B. �
 TPPGToolBar.OnDragDrop ! Wenn etwas auf die Leiste gezogen werden darf, z. B. eine Datei auf die Leiste eines Dokumentenfensters: hier das Ablegen verarbeiten.
 TPPGToolBar.OnDragOver ! Zusammen mit OnDragDrop: Accept nur für passende Quellen auf True setzen.
 TPPGToolBar.OnEndDrag ! Nach dem Ziehen der Leiste selbst (DragMode = dmAutomatic): Target = nil heißt abgebrochen.
+TPPGToolBar.OnDropdown ! Menüpunkte erst beim Aufklappen anpassen, z. B. „Zuletzt geöffnet" füllen oder Punkte sperren; mit Menu := nil bleibt das Menü zu, etwa ohne Recht.
 TPPGToolBar.OnEnter ! Z. B. einen Hinweis in der Statusleiste zeigen („Pfeiltasten wählen den Befehl, Enter führt ihn aus").
 TPPGToolBar.OnExit ! Gegenstück zu OnEnter: den Hinweis in der Statusleiste wieder löschen.
 TPPGToolBar.OnGesture ! Auf Touch-Geräten z. B. Wischen nach links auf der Leiste für „Zurück" auswerten (EventInfo.GestureID).
@@ -75,6 +76,8 @@ TPPGToolItem.Action ! Für Befehle, die auch im Menü oder per Tastenkürzel ste
 TPPGToolItem.Caption ! Kurz und als Verb oder Substantiv („Neu", „Drucken"). Ein & wird nur ausgeblendet, es vergibt keine Zugriffstaste; bei ShowCaptions = False dient die Caption als Tooltip.
 TPPGToolItem.Color ! Nur für die eine Hauptaktion der Leiste, z. B. „Speichern" oder „Neuer Auftrag" in der Akzentfarbe; zusammen mit TextColor = clWhite. Die übrigen Befehle bleiben flach.
 TPPGToolItem.Down ! Zustand eines Umschalt-Buttons lesen oder setzen, z. B. itFett.Down := Text.Fett beim Wechsel des Absatzes. Setzen im Code löst kein Ereignis aus.
+TPPGToolItem.DropdownMenu ! Für Befehle mit Varianten, z. B. „Ansicht" mit Liste/Kacheln/Details oder „Exportieren" mit PDF/Excel. Einen TPPGPopupMenu zuweisen, dann passt das Menü zur Optik der Leiste.
+TPPGToolItem.DropdownStyle ! tdsMenu, wenn der Befehl selbst nichts tut (nur Auswahl); tdsSplit, wenn es eine übliche Hauptaktion gibt, z. B. „Drucken" sofort und im Pfeil „Vorschau" und „Drucker wählen …".
 TPPGToolItem.Enabled ! Befehle sperren, die gerade nicht gehen, z. B. „Bearbeiten" ohne ausgewählten Datensatz. Mit Action besser deren Enabled setzen.
 TPPGToolItem.FontStyle ! [fsBold] für die Hauptaktion, damit sie auch ohne Farbe auffällt. Die Breite des Befehls passt sich an.
 TPPGToolItem.GroupIndex ! Gleiche Zahl > 0 für Umschalt-Buttons, von denen genau einer gedrückt ist, z. B. 1 für Ansicht „Liste / Kacheln / Details". 0 für einzelne Umschalter wie „Nur aktive".
