@@ -183,7 +183,20 @@ type
     FMenuStyles: TPPGMenuStyles;
     FOnCustomDrawItem: TPPGMenuCustomDrawEvent;
     FDrawSender: TObject;
+    FOwnerWindow: HWND;
+    FHostForm: TCustomForm;
+    FHostWnd: HWND;          // Fenster von FHostForm, solange beobachtet
+    FNotifier: TComponent;   // FreeNotification fuer FHostForm
+    FDeferredRelease: TArray<HWND>;
     procedure SetPreset(const Value: string);
+    procedure SetHostForm(const Value: TCustomForm);
+    procedure SetStyleSource(const Value: TPPGCustomControl);
+    procedure NeedNotifier;
+    procedure ComponentFreed(AComponent: TComponent);
+    procedure HostEvent(Control: TControl; var Message: TMessage);
+    procedure HostFreed;
+    procedure WatchHost;
+    procedure PostDeferredReleases;
     procedure Hook(var Msg: TMsg; var Handled: Boolean);
     procedure AppDeactivate(Sender: TObject);
     procedure DelayStep(Sender: TObject);
@@ -222,7 +235,8 @@ type
     property Modal: Boolean read FModal write FModal;
     /// Zuletzt ausgeloester Eintrag (nil = abgebrochen).
     property Selected: TMenuItem read FSelected;
-    property StyleSource: TPPGCustomControl read FStyleSource write FStyleSource;
+    /// Ausloeser fuer Optik und Besitzer der Fenster; wird er freigegeben, schliesst das Menue.
+    property StyleSource: TPPGCustomControl read FStyleSource write SetStyleSource;
     property StyleManager: TPPGStyleManager read FStyleManager write FStyleManager;
     property Preset: string read FPreset write SetPreset;
     property BiDiMode: TBiDiMode read FBiDiMode write FBiDiMode;
@@ -236,6 +250,13 @@ type
     property Styles: TPPGMenuStyles read FMenuStyles write FMenuStyles;
     property OnCustomDrawItem: TPPGMenuCustomDrawEvent read FOnCustomDrawItem write FOnCustomDrawItem;
     property DrawSender: TObject read FDrawSender write FDrawSender;
+    /// Besitzer der Menuefenster ohne StyleSource (siehe TPPGPopupWindow.OwnerWindow).
+    property OwnerWindow: HWND read FOwnerWindow write FOwnerWindow;
+    /// Formular, zu dem das Menue gehoert: wird es versteckt, minimiert oder
+    /// zerstoert, schliesst das Menue. Release (caFree) waehrend RunModal wird
+    /// bis nach dem Schliessen verschoben - der Ausloeser (z.B. OnClick eines
+    /// Buttons) laeuft sonst nach Popup in freigegebenen Objekten weiter.
+    property HostForm: TCustomForm read FHostForm write SetHostForm;
   end;
 
   TPPGPopupMenu = class(TPopupMenu, IPPGStyleManagedHost)
@@ -256,6 +277,7 @@ type
     function IsPresetStored: Boolean;
     procedure SetMenuStyles(const Value: TPPGMenuStyles);
     function StyleSourceControl: TPPGCustomControl;
+    function HostFormOf: TCustomForm;
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
@@ -305,6 +327,14 @@ const
 type
   TMenuItemAccess = class(TMenuItem);
   TPopupAccess = class(TPopupMenu);
+
+  /// Meldet der Schleife (ein TObject) die Freigabe ihres Formulars.
+  TLoopNotifier = class(TComponent)
+  private
+    FLoop: TPPGMenuLoop;
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  end;
 
   /// Fuehrt einen Eintrag nach dem Schliessen aus (gepostete Nachricht).
   /// Lebt bis zum Programmende; FreeNotification sichert gegen geloeschte
@@ -1296,6 +1326,15 @@ begin
   Result := FHot + 1;
 end;
 
+{ TLoopNotifier }
+
+procedure TLoopNotifier.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (FLoop <> nil) then
+    FLoop.ComponentFreed(AComponent);
+end;
+
 { TPPGMenuStyles }
 
 constructor TPPGMenuStyles.Create(AOwner: TPersistent);
@@ -1325,6 +1364,9 @@ destructor TPPGMenuLoop.Destroy;
 begin
   CloseAll;
   StopHooks;
+  SetHostForm(nil);
+  SetStyleSource(nil);
+  FreeAndNil(FNotifier);
   if GActiveLoop = Self then
     GActiveLoop := nil;
   if FDelay <> nil then
@@ -1367,6 +1409,99 @@ begin
   else if FPreset <> '' then
     Result.Preset := FPreset;
   Result.BiDiMode := FBiDiMode;
+  Result.OwnerWindow := FOwnerWindow;
+end;
+
+procedure TPPGMenuLoop.SetHostForm(const Value: TCustomForm);
+begin
+  if FHostForm = Value then
+    Exit;
+  if FHostWnd <> 0 then
+  begin
+    PPGUnwatchControl(FHostForm, HostEvent);
+    FHostWnd := 0;
+  end;
+  if (FHostForm <> nil) and (FNotifier <> nil) then
+    FHostForm.RemoveFreeNotification(FNotifier);
+  FHostForm := Value;
+  if FHostForm <> nil then
+  begin
+    NeedNotifier;
+    FHostForm.FreeNotification(FNotifier);
+    if FActive then
+      WatchHost; // offen: ab jetzt beobachten
+  end;
+end;
+
+procedure TPPGMenuLoop.NeedNotifier;
+begin
+  if FNotifier = nil then
+  begin
+    FNotifier := TLoopNotifier.Create(nil);
+    TLoopNotifier(FNotifier).FLoop := Self;
+  end;
+end;
+
+procedure TPPGMenuLoop.SetStyleSource(const Value: TPPGCustomControl);
+begin
+  if FStyleSource = Value then
+    Exit;
+  if (FStyleSource <> nil) and (FNotifier <> nil) and (TComponent(FStyleSource) <> TComponent(FHostForm)) then
+    FStyleSource.RemoveFreeNotification(FNotifier);
+  FStyleSource := Value;
+  if FStyleSource <> nil then
+  begin
+    NeedNotifier;
+    FStyleSource.FreeNotification(FNotifier);
+  end;
+end;
+
+procedure TPPGMenuLoop.ComponentFreed(AComponent: TComponent);
+begin
+  if AComponent = FHostForm then
+    HostFreed;
+  if AComponent = FStyleSource then
+  begin
+    // Die Fenster zeigen noch auf ihn (Besitzer, Optik): sofort schliessen
+    FStyleSource := nil;
+    Finish(False);
+  end;
+end;
+
+procedure TPPGMenuLoop.HostFreed;
+begin
+  // Der Beobachter gehoerte dem Formular und ist mit ihm weg
+  FHostWnd := 0;
+  FHostForm := nil;
+  Finish(False);
+end;
+
+procedure TPPGMenuLoop.HostEvent(Control: TControl; var Message: TMessage);
+begin
+  if not FActive or (FHostWnd = 0) then
+    Exit;
+  case Message.Msg of
+    WM_SHOWWINDOW:
+      if Message.WParam = 0 then
+        Finish(False);
+    WM_WINDOWPOSCHANGED:
+      if not IsWindowVisible(FHostWnd) or IsIconic(FHostWnd) then
+        Finish(False);
+    WM_DESTROY:
+      Finish(False);
+  end;
+end;
+
+procedure TPPGMenuLoop.PostDeferredReleases;
+var
+  L: TArray<HWND>;
+  I: Integer;
+begin
+  L := FDeferredRelease;
+  FDeferredRelease := nil;
+  for I := 0 to High(L) do
+    if IsWindow(L[I]) then
+      PostMessage(L[I], CM_RELEASE, 0, 0);
 end;
 
 procedure TPPGMenuLoop.InitiateActions(Parent: TMenuItem);
@@ -1381,10 +1516,25 @@ end;
 procedure TPPGMenuLoop.StartHooks;
 begin
   if FHooked then
+  begin
+    WatchHost;
     Exit;
+  end;
   PPGAddMessageHook(Hook);
   PPGAddDeactivateHook(AppDeactivate);
   FHooked := True;
+  WatchHost;
+end;
+
+procedure TPPGMenuLoop.WatchHost;
+begin
+  // Nur ein sichtbares Formular: ein verstecktes (z.B. in Tests) meldet sonst
+  // beim ersten Verschieben "unsichtbar"
+  if (FHostWnd <> 0) or (FHostForm = nil) or (csDestroying in FHostForm.ComponentState) or
+    not FHostForm.HandleAllocated or not IsWindowVisible(FHostForm.Handle) then
+    Exit;
+  FHostWnd := FHostForm.Handle;
+  PPGWatchControl(FHostForm, HostEvent);
 end;
 
 procedure TPPGMenuLoop.StopHooks;
@@ -1394,6 +1544,11 @@ begin
   PPGRemoveMessageHook(Hook);
   PPGRemoveDeactivateHook(AppDeactivate);
   FHooked := False;
+  if FHostWnd <> 0 then
+  begin
+    FHostWnd := 0;
+    PPGUnwatchControl(FHostForm, HostEvent);
+  end;
 end;
 
 procedure TPPGMenuLoop.OpenPopup(Items: TMenuItem; const Anchor: TRect;
@@ -1803,6 +1958,18 @@ begin
         Finish(False);
         Handled := True;
       end;
+    CM_RELEASE:
+      // Formular des Menues gibt sich frei (Close mit caFree, Release): in
+      // RunModal liefe das mitten im Ausloeser (OnClick, MouseUp ...), der
+      // danach in freigegebenen Objekten weiterliefe. Erst schliessen, nach
+      // RunModal neu posten (wie Release es vorsieht: nach dem Ereignis).
+      if FModal and (FHostWnd <> 0) and ((Msg.hwnd = FHostWnd) or IsChild(Msg.hwnd, FHostWnd)) then
+      begin
+        SetLength(FDeferredRelease, Length(FDeferredRelease) + 1);
+        FDeferredRelease[High(FDeferredRelease)] := Msg.hwnd;
+        Handled := True;
+        Finish(False);
+      end;
   end;
 end;
 
@@ -1819,6 +1986,7 @@ begin
       Application.HandleMessage;
   finally
     FModal := False;
+    PostDeferredReleases;
   end;
 end;
 
@@ -1897,6 +2065,19 @@ begin
   end;
 end;
 
+function TPPGPopupMenu.HostFormOf: TCustomForm;
+begin
+  // Formular des Ausloesers, sonst des Besitzers (Menue auf dem Formular),
+  // sonst das aktive (Menue z.B. auf einem Datenmodul)
+  Result := nil;
+  if PopupComponent is TControl then
+    Result := GetParentForm(TControl(PopupComponent));
+  if (Result = nil) and (Owner is TControl) then
+    Result := GetParentForm(TControl(Owner));
+  if Result = nil then
+    Result := Screen.ActiveForm;
+end;
+
 procedure TPPGPopupMenu.Popup(X, Y: Integer);
 begin
   PopupAtRect(Rect(X, Y, X, Y));
@@ -1919,6 +2100,7 @@ var
   AlignEnd: Boolean;
   Destroyed: Boolean;
   OldFlag: PBoolean;
+  Host: TCustomForm;
 begin
   if csDesigning in ComponentState then
   begin
@@ -1940,6 +2122,13 @@ begin
     Loop.Styles := FMenuStyles;
     Loop.OnCustomDrawItem := FOnCustomDrawItem;
     Loop.DrawSender := Self;
+    // Ohne PPGlow-Ausloeser gehoeren die Menuefenster dem Formular (bei MDI dem
+    // Hauptformular) - nicht dem Anwendungsfenster, sonst laegen sie unter
+    // dem Hauptformular, sobald es nach vorn kommt
+    Host := HostFormOf;
+    if (Host <> nil) and Host.HandleAllocated then
+      Loop.OwnerWindow := Host.Handle;
+    Loop.HostForm := Host;
     Loop.ShowAccelerators := ShowAccelerators;
     AlignEnd := (Alignment = paRight) <> (BiDiMode = bdRightToLeft);
     Loop.OpenPopup(Items, Anchor, ppsBelow, AlignEnd);

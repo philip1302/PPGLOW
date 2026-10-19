@@ -382,6 +382,7 @@
         <DCCReference Include="PPG.Tests.ToolBarDropdown.pas"/>
         <DCCReference Include="PPG.Tests.NavigatorExtras.pas"/>
         <DCCReference Include="PPG.Tests.ImageStored.pas"/>
+        <DCCReference Include="PPG.Tests.PopupMenuBasics.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

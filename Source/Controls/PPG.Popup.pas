@@ -58,6 +58,7 @@ type
     FFollowOrigin: TPoint;          // Ursprung des Ausloesers beim Platzieren
     FOnFollow: TNotifyEvent;
     FOnSourceHidden: TNotifyEvent;
+    FOwnerWindow: HWND;
     procedure DropAnimStep(Sender: TObject);
     procedure StartFollow;
     procedure StopFollow;
@@ -66,6 +67,8 @@ type
     procedure WMMouseActivate(var Message: TWMMouseActivate); message WM_MOUSEACTIVATE;
     procedure WMNCHitTest(var Message: TWMNCHitTest); message WM_NCHITTEST;
     function GetFullHeight: Integer;
+    /// Besitzerfenster: oberstes Fenster des Ausloesers, sonst OwnerWindow (0 = keins).
+    function OwnerRoot: HWND;
   protected
     procedure CreateParams(var Params: TCreateParams); override;
     procedure DestroyWnd; override;
@@ -109,6 +112,10 @@ type
     property Source: TPPGCustomControl read FSource;
     /// PPI fuer das Zeichnen ohne PPGlow-Ausloeser (0 = aus dem Fenster).
     property PopupPPI: Integer read FPPI write FPPI;
+    /// Besitzer ohne PPGlow-Ausloeser (z.B. Formular eines Popup-Menues): das Popup
+    /// liegt immer ueber dessen oberstem Fenster (bei MDI das Hauptformular).
+    /// 0 = Hauptformular bzw. Anwendungsfenster.
+    property OwnerWindow: HWND read FOwnerWindow write FOwnerWindow;
     /// Offen dem Ausloeser (Source) und seinem Formular folgen (Audit 7a #4).
     property FollowSource: Boolean read FFollowSource write FFollowSource;
     /// Statt mitzugehen neu platzieren (z.B. RepositionPopup des Felds).
@@ -323,8 +330,8 @@ begin
   Params.ExStyle := WS_EX_TOOLWINDOW;
   // Schatten des Systems (beachtet die Einstellung "Schatten unter Fenstern")
   Params.WindowClass.style := Params.WindowClass.style or CS_DROPSHADOW or CS_SAVEBITS;
-  if (FSource <> nil) and FSource.HandleAllocated then
-    Params.WndParent := GetAncestor(FSource.Handle, GA_ROOT)
+  if OwnerRoot <> 0 then
+    Params.WndParent := OwnerRoot
   else if Application.MainFormOnTaskBar and (Application.MainForm <> nil) and
     Application.MainForm.HandleAllocated then
     Params.WndParent := Application.MainForm.Handle
@@ -390,6 +397,16 @@ begin
   Result := 0;
 end;
 
+function TPPGPopupWindow.OwnerRoot: HWND;
+begin
+  if (FSource <> nil) and FSource.HandleAllocated then
+    Result := GetAncestor(FSource.Handle, GA_ROOT)
+  else if (FOwnerWindow <> 0) and IsWindow(FOwnerWindow) then
+    Result := GetAncestor(FOwnerWindow, GA_ROOT)
+  else
+    Result := 0;
+end;
+
 function TPPGPopupWindow.GetFullHeight: Integer;
 begin
   Result := FFullRect.Bottom - FFullRect.Top;
@@ -428,13 +445,17 @@ end;
 
 procedure TPPGPopupWindow.PopupAt(const Bounds: TRect; Side: TPPGPopupSide;
   DurationMs: Cardinal);
+var
+  OwnerWnd: HWND;
 begin
   FFullRect := Bounds;
   FOpenedAbove := Side = ppsAbove;
   HandleNeeded;
-  // Besitzer = Formular des Ausloesers: Popup liegt immer ueber ihm
-  if (FSource <> nil) and FSource.HandleAllocated then
-    SetWindowLongPtr(Handle, GWLP_HWNDPARENT, LONG_PTR(GetAncestor(FSource.Handle, GA_ROOT)));
+  // Besitzer = Formular des Ausloesers: Popup liegt immer ueber ihm (auch wenn
+  // das Formular spaeter nach vorn kommt - als Geschwister laege es dann darunter)
+  OwnerWnd := OwnerRoot;
+  if OwnerWnd <> 0 then
+    SetWindowLongPtr(Handle, GWLP_HWNDPARENT, LONG_PTR(OwnerWnd));
   FOpen := True;
   if (DurationMs > 0) and not (csDesigning in ComponentState) then
   begin
@@ -542,7 +563,7 @@ end;
 procedure TPPGPopupWindow.ApplyBounds(Progress: Single);
 var
   H, Y, Flags: Integer;
-  After: HWND;
+  After, OwnerWnd: HWND;
 begin
   if not HandleAllocated then
     Exit;
@@ -555,8 +576,8 @@ begin
     Y := FFullRect.Top;
   // Topmost-Formular: das Popup muss ebenfalls topmost sein
   After := HWND_TOP;
-  if (FSource <> nil) and FSource.HandleAllocated and
-    (GetWindowLong(GetAncestor(FSource.Handle, GA_ROOT), GWL_EXSTYLE) and WS_EX_TOPMOST <> 0) then
+  OwnerWnd := OwnerRoot;
+  if (OwnerWnd <> 0) and (GetWindowLong(OwnerWnd, GWL_EXSTYLE) and WS_EX_TOPMOST <> 0) then
     After := HWND_TOPMOST;
   Flags := SWP_NOACTIVATE or SWP_SHOWWINDOW;
   SetWindowPos(Handle, After, FFullRect.Left, Y, FFullRect.Right - FFullRect.Left, H, Flags);

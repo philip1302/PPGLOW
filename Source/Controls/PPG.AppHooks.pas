@@ -21,7 +21,14 @@ unit PPG.AppHooks;
   eingehaengt, bleibt das Hilfsobjekt als Durchreiche stehen (sonst wuerde
   dessen Kette brechen).
   Abmelden waehrend einer gemeldeten Nachricht (z.B. Popup schliesst beim
-  Ausblenden des Formulars) gibt das Hilfsobjekt erst nach deren Ende frei. }
+  Ausblenden des Formulars) gibt das Hilfsobjekt erst nach deren Ende frei.
+
+  Anwendungen, die Application.OnMessage bzw. OnDeactivate selbst setzen,
+  trennen den Verteiler von TApplicationEvents ab (die VCL ruft dann nur noch
+  ihren Handler). Solange Haken angemeldet sind, liegt deshalb ein Thread-Haken
+  (WH_GETMESSAGE bzw. WH_CALLWNDPROC fuer WM_ACTIVATEAPP) bereit. Er verteilt
+  nur, wenn das VCL-Ereignis nicht mehr auf den Verteiler zeigt - sonst laeuft
+  alles wie bisher ueber TApplicationEvents, jede Nachricht genau einmal. }
 
 {$I ..\PPG.inc}
 
@@ -42,6 +49,9 @@ procedure PPGAddDeactivateHook(const Hook: TNotifyEvent);
 procedure PPGRemoveDeactivateHook(const Hook: TNotifyEvent);
 /// Anzahl angemeldeter Haken (Tests, Diagnose).
 function PPGMessageHookCount: Integer;
+/// True, solange ein Thread-Haken als Ersatzweg bereitliegt (Tests, Diagnose):
+/// Nachrichten-Haken bzw. Deaktivieren-Haken angemeldet.
+function PPGFallbackHooksInstalled: Boolean;
 
 /// Meldet alle Nachrichten an Control (nach dessen Verarbeitung) an Event.
 procedure PPGWatchControl(Control: TControl; const Event: TPPGControlWatchEvent);
@@ -52,7 +62,7 @@ function PPGControlWatchCount(Control: TControl): Integer;
 implementation
 
 uses
-  System.SysUtils, Vcl.AppEvnts, PPG.ErrorHandler;
+  System.SysUtils, Vcl.AppEvnts, Vcl.Forms, PPG.ErrorHandler;
 
 type
   THookHost = class(TComponent)
@@ -60,10 +70,18 @@ type
     FEvents: TApplicationEvents;
     FMessageHooks: TArray<TMethod>;
     FDeactivateHooks: TArray<TMethod>;
+    FMsgHook: HHOOK;        // WH_GETMESSAGE (Ersatzweg fuer OnMessage)
+    FWndHook: HHOOK;        // WH_CALLWNDPROC (Ersatzweg fuer OnDeactivate)
+    FInactive: Boolean;     // Ersatzweg hat das Deaktivieren schon gemeldet
+    FInHook: Integer;       // laufende Aufrufe der Thread-Haken
+    FUpdatePending: Boolean; // Abmelden waehrend eines Aufrufs: danach
     procedure AppMessage(var Msg: TMsg; var Handled: Boolean);
     procedure AppDeactivate(Sender: TObject);
+    /// Thread-Haken passend zu den angemeldeten Haken an- bzw. abmelden.
+    procedure UpdateThreadHooks;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 var
@@ -71,10 +89,98 @@ var
   // Nach der Finalisierung nicht neu anlegen (Formulare werden spaeter
   // abgebaut und melden sich dabei ab bzw. an): sonst Leck
   GFinalized: Boolean = False;
+  // Handler, die Vcl.AppEvnts beim Start eingetragen hat (der Verteiler von
+  // TApplicationEvents). Zeigt Application.OnMessage nicht mehr darauf, hat
+  // die Anwendung das Ereignis selbst gesetzt.
+  GVclOnMessage: TMethod;
+  GVclOnDeactivate: TMethod;
 
 function SameMethod(const A, B: TMethod): Boolean;
 begin
   Result := (A.Code = B.Code) and (A.Data = B.Data);
+end;
+
+/// Laeuft OnMessage noch ueber den Verteiler von TApplicationEvents?
+function VclMessagePathIntact: Boolean;
+var
+  M: TMessageEvent;
+begin
+  if (Application = nil) or (GVclOnMessage.Code = nil) then
+    Exit(True);
+  M := Application.OnMessage;
+  Result := SameMethod(TMethod(M), GVclOnMessage);
+end;
+
+function VclDeactivatePathIntact: Boolean;
+var
+  M: TNotifyEvent;
+begin
+  if (Application = nil) or (GVclOnDeactivate.Code = nil) then
+    Exit(True);
+  M := Application.OnDeactivate;
+  Result := SameMethod(TMethod(M), GVclOnDeactivate);
+end;
+
+function GetMsgProc(Code: Integer; WParam: WPARAM; LParam: LPARAM): LRESULT; stdcall;
+var
+  Handled: Boolean;
+  P: PMsg;
+begin
+  // Nur entnommene Nachrichten (nicht PM_NOREMOVE) und nur, wenn die VCL
+  // den Verteiler nicht mehr ruft - sonst kaeme jede Nachricht doppelt an
+  if (Code = HC_ACTION) and (WParam = PM_REMOVE) and (GHost <> nil) and
+    not VclMessagePathIntact then
+  begin
+    P := PMsg(LParam);
+    Handled := False;
+    Inc(GHost.FInHook);
+    try
+      GHost.AppMessage(P^, Handled); // faengt Exceptions je Haken selbst
+    finally
+      Dec(GHost.FInHook);
+    end;
+    if Handled then
+      P^.message := WM_NULL; // verbraucht: die Schleife verteilt nur noch WM_NULL
+    if (GHost.FInHook = 0) and GHost.FUpdatePending then
+      GHost.UpdateThreadHooks;
+  end;
+  Result := CallNextHookEx(0, Code, WParam, LParam);
+end;
+
+function CallWndProc(Code: Integer; WParam: WPARAM; LParam: LPARAM): LRESULT; stdcall;
+var
+  P: PCWPStruct;
+begin
+  if (Code = HC_ACTION) and (GHost <> nil) then
+  begin
+    P := PCWPStruct(LParam);
+    if P^.message = WM_ACTIVATEAPP then
+    begin
+      // WM_ACTIVATEAPP geht an jedes Fenster der Anwendung: einmal melden
+      if P^.wParam <> 0 then
+        GHost.FInactive := False
+      else if not GHost.FInactive and not VclDeactivatePathIntact then
+      begin
+        GHost.FInactive := True;
+        Inc(GHost.FInHook);
+        try
+          try
+            GHost.AppDeactivate(Application);
+          except
+            // Grenze: Haken des Systems in der Fensterprozedur - keine
+            // Exception hinaus; gemeldet wird sie trotzdem
+            on E: Exception do
+              TPPGErrorHandler.HandleCallbackError(GHost, E, 'PPG.AppHooks');
+          end;
+        finally
+          Dec(GHost.FInHook);
+        end;
+        if (GHost.FInHook = 0) and GHost.FUpdatePending then
+          GHost.UpdateThreadHooks;
+      end;
+    end;
+  end;
+  Result := CallNextHookEx(0, Code, WParam, LParam);
 end;
 
 constructor THookHost.Create(AOwner: TComponent);
@@ -83,6 +189,48 @@ begin
   FEvents := TApplicationEvents.Create(Self);
   FEvents.OnMessage := AppMessage;
   FEvents.OnDeactivate := AppDeactivate;
+end;
+
+destructor THookHost.Destroy;
+begin
+  if FMsgHook <> 0 then
+    UnhookWindowsHookEx(FMsgHook);
+  FMsgHook := 0;
+  if FWndHook <> 0 then
+    UnhookWindowsHookEx(FWndHook);
+  FWndHook := 0;
+  inherited Destroy;
+end;
+
+procedure THookHost.UpdateThreadHooks;
+begin
+  // Nur im Hauptthread (dort laeuft die Nachrichtenschleife der VCL)
+  if GetCurrentThreadId <> MainThreadID then
+    Exit;
+  // Abmelden aus einem laufenden Haken heraus: erst nach dessen Ende
+  if FInHook > 0 then
+  begin
+    FUpdatePending := True;
+    Exit;
+  end;
+  FUpdatePending := False;
+  if (Length(FMessageHooks) > 0) and (FMsgHook = 0) then
+    FMsgHook := SetWindowsHookEx(WH_GETMESSAGE, @GetMsgProc, 0, GetCurrentThreadId)
+  else if (Length(FMessageHooks) = 0) and (FMsgHook <> 0) then
+  begin
+    UnhookWindowsHookEx(FMsgHook);
+    FMsgHook := 0;
+  end;
+  if (Length(FDeactivateHooks) > 0) and (FWndHook = 0) then
+  begin
+    FInactive := False;
+    FWndHook := SetWindowsHookEx(WH_CALLWNDPROC, @CallWndProc, 0, GetCurrentThreadId);
+  end
+  else if (Length(FDeactivateHooks) = 0) and (FWndHook <> 0) then
+  begin
+    UnhookWindowsHookEx(FWndHook);
+    FWndHook := 0;
+  end;
 end;
 
 procedure THookHost.AppMessage(var Msg: TMsg; var Handled: Boolean);
@@ -175,6 +323,7 @@ begin
   L := Host.FMessageHooks;
   AddMethod(L, TMethod(Hook));
   Host.FMessageHooks := L;
+  Host.UpdateThreadHooks;
 end;
 
 procedure PPGRemoveMessageHook(const Hook: TPPGMessageHook);
@@ -186,6 +335,7 @@ begin
   L := GHost.FMessageHooks;
   RemoveMethod(L, TMethod(Hook));
   GHost.FMessageHooks := L;
+  GHost.UpdateThreadHooks;
 end;
 
 procedure PPGAddDeactivateHook(const Hook: TNotifyEvent);
@@ -197,6 +347,7 @@ begin
   L := Host.FDeactivateHooks;
   AddMethod(L, TMethod(Hook));
   Host.FDeactivateHooks := L;
+  Host.UpdateThreadHooks;
 end;
 
 procedure PPGRemoveDeactivateHook(const Hook: TNotifyEvent);
@@ -208,6 +359,7 @@ begin
   L := GHost.FDeactivateHooks;
   RemoveMethod(L, TMethod(Hook));
   GHost.FDeactivateHooks := L;
+  GHost.UpdateThreadHooks;
 end;
 
 function PPGMessageHookCount: Integer;
@@ -216,6 +368,24 @@ begin
     Result := 0
   else
     Result := Length(GHost.FMessageHooks);
+end;
+
+procedure CaptureVclEvents;
+var
+  M: TMessageEvent;
+  D: TNotifyEvent;
+begin
+  if Application = nil then
+    Exit;
+  M := Application.OnMessage;
+  D := Application.OnDeactivate;
+  GVclOnMessage := TMethod(M);
+  GVclOnDeactivate := TMethod(D);
+end;
+
+function PPGFallbackHooksInstalled: Boolean;
+begin
+  Result := (GHost <> nil) and ((GHost.FMsgHook <> 0) or (GHost.FWndHook <> 0));
 end;
 
 { Beobachter }
@@ -391,6 +561,9 @@ begin
 end;
 
 initialization
+  // Vcl.AppEvnts (in uses) ist schon initialisiert: sein Verteiler steht in
+  // den Ereignissen der Anwendung
+  CaptureVclEvents;
 
 finalization
   GFinalized := True;
