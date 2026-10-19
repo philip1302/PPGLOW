@@ -18,6 +18,7 @@ unit PPG.Reg;
 interface
 
 uses
+  Winapi.Windows, Winapi.Messages,
   System.Classes, System.Types, Vcl.Graphics, DesignIntf, DesignEditors, VCLEditors,
   PPG.PageControl, PPG.Wizard;
 
@@ -187,6 +188,26 @@ type
     procedure RequiresUnits(Proc: TGetStrProc); override;
   end;
 
+  /// Blendet im Objektinspektor die Properties aus, die der StyleManager
+  /// verwaltet (Preset, Appearance, Animation), solange er gesetzt ist - bei
+  /// Mehrfachauswahl nur, wenn ALLE markierten Komponenten einen haben. Die
+  /// Regel steht in PPGIsStyleManagedProperty (PPG.StyleManager, getestet);
+  /// der Filter reicht die Auswahl nur weiter.
+  TPPGStyleManagedFilter = class(TSelectionEditor, ISelectionPropertyFilter)
+  public
+    procedure FilterProperties(const ASelection: IDesignerSelections;
+      const ASelectionProperties: IInterfaceList);
+  end;
+
+  /// StyleManager-Property: Wird der Manager gesetzt oder geleert, baut der
+  /// Objektinspektor die Liste neu auf (verwaltete Properties aus- bzw.
+  /// einblenden). Der Neuaufbau laeuft verzoegert ueber eine gepostete
+  /// Nachricht, nicht mitten im SetValue des Inspektors.
+  TPPGStyleManagerProperty = class(TComponentProperty)
+  public
+    procedure SetValue(const Value: string); override;
+  end;
+
 procedure Register;
 
 implementation
@@ -207,7 +228,7 @@ uses
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
   PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator, PPG.Controls.Field, PPG.BusyOverlay,
   PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban, PPG.RichEdit,
-  PPG.Editors.Logic, PPG.Editors.Forms, Vcl.ImgList, System.Math, PPG.Types;
+  PPG.Editors.Logic, PPG.Editors.Forms, Vcl.ImgList, System.Math, PPG.Types, PPG.ErrorHandler;
 
 const
   /// Kategorie im Objektinspektor fuer die Optik der Suite.
@@ -1170,6 +1191,141 @@ end;
 {$ENDIF}
 
 
+{ TPPGStyleManagedFilter }
+
+procedure TPPGStyleManagedFilter.FilterProperties(const ASelection: IDesignerSelections;
+  const ASelectionProperties: IInterfaceList);
+var
+  Objs: array of TObject;
+  I: Integer;
+  P: IProperty;
+begin
+  try
+    if (ASelection = nil) or (ASelection.Count = 0) or (ASelectionProperties = nil) then
+      Exit;
+    SetLength(Objs, ASelection.Count);
+    for I := 0 to ASelection.Count - 1 do
+      Objs[I] := ASelection[I];
+    for I := ASelectionProperties.Count - 1 downto 0 do
+      if Supports(ASelectionProperties[I], IProperty, P) and
+        PPGIsStyleManagedPropertyForAll(Objs, P.GetName) then
+        ASelectionProperties.Delete(I);
+  except
+    // Grenze zur IDE (Aufbau des Objektinspektors): kein Dialog beim Markieren;
+    // im Fehlerfall bleiben die Properties einfach sichtbar
+    on E: Exception do
+      TPPGErrorHandler.LogWarning(nil, E.Message);
+  end;
+end;
+
+{ Neuaufbau des Objektinspektors }
+
+const
+  WM_PPG_REFRESHINSPECTOR = WM_USER + 1;
+
+type
+  /// Verzoegerter Neuaufbau: nach dem SetValue des Inspektors (gepostete
+  /// Nachricht an ein eigenes Fenster) die Auswahl neu setzen, damit der
+  /// Inspektor die Properties neu ermittelt und der Filter erneut greift.
+  TPPGInspectorRefresh = class
+  private
+    FWnd: HWND;
+    FDesigner: IDesigner;
+    procedure WndProc(var Msg: TMessage);
+    procedure Refresh;
+  public
+    destructor Destroy; override;
+    procedure Request(const ADesigner: IDesigner);
+  end;
+
+var
+  GInspectorRefresh: TPPGInspectorRefresh = nil;
+
+destructor TPPGInspectorRefresh.Destroy;
+begin
+  FDesigner := nil;
+  if FWnd <> 0 then
+    DeallocateHWnd(FWnd);
+  inherited Destroy;
+end;
+
+procedure TPPGInspectorRefresh.Request(const ADesigner: IDesigner);
+begin
+  if ADesigner = nil then
+    Exit;
+  if FWnd = 0 then
+    FWnd := AllocateHWnd(WndProc);
+  FDesigner := ADesigner;
+  PostMessage(FWnd, WM_PPG_REFRESHINSPECTOR, 0, 0);
+end;
+
+procedure TPPGInspectorRefresh.WndProc(var Msg: TMessage);
+begin
+  if Msg.Msg = WM_PPG_REFRESHINSPECTOR then
+    Refresh
+  else
+    Msg.Result := DefWindowProc(FWnd, Msg.Msg, Msg.WParam, Msg.LParam);
+end;
+
+procedure TPPGInspectorRefresh.Refresh;
+var
+  D: IDesigner;
+  Sel: IDesignerSelections;
+begin
+  D := FDesigner;
+  FDesigner := nil;
+  if D = nil then
+    Exit;
+  try
+    if D.GetRoot = nil then
+      Exit;
+    Sel := CreateSelectionList;
+    D.GetSelections(Sel);
+    if Sel.Count = 0 then
+      Exit;
+    // Dieselbe Auswahl erneut setzen: erst leeren, sonst ignoriert der
+    // Designer die unveraenderte Auswahl
+    D.NoSelection;
+    D.SetSelections(Sel);
+  except
+    // Grenze zur IDE (Nachricht aus der Ereignisschleife): der Neuaufbau ist
+    // nur Komfort, ein Fehler darf die IDE nicht stoeren
+    on E: Exception do
+      TPPGErrorHandler.LogWarning(nil, E.Message);
+  end;
+end;
+
+{ TPPGStyleManagerProperty }
+
+procedure TPPGStyleManagerProperty.SetValue(const Value: string);
+var
+  Before: array of Boolean;
+  I: Integer;
+  Changed: Boolean;
+begin
+  try
+    SetLength(Before, PropCount);
+    for I := 0 to PropCount - 1 do
+      Before[I] := PPGHasStyleManager(GetComponent(I));
+    inherited SetValue(Value);
+    Changed := False;
+    for I := 0 to PropCount - 1 do
+      if PPGHasStyleManager(GetComponent(I)) <> Before[I] then
+        Changed := True;
+    if Changed then
+    begin
+      if GInspectorRefresh = nil then
+        GInspectorRefresh := TPPGInspectorRefresh.Create;
+      GInspectorRefresh.Request(Designer);
+    end;
+  except
+    // Grenze zur IDE (Objektinspektor): Fehler als Dialog zeigen, die IDE
+    // nicht mit einer Exception aus dem Property-Editor belasten
+    on E: Exception do
+      MessageDlg(E.Message, mtError, [mbOK], 0);
+  end;
+end;
+
 procedure Register;
 begin
   RegisterComponents(PPGPaletteName, [TPPGButton, TPPGCheckBox, TPPGRadioButton,
@@ -1217,6 +1373,17 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TPPGCustomHint, 'Preset', TPPGPresetProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGTeachingTip, 'Preset', TPPGPresetProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGTaskDialog, 'Preset', TPPGPresetProperty);
+  // StyleManager: verwaltete Properties ausblenden (Filter je Klasse mit
+  // IPPGStyleManagedHost) und den Inspektor nach dem Setzen/Leeren neu aufbauen
+  RegisterPropertyEditor(TypeInfo(TPPGStyleManager), nil, '', TPPGStyleManagerProperty);
+  RegisterSelectionEditor(TPPGCustomControl, TPPGStyleManagedFilter);
+  RegisterSelectionEditor(TPPGPopupMenu, TPPGStyleManagedFilter);
+  RegisterSelectionEditor(TPPGHintManager, TPPGStyleManagedFilter);
+  RegisterSelectionEditor(TPPGCustomHint, TPPGStyleManagedFilter);
+  RegisterSelectionEditor(TPPGTeachingTip, TPPGStyleManagedFilter);
+  RegisterSelectionEditor(TPPGTaskDialog, TPPGStyleManagedFilter);
+  RegisterSelectionEditor(TPPGNotificationCenter, TPPGStyleManagedFilter);
+  RegisterSelectionEditor(TPPGBusyOverlay, TPPGStyleManagedFilter);
   // Spezifischere Klassen nach den allgemeinen registrieren (die IDE nimmt
   // den Editor der naechstliegenden Klasse)
   RegisterComponentEditor(TPPGCustomControl, TPPGComponentEditor);
@@ -1249,5 +1416,10 @@ begin
   RegisterSelectionEditor(TPPGCustomControl, TPPGSelectionEditor);
   RegisterSelectionEditor(TPPGNotificationCenter, TPPGSelectionEditor);
 end;
+
+initialization
+
+finalization
+  FreeAndNil(GInspectorRefresh);
 
 end.

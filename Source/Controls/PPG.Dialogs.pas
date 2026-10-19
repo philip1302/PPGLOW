@@ -173,7 +173,7 @@ type
 
   TPPGDialogShowEvent = procedure(Form: TPPGDialogForm) of object;
 
-  TPPGTaskDialog = class(TCustomTaskDialog)
+  TPPGTaskDialog = class(TCustomTaskDialog, IPPGStyleManagedHost)
   private
     FPreset: string;
     FStyleManager: TPPGStyleManager;
@@ -190,6 +190,10 @@ type
     FPosX, FPosY: Integer;
     procedure SetPreset(const Value: string);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    { IPPGStyleManagedHost: mit StyleManager kommt das Preset vom Manager }
+    function GetStyleManager: TPPGStyleManager;
+    function StyleManagedProperties: TArray<string>;
+    function IsPresetStored: Boolean;
     procedure SetContentControl(const Value: TControl);
     procedure NoOp(Sender: TObject);
     procedure InternalButtonClicked(AModalResult: TModalResult; var CanClose: Boolean);
@@ -238,7 +242,7 @@ type
     property OnTimer;
     property OnVerificationClicked;
     { PPGlow }
-    property Preset: string read FPreset write SetPreset;
+    property Preset: string read FPreset write SetPreset stored IsPresetStored;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// Text, Titel-Zusatz und Fusszeile mit Markup (<b>, <i>, <color=...>).
     property AllowMarkup: Boolean read FAllowMarkup write FAllowMarkup default False;
@@ -1397,6 +1401,22 @@ begin
     else if AComponent = FContentControl then
       FContentControl := nil;
   end;
+end;
+
+function TPPGTaskDialog.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGTaskDialog.StyleManagedProperties: TArray<string>;
+begin
+  // Wie bei den Controls: gesetzt bestimmt der Manager das Preset
+  Result := PPGStyleManagedNames(['Preset']);
+end;
+
+function TPPGTaskDialog.IsPresetStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset');
 end;
 
 procedure TPPGTaskDialog.SetStyleManager(const Value: TPPGStyleManager);

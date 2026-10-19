@@ -238,7 +238,7 @@ type
     property DrawSender: TObject read FDrawSender write FDrawSender;
   end;
 
-  TPPGPopupMenu = class(TPopupMenu)
+  TPPGPopupMenu = class(TPopupMenu, IPPGStyleManagedHost)
   private
     FStyleManager: TPPGStyleManager;
     FPreset: string;
@@ -250,6 +250,10 @@ type
     FDestroyedFlag: PBoolean;
     procedure SetPreset(const Value: string);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    { IPPGStyleManagedHost: mit StyleManager kommt das Preset vom Manager }
+    function GetStyleManager: TPPGStyleManager;
+    function StyleManagedProperties: TArray<string>;
+    function IsPresetStored: Boolean;
     procedure SetMenuStyles(const Value: TPPGMenuStyles);
     function StyleSourceControl: TPPGCustomControl;
   protected
@@ -267,7 +271,7 @@ type
     /// Optik wie die Controls (Preset, Appearance); sonst die des Ausloesers.
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// Preset ohne StyleManager ('' = des Ausloesers bzw. Standard).
-    property Preset: string read FPreset write SetPreset;
+    property Preset: string read FPreset write SetPreset stored IsPresetStored;
     /// Bereiche des Menues (Flaeche, Hover, Trennlinien, Kuerzel).
     property Styles: TPPGMenuStyles read FMenuStyles write SetMenuStyles;
     /// Vor dem Zeichnen jedes Eintrags: Style anpassen oder selbst zeichnen.
@@ -1842,6 +1846,22 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (AComponent = FStyleManager) then
     FStyleManager := nil;
+end;
+
+function TPPGPopupMenu.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGPopupMenu.StyleManagedProperties: TArray<string>;
+begin
+  // Wie bei den Controls: gesetzt bestimmt der Manager das Preset
+  Result := PPGStyleManagedNames(['Preset']);
+end;
+
+function TPPGPopupMenu.IsPresetStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset');
 end;
 
 procedure TPPGPopupMenu.SetStyleManager(const Value: TPPGStyleManager);

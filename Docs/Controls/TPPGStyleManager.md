@@ -16,6 +16,14 @@ Palette **PPGlow** - Unit `PPG.StyleManager` - Basis `TComponent`
 - `ThemeColors.Light`/`ThemeColors.Dark`: einzelne Tokens überschreiben (Flächen, Text, Rand, Signalfarben). `ChartPalette`: eigene Serienfarben (eine Farbe je Zeile).
 - `SaveToFile`/`LoadFromFile` (INI `[PPGlowTheme]`): Firmen-Design weitergeben. Eine fehlerhafte Datei lässt den Manager unverändert.
 
+## Verwaltete Properties der Clients
+
+- Solange an einer Komponente `StyleManager` gesetzt ist, verwaltet der Manager ihre Optik-Properties: bei allen Controls `Preset`, `Appearance` und `Animation` (genau das, was der Manager beim Zuweisen und bei jeder Änderung überschreibt), bei `TPPGPopupMenu`, `TPPGHintManager`, `TPPGCustomHint`, `TPPGTeachingTip`, `TPPGTaskDialog`, `TPPGNotificationCenter` und `TPPGBusyOverlay` das `Preset`. Die `Animation` des NotificationCenters (Ein- und Ausblenden der Toasts) bleibt eigene Einstellung.
+- Objektinspektor: Diese Properties sind ausgeblendet, solange der Manager gesetzt ist; nach dem Leeren erscheinen sie sofort wieder. Bei Mehrfachauswahl werden sie nur ausgeblendet, wenn alle markierten Komponenten einen Manager haben.
+- DFM: Mit Manager werden sie nicht gespeichert. Ältere DFMs, die solche Werte noch enthalten, laden wie bisher (der Manager überschreibt sie); beim nächsten Speichern fallen sie heraus. Ohne Manager ändert sich am Speichern nichts.
+- Zur Laufzeit bleibt alles wie bisher: Zuweisungen im Code sind möglich, der Manager überschreibt sie bei seiner nächsten Änderung.
+- Die Regel steht an einer Stelle: `PPGIsStyleManagedProperty(Komponente, 'Appearance')` (Unit `PPG.StyleManager`); Designer und Streaming fragen nur sie.
+
 ## Verhalten (aus dem Quelltext)
 
 Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster).
@@ -52,7 +60,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
 | `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
 
-Tests: `PPG.Tests.Controls` (TLifecycleTests, TResourceTests, TStyleTests); `PPG.Tests.Custom` (TCustomThemeTests); `PPG.Tests.Phase8` (TThemeTests); `PPG.Tests.Phase9a` (TPresetTargetTests); `PPG.Tests.Review` (TReviewTests); `PPG.Tests.Streaming` (TPresetStreamingTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Controls` (TLifecycleTests, TResourceTests, TStyleTests); `PPG.Tests.Custom` (TCustomThemeTests); `PPG.Tests.Phase8` (TThemeTests); `PPG.Tests.Phase9a` (TPresetTargetTests); `PPG.Tests.Review` (TReviewTests); `PPG.Tests.Streaming` (TPresetStreamingTests, TStyleManagedPropertyTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGStyleManager.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

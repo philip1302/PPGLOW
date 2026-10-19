@@ -51,6 +51,6 @@ TPPGBusyOverlay.Preset = Preset der Karte ('' = wie der StyleManager bzw. die Vo
 TPPGBusyOverlay.Progress = -1 = unbestimmt (drehender Ring), 0 … 100 = Prozent im Ring. Aus Run über Context.Report.
 > `Overlay.Run(procedure(const C: IPPGBusyContext) begin C.Report(50); end);`
 TPPGBusyOverlay.ShowCancel = Knopf „Abbrechen“ auf der Karte; Esc im gesperrten Bereich bricht dann ebenfalls ab.
-TPPGBusyOverlay.StyleManager = StyleManager für Preset und Farben der Karte.
+TPPGBusyOverlay.StyleManager = StyleManager für Preset und Farben der Karte. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert.
 TPPGBusyOverlay.Target = Abgedeckter Bereich: ein Control (nur sein sichtbarer Teil) oder leer = das ganze Formular ohne Titelleiste. Andere Teile des Formulars bleiben bedienbar.
 TPPGBusyOverlay.Text = Haupttext der Karte (fett); leer = „Bitte warten …“. Screenreader lesen ihn beim Erscheinen vor.

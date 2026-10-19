@@ -16,6 +16,14 @@
 <li><code>ThemeColors.Light</code>/<code>ThemeColors.Dark</code>: einzelne Tokens &#252;berschreiben (Fl&#228;chen, Text, Rand, Signalfarben). <code>ChartPalette</code>: eigene Serienfarben (eine Farbe je Zeile).</li>
 <li><code>SaveToFile</code>/<code>LoadFromFile</code> (INI <code>[PPGlowTheme]</code>): Firmen-Design weitergeben. Eine fehlerhafte Datei l&#228;sst den Manager unver&#228;ndert.</li>
 </ul>
+<h2>Verwaltete Properties der Clients</h2>
+<ul>
+<li>Solange an einer Komponente <code>StyleManager</code> gesetzt ist, verwaltet der Manager ihre Optik-Properties: bei allen Controls <code>Preset</code>, <code>Appearance</code> und <code>Animation</code> (genau das, was der Manager beim Zuweisen und bei jeder &#196;nderung &#252;berschreibt), bei <code>TPPGPopupMenu</code>, <code>TPPGHintManager</code>, <code>TPPGCustomHint</code>, <code>TPPGTeachingTip</code>, <code>TPPGTaskDialog</code>, <code>TPPGNotificationCenter</code> und <code>TPPGBusyOverlay</code> das <code>Preset</code>. Die <code>Animation</code> des NotificationCenters (Ein- und Ausblenden der Toasts) bleibt eigene Einstellung.</li>
+<li>Objektinspektor: Diese Properties sind ausgeblendet, solange der Manager gesetzt ist; nach dem Leeren erscheinen sie sofort wieder. Bei Mehrfachauswahl werden sie nur ausgeblendet, wenn alle markierten Komponenten einen Manager haben.</li>
+<li>DFM: Mit Manager werden sie nicht gespeichert. &#196;ltere DFMs, die solche Werte noch enthalten, laden wie bisher (der Manager &#252;berschreibt sie); beim n&#228;chsten Speichern fallen sie heraus. Ohne Manager &#228;ndert sich am Speichern nichts.</li>
+<li>Zur Laufzeit bleibt alles wie bisher: Zuweisungen im Code sind m&#246;glich, der Manager &#252;berschreibt sie bei seiner n&#228;chsten &#196;nderung.</li>
+<li>Die Regel steht an einer Stelle: <code>PPGIsStyleManagedProperty(Komponente, &#39;Appearance&#39;)</code> (Unit <code>PPG.StyleManager</code>); Designer und Streaming fragen nur sie.</li>
+</ul>
 <h2>Verhalten (aus dem Quelltext)</h2>
 <p>Zentrales Theme fuer beliebig viele PPGlow-Controls (Observer-Muster).</p>
 <p>Lebenszyklus-Regeln:</p>
@@ -49,7 +57,7 @@
 <tr><td><code>Name</code></td><td><code>TComponentName</code></td><td></td><td>Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein g&#252;ltiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: <code>PPGButton1.Name := &#39;btnSpeichern&#39;;</code> (meist nur im Objektinspektor &#228;ndern)</td></tr>
 <tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td></td><td>Freier Ganzzahlwert f&#252;r eigene Zwecke (z. B. eine ID oder einen Zeiger).</td></tr>
 </table>
-<p>Tests: <code>PPG.Tests.Controls</code> (TLifecycleTests, TResourceTests, TStyleTests); <code>PPG.Tests.Custom</code> (TCustomThemeTests); <code>PPG.Tests.Phase8</code> (TThemeTests); <code>PPG.Tests.Phase9a</code> (TPresetTargetTests); <code>PPG.Tests.Review</code> (TReviewTests); <code>PPG.Tests.Streaming</code> (TPresetStreamingTests) (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
+<p>Tests: <code>PPG.Tests.Controls</code> (TLifecycleTests, TResourceTests, TStyleTests); <code>PPG.Tests.Custom</code> (TCustomThemeTests); <code>PPG.Tests.Phase8</code> (TThemeTests); <code>PPG.Tests.Phase9a</code> (TPresetTargetTests); <code>PPG.Tests.Review</code> (TReviewTests); <code>PPG.Tests.Streaming</code> (TPresetStreamingTests, TStyleManagedPropertyTests) (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGStyleManager.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

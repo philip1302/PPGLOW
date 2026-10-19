@@ -51,7 +51,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|---|
 | `Active` | `Boolean` | `True` | True: Alle Hints der Anwendung erscheinen zur Laufzeit im PPGlow-Stil (HintWindowClass wird ersetzt und beim Freigeben wiederhergestellt). Im Designer ohne Wirkung. Nutzung: Einen TPPGHintManager auf das Hauptformular legen, Active := True. |
 | `Preset` | `string` |  | Optik-Vorlage der Hints; '' = Standard bzw. StyleManager. |
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben der Hints. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben der Hints. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert. |
 | `ShowTitle` | `Boolean` | `True` | True: Besteht ein Hint aus Titel und Text, getrennt durch einen senkrechten Strich (wie bei der VCL), erscheint der Titel fett und der Text darunter; False: nur der kurze Teil wie bei der VCL. Nutzung: Hint-Text im Format der VCL: kurzer Titel, senkrechter Strich, ausführlicher Text. |
 | `AllowMarkup` | `Boolean` | `False` | True: Hint-Texte dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). |
 | `MaxWidth` | `Integer` | `360` | Größte Breite eines Hints in logischen Pixeln (80..2000); längerer Text bricht um. |

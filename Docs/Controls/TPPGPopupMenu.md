@@ -46,7 +46,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle: Preset und Appearance wie bei den Controls. Ohne Manager übernimmt das Menü die Optik des auslösenden Controls. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle: Preset und Appearance wie bei den Controls. Ohne Manager übernimmt das Menü die Optik des auslösenden Controls. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert. |
 | `Preset` | `string` |  | Optik-Vorlage des Menüs, wenn kein StyleManager gesetzt ist; leer = Preset des auslösenden Controls bzw. Standard. |
 | `Styles` | [TPPGMenuStyles](types/TPPGMenuStyles.md) |  | Aussehen des Menüs in Bereichen (Fläche, Hover, Trennlinien, Tastenkürzel); clDefault = vom Preset. |
 
@@ -63,7 +63,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 |---|---|---|
 | `OnCustomDrawItem` | `TPPGMenuCustomDrawEvent` `(Sender: TObject; Canvas: TCanvas; Item: TMenuItem; const ARect: TRect; State: TPPGItemDrawState; var Style: TPPGDrawStyle; var DefaultDraw: Boolean)` | Vor dem Zeichnen jedes Eintrags: Style (Fill, TextColor, BorderColor, FontStyle) ändern oder mit DefaultDraw := False selbst zeichnen; Item ist der TMenuItem. Nutzung: `if Item = miLoeschen then Style.TextColor := clRed;` |
 
-Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.Phase11a` (TFieldMenuTests, TMenuLoopTests); `PPG.Tests.Phase13b` (TGridColumnTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit45` (TNamingTests, TStreamingFixTests); `PPG.Tests.Custom` (TCustomBarTests); `PPG.Tests.Phase11a` (TFieldMenuTests, TMenuLoopTests); `PPG.Tests.Phase13b` (TGridColumnTests); `PPG.Tests.Streaming` (TStyleManagedPropertyTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGPopupMenu.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

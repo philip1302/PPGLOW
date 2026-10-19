@@ -60,7 +60,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
 | `Preset` | `string` |  | Optik-Vorlage des Dialogs ('' = Standard bzw. StyleManager). |
-| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben des Dialogs. |
+| `StyleManager` | `TPPGStyleManager` |  | Zentrale Stilquelle für Preset und Farben des Dialogs. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert. |
 | `AllowMarkup` | `Boolean` | `False` | True: Text, Fußzeile und Zusatztexte dürfen Mini-Markup enthalten (<b>, <i>, <color=...>). |
 | `HighContrastSupport` | `Boolean` | `True` | True: Im Windows-Hochkontrastmodus verwendet der Dialog mit allen Teilen (Schaltflächen, Felder, Fußzeile) die Systemfarben. |
 | `ContentControl` | `TControl` |  | Eigenes Control, das im Dialog unter dem Text eingebettet wird (z. B. ein Panel mit Eingabefeldern). Es wird für die Dauer des Dialogs umgehängt. Nutzung: `PPGTaskDialog1.ContentControl := pnlOptionen;` |

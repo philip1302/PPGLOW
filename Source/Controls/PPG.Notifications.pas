@@ -104,7 +104,7 @@ type
   TPPGToastActionEvent = procedure(Sender: TObject; Toast: TPPGToast; ActionIndex: Integer) of object;
   TPPGToastCloseEvent = procedure(Sender: TObject; Toast: TPPGToast; Reason: TPPGToastCloseReason) of object;
 
-  TPPGNotificationCenter = class(TComponent)
+  TPPGNotificationCenter = class(TComponent, IPPGStyleManagedHost)
   private
     FToasts: TList<TPPGToast>;   // sichtbar (inkl. ausblendende)
     FQueue: TList<TPPGToast>;    // wartend
@@ -133,6 +133,10 @@ type
     procedure SetToastWidth(const Value: Integer);
     procedure SetDuration(const Value: Integer);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    { IPPGStyleManagedHost: mit StyleManager kommt das Preset vom Manager }
+    function GetStyleManager: TPPGStyleManager;
+    function StyleManagedProperties: TArray<string>;
+    function IsPresetStored: Boolean;
     procedure WndMethod(var Msg: TMessage);
     procedure PollStep(Sender: TObject);
     function OwnerForm: TCustomForm;
@@ -167,7 +171,7 @@ type
     property MaxVisible: Integer read FMaxVisible write SetMaxVisible default 3;
     /// Breite in logischen px.
     property ToastWidth: Integer read FToastWidth write SetToastWidth default 360;
-    property Preset: string read FPreset write SetPreset;
+    property Preset: string read FPreset write SetPreset stored IsPresetStored;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     /// Ein-/Ausblenden und Verschieben (wie Animation der Controls).
     property Animation: TPPGAnimationSettings read FAnimation write SetAnimation;
@@ -711,6 +715,22 @@ begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and (AComponent = FStyleManager) then
     FStyleManager := nil;
+end;
+
+function TPPGNotificationCenter.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGNotificationCenter.StyleManagedProperties: TArray<string>;
+begin
+  // Wie bei den Controls: gesetzt bestimmt der Manager das Preset
+  Result := PPGStyleManagedNames(['Preset']);
+end;
+
+function TPPGNotificationCenter.IsPresetStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset');
 end;
 
 procedure TPPGNotificationCenter.SetStyleManager(const Value: TPPGStyleManager);

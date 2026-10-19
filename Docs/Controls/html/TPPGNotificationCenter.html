@@ -32,7 +32,7 @@
 <tr><td><code>MaxVisible</code></td><td><code>Integer</code></td><td><code>3</code></td><td>H&#246;chstzahl gleichzeitig sichtbarer Toasts (1..20); weitere warten in einer Schlange.</td></tr>
 <tr><td><code>ToastWidth</code></td><td><code>Integer</code></td><td><code>360</code></td><td>Breite eines Toasts in logischen Pixeln (160..1000).</td></tr>
 <tr><td><code>Preset</code></td><td><code>string</code></td><td></td><td>Optik-Vorlage der Toasts (&#39;&#39; = Standard bzw. StyleManager).</td></tr>
-<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle f&#252;r Preset und Farben der Toasts.</td></tr>
+<tr><td><code>StyleManager</code></td><td><code>TPPGStyleManager</code></td><td></td><td>Zentrale Stilquelle f&#252;r Preset und Farben der Toasts. Gesetzt ist Preset im Objektinspektor ausgeblendet und wird nicht in der DFM gespeichert.</td></tr>
 <tr><td><code>Animation</code></td><td><a href="types/TPPGAnimationSettings.html">TPPGAnimationSettings</a></td><td></td><td>Ein- und Ausblenden der Toasts wie Animation der Controls: Enabled = False schaltet ab, Duration und Easing steuern den Verlauf. Toasts gleiten ein und aus, der Stapel r&#252;ckt animiert nach (nur, wenn Windows Animationen erlaubt).</td></tr>
 <tr><td><code>RespectQuietHours</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: L&#228;uft eine Vollbild-Anwendung oder Pr&#228;sentation, warten neue Toasts, bis sie beendet ist.</td></tr>
 </table>
@@ -50,7 +50,7 @@
 <tr><td><code>OnShow</code></td><td><code>TPPGToastEvent</code> <code>(Sender: TObject; Toast: TPPGToast)</code></td><td>Ein Toast ist erschienen (nach Warteschlange bzw. Ruhezeit).</td></tr>
 <tr><td><code>OnToastClick</code></td><td><code>TPPGToastEvent</code> <code>(Sender: TObject; Toast: TPPGToast)</code></td><td>Der Anwender hat auf die Fl&#228;che eines Toasts geklickt (nicht auf Buttons), z. B. um zum Vorgang zu springen.</td></tr>
 </table>
-<p>Tests: <code>PPG.Tests.Audit45</code> (TNamingTests, TStreamingFixTests); <code>PPG.Tests.Audit8A</code> (TAudit8AAnimatorTests); <code>PPG.Tests.Phase7d</code> (TNotificationTests); <code>PPG.Tests.Streaming</code>; <code>PPG.Tests.Visual</code> (TVisualTests) (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
+<p>Tests: <code>PPG.Tests.Audit45</code> (TNamingTests, TStreamingFixTests); <code>PPG.Tests.Audit8A</code> (TAudit8AAnimatorTests); <code>PPG.Tests.Phase7d</code> (TNotificationTests); <code>PPG.Tests.Streaming</code> (TStyleManagedPropertyTests); <code>PPG.Tests.Visual</code> (TVisualTests) (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGNotificationCenter.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

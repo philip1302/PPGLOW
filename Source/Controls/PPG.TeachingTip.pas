@@ -125,7 +125,7 @@ type
     property StyleManager;
   end;
 
-  TPPGTeachingTip = class(TComponent)
+  TPPGTeachingTip = class(TComponent, IPPGStyleManagedHost)
   private
     FTarget: TControl;
     // Audit 8D: Neu platzieren ist angefordert (eine Nachricht je Runde)
@@ -155,6 +155,10 @@ type
     procedure SetPreset(const Value: string);
     procedure SetTarget(const Value: TControl);
     procedure SetStyleManager(const Value: TPPGStyleManager);
+    { IPPGStyleManagedHost: mit StyleManager kommt das Preset vom Manager }
+    function GetStyleManager: TPPGStyleManager;
+    function StyleManagedProperties: TArray<string>;
+    function IsPresetStored: Boolean;
     procedure SetMaxWidth(const Value: Integer);
     procedure SetText(const Index: Integer; const Value: string);
     procedure SetIcon(const Value: TPPGTipIcon);
@@ -206,7 +210,7 @@ type
     property Placement: TPPGTipPlacementMode read FPlacement write SetPlacement default ttpAuto;
     /// Breite der Flaeche in logischen px.
     property MaxWidth: Integer read FMaxWidth write SetMaxWidth default 320;
-    property Preset: string read FPreset write SetPreset;
+    property Preset: string read FPreset write SetPreset stored IsPresetStored;
     property StyleManager: TPPGStyleManager read FStyleManager write SetStyleManager;
     property OnActionClick: TNotifyEvent read FOnActionClick write FOnActionClick;
     property OnLinkClick: TPPGTipLinkEvent read FOnLinkClick write FOnLinkClick;
@@ -998,6 +1002,22 @@ begin
     Watch;
     UpdatePosition;
   end;
+end;
+
+function TPPGTeachingTip.GetStyleManager: TPPGStyleManager;
+begin
+  Result := FStyleManager;
+end;
+
+function TPPGTeachingTip.StyleManagedProperties: TArray<string>;
+begin
+  // Wie bei den Controls: gesetzt bestimmt der Manager das Preset
+  Result := PPGStyleManagedNames(['Preset']);
+end;
+
+function TPPGTeachingTip.IsPresetStored: Boolean;
+begin
+  Result := not PPGIsStyleManagedProperty(Self, 'Preset');
 end;
 
 procedure TPPGTeachingTip.SetStyleManager(const Value: TPPGStyleManager);
