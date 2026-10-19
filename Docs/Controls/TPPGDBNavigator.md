@@ -34,6 +34,9 @@ ConfirmDelete, Flat, BeforeAction, OnClick mit TNavigateBtn). Mehrwert:
 - Ueberlauf: Passen nicht alle Knoepfe, kommen die hinteren in ein Menue.
 - Tastatur (mit Fokus): Pfeile wechseln den Knopf, Leertaste/Enter loest aus; Strg+Pos1/Ende, Bild auf/ab, Einfg, Strg+Entf, F2, Strg+Enter, Esc.
 - Ein Control mit selbst gezeichneten Knoepfen und Fluent-Symbolen; das Suchfeld ist ein eingebettetes TPPGSearchEdit.
+- OnButtonEnabled: Freigabe je Knopf nach eigenen Regeln (Rechte, Zustand der Ansicht) zusaetzlich zur Regel der Datenmenge.
+- CustomButtons: Zusatzknoepfe (Symbol aus Images/IconChar oder Text) hinter den Standardknoepfen, auch im Ueberlauf, per Tastatur und Screenreader.
+- PositionSource: Komponente mit IPPGViewPosition (z. B. ein Grid mit Filter, Sortierung und Gruppen); Zaehler und Blaettern (Erster, Voriger, Naechster, Letzter) folgen dann deren Ansicht statt der Datenmenge.
 
 TPPGDBRadioGroup - wie TDBRadioGroup (Items, Values, DataField, ReadOnly)
 auf TPPGRadioGroup: Segmente und Kacheln auch fuer Datenbankfelder.
@@ -61,6 +64,9 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `ShowSearch` | `Boolean` | `False` | Suchfeld im Navigator; Enter springt zum nächsten Datensatz, der den Begriff enthält (Teiltreffer, ohne Groß-/Kleinschreibung). Nutzung: `Nav.ShowSearch := True; Nav.SearchField := 'NAME';` |
 | `ShowFilter` | `Boolean` | `False` | Schnellfilter: zeigt nur Datensätze, deren SearchField den Suchbegriff enthält; ein Knopf hebt den Filter auf. Ein vorhandenes OnFilterRecord bleibt wirksam. |
 | `SearchField` | `string` |  | Feld für Suchfeld und Schnellfilter; leer = alle Textfelder. |
+| `Images` | `TCustomImageList` |  | Bildliste für die Zusatzknöpfe (ImageIndex bzw. ImageName der CustomButtons). |
+| `CustomButtons` | [TPPGNavButtons](types/TPPGNavButtons.md) |  | Zusatzknöpfe hinter den Standardknöpfen (Symbol aus Images bzw. IconChar, sonst Text); sie wandern bei Platzmangel ins Überlaufmenü und sind per Tastatur und Screenreader bedienbar. Nutzung: `with Nav.CustomButtons.Add do begin IconChar := $E8C8; Hint := 'Satz kopieren'; OnClick := KopierenClick; end;` |
+| `PositionSource` | `TComponent` |  | Komponente mit IPPGViewPosition (z. B. ein Grid mit Filter, Sortierung oder Gruppen): Zähler und Erster/Voriger/Nächster/Letzter folgen ihrer Ansicht statt der Datenmenge. Leer = wie bisher die Datenmenge. Nutzung: `Nav.PositionSource := Grid1;` |
 | `BeforeAction` | `ENavClick` |  | Vor der Aktion eines Knopfs, wie bei TDBNavigator; mit Abort im Handler unterbleibt sie. |
 | `OnClick` | `ENavClick` |  | Nach der Aktion eines Knopfs; Button nennt den Knopf (gleiche Signatur wie TDBNavigator.OnClick). |
 
@@ -109,6 +115,8 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 
 | Ereignis | Typ und Parameter | Wann und wozu |
 |---|---|---|
+| `OnButtonEnabled` | `TPPGNavButtonEnabledEvent` `(Sender: TObject; Button: TNavigateBtn; var Enabled: Boolean)` | Freigabe je Standardknopf nach eigenen Regeln (z. B. Rechte); Enabled kommt mit der Standardregel herein. Gilt für Zeichnen, Klick, Tastatur, Überlaufmenü und Screenreader; nach geänderten Regeln UpdateButtons aufrufen. Nutzung: `if (Button = nbDelete) and not DarfLoeschen then Enabled := False;` |
+| `OnCustomButtonClick` | `TPPGNavCustomButtonEvent` `(Sender: TObject; Button: TPPGNavButton)` | Klick auf einen Zusatzknopf, nach dessen eigenem OnClick; Button nennt den Knopf. |
 | `OnContextPopup` | `TContextPopupEvent` `(Sender: TObject; MousePos: TPoint; var Handled: Boolean)` | Vor dem Kontextmenü; Handled := True unterdrückt das Standardmenü. |
 | `OnEnter` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus erhalten. |
 | `OnExit` | `TNotifyEvent` `(Sender: TObject)` | Das Control hat den Fokus verloren; guter Ort für Prüfungen der Eingabe. |
@@ -129,7 +137,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
-Tests: `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit5d`; `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Streaming` (TPresetStreamingTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit5d`; `PPG.Tests.NavigatorExtras` (TNavigatorExtrasTests); `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Streaming` (TPresetStreamingTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBNavigator.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

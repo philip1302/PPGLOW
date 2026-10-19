@@ -46,6 +46,33 @@ const
   /// Per Perform an das Control selbst, nach dem internen Zustand und vor
   /// OnChange; der Validator beobachtet es (CM_BASE + $7A0, Vcl.Controls).
   CM_PPGVALUECHANGED = $B000 + $7A0;
+  /// Position oder Ansicht einer IPPGViewPosition-Quelle hat sich geaendert
+  /// (Fokus, Filter, Sortierung, Auf-/Zuklappen). Per Perform an die
+  /// angemeldeten Beobachter (ViewPositionObserver); WParam/LParam = 0.
+  CM_PPGVIEWPOSITION = $B000 + $7A1;
+
+type
+  /// Schritt beim Blaettern ueber eine Ansicht (IPPGViewPosition).
+  TPPGViewMove = (pvmFirst, pvmPrior, pvmNext, pvmLast);
+
+  /// Blaettern ueber die Ansicht eines Controls statt ueber die Datenmenge,
+  /// z. B. ein Grid mit Filter, Sortierung und zugeklappten Gruppen. Ein
+  /// Navigator (TPPGDBNavigator.PositionSource) zeigt damit "x von y" der
+  /// Ansicht und blaettert in ihrer Reihenfolge.
+  IPPGViewPosition = interface
+    ['{7C51E0A4-2B9D-4E3F-A1C6-5D8E9F0B7A42}']
+    /// Position (1-basiert) des Fokus-Satzes in der Ansicht; 0 = keiner.
+    function ViewRecordNo: Integer;
+    /// Anzahl der Saetze in der Ansicht.
+    function ViewRecordCount: Integer;
+    /// Ist der Schritt moeglich (nicht schon am Anfang bzw. Ende)?
+    function ViewCanMove(Move: TPPGViewMove): Boolean;
+    /// Schritt ausfuehren; False = nicht moeglich bzw. abgelehnt.
+    function ViewMove(Move: TPPGViewMove): Boolean;
+    /// Beobachter an- bzw. abmelden: ein TControl bekommt bei jeder Aenderung
+    /// CM_PPGVIEWPOSITION. Abmelden spaetestens im Destruktor des Beobachters.
+    procedure ViewPositionObserver(AObserver: TComponent; Attach: Boolean);
+  end;
 
 type
 

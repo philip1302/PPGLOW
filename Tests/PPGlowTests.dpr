@@ -198,6 +198,7 @@ uses
   PPG.Tests.Phase9d in 'PPG.Tests.Phase9d.pas',
   PPG.Tests.GridFilterSearch in 'PPG.Tests.GridFilterSearch.pas',
   PPG.Tests.DBGridGrouping in 'PPG.Tests.DBGridGrouping.pas',
+  PPG.Tests.GridWishes in 'PPG.Tests.GridWishes.pas',
   PPG.Tests.Phase10a in 'PPG.Tests.Phase10a.pas',
   PPG.Tests.Phase10b in 'PPG.Tests.Phase10b.pas',
   PPG.Tests.Phase10c in 'PPG.Tests.Phase10c.pas',
@@ -248,7 +249,9 @@ uses
   PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas',
   PPG.Tests.Review in 'PPG.Tests.Review.pas',
   PPG.Tests.Custom in 'PPG.Tests.Custom.pas',
-  PPG.Tests.RichEdit in 'PPG.Tests.RichEdit.pas';
+  PPG.Tests.RichEdit in 'PPG.Tests.RichEdit.pas',
+  PPG.Tests.ToolBarDropdown in 'PPG.Tests.ToolBarDropdown.pas',
+  PPG.Tests.NavigatorExtras in 'PPG.Tests.NavigatorExtras.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;

@@ -29,6 +29,9 @@ PPGDBNavigator1.SearchField := &#39;NAME&#39;;
 <li>Ueberlauf: Passen nicht alle Knoepfe, kommen die hinteren in ein Menue.</li>
 <li>Tastatur (mit Fokus): Pfeile wechseln den Knopf, Leertaste/Enter loest aus; Strg+Pos1/Ende, Bild auf/ab, Einfg, Strg+Entf, F2, Strg+Enter, Esc.</li>
 <li>Ein Control mit selbst gezeichneten Knoepfen und Fluent-Symbolen; das Suchfeld ist ein eingebettetes TPPGSearchEdit.</li>
+<li>OnButtonEnabled: Freigabe je Knopf nach eigenen Regeln (Rechte, Zustand der Ansicht) zusaetzlich zur Regel der Datenmenge.</li>
+<li>CustomButtons: Zusatzknoepfe (Symbol aus Images/IconChar oder Text) hinter den Standardknoepfen, auch im Ueberlauf, per Tastatur und Screenreader.</li>
+<li>PositionSource: Komponente mit IPPGViewPosition (z. B. ein Grid mit Filter, Sortierung und Gruppen); Zaehler und Blaettern (Erster, Voriger, Naechster, Letzter) folgen dann deren Ansicht statt der Datenmenge.</li>
 </ul>
 <p>TPPGDBRadioGroup - wie TDBRadioGroup (Items, Values, DataField, ReadOnly) auf TPPGRadioGroup: Segmente und Kacheln auch fuer Datenbankfelder.</p>
 <p>Eigene Unit (statt PPG.DB.Controls), damit die laufenden Arbeiten an den DB-Controls (Audit Paket 4) unabhaengig bleiben.</p>
@@ -50,6 +53,9 @@ PPGDBNavigator1.SearchField := &#39;NAME&#39;;
 <tr><td><code>ShowSearch</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Suchfeld im Navigator; Enter springt zum n&#228;chsten Datensatz, der den Begriff enth&#228;lt (Teiltreffer, ohne Gro&#223;-/Kleinschreibung). Nutzung: <code>Nav.ShowSearch := True; Nav.SearchField := &#39;NAME&#39;;</code></td></tr>
 <tr><td><code>ShowFilter</code></td><td><code>Boolean</code></td><td><code>False</code></td><td>Schnellfilter: zeigt nur Datens&#228;tze, deren SearchField den Suchbegriff enth&#228;lt; ein Knopf hebt den Filter auf. Ein vorhandenes OnFilterRecord bleibt wirksam.</td></tr>
 <tr><td><code>SearchField</code></td><td><code>string</code></td><td></td><td>Feld f&#252;r Suchfeld und Schnellfilter; leer = alle Textfelder.</td></tr>
+<tr><td><code>Images</code></td><td><code>TCustomImageList</code></td><td></td><td>Bildliste f&#252;r die Zusatzkn&#246;pfe (ImageIndex bzw. ImageName der CustomButtons).</td></tr>
+<tr><td><code>CustomButtons</code></td><td><a href="types/TPPGNavButtons.html">TPPGNavButtons</a></td><td></td><td>Zusatzkn&#246;pfe hinter den Standardkn&#246;pfen (Symbol aus Images bzw. IconChar, sonst Text); sie wandern bei Platzmangel ins &#220;berlaufmen&#252; und sind per Tastatur und Screenreader bedienbar. Nutzung: <code>with Nav.CustomButtons.Add do begin IconChar := $E8C8; Hint := &#39;Satz kopieren&#39;; OnClick := KopierenClick; end;</code></td></tr>
+<tr><td><code>PositionSource</code></td><td><code>TComponent</code></td><td></td><td>Komponente mit IPPGViewPosition (z. B. ein Grid mit Filter, Sortierung oder Gruppen): Z&#228;hler und Erster/Voriger/N&#228;chster/Letzter folgen ihrer Ansicht statt der Datenmenge. Leer = wie bisher die Datenmenge. Nutzung: <code>Nav.PositionSource := Grid1;</code></td></tr>
 <tr><td><code>BeforeAction</code></td><td><code>ENavClick</code></td><td></td><td>Vor der Aktion eines Knopfs, wie bei TDBNavigator; mit Abort im Handler unterbleibt sie.</td></tr>
 <tr><td><code>OnClick</code></td><td><code>ENavClick</code></td><td></td><td>Nach der Aktion eines Knopfs; Button nennt den Knopf (gleiche Signatur wie TDBNavigator.OnClick).</td></tr>
 </table>
@@ -96,6 +102,8 @@ PPGDBNavigator1.SearchField := &#39;NAME&#39;;
 <h2>Ereignisse</h2>
 <table>
 <tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnButtonEnabled</code></td><td><code>TPPGNavButtonEnabledEvent</code> <code>(Sender: TObject; Button: TNavigateBtn; var Enabled: Boolean)</code></td><td>Freigabe je Standardknopf nach eigenen Regeln (z. B. Rechte); Enabled kommt mit der Standardregel herein. Gilt f&#252;r Zeichnen, Klick, Tastatur, &#220;berlaufmen&#252; und Screenreader; nach ge&#228;nderten Regeln UpdateButtons aufrufen. Nutzung: <code>if (Button = nbDelete) and not DarfLoeschen then Enabled := False;</code></td></tr>
+<tr><td><code>OnCustomButtonClick</code></td><td><code>TPPGNavCustomButtonEvent</code> <code>(Sender: TObject; Button: TPPGNavButton)</code></td><td>Klick auf einen Zusatzknopf, nach dessen eigenem OnClick; Button nennt den Knopf.</td></tr>
 <tr><td><code>OnContextPopup</code></td><td><code>TContextPopupEvent</code> <code>(Sender: TObject; MousePos: TPoint; var Handled: Boolean)</code></td><td>Vor dem Kontextmen&#252;; Handled := True unterdr&#252;ckt das Standardmen&#252;.</td></tr>
 <tr><td><code>OnEnter</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus erhalten.</td></tr>
 <tr><td><code>OnExit</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Das Control hat den Fokus verloren; guter Ort f&#252;r Pr&#252;fungen der Eingabe.</td></tr>
@@ -116,7 +124,7 @@ PPGDBNavigator1.SearchField := &#39;NAME&#39;;
 <tr><td><code>OnKeyPress</code></td><td><code>TKeyPressEvent</code> <code>(Sender: TObject; var Key: Char)</code></td><td>Zeichen eingegeben; Key := #0 verwirft es.</td></tr>
 <tr><td><code>OnKeyUp</code></td><td><code>TKeyEvent</code> <code>(Sender: TObject; var Key: Word; Shift: TShiftState)</code></td><td>Taste losgelassen.</td></tr>
 </table>
-<p>Tests: <code>PPG.Tests.Audit11C</code> (TAudit11CGdiTests); <code>PPG.Tests.Audit5d</code>; <code>PPG.Tests.Phase18</code> (TDBNavigatorTests); <code>PPG.Tests.Streaming</code> (TPresetStreamingTests); <code>PPG.Tests.Visual</code> (TVisualTests) (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
+<p>Tests: <code>PPG.Tests.Audit11C</code> (TAudit11CGdiTests); <code>PPG.Tests.Audit5d</code>; <code>PPG.Tests.NavigatorExtras</code> (TNavigatorExtrasTests); <code>PPG.Tests.Phase18</code> (TDBNavigatorTests); <code>PPG.Tests.Streaming</code> (TPresetStreamingTests); <code>PPG.Tests.Visual</code> (TVisualTests) (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGDBNavigator.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

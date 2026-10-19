@@ -57,6 +57,13 @@ const
   gekCombo = PPG.Grid.Columns.gekCombo;
   gekSpin = PPG.Grid.Columns.gekSpin;
   gekCheck = PPG.Grid.Columns.gekCheck;
+  gdmValue = PPG.Grid.Columns.gdmValue;
+  gdmDay = PPG.Grid.Columns.gdmDay;
+  gdmWeek = PPG.Grid.Columns.gdmWeek;
+  gdmMonth = PPG.Grid.Columns.gdmMonth;
+  gdmQuarter = PPG.Grid.Columns.gdmQuarter;
+  gdmYear = PPG.Grid.Columns.gdmYear;
+  gdmRelative = PPG.Grid.Columns.gdmRelative;
 
 const
   // UI Automation: Arten der Elemente (0 = das Grid selbst)
@@ -73,6 +80,7 @@ type
   TPPGGridEditorKind = PPG.Grid.Columns.TPPGGridEditorKind;
   TPPGGridColumn = PPG.Grid.Columns.TPPGGridColumn;
   TPPGGridColumns = PPG.Grid.Columns.TPPGGridColumns;
+  TPPGGridGroupDateMode = PPG.Grid.Columns.TPPGGridGroupDateMode;
 
   TPPGGetCellTextEvent = procedure(Sender: TObject; ACol, ARow: Integer;
     var Text: string) of object;
@@ -98,6 +106,18 @@ type
   TPPGGridLinkEvent = procedure(Sender: TObject; ACol, ARow: Integer;
     const Link: string) of object;
   TPPGGridCellEvent = procedure(Sender: TObject; ACol, ARow: Integer) of object;
+  /// Richtung einer Sortier-Anforderung (Kopfklick, Kopfmenue).
+  TPPGGridSortDirection = (gsdNone, gsdAscending, gsdDescending);
+  /// Der Anwender will sortieren (Kopfklick, Kopfmenue). ACol = Datenspalte
+  /// (bei "Sortierung entfernen" die bisherige Sortierspalte). Direction
+  /// aendern (z. B. absteigend -> keine, wenn die Datenmenge das nicht kann)
+  /// oder Accept := False: dann bleibt die Sortierung, wie sie ist.
+  TPPGGridSortRequestEvent = procedure(Sender: TObject; ACol: Integer;
+    var Direction: TPPGGridSortDirection; var Accept: Boolean) of object;
+  /// Werte des Kopfmenues "Nach Wert filtern" einer Datenspalte (Values
+  /// aendern, ergaenzen, leeren).
+  TPPGGridFilterValuesEvent = procedure(Sender: TObject; ACol: Integer;
+    Values: TStrings) of object;
 
   /// Verbundene Zellen (Datenspalte/-zeile der Ursprungszelle).
   TPPGGridMerge = record
@@ -183,7 +203,7 @@ type
 
   TPPGCustomGrid = class(TPPGCustomScrollControl, IPPGAccessibleChildren, IPPGUiaSource,
     IPPGGridColumnsHost, IPPGGridViewHost, IPPGGridViewSortKeys, IPPGGridViewFilterKey,
-    IPPGTableSource,
+    IPPGTableSource, IPPGViewPosition,
     IPPGGridStylesHost, IPPGGridPrintSource, IPPGTableExport, IPPGTableLook)
   private
     FPaint: TPPGGridPaintColors;
@@ -281,7 +301,19 @@ type
     FFindVisible: Boolean;
     FFindText: string;
     FFindUpper: string;
+    FFindQuery: TPPGFindQuery;
+    FFindExtended: Boolean;
     FIncSearch: Boolean;
+    FEnterMovesNext: Boolean;
+    FFilterValueMenu: Boolean;
+    FMenuFilterValues: TStringList;  // Werte des zuletzt gebauten Kopfmenues
+    FViewObservers: TList;           // IPPGViewPosition: Beobachter
+    FDblPos: TPoint;                 // Lage des letzten Doppelklicks (Client)
+    FDblPosValid: Boolean;
+    FGroupDateSig: string;           // GroupDateMode der Gruppenspalten (RebuildMap)
+    FOnCellDblClick: TPPGGridCellEvent;
+    FOnSortRequest: TPPGGridSortRequestEvent;
+    FOnGetFilterValues: TPPGGridFilterValuesEvent;
     FTypeAhead: TPPGTypeAhead;
     FIncText: string;
     FFocusC: Integer;
@@ -346,7 +378,16 @@ type
     procedure SetShowFilterBar(const Value: Boolean);
     procedure SetFindMode(const Value: TPPGGridFindPanelMode);
     procedure SetFindText(const Value: string);
+    procedure SetFindExtended(const Value: Boolean);
     function GetFindVisible: Boolean;
+    /// Sortierung setzen; Notify = OnSorted ausloesen.
+    procedure ApplySort(ACol: Integer; Ascending, Notify: Boolean);
+    /// Sortier-Anforderung des Anwenders (OnSortRequest, dann sortieren).
+    procedure UserSort(ACol: Integer; Direction: TPPGGridSortDirection);
+    /// Wert im Filter "Nach Wert" einer Spalte ein- bzw. ausschalten.
+    procedure ToggleFilterValue(ACol: Integer; const Value: string);
+    /// GroupDateMode der Gruppenspalten als Text (aendert er sich: neu gruppieren).
+    function GroupDateSignature: string;
     procedure SetBorderStyle(const Value: TBorderStyle);
     procedure SetStyles(const Value: TPPGGridStyles);
     procedure StylesObjChanged(Sender: TObject);
@@ -391,6 +432,7 @@ type
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
     procedure CMEnter(var Message: TCMEnter); message CM_ENTER;
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
+    procedure WMLButtonDblClk(var Message: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
   protected
     procedure WndProc(var Message: TMessage); override;
     procedure DefineProperties(Filer: TFiler); override;
@@ -671,6 +713,34 @@ type
     procedure EditorEllipsisClick(Sender: TObject);
     /// ACol = Datenspalte, VRow = sichtbare Zeile.
     function CanEditCell(ACol, VRow: Integer): Boolean; virtual;
+    /// EnterMovesNext: naechste Zelle (Spalte rechts, am Zeilenende erste
+    /// Spalte der naechsten Datenzeile; am Ende bleibt der Fokus). DB-Grid:
+    /// naechster Satz der Datenmenge, ohne anzuhaengen. True = bewegt.
+    function MoveToNextCell: Boolean; virtual;
+    /// Darf der Anwender nach der Datenspalte sortieren (Kopfmenue)?
+    /// Standard: die Ansicht sortiert selbst und die Spalte ist sortierbar.
+    function CanSortColumn(ACol: Integer): Boolean; virtual;
+    /// Datum einer Zelle fuer Column.GroupDateMode (Grid: aus dem Text;
+    /// DB-Grid: Feldwert). False = kein Datum (gruppiert nach dem Text).
+    function GroupDateValue(ACol, ARow: Integer; out D: TDateTime): Boolean; virtual;
+    /// Beobachter (IPPGViewPosition) benachrichtigen: Lage oder Anzahl der
+    /// Datenzeilen kann sich geaendert haben.
+    procedure NotifyViewPosition;
+    /// Gelesener Suchtext (FindText, FindExtendedSyntax).
+    property FindQuery: TPPGFindQuery read FFindQuery;
+    /// Treffer der Suche: Zeile (Texte der durchsuchten Zellen in
+    /// Grossbuchstaben) passt, und Zelle Index enthaelt einen Begriff.
+    function FindRowHit(const RowUpper: array of string; Index: Integer): Boolean;
+    { IPPGViewPosition (Blaettern ueber die Ansicht, z. B. Navigator) }
+    function ViewRecordNo: Integer; virtual;
+    function ViewRecordCount: Integer; virtual;
+    function ViewCanMove(Move: TPPGViewMove): Boolean; virtual;
+    function ViewMove(Move: TPPGViewMove): Boolean; virtual;
+    procedure ViewPositionObserver(AObserver: TComponent; Attach: Boolean);
+    /// Sichtbare Zeile der ersten/vorigen/naechsten/letzten Datenzeile der
+    /// Ansicht von der Fokuszeile aus (-1 = keine).
+    function ViewMoveTarget(Move: TPPGViewMove): Integer;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     { Zeichnen }
     function FrameInset: Integer; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
@@ -858,6 +928,23 @@ type
     property OnFixedCellClick: TFixedCellClickEvent read FOnFixedCellClick write FOnFixedCellClick;
     property OnTopLeftChange: TNotifyEvent read FOnTopLeftChanged write FOnTopLeftChanged;
     property OnSorted: TNotifyEvent read FOnSorted write FOnSorted;
+    /// Enter (im Editor nach dem Uebernehmen, sonst statt den Editor zu
+    /// oeffnen) springt zur naechsten Zelle, am Zeilenende in die naechste
+    /// Zeile (F2 oeffnet den Editor weiter).
+    property EnterMovesNext: Boolean read FEnterMovesNext write FEnterMovesNext default False;
+    /// Erweiterte Suche im Suchfeld: Leerzeichen trennen Begriffe (oder),
+    /// "+wort" muss, "-wort" darf nicht vorkommen, "..." ist ein Begriff,
+    /// % und _ sind Platzhalter (siehe TPPGFindQuery).
+    property FindExtendedSyntax: Boolean read FFindExtended write SetFindExtended default False;
+    /// Kopfmenue mit "Nach Wert filtern": die Werte der Spalte zum
+    /// An- und Abhaken (Filter "=a|b|").
+    property FilterValueMenu: Boolean read FFilterValueMenu write FFilterValueMenu default False;
+    /// Doppelklick auf eine Datenzelle (auch Karte); ACol = Datenspalte,
+    /// ARow = Datenzeile (DB-Grid: Zeile im Puffer bzw. der Ansicht).
+    property OnCellDblClick: TPPGGridCellEvent read FOnCellDblClick write FOnCellDblClick;
+    property OnSortRequest: TPPGGridSortRequestEvent read FOnSortRequest write FOnSortRequest;
+    property OnGetFilterValues: TPPGGridFilterValuesEvent read FOnGetFilterValues
+      write FOnGetFilterValues;
     property Bands: TPPGGridBands read FBands write SetBands;
     /// Anzahl Spalten, die rechts stehen bleiben (z.B. Aktionsspalte).
     property FixedColsRight: Integer read FFixedColsRight write SetFixedColsRight default 0;
@@ -962,6 +1049,23 @@ type
     procedure MakeCellVisible(ACol, VRow: Integer);
     /// Sortiert nach Spalte (-1 = urspruengliche Reihenfolge).
     procedure SortBy(ACol: Integer; Ascending: Boolean = True);
+    /// Sortierpfeil setzen, ohne OnSorted (z. B. nach dem Index der
+    /// Datenmenge); sortiert die Ansicht selbst, folgt sie dem Pfeil.
+    procedure SetSortIndicator(ACol: Integer; Ascending: Boolean = True);
+    /// Text einer Datenzelle wie angezeigt (ACol/ARow = Datenspalte/-zeile;
+    /// DB-Grid: Zeile im Puffer bzw. der Ansicht). '' ausserhalb.
+    function CellText(ACol, ARow: Integer): string;
+    /// Anzahl Kopfzeilen (FixedRows): Datenzeile ARow ist der Eintrag
+    /// ARow - HeaderRowCount.
+    function HeaderRowCount: Integer;
+    /// Filter einer Spalte auf eine Werteliste setzen ("=a|b|"; leer = aus).
+    procedure SetFilterValues(ACol: Integer; const Values: array of string);
+    /// Werte des Filters einer Spalte, wenn er eine Werteliste ist.
+    function FilterValues(ACol: Integer): TArray<string>;
+    /// Verschiedene Texte einer Datenspalte (sortiert wie die Spalte; hoechstens
+    /// MaxCount), z. B. fuer eine Werteauswahl. DB-Grid: gruppiert aus dem
+    /// Speicher, sonst ueber die (gefilterte) Datenmenge.
+    function ColumnFilterValues(ACol: Integer; MaxCount: Integer = 1000): TArray<string>; virtual;
     procedure ClearFilters;
     /// Filter einer Datenspalte aus Operator und Wert(en) setzen (schreibt den
     /// Text der Filterzeile, siehe TPPGFilterCondition).
@@ -1041,6 +1145,9 @@ type
     property FilterImmediate;
     property ShowFilterBar;
     property FindPanel;
+    property FindExtendedSyntax;
+    property FilterValueMenu;
+    property EnterMovesNext;
     property IncrementalSearch;
     property FixedColsRight;
     property HeaderMenu;
@@ -1098,6 +1205,7 @@ type
     property OnClick;
     property OnCompareCells;
     property OnCellButtonClick;
+    property OnCellDblClick;
     property OnColumnMoved;
     property OnCustomAggregate;
     property OnContextPopup;
@@ -1113,6 +1221,7 @@ type
     property OnFixedCellClick;
     property OnGetCellText;
     property OnGetEditText;
+    property OnGetFilterValues;
     property OnGetGroupText;
     property OnGetCellStyle;
     property OnHeaderMenu;
@@ -1129,6 +1238,7 @@ type
     property OnSelectCell;
     property OnSetEditText;
     property OnSorted;
+    property OnSortRequest;
     property OnStartDock;
     property OnStartDrag;
     property OnTopLeftChange;
@@ -1421,6 +1531,8 @@ begin
   FBands := TPPGGridBands.Create(Self, TPPGGridBand);
   FHeaderMenu := True;
   FColDropAt := -1;
+  FMenuFilterValues := TStringList.Create;
+  FViewObservers := TList.Create;
   FItemCanvas := TCanvas.Create;
   FColCount := 0;
   FRowCount := 0;
@@ -1437,11 +1549,17 @@ begin
 end;
 
 destructor TPPGCustomGrid.Destroy;
+var
+  I: Integer;
 begin
   FEditor := nil; // gehoert dem Grid (Owner), wird mit ihm freigegeben
   // Suchfeld (Kind, Owner = Grid) nicht mehr bedienen
   if FFindPanel <> nil then
     FFindPanel.FGrid := nil;
+  for I := FViewObservers.Count - 1 downto 0 do
+    TComponent(FViewObservers[I]).RemoveFreeNotification(Self);
+  FreeAndNil(FViewObservers);
+  FreeAndNil(FMenuFilterValues);
   FreeAndNil(FItemCanvas);
   FreeAndNil(FColumns);
   FreeAndNil(FBands);
@@ -1529,10 +1647,26 @@ begin
     for I := 0 to High(G) do
       if G[I] <> FGroupCols[I] then
         Same := False;
-  if not Same then
+  // Datumsgruppen (GroupDateMode) geaendert: ebenfalls neu gruppieren
+  if not Same or (GroupDateSignature <> FGroupDateSig) then
     RebuildMap
   else if AggSignature <> FAggSig then
     AggregatesChanged;
+end;
+
+function TPPGCustomGrid.GroupDateSignature: string;
+var
+  I: Integer;
+  C: TPPGGridColumn;
+begin
+  Result := '';
+  for I := 0 to High(FGroupCols) do
+  begin
+    C := ColumnOf(FGroupCols[I]);
+    if C <> nil then
+      Result := Result + IntToStr(Ord(C.GroupDateMode));
+    Result := Result + ',';
+  end;
 end;
 
 function TPPGCustomGrid.AggSignature: string;
@@ -2115,7 +2249,7 @@ end;
 function TPPGCustomGrid.FilterDescription: string;
 const
   OpText: array[TPPGFilterOperator] of string = ('', '=', '<>', '<', '<=', '>', '>=', '', '',
-    '', '', '');
+    '', '', '', '');
 var
   C: Integer;
   Cond: TPPGFilterCondition;
@@ -2137,6 +2271,8 @@ begin
       pfoBetween: Part := Format(PPGStr(@SPPGFilterDescBetween), [Cap, Cond.Value, Cond.Value2]);
       pfoEmpty: Part := Format(PPGStr(@SPPGFilterDescEmpty), [Cap]);
       pfoNotEmpty: Part := Format(PPGStr(@SPPGFilterDescNotEmpty), [Cap]);
+      pfoInList: Part := Format(PPGStr(@SPPGFilterDescInList),
+        [Cap, StringReplace(Cond.Value, '|', ', ', [rfReplaceAll])]);
     else
       Part := Format(PPGStr(@SPPGFilterDescCompare), [Cap, OpText[Cond.Op], Cond.Value]);
     end;
@@ -2213,9 +2349,27 @@ procedure TPPGCustomGrid.SetFindText(const Value: string);
 begin
   FFindText := Value;
   FFindUpper := AnsiUpperCase(Value);
+  FFindQuery.Parse(Value, FFindExtended);
   if (FFindPanel <> nil) and (FFindPanel.FEdit.Text <> Value) then
     FFindPanel.FEdit.Text := Value; // ohne OnSearch (Text per Code)
   Invalidate;
+end;
+
+procedure TPPGCustomGrid.SetFindExtended(const Value: Boolean);
+begin
+  if FFindExtended = Value then
+    Exit;
+  FFindExtended := Value;
+  SetFindText(FFindText);
+end;
+
+function TPPGCustomGrid.FindRowHit(const RowUpper: array of string; Index: Integer): Boolean;
+begin
+  if (Index < 0) or (Index > High(RowUpper)) or FFindQuery.Empty then
+    Exit(False);
+  if not FFindExtended then
+    Exit(Pos(FFindUpper, RowUpper[Index]) > 0);
+  Result := FFindQuery.CellHit(RowUpper[Index]) and FFindQuery.RowMatches(RowUpper);
 end;
 
 procedure TPPGCustomGrid.ShowFind;
@@ -2267,7 +2421,8 @@ end;
 function TPPGCustomGrid.FindFrom(Forward, IncludeCurrent: Boolean): Boolean;
 var
   Cols: array of Integer;
-  I, N, NC, Rows, Start, K, Idx, V, D, CI: Integer;
+  I, N, NC, Rows, Start, K, Idx, V, D, CI, RowD: Integer;
+  RowU: TArray<string>;
 begin
   Result := False;
   if FFindUpper = '' then
@@ -2291,6 +2446,8 @@ begin
     if Cols[I] <= FFocusC then
       CI := I;
   Start := (Max(FFocusV, VFixedRows) - VFixedRows) * NC + CI;
+  SetLength(RowU, NC);
+  RowD := -1;
   for K := 0 to Rows * NC - 1 do
   begin
     if Forward then
@@ -2305,7 +2462,15 @@ begin
     if D < FFixedRows then
       Continue; // Gruppenzeile
     I := Cols[Idx mod NC];
-    if Pos(FFindUpper, AnsiUpperCase(GetCellText(DataCol(I), D))) > 0 then
+    // Texte der durchsuchten Zellen je Zeile einmal (erweiterte Suche
+    // prueft die ganze Zeile)
+    if D <> RowD then
+    begin
+      for N := 0 to NC - 1 do
+        RowU[N] := AnsiUpperCase(GetCellText(DataCol(Cols[N]), D));
+      RowD := D;
+    end;
+    if FindRowHit(RowU, Idx mod NC) then
     begin
       MoveFocus(I, V, False, True);
       Exit(True);
@@ -2344,10 +2509,19 @@ end;
 procedure TPPGCustomGrid.PaintFindMark(const ACanvas: IPPGCanvas; const TR: TRect;
   const S: string; Al: TAlignment; AFont: TFont);
 var
-  P, W, X0, MW, Start, Inset: Integer;
+  P, W, X0, MW, Start, Inset, MLen: Integer;
   MR: TRect;
 begin
-  P := Pos(FFindUpper, AnsiUpperCase(S));
+  if FFindExtended then
+  begin
+    if not FFindQuery.MarkAt(AnsiUpperCase(S), P, MLen) then
+      Exit;
+  end
+  else
+  begin
+    P := Pos(FFindUpper, AnsiUpperCase(S));
+    MLen := Length(FFindUpper);
+  end;
   if P = 0 then
     Exit;
   if AFont = nil then
@@ -2359,7 +2533,7 @@ begin
   begin
     W := FPainter.TextWidth(AFont, S);
     X0 := FPainter.TextWidth(AFont, Copy(S, 1, P - 1));
-    MW := FPainter.TextWidth(AFont, Copy(S, P, Length(FFindUpper)));
+    MW := FPainter.TextWidth(AFont, Copy(S, P, MLen));
     case Al of
       taRightJustify: Start := TR.Right - W;
       taCenter: Start := TR.Left + (TR.Right - TR.Left - W) div 2;
@@ -2507,6 +2681,7 @@ begin
     FView.Group.Columns := FGroupCols
   else
     FView.Group.Columns := nil;
+  FGroupDateSig := GroupDateSignature;
   FView.Group.SortColumn := FSortCol;
   FView.Group.SortAscending := FSortAscending;
   FView.Group.Footers := FGroupFooter;
@@ -2531,6 +2706,7 @@ begin
   FFocusV := I;
   FAnchorV := I;
   InvalidateGeometry;
+  NotifyViewPosition;
 end;
 
 function TPPGCustomGrid.ViewRowPasses(ARow: Integer): Boolean;
@@ -2539,7 +2715,21 @@ begin
 end;
 
 function TPPGCustomGrid.ViewCompareRows(ACol, R1, R2: Integer): Integer;
+var
+  C: TPPGGridColumn;
+  D1, D2: TDateTime;
 begin
+  // Datumsgruppen (GroupDateMode): nach dem Datum, nicht nach dem Text
+  C := ColumnOf(ACol);
+  if (C <> nil) and (C.GroupDateMode <> gdmValue) and GroupDateValue(ACol, R1, D1) and
+    GroupDateValue(ACol, R2, D2) then
+  begin
+    if D1 < D2 then
+      Exit(-1);
+    if D1 > D2 then
+      Exit(1);
+    Exit(0);
+  end;
   Result := CompareDataRows(ACol, R1, R2);
 end;
 
@@ -2969,7 +3159,7 @@ begin
   end;
 end;
 
-procedure TPPGCustomGrid.SortBy(ACol: Integer; Ascending: Boolean);
+procedure TPPGCustomGrid.ApplySort(ACol: Integer; Ascending, Notify: Boolean);
 begin
   HideEditor(True);
   if (ACol < -1) or (ACol >= FColCount) then
@@ -2977,8 +3167,273 @@ begin
   FSortCol := ACol;
   FSortAscending := Ascending;
   RebuildMap;
-  if Assigned(FOnSorted) then
+  if Notify and Assigned(FOnSorted) then
     FOnSorted(Self);
+end;
+
+procedure TPPGCustomGrid.SortBy(ACol: Integer; Ascending: Boolean);
+begin
+  ApplySort(ACol, Ascending, True);
+end;
+
+procedure TPPGCustomGrid.SetSortIndicator(ACol: Integer; Ascending: Boolean);
+begin
+  ApplySort(ACol, Ascending, False);
+end;
+
+procedure TPPGCustomGrid.UserSort(ACol: Integer; Direction: TPPGGridSortDirection);
+var
+  Accept: Boolean;
+begin
+  Accept := True;
+  if Assigned(FOnSortRequest) then
+    FOnSortRequest(Self, ACol, Direction, Accept);
+  if not Accept then
+    Exit;
+  case Direction of
+    gsdAscending: SortBy(ACol, True);
+    gsdDescending: SortBy(ACol, False);
+  else
+    SortBy(-1);
+  end;
+end;
+
+function TPPGCustomGrid.CanSortColumn(ACol: Integer): Boolean;
+var
+  Col: TPPGGridColumn;
+begin
+  Col := ColumnOf(ACol);
+  Result := SortsInView and (ACol >= FFixedCols) and (ACol < FColCount) and
+    ((Col = nil) or Col.Sortable);
+end;
+
+function TPPGCustomGrid.CellText(ACol, ARow: Integer): string;
+begin
+  if (ACol < 0) or (ACol >= FColCount) or (ARow < 0) or (ARow >= FRowCount) then
+    Exit('');
+  Result := GetCellText(ACol, ARow);
+end;
+
+function TPPGCustomGrid.HeaderRowCount: Integer;
+begin
+  Result := FFixedRows;
+end;
+
+{ ---- Filter nach Werten ---- }
+
+procedure TPPGCustomGrid.SetFilterValues(ACol: Integer; const Values: array of string);
+begin
+  SetFilter(ACol, PPGFilterListText(Values));
+end;
+
+function TPPGCustomGrid.FilterValues(ACol: Integer): TArray<string>;
+var
+  Cond: TPPGFilterCondition;
+  I, K, N: Integer;
+  S: string;
+begin
+  Result := nil;
+  if (ACol < 0) or (ACol > High(FFilters)) then
+    Exit;
+  Cond := PPGFilterParse(FFilters[ACol]);
+  if Cond.Op <> pfoInList then
+    Exit;
+  // Wie TPPGFilterCondition: am "|" trennen, auch leere Eintraege ("=|")
+  S := Cond.Value;
+  SetLength(Result, Length(S) + 1);
+  N := 0;
+  K := 1;
+  for I := 1 to Length(S) + 1 do
+    if (I > Length(S)) or (S[I] = '|') then
+    begin
+      Result[N] := Trim(Copy(S, K, I - K));
+      Inc(N);
+      K := I + 1;
+    end;
+  SetLength(Result, N);
+end;
+
+function TPPGCustomGrid.ColumnFilterValues(ACol, MaxCount: Integer): TArray<string>;
+var
+  Seen: TDictionary<string, Integer>;
+  Rows: TArray<Integer>;
+  R, N, I, J, T: Integer;
+  S: string;
+begin
+  Result := nil;
+  if (ACol < 0) or (ACol >= FColCount) or (MaxCount <= 0) then
+    Exit;
+  // Erste Zeile je Text, danach sortiert wie die Spalte (Zahlen nach Wert)
+  Seen := TDictionary<string, Integer>.Create;
+  try
+    N := 0;
+    for R := FFixedRows to FRowCount - 1 do
+    begin
+      S := Trim(GetCellText(ACol, R));
+      if Seen.ContainsKey(S) then
+        Continue;
+      Seen.Add(S, R);
+      if N >= Length(Rows) then
+        SetLength(Rows, N * 2 + 16);
+      Rows[N] := R;
+      Inc(N);
+      if N >= MaxCount then
+        Break;
+    end;
+    SetLength(Rows, N);
+    // Einfuegesortierung reicht fuer Wertelisten
+    for I := 1 to N - 1 do
+    begin
+      T := Rows[I];
+      J := I - 1;
+      while (J >= 0) and (CompareDataRows(ACol, Rows[J], T) > 0) do
+      begin
+        Rows[J + 1] := Rows[J];
+        Dec(J);
+      end;
+      Rows[J + 1] := T;
+    end;
+    SetLength(Result, N);
+    for I := 0 to N - 1 do
+      Result[I] := Trim(GetCellText(ACol, Rows[I]));
+  finally
+    Seen.Free;
+  end;
+end;
+
+procedure TPPGCustomGrid.ToggleFilterValue(ACol: Integer; const Value: string);
+var
+  Cur: TArray<string>;
+  I, K: Integer;
+begin
+  Cur := FilterValues(ACol);
+  K := -1;
+  for I := 0 to High(Cur) do
+    if AnsiSameText(Cur[I], Value) then
+      K := I;
+  if K >= 0 then
+    Delete(Cur, K, 1)
+  else
+    Insert(Value, Cur, Length(Cur));
+  SetFilterValues(ACol, Cur);
+end;
+
+{ ---- IPPGViewPosition ---- }
+
+procedure TPPGCustomGrid.NotifyViewPosition;
+var
+  I: Integer;
+  Msg: TMessage;
+begin
+  if (FViewObservers = nil) or (FViewObservers.Count = 0) or
+    (csDestroying in ComponentState) then
+    Exit;
+  for I := FViewObservers.Count - 1 downto 0 do
+    if I < FViewObservers.Count then
+    begin
+      Msg.Msg := CM_PPGVIEWPOSITION;
+      Msg.WParam := 0;
+      Msg.LParam := 0;
+      Msg.Result := 0;
+      TComponent(FViewObservers[I]).Dispatch(Msg);
+    end;
+end;
+
+procedure TPPGCustomGrid.ViewPositionObserver(AObserver: TComponent; Attach: Boolean);
+begin
+  if (AObserver = nil) or (FViewObservers = nil) then
+    Exit;
+  if Attach then
+  begin
+    if FViewObservers.IndexOf(AObserver) < 0 then
+    begin
+      FViewObservers.Add(AObserver);
+      AObserver.FreeNotification(Self);
+    end;
+  end
+  else if FViewObservers.IndexOf(AObserver) >= 0 then
+  begin
+    FViewObservers.Remove(AObserver);
+    AObserver.RemoveFreeNotification(Self);
+  end;
+end;
+
+procedure TPPGCustomGrid.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (FViewObservers <> nil) then
+    FViewObservers.Remove(AComponent);
+end;
+
+function TPPGCustomGrid.ViewMoveTarget(Move: TPPGViewMove): Integer;
+var
+  V, Step: Integer;
+begin
+  Result := -1;
+  case Move of
+    pvmFirst:
+      begin
+        V := VFixedRows;
+        Step := 1;
+      end;
+    pvmLast:
+      begin
+        V := VRowCount - 1;
+        Step := -1;
+      end;
+    pvmPrior:
+      begin
+        V := FFocusV - 1;
+        Step := -1;
+      end;
+  else
+    V := FFocusV + 1;
+    Step := 1;
+  end;
+  while (V >= VFixedRows) and (V < VRowCount) do
+  begin
+    if IsDataRow(V) then
+      Exit(V);
+    Inc(V, Step);
+  end;
+end;
+
+function TPPGCustomGrid.ViewRecordNo: Integer;
+var
+  V: Integer;
+begin
+  Result := 0;
+  if not IsDataRow(FFocusV) then
+    Exit;
+  for V := VFixedRows to FFocusV do
+    if IsDataRow(V) then
+      Inc(Result);
+end;
+
+function TPPGCustomGrid.ViewRecordCount: Integer;
+var
+  V: Integer;
+begin
+  Result := 0;
+  for V := VFixedRows to VRowCount - 1 do
+    if IsDataRow(V) then
+      Inc(Result);
+end;
+
+function TPPGCustomGrid.ViewCanMove(Move: TPPGViewMove): Boolean;
+var
+  V: Integer;
+begin
+  V := ViewMoveTarget(Move);
+  Result := (V >= 0) and (V <> FFocusV);
+end;
+
+function TPPGCustomGrid.ViewMove(Move: TPPGViewMove): Boolean;
+var
+  V: Integer;
+begin
+  V := ViewMoveTarget(Move);
+  Result := (V >= 0) and (V <> FFocusV) and MoveFocus(FFocusC, V, False, True);
 end;
 
 { ---- Spalten in der Anzeige (Phase 13b) ---- }
@@ -3345,14 +3800,17 @@ const
   HMExpandAll = 10;
   HMCollapseAll = 11;
   HMColumnBase = 1000; // + Datenspalte (Spaltenauswahl)
+  HMFilterAll = 12;
+  HMFilterBase = 100000; // + Index in FMenuFilterValues
 
 function TPPGCustomGrid.CreateHeaderMenu(ACol: Integer): TPopupMenu;
 var
   M: TPPGPopupMenu;
   Sub, It: TMenuItem;
   Col, C2: TPPGGridColumn;
-  I, Shown: Integer;
+  I, J, Shown: Integer;
   Sortable: Boolean;
+  Vals, Cur: TArray<string>;
 
   function Add(Parent: TMenuItem; const Caption: string; ATag: Integer): TMenuItem;
   begin
@@ -3383,9 +3841,8 @@ begin
   M := TPPGPopupMenu.Create(Self);
   M.Tag := ACol;
   Col := ColumnOf(ACol);
-  Sortable := (ACol >= FFixedCols) and ((Col = nil) or Col.Sortable);
-  if not SortsInView then
-    Sortable := False; // DB-Grid: Sortieren ist Sache der Datenmenge
+  // DB-Grid: nur mit Sortierpfeil (sortieren muss die Datenmenge)
+  Sortable := CanSortColumn(ACol);
   It := Add(M.Items, PPGStr(@SPPGGridSortAsc), HMSortAsc);
   It.Enabled := Sortable;
   It.Checked := (FSortCol = ACol) and FSortAscending;
@@ -3406,6 +3863,32 @@ begin
       Add(M.Items, PPGStr(@SPPGGridCollapseAll), HMCollapseAll);
     end;
   end;
+  // Nach Wert filtern (FilterValueMenu): Werte der Spalte zum Abhaken
+  FMenuFilterValues.Clear;
+  if FFilterValueMenu and (ACol >= FFixedCols) and (ACol < FColCount) then
+  begin
+    Add(M.Items, '-', 0);
+    Sub := Add(M.Items, PPGStr(@SPPGGridFilterValues), 0);
+    Vals := ColumnFilterValues(ACol);
+    for I := 0 to High(Vals) do
+      FMenuFilterValues.Add(Vals[I]);
+    if Assigned(FOnGetFilterValues) then
+      FOnGetFilterValues(Self, ACol, FMenuFilterValues);
+    Cur := FilterValues(ACol);
+    It := Add(Sub, PPGStr(@SPPGGridFilterAllValues), HMFilterAll);
+    It.Checked := Length(Cur) = 0;
+    for I := 0 to FMenuFilterValues.Count - 1 do
+    begin
+      if Trim(FMenuFilterValues[I]) = '' then
+        It := Add(Sub, PPGStr(@SPPGGridFilterEmptyValue), HMFilterBase + I)
+      else
+        It := Add(Sub, StringReplace(FMenuFilterValues[I], '&', '&&', [rfReplaceAll]),
+          HMFilterBase + I);
+      for J := 0 to High(Cur) do
+        if AnsiSameText(Cur[J], Trim(FMenuFilterValues[I])) then
+          It.Checked := True;
+    end;
+  end;
   Add(M.Items, '-', 0);
   // Spaltenauswahl (Kaestchen) nur mit Spalten-Objekten
   Shown := 0;
@@ -3416,12 +3899,13 @@ begin
       Inc(Shown);
   end;
   Add(M.Items, PPGStr(@SPPGGridHideColumn), HMHide).Enabled :=
-    (Col <> nil) and (ACol >= FFixedCols) and (Shown > 1);
+    (Col <> nil) and (ACol >= FFixedCols) and (Shown > 1) and Col.VisibleForCustomization;
   Sub := Add(M.Items, PPGStr(@SPPGGridColumnChooser), 0);
   for I := FFixedCols to FColCount - 1 do
   begin
     C2 := ColumnOf(I);
-    if C2 = nil then
+    // VisibleForCustomization = False: nicht in der Spaltenauswahl
+    if (C2 = nil) or not C2.VisibleForCustomization then
       Continue;
     It := Add(Sub, ColCaption(I), HMColumnBase + I);
     It.Checked := C2.Visible;
@@ -3458,11 +3942,12 @@ begin
   ACol := M.Tag;
   C := ColumnOf(ACol);
   case It.Tag of
-    HMSortAsc: SortBy(ACol, True);
-    HMSortDesc: SortBy(ACol, False);
-    HMSortNone: SortBy(-1);
+    HMSortAsc: UserSort(ACol, gsdAscending);
+    HMSortDesc: UserSort(ACol, gsdDescending);
+    HMSortNone: UserSort(FSortCol, gsdNone);
+    HMFilterAll: SetFilter(ACol, '');
     HMHide:
-      if C <> nil then
+      if (C <> nil) and C.VisibleForCustomization then
         C.Visible := False;
     HMBestFit: AutoSizeColumn(ACol);
     HMBestFitAll:
@@ -3479,7 +3964,7 @@ begin
           for I := 0 to FColCount - 1 do
           begin
             C := ColumnOf(I);
-            if C <> nil then
+            if (C <> nil) and C.VisibleForCustomization then
               C.Visible := True;
           end;
         finally
@@ -3487,7 +3972,13 @@ begin
         end;
       end;
   else
-    if It.Tag >= HMColumnBase then
+    if It.Tag >= HMFilterBase then
+    begin
+      I := It.Tag - HMFilterBase;
+      if (I >= 0) and (I < FMenuFilterValues.Count) then
+        ToggleFilterValue(ACol, Trim(FMenuFilterValues[I]));
+    end
+    else if It.Tag >= HMColumnBase then
     begin
       C := ColumnOf(It.Tag - HMColumnBase);
       if C <> nil then
@@ -3779,8 +4270,20 @@ begin
 end;
 
 function TPPGCustomGrid.ViewGroupKey(ACol, ARow: Integer): string;
+var
+  C: TPPGGridColumn;
+  D: TDateTime;
 begin
-  Result := GetCellText(ACol, ARow);
+  C := ColumnOf(ACol);
+  if (C <> nil) and (C.GroupDateMode <> gdmValue) and GroupDateValue(ACol, ARow, D) then
+    Result := PPGGridDateGroupKey(D, C.GroupDateMode, Date)
+  else
+    Result := GetCellText(ACol, ARow);
+end;
+
+function TPPGCustomGrid.GroupDateValue(ACol, ARow: Integer; out D: TDateTime): Boolean;
+begin
+  Result := TryStrToDateTime(Trim(GetCellText(ACol, ARow)), D);
 end;
 
 procedure TPPGCustomGrid.GroupBy(const ACols: array of Integer);
@@ -3916,6 +4419,7 @@ begin
   FFocusV := EnsureRangeInt(V, 0, VRowCount - 1);
   FAnchorV := FFocusV;
   InvalidateGeometry;
+  NotifyViewPosition;
 end;
 
 procedure TPPGCustomGrid.FullExpand;
@@ -3928,6 +4432,7 @@ begin
   FFocusV := EnsureRangeInt(FFocusV, VFixedRows, VRowCount - 1);
   FAnchorV := FFocusV;
   InvalidateGeometry;
+  NotifyViewPosition;
 end;
 
 procedure TPPGCustomGrid.FullCollapse;
@@ -7196,6 +7701,8 @@ begin
   if HandleAllocated and Focused and (VRow <> FLastFocusRow) then
     NotifyAccessibilityChild(EVENT_OBJECT_FOCUS, VRow + 1);
   FLastFocusRow := VRow;
+  if VRow <> OldV then
+    NotifyViewPosition;
   if ColChanged then
     ColEnter;
   if ByUser then
@@ -7577,11 +8084,11 @@ begin
     Exit;
   // Erster Klick aufsteigend, zweiter absteigend, dritter wieder unsortiert
   if FSortCol <> ACol then
-    SortBy(ACol, True)
+    UserSort(ACol, gsdAscending)
   else if FSortAscending then
-    SortBy(ACol, False)
+    UserSort(ACol, gsdDescending)
   else
-    SortBy(-1);
+    UserSort(ACol, gsdNone);
 end;
 
 procedure TPPGCustomGrid.WMCaptureChanged(var Message: TMessage);
@@ -7601,15 +8108,52 @@ end;
 procedure TPPGCustomGrid.DblClick;
 var
   P: TPoint;
+  C, V: Integer;
 begin
   inherited DblClick;
+  // Lage aus der Nachricht (sonst die Maus, z. B. DblClick per Code)
+  if FDblPosValid then
+    P := FDblPos
+  else
+    P := ScreenToClient(Mouse.CursorPos);
+  FDblPosValid := False;
   // Doppelklick auf eine Kopf-Kante passt die Breite an (ContentMouseDown)
-  P := ScreenToClient(Mouse.CursorPos);
   if SizingColAt(P.X, P.Y) >= 0 then
     Exit;
+  // OnCellDblClick: nur Datenzellen (Tabelle und Karten)
+  if Assigned(FOnCellDblClick) and MouseCoord(P.X, P.Y, C, V) and IsDataRow(V) and
+    (C >= FFixedCols) then
+  begin
+    FOnCellDblClick(Self, DataCol(C), DataRow(V));
+    if csDestroying in ComponentState then
+      Exit;
+  end;
   if CanEditCell(DataCol(FFocusC), FFocusV) and
     (CellEditorKind(DataCol(FFocusC), DataRow(FFocusV)) <> gekCheck) then
     ShowEditor;
+end;
+
+function TPPGCustomGrid.MoveToNextCell: Boolean;
+var
+  V: Integer;
+begin
+  if FFocusC < VColCount - 1 then
+    Exit(MoveFocus(FFocusC + 1, FFocusV, False, True));
+  V := FFocusV + 1;
+  while (V < VRowCount) and not IsDataRow(V) do
+    Inc(V);
+  Result := (V < VRowCount) and MoveFocus(FFixedCols, V, False, True);
+end;
+
+procedure TPPGCustomGrid.WMLButtonDblClk(var Message: TWMLButtonDblClk);
+begin
+  FDblPos := Point(Message.XPos, Message.YPos);
+  FDblPosValid := True;
+  try
+    inherited;
+  finally
+    FDblPosValid := False;
+  end;
 end;
 
 procedure TPPGCustomGrid.ToggleCheck(ACol, VRow: Integer);
@@ -7770,6 +8314,12 @@ begin
       begin
         if (Key = VK_RETURN) and KindKey(Key) then
         begin
+          Key := 0;
+          Exit;
+        end;
+        if (Key = VK_RETURN) and FEnterMovesNext and (Shift * [ssCtrl, ssAlt] = []) then
+        begin
+          MoveToNextCell;
           Key := 0;
           Exit;
         end;
@@ -8163,6 +8713,8 @@ begin
 end;
 
 procedure TPPGCustomGrid.EditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+var
+  V: Integer;
 begin
   case Key of
     VK_RETURN:
@@ -8171,7 +8723,14 @@ begin
         if (ssCtrl in Shift) and (Sender is TPPGGridEdit) and TPPGGridEdit(Sender).Ellipsis then
           EditButtonClick
         else
+        begin
+          V := FEditV;
           HideEditor(True);
+          // EnterMovesNext: nur wenn der Wert uebernommen wurde (nicht in
+          // der Filterzeile)
+          if FEnterMovesNext and (FEditV < 0) and (V >= VFixedRows) then
+            MoveToNextCell;
+        end;
         Key := 0;
       end;
     VK_ESCAPE:

@@ -16,7 +16,12 @@ unit PPG.ToolBar;
   - Code (Down := ...) loest kein Ereignis aus; ein Klick loest
     Item.OnClick (bzw. Action.Execute) und danach OnItemClick aus.
   - Screenreader: Symbolleiste; Kinder Buttons/Umschalt-Buttons/Trenner und
-    der Ueberlauf-Knopf. }
+    der Ueberlauf-Knopf.
+  - Aufklappmenue je Eintrag (DropdownMenu): Pfeil rechts im Eintrag;
+    tdsMenu klappt bei jedem Klick auf, tdsSplit nur ueber den Pfeilteil (der
+    Rest loest OnClick/Action aus). OnDropdown kann das Menue vorher tauschen
+    oder fuellen. Im Ueberlauf wird daraus ein Untermenue (Kopien der
+    Menuepunkte, die das Original ausloesen). }
 
 {$I ..\PPG.inc}
 
@@ -32,6 +37,16 @@ type
   TPPGToolItem = class;
 
   TPPGToolItemStyle = (tisButton, tisCheck, tisSeparator);
+
+  /// Eintrag mit Aufklappmenue: tdsMenu = Klick auf den ganzen Eintrag klappt
+  /// das Menue auf (OnClick/Action laufen nicht), tdsSplit = der Pfeilteil
+  /// klappt auf, der Rest loest OnClick/Action aus.
+  TPPGToolItemDropdownStyle = (tdsMenu, tdsSplit);
+
+  /// Vor dem Aufklappen des Menues eines Eintrags: Menu tauschen bzw. fuellen
+  /// (nil = nichts aufklappen).
+  TPPGToolDropdownEvent = procedure(Sender: TObject; Item: TPPGToolItem;
+    var Menu: TPopupMenu) of object;
 
   TPPGToolItemActionLink = class(TActionLink)
   protected
@@ -69,6 +84,8 @@ type
     FFontStyle: TFontStyles;
     FActionLink: TPPGToolItemActionLink;
     FOnClick: TNotifyEvent;
+    FDropdownMenu: TPopupMenu;
+    FDropdownStyle: TPPGToolItemDropdownStyle;
     {$IFDEF PPG_HAS_IMAGENAME}
     FImageName: TImageName;
     {$ENDIF}
@@ -83,6 +100,8 @@ type
     procedure SetColor(const Value: TColor);
     procedure SetTextColor(const Value: TColor);
     procedure SetFontStyle(const Value: TFontStyles);
+    procedure SetDropdownMenu(const Value: TPopupMenu);
+    procedure SetDropdownStyle(const Value: TPPGToolItemDropdownStyle);
     function GetAction: TBasicAction;
     procedure SetAction(const Value: TBasicAction);
     function IsCaptionStored: Boolean;
@@ -109,6 +128,8 @@ type
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
     function ToolBar: TPPGToolBar;
+    /// Hat der Eintrag ein Aufklappmenue (DropdownMenu, kein Trenner)?
+    function HasDropdown: Boolean;
     property ActionLink: TPPGToolItemActionLink read FActionLink;
   published
     property Action: TBasicAction read GetAction write SetAction;
@@ -136,6 +157,11 @@ type
     property TextColor: TColor read FTextColor write SetTextColor default clDefault;
     property FontStyle: TFontStyles read FFontStyle write SetFontStyle default [];
     property OnClick: TNotifyEvent read FOnClick write FOnClick stored IsOnClickStored;
+    /// Aufklappmenue des Eintrags (Pfeil rechts im Eintrag, Menue unter ihm).
+    property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
+    /// tdsMenu: Klick klappt auf; tdsSplit: nur der Pfeilteil klappt auf.
+    property DropdownStyle: TPPGToolItemDropdownStyle read FDropdownStyle
+      write SetDropdownStyle default tdsMenu;
   end;
 
   TPPGToolItems = class(TOwnedCollection)
@@ -167,7 +193,9 @@ type
     FDownPart: Integer;
     FFocusPart: Integer;
     FMenu: TPopupMenu;
+    FDropPart: Integer;       // Eintrag mit offenem Aufklappmenue (-1 = keins)
     FOnItemClick: TPPGToolItemEvent;
+    FOnDropdown: TPPGToolDropdownEvent;
     procedure DrawItemImage(const ACanvas: IPPGCanvas; Index, X, Y: Integer; AEnabled: Boolean;
       Color: TColor);
     procedure SetImageTint(const Value: TPPGImageTint);
@@ -177,6 +205,12 @@ type
     function ItemWidth(Item: TPPGToolItem): Integer;
     function ButtonHeight: Integer;
     procedure MenuItemClick(Sender: TObject);
+    /// Kopie eines Menuepunkts im Ueberlauf: loest das Original aus.
+    procedure OverflowCopyClick(Sender: TObject);
+    /// Breite des Pfeilteils eines Eintrags (0 = ohne Aufklappmenue).
+    function DropWidth(Item: TPPGToolItem): Integer;
+    /// Menue fuer einen Eintrag (DropdownMenu, danach OnDropdown).
+    function DropdownMenuOf(Item: TPPGToolItem): TPopupMenu;
     function NextFocusable(From, Dir: Integer): Integer;
     /// Nur einen Knopf (-2 = Ueberlauf) neu zeichnen (8b).
     procedure InvalidatePart(Part: Integer);
@@ -204,6 +238,13 @@ type
     procedure DoEnter; override;
     procedure DoExit; override;
     procedure ItemsChanged; virtual;
+    /// Menue am Rechteck (Bildschirm) aufklappen; kehrt nach dem Schliessen
+    /// zurueck (Erweiterungspunkt, z. B. fuer Tests).
+    procedure PopupMenuAt(Menu: TPopupMenu; const ScreenRect: TRect); virtual;
+    /// Ueberlauf-Menue (OverflowMenu) mit den verborgenen Eintraegen fuellen.
+    procedure BuildOverflowMenu;
+    /// Eintrag wie per Klick bedienen: tdsMenu klappt auf, sonst ClickItem.
+    procedure ActivateItem(Item: TPPGToolItem);
     function AccRole: Integer; override;
     function AccChildCount: Integer;
     function AccChildName(Id: Integer): string;
@@ -222,6 +263,13 @@ type
     /// Item ausloesen wie per Klick (Umschalten, OnClick/Action, OnItemClick).
     procedure ClickItem(Item: TPPGToolItem);
     function ItemRect(Index: Integer): TRect;
+    /// Pfeilteil eines Eintrags mit Aufklappmenue (Client); leer = keiner.
+    function ItemArrowRect(Index: Integer): TRect;
+    /// Aufklappmenue des Eintrags unter ihm zeigen (OnDropdown vorher); kehrt
+    /// nach dem Schliessen zurueck. False = kein Menue bzw. nicht bedienbar.
+    function DropdownItem(Item: TPPGToolItem): Boolean;
+    /// Eintrag, dessen Menue gerade offen ist (-1 = keiner).
+    property DropdownPart: Integer read FDropPart;
     /// Item unter dem Punkt (-2 = Ueberlauf, -1 = nichts).
     function PartAt(X, Y: Integer): Integer;
     /// Items, die gerade im Ueberlauf-Menue liegen.
@@ -264,6 +312,8 @@ type
     property OnEnter;
     property OnExit;
     property OnItemClick: TPPGToolItemEvent read FOnItemClick write FOnItemClick;
+    /// Vor dem Aufklappen eines Eintrags-Menues (Menue tauschen, fuellen, nil).
+    property OnDropdown: TPPGToolDropdownEvent read FOnDropdown write FOnDropdown;
     // Audit 5d: VCL-Properties und -Ereignisse aus TControl/TWinControl
     property OnClick;
     property OnMouseDown;
@@ -299,7 +349,12 @@ uses
   PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.Render.Gdi,
   PPG.Menus;
 
+type
+  TPopupMenuAccess = class(TPopupMenu);
+
 const
+  DropWMenu = 14;   // Pfeil hinter dem Text (tdsMenu), logische px
+  DropWSplit = 18;  // Pfeilteil eines geteilten Eintrags
   BtnPadH = 10;
   IconSz = 16;
   SepW = 9;
@@ -463,6 +518,30 @@ begin
   end;
 end;
 
+procedure TPPGToolItem.SetDropdownMenu(const Value: TPopupMenu);
+begin
+  if FDropdownMenu = Value then
+    Exit;
+  FDropdownMenu := Value;
+  if (Value <> nil) and (ToolBar <> nil) then
+    Value.FreeNotification(ToolBar);
+  Changed(False);
+end;
+
+procedure TPPGToolItem.SetDropdownStyle(const Value: TPPGToolItemDropdownStyle);
+begin
+  if FDropdownStyle <> Value then
+  begin
+    FDropdownStyle := Value;
+    Changed(False);
+  end;
+end;
+
+function TPPGToolItem.HasDropdown: Boolean;
+begin
+  Result := (FDropdownMenu <> nil) and (FStyle <> tisSeparator);
+end;
+
 procedure TPPGToolItem.Assign(Source: TPersistent);
 var
   S: TPPGToolItem;
@@ -484,6 +563,8 @@ begin
     FTextColor := S.FTextColor;
     FFontStyle := S.FFontStyle;
     FOnClick := S.FOnClick;
+    FDropdownStyle := S.FDropdownStyle;
+    DropdownMenu := S.FDropdownMenu;
     Action := S.Action;
     Changed(False);
   end
@@ -805,6 +886,7 @@ begin
   FShowCaptions := True;
   FHotPart := -1;
   FDownPart := -1;
+  FDropPart := -1;
   FFocusPart := -1;
   TabStop := True;
   Align := alTop;
@@ -831,6 +913,16 @@ begin
     for I := 0 to FItems.Count - 1 do
       if FItems[I].Action = AComponent then
         FItems[I].Action := nil;
+  if (Operation = opRemove) and (FItems <> nil) and (AComponent is TPopupMenu) and
+    (AComponent <> FMenu) then
+  begin
+    for I := 0 to FItems.Count - 1 do
+      if FItems[I].FDropdownMenu = AComponent then
+        FItems[I].DropdownMenu := nil;
+    // Kopien im Ueberlauf verweisen auf Punkte des Menues: verwerfen
+    if FMenu <> nil then
+      FMenu.Items.Clear;
+  end;
 end;
 
 procedure TPPGToolBar.InitiateAction;
@@ -933,6 +1025,97 @@ begin
   end;
   if Result < ButtonHeight then
     Result := ButtonHeight;
+  Inc(Result, DropWidth(Item));
+end;
+
+function TPPGToolBar.DropWidth(Item: TPPGToolItem): Integer;
+begin
+  if not Item.HasDropdown then
+    Result := 0
+  else if Item.DropdownStyle = tdsSplit then
+    Result := PPGScale(DropWSplit, ScalePPI)
+  else
+    Result := PPGScale(DropWMenu, ScalePPI);
+end;
+
+function TPPGToolBar.ItemArrowRect(Index: Integer): TRect;
+var
+  W: Integer;
+begin
+  Result := ItemRect(Index);
+  if IsRectEmpty(Result) or not FItems[Index].HasDropdown then
+    Exit(Rect(0, 0, 0, 0));
+  W := DropWidth(FItems[Index]);
+  if UseRightToLeftAlignment then
+    Result.Right := Result.Left + W
+  else
+    Result.Left := Result.Right - W;
+end;
+
+function TPPGToolBar.DropdownMenuOf(Item: TPPGToolItem): TPopupMenu;
+begin
+  Result := nil;
+  if (Item = nil) or not Item.HasDropdown then
+    Exit;
+  Result := Item.DropdownMenu;
+  if Assigned(FOnDropdown) then
+    FOnDropdown(Self, Item, Result);
+end;
+
+procedure TPPGToolBar.PopupMenuAt(Menu: TPopupMenu; const ScreenRect: TRect);
+begin
+  if Menu is TPPGPopupMenu then
+    TPPGPopupMenu(Menu).PopupAtRect(ScreenRect)
+  else if UseRightToLeftAlignment then
+    Menu.Popup(ScreenRect.Right, ScreenRect.Bottom)
+  else
+    Menu.Popup(ScreenRect.Left, ScreenRect.Bottom);
+end;
+
+function TPPGToolBar.DropdownItem(Item: TPPGToolItem): Boolean;
+var
+  M: TPopupMenu;
+  I, ItemId: Integer;
+  R: TRect;
+begin
+  Result := False;
+  if (Item = nil) or (Item.Collection <> FItems) or not Item.HasDropdown or
+    not Item.Enabled or not Item.Visible or not Enabled or not HandleAllocated then
+    Exit;
+  I := Item.Index;
+  R := ItemRect(I);
+  if IsRectEmpty(R) then
+    Exit; // im Ueberlauf: dort als Untermenue
+  ItemId := Item.ID;
+  M := DropdownMenuOf(Item);
+  if (M = nil) or (FItems.FindItemID(ItemId) <> Item) then
+    Exit;
+  Result := True;
+  // Eintrag bleibt gedrueckt, solange das Menue offen ist
+  FDropPart := I;
+  InvalidatePart(I);
+  Update;
+  try
+    M.PopupComponent := Self;
+    R.TopLeft := ClientToScreen(R.TopLeft);
+    R.BottomRight := ClientToScreen(R.BottomRight);
+    PopupMenuAt(M, R);
+  finally
+    if not (csDestroying in ComponentState) then
+    begin
+      FDropPart := -1;
+      FHotPart := -1;
+      Invalidate;
+    end;
+  end;
+end;
+
+procedure TPPGToolBar.ActivateItem(Item: TPPGToolItem);
+begin
+  if (Item <> nil) and Item.HasDropdown and (Item.DropdownStyle = tdsMenu) then
+    DropdownItem(Item)
+  else
+    ClickItem(Item);
 end;
 
 procedure TPPGToolBar.EnsureLayout;
@@ -1101,14 +1284,65 @@ end;
 
 procedure TPPGToolBar.ShowOverflowMenu;
 var
-  I: Integer;
-  M: TMenuItem;
   P: TPoint;
-  It: TPPGToolItem;
-  PrevSep: Boolean;
 begin
   if not HasOverflow or not HandleAllocated then
     Exit;
+  BuildOverflowMenu;
+  // Menue im Stil der Suite unter dem Ueberlauf-Knopf (Preset vom ToolBar)
+  FMenu.PopupComponent := Self;
+  P := ClientToScreen(FOverflowRect.TopLeft);
+  PopupMenuAt(FMenu, Rect(P.X, P.Y, P.X + FOverflowRect.Right - FOverflowRect.Left,
+    P.Y + FOverflowRect.Bottom - FOverflowRect.Top));
+end;
+
+procedure CopyMenuItems(Source, Dest: TMenuItem; OnClick: TNotifyEvent);
+var
+  I: Integer;
+  S, D: TMenuItem;
+begin
+  for I := 0 to Source.Count - 1 do
+  begin
+    S := Source.Items[I];
+    D := TMenuItem.Create(Dest);
+    D.Caption := S.Caption;
+    D.Hint := S.Hint;
+    D.Enabled := S.Enabled;
+    D.Visible := S.Visible;
+    D.Checked := S.Checked;
+    D.RadioItem := S.RadioItem;
+    D.GroupIndex := S.GroupIndex;
+    D.Default := S.Default;
+    D.ImageIndex := S.ImageIndex;
+    D.ShortCut := S.ShortCut;
+    D.Tag := NativeInt(S); // Original (OverflowCopyClick)
+    Dest.Add(D);
+    if S.Count > 0 then
+    begin
+      D.SubMenuImages := S.SubMenuImages;
+      CopyMenuItems(S, D, OnClick);
+    end
+    else if not S.IsLine then
+      D.OnClick := OnClick;
+  end;
+end;
+
+procedure TPPGToolBar.OverflowCopyClick(Sender: TObject);
+begin
+  // Das Original lebt noch: verschwindet ein Menue, leert Notification die Kopien
+  if (Sender is TMenuItem) and (TMenuItem(Sender).Tag <> 0) then
+    TMenuItem(TMenuItem(Sender).Tag).Click;
+end;
+
+procedure TPPGToolBar.BuildOverflowMenu;
+var
+  I: Integer;
+  M, Sub: TMenuItem;
+  It: TPPGToolItem;
+  PrevSep: Boolean;
+  DM: TPopupMenu;
+begin
+  EnsureLayout;
   if FMenu = nil then
     FMenu := TPPGPopupMenu.Create(nil);
   FMenu.Items.Clear;
@@ -1138,8 +1372,34 @@ begin
       M.Checked := (It.Style = tisCheck) and It.Down;
       M.ImageIndex := It.ImageIndex;
       M.Tag := I;
-      M.OnClick := MenuItemClick;
       PrevSep := False;
+      DM := nil;
+      if It.HasDropdown and It.Enabled and Enabled then
+        DM := DropdownMenuOf(It);
+      if DM <> nil then
+      begin
+        // Aufklappmenue als Untermenue (OnPopup des Menues wie beim Aufklappen)
+        TPopupMenuAccess(DM).DoPopup(DM);
+        if It.DropdownStyle = tdsSplit then
+        begin
+          // Geteilter Eintrag: zuerst der eigene Befehl
+          Sub := TMenuItem.Create(M);
+          Sub.Caption := It.Caption;
+          Sub.Hint := It.Hint;
+          Sub.Tag := I;
+          Sub.OnClick := MenuItemClick;
+          M.Add(Sub);
+          Sub := TMenuItem.Create(M);
+          Sub.Caption := '-';
+          M.Add(Sub);
+        end;
+        M.SubMenuImages := DM.Images;
+        CopyMenuItems(DM.Items, M, OverflowCopyClick);
+      end
+      else if It.HasDropdown and (It.DropdownStyle = tdsMenu) then
+        M.Enabled := False // Menue-Eintrag ohne Menue: nichts auszuloesen
+      else
+        M.OnClick := MenuItemClick;
     end;
     FMenu.Items.Add(M);
   end;
@@ -1148,11 +1408,6 @@ begin
     FMenu.Alignment := paLeft
   else
     FMenu.Alignment := paRight;
-  // Menue im Stil der Suite unter dem Ueberlauf-Knopf (Preset vom ToolBar)
-  FMenu.PopupComponent := Self;
-  P := ClientToScreen(FOverflowRect.TopLeft);
-  TPPGPopupMenu(FMenu).PopupAtRect(Rect(P.X, P.Y, P.X + FOverflowRect.Right - FOverflowRect.Left,
-    P.Y + FOverflowRect.Bottom - FOverflowRect.Top));
 end;
 
 procedure TPPGToolBar.MenuItemClick(Sender: TObject);
@@ -1178,6 +1433,30 @@ var
   TextCol, C: TColor;
   UseColors, OwnFill: Boolean;
   F, Temp: TFont;
+  ArrowR: TRect;
+
+  procedure DrawDropArrow(const AR: TRect; Split: Boolean; AColor: TColor);
+  var
+    CX, CY, S, X, Inset: Integer;
+  begin
+    // Trennlinie des geteilten Eintrags (bei Hover/Druck/offenem Menue)
+    if Split and (Hot or Down) then
+    begin
+      if UseRightToLeftAlignment then
+        X := AR.Right
+      else
+        X := AR.Left;
+      Inset := PPGScale(6, PPI);
+      ACanvas.DrawPolyline([Point(X, AR.Top + Inset), Point(X, AR.Bottom - Inset)], 1, AColor, 110);
+    end;
+    // Chevron wie im TPPGButton
+    CX := (AR.Left + AR.Right) div 2;
+    CY := (AR.Top + AR.Bottom) div 2;
+    S := PPGScale(3, PPI);
+    ACanvas.DrawPolyline([Point(CX - S, CY - S div 2), Point(CX, CY + S div 2),
+      Point(CX + S, CY - S div 2)], Max(1, PPGScale(1, PPI) + PPGScale(1, PPI) div 2), AColor, 255);
+  end;
+
 begin
   EnsureLayout;
   PPI := ScalePPI;
@@ -1202,7 +1481,7 @@ begin
       Continue;
     end;
     Hot := Enabled and It.Enabled and (FHotPart = I);
-    Down := Hot and (FDownPart = I);
+    Down := (Hot and (FDownPart = I)) or (FDropPart = I);
     Checked := (It.Style = tisCheck) and It.Down;
     // Eigene Flaeche des Eintrags (auch in Ruhe); Hover/Druck dann als Abdunkelung
     UseColors := UseOwnColors;
@@ -1246,7 +1525,25 @@ begin
     if not (Enabled and It.Enabled) then
       C := T.TextDisabled;
     HasIcon := (It.IconChar <> 0) or ((Images <> nil) and (It.ImageIndex >= 0));
+    // Pfeilteil (Aufklappmenue) abziehen; der Rest wie ein normaler Eintrag
+    if It.HasDropdown then
+    begin
+      ArrowR := ItemArrowRect(I);
+      if UseRightToLeftAlignment then
+        R.Left := ArrowR.Right
+      else
+        R.Right := ArrowR.Left;
+      DrawDropArrow(ArrowR, It.DropdownStyle = tdsSplit, C);
+    end;
     TextR := Rect(R.Left + PPGScale(BtnPadH, PPI), R.Top, R.Right - PPGScale(BtnPadH, PPI), R.Bottom);
+    if It.HasDropdown and (It.DropdownStyle = tdsMenu) then
+    begin
+      // Pfeil direkt hinter dem Inhalt: kein Innenabstand zum Pfeil
+      if UseRightToLeftAlignment then
+        TextR.Left := R.Left
+      else
+        TextR.Right := R.Right;
+    end;
     if HasIcon then
     begin
       if (FShowCaptions and (It.Caption <> '')) then
@@ -1284,7 +1581,7 @@ begin
       end;
     end;
     if FocusVisible and Focused and (FFocusPart = I) then
-      ACanvas.FrameRoundRect(R, PPGScale(4, PPI), PPGScale(2, PPI), PPGColorToRGB(A.FocusColor), 255);
+      ACanvas.FrameRoundRect(FRects[I], PPGScale(4, PPI), PPGScale(2, PPI), PPGColorToRGB(A.FocusColor), 255);
   end;
   if FOverflow then
   begin
@@ -1343,6 +1640,9 @@ begin
     Exit;
   if P = -2 then
     ShowOverflowMenu
+  else if FItems[P].HasDropdown and ((FItems[P].DropdownStyle = tdsMenu) or
+    PtInRect(ItemArrowRect(P), Point(X, Y))) then
+    DropdownItem(FItems[P])
   else
     ClickItem(FItems[P]);
 end;
@@ -1439,7 +1739,20 @@ begin
         if FFocusPart = -2 then
           ShowOverflowMenu
         else if (FFocusPart >= 0) and (FFocusPart < FItems.Count) then
-          ClickItem(FItems[FFocusPart]);
+          ActivateItem(FItems[FFocusPart]);
+        Key := 0;
+        Exit;
+      end;
+    VK_DOWN:
+      begin
+        // Pfeil runter (auch Alt+Pfeil runter) klappt das Menue des Eintrags auf
+        if FFocusPart = -2 then
+          ShowOverflowMenu
+        else if (FFocusPart >= 0) and (FFocusPart < FItems.Count) and
+          FItems[FFocusPart].HasDropdown then
+          DropdownItem(FItems[FFocusPart])
+        else
+          Exit;
         Key := 0;
         Exit;
       end;
@@ -1490,7 +1803,7 @@ begin
         ShowOverflowMenu;
     end
     else
-      ClickItem(TPPGToolItem(FItems.FindItemID(Integer(Message.LParam))));
+      ActivateItem(TPPGToolItem(FItems.FindItemID(Integer(Message.LParam))));
     Exit;
   end;
   inherited WndProc(Message);
@@ -1527,6 +1840,12 @@ begin
     Exit(ROLE_SYSTEM_BUTTONMENU);
   if (Id < 1) or (Id > FItems.Count) then
     Exit(ROLE_SYSTEM_PUSHBUTTON);
+  if FItems[Id - 1].HasDropdown then
+  begin
+    if FItems[Id - 1].DropdownStyle = tdsSplit then
+      Exit(ROLE_SYSTEM_SPLITBUTTON);
+    Exit(ROLE_SYSTEM_BUTTONMENU);
+  end;
   case FItems[Id - 1].Style of
     tisCheck: Result := ROLE_SYSTEM_CHECKBUTTON;
     tisSeparator: Result := ROLE_SYSTEM_SEPARATOR;
@@ -1553,6 +1872,10 @@ begin
     Result := STATE_SYSTEM_UNAVAILABLE;
   if (It.Style = tisCheck) and It.Down then
     Result := Result or STATE_SYSTEM_CHECKED or STATE_SYSTEM_PRESSED;
+  if It.HasDropdown then
+    Result := Result or STATE_SYSTEM_HASPOPUP;
+  if FDropPart = Id - 1 then
+    Result := Result or STATE_SYSTEM_PRESSED;
   if Focused and (FFocusPart = Id - 1) then
     Result := Result or STATE_SYSTEM_FOCUSED;
 end;
@@ -1579,6 +1902,9 @@ end;
 function TPPGToolBar.AccChildDefaultAction(Id: Integer): string;
 begin
   if Id = FItems.Count + 1 then
+    Result := PPGStr(@SPPGAccOpen)
+  else if (Id >= 1) and (Id <= FItems.Count) and FItems[Id - 1].HasDropdown and
+    (FItems[Id - 1].DropdownStyle = tdsMenu) then
     Result := PPGStr(@SPPGAccOpen)
   else if (Id >= 1) and (Id <= FItems.Count) and (FItems[Id - 1].Style = tisCheck) then
     Result := PPGStr(@SPPGAccToggle)

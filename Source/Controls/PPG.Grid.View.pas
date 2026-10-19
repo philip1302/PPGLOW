@@ -209,7 +209,7 @@ type
   /// Vergleich einer Filterbedingung (Filterzeile von Grid und DB-Grid).
   TPPGFilterOperator = (pfoContains, pfoEqual, pfoNotEqual, pfoLess, pfoLessEqual,
     pfoGreater, pfoGreaterEqual, pfoBeginsWith, pfoEndsWith, pfoBetween, pfoEmpty,
-    pfoNotEmpty);
+    pfoNotEmpty, pfoInList);
 
   /// Art der Werte einer Spalte: fvkAuto = Zahl bzw. Datum, wenn Zelle und
   /// Vergleichswert so lesbar sind (Grid ohne Typangaben), sonst Text.
@@ -221,6 +221,8 @@ type
   ///   abc*       beginnt mit;  *abc  endet mit;  *abc*  enthaelt
   ///   a..b       zwischen a und b (einschliesslich)
   ///   =          leer;  <>  nicht leer
+  ///   =a|b|c     einer der Werte (Werteliste, angezeigter Text, ohne Gross-/
+  ///              Kleinschreibung; ein leerer Eintrag "=|a" steht fuer leer)
   /// Zahlen und Datumswerte im Format der Anwendung (FormatSettings).
   /// Datum ohne Uhrzeit vergleicht nur den Tag. Text ohne Gross-/Kleinschreibung.
   TPPGFilterCondition = record
@@ -233,6 +235,8 @@ type
     Date, Date2: TDateTime;
     DateOk: Boolean;                 // Vergleichswert(e) als Datum lesbar
     DateHasTime: Boolean;
+    /// pfoInList: die Werte (Grossbuchstaben, ohne Leerzeichen am Rand).
+    UpperValues: TArray<string>;
     /// Text der Filterzeile lesen ('' = keine Bedingung).
     procedure Parse(const S: string; AKind: TPPGFilterValueKind = fvkAuto);
     /// Gibt es eine Bedingung?
@@ -250,12 +254,53 @@ type
     function MatchNull: Boolean;
   end;
 
+type
+  /// Art eines Suchbegriffs (TPPGFindQuery): oder, muss (+), darf nicht (-).
+  TPPGFindTermKind = (ftkOr, ftkAnd, ftkNot);
+
+  TPPGFindTerm = record
+    Kind: TPPGFindTermKind;
+    Text: string;      // Grossbuchstaben; mit Platzhaltern % und _ (Wild)
+    Wild: Boolean;
+  end;
+
+  /// Suchtext des Suchfelds (FindText). Einfach: der ganze Text als ein
+  /// Begriff (Zelle enthaelt ihn). Erweitert (FindExtendedSyntax, wie
+  /// DevExpress UseExtendedSyntax): Leerzeichen trennen Begriffe, die mit
+  /// ODER verknuepft sind; "+wort" muss vorkommen, "-wort" darf nicht
+  /// vorkommen; "in Anfuehrungszeichen" ist ein Begriff mit Leerzeichen;
+  /// % steht fuer beliebig viele, _ fuer genau ein Zeichen. Alle Begriffe
+  /// gelten fuer die ganze Zeile (alle durchsuchten Zellen), ohne Gross-/
+  /// Kleinschreibung.
+  TPPGFindQuery = record
+    Terms: TArray<TPPGFindTerm>;
+    procedure Parse(const S: string; Extended: Boolean);
+    /// Kein Begriff (nichts zu suchen)?
+    function Empty: Boolean;
+    /// Enthaelt der Text (Grossbuchstaben) den Begriff I?
+    function TermIn(I: Integer; const U: string): Boolean;
+    /// Erfuellt eine Zeile (Texte ihrer Zellen in Grossbuchstaben) die Suche?
+    function RowMatches(const Cells: array of string): Boolean;
+    /// Treffer-Zelle einer passenden Zeile: enthaelt einen Begriff ohne "-"
+    /// (gibt es keinen solchen, zaehlt jede Zelle).
+    function CellHit(const U: string): Boolean;
+    /// Erste Fundstelle eines Begriffs ohne "-" und ohne Platzhalter im Text
+    /// (Grossbuchstaben) fuer die Markierung; False = keine.
+    function MarkAt(const U: string; out P, Len: Integer): Boolean;
+  end;
+
+/// Text U (Grossbuchstaben) enthaelt das Muster Pat mit % (beliebig viele)
+/// und _ (genau ein Zeichen).
+function PPGWildContains(const U, Pat: string): Boolean;
+
 /// Filtertext lesen (siehe TPPGFilterCondition).
 function PPGFilterParse(const S: string; Kind: TPPGFilterValueKind = fvkAuto): TPPGFilterCondition;
 /// Filtertext aus Operator und Werten (Gegenstueck zu Parse; Value2 nur fuer
-/// pfoBetween).
+/// pfoBetween; pfoInList: Value = Werte mit "|" getrennt).
 function PPGFilterText(Op: TPPGFilterOperator; const Value: string;
   const Value2: string = ''): string;
+/// Filtertext einer Werteliste ("=a|b|c|"; leere Liste = kein Filter).
+function PPGFilterListText(const Values: array of string): string;
 
 implementation
 
@@ -310,6 +355,7 @@ begin
     pfoBetween: Result := Value + '..' + Value2;
     pfoEmpty: Result := '=';
     pfoNotEmpty: Result := '<>';
+    pfoInList: Result := '=' + Value + '|';
   else
     // Enthaelt: mit Sternen, damit es auch bei Zahl/Datum "enthaelt" bleibt
     if Value = '' then
@@ -317,6 +363,19 @@ begin
     else
       Result := '*' + Value + '*';
   end;
+end;
+
+function PPGFilterListText(const Values: array of string): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  if Length(Values) = 0 then
+    Exit;
+  // Immer mit "|" am Ende: auch ein einzelner Wert bleibt eine Liste
+  Result := '=';
+  for I := 0 to High(Values) do
+    Result := Result + Trim(Values[I]) + '|';
 end;
 
 procedure TPPGFilterCondition.Parse(const S: string; AKind: TPPGFilterValueKind);
@@ -327,6 +386,24 @@ var
   function StartsWith(const Prefix: string): Boolean;
   begin
     Result := Copy(T, 1, Length(Prefix)) = Prefix;
+  end;
+
+  function SplitList(const L: string): TArray<string>;
+  var
+    I, K, N: Integer;
+  begin
+    // Werte am "|" trennen (auch leere), Leerzeichen am Rand weg
+    N := 0;
+    SetLength(Result, Length(L) + 1);
+    K := 1;
+    for I := 1 to Length(L) + 1 do
+      if (I > Length(L)) or (L[I] = '|') then
+      begin
+        Result[N] := Trim(Copy(L, K, I - K));
+        Inc(N);
+        K := I + 1;
+      end;
+    SetLength(Result, N);
   end;
 
 begin
@@ -341,6 +418,7 @@ begin
   NumOk := False;
   DateOk := False;
   DateHasTime := False;
+  UpperValues := nil;
   T := Trim(S);
   if T = '' then
   begin
@@ -364,6 +442,18 @@ begin
     Value := Trim(Copy(T, 3, MaxInt));
     if Value = '' then
       Op := pfoNotEmpty;
+  end
+  else if StartsWith('=') and (Pos('|', T) > 0) then
+  begin
+    // Werteliste: "=a|b|c" (ein "|" am Ende gehoert zur Schreibweise)
+    Op := pfoInList;
+    Value := Copy(T, 2, MaxInt);
+    if (Value <> '') and (Value[Length(Value)] = '|') then
+      Delete(Value, Length(Value), 1);
+    UpperValues := SplitList(AnsiUpperCase(Value));
+    UpperValue := AnsiUpperCase(Value);
+    UpperValue2 := '';
+    Exit;
   end
   else if StartsWith('=') then
   begin
@@ -443,7 +533,7 @@ end;
 
 function TPPGFilterCondition.Active: Boolean;
 begin
-  Result := (Op in [pfoEmpty, pfoNotEmpty]) or (Value <> '');
+  Result := (Op in [pfoEmpty, pfoNotEmpty, pfoInList]) or (Value <> '');
 end;
 
 function TPPGFilterCondition.Compares: Boolean;
@@ -453,7 +543,16 @@ begin
 end;
 
 function TPPGFilterCondition.MatchNull: Boolean;
+var
+  I: Integer;
 begin
+  if Op = pfoInList then
+  begin
+    for I := 0 to High(UpperValues) do
+      if UpperValues[I] = '' then
+        Exit(True);
+    Exit(False);
+  end;
   Result := Op in [pfoEmpty, pfoNotEqual];
 end;
 
@@ -467,6 +566,14 @@ begin
     pfoNotEmpty: Exit(Trim(S) <> '');
   end;
   U := AnsiUpperCase(S);
+  if Op = pfoInList then
+  begin
+    U := Trim(U);
+    for C := 0 to High(UpperValues) do
+      if UpperValues[C] = U then
+        Exit(True);
+    Exit(False);
+  end;
   case Op of
     pfoContains: Result := Pos(UpperValue, U) > 0;
     pfoBeginsWith: Result := Copy(U, 1, Length(UpperValue)) = UpperValue;
@@ -538,7 +645,7 @@ var
   D: TDateTime;
 begin
   case Op of
-    pfoEmpty, pfoNotEmpty: Exit(MatchPlainText(CellText));
+    pfoEmpty, pfoNotEmpty, pfoInList: Exit(MatchPlainText(CellText));
   end;
   if Compares then
     case Kind of
@@ -557,6 +664,203 @@ begin
           Exit(MatchNull);
     end;
   Result := MatchPlainText(CellText);
+end;
+
+{ TPPGFindQuery }
+
+function WildAt(const U, Pat: string; UI, PI: Integer): Boolean;
+begin
+  // Muster ab PI passt auf U ab UI (bis zum Musterende; Rest von U egal)
+  while PI <= Length(Pat) do
+  begin
+    case Pat[PI] of
+      '%':
+        begin
+          while (PI <= Length(Pat)) and (Pat[PI] = '%') do
+            Inc(PI);
+          if PI > Length(Pat) then
+            Exit(True);
+          while UI <= Length(U) do
+          begin
+            if WildAt(U, Pat, UI, PI) then
+              Exit(True);
+            Inc(UI);
+          end;
+          Exit(False);
+        end;
+      '_':
+        if UI > Length(U) then
+          Exit(False);
+    else
+      if (UI > Length(U)) or (U[UI] <> Pat[PI]) then
+        Exit(False);
+    end;
+    Inc(UI);
+    Inc(PI);
+  end;
+  Result := True;
+end;
+
+function PPGWildContains(const U, Pat: string): Boolean;
+var
+  I: Integer;
+begin
+  if Pat = '' then
+    Exit(True);
+  for I := 1 to Length(U) + 1 do
+    if WildAt(U, Pat, I, 1) then
+      Exit(True);
+  Result := False;
+end;
+
+procedure TPPGFindQuery.Parse(const S: string; Extended: Boolean);
+var
+  I, N: Integer;
+  T: string;
+  K: TPPGFindTermKind;
+
+  procedure AddTerm(AKind: TPPGFindTermKind; const AText: string; CanWild: Boolean);
+  begin
+    if AText = '' then
+      Exit;
+    SetLength(Terms, Length(Terms) + 1);
+    Terms[High(Terms)].Kind := AKind;
+    Terms[High(Terms)].Text := AnsiUpperCase(AText);
+    Terms[High(Terms)].Wild := CanWild and ((Pos('%', AText) > 0) or (Pos('_', AText) > 0));
+  end;
+
+begin
+  Terms := nil;
+  if not Extended then
+  begin
+    AddTerm(ftkOr, S, False);
+    Exit;
+  end;
+  I := 1;
+  N := Length(S);
+  while I <= N do
+  begin
+    while (I <= N) and (S[I] = ' ') do
+      Inc(I);
+    if I > N then
+      Break;
+    K := ftkOr;
+    if (S[I] = '+') or (S[I] = '-') then
+    begin
+      if S[I] = '+' then
+        K := ftkAnd
+      else
+        K := ftkNot;
+      Inc(I);
+    end;
+    if (I <= N) and (S[I] = '"') then
+    begin
+      // Begriff in Anfuehrungszeichen (bis zum naechsten " bzw. Ende)
+      Inc(I);
+      T := '';
+      while (I <= N) and (S[I] <> '"') do
+      begin
+        T := T + S[I];
+        Inc(I);
+      end;
+      Inc(I);
+    end
+    else
+    begin
+      T := '';
+      while (I <= N) and (S[I] <> ' ') do
+      begin
+        T := T + S[I];
+        Inc(I);
+      end;
+    end;
+    AddTerm(K, T, True);
+  end;
+end;
+
+function TPPGFindQuery.Empty: Boolean;
+begin
+  Result := Length(Terms) = 0;
+end;
+
+function TPPGFindQuery.TermIn(I: Integer; const U: string): Boolean;
+begin
+  if Terms[I].Wild then
+    Result := PPGWildContains(U, Terms[I].Text)
+  else
+    Result := Pos(Terms[I].Text, U) > 0;
+end;
+
+function TPPGFindQuery.RowMatches(const Cells: array of string): Boolean;
+var
+  I, C: Integer;
+  HasOr, AnyOr, Found: Boolean;
+begin
+  Result := False;
+  if Empty then
+    Exit;
+  HasOr := False;
+  AnyOr := False;
+  for I := 0 to High(Terms) do
+  begin
+    Found := False;
+    for C := 0 to High(Cells) do
+      if TermIn(I, Cells[C]) then
+      begin
+        Found := True;
+        Break;
+      end;
+    case Terms[I].Kind of
+      ftkOr:
+        begin
+          HasOr := True;
+          if Found then
+            AnyOr := True;
+        end;
+      ftkAnd:
+        if not Found then
+          Exit;
+      ftkNot:
+        if Found then
+          Exit;
+    end;
+  end;
+  Result := not HasOr or AnyOr;
+end;
+
+function TPPGFindQuery.CellHit(const U: string): Boolean;
+var
+  I: Integer;
+  HasPositive: Boolean;
+begin
+  HasPositive := False;
+  for I := 0 to High(Terms) do
+    if Terms[I].Kind <> ftkNot then
+    begin
+      HasPositive := True;
+      if TermIn(I, U) then
+        Exit(True);
+    end;
+  Result := not HasPositive;
+end;
+
+function TPPGFindQuery.MarkAt(const U: string; out P, Len: Integer): Boolean;
+var
+  I, Q: Integer;
+begin
+  P := 0;
+  Len := 0;
+  for I := 0 to High(Terms) do
+    if (Terms[I].Kind <> ftkNot) and not Terms[I].Wild then
+    begin
+      Q := Pos(Terms[I].Text, U);
+      if (Q > 0) and ((P = 0) or (Q < P)) then
+      begin
+        P := Q;
+        Len := Length(Terms[I].Text);
+      end;
+    end;
+  Result := P > 0;
 end;
 
 { TPPGGridFilterStage }

@@ -270,6 +270,8 @@ TPPGTabStyles.Tab = Nicht gewählte Reiter: Color, TextColor, BorderColor und Sc
 # --- TPPGToolBar ---
 TPPGToolBar.Items = Befehle der Leiste: Buttons, Umschalt-Buttons und Trenner; was nicht in die Breite passt, landet im „…"-Menü am Ende.
 > Im Designer per Collection-Editor; im Code `PPGToolBar1.Items.AddButton('Neu', $E710, NeuClick);`
+TPPGToolBar.OnDropdown = Vor dem Aufklappen des Menüs eines Befehls (Item.DropdownMenu, auch im „…"-Menü); Menu lässt sich durch ein anderes ersetzen oder mit nil das Aufklappen verhindern.
+> `procedure TForm1.tbDropdown(Sender: TObject; Item: TPPGToolItem; var Menu: TPopupMenu); begin miZuletzt.Enabled := FZuletzt.Count > 0; end;`
 TPPGToolBar.OnItemClick = Ein Item wurde ausgelöst (nach Item.OnClick bzw. Action.Execute); Item ist der Befehl.
 TPPGToolBar.ShowCaptions = True: Text neben dem Symbol; False: nur Symbole (Text dann als Tooltip).
 
@@ -280,6 +282,8 @@ TPPGToolItem.Action = Verknüpfte Action: Caption, Hint, Enabled, Checked, Visib
 TPPGToolItem.Caption = Beschriftung des Befehls (sichtbar mit ShowCaptions).
 TPPGToolItem.Color = Eigene Flächenfarbe – auch in Ruhe, z. B. um die Hauptaktion hervorzuheben; clDefault = flach nach Preset.
 > `PPGToolBar1.Items[0].Color := $00D77800; PPGToolBar1.Items[0].TextColor := clWhite;`
+TPPGToolItem.DropdownMenu = Aufklappmenü des Befehls: Ein Pfeil erscheint neben dem Text, das Menü öffnet unter dem Befehl (Pfeil runter bzw. Alt+Pfeil runter per Tastatur). Im „…"-Menü wird der Befehl zum Untermenü; nil = kein Menü.
+TPPGToolItem.DropdownStyle = Nur mit DropdownMenu: tdsMenu (Vorgabe) – der ganze Befehl klappt das Menü auf, OnClick läuft nicht; tdsSplit – geteilt: der Text löst den Befehl aus, der abgetrennte Pfeil klappt auf.
 TPPGToolItem.Down = Eingerastet (nur Style = tisCheck); Setzen im Code ohne Ereignis.
 TPPGToolItem.Enabled = False: Befehl grau und nicht auslösbar.
 TPPGToolItem.FontStyle = Zusätzliche Schriftstile nur für diesen Befehl; die Breite wird mit dieser Schrift gemessen.

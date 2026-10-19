@@ -18,6 +18,13 @@ unit PPG.DB.Navigator;
     aus; Strg+Pos1/Ende, Bild auf/ab, Einfg, Strg+Entf, F2, Strg+Enter, Esc.
   - Ein Control mit selbst gezeichneten Knoepfen und Fluent-Symbolen; das
     Suchfeld ist ein eingebettetes TPPGSearchEdit.
+  - OnButtonEnabled: Freigabe je Knopf nach eigenen Regeln (Rechte,
+    Zustand der Ansicht) zusaetzlich zur Regel der Datenmenge.
+  - CustomButtons: Zusatzknoepfe (Symbol aus Images/IconChar oder Text) hinter
+    den Standardknoepfen, auch im Ueberlauf, per Tastatur und Screenreader.
+  - PositionSource: Komponente mit IPPGViewPosition (z. B. ein Grid mit
+    Filter, Sortierung und Gruppen); Zaehler und Blaettern (Erster, Voriger,
+    Naechster, Letzter) folgen dann deren Ansicht statt der Datenmenge.
 
   TPPGDBRadioGroup - wie TDBRadioGroup (Items, Values, DataField, ReadOnly)
   auf TPPGRadioGroup: Segmente und Kacheln auch fuer Datenbankfelder.
@@ -32,11 +39,84 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.Types,
   Vcl.Controls, Vcl.Graphics, Vcl.Menus, Vcl.DBCtrls, Data.DB,
+  {$IFDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF}
   PPG.Types, PPG.Render.Intf, PPG.Accessibility, PPG.Controls.Base, PPG.SearchEdit,
   PPG.RadioGroup, PPG.DB.Controls;
 
 type
   TPPGNavDataLink = class;
+  TPPGCustomDBNavigator = class;
+
+  /// Zusatzknopf des Navigators (CustomButtons): Symbol aus Images/ImageIndex
+  /// bzw. der Symbolschrift (IconChar), sonst der Text (Caption). Ein Klick
+  /// loest OnClick des Knopfs und danach OnCustomButtonClick des Navigators aus.
+  TPPGNavButton = class(TCollectionItem)
+  private
+    FCaption: string;
+    FHint: string;
+    FImageIndex: TPPGImageIndex;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    FImageName: TImageName;
+    {$ENDIF}
+    FIconChar: Word;
+    FEnabled: Boolean;
+    FVisible: Boolean;
+    FTag: NativeInt;
+    FOnClick: TNotifyEvent;
+    procedure SetCaption(const Value: string);
+    procedure SetImageIndex(const Value: TPPGImageIndex);
+    procedure SetIconChar(const Value: Word);
+    procedure SetEnabled(const Value: Boolean);
+    procedure SetVisible(const Value: Boolean);
+    {$IFDEF PPG_HAS_IMAGENAME}
+    procedure SetImageName(const Value: TImageName);
+    {$ENDIF}
+  protected
+    function GetDisplayName: string; override;
+  public
+    constructor Create(Collection: TCollection); override;
+    procedure Assign(Source: TPersistent); override;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bildindex aus ImageName neu bestimmen (Images des Navigators).
+    procedure ResolveImageName;
+    {$ENDIF}
+    /// Navigator, zu dem der Knopf gehoert (nil = keiner).
+    function Navigator: TPPGCustomDBNavigator;
+    /// Zeigt der Knopf ein Symbol (Bild bzw. IconChar) statt Text?
+    function HasIcon: Boolean;
+  published
+    property Caption: string read FCaption write SetCaption;
+    property Hint: string read FHint write FHint;
+    property ImageIndex: TPPGImageIndex read FImageIndex write SetImageIndex default -1;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    /// Bild per Namen (TVirtualImageList, ab 10.4).
+    property ImageName: TImageName read FImageName write SetImageName;
+    {$ENDIF}
+    /// Zeichen der Symbolschrift (0 = keins); gilt, wenn kein Bild gesetzt ist.
+    property IconChar: Word read FIconChar write SetIconChar default 0;
+    property Enabled: Boolean read FEnabled write SetEnabled default True;
+    property Visible: Boolean read FVisible write SetVisible default True;
+    property Tag: NativeInt read FTag write FTag default 0;
+    property OnClick: TNotifyEvent read FOnClick write FOnClick;
+  end;
+
+  /// Zusatzknoepfe des Navigators (TPPGCustomDBNavigator.CustomButtons).
+  TPPGNavButtons = class(TOwnedCollection)
+  private
+    function GetItem(Index: Integer): TPPGNavButton;
+  protected
+    procedure Update(Item: TCollectionItem); override;
+  public
+    constructor Create(AOwner: TPPGCustomDBNavigator);
+    function Add: TPPGNavButton;
+    property Items[Index: Integer]: TPPGNavButton read GetItem; default;
+  end;
+
+  /// Freigabe eines Standardknopfs (Enabled = Ergebnis der Standardregel).
+  TPPGNavButtonEnabledEvent = procedure(Sender: TObject; Button: TNavigateBtn;
+    var Enabled: Boolean) of object;
+  /// Zusatzknopf angeklickt.
+  TPPGNavCustomButtonEvent = procedure(Sender: TObject; Button: TPPGNavButton) of object;
 
   TPPGCustomDBNavigator = class(TPPGCustomControl, IPPGAccessibleChildren)
   private
@@ -59,10 +139,16 @@ type
     // Layout
     FRects: array of record
       Btn: TNavigateBtn;
+      Custom: Integer; // Index in CustomButtons; -1 = Standardknopf (Btn)
       R: TRect;
     end;
     FMoreRect, FFilterRect, FCounterRect: TRect;
     FHidden: TNavButtonSet;
+    FHiddenCustom: array of Integer; // Zusatzknoepfe im Ueberlauf
+    FCustomButtons: TPPGNavButtons;
+    FPositionSource: TComponent;
+    FOnButtonEnabled: TPPGNavButtonEnabledEvent;
+    FOnCustomButtonClick: TPPGNavCustomButtonEvent;
     FLaidW, FLaidH: Integer;  // Groesse des letzten Layouts (-1 = neu rechnen)
     FHot, FDown, FFocusPart: Integer; // Index in FRects; -2 = Filter, -3 = Mehr
     FBeforeAction: ENavClick;
@@ -84,7 +170,23 @@ type
     procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
     procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
+    procedure CMViewPosition(var Message: TMessage); message CM_PPGVIEWPOSITION;
+    procedure SetCustomButtons(const Value: TPPGNavButtons);
+    procedure SetPositionSource(Value: TComponent);
+    /// Quelle als Schnittstelle (nil = keine; dann blaettert die Datenmenge).
+    function ViewSource: IPPGViewPosition;
+    function IsCustomButtonsStored: Boolean;
+    /// Breite eines Zusatzknopfs (Pixel).
+    function CustomButtonWidth(B: TPPGNavButton): Integer;
+    /// Teil I (Index in FRects): bedienbar, ausloesen, Name.
+    function PartEnabled(I: Integer): Boolean;
+    procedure PartClick(I: Integer);
+    function PartName(I: Integer): string;
   protected
+    /// Bildnamen der Zusatzknoepfe neu aufloesen (ImageName).
+    procedure ImagesChanged; override;
+    /// Zusatzknoepfe geaendert: Layout neu.
+    procedure CustomButtonsChanged; virtual;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Resize; override;
@@ -119,8 +221,20 @@ type
     destructor Destroy; override;
     /// Wie TDBNavigator.BtnClick: Aktion ausfuehren (BeforeAction, Aktion, OnClick).
     procedure BtnClick(Index: TNavigateBtn); virtual;
-    /// Ist der Knopf im aktuellen Zustand der Datenmenge bedienbar?
+    /// Ist der Knopf im aktuellen Zustand der Datenmenge bedienbar (danach
+    /// OnButtonEnabled)?
     function ButtonEnabled(Btn: TNavigateBtn): Boolean;
+    /// Freigabe neu fragen und neu zeichnen (z. B. nach geaenderten Rechten
+    /// fuer OnButtonEnabled oder geaenderter Ansicht der PositionSource).
+    procedure UpdateButtons;
+    /// Zusatzknopf ausloesen wie per Klick (OnClick des Knopfs, dann
+    /// OnCustomButtonClick); gesperrt bzw. unsichtbar: nichts.
+    procedure CustomButtonClick(Button: TPPGNavButton); virtual;
+    /// Ist der Zusatzknopf bedienbar (Navigator und Knopf aktiv, sichtbar)?
+    function CustomButtonEnabled(Button: TPPGNavButton): Boolean;
+    /// Lage eines Zusatzknopfs (Index in CustomButtons); leer = unsichtbar
+    /// oder im Ueberlauf.
+    function CustomButtonRect(Index: Integer): TRect;
     /// Lage eines Knopfs (Client); leer = unsichtbar oder im Ueberlauf.
     function ButtonRect(Btn: TNavigateBtn): TRect;
     /// Text des Zaehlers (wie angezeigt bzw. vorgelesen).
@@ -145,6 +259,16 @@ type
     property SearchField: string read FSearchField write FSearchField;
     property BeforeAction: ENavClick read FBeforeAction write FBeforeAction;
     property OnClick: ENavClick read FOnNavClick write FOnNavClick;
+    /// Zusatzknoepfe hinter den Standardknoepfen.
+    property CustomButtons: TPPGNavButtons read FCustomButtons write SetCustomButtons
+      stored IsCustomButtonsStored;
+    /// Komponente mit IPPGViewPosition (z. B. ein Grid): Zaehler und Blaettern
+    /// folgen ihrer Ansicht; nil = Datenmenge.
+    property PositionSource: TComponent read FPositionSource write SetPositionSource;
+    property OnButtonEnabled: TPPGNavButtonEnabledEvent read FOnButtonEnabled
+      write FOnButtonEnabled;
+    property OnCustomButtonClick: TPPGNavCustomButtonEvent read FOnCustomButtonClick
+      write FOnCustomButtonClick;
   end;
 
   TPPGNavDataLink = class(TDataLink)
@@ -174,6 +298,11 @@ type
     property ShowSearch;
     property ShowFilter;
     property SearchField;
+    property Images;
+    property CustomButtons;
+    property PositionSource;
+    property OnButtonEnabled;
+    property OnCustomButtonClick;
     { VCL-Standard }
     property Align;
     property Anchors;
@@ -265,7 +394,7 @@ type
 implementation
 
 uses
-  System.Math, System.UITypes, System.StrUtils, Vcl.Forms, Vcl.Dialogs, Winapi.oleacc,
+  System.Math, {$IFNDEF PPG_HAS_IMAGENAME}System.UITypes,{$ENDIF} System.StrUtils, Vcl.Forms, Vcl.ImgList, Vcl.Dialogs, Winapi.oleacc,
   PPG.Appearance, PPG.Exceptions, PPG.Lang, PPG.Consts, PPG.DpiUtils, PPG.Render.Gdi,
   PPG.IconFont, PPG.Tokens, PPG.Controls.Field, PPG.Dialogs, PPG.DB.Validator;
 
@@ -276,6 +405,7 @@ const
   BtnW = 36;          // logische px
   SearchW = 180;
   CounterMinW = 120;
+  CustomPadH = 10;    // logische px Rand neben dem Text eines Zusatzknopfs
   PartFilter = -2;
   PartMore = -3;
 
@@ -301,6 +431,156 @@ begin
   else
     Result := PPGStr(@SPPGNavCancelUpdates);
   end;
+end;
+
+{ TPPGNavButton }
+
+constructor TPPGNavButton.Create(Collection: TCollection);
+begin
+  inherited Create(Collection);
+  FImageIndex := -1;
+  FEnabled := True;
+  FVisible := True;
+end;
+
+procedure TPPGNavButton.Assign(Source: TPersistent);
+var
+  S: TPPGNavButton;
+begin
+  if Source is TPPGNavButton then
+  begin
+    S := TPPGNavButton(Source);
+    FCaption := S.FCaption;
+    FHint := S.FHint;
+    FImageIndex := S.FImageIndex;
+    {$IFDEF PPG_HAS_IMAGENAME}
+    FImageName := S.FImageName;
+    {$ENDIF}
+    FIconChar := S.FIconChar;
+    FEnabled := S.FEnabled;
+    FVisible := S.FVisible;
+    FTag := S.FTag;
+    FOnClick := S.FOnClick;
+    Changed(False);
+  end
+  else
+    inherited Assign(Source);
+end;
+
+function TPPGNavButton.GetDisplayName: string;
+begin
+  if FCaption <> '' then
+    Result := FCaption
+  else if FHint <> '' then
+    Result := FHint
+  else
+    Result := inherited GetDisplayName;
+end;
+
+function TPPGNavButton.Navigator: TPPGCustomDBNavigator;
+begin
+  if (Collection <> nil) and (Collection.Owner is TPPGCustomDBNavigator) then
+    Result := TPPGCustomDBNavigator(Collection.Owner)
+  else
+    Result := nil;
+end;
+
+function TPPGNavButton.HasIcon: Boolean;
+var
+  N: TPPGCustomDBNavigator;
+begin
+  N := Navigator;
+  Result := (FIconChar <> 0) or ((N <> nil) and (N.Images <> nil) and (FImageIndex >= 0) and
+    (FImageIndex < N.Images.Count));
+end;
+
+procedure TPPGNavButton.SetCaption(const Value: string);
+begin
+  if FCaption <> Value then
+  begin
+    FCaption := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGNavButton.SetImageIndex(const Value: TPPGImageIndex);
+begin
+  if FImageIndex <> Value then
+  begin
+    FImageIndex := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGNavButton.SetIconChar(const Value: Word);
+begin
+  if FIconChar <> Value then
+  begin
+    FIconChar := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGNavButton.SetEnabled(const Value: Boolean);
+begin
+  if FEnabled <> Value then
+  begin
+    FEnabled := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGNavButton.SetVisible(const Value: Boolean);
+begin
+  if FVisible <> Value then
+  begin
+    FVisible := Value;
+    Changed(False);
+  end;
+end;
+
+{$IFDEF PPG_HAS_IMAGENAME}
+procedure TPPGNavButton.ResolveImageName;
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := PPGImagesOf(Self);
+  // Unbekannter Name: -1 (die Liste kann zur Laufzeit befuellt werden)
+  if (FImageName <> '') and (Imgs <> nil) and Imgs.IsImageNameAvailable then
+    ImageIndex := Imgs.GetIndexByName(FImageName);
+end;
+
+procedure TPPGNavButton.SetImageName(const Value: TImageName);
+begin
+  if FImageName = Value then
+    Exit;
+  FImageName := Value;
+  ResolveImageName;
+end;
+{$ENDIF}
+
+{ TPPGNavButtons }
+
+constructor TPPGNavButtons.Create(AOwner: TPPGCustomDBNavigator);
+begin
+  inherited Create(AOwner, TPPGNavButton);
+end;
+
+function TPPGNavButtons.Add: TPPGNavButton;
+begin
+  Result := TPPGNavButton(inherited Add);
+end;
+
+function TPPGNavButtons.GetItem(Index: Integer): TPPGNavButton;
+begin
+  Result := TPPGNavButton(inherited Items[Index]);
+end;
+
+procedure TPPGNavButtons.Update(Item: TCollectionItem);
+begin
+  inherited Update(Item);
+  if Owner is TPPGCustomDBNavigator then
+    TPPGCustomDBNavigator(Owner).CustomButtonsChanged;
 end;
 
 { TPPGNavDataLink }
@@ -351,10 +631,13 @@ begin
   FFocusPart := 0;
   FLaidW := -1;
   FLaidH := -1;
+  FCustomButtons := TPPGNavButtons.Create(Self);
 end;
 
 destructor TPPGCustomDBNavigator.Destroy;
 begin
+  // Bei der Quelle abmelden (sie meldet sonst an einen freigegebenen Beobachter)
+  PositionSource := nil;
   // Filter der Datenmenge wiederherstellen, bevor der Handler ins Leere zeigt
   if FFilterOn then
     SetQuickFilter(False);
@@ -362,6 +645,7 @@ begin
   FreeAndNil(FDataLink);
   FreeAndNil(FHints);
   inherited Destroy;
+  FreeAndNil(FCustomButtons);
 end;
 
 procedure TPPGCustomDBNavigator.Loaded;
@@ -388,6 +672,97 @@ begin
     FSearch := nil;
   if AComponent = FOverflow then
     FOverflow := nil;
+  if AComponent = FPositionSource then
+  begin
+    // Quelle wird freigegeben: nicht mehr abmelden (sie ist schon im Abbau)
+    FPositionSource := nil;
+    if not (csDestroying in ComponentState) then
+    begin
+      DoLayout;
+      DataChanged;
+    end;
+  end;
+end;
+
+procedure TPPGCustomDBNavigator.SetCustomButtons(const Value: TPPGNavButtons);
+begin
+  FCustomButtons.Assign(Value);
+end;
+
+procedure TPPGCustomDBNavigator.CustomButtonsChanged;
+begin
+  if csDestroying in ComponentState then
+    Exit;
+  FHot := -1;
+  FDown := -1;
+  DoLayout;
+  Invalidate;
+  NotifyAccessibility(EVENT_OBJECT_REORDER);
+end;
+
+procedure TPPGCustomDBNavigator.ImagesChanged;
+{$IFDEF PPG_HAS_IMAGENAME}
+var
+  I: Integer;
+{$ENDIF}
+begin
+  inherited ImagesChanged;
+  if FCustomButtons = nil then
+    Exit;
+{$IFDEF PPG_HAS_IMAGENAME}
+  for I := 0 to FCustomButtons.Count - 1 do
+    FCustomButtons[I].ResolveImageName;
+{$ENDIF}
+  CustomButtonsChanged;
+end;
+
+procedure TPPGCustomDBNavigator.SetPositionSource(Value: TComponent);
+var
+  Src: IPPGViewPosition;
+begin
+  if (Value <> nil) and not Supports(Value, IPPGViewPosition) then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGInvalidPropertyValue), [Value.ClassName, Name, 'PositionSource']);
+  if Value = Self then
+    raise EPPGError.CreateFmt(PPGStr(@SPPGInvalidPropertyValue), [Value.ClassName, Name, 'PositionSource']);
+  if FPositionSource = Value then
+    Exit;
+  if FPositionSource <> nil then
+  begin
+    if Supports(FPositionSource, IPPGViewPosition, Src) then
+      Src.ViewPositionObserver(Self, False);
+    Src := nil;
+    FPositionSource.RemoveFreeNotification(Self);
+  end;
+  FPositionSource := Value;
+  if FPositionSource <> nil then
+  begin
+    FPositionSource.FreeNotification(Self);
+    if Supports(FPositionSource, IPPGViewPosition, Src) then
+      Src.ViewPositionObserver(Self, True);
+  end;
+  if not (csDestroying in ComponentState) then
+    DataChanged;
+end;
+
+function TPPGCustomDBNavigator.IsCustomButtonsStored: Boolean;
+begin
+  Result := FCustomButtons.Count > 0;
+end;
+
+function TPPGCustomDBNavigator.ViewSource: IPPGViewPosition;
+begin
+  if (FPositionSource = nil) or not Supports(FPositionSource, IPPGViewPosition, Result) then
+    Result := nil;
+end;
+
+procedure TPPGCustomDBNavigator.CMViewPosition(var Message: TMessage);
+begin
+  DataChanged;
+end;
+
+procedure TPPGCustomDBNavigator.UpdateButtons;
+begin
+  DataChanged;
 end;
 
 function TPPGCustomDBNavigator.GetDataSource: TDataSource;
@@ -505,6 +880,7 @@ var
   Cmd: IDataSetCommandSupport;
   {$ENDIF}
   Browse, CanMod, Empty: Boolean;
+  Src: IPPGViewPosition;
 begin
   Result := False;
   if not Enabled or not FDataLink.Active then
@@ -513,10 +889,30 @@ begin
   Browse := not (DS.State in dsEditModes);
   CanMod := DS.CanModify;
   Empty := DS.IsEmpty;
-  // Wie TDBNavigator.EditingChanged/DataChanged
+  Src := ViewSource;
+  // Wie TDBNavigator.EditingChanged/DataChanged; mit PositionSource folgen
+  // Erster/Voriger/Naechster/Letzter der Ansicht der Quelle
   case Btn of
-    nbFirst, nbPrior: Result := Browse and not DS.Bof;
-    nbNext, nbLast: Result := Browse and not DS.Eof;
+    nbFirst:
+      if Src <> nil then
+        Result := Browse and Src.ViewCanMove(pvmFirst)
+      else
+        Result := Browse and not DS.Bof;
+    nbPrior:
+      if Src <> nil then
+        Result := Browse and Src.ViewCanMove(pvmPrior)
+      else
+        Result := Browse and not DS.Bof;
+    nbNext:
+      if Src <> nil then
+        Result := Browse and Src.ViewCanMove(pvmNext)
+      else
+        Result := Browse and not DS.Eof;
+    nbLast:
+      if Src <> nil then
+        Result := Browse and Src.ViewCanMove(pvmLast)
+      else
+        Result := Browse and not DS.Eof;
     nbInsert: Result := CanMod;
     nbDelete: Result := CanMod and not Empty and Browse;
     nbEdit: Result := CanMod and Browse and not Empty;
@@ -529,12 +925,16 @@ begin
       (dcEnabled in Cmd.GetCommandStates(sCancelUpdatesDataSetCommand));
     {$ENDIF}
   end;
+  // Eigene Regel der Anwendung (Rechte, Zustand der Ansicht)
+  if Assigned(FOnButtonEnabled) then
+    FOnButtonEnabled(Self, Btn, Result);
 end;
 
 function TPPGCustomDBNavigator.CounterText: string;
 var
   DS: TDataSet;
   N, R: Integer;
+  Src: IPPGViewPosition;
 begin
   Result := '';
   if not FDataLink.Active then
@@ -542,6 +942,20 @@ begin
   DS := FDataLink.DataSet;
   if DS.State = dsInsert then
     Exit(PPGStr(@SPPGNavNewRecord));
+  Src := ViewSource;
+  if Src <> nil then
+  begin
+    // Position in der Ansicht der Quelle (Filter, Sortierung, Gruppen)
+    N := Src.ViewRecordCount;
+    if N <= 0 then
+      Exit(PPGStr(@SPPGNavNoRecords));
+    R := Src.ViewRecordNo;
+    if R >= 1 then
+      Result := Format(PPGStr(@SPPGNavCounter), [R, N])
+    else
+      Result := Format(PPGStr(@SPPGNavCount), [N]);
+    Exit;
+  end;
   N := DS.RecordCount;
   if (N = 0) or DS.IsEmpty then
     Exit(PPGStr(@SPPGNavNoRecords));
@@ -563,11 +977,28 @@ end;
 
 { Layout }
 
+function TPPGCustomDBNavigator.CustomButtonWidth(B: TPPGNavButton): Integer;
+var
+  PPI: Integer;
+begin
+  // Symbol: Knopfbreite wie die Standardknoepfe; Text: Text + Rand
+  PPI := ScalePPI;
+  Result := PPGScale(BtnW, PPI);
+  if B.HasIcon or (B.Caption = '') then
+    Exit;
+  Result := Max(Result, PPGMeasureTextNoCanvas(StripHotkey(B.Caption), Font, 0, False).cx +
+    2 * PPGScale(CustomPadH, PPI));
+end;
+
 procedure TPPGCustomDBNavigator.DoLayout;
 var
-  PPI, W, X, Right, H, N, I, Need, CW: Integer;
+  PPI, W, X, Right, H, N, I, Need, CW, NC: Integer;
   B: TNavigateBtn;
-  Btns: array of TNavigateBtn;
+  Ent: array of record
+    Btn: TNavigateBtn;
+    Custom: Integer;
+    W: Integer;
+  end;
   Fits: Boolean;
 begin
   // Width/Height statt ClientWidth/ClientHeight: ohne Rahmen gleich, und kein Fensterhandle noetig
@@ -582,12 +1013,26 @@ begin
   PPI := ScalePPI;
   W := PPGScale(BtnW, PPI);
   H := Height;
+  // Eintraege: Standardknoepfe, danach die sichtbaren Zusatzknoepfe
   N := 0;
-  SetLength(Btns, Ord(High(TNavigateBtn)) + 1);
+  NC := 0;
+  if FCustomButtons <> nil then
+    NC := FCustomButtons.Count;
+  SetLength(Ent, Ord(High(TNavigateBtn)) + 1 + NC);
   for B := Low(TNavigateBtn) to High(TNavigateBtn) do
     if B in FVisibleButtons then
     begin
-      Btns[N] := B;
+      Ent[N].Btn := B;
+      Ent[N].Custom := -1;
+      Ent[N].W := W;
+      Inc(N);
+    end;
+  for I := 0 to NC - 1 do
+    if FCustomButtons[I].Visible then
+    begin
+      Ent[N].Btn := nbFirst;
+      Ent[N].Custom := I;
+      Ent[N].W := CustomButtonWidth(FCustomButtons[I]);
       Inc(N);
     end;
   // Platz rechts: Suchfeld, Filterknopf, Zaehler
@@ -611,33 +1056,42 @@ begin
   if FShowCounter then
     CW := PPGScale(CounterMinW, PPI);
   // Passen alle Knoepfe und der Zaehler? Sonst erst der Zaehler, dann Ueberlauf
-  Need := N * W + CW;
+  Need := CW;
+  for I := 0 to N - 1 do
+    Inc(Need, Ent[I].W);
   if (Need > Right) and (CW > 0) then
   begin
+    Dec(Need, CW);
     CW := 0;
-    Need := N * W;
   end;
   Fits := Need <= Right;
   FHidden := [];
+  SetLength(FHiddenCustom, 0);
   SetLength(FRects, 0);
   FMoreRect := Rect(0, 0, 0, 0);
   X := 0;
   for I := 0 to N - 1 do
   begin
-    if not Fits and (X + 2 * W > Right) then
+    if not Fits and (X + Ent[I].W + W > Right) then
     begin
       // Rest ins Ueberlaufmenue
       FMoreRect := Rect(X, 0, X + W, H);
-      for N := I to High(Btns) do
-        if Btns[N] in FVisibleButtons then
-          Include(FHidden, Btns[N]);
+      for NC := I to N - 1 do
+        if Ent[NC].Custom < 0 then
+          Include(FHidden, Ent[NC].Btn)
+        else
+        begin
+          SetLength(FHiddenCustom, Length(FHiddenCustom) + 1);
+          FHiddenCustom[High(FHiddenCustom)] := Ent[NC].Custom;
+        end;
       Inc(X, W);
       Break;
     end;
     SetLength(FRects, Length(FRects) + 1);
-    FRects[High(FRects)].Btn := Btns[I];
-    FRects[High(FRects)].R := Rect(X, 0, X + W, H);
-    Inc(X, W);
+    FRects[High(FRects)].Btn := Ent[I].Btn;
+    FRects[High(FRects)].Custom := Ent[I].Custom;
+    FRects[High(FRects)].R := Rect(X, 0, X + Ent[I].W, H);
+    Inc(X, Ent[I].W);
   end;
   if CW > 0 then
     FCounterRect := Rect(X + PPGScale(8, PPI), 0, Right, H)
@@ -673,9 +1127,61 @@ var
 begin
   EnsureLayout;
   for I := 0 to High(FRects) do
-    if FRects[I].Btn = Btn then
+    if (FRects[I].Custom < 0) and (FRects[I].Btn = Btn) then
       Exit(FRects[I].R);
   Result := Rect(0, 0, 0, 0);
+end;
+
+function TPPGCustomDBNavigator.CustomButtonRect(Index: Integer): TRect;
+var
+  I: Integer;
+begin
+  EnsureLayout;
+  for I := 0 to High(FRects) do
+    if FRects[I].Custom = Index then
+      Exit(FRects[I].R);
+  Result := Rect(0, 0, 0, 0);
+end;
+
+function TPPGCustomDBNavigator.CustomButtonEnabled(Button: TPPGNavButton): Boolean;
+begin
+  Result := Enabled and (Button <> nil) and Button.Enabled and Button.Visible;
+end;
+
+function TPPGCustomDBNavigator.PartEnabled(I: Integer): Boolean;
+begin
+  if (I < 0) or (I > High(FRects)) then
+    Exit(False);
+  if FRects[I].Custom >= 0 then
+    Result := CustomButtonEnabled(FCustomButtons[FRects[I].Custom])
+  else
+    Result := ButtonEnabled(FRects[I].Btn);
+end;
+
+procedure TPPGCustomDBNavigator.PartClick(I: Integer);
+begin
+  if (I < 0) or (I > High(FRects)) then
+    Exit;
+  if FRects[I].Custom >= 0 then
+    CustomButtonClick(FCustomButtons[FRects[I].Custom])
+  else
+    BtnClick(FRects[I].Btn);
+end;
+
+function TPPGCustomDBNavigator.PartName(I: Integer): string;
+var
+  B: TPPGNavButton;
+begin
+  Result := '';
+  if (I < 0) or (I > High(FRects)) then
+    Exit;
+  if FRects[I].Custom < 0 then
+    Exit(ButtonHint(FRects[I].Btn));
+  B := FCustomButtons[FRects[I].Custom];
+  if B.Caption <> '' then
+    Result := StripHotkey(B.Caption)
+  else
+    Result := B.Hint;
 end;
 
 function TPPGCustomDBNavigator.PartAt(X, Y: Integer): Integer;
@@ -709,27 +1215,63 @@ var
   F: TFont;
   HC: Boolean;
 
-  procedure DrawPart(const PR: TRect; Part: Integer; Icon: Word; Enabled, Pressed: Boolean);
-  var
-    BR: TRect;
+  function DrawFrame(const PR: TRect; Part: Integer; Enabled, Pressed: Boolean): TRect;
   begin
-    BR := PR;
-    InflateRect(BR, -PPGScale(2, PPI), -PPGScale(2, PPI));
+    Result := PR;
+    InflateRect(Result, -PPGScale(2, PPI), -PPGScale(2, PPI));
     if Pressed then
-      ACanvas.FillRoundRect(BR, Rad, Accent, 60)
+      ACanvas.FillRoundRect(Result, Rad, Accent, 60)
     else if (Part = FDown) and (Part = FHot) and Enabled then
-      ACanvas.FillRoundRect(BR, Rad, Txt, 40)
+      ACanvas.FillRoundRect(Result, Rad, Txt, 40)
     else if (Part = FHot) and Enabled then
-      ACanvas.FillRoundRect(BR, Rad, Txt, 20)
+      ACanvas.FillRoundRect(Result, Rad, Txt, 20)
     else if not FFlat then
-      ACanvas.FrameRoundRect(BR, Rad, Max(1, PPGScale(1, PPI)), St.BorderColor, 255);
+      ACanvas.FrameRoundRect(Result, Rad, Max(1, PPGScale(1, PPI)), St.BorderColor, 255);
     if Enabled then
       C := Txt
     else
       C := Dis;
-    PPGDrawIconChar(ACanvas, BR, Icon, C, Sz);
+  end;
+
+  procedure DrawFocus(const BR: TRect; Part: Integer);
+  begin
     if Focused and FocusVisible and (Part = FFocusPart) then
       ACanvas.FrameRoundRect(BR, Rad, PPGScale(2, PPI), Accent, 255);
+  end;
+
+  procedure DrawPart(const PR: TRect; Part: Integer; Icon: Word; Enabled, Pressed: Boolean);
+  var
+    BR: TRect;
+  begin
+    BR := DrawFrame(PR, Part, Enabled, Pressed);
+    PPGDrawIconChar(ACanvas, BR, Icon, C, Sz);
+    DrawFocus(BR, Part);
+  end;
+
+  procedure DrawCustom(Part: Integer; Enabled: Boolean);
+  var
+    BR: TRect;
+    B: TPPGNavButton;
+    T2: TFont;
+  begin
+    B := FCustomButtons[FRects[Part].Custom];
+    BR := DrawFrame(FRects[Part].R, Part, Enabled, False);
+    if (Images <> nil) and (B.ImageIndex >= 0) and (B.ImageIndex < Images.Count) then
+      ACanvas.DrawImage(Images, B.ImageIndex, (BR.Left + BR.Right - Images.Width) div 2,
+        (BR.Top + BR.Bottom - Images.Height) div 2, Enabled)
+    else if B.IconChar <> 0 then
+      PPGDrawIconChar(ACanvas, BR, B.IconChar, C, Sz)
+    else if B.Caption <> '' then
+    begin
+      T2 := nil;
+      try
+        ACanvas.DrawText(BR, B.Caption, PPGStyledFont(Font, [], T2), C,
+          DrawTextBiDiModeFlags(DT_SINGLELINE or DT_VCENTER or DT_CENTER or DT_END_ELLIPSIS));
+      finally
+        T2.Free;
+      end;
+    end;
+    DrawFocus(BR, Part);
   end;
 
 begin
@@ -751,8 +1293,11 @@ begin
   Sz := PPGScale(16, PPI);
   for I := 0 to High(FRects) do
   begin
-    En := ButtonEnabled(FRects[I].Btn);
-    DrawPart(FRects[I].R, I, BtnIcons[FRects[I].Btn], En, False);
+    En := PartEnabled(I);
+    if FRects[I].Custom >= 0 then
+      DrawCustom(I, En)
+    else
+      DrawPart(FRects[I].R, I, BtnIcons[FRects[I].Btn], En, False);
   end;
   if not IsRectEmpty(FMoreRect) then
     DrawPart(FMoreRect, PartMore, Ord(PPGIconChar(igMore)), Enabled, False);
@@ -786,6 +1331,7 @@ end;
 procedure TPPGCustomDBNavigator.BtnClick(Index: TNavigateBtn);
 var
   DS: TDataSet;
+  Src: IPPGViewPosition;
   {$IFDEF PPG_HAS_DATASETCOMMANDS}
   Cmd: IDataSetCommandSupport;
   {$ENDIF}
@@ -795,6 +1341,18 @@ begin
   if Assigned(FBeforeAction) then
     FBeforeAction(Self, Index);
   DS := FDataLink.DataSet;
+  Src := ViewSource;
+  if (Src <> nil) and (Index in [nbFirst, nbPrior, nbNext, nbLast]) then
+  begin
+    // Blaettern in der Ansicht der Quelle (die Datenmenge folgt ihr)
+    case Index of
+      nbFirst: Src.ViewMove(pvmFirst);
+      nbPrior: Src.ViewMove(pvmPrior);
+      nbNext: Src.ViewMove(pvmNext);
+      nbLast: Src.ViewMove(pvmLast);
+    end;
+  end
+  else
   case Index of
     nbFirst: DS.First;
     nbPrior: DS.Prior;
@@ -824,8 +1382,27 @@ begin
 end;
 
 procedure TPPGCustomDBNavigator.OverflowClick(Sender: TObject);
+var
+  T: NativeInt;
 begin
-  BtnClick(TNavigateBtn((Sender as TMenuItem).Tag));
+  T := (Sender as TMenuItem).Tag;
+  if T < 0 then
+  begin
+    if -1 - T < FCustomButtons.Count then
+      CustomButtonClick(FCustomButtons[-1 - T]);
+  end
+  else
+    BtnClick(TNavigateBtn(T));
+end;
+
+procedure TPPGCustomDBNavigator.CustomButtonClick(Button: TPPGNavButton);
+begin
+  if not CustomButtonEnabled(Button) then
+    Exit;
+  if Assigned(Button.OnClick) then
+    Button.OnClick(Button);
+  if Assigned(FOnCustomButtonClick) then
+    FOnCustomButtonClick(Self, Button);
 end;
 
 { Suche und Filter }
@@ -1028,7 +1605,7 @@ begin
   if P >= 0 then
   begin
     FFocusPart := P;
-    BtnClick(FRects[P].Btn);
+    PartClick(P);
   end
   else if P = PartFilter then
     SetQuickFilter(not FFilterOn)
@@ -1051,6 +1628,19 @@ begin
         Item.OnClick := OverflowClick;
         FOverflow.Items.Add(Item);
       end;
+    // Zusatzknoepfe im Ueberlauf: Tag = -1 - Index in CustomButtons
+    for D := 0 to High(FHiddenCustom) do
+    begin
+      Item := TMenuItem.Create(FOverflow);
+      if FCustomButtons[FHiddenCustom[D]].Caption <> '' then
+        Item.Caption := FCustomButtons[FHiddenCustom[D]].Caption
+      else
+        Item.Caption := FCustomButtons[FHiddenCustom[D]].Hint;
+      Item.Tag := -1 - FHiddenCustom[D];
+      Item.Enabled := CustomButtonEnabled(FCustomButtons[FHiddenCustom[D]]);
+      Item.OnClick := OverflowClick;
+      FOverflow.Items.Add(Item);
+    end;
     Pt := ClientToScreen(Point(FMoreRect.Left, FMoreRect.Bottom));
     FOverflow.Popup(Pt.X, Pt.Y);
   end;
@@ -1074,7 +1664,10 @@ begin
   P := PartAt(Message.HintInfo.CursorPos.X, Message.HintInfo.CursorPos.Y);
   if P >= 0 then
   begin
-    Message.HintInfo.HintStr := ButtonHint(FRects[P].Btn);
+    if (FRects[P].Custom >= 0) and (FCustomButtons[FRects[P].Custom].Hint <> '') then
+      Message.HintInfo.HintStr := FCustomButtons[FRects[P].Custom].Hint
+    else
+      Message.HintInfo.HintStr := PartName(P);
     Message.HintInfo.CursorRect := FRects[P].R;
   end
   else if P = PartFilter then
@@ -1122,7 +1715,7 @@ begin
     VK_SPACE:
       if (FFocusPart >= 0) and (FFocusPart <= High(FRects)) then
       begin
-        BtnClick(FRects[FFocusPart].Btn);
+        PartClick(FFocusPart);
         Key := 0;
       end;
     VK_RETURN:
@@ -1130,7 +1723,7 @@ begin
         Run(nbPost)
       else if (FFocusPart >= 0) and (FFocusPart <= High(FRects)) then
       begin
-        BtnClick(FRects[FFocusPart].Btn);
+        PartClick(FFocusPart);
         Key := 0;
       end;
     VK_HOME: if ssCtrl in Shift then Run(nbFirst);
@@ -1153,7 +1746,7 @@ begin
     // Standardaktion des Screenreaders (nie im COM-Aufruf selbst)
     Id := Integer(Message.WParam) - 1;
     if (Id >= 0) and (Id <= High(FRects)) then
-      BtnClick(FRects[Id].Btn);
+      PartClick(Id);
     Exit;
   end;
   inherited WndProc(Message);
@@ -1180,7 +1773,7 @@ end;
 function TPPGCustomDBNavigator.AccChildName(Id: Integer): string;
 begin
   if (Id >= 1) and (Id <= Length(FRects)) then
-    Result := ButtonHint(FRects[Id - 1].Btn)
+    Result := PartName(Id - 1)
   else
     Result := '';
 end;
@@ -1195,7 +1788,7 @@ begin
   Result := 0;
   if (Id < 1) or (Id > Length(FRects)) then
     Exit;
-  if not ButtonEnabled(FRects[Id - 1].Btn) then
+  if not PartEnabled(Id - 1) then
     Exit(STATE_SYSTEM_UNAVAILABLE);
   Result := STATE_SYSTEM_FOCUSABLE;
   if Focused and (Id - 1 = FFocusPart) then

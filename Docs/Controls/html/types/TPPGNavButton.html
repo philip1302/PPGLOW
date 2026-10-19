@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGNavButton</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGNavButton</h1>
+<p>Typ in Unit <code>PPG.DB.Navigator</code> - Basis <code>TCollectionItem</code></p>
+<p>Zusatzknopf des Navigators (CustomButtons): Symbol aus Images/ImageIndex bzw. der Symbolschrift (IconChar), sonst der Text (Caption). Ein Klick loest OnClick des Knopfs und danach OnCustomButtonClick des Navigators aus.</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>Caption</code></td><td><code>string</code></td><td></td><td>Text des Zusatzknopfs, wenn kein Symbol gesetzt ist; ein &amp; wird f&#252;r den Screenreader entfernt.</td></tr>
+<tr><td><code>Hint</code></td><td><code>string</code></td><td></td><td>Hinweistext; bei reinen Symbolkn&#246;pfen auch der Name f&#252;r den Screenreader.</td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Bild aus Images des Navigators (-1 = keins).</td></tr>
+<tr><td><code>ImageName</code></td><td><code>TImageName</code></td><td></td><td>Bild per Namen aus Images (TVirtualImageList, ab Delphi 10.4).</td></tr>
+<tr><td><code>IconChar</code></td><td><code>Word</code></td><td><code>0</code></td><td>Zeichen der Symbolschrift (0 = keins); gilt, wenn kein Bild aus Images gesetzt ist.</td></tr>
+<tr><td><code>Enabled</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False = gesperrt: grau, kein Klick (Vorgabe True).</td></tr>
+<tr><td><code>Visible</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>False = ausgeblendet; die folgenden Kn&#246;pfe r&#252;cken auf (Vorgabe True).</td></tr>
+<tr><td><code>Tag</code></td><td><code>NativeInt</code></td><td><code>0</code></td><td>Freie Zahl f&#252;r eigene Zwecke.</td></tr>
+</table>
+<h2>Ereignisse</h2>
+<table>
+<tr><th>Ereignis</th><th>Typ und Parameter</th><th>Wann und wozu</th></tr>
+<tr><td><code>OnClick</code></td><td><code>TNotifyEvent</code> <code>(Sender: TObject)</code></td><td>Klick auf den Knopf; Sender ist der TPPGNavButton. Danach folgt OnCustomButtonClick des Navigators.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="TPPGNavButtons.html">TPPGNavButtons</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

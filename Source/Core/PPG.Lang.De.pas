@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 278;
+  PPGLangDeCount = 293;
 
 implementation
 
@@ -106,6 +106,14 @@ begin
     '%s ist nicht leer');
   PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescJoin,
     '%s und %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescInList,
+    '%s ist eines von %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridFilterValues,
+    'Nach Wert filtern');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridFilterAllValues,
+    '(Alle)');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridFilterEmptyValue,
+    '(Leer)');
   PPGAddTranslation(PPGLangDeCode, @SPPGFilterBarText,
     'Filter: %s');
   PPGAddTranslation(PPGLangDeCode, @SPPGFilterBarClear,
@@ -276,6 +284,28 @@ begin
     'Alle Gruppen zuklappen');
   PPGAddTranslation(PPGLangDeCode, @SPPGGridGroupName,
     '%s: %s, %d Zeilen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateWeek,
+    'KW %d, %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateQuarter,
+    'Q%d %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateOlder,
+    #$00C4'lter');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateLastWeek,
+    'Letzte Woche');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateEarlierThisWeek,
+    'Fr'#$00FC'her in dieser Woche');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateYesterday,
+    'Gestern');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateToday,
+    'Heute');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateTomorrow,
+    'Morgen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateLaterThisWeek,
+    'Sp'#$00E4'ter in dieser Woche');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateNextWeek,
+    'N'#$00E4'chste Woche');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridDateLater,
+    'Sp'#$00E4'ter');
   PPGAddTranslation(PPGLangDeCode, @SPPGPrintFooterDefault,
     'Seite [Seite] von [Seiten]');
   PPGAddTranslation(PPGLangDeCode, @SPPGPrintNoPrinter,

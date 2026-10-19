@@ -23,6 +23,9 @@ ConfirmDelete, Flat, BeforeAction, OnClick mit TNavigateBtn). Mehrwert:
 - Ueberlauf: Passen nicht alle Knoepfe, kommen die hinteren in ein Menue.
 - Tastatur (mit Fokus): Pfeile wechseln den Knopf, Leertaste/Enter loest aus; Strg+Pos1/Ende, Bild auf/ab, Einfg, Strg+Entf, F2, Strg+Enter, Esc.
 - Ein Control mit selbst gezeichneten Knoepfen und Fluent-Symbolen; das Suchfeld ist ein eingebettetes TPPGSearchEdit.
+- OnButtonEnabled: Freigabe je Knopf nach eigenen Regeln (Rechte, Zustand der Ansicht) zusaetzlich zur Regel der Datenmenge.
+- CustomButtons: Zusatzknoepfe (Symbol aus Images/IconChar oder Text) hinter den Standardknoepfen, auch im Ueberlauf, per Tastatur und Screenreader.
+- PositionSource: Komponente mit IPPGViewPosition (z. B. ein Grid mit Filter, Sortierung und Gruppen); Zaehler und Blaettern (Erster, Voriger, Naechster, Letzter) folgen dann deren Ansicht statt der Datenmenge.
 
 TPPGDBRadioGroup - wie TDBRadioGroup (Items, Values, DataField, ReadOnly)
 auf TPPGRadioGroup: Segmente und Kacheln auch fuer Datenbankfelder.

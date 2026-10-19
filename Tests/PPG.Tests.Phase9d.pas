@@ -32,7 +32,7 @@ type
 const
   /// Alle Texte aus PPG.Consts (die Vollstaendigkeit gegen die Datei prueft
   /// zusaetzlich Build\make-lang.ps1 bzw. der Regel-Pruefer).
-  AllTexts: array[0..277] of PResStringRec = (
+  AllTexts: array[0..292] of PResStringRec = (
     @SPPGInvalidPropertyValue, @SPPGValueOutOfRange, @SPPGValueClamped, @SPPGUnknownPreset,
     @SPPGUnknownPresetFallback, @SPPGRendererAlreadyRegistered, @SPPGRendererClassNil,
     @SPPGPaintFailed, @SPPGGdiPlusStartupFailed, @SPPGGdiPlusCallFailed, @SPPGOSCallFailed,
@@ -159,7 +159,12 @@ const
     @SPPGKanbanColumnMoved,
     @SPPGTrackRangeValue,
     @SPPGTrackRangeFrom,
-    @SPPGTrackRangeTo, @SPPGImageUnknownFormat);
+    @SPPGTrackRangeTo, @SPPGImageUnknownFormat,
+    @SPPGFilterDescInList, @SPPGGridFilterValues, @SPPGGridFilterAllValues,
+    @SPPGGridFilterEmptyValue, @SPPGGridDateWeek, @SPPGGridDateQuarter, @SPPGGridDateOlder,
+    @SPPGGridDateLastWeek, @SPPGGridDateEarlierThisWeek, @SPPGGridDateYesterday,
+    @SPPGGridDateToday, @SPPGGridDateTomorrow, @SPPGGridDateLaterThisWeek,
+    @SPPGGridDateNextWeek, @SPPGGridDateLater);
 
 var
   GChanges: Integer;
