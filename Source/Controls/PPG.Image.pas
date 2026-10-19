@@ -845,8 +845,9 @@ end;
 
 function TPPGImageView.IsImageIndexStored(Dark: Boolean): Boolean;
 begin
-  // Mit Namen wird nur ImageName gespeichert
-  Result := (GetImageIndex(Ord(Dark)) <> -1) and not ImageNameAvailable;
+  // Wie VCL: Wird ImageName gespeichert, entfaellt der Index; sonst (Bild
+  // ohne Namen, ImageName leer) bleibt der Index, damit das Bild nicht verloren geht
+  Result := (GetImageIndex(Ord(Dark)) <> -1) and not IsImageNameStored(Dark);
 end;
 
 {$IFDEF PPG_HAS_IMAGENAME}

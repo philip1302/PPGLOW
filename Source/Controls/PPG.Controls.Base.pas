@@ -405,6 +405,13 @@ type
 /// Bilderliste (published "Images") des naechsten Besitzers: Collection-Owner
 /// bzw. Parent (fuer ImageName an Eintraegen und Seiten).
 function PPGImagesOf(Start: TPersistent): TCustomImageList;
+{$IFDEF PPG_HAS_IMAGENAME}
+/// Fuehrt ImageName eines Eintrags nach einer Aenderung von ImageIndex nach
+/// (wie VCL): Name := Name des Bildes an Index der Bilderliste von Item. Ein
+/// Name, der bereits auf Index zeigt (auch ein unbekannter bei Index -1),
+/// bleibt unveraendert; ohne Liste mit Namen geschieht nichts.
+procedure PPGSyncItemImageName(Item: TPersistent; Index: Integer; var Name: TImageName);
+{$ENDIF}
 
 type
   /// Ersatz fuer die Systemabfrage SPI_GETWHEELSCROLLLINES (Tests): liefert
@@ -552,8 +559,10 @@ end;
 
 function TPPGCustomControl.IsImageIndexStoredByName: Boolean;
 begin
-  // Mit Namen wird nur ImageName gespeichert (robust gegen Umsortieren)
-  Result := (FImageIndex <> -1) and not ImageNameAvailable;
+  // Wie VCL: Wird ImageName gespeichert, entfaellt der Index (robust gegen
+  // Umsortieren). Sonst (TImageList, Bild ohne Namen, ImageName leer) muss
+  // der Index gespeichert werden, damit die Bildreferenz nicht verloren geht.
+  Result := (FImageIndex <> -1) and not IsImageNameStored;
 end;
 
 function TPPGCustomControl.IsImageNameStored: Boolean;
@@ -2442,6 +2451,26 @@ begin
       Exit;
   end;
 end;
+
+{$IFDEF PPG_HAS_IMAGENAME}
+procedure PPGSyncItemImageName(Item: TPersistent; Index: Integer; var Name: TImageName);
+var
+  Imgs: TCustomImageList;
+begin
+  Imgs := PPGImagesOf(Item);
+  if (Imgs = nil) or not Imgs.IsImageNameAvailable then
+    Exit;
+  // Unbekannter Name bei Index -1 bleibt (die Liste kann zur Laufzeit
+  // befuellt werden). Sonst Name nachziehen: ein veralteter Name wuerde beim
+  // Laden den neu gesetzten Index wieder ueberschreiben
+  if (Name <> '') and (Imgs.GetIndexByName(Name) = Index) then
+    Exit;
+  if (Index >= 0) and (Index < Imgs.Count) then
+    Name := Imgs.GetNameByIndex(Index)
+  else
+    Name := '';
+end;
+{$ENDIF}
 
 var
   GWheelScrollLinesReader: TPPGWheelScrollLinesReader = nil;

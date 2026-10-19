@@ -8,7 +8,7 @@ TPPGImage.PictureDark = Bild für den Dark Mode; leer = das helle Bild bleibt.
 ! Ein dunkles Logo auf dunklem Grund verschwindet; hier steht die helle Fassung. Im Hochkontrast gilt immer `Picture`.
 TPPGImage.Images = Bildliste (z. B. TVirtualImageList), aus der das Bild kommt, wenn Picture leer ist.
 ! Für Symbole aus einer zentralen `TImageCollection`: eine Liste, mehrere Images am Formular.
-TPPGImage.ImageIndex = Nummer des Bilds in Images; -1 = keins. Bei Listen mit Namen wird nur ImageName gespeichert.
+TPPGImage.ImageIndex = Nummer des Bilds in Images; -1 = keins. Ist ImageName gesetzt (Liste mit Namen), wird nur ImageName gespeichert, sonst der Index (TImageList, Bild ohne Namen).
 > `Image1.ImageIndex := 3;`
 TPPGImage.ImageName = Name des Bilds in Images (ab Delphi 10.4, Liste mit Namen). Unbekannte Namen zeigen kein Bild.
 > `Image1.ImageName := 'Warnung';`

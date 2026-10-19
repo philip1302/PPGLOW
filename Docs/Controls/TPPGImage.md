@@ -73,7 +73,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Picture` | `TPicture` |  | Das angezeigte Bild (BMP, PNG, JPEG, GIF, TIFF, ICO, WMF/EMF), wie bei TImage. Nutzung: `Image1.Picture.LoadFromFile('logo.png');` Praxis: Das Standardbild. Mit `PictureDark` zusammen für Logos, die auf dunklem Grund anders aussehen müssen. |
 | `PictureDark` | `TPicture` |  | Bild für den Dark Mode; leer = das helle Bild bleibt. Nutzung: `Image1.PictureDark.LoadFromFile('logo-hell.png');` Praxis: Ein dunkles Logo auf dunklem Grund verschwindet; hier steht die helle Fassung. Im Hochkontrast gilt immer `Picture`. |
 | `Images` | `TCustomImageList` |  | Bildliste (z. B. TVirtualImageList), aus der das Bild kommt, wenn Picture leer ist. Praxis: Für Symbole aus einer zentralen `TImageCollection`: eine Liste, mehrere Images am Formular. |
-| `ImageIndex` | `TPPGImageIndex` | `-1` | Nummer des Bilds in Images; -1 = keins. Bei Listen mit Namen wird nur ImageName gespeichert. Nutzung: `Image1.ImageIndex := 3;` |
+| `ImageIndex` | `TPPGImageIndex` | `-1` | Nummer des Bilds in Images; -1 = keins. Ist ImageName gesetzt (Liste mit Namen), wird nur ImageName gespeichert, sonst der Index (TImageList, Bild ohne Namen). Nutzung: `Image1.ImageIndex := 3;` |
 | `ImageName` | `TImageName` |  | Name des Bilds in Images (ab Delphi 10.4, Liste mit Namen). Unbekannte Namen zeigen kein Bild. Nutzung: `Image1.ImageName := 'Warnung';` Praxis: Robust gegen Umsortieren der Liste. |
 | `ImageIndexDark` | `TPPGImageIndex` | `-1` | Nummer des Bilds in Images für den Dark Mode; -1 = das helle Bild bleibt. |
 | `ImageNameDark` | `TImageName` |  | Name des Bilds in Images für den Dark Mode. Nutzung: `Image1.ImageNameDark := 'Warnung-hell';` |
@@ -141,7 +141,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDock` | `TStartDockEvent` `(Sender: TObject; var DragObject: TDragDockObject)` | Beginn des Andockens dieses Controls. |
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 
-Tests: `PPG.Tests.Image` (TImageTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Image` (TImageTests); `PPG.Tests.ImageStored` (TImageStoredTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGImage.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

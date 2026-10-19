@@ -52,7 +52,7 @@ Image1.BorderStyle := bsSingle;
 <tr><td><code>Picture</code></td><td><code>TPicture</code></td><td></td><td>Das angezeigte Bild (BMP, PNG, JPEG, GIF, TIFF, ICO, WMF/EMF), wie bei TImage. Nutzung: <code>Image1.Picture.LoadFromFile(&#39;logo.png&#39;);</code> Praxis: Das Standardbild. Mit <code>PictureDark</code> zusammen f&#252;r Logos, die auf dunklem Grund anders aussehen m&#252;ssen.</td></tr>
 <tr><td><code>PictureDark</code></td><td><code>TPicture</code></td><td></td><td>Bild f&#252;r den Dark Mode; leer = das helle Bild bleibt. Nutzung: <code>Image1.PictureDark.LoadFromFile(&#39;logo-hell.png&#39;);</code> Praxis: Ein dunkles Logo auf dunklem Grund verschwindet; hier steht die helle Fassung. Im Hochkontrast gilt immer <code>Picture</code>.</td></tr>
 <tr><td><code>Images</code></td><td><code>TCustomImageList</code></td><td></td><td>Bildliste (z. B. TVirtualImageList), aus der das Bild kommt, wenn Picture leer ist. Praxis: F&#252;r Symbole aus einer zentralen <code>TImageCollection</code>: eine Liste, mehrere Images am Formular.</td></tr>
-<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Nummer des Bilds in Images; -1 = keins. Bei Listen mit Namen wird nur ImageName gespeichert. Nutzung: <code>Image1.ImageIndex := 3;</code></td></tr>
+<tr><td><code>ImageIndex</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Nummer des Bilds in Images; -1 = keins. Ist ImageName gesetzt (Liste mit Namen), wird nur ImageName gespeichert, sonst der Index (TImageList, Bild ohne Namen). Nutzung: <code>Image1.ImageIndex := 3;</code></td></tr>
 <tr><td><code>ImageName</code></td><td><code>TImageName</code></td><td></td><td>Name des Bilds in Images (ab Delphi 10.4, Liste mit Namen). Unbekannte Namen zeigen kein Bild. Nutzung: <code>Image1.ImageName := &#39;Warnung&#39;;</code> Praxis: Robust gegen Umsortieren der Liste.</td></tr>
 <tr><td><code>ImageIndexDark</code></td><td><code>TPPGImageIndex</code></td><td><code>-1</code></td><td>Nummer des Bilds in Images f&#252;r den Dark Mode; -1 = das helle Bild bleibt.</td></tr>
 <tr><td><code>ImageNameDark</code></td><td><code>TImageName</code></td><td></td><td>Name des Bilds in Images f&#252;r den Dark Mode. Nutzung: <code>Image1.ImageNameDark := &#39;Warnung-hell&#39;;</code></td></tr>
@@ -118,7 +118,7 @@ Image1.BorderStyle := bsSingle;
 <tr><td><code>OnStartDock</code></td><td><code>TStartDockEvent</code> <code>(Sender: TObject; var DragObject: TDragDockObject)</code></td><td>Beginn des Andockens dieses Controls.</td></tr>
 <tr><td><code>OnStartDrag</code></td><td><code>TStartDragEvent</code> <code>(Sender: TObject; var DragObject: TDragObject)</code></td><td>Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden.</td></tr>
 </table>
-<p>Tests: <code>PPG.Tests.Image</code> (TImageTests); <code>PPG.Tests.Streaming</code> (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
+<p>Tests: <code>PPG.Tests.Image</code> (TImageTests); <code>PPG.Tests.ImageStored</code> (TImageStoredTests); <code>PPG.Tests.Streaming</code> (Uebersicht: <a href="Tests.html">Control -&gt; Testunits</a>)</p>
 <hr>
 <p>Erzeugt von <code>Build\make-docs.ps1</code>. Eigene Ergaenzungen in <code>Docs\Controls\notes\TPPGImage.md</code>, Beschreibungen der Eigenschaften in <code>Docs\Controls\props\*.txt</code>.</p>
 </body></html>

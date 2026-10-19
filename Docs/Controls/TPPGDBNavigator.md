@@ -137,7 +137,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnKeyPress` | `TKeyPressEvent` `(Sender: TObject; var Key: Char)` | Zeichen eingegeben; Key := #0 verwirft es. |
 | `OnKeyUp` | `TKeyEvent` `(Sender: TObject; var Key: Word; Shift: TShiftState)` | Taste losgelassen. |
 
-Tests: `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit5d`; `PPG.Tests.NavigatorExtras` (TNavigatorExtrasTests); `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Streaming` (TPresetStreamingTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit11C` (TAudit11CGdiTests); `PPG.Tests.Audit5d`; `PPG.Tests.ImageStored` (TImageStoredTests); `PPG.Tests.NavigatorExtras` (TNavigatorExtrasTests); `PPG.Tests.Phase18` (TDBNavigatorTests); `PPG.Tests.Streaming` (TPresetStreamingTests); `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDBNavigator.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.
