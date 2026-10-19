@@ -166,3 +166,11 @@ TPPGGrid.ShowFilterBar ! Einschalten, wenn die Filterzeile benutzt wird: Die Lei
 TPPGGrid.FindPanel ! fpmManual für Listen, in denen man gelegentlich etwas sucht (Strg+F wie im Browser); fpmAlways, wenn Suchen die Hauptaufgabe ist.
 TPPGGrid.IncrementalSearch ! Für schreibgeschützte, sortierte Listen (Kunden, Artikel): Anfangsbuchstaben tippen springt zum Eintrag.
 TPPGGrid.OnFilterChanged ! Trefferzahl in der Statusleiste anzeigen oder den Filter im Layout bzw. in den Einstellungen merken.
+TPPGGrid.EnterMovesNext ! Für Erfassungslisten (Stücklisten, Positionen), in denen man Zeile für Zeile tippt: Enter übernimmt und springt weiter wie in einer Tabellenkalkulation.
+TPPGGrid.FindExtendedSyntax ! Wenn Anwender mehrere Begriffe kombinieren (z. B. Artikelsuche „schraube +m8 -verzinkt“); für einfache Listen aus lassen.
+TPPGGrid.FilterValueMenu ! Für Spalten mit wenigen verschiedenen Werten (Status, Ort, Kategorie): Anwender haken die gewünschten Werte im Kopfmenü an statt Filtertext zu tippen.
+TPPGGrid.OnCellDblClick ! Den Datensatz der Zeile öffnen (Detailfenster); im Gegensatz zu OnDblClick liefert es Spalte und Zeile und kommt nicht für Kopf oder Gruppenzeilen.
+TPPGGrid.OnSortRequest ! Sortierwünsche prüfen oder umlenken, z. B. bestimmte Spalten nur aufsteigend sortieren oder die Sortierung im Layout merken.
+TPPGGrid.OnGetFilterValues ! Feste Auswahlwerte anbieten (alle Status statt nur der vorhandenen) oder lange Wertelisten kürzen.
+TPPGGridColumn.VisibleForCustomization ! Für Schlüssel- und Hilfsspalten, die der Anwender weder sehen noch einblenden soll (IDs, Sortierspalten).
+TPPGGridColumn.GroupDateMode ! gdmMonth bzw. gdmQuarter für Belege und Umsätze, gdmRelative für Termine und Wiedervorlagen („Heute“, „Nächste Woche“).

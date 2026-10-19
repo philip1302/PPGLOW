@@ -11,7 +11,7 @@ TPPGDBGrid.ShowGroupPanel = True: Über den Titeln erscheint die Gruppenleiste; 
 TPPGDBGrid.GroupFooter = True: Unter jeder Gruppe steht eine Fußzeile mit den Summen der Spalten mit Column.Aggregate (nur in der gruppierten Ansicht).
 TPPGDBGrid.OnGetGroupText = Text einer Gruppenzeile (Markup erlaubt, vorbelegt mit „Feld: Wert (Anzahl)“); Group ist der Index für GroupInfo.
 > `Text := '<b>' + PPGDBGrid1.GroupInfo(Group).Key + '</b> (' + IntToStr(PPGDBGrid1.GroupInfo(Group).Count) + ' Artikel)';`
-TPPGDBGrid.HeaderMenu = True: Rechtsklick auf den Kopf öffnet ein Menü zum Ausblenden und Wählen der Spalten und zum Anpassen der Breite. Sortieren ist im DB-Grid Sache der Datenmenge (OnTitleClick), die Sortier-Einträge sind daher gesperrt. Ergänzen lässt sich das Menü in OnHeaderMenu.
+TPPGDBGrid.HeaderMenu = True: Rechtsklick auf den Kopf öffnet ein Menü zum Ausblenden und Wählen der Spalten und zum Anpassen der Breite. Sortieren ist im DB-Grid Sache der Datenmenge (OnTitleClick, OnSorted); die Sortier-Einträge sind nur mit SortOnHeaderClick frei und setzen dann den Pfeil (OnSortRequest, OnSorted). Ergänzen lässt sich das Menü in OnHeaderMenu.
 TPPGDBGrid.Columns = Feste Spalten des DB-Grids: je Spalte ein Feld (FieldName) mit Titel, Breite, Ausrichtung, Editor, Stil und Summenfeld (FooterField). Ohne Einträge zeigt das Grid alle sichtbaren Felder der Datenmenge (Titel = DisplayLabel, Breite aus DisplayWidth).
 > `with TPPGDBGridColumn(PPGDBGrid1.Columns.Add) do begin FieldName := 'Umsatz'; Title := 'Umsatz'; Width := 100; end;`
 TPPGDBGridColumn.FieldName =Name des Felds der Datenmenge, das die Spalte zeigt und bearbeitet. Ein unbekannter Name ergibt eine leere Spalte; Titel (ohne eigenen Title das DisplayLabel), Ausrichtung und Schreibschutz kommen sonst vom Feld.
@@ -162,3 +162,19 @@ TPPGDBGridColumn.EditFormEditor ! Meist efeAuto lassen; efeMemo für lange Textf
 TPPGDBGridColumn.EditFormRows ! 3 bis 5 Zeilen für Bemerkungen; mit EditFormColSpan über die ganze Breite.
 TPPGDBGridColumn.EditFormGroup ! Formulare ab etwa acht Feldern in Abschnitte teilen (Anschrift, Kontakt, Konditionen).
 TPPGDBGrid.OnSorted ! Mit SortOnHeaderClick: die Sortierung in der Statusleiste anzeigen oder in den Einstellungen merken; sortiert hat die Datenmenge schon in OnTitleClick.
+TPPGDBGrid.EnterMovesNext ! Für Erfassungslisten (Positionen, Stücklisten): Enter übernimmt den Wert und springt weiter, am Zeilenende in den nächsten Satz.
+TPPGDBGrid.FindExtendedSyntax ! Für Artikel- oder Kundensuche mit mehreren Begriffen („+m8 -verzinkt“); die Suche läuft über die Datenmenge.
+TPPGDBGrid.FilterValueMenu ! Für Spalten mit wenigen Werten (Status, Ort); bei großen, ungruppierten Datenmengen liest das Menü die Datenmenge einmal durch (höchstens 1000 Werte).
+TPPGDBGrid.OnCellDblClick ! Den Satz in einem Detailfenster öffnen; der Satz ist beim Ereignis der aktive, Spalte und Zeile liefert das Ereignis, auch in der Kartenansicht.
+TPPGDBGrid.OnSortRequest ! Nur Richtungen zulassen, die die Datenmenge kann (z. B. Index nur aufsteigend: absteigend in keine Sortierung umlenken); sortiert wird danach in OnSorted.
+TPPGDBGrid.OnGetFilterValues ! Feste Werte für „Nach Wert filtern“ anbieten (z. B. alle Status aus einer Nachschlagetabelle).
+TPPGDBGrid.AllowEdit ! Für Listen, in denen man nur neue Sätze erfasst oder nur löscht; ganz schreibgeschützt lieber ReadOnly.
+TPPGDBGrid.AllowInsert ! Aus, wenn neue Sätze nur über einen eigenen Dialog oder Knopf entstehen sollen.
+TPPGDBGrid.AllowDelete ! Aus, wenn Löschen nur über einen Befehl mit eigener Rückfrage oder Prüfung gehen soll.
+TPPGDBGrid.SortIndicatorFromIndex ! Einschalten, wenn die Anwendung IndexFieldNames selbst setzt (Menü, gespeichertes Layout): der Pfeil zeigt dann immer die echte Sortierung.
+TPPGDBGrid.CardAutoWidth ! Für Kartenansichten in veränderbaren Fenstern: die Karten nutzen die volle Breite statt rechts einen Rand zu lassen.
+TPPGDBGrid.CardAreaColor ! Eine leicht abgesetzte Fläche (z. B. ein heller Grauton) hebt die Karten hervor; sonst clDefault lassen.
+TPPGDBGridColumn.EditFormIndex ! Die wichtigsten Felder zuerst ins Formular holen, ohne die Spalten der Tabelle umzustellen.
+TPPGDBGridColumn.EditFormNewRow ! Zusammengehörige Felder (PLZ und Ort) in eine eigene Zeile stellen.
+TPPGDBGridColumn.VisibleForCustomization ! Für Schlüsselfelder (IDs), die der Anwender nicht über das Kopfmenü einblenden soll.
+TPPGDBGridColumn.GroupDateMode ! gdmMonth für Belegdatum, gdmRelative für Termine (gruppiert wird erst mit GroupIndex bzw. der Gruppenleiste).

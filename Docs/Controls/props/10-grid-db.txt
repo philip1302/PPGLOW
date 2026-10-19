@@ -396,3 +396,27 @@ TPPGCustomDBGrid.SortOnHeaderClick = True: Klick auf einen Spaltenkopf setzt nur
 TPPGCustomDBGrid.OnFocusedRecordChanged = Der aktuelle Datensatz ist ein anderer geworden (Blättern, Klick, Suche, Einfügen, Abbrechen); nicht beim Ändern von Werten desselben Satzes.
 TPPGCustomDBGrid.OnCanSelectRecord = Mehrfachauswahl: vor dem Wählen eines Datensatzes (Klick, Umschalt-Bereich, Strg+A, SelectedRows); die Datenmenge steht auf dem Satz, Allow := False lehnt ihn ab.
 TPPGCustomDBGrid.OnSelectCell = Vor dem Wechsel der Fokuszelle bzw. des Datensatzes; CanSelect := False verhindert ihn. RowValue('Feld') liefert dabei schon die Werte der Zielzeile.
+
+# --- Grid-Wünsche: Enter, Sortieren, Filter nach Werten, Suche, Datumsgruppen ---
+TPPGCustomGrid.EnterMovesNext = True: Enter springt zur nächsten Zelle (Spalte rechts, am Zeilenende erste Spalte der nächsten Datenzeile; Gruppenzeilen werden übersprungen). Im Editor wird der Wert zuerst übernommen (lehnt OnValidateCell ab, bleibt der Editor offen). Ohne Editor öffnet Enter dann keinen Editor mehr, F2 und Tippen schon. DB-Grid: am Zeilenende der nächste Satz der Datenmenge (bucht wie Pfeil runter), am letzten Satz wird nichts angehängt.
+> `Grid1.EnterMovesNext := True;`
+TPPGCustomGrid.FindExtendedSyntax = True: Das Suchfeld (FindText) versteht mehrere Begriffe: Leerzeichen trennen Begriffe, von denen einer vorkommen muss (oder); „+wort“ muss, „-wort“ darf in der Zeile nicht vorkommen; ein Text in Anführungszeichen ist ein Begriff mit Leerzeichen; % steht für beliebig viele, _ für genau ein Zeichen. Die Begriffe gelten für die ganze Zeile (alle durchsuchten Spalten), Treffer ist eine Zelle mit einem Begriff ohne „-“. False: der ganze Text ist ein Begriff.
+> `Grid1.FindExtendedSyntax := True; Grid1.FindText := 'schraube +m8 -verzinkt';`
+TPPGCustomGrid.FilterValueMenu = True: Das Kopfmenü bekommt „Nach Wert filtern“ mit den verschiedenen Werten der Spalte zum An- und Abhaken („(Alle)“ hebt den Filter auf, „(Leer)“ steht für leere Zellen). Der Filter ist eine Werteliste („=a|b|“, siehe Filters). DB-Grid: die Werte kommen aus der (schon gefilterten) Datenmenge bzw. gruppiert aus dem Speicher.
+TPPGCustomGrid.OnCellDblClick = Doppelklick auf eine Datenzelle (auch eine Karte der Kartenansicht); ACol = Datenspalte, ARow = Datenzeile (DB-Grid: Zeile im Puffer bzw. der gruppierten Ansicht, der Satz ist dann der aktive). Kopf, Gruppen- und Filterzeile lösen es nicht aus; OnDblClick kommt wie bisher immer.
+> `procedure TForm1.Grid1CellDblClick(Sender: TObject; ACol, ARow: Integer); begin OeffneArtikel; end;`
+TPPGCustomGrid.OnSortRequest = Der Anwender will sortieren (Kopfklick mit SortOnHeaderClick, Kopfmenü). Direction (gsdAscending, gsdDescending, gsdNone) lässt sich ändern, etwa absteigend in keine Sortierung, wenn die Datenmenge das nicht kann; Accept := False lässt alles, wie es ist. Danach sortiert das Grid bzw. setzt den Pfeil und meldet OnSorted.
+> `if Direction = gsdDescending then Direction := gsdNone;`
+TPPGCustomGrid.OnGetFilterValues = Werte für „Nach Wert filtern“ (FilterValueMenu) einer Spalte: Values ändern, ergänzen oder leeren (z. B. feste Werte statt der vorhandenen).
+TPPGGridColumn.VisibleForCustomization = False: Die Spalte fehlt in der Spaltenauswahl des Kopfmenüs und lässt sich dort weder aus- noch einblenden („Alle einblenden“ lässt sie aus). Visible per Code wirkt weiter, z. B. für Schlüsselspalten.
+TPPGGridColumn.GroupDateMode = Gruppieren einer Datumsspalte: gdmValue (nach dem angezeigten Wert), gdmDay, gdmWeek (Kalenderwoche nach ISO), gdmMonth, gdmQuarter, gdmYear oder gdmRelative (Heute, Gestern, Morgen, Früher/Später in dieser Woche, Letzte/Nächste Woche, Älter, Später). Gruppen stehen nach dem Datum, nicht alphabetisch; Zellen ohne Datum gruppieren nach ihrem Text.
+> `Grid1.Columns[3].GroupDateMode := gdmMonth; Grid1.GroupBy([3]);`
+TPPGCustomDBGrid.AllowEdit = False: Bestehende Sätze lassen sich weder in der Zelle noch im Bearbeitungsformular ändern (neue Sätze folgen AllowInsert). Wirkt zusätzlich zu ReadOnly und Options (dgEditing).
+TPPGCustomDBGrid.AllowInsert = False: Einfg und Pfeil runter am Ende legen keinen Satz an; ein neuer Satz (von außen) ist nicht bearbeitbar.
+TPPGCustomDBGrid.AllowDelete = False: Strg+Entf löscht weder den Satz noch die Mehrfachauswahl.
+TPPGCustomDBGrid.SortIndicatorFromIndex = True: Der Sortierpfeil folgt IndexFieldNames der Datenmenge (erstes Feld; „:D“ bzw. „ DESC“ = absteigend), beim Öffnen und nach jeder Änderung der Datenmenge, nicht beim Blättern. Ohne passende Spalte verschwindet der Pfeil. OnSorted kommt dabei nicht.
+TPPGCustomDBGrid.CardAutoWidth = Kartenansicht, True: Die Karten teilen sich die ganze Breite (CardWidth ist dann die Mindestbreite und bestimmt, wie viele nebeneinander passen).
+TPPGCustomDBGrid.CardAreaColor = Kartenansicht: Farbe der Fläche zwischen den Karten (clDefault = Theme). Im Hochkontrast gilt das Theme.
+TPPGDBGridColumn.EditFormIndex = Reihenfolge im Bearbeitungsformular (-1..9999; -1 = wie die Anzeige). Felder mit Index stehen zuerst, nach dem Index aufsteigend (gleicher Index: Anzeige-Reihenfolge), danach die übrigen. Abschnitte (EditFormGroup) folgen dieser Reihenfolge.
+> `TPPGDBGridColumn(DBGrid1.Columns[5]).EditFormIndex := 0;`
+TPPGDBGridColumn.EditFormNewRow = True: Das Feld beginnt im Formular eine neue Rasterzeile (links), auch wenn daneben noch Platz wäre.
