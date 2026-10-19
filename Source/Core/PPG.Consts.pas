@@ -59,6 +59,10 @@ resourcestring
   SPPGFilterDescEmpty = '%s is empty';
   SPPGFilterDescNotEmpty = '%s is not empty';
   SPPGFilterDescJoin = '%s and %s';
+  SPPGFilterDescInList = '%s is one of %s';
+  SPPGGridFilterValues = 'Filter by value';
+  SPPGGridFilterAllValues = '(All)';
+  SPPGGridFilterEmptyValue = '(Empty)';
   SPPGFilterBarText = 'Filter: %s';
   SPPGFilterBarClear = 'Clear filter';
   SPPGGridFindHint = 'Search';
@@ -156,6 +160,18 @@ resourcestring
   SPPGGridExpandAll = 'Expand all groups';
   SPPGGridCollapseAll = 'Collapse all groups';
   SPPGGridGroupName = '%s: %s, %d rows';
+  // Gruppieren nach Datum (Column.GroupDateMode)
+  SPPGGridDateWeek = 'Week %d, %d';
+  SPPGGridDateQuarter = 'Q%d %d';
+  SPPGGridDateOlder = 'Older';
+  SPPGGridDateLastWeek = 'Last week';
+  SPPGGridDateEarlierThisWeek = 'Earlier this week';
+  SPPGGridDateYesterday = 'Yesterday';
+  SPPGGridDateToday = 'Today';
+  SPPGGridDateTomorrow = 'Tomorrow';
+  SPPGGridDateLaterThisWeek = 'Later this week';
+  SPPGGridDateNextWeek = 'Next week';
+  SPPGGridDateLater = 'Later';
 
   // Drucken (Phase 13e)
   SPPGPrintFooterDefault = 'Page [Page] of [Pages]';

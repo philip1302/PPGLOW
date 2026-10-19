@@ -35,6 +35,12 @@ type
   /// Ausrichtung des Spaltentitels; gtaColumn = wie Alignment der Spalte.
   TPPGGridTitleAlignment = (gtaColumn, gtaLeft, gtaCenter, gtaRight);
 
+  /// Gruppieren einer Datumsspalte: nach dem Wert (gdmValue = angezeigter
+  /// Text), nach Tag, Kalenderwoche (ISO), Monat, Quartal, Jahr oder relativ
+  /// zu heute (Heute, Gestern, Letzte Woche, ...).
+  TPPGGridGroupDateMode = (gdmValue, gdmDay, gdmWeek, gdmMonth, gdmQuarter,
+    gdmYear, gdmRelative);
+
   /// Owner der Spalten (Grid, DB-Grid): wird nach jeder Aenderung gerufen.
   IPPGGridColumnsHost = interface
     ['{3E7A2C91-5B4D-4F86-9C1E-D2A0B6F4E853}']
@@ -64,6 +70,9 @@ type
     FStyle: TPPGElementStyle;
     FTitleStyle: TPPGElementStyle;
     FTitleAlignment: TPPGGridTitleAlignment;
+    FVisibleForCustomization: Boolean;
+    FGroupDateMode: TPPGGridGroupDateMode;
+    procedure SetGroupDateMode(const Value: TPPGGridGroupDateMode);
     procedure SetMinValue(const Value: Integer);
     procedure SetMaxValue(const Value: Integer);
     procedure SetStyle(const Value: TPPGElementStyle);
@@ -128,6 +137,14 @@ type
     property TitleStyle: TPPGElementStyle read FTitleStyle write SetTitleStyle;
     property TitleAlignment: TPPGGridTitleAlignment read FTitleAlignment
       write SetTitleAlignment default gtaColumn;
+    /// False: die Spalte fehlt in der Spaltenauswahl des Kopfmenues und
+    /// laesst sich dort weder aus- noch einblenden (Visible bleibt wie es ist).
+    property VisibleForCustomization: Boolean read FVisibleForCustomization
+      write FVisibleForCustomization default True;
+    /// Gruppen einer Datumsspalte (gdmValue = nach dem angezeigten Wert).
+    /// Gruppen und Sortierung folgen dem Datum, nicht dem Text.
+    property GroupDateMode: TPPGGridGroupDateMode read FGroupDateMode
+      write SetGroupDateMode default gdmValue;
   end;
 
   TPPGGridColumns = class(TOwnedCollection)
@@ -176,10 +193,67 @@ type
     property Items[Index: Integer]: TPPGGridBand read GetItem; default;
   end;
 
+/// Gruppenschluessel (Text) eines Datums D fuer den Modus Mode; Today ist
+/// der Bezug fuer gdmRelative. gdmValue und gdmDay liefern DateToStr.
+function PPGGridDateGroupKey(D: TDateTime; Mode: TPPGGridGroupDateMode;
+  Today: TDateTime): string;
+
 implementation
 
 uses
-  System.SysUtils, PPG.Types;
+  System.SysUtils, System.DateUtils, PPG.Types, PPG.Consts, PPG.Lang;
+
+function PPGGridDateGroupKey(D: TDateTime; Mode: TPPGGridGroupDateMode;
+  Today: TDateTime): string;
+var
+  Day, T, WS: Integer;
+  Y: Word;
+begin
+  case Mode of
+    gdmWeek:
+      begin
+        Y := 0;
+        T := WeekOfTheYear(D, Y);
+        Result := System.SysUtils.Format(PPGStr(@SPPGGridDateWeek), [T, Integer(Y)]);
+      end;
+    gdmMonth:
+      Result := FormatDateTime('mmmm yyyy', D);
+    gdmQuarter:
+      Result := System.SysUtils.Format(PPGStr(@SPPGGridDateQuarter),
+        [(MonthOf(D) - 1) div 3 + 1, Integer(YearOf(D))]);
+    gdmYear:
+      Result := IntToStr(YearOf(D));
+    gdmRelative:
+      begin
+        Day := Trunc(D);
+        T := Trunc(Today);
+        WS := T - (DayOfTheWeek(Today) - 1);   // Montag dieser Woche
+        if Day = T - 1 then
+          Result := PPGStr(@SPPGGridDateYesterday)
+        else if Day = T then
+          Result := PPGStr(@SPPGGridDateToday)
+        else if Day = T + 1 then
+          Result := PPGStr(@SPPGGridDateTomorrow)
+        else if Day < T then
+        begin
+          if Day < WS - 7 then
+            Result := PPGStr(@SPPGGridDateOlder)
+          else if Day < WS then
+            Result := PPGStr(@SPPGGridDateLastWeek)
+          else
+            Result := PPGStr(@SPPGGridDateEarlierThisWeek);
+        end
+        else if Day <= WS + 6 then
+          Result := PPGStr(@SPPGGridDateLaterThisWeek)
+        else if Day <= WS + 13 then
+          Result := PPGStr(@SPPGGridDateNextWeek)
+        else
+          Result := PPGStr(@SPPGGridDateLater);
+      end;
+  else
+    Result := DateToStr(D);
+  end;
+end;
 
 { TPPGGridColumn }
 
@@ -191,6 +265,7 @@ begin
   FDisplayIndex := -1;
   FBand := -1;
   FGroupIndex := -1;
+  FVisibleForCustomization := True;
   FStyle := TPPGElementStyle.Create(Self);
   FStyle.OnChange := StyleChanged;
   FTitleStyle := TPPGElementStyle.Create(Self);
@@ -241,6 +316,8 @@ begin
       FTitleStyle.OnChange := StyleChanged;
     end;
     FTitleAlignment := S.FTitleAlignment;
+    FVisibleForCustomization := S.FVisibleForCustomization;
+    FGroupDateMode := S.FGroupDateMode;
     Changed(True);
   end
   else
@@ -276,6 +353,15 @@ begin
   begin
     FTitleAlignment := Value;
     Changed(False);
+  end;
+end;
+
+procedure TPPGGridColumn.SetGroupDateMode(const Value: TPPGGridGroupDateMode);
+begin
+  if FGroupDateMode <> Value then
+  begin
+    FGroupDateMode := Value;
+    Changed(True);
   end;
 end;
 
