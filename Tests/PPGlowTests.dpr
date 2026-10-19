@@ -248,7 +248,8 @@ uses
   PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas',
   PPG.Tests.Review in 'PPG.Tests.Review.pas',
   PPG.Tests.Custom in 'PPG.Tests.Custom.pas',
-  PPG.Tests.RichEdit in 'PPG.Tests.RichEdit.pas';
+  PPG.Tests.RichEdit in 'PPG.Tests.RichEdit.pas',
+  PPG.Tests.NavigatorExtras in 'PPG.Tests.NavigatorExtras.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;

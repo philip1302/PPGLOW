@@ -78,6 +78,23 @@ TPPGCustomDBNavigator.ShowFilter = Schnellfilter: zeigt nur Datensätze, deren S
 TPPGCustomDBNavigator.ShowSearch = Suchfeld im Navigator; Enter springt zum nächsten Datensatz, der den Begriff enthält (Teiltreffer, ohne Groß-/Kleinschreibung).
 > `Nav.ShowSearch := True; Nav.SearchField := 'NAME';`
 TPPGCustomDBNavigator.VisibleButtons = Sichtbare Knöpfe wie bei TDBNavigator; passen nicht alle in die Breite, kommen die übrigen ins Überlaufmenü.
+TPPGCustomDBNavigator.CustomButtons = Zusatzknöpfe hinter den Standardknöpfen (Symbol aus Images bzw. IconChar, sonst Text); sie wandern bei Platzmangel ins Überlaufmenü und sind per Tastatur und Screenreader bedienbar.
+> `with Nav.CustomButtons.Add do begin IconChar := $E8C8; Hint := 'Satz kopieren'; OnClick := KopierenClick; end;`
+TPPGCustomDBNavigator.Images = Bildliste für die Zusatzknöpfe (ImageIndex bzw. ImageName der CustomButtons).
+TPPGCustomDBNavigator.OnButtonEnabled = Freigabe je Standardknopf nach eigenen Regeln (z. B. Rechte); Enabled kommt mit der Standardregel herein. Gilt für Zeichnen, Klick, Tastatur, Überlaufmenü und Screenreader; nach geänderten Regeln UpdateButtons aufrufen.
+> `if (Button = nbDelete) and not DarfLoeschen then Enabled := False;`
+TPPGCustomDBNavigator.OnCustomButtonClick = Klick auf einen Zusatzknopf, nach dessen eigenem OnClick; Button nennt den Knopf.
+TPPGCustomDBNavigator.PositionSource = Komponente mit IPPGViewPosition (z. B. ein Grid mit Filter, Sortierung oder Gruppen): Zähler und Erster/Voriger/Nächster/Letzter folgen ihrer Ansicht statt der Datenmenge. Leer = wie bisher die Datenmenge.
+> `Nav.PositionSource := Grid1;`
+TPPGNavButton.Caption = Text des Zusatzknopfs, wenn kein Symbol gesetzt ist; ein & wird für den Screenreader entfernt.
+TPPGNavButton.Enabled = False = gesperrt: grau, kein Klick (Vorgabe True).
+TPPGNavButton.Hint = Hinweistext; bei reinen Symbolknöpfen auch der Name für den Screenreader.
+TPPGNavButton.IconChar = Zeichen der Symbolschrift (0 = keins); gilt, wenn kein Bild aus Images gesetzt ist.
+TPPGNavButton.ImageIndex = Bild aus Images des Navigators (-1 = keins).
+TPPGNavButton.ImageName = Bild per Namen aus Images (TVirtualImageList, ab Delphi 10.4).
+TPPGNavButton.OnClick = Klick auf den Knopf; Sender ist der TPPGNavButton. Danach folgt OnCustomButtonClick des Navigators.
+TPPGNavButton.Tag = Freie Zahl für eigene Zwecke.
+TPPGNavButton.Visible = False = ausgeblendet; die folgenden Knöpfe rücken auf (Vorgabe True).
 
 # --- TPPGCustomPanel (Scrollen) ---
 TPPGCustomPanel.AutoScroll = Scrollleisten erscheinen, sobald Kind-Controls über den Rand hinausragen, wie bei TScrollBox. Das Mausrad scrollt auch über Kind-Controls, Tab zu einem verdeckten Feld holt es ins Bild.
