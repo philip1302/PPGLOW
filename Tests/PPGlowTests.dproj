@@ -325,6 +325,7 @@
         <DCCReference Include="PPG.Tests.Phase9c.pas"/>
         <DCCReference Include="PPG.Tests.Phase9d.pas"/>
         <DCCReference Include="PPG.Tests.GridFilterSearch.pas"/>
+        <DCCReference Include="PPG.Tests.DBGridGrouping.pas"/>
         <DCCReference Include="PPG.Tests.Phase10a.pas"/>
         <DCCReference Include="PPG.Tests.Phase10b.pas"/>
         <DCCReference Include="PPG.Tests.Phase10c.pas"/>

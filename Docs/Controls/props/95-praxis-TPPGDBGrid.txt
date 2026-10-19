@@ -5,7 +5,12 @@
 # "Klasse.Name = Wirkung" am Anfang.
 
 # --- Wirkung, DB-spezifisch ---
-TPPGDBGrid.ShowFooter = True: Unten steht eine Summenzeile. Ihren Inhalt liefert die Datenmenge: je Spalte das Feld aus Column.FooterField (z. B. ein TAggregateField) oder der Text aus OnGetFooterText. Column.Aggregate wirkt im DB-Grid nicht; das Grid liest dafür nie die ganze Datenmenge.
+TPPGDBGrid.ShowFooter = True: Unten steht eine Summenzeile. Ihren Inhalt liefert die Datenmenge: je Spalte das Feld aus Column.FooterField (z. B. ein TAggregateField) oder der Text aus OnGetFooterText. Column.Aggregate rechnet das Grid nur, solange es gruppiert (dann sind alle Sätze gelesen); ohne Gruppierung liest es dafür nie die ganze Datenmenge.
+TPPGDBGrid.ShowGroupPanel = True: Über den Titeln erscheint die Gruppenleiste; einen Spaltenkopf hineinziehen gruppiert nach dieser Spalte (mehrstufig), das Kopfmenü bietet dann auch „Gruppieren nach“. Erst mit einer Gruppenspalte (Column.GroupIndex) liest das Grid die ganze Datenmenge in den Speicher; die Leiste allein ändert nichts.
+> `PPGDBGrid1.ShowGroupPanel := True;`
+TPPGDBGrid.GroupFooter = True: Unter jeder Gruppe steht eine Fußzeile mit den Summen der Spalten mit Column.Aggregate (nur in der gruppierten Ansicht).
+TPPGDBGrid.OnGetGroupText = Text einer Gruppenzeile (Markup erlaubt, vorbelegt mit „Feld: Wert (Anzahl)“); Group ist der Index für GroupInfo.
+> `Text := '<b>' + PPGDBGrid1.GroupInfo(Group).Key + '</b> (' + IntToStr(PPGDBGrid1.GroupInfo(Group).Count) + ' Artikel)';`
 TPPGDBGrid.HeaderMenu = True: Rechtsklick auf den Kopf öffnet ein Menü zum Ausblenden und Wählen der Spalten und zum Anpassen der Breite. Sortieren ist im DB-Grid Sache der Datenmenge (OnTitleClick), die Sortier-Einträge sind daher gesperrt. Ergänzen lässt sich das Menü in OnHeaderMenu.
 TPPGDBGrid.Columns = Feste Spalten des DB-Grids: je Spalte ein Feld (FieldName) mit Titel, Breite, Ausrichtung, Editor, Stil und Summenfeld (FooterField). Ohne Einträge zeigt das Grid alle sichtbaren Felder der Datenmenge (Titel = DisplayLabel, Breite aus DisplayWidth).
 > `with TPPGDBGridColumn(PPGDBGrid1.Columns.Add) do begin FieldName := 'Umsatz'; Title := 'Umsatz'; Width := 100; end;`
@@ -70,6 +75,9 @@ TPPGDBGrid.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am best
 TPPGDBGrid.ReadOnly ! Für Listen, in denen nur gesucht und gewählt wird, während die Datenmenge selbst änderbar bleibt (Bearbeiten im Detailformular). Für ganz schreibgeschützte Daten besser die Abfrage bzw. DataSource.AutoEdit.
 TPPGDBGrid.ScrollBarMode ! sbmAuto lassen (schmale Leiste bei Bedarf). sbmAlways, wenn Anwender die Leiste sehen sollen, um die Länge der Liste abzuschätzen.
 TPPGDBGrid.ShowFooter ! Einschalten, sobald die Datenmenge Summen liefert (TAggregateField wie SUM(Betrag)) und eine Spalte sie über FooterField zeigt, z. B. Bestellwert oder offene Posten.
+TPPGDBGrid.ShowGroupPanel ! Für Übersichten, in denen der Anwender selbst gruppieren soll (nach Kunde, Lieferant, Status). Für eine feste Gruppierung reicht Column.GroupIndex im Designer; die Leiste kann dann aus bleiben.
+TPPGDBGrid.GroupFooter ! Einschalten, wenn jede Gruppe ihre Summe zeigen soll (Bestand je Lager, Umsatz je Kunde); dazu Column.Aggregate der Betragsspalte setzen.
+TPPGDBGrid.OnGetGroupText ! Gruppenzeilen mit dem Namen statt der Nummer füllen, z. B. den Kundennamen zur Kundennummer aus einem Nachschlagefeld.
 TPPGDBGrid.ShowHint ! Einschalten (oder am Formular), damit abgeschnittene Zelltexte und Hint erscheinen.
 TPPGDBGrid.ShowRequired ! In Erfassungstabellen einschalten: Pflichtfelder (TField.Required) bekommen ein Sternchen im Titel, bevor der Anwender beim Speichern eine Meldung bekommt.
 TPPGDBGrid.SmoothScrolling ! True lassen; bei sehr langsamen Remote-Sitzungen kann False das Scrollen direkter machen.

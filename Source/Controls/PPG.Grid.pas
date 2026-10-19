@@ -447,6 +447,10 @@ type
     /// Darf das Grid gruppieren und rechnet es Summen/Sortierung selbst
     /// (Ansicht im Speicher)? DB-Grid: nein - das ist Sache der Datenmenge.
     function CanGroup: Boolean; virtual;
+    /// Haelt die Ansicht alle Datenzeilen (Gruppieren, Summen und
+    /// Gruppenfuesse rechnet das Grid selbst)? Standard: True; DB-Grid nur
+    /// im Gruppenmodus (ganze Datenmenge gelesen).
+    function AllRowsInView: Boolean; virtual;
     /// Collection der angezeigten Spalten (fuer BeginUpdate/EndUpdate).
     function ColumnCollection: TPPGGridColumns; virtual;
     /// Gruppenspalten aus Columns[].GroupIndex.
@@ -934,6 +938,11 @@ type
     function GroupText(Group: Integer): string;
     /// Datenzeilen einer Gruppe (-1 = alle Zeilen der Ansicht).
     function GroupDataRows(Group: Integer): TArray<Integer>;
+    /// Zeigt die sichtbare Zeile Daten (keine Kopf-, Filter-, Gruppenkopf-
+    /// oder Gruppenfusszeile)?
+    function IsDataRow(VRow: Integer): Boolean;
+    /// Unterste Gruppe einer Datenzeile (-1 = ungruppiert/nicht in der Ansicht).
+    function DataRowGroup(ARow: Integer): Integer;
     /// Summen neu berechnen (sonst verzoegert nach Datenaenderung).
     procedure RecalcAggregates;
     /// Text der Summenzeile bzw. des Gruppenfusses fuer eine Datenspalte.
@@ -1008,6 +1017,9 @@ type
     property FocusCol: Integer read FFocusC;
     /// Anzahl angezeigter Spalten (ohne ausgeblendete).
     property VisibleColCount: Integer read VColCount;
+    /// Anzahl sichtbarer Zeilen (inkl. fester Zeilen, Filter- und
+    /// Gruppenzeilen; ohne Zeilen zugeklappter Gruppen).
+    property ViewRowCount: Integer read VRowCount;
     property Selection: TGridRect read GetSelection write SetSelection;
     property SortColumn: Integer read FSortCol;
     property SortAscending: Boolean read FSortAscending;
@@ -2489,7 +2501,12 @@ begin
     FGroupCols := CurrentGroupColumns
   else
     FGroupCols := nil;
-  FView.Group.Columns := FGroupCols;
+  // Gruppiert wird nur, wenn die Ansicht alle Zeilen haelt (DB-Grid: erst
+  // nach dem Lesen der ganzen Datenmenge); die Leiste zeigt die Spalten immer
+  if AllRowsInView then
+    FView.Group.Columns := FGroupCols
+  else
+    FView.Group.Columns := nil;
   FView.Group.SortColumn := FSortCol;
   FView.Group.SortAscending := FSortAscending;
   FView.Group.Footers := FGroupFooter;
@@ -2544,7 +2561,7 @@ end;
 function TPPGCustomGrid.AggViewKey: string;
 begin
   Result := '';
-  if not CanGroup or FView.Grouped or (Length(FGroupCols) > 0) or not PlainCellText then
+  if not AllRowsInView or FView.Grouped or (Length(FGroupCols) > 0) or not PlainCellText then
     Exit;
   if FView.Filter.Active then
   begin
@@ -3367,7 +3384,7 @@ begin
   M.Tag := ACol;
   Col := ColumnOf(ACol);
   Sortable := (ACol >= FFixedCols) and ((Col = nil) or Col.Sortable);
-  if not CanGroup then
+  if not SortsInView then
     Sortable := False; // DB-Grid: Sortieren ist Sache der Datenmenge
   It := Add(M.Items, PPGStr(@SPPGGridSortAsc), HMSortAsc);
   It.Enabled := Sortable;
@@ -3709,6 +3726,21 @@ end;
 function TPPGCustomGrid.CanGroup: Boolean;
 begin
   Result := True;
+end;
+
+function TPPGCustomGrid.AllRowsInView: Boolean;
+begin
+  Result := True;
+end;
+
+function TPPGCustomGrid.IsDataRow(VRow: Integer): Boolean;
+begin
+  Result := (VRow >= VFixedRows) and (VRow < VRowCount) and (DataRow(VRow) >= 0);
+end;
+
+function TPPGCustomGrid.DataRowGroup(ARow: Integer): Integer;
+begin
+  Result := LeafGroupOf(ARow);
 end;
 
 function TPPGCustomGrid.ColumnCollection: TPPGGridColumns;
@@ -4060,7 +4092,7 @@ var
 begin
   // Voll rechnen: Custom (Ereignis sieht alle Zeilen), virtuelle bzw.
   // umgeleitete Texte, Gruppenspalte, Statistik der bedingten Formate
-  Result := CanGroup and not FAggHasCustom and (FAggPendCount < MaxPending) and PlainCellText;
+  Result := AllRowsInView and not FAggHasCustom and (FAggPendCount < MaxPending) and PlainCellText;
   if not Result then
     Exit;
   for I := 0 to High(FGroupCols) do
@@ -4263,8 +4295,9 @@ begin
   SetLength(FGroupAcc, 0);
   SetLength(FGroupCustom, 0);
   // Statistiken fuer bedingte Formate (Oben-N, Farbskala, Datenbalken ...)
-  // Ansicht nicht im Speicher (DB-Grid): Summen liefert die Datenmenge
-  if not CanGroup then
+  // Ansicht nicht im Speicher (DB-Grid ohne Gruppierung): Summen liefert die
+  // Datenmenge
+  if not AllRowsInView then
   begin
     SetLength(FAggCols, 0);
     SetLength(FFooterAcc, 0);

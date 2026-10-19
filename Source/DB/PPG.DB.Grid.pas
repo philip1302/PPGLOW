@@ -88,8 +88,26 @@ unit PPG.DB.Grid;
     Cancel. Wechselt der Datensatz (Navigator, Klick auf eine andere Zeile,
     Scrollen), bucht die Datenmenge wie ueblich und das Formular schliesst.
     Zellen der Tabelle sind in diesem Modus nicht direkt bearbeitbar.
-  - Nicht unterstuetzt: Gruppieren (braeuchte die ganze Datenmenge im Speicher;
-    GROUP BY in der Abfrage nutzen), Unterspalten (ADT/Array-Felder). }
+  - Gruppieren (Columns[].GroupIndex, Ziehen in die Gruppenleiste
+    ShowGroupPanel, GroupBy): nur dann liest das Grid die ganze Datenmenge
+    (einmal mit DisableControls) und haelt je Satz eine Zeile im Speicher
+    (Texte, Werte, Lesezeichen). Gruppen, Zuklappen, Gruppenfuesse und Summen
+    (Column.Aggregate) rechnet die Basis wie im TPPGGrid; die Reihenfolge
+    innerhalb einer Gruppe ist die der Datenmenge. Fokus auf einer Datenzeile
+    stellt die Datenmenge per Lesezeichen auf den Satz; Satzwechsel von aussen
+    (Navigator, Next, Locate) fokussieren die Zeile und klappen ihre Gruppen
+    auf. Aenderungen von aussen (DataSetChanged: Refresh, Filter, Loeschen,
+    First/Last, EnableControls ...) lesen die Datenmenge neu; Post/Cancel einer
+    Bearbeitung liest nur den Satz. Zugeklappte Gruppen bleiben (nach
+    Gruppenwert) beim Neulesen zugeklappt. Ohne Gruppenspalten bleibt alles
+    beim Puffer wie oben. Grenzen: Speicher und Lesezeit wachsen mit der
+    Datenmenge; Pfeil runter am Ende haengt keinen Satz an; ein neuer Satz
+    steht bis zum Buchen in der Gruppe seiner Anfangswerte; OnDrawColumnCell
+    kommt nur fuer Saetze im Puffer der Datenmenge; RowValue fuer andere als
+    den aktiven Satz liefert die Felder der Spalten (alle Felder nur, wenn
+    OnGetCellStyle/OnSelectCell beim Lesen zugewiesen waren); Kartenansicht
+    gruppiert nicht.
+  - Nicht unterstuetzt: Unterspalten (ADT/Array-Felder). }
 
 {$I ..\PPG.inc}
 
@@ -529,6 +547,30 @@ type
     FOnFocusedRecordChanged: TNotifyEvent;
     FOnCanSelectRecord: TPPGDBGridCanSelectEvent;
     FNoVeto: Integer;
+    // Gruppieren (Columns[].GroupIndex): die ganze Datenmenge im Speicher,
+    // je Satz eine Zeile (FCache, FRowBms, FMarks dann je Satz statt je
+    // Pufferzeile)
+    FGrpOn: Boolean;
+    FGrpVals: array of array of Variant; // Wert je Satz x Datenspalte
+    FGrpAll: array of array of Variant;  // alle Felder je Satz (RowValue)
+    FGrpIndex: TDictionary<string, Integer>; // Lesezeichen -> Satz
+    FGrpActive: Integer;    // Satz des aktiven Datensatzes (-1 = keiner)
+    FGrpIns: Integer;       // Zeile des neuen Satzes (dsInsert), sonst -1
+    FGrpDirty: Boolean;     // ganz neu lesen
+    FGrpRowDirty: Boolean;  // nur den aktiven Satz neu lesen (Post/Cancel)
+    FGrpNeedApply: Boolean; // Gruppen neu bilden
+    FGrpQuiet: Integer;     // > 0: eigener Satzwechsel (kein Neulesen)
+    FGrpMoving: Integer;    // > 0: Fokuswechsel bewegt gerade die Datenmenge
+    FGrpLoading: Boolean;
+    FGrpEditBm: TBookmark;  // Satz der laufenden Bearbeitung (dsEdit)
+    FGrpLastBm: TBookmark;  // zuletzt fokussierter Satz
+    FGrpLastIns: Boolean;
+    FGrpBufRecs: array of Integer; // Pufferzeile -> Satz (OnDrawColumnCell)
+    FGrpColSig: string;
+    FGrpViewSig: string;
+    FGrpViewVer: Integer;
+    FGrpReadCount: Integer;
+    FDrawRec: Integer;      // Owner-Draw im Gruppenmodus: gezeichneter Satz
     procedure FilterRecordHook(DataSet: TDataSet; var Accept: Boolean);
     procedure FilterHook(DS: TDataSet);
     procedure FilterUnhook;
@@ -648,6 +690,48 @@ type
     procedure SelectRangeTo(const FromBm: TBookmark);
     /// Umschalt+Pfeil: Auswahl um den neuen Satz erweitern bzw. verkleinern.
     procedure ExtendByStep(const OldBm: TBookmark);
+    { Gruppieren (ganze Datenmenge im Speicher) }
+    /// Gruppenmodus ein bzw. aus (Gruppenspalten, aktive Datenmenge, Tabelle).
+    procedure UpdateGroupMode;
+    /// DataSetChanged von aussen: ganz bzw. nur den Satz neu lesen.
+    procedure GroupNoteChange;
+    procedure GroupDataChanged;
+    /// Alle Saetze lesen (DisableControls, Position bleibt).
+    procedure GroupLoad;
+    procedure GroupSetLength(N: Integer; All: Boolean);
+    /// Aktiven Satz der Datenmenge in Zeile R lesen.
+    procedure GroupReadRow(R: Integer; IsInsert: Boolean);
+    /// Gruppen neu bilden (Fokus auf einer Gruppenzeile bleibt auf ihr).
+    procedure GroupApply;
+    /// Aktiven Satz bestimmen und fokussieren (nach jedem DataChanged).
+    procedure GroupSync;
+    /// Zeile sichtbar machen (Gruppen darueber aufklappen); sichtbare Zeile.
+    function GroupReveal(ARow: Integer): Integer;
+    procedure GroupFocusActive;
+    /// Datenmenge auf Satz R stellen; False = Ansicht neu aufgebaut bzw.
+    /// Satz nicht erreichbar (Fokus ist dann schon gesetzt).
+    function GroupGoto(R: Integer): Boolean;
+    function GroupIndexOfBm(const B: TBookmark): Integer;
+    function GroupIndexOfCurrent: Integer;
+    function GroupKeysOf(R: Integer): string;
+    function GroupViewSignature: string;
+    function GroupColSignature: string;
+    function GroupPath(G: Integer): string;
+    function GroupByPath(const P: string): Integer;
+    /// Bereich in der Reihenfolge der Ansicht waehlen (statt der Datenmenge).
+    procedure GroupSelectRange(const FromBm: TBookmark);
+    procedure GroupRecordChanged;
+    procedure GroupListChanged;
+    /// Suche in der Reihenfolge der Ansicht (auch zugeklappte Gruppen).
+    function GroupFind(const U: string; Forward, IncludeCurrent, Prefix,
+      OneCol: Boolean): Boolean;
+    /// Satz des aktiven Datensatzes: Pufferzeile bzw. (gruppiert) Satz.
+    function ActiveDataIndex: Integer;
+    /// Geladene Zeilen: Puffer bzw. (gruppiert) alle Saetze.
+    function LoadedRowCount: Integer;
+    procedure GotoDataIndex(R: Integer);
+    function GetGroupPanel: Boolean;
+    procedure SetGroupPanel(const Value: Boolean);
   protected
     /// Kaestchen-Spalte (Boolean-Feld, gekCheck oder ckCheck)?
     function IsCheckColumn(ACol: Integer): Boolean;
@@ -690,6 +774,9 @@ type
     function ColumnOf(ACol: Integer): TPPGGridColumn; override;
     function ColumnKey(ACol: Integer): string; override;
     function CanGroup: Boolean; override;
+    function AllRowsInView: Boolean; override;
+    function CompareDataRows(ACol, R1, R2: Integer): Integer; override;
+    function ViewGroupKey(ACol, ARow: Integer): string; override;
     function ColumnCollection: TPPGGridColumns; override;
     function KindOf(ACol: Integer): IPPGCellKind; override;
     function CachedFooterText(ACol: Integer): string; override;
@@ -810,6 +897,9 @@ type
     property EditMode: TPPGDBGridEditMode read FEditMode write SetEditMode default dgeCells;
     /// Spalten, Beschriftungsbreite und Schaltflaechen des Formulars.
     property EditForm: TPPGDBGridEditFormOptions read FEditForm write SetEditForm;
+    /// Gruppenleiste ueber den Titeln: Spaltenkopf hineinziehen gruppiert
+    /// (liest dann die ganze Datenmenge, siehe Kopf der Unit).
+    property ShowGroupPanel: Boolean read GetGroupPanel write SetGroupPanel default False;
     /// Formular wurde geoeffnet (Editoren gefuellt, Fokus gesetzt).
     property OnEditFormShow: TNotifyEvent read FOnEditFormShow write FOnEditFormShow;
     /// Formular wurde geschlossen (Accepted = uebernommen).
@@ -871,8 +961,24 @@ type
     /// Werte eines Felds aller ausgewaehlten Saetze (Reihenfolge wie
     /// ForEachSelected). Unbekanntes Feld: EPPGError.
     function SelectedValues(const FieldName: string): TArray<Variant>;
+    /// Gruppierte Ansicht aktiv (Gruppenspalten; ganze Datenmenge gelesen)?
+    function GroupedView: Boolean;
+    /// Datenzeile (wie Row) des aktiven Satzes; -1 = keiner.
+    function ActiveDataRow: Integer;
+    /// Gruppenwerte (Ebene 0 zuerst) des aktiven Satzes; leer ohne Gruppen.
+    function ActiveGroupValues: TArray<string>;
+    /// Wie TDataSet.Locate; gruppiert ohne Neulesen der Datenmenge (Treffer:
+    /// Gruppen aufgeklappt, Zeile fokussiert). Offene Bearbeitung wird gebucht.
+    function LocateRecord(const KeyFields: string; const KeyValues: Variant;
+      Options: TLocateOptions): Boolean;
+    /// Gruppierte Ansicht neu aus der Datenmenge lesen (ohne Gruppierung:
+    /// nichts).
+    procedure RefreshGroups;
+    /// Anzahl kompletter Lesevorgaenge der Datenmenge im Gruppenmodus.
+    property GroupReadCount: Integer read FGrpReadCount;
   end;
 
+type
   TPPGDBGrid = class(TPPGCustomDBGrid)
   private
     function GetTitleFont: TFont;
@@ -896,6 +1002,8 @@ type
     property FixedColsRight;
     property HeaderMenu;
     property ShowFooter;
+    property ShowGroupPanel;
+    property GroupFooter;
     property ShowFilterRow;
     property FilterImmediate;
     property ShowFilterBar;
@@ -958,6 +1066,7 @@ type
     property OnExit;
     property OnGetCellStyle;
     property OnGetFooterText;
+    property OnGetGroupText;
     property OnHeaderMenu;
     property OnKeyDown;
     property OnKeyPress;
@@ -1753,6 +1862,10 @@ begin
   // Reihenfolge der Lesezeichen vor der naechsten Suche pruefen
   if FGrid.FSelected <> nil then
     FGrid.FSelected.FCheckOrder := True;
+  // Gruppiert: Aenderung von aussen -> neu lesen (nicht bei eigenen
+  // Satzwechseln und waehrend ein PPGlow-Control die Datenmenge liest)
+  if FGrid.FGrpOn and (FGrid.FGrpQuiet = 0) and not FGrid.FGrpLoading and not PPGDBReading then
+    FGrid.GroupNoteChange;
   FGrid.DataChanged;
 end;
 
@@ -1833,6 +1946,10 @@ begin
   FCardActive := -1;
   FCtxRow := -1;
   FCtxSnap := -1;
+  FGrpActive := -1;
+  FGrpIns := -1;
+  FDrawRec := -1;
+  FGrpIndex := TDictionary<string, Integer>.Create;
   FEditForm := TPPGDBGridEditFormOptions.Create(Self);
   FDataLink := TPPGGridDataLink.Create(Self);
   FSelected := TPPGBookmarkList.Create(Self);
@@ -1865,6 +1982,7 @@ begin
   FreeAndNil(FAutoState);
   inherited Destroy;
   FreeAndNil(FEditForm);
+  FreeAndNil(FGrpIndex);
 end;
 
 procedure TPPGCustomDBGrid.SetShowRequired(const Value: Boolean);
@@ -2121,6 +2239,10 @@ begin
               C.Width := OldC.Width;
               C.Band := OldC.Band;
               C.FooterField := OldC.FooterField;
+              // Gruppierung und Summen bleiben (Ziehen in die Gruppenleiste)
+              C.GroupIndex := OldC.GroupIndex;
+              C.Aggregate := OldC.Aggregate;
+              C.FooterFormat := OldC.FooterFormat;
             end;
           end;
         end;
@@ -2148,6 +2270,16 @@ begin
     Keep.Free;
     FLayoutBusy := False;
   end;
+  // Gruppenmodus nach den Gruppenspalten; andere Felder: neu lesen
+  UpdateGroupMode;
+  if FGrpOn then
+  begin
+    if GroupColSignature <> FGrpColSig then
+      FGrpDirty := True;
+    FGrpColSig := GroupColSignature;
+  end
+  else
+    FGrpColSig := '';
   // Offenes Formular folgt den Spalten (Werte neu aus dem Satz)
   if FFormOpen and (FEditPanel <> nil) and FDataLink.Active then
   begin
@@ -2321,6 +2453,12 @@ var
 begin
   if not MultiSelectActive then
     Exit;
+  // Gruppiert: Bereich in der Reihenfolge der Ansicht
+  if FGrpOn then
+  begin
+    GroupSelectRange(FromBm);
+    Exit;
+  end;
   DS := FDataLink.DataSet;
   Cur := FSelected.CurrentBookmark;
   if Length(Cur) = 0 then
@@ -2409,7 +2547,7 @@ var
 begin
   if Button = mbLeft then
     FDownOnRow := FDataLink.Active and MouseCoord(X, Y, C, V) and (DataRow(V) >= FixedRows) and
-      (DataRow(V) - FixedRows < FDataLink.RecordCount);
+      (DataRow(V) - FixedRows < LoadedRowCount);
   if CardMode then
   begin
     // Linke Taste waehlt Karte und Feld; die uebrigen wie im Grid
@@ -2421,7 +2559,7 @@ begin
   end;
   OnRow := MultiSelectActive and (Button = mbLeft) and not (ssDouble in Shift) and
     (SizingColAt(X, Y) < 0) and MouseCoord(X, Y, C, V) and (DataRow(V) >= FixedRows) and
-    (DataRow(V) - FixedRows < FDataLink.RecordCount);
+    (DataRow(V) - FixedRows < LoadedRowCount);
   if not OnRow then
   begin
     inherited ContentMouseDown(Button, Shift, X, Y);
@@ -2438,10 +2576,10 @@ begin
   if not MultiSelectActive then
     Exit;
   // Klick in den Indikator: Datensatz wechseln wie TDBGrid
-  if (C < FixedCols) and (R <> FDataLink.ActiveRecord) then
-    FDataLink.MoveBy(R - FDataLink.ActiveRecord);
+  if (C < FixedCols) and (R <> ActiveDataIndex) then
+    GotoDataIndex(R);
   // Wechsel abgelehnt (z.B. Pflichtfeld beim Buchen): Auswahl bleibt
-  if not MultiSelectActive or (FDataLink.ActiveRecord <> R) then
+  if not MultiSelectActive or (ActiveDataIndex <> R) then
     Exit;
   if ssShift in Shift then
   begin
@@ -2480,7 +2618,7 @@ var
   DS: TDataSet;
   RowH, Top, MaxY, Target: Integer;
 begin
-  if not FDataLink.Active then
+  if not FDataLink.Active or FGrpOn then
     Exit;
   if CardMode then
   begin
@@ -2559,7 +2697,7 @@ var
   DS: TDataSet;
 begin
   FSnapValid := False;
-  if (csDestroying in ComponentState) or FLayoutBusy then
+  if (csDestroying in ComponentState) or FLayoutBusy or FGrpLoading then
     Exit;
   // Anderer Datensatz (Navigator, Code, Blaettern ueber den Puffer hinaus):
   // der offene Editor gehoert zum alten und wird verworfen
@@ -2569,7 +2707,11 @@ begin
     HideEditor(False);
   if not EditorMode then
     FEditBm := nil;
-  RebuildCache;
+  // Gruppiert: alle Saetze im Speicher (neu gelesen nur nach Aenderungen)
+  if FGrpOn then
+    GroupDataChanged
+  else
+    RebuildCache;
   // Bearbeitungsformular: Bearbeitung von aussen beendet (Navigator, Code).
   // Anderer bzw. gebuchter neuer Satz: schliessen (die Datenmenge hat die
   // Eingaben ueber UpdateData schon gebucht); derselbe Satz: neu lesen
@@ -2586,7 +2728,8 @@ begin
       begin
         FormClose(False, False);
         UpdateBufferCount;
-        RebuildCache;
+        if not FGrpOn then
+          RebuildCache;
       end
       else
       begin
@@ -2597,13 +2740,18 @@ begin
       end;
     end;
   end;
-  // Mindestens eine (ggf. leere) Datenzeile: RowCount > FixedRows
-  N := Length(FCache);
-  if N < 1 then
-    N := 1;
-  if RowCount <> FixedRows + N then
-    RowCount := FixedRows + N;
-  SyncPosition;
+  if FGrpOn then
+    GroupSync
+  else
+  begin
+    // Mindestens eine (ggf. leere) Datenzeile: RowCount > FixedRows
+    N := Length(FCache);
+    if N < 1 then
+      N := 1;
+    if RowCount <> FixedRows + N then
+      RowCount := FixedRows + N;
+    SyncPosition;
+  end;
   FormPlace;
   Invalidate;
   CheckFocusedRecord;
@@ -2651,6 +2799,14 @@ begin
   // naechsten DataChanged alle Felder neu
   if FFormOpen and (FFormBusy = 0) and FDataLink.Active and not FDataLink.Editing then
     FFormReload := True;
+  // Gruppiert: Post/Cancel dieser Bearbeitung liest nur den Satz neu
+  if FGrpOn and FDataLink.Active then
+  begin
+    if FDataLink.DataSet.State = dsEdit then
+      FGrpEditBm := FDataLink.DataSet.Bookmark
+    else if FDataLink.DataSet.State = dsInsert then
+      FGrpEditBm := nil;
+  end;
   Invalidate;
 end;
 
@@ -2659,7 +2815,10 @@ begin
   if csDestroying in ComponentState then
     Exit;
   // Nur der aktive Datensatz hat sich geaendert: Zwischenspeicher neu
-  RebuildCache;
+  if FGrpOn then
+    GroupRecordChanged
+  else
+    RebuildCache;
   // Formular: Felder, die der Anwender nicht geaendert hat, folgen dem Satz
   if FFormOpen and (FFormBusy = 0) then
     FormLoadValues(True);
@@ -2679,8 +2838,9 @@ end;
 
 function TPPGCustomDBGrid.CanGroup: Boolean;
 begin
-  // Kein Gruppieren im DB-Grid (Phase 13: Datenmenge bleibt die Quelle)
-  Result := False;
+  // Gruppieren nur in der Tabelle; ohne Gruppenleiste und Gruppenspalten
+  // bleibt alles wie ohne Gruppierung (auch das Kopfmenue)
+  Result := not CardMode and (ShowGroupPanel or (Length(CurrentGroupColumns) > 0));
 end;
 
 function TPPGCustomDBGrid.ColumnKey(ACol: Integer): string;
@@ -2738,6 +2898,14 @@ begin
   C := ColumnOf(ACol);
   if not (C is TPPGDBGridColumn) then
     Exit;
+  // Gruppiert: Column.Aggregate rechnet das Grid ueber alle Saetze
+  if FGrpOn and (C.Aggregate <> agNone) then
+  begin
+    Result := inherited CachedFooterText(ACol);
+    if Assigned(FOnGetFooterText) then
+      FOnGetFooterText(Self, TPPGDBGridColumn(C), Result);
+    Exit;
+  end;
   if (TPPGDBGridColumn(C).FooterField <> '') and FDataLink.Active then
   begin
     F := FDataLink.DataSet.FindField(TPPGDBGridColumn(C).FooterField);
@@ -2883,6 +3051,9 @@ end;
 
 function TPPGCustomDBGrid.TableRowCount: Integer;
 begin
+  // Gruppiert: alle Saetze sind schon gelesen (Reihenfolge der Gruppen)
+  if FGrpOn then
+    Exit(inherited TableRowCount);
   EnsureSnapshot;
   Result := Length(FSnap);
 end;
@@ -2893,7 +3064,18 @@ begin
 end;
 
 function TPPGCustomDBGrid.TableCellText(ACol, ARow: Integer): string;
+var
+  R, C: Integer;
 begin
+  if FGrpOn then
+  begin
+    Result := '';
+    R := inherited TableStyleRow(ARow) - FixedRows;
+    C := DataCol(ACol + FixedCols) - FixedCols;
+    if (R >= 0) and (R < Length(FCache)) and (C >= 0) and (C < Length(FCache[R])) then
+      Result := FCache[R][C];
+    Exit;
+  end;
   EnsureSnapshot;
   if (ARow >= 0) and (ARow < Length(FSnapText)) and (ACol >= 0) and (ACol < Length(FSnapText[ARow])) then
     Result := FSnapText[ARow][ACol]
@@ -2902,7 +3084,49 @@ begin
 end;
 
 function TPPGCustomDBGrid.TableCellValue(ACol, ARow: Integer): Variant;
+var
+  R, C, DC: Integer;
+  F: TField;
+  S: string;
 begin
+  if FGrpOn then
+  begin
+    // Wie der Schnappschuss: Kaestchen als Wahrheitswert, Nachschlagen als
+    // Text, Datum/Zahl als Wert
+    Result := Null;
+    R := inherited TableStyleRow(ARow) - FixedRows;
+    DC := DataCol(ACol + FixedCols);
+    C := DC - FixedCols;
+    F := FieldOfCol(DC);
+    if (F = nil) or (R < 0) or (R >= Length(FCache)) or (C < 0) or (C >= Length(FCache[R])) or
+      (C >= Length(FGrpVals[R])) then
+      Exit;
+    S := FCache[R][C];
+    if IsCheckColumn(DC) then
+    begin
+      if S = CheckStateText(cbChecked) then
+        Result := True
+      else if S = CheckStateText(cbUnchecked) then
+        Result := False;
+    end
+    else if (ColumnLookup(DC) <> nil) or (F.FieldKind = fkLookup) then
+    begin
+      if S <> '' then
+        Result := S;
+    end
+    else if VarIsNull(FGrpVals[R][C]) or VarIsEmpty(FGrpVals[R][C]) then
+      Result := Null
+    else if F.DataType in [ftDate, ftTime, ftDateTime, ftTimeStamp] then
+      Result := VarAsType(FGrpVals[R][C], varDate)
+    else if F.DataType in [ftBoolean, ftLargeint] then
+      Result := FGrpVals[R][C]
+    else if F.DataType in [ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency, ftBCD,
+      ftFMTBcd, ftAutoInc, ftShortint, ftByte, ftLongWord, ftExtended, ftSingle] then
+      Result := VarAsType(FGrpVals[R][C], varDouble)
+    else
+      Result := S;
+    Exit;
+  end;
   EnsureSnapshot;
   if (ARow >= 0) and (ARow < Length(FSnap)) and (ACol >= 0) and (ACol < Length(FSnap[ARow])) then
     Result := FSnap[ARow][ACol]
@@ -2916,7 +3140,11 @@ begin
   Result.Reset;
   if ConditionalFormats.Count > 0 then
     ConditionalFormats.Apply(DataCol(ACol + FixedCols), Text, Tokens, clWhite, Result);
-  DoGetCellStyle(DataCol(ACol + FixedCols), ARow, gspPrint, Result);
+  // Gruppiert: OnGetCellStyle bekommt die Zeile des Grids (wie am Bildschirm)
+  if FGrpOn then
+    DoGetCellStyle(DataCol(ACol + FixedCols), inherited TableStyleRow(ARow), gspPrint, Result)
+  else
+    DoGetCellStyle(DataCol(ACol + FixedCols), ARow, gspPrint, Result);
 end;
 
 procedure TPPGCustomDBGrid.DoGetCellStyle(ACol, ARow: Integer; Purpose: TPPGGridStylePurpose;
@@ -2938,7 +3166,10 @@ begin
   else
   begin
     FCtxRow := -1;
-    FCtxSnap := ARow;
+    if FGrpOn then
+      FCtxSnap := ARow - FixedRows
+    else
+      FCtxSnap := ARow;
   end;
   try
     inherited DoGetCellStyle(ACol, ARow, Purpose, Style);
@@ -2961,6 +3192,23 @@ begin
   F := DS.FindField(FieldName);
   if F = nil then
     raise EPPGError.CreateFmt(PPGStr(@SPPGDBFieldNotFound), [FieldName]);
+  if FGrpOn then
+  begin
+    // Gruppiert: gespeicherte Werte des Satzes (aktiver Satz: das Feld)
+    if FCtxSnap >= 0 then
+      Old := FCtxSnap
+    else
+      Old := FCtxRow;
+    if (Old < 0) or (Old = FGrpActive) or (Old >= Length(FCache)) then
+      Exit(F.Value);
+    I := DS.Fields.IndexOf(F);
+    if (Old < Length(FGrpAll)) and (I >= 0) and (I < Length(FGrpAll[Old])) then
+      Exit(FGrpAll[Old][I]);
+    for I := 0 to High(FFields) do
+      if (FFields[I] = F) and (I < Length(FGrpVals[Old])) then
+        Exit(FGrpVals[Old][I]);
+    Exit;
+  end;
   if FCtxSnap >= 0 then
   begin
     // Druck/Export: Werte aus dem Schnappschuss (Datenmenge steht woanders)
@@ -2992,7 +3240,11 @@ end;
 
 function TPPGCustomDBGrid.ExportAggregate(ACol: Integer): TPPGGridAggregate;
 begin
-  Result := agNone; // Summen rechnet die Datenmenge
+  // Summen rechnet die Datenmenge; gruppiert das Grid (Column.Aggregate)
+  if FGrpOn then
+    Result := inherited ExportAggregate(ACol + FixedCols)
+  else
+    Result := agNone;
 end;
 
 function TPPGCustomDBGrid.ExportMerges: TArray<TRect>;
@@ -3002,7 +3254,11 @@ end;
 
 function TPPGCustomDBGrid.ExportOutline: TArray<TPPGOutlineRow>;
 begin
-  SetLength(Result, 0);
+  // Gruppiert: Gruppenzeilen wie im Grid
+  if FGrpOn then
+    Result := inherited ExportOutline
+  else
+    SetLength(Result, 0);
 end;
 
 function TPPGCustomDBGrid.ExportColumnLook(ACol: Integer): TPPGTableColumnLook;
@@ -3021,8 +3277,12 @@ end;
 
 function TPPGCustomDBGrid.TableStyleRow(ARow: Integer): Integer;
 begin
-  // OnGetCellStyle bekommt die Satznummer (0-basiert), wie beim Druck
-  Result := ARow;
+  // OnGetCellStyle bekommt die Satznummer (0-basiert), wie beim Druck;
+  // gruppiert die Zeile des Grids
+  if FGrpOn then
+    Result := inherited TableStyleRow(ARow)
+  else
+    Result := ARow;
 end;
 
 procedure TPPGCustomDBGrid.ColumnsChanged;
@@ -3046,8 +3306,12 @@ end;
 
 function TPPGCustomDBGrid.RowScrollY: Integer;
 begin
-  // Der Puffer steht immer oben; die Leiste gehoert der Datenmenge
-  Result := 0;
+  // Der Puffer steht immer oben; die Leiste gehoert der Datenmenge.
+  // Gruppiert scrollt das Grid wie TPPGGrid (alle Zeilen geladen)
+  if FGrpOn then
+    Result := inherited RowScrollY
+  else
+    Result := 0;
 end;
 
 function TPPGCustomDBGrid.RowsContentHeight: Integer;
@@ -3057,6 +3321,8 @@ var
   V: TRect;
   M: TPPGDBGridCardMetrics;
 begin
+  if FGrpOn then
+    Exit(inherited RowsContentHeight);
   if CardMode then
   begin
     // Alle Kartenzeilen der Datenmenge (ohne RecNo: die geladenen)
@@ -3091,8 +3357,11 @@ end;
 
 procedure TPPGCustomDBGrid.ScrollCellsTo(X, Y: Integer);
 begin
-  // Nur waagerecht: senkrecht bewegt sich die Datenmenge
-  ScrollTo(X, ScrollY);
+  // Nur waagerecht: senkrecht bewegt sich die Datenmenge (gruppiert: beide)
+  if FGrpOn then
+    inherited ScrollCellsTo(X, Y)
+  else
+    ScrollTo(X, ScrollY);
 end;
 
 procedure TPPGCustomDBGrid.Scrolled;
@@ -3101,7 +3370,7 @@ var
   RowH, Wanted, Top, Delta: Integer;
 begin
   inherited Scrolled;
-  if (FSyncing > 0) or not FDataLink.Active then
+  if (FSyncing > 0) or not FDataLink.Active or FGrpOn then
     Exit;
   if CardMode then
   begin
@@ -3175,7 +3444,7 @@ begin
   if ACol < FixedCols then
   begin
     // Indikator: Datensatzzeiger und Zustand
-    if FDataLink.Active and (R = FDataLink.ActiveRecord) and (R < Length(FCache)) then
+    if FDataLink.Active and (R = ActiveDataIndex) and (R < Length(FCache)) then
       case FDataLink.DataSet.State of
         dsEdit: Result := IndEdit;
         dsInsert: Result := IndInsert;
@@ -3196,7 +3465,7 @@ var
 begin
   // Der Editor bearbeitet den aktiven Datensatz: Field.Text (Bearbeitungsformat)
   F := FieldOfCol(ACol);
-  if (F <> nil) and FDataLink.Active and (ARow - FixedRows = FDataLink.ActiveRecord) and
+  if (F <> nil) and FDataLink.Active and (ARow - FixedRows = ActiveDataIndex) and
     not IsCheckColumn(ACol) and (ColumnLookup(ACol) = nil) then
     Result := F.Text
   else
@@ -3223,10 +3492,14 @@ var
   L: TDataSet;
 begin
   F := FieldOfCol(ACol);
-  Result := not FReadOnly and (dgEditing in FDBOptions) and FDataLink.Active and
+  // Geladene Zeile (gruppiert: Datenzeile eines Satzes, keine Gruppenzeile)
+  if FGrpOn then
+    Result := (DataRow(VRow) >= FixedRows) and (DataRow(VRow) - FixedRows < Length(FCache))
+  else
+    Result := VRow - VisualRow(FixedRows) < Length(FCache);
+  Result := Result and not FReadOnly and (dgEditing in FDBOptions) and FDataLink.Active and
     not FDataLink.ReadOnly and FDataLink.DataSet.CanModify and (F <> nil) and
-    FieldEditable(F) and (VRow - VisualRow(FixedRows) < Length(FCache)) and
-    inherited CanEditCell(ACol, VRow);
+    FieldEditable(F) and inherited CanEditCell(ACol, VRow);
   if Result then
   begin
     // Nachschlage-Spalte: nur mit offener Liste und einem Schluesselfeld
@@ -3427,7 +3700,10 @@ begin
   FListBusy := True;
   try
     FSnapValid := False;
-    RebuildCache;
+    if FGrpOn then
+      GroupListChanged
+    else
+      RebuildCache;
     Invalidate;
   finally
     FListBusy := False;
@@ -3620,7 +3896,7 @@ var
   VC, VU: string;
 begin
   F := FieldOfCol(ACol);
-  if (F = nil) or not FDataLink.Active or (ARow - FixedRows <> FDataLink.ActiveRecord) then
+  if (F = nil) or not FDataLink.Active or (ARow - FixedRows <> ActiveDataIndex) then
     Exit;
   if (F.FieldKind = fkLookup) or (ColumnLookup(ACol) <> nil) then
   begin
@@ -3743,6 +4019,23 @@ function TPPGCustomDBGrid.SelectCell(ACol, ARow: Integer): Boolean;
 var
   R, OldCtx: Integer;
 begin
+  if FGrpOn and (FSyncing = 0) and (ARow >= FixedRows) then
+  begin
+    // Gruppiert: Satz per Lesezeichen (Zeile = Satz)
+    R := ARow - FixedRows;
+    if R >= Length(FCache) then
+      Exit(False);
+    OldCtx := FCtxRow;
+    FCtxRow := R;
+    try
+      Result := inherited SelectCell(ACol, ARow);
+    finally
+      FCtxRow := OldCtx;
+    end;
+    if Result then
+      Result := GroupGoto(R);
+    Exit;
+  end;
   if (FSyncing = 0) and FDataLink.Active and (ARow >= FixedRows) then
   begin
     R := ARow - FixedRows;
@@ -3794,7 +4087,8 @@ var
 begin
   inherited ContentMouseUp(Button, Shift, X, Y);
   if (Button = mbLeft) and Assigned(FOnCellClick) and MouseCoord(X, Y, C, V) and
-    (V >= VisualRow(FixedRows)) and (C >= FixedCols) then
+    ((FGrpOn and IsDataRow(V)) or (not FGrpOn and (V >= VisualRow(FixedRows)))) and
+    (C >= FixedCols) then
   begin
     Col := ColumnOf(DataCol(C));
     if Col is TPPGDBGridColumn then
@@ -3811,7 +4105,7 @@ procedure TPPGCustomDBGrid.NavigateKey(var Key: Word; Shift: TShiftState);
 var
   DS: TDataSet;
   RowKey: Boolean;
-  OrigKey: Word;
+  OrigKey, K2: Word;
   OldBm: TBookmark;
 begin
   // Audit 7c #1: laeuft nach OnKeyDown (KeyDown der Grid-Basis)
@@ -3823,6 +4117,16 @@ begin
   // Kartenansicht: Pfeile, Bild und Pos1/Ende bewegen zwischen den Karten
   if CardMode and CardNavigateKey(Key, Shift) then
     Exit;
+  // Gruppenkopf: Pfeil links/rechts, +/-, Enter, Leertaste und F2 klappen
+  // auf bzw. zu (wie im Grid)
+  if FGrpOn and (GroupOfRow(FocusRow) >= 0) and (Shift * [ssCtrl, ssAlt] = []) then
+    case Key of
+      VK_LEFT, VK_RIGHT, VK_ADD, VK_SUBTRACT, VK_RETURN, VK_SPACE, VK_F2:
+        begin
+          inherited NavigateKey(Key, Shift);
+          Exit;
+        end;
+    end;
   // Formular-Modus: Enter/F2 oeffnen das Bearbeitungsformular (bzw. holen
   // den Fokus hinein), Esc verwirft es
   if FormMode and (Shift * [ssCtrl, ssAlt] = []) then
@@ -3886,13 +4190,44 @@ begin
     begin
       OldBm := FSelected.CurrentBookmark;
       // Umschalt+Pfeil runter am Ende waehlt, haengt aber keinen Satz an
-      if (Key = VK_DOWN) and (ssShift in Shift) and (DS.State = dsBrowse) then
+      if (Key = VK_DOWN) and (ssShift in Shift) and (DS.State = dsBrowse) and not FGrpOn then
       begin
         DS.Next;
         Key := 0;
       end;
     end;
   end;
+  // Gruppiert: die Pfeile bewegen den Fokus in der Ansicht (die Datenmenge
+  // folgt per Lesezeichen); am Ende wird kein Satz angehaengt
+  if FGrpOn then
+    case Key of
+      VK_UP, VK_DOWN, VK_PRIOR, VK_NEXT:
+        begin
+          if (DS.State = dsInsert) and not DS.Modified and ((Key = VK_UP) or (Key = VK_DOWN)) then
+          begin
+            // Neuer, unveraenderter Satz: hoch verwirft ihn, runter bleibt
+            if Key = VK_DOWN then
+            begin
+              Key := 0;
+              Exit;
+            end;
+            DS.Cancel;
+          end
+          else
+          begin
+            K2 := Key;
+            inherited NavigateKey(K2, Shift - [ssShift]);
+          end;
+          Key := 0;
+        end;
+      VK_HOME, VK_END:
+        if ssCtrl in Shift then
+        begin
+          K2 := Key;
+          inherited NavigateKey(K2, Shift - [ssShift]);
+          Key := 0;
+        end;
+    end;
   case Key of
     VK_UP:
       begin
@@ -4001,7 +4336,7 @@ end;
 procedure TPPGCustomDBGrid.OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
   State: TGridDrawState);
 var
-  DCol, Old, B: Integer;
+  DCol, Old, B, Rec, I, OldRec: Integer;
   Col: TPPGGridColumn;
   Fill, Txt: TColor;
 begin
@@ -4010,7 +4345,20 @@ begin
     Exit;
   // Nur echte Datensaetze (keine leere Fuellzeile)
   B := ARow - FixedRows;
-  if (B < 0) or (B >= FDataLink.RecordCount) or (B >= Length(FCache)) then
+  Rec := B;
+  if FGrpOn then
+  begin
+    // Gruppiert: nur Saetze im Puffer der Datenmenge (Feldzugriff im Ereignis)
+    if (Rec < 0) or (Rec >= Length(FCache)) then
+      Exit;
+    B := -1;
+    for I := 0 to High(FGrpBufRecs) do
+      if FGrpBufRecs[I] = Rec then
+        B := I;
+    if (B < 0) or (B >= FDataLink.RecordCount) then
+      Exit;
+  end
+  else if (B < 0) or (B >= FDataLink.RecordCount) or (B >= Length(FCache)) then
     Exit;
   DCol := DataCol(ACol);
   Col := ColumnOf(DCol);
@@ -4025,7 +4373,9 @@ begin
   // Wie TDBGrid: die Datenmenge steht waehrend des Ereignisses auf dem
   // gezeichneten Satz (ActiveRecord des Puffers, ohne Satzwechsel)
   Old := FDataLink.ActiveRecord;
+  OldRec := FDrawRec;
   FDrawRow := B;
+  FDrawRec := Rec;
   try
     FDataLink.ActiveRecord := B;
     try
@@ -4035,6 +4385,7 @@ begin
     end;
   finally
     FDrawRow := -1;
+    FDrawRec := OldRec;
   end;
 end;
 
@@ -4067,9 +4418,14 @@ begin
     Cv.FillRect(Rect);
   ACol := FixedCols + DataCol;
   if FDrawRow >= 0 then
-    R := FDrawRow
+  begin
+    if FGrpOn then
+      R := FDrawRec
+    else
+      R := FDrawRow;
+  end
   else if FDataLink.Active then
-    R := FDataLink.ActiveRecord
+    R := ActiveDataIndex
   else
     R := -1;
   S := '';
@@ -4144,6 +4500,8 @@ begin
   finally
     Dec(FSyncing);
   end;
+  // Karten gruppieren nicht
+  UpdateGroupMode;
   InvalidateGeometry;
   UpdateBufferCount;
   DataChanged;
@@ -5258,7 +5616,7 @@ end;
 
 function TPPGCustomDBGrid.FormCanEdit(ACol: Integer): Boolean;
 begin
-  Result := FDataLink.Active and CellEditable(ACol, VisualRow(FixedRows + FDataLink.ActiveRecord));
+  Result := FDataLink.Active and CellEditable(ACol, VisualRow(FixedRows + ActiveDataIndex));
 end;
 
 procedure TPPGCustomDBGrid.SetEditMode(const Value: TPPGDBGridEditMode);
@@ -5377,7 +5735,7 @@ begin
   FEditPanel.ClearItems;
   if not FDataLink.Active then
     Exit;
-  ARow := FixedRows + FDataLink.ActiveRecord;
+  ARow := FixedRows + ActiveDataIndex;
   // Datenspalten in der Reihenfolge der Anzeige (auch ausgeblendete mit
   // efvShow), stabil nach DisplayIndex einsortiert
   N := DataColCount;
@@ -5622,7 +5980,7 @@ var
 begin
   if (FEditPanel = nil) or not FDataLink.Active then
     Exit;
-  ARow := FixedRows + FDataLink.ActiveRecord;
+  ARow := FixedRows + ActiveDataIndex;
   Inc(FEditPanel.FLoading);
   try
     for I := 0 to High(FEditPanel.FItems) do
@@ -5843,7 +6201,7 @@ begin
   end;
   // Luecke unter der aktiven Zeile; das Formular fuellt sie ueber die ganze
   // Breite (scrollt nicht waagerecht mit den Spalten)
-  V := VisualRow(FixedRows + FDataLink.ActiveRecord);
+  V := VisualRow(FixedRows + ActiveDataIndex);
   Inc(FSyncing);
   try
     SetRowGap(V, FFormGap);
@@ -5865,7 +6223,7 @@ var
 begin
   if (FEditPanel = nil) or not FDataLink.Active then
     Exit;
-  ARow := FixedRows + FDataLink.ActiveRecord;
+  ARow := FixedRows + ActiveDataIndex;
   Inc(FFormBusy);
   try
     for I := 0 to High(FEditPanel.FItems) do
@@ -6514,6 +6872,9 @@ begin
   U := AnsiUpperCase(FindText);
   if (U = '') or not FDataLink.Active then
     Exit;
+  // Gruppiert: in der Reihenfolge der Ansicht (ohne Lesen der Datenmenge)
+  if FGrpOn then
+    Exit(GroupFind(U, Forward, IncludeCurrent, False, False));
   DS := FDataLink.DataSet;
   if DS.IsEmpty then
     Exit;
@@ -6632,6 +6993,8 @@ begin
   F := FieldOfCol(DC);
   if (U = '') or (F = nil) or not FDataLink.Active then
     Exit;
+  if FGrpOn then
+    Exit(GroupFind(U, True, not FromNext, True, True));
   DS := FDataLink.DataSet;
   if DS.IsEmpty then
     Exit;
@@ -6801,6 +7164,857 @@ begin
   end;
   SetLength(Vals, N);
   Result := Vals;
+end;
+
+{ ---- Gruppieren (ganze Datenmenge im Speicher) ---- }
+
+/// Schluessel eines Lesezeichens fuer das Woerterbuch (ein Zeichen je Byte).
+function BookmarkKey(const B: TBookmark): string;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(B));
+  for I := 0 to High(B) do
+    Result[I + 1] := Char(B[I]);
+end;
+
+/// Wert eines Felds fuer Vergleich, Export und RowValue (Binaerdaten: Null).
+function GroupFieldValue(F: TField): Variant;
+begin
+  if (F = nil) or (F.IsBlob and not (F.DataType in [ftMemo, ftWideMemo, ftFmtMemo])) then
+    Result := Null
+  else
+    Result := F.Value;
+end;
+
+function TPPGCustomDBGrid.AllRowsInView: Boolean;
+begin
+  // Ohne Gruppierung zeigt das Grid nur den Puffer der Datenmenge
+  Result := FGrpOn and (Length(FCache) > 0);
+end;
+
+function TPPGCustomDBGrid.GroupedView: Boolean;
+begin
+  Result := FGrpOn;
+end;
+
+function TPPGCustomDBGrid.ActiveDataIndex: Integer;
+begin
+  if FGrpOn then
+    Result := FGrpActive
+  else if FDataLink.Active then
+    Result := FDataLink.ActiveRecord
+  else
+    Result := -1;
+end;
+
+function TPPGCustomDBGrid.LoadedRowCount: Integer;
+begin
+  if FGrpOn then
+    Result := Length(FCache)
+  else
+    Result := FDataLink.RecordCount;
+end;
+
+procedure TPPGCustomDBGrid.GotoDataIndex(R: Integer);
+begin
+  if FGrpOn then
+    GroupGoto(R)
+  else if R <> FDataLink.ActiveRecord then
+    FDataLink.MoveBy(R - FDataLink.ActiveRecord);
+end;
+
+function TPPGCustomDBGrid.ActiveDataRow: Integer;
+var
+  R: Integer;
+begin
+  Result := -1;
+  if not FDataLink.Active then
+    Exit;
+  R := ActiveDataIndex;
+  if (R >= 0) and (R < LoadedRowCount) and (R < Length(FCache)) then
+    Result := FixedRows + R;
+end;
+
+function TPPGCustomDBGrid.ActiveGroupValues: TArray<string>;
+var
+  G, N, I: Integer;
+  Info: TPPGGridGroupInfo;
+  S: string;
+begin
+  SetLength(Result, 0);
+  if not FGrpOn or (FGrpActive < 0) or (FGrpActive >= Length(FCache)) then
+    Exit;
+  N := 0;
+  G := DataRowGroup(FixedRows + FGrpActive);
+  while G >= 0 do
+  begin
+    Info := GroupInfo(G);
+    SetLength(Result, N + 1);
+    Result[N] := Info.Key;
+    Inc(N);
+    G := Info.Parent;
+  end;
+  // Ebene 0 zuerst
+  for I := 0 to N div 2 - 1 do
+  begin
+    S := Result[I];
+    Result[I] := Result[N - 1 - I];
+    Result[N - 1 - I] := S;
+  end;
+end;
+
+function TPPGCustomDBGrid.GetGroupPanel: Boolean;
+begin
+  Result := inherited ShowGroupPanel;
+end;
+
+procedure TPPGCustomDBGrid.SetGroupPanel(const Value: Boolean);
+begin
+  if Value = inherited ShowGroupPanel then
+    Exit;
+  inherited ShowGroupPanel := Value;
+  // Die Leiste nimmt Platz von Datenzeilen (wie Suchfeld und Filterleiste)
+  if not (csLoading in ComponentState) and not (csDestroying in ComponentState) and
+    (FDataLink <> nil) and FDataLink.Active and not FLayoutBusy then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.GroupSetLength(N: Integer; All: Boolean);
+begin
+  SetLength(FCache, N);
+  SetLength(FRowBms, N);
+  SetLength(FGrpVals, N);
+  if All then
+    SetLength(FGrpAll, N)
+  else
+    SetLength(FGrpAll, 0);
+end;
+
+procedure TPPGCustomDBGrid.UpdateGroupMode;
+var
+  NewOn: Boolean;
+begin
+  NewOn := FDataLink.Active and not CardMode and (Length(CurrentGroupColumns) > 0);
+  if NewOn = FGrpOn then
+    Exit;
+  FGrpOn := NewOn;
+  FGrpActive := -1;
+  FGrpIns := -1;
+  FGrpEditBm := nil;
+  FGrpLastBm := nil;
+  FGrpLastIns := False;
+  FGrpRowDirty := False;
+  FGrpNeedApply := False;
+  FGrpViewSig := '';
+  GroupSetLength(0, False);
+  SetLength(FMarks, 0);
+  SetLength(FGrpBufRecs, 0);
+  if FGrpIndex <> nil then
+    FGrpIndex.Clear;
+  FGrpDirty := NewOn;
+  if not NewOn then
+  begin
+    // Wieder der Puffer: die Leiste gehoert der Datenmenge, keine Gruppen
+    Inc(FSyncing);
+    try
+      ScrollTo(ScrollX, 0);
+      RebuildMap;
+    finally
+      Dec(FSyncing);
+    end;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.GroupNoteChange;
+var
+  DS: TDataSet;
+begin
+  DS := FDataLink.DataSet;
+  // Neuer Satz: eigene Zeile (GroupDataChanged), die Saetze bleiben
+  if DS.State = dsInsert then
+    Exit;
+  // Post/Cancel einer Bearbeitung: nur dieser Satz hat sich geaendert
+  if (DS.State = dsBrowse) and (Length(FGrpEditBm) > 0) and not FGrpDirty and
+    not DS.IsEmpty and DS.BookmarkValid(FGrpEditBm) and
+    (DS.CompareBookmarks(FGrpEditBm, DS.Bookmark) = 0) then
+    FGrpRowDirty := True
+  else
+    FGrpDirty := True;
+  if DS.State = dsBrowse then
+    FGrpEditBm := nil;
+end;
+
+procedure TPPGCustomDBGrid.GroupReadRow(R: Integer; IsInsert: Boolean);
+var
+  C: Integer;
+  F: TField;
+  DS: TDataSet;
+begin
+  DS := FDataLink.DataSet;
+  if IsInsert then
+    FRowBms[R] := nil // neuer Satz hat kein Lesezeichen
+  else
+    FRowBms[R] := DS.Bookmark;
+  SetLength(FCache[R], Length(FFields));
+  SetLength(FGrpVals[R], Length(FFields));
+  for C := 0 to High(FFields) do
+  begin
+    F := FFields[C];
+    // Wie im Puffer: Kaestchen 1/0, Nachschlage-Spalte Listentext
+    FCache[R][C] := FieldCellText(FixedCols + C, F);
+    FGrpVals[R][C] := GroupFieldValue(F);
+  end;
+  if R < Length(FGrpAll) then
+  begin
+    SetLength(FGrpAll[R], DS.FieldCount);
+    for C := 0 to DS.FieldCount - 1 do
+      FGrpAll[R][C] := GroupFieldValue(DS.Fields[C]);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.GroupLoad;
+var
+  DS: TDataSet;
+  B: TBookmark;
+  Pos0, N: Integer;
+  All: Boolean;
+begin
+  DS := FDataLink.DataSet;
+  FGrpDirty := False;
+  FGrpRowDirty := False;
+  FGrpIns := -1;
+  FGrpNeedApply := True;
+  Inc(FGrpReadCount);
+  FGrpIndex.Clear;
+  // Alle Felder nur, wenn RowValue sie fuer andere Saetze braucht
+  All := Assigned(OnGetCellStyle) or Assigned(OnSelectCell);
+  GroupSetLength(0, False);
+  Pos0 := TDataSetAccess(DS).ActiveRecord;
+  B := nil;
+  if not DS.IsEmpty then
+    B := DS.Bookmark;
+  N := 0;
+  FGrpLoading := True;
+  // Andere PPGlow-Controls an derselben Datenmenge sollen das EnableControls
+  // am Ende nicht als Aenderung werten
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    try
+      DS.First;
+      while not DS.Eof do
+      begin
+        // geometrisch wachsen statt je Satz neu anlegen
+        if N >= Length(FCache) then
+          GroupSetLength(Max(64, Length(FCache) * 2), All);
+        GroupReadRow(N, False);
+        FGrpIndex.AddOrSetValue(BookmarkKey(FRowBms[N]), N);
+        Inc(N);
+        DS.Next;
+      end;
+    finally
+      GroupSetLength(N, All);
+      if (Length(B) > 0) and DS.BookmarkValid(B) then
+        GotoBookmarkAt(DS, B, Pos0);
+    end;
+  finally
+    try
+      DS.EnableControls;
+    finally
+      PPGDBEndRead;
+      FGrpLoading := False;
+    end;
+  end;
+  UpdateMarks;
+end;
+
+function TPPGCustomDBGrid.GroupIndexOfBm(const B: TBookmark): Integer;
+var
+  I: Integer;
+  DS: TDataSet;
+begin
+  Result := -1;
+  if (Length(B) = 0) or (FGrpIndex = nil) or not FDataLink.Active then
+    Exit;
+  if FGrpIndex.TryGetValue(BookmarkKey(B), I) and (I < Length(FRowBms)) then
+    Exit(I);
+  // Datenmengen mit mehrdeutigen Lesezeichen-Bytes: vergleichen lassen
+  DS := FDataLink.DataSet;
+  for I := 0 to High(FRowBms) do
+    if (Length(FRowBms[I]) > 0) and (DS.CompareBookmarks(FRowBms[I], B) = 0) then
+      Exit(I);
+end;
+
+function TPPGCustomDBGrid.GroupIndexOfCurrent: Integer;
+var
+  DS: TDataSet;
+begin
+  DS := FDataLink.DataSet;
+  if DS.State = dsInsert then
+    Result := FGrpIns
+  else if DS.IsEmpty then
+    Result := -1
+  else
+    Result := GroupIndexOfBm(DS.Bookmark);
+end;
+
+function TPPGCustomDBGrid.GroupKeysOf(R: Integer): string;
+var
+  Cols: TArray<Integer>;
+  I: Integer;
+begin
+  Result := '';
+  Cols := CurrentGroupColumns;
+  for I := 0 to High(Cols) do
+    Result := Result + ViewGroupKey(Cols[I], FixedRows + R) + #1;
+end;
+
+function TPPGCustomDBGrid.GroupViewSignature: string;
+var
+  Cols: TArray<Integer>;
+  I: Integer;
+  C: TPPGGridColumn;
+begin
+  // Gruppenspalten und Summen-Spalten: aendern sie sich, neu gruppieren
+  Result := '';
+  Cols := CurrentGroupColumns;
+  for I := 0 to High(Cols) do
+    Result := Result + IntToStr(Cols[I]) + ',';
+  Result := Result + '|';
+  for I := FixedCols to ColCount - 1 do
+  begin
+    C := ColumnOf(I);
+    if (C <> nil) and (C.Aggregate <> agNone) then
+      Result := Result + IntToStr(I) + ':' + IntToStr(Ord(C.Aggregate)) + ';';
+  end;
+end;
+
+function TPPGCustomDBGrid.GroupColSignature: string;
+var
+  I: Integer;
+  C: TPPGGridColumn;
+  L: TPPGDBGridColumn;
+begin
+  // Felder und Darstellung der Spalten: aendern sie sich, neu lesen
+  Result := IntToStr(FixedCols);
+  for I := 0 to High(FFields) do
+  begin
+    Result := Result + '|' + IntToHex(NativeUInt(Pointer(FFields[I])), SizeOf(Pointer) * 2) +
+      IntToStr(Ord(IsCheckColumn(FixedCols + I)));
+    C := ColumnOf(FixedCols + I);
+    if C is TPPGDBGridColumn then
+      Result := Result + #2 + TPPGDBGridColumn(C).ValueChecked + #2 +
+        TPPGDBGridColumn(C).ValueUnchecked;
+    L := ColumnLookup(FixedCols + I);
+    if L <> nil then
+      Result := Result + #2 + L.KeyField + #2 + L.ListField + #2 + IntToStr(L.ListFieldIndex);
+  end;
+end;
+
+function TPPGCustomDBGrid.GroupPath(G: Integer): string;
+var
+  Info: TPPGGridGroupInfo;
+begin
+  Result := '';
+  while G >= 0 do
+  begin
+    Info := GroupInfo(G);
+    Result := IntToStr(Info.Column) + #2 + Info.Key + #1 + Result;
+    G := Info.Parent;
+  end;
+end;
+
+function TPPGCustomDBGrid.GroupByPath(const P: string): Integer;
+var
+  G: Integer;
+begin
+  for G := 0 to GroupCount - 1 do
+    if GroupPath(G) = P then
+      Exit(G);
+  Result := -1;
+end;
+
+procedure TPPGCustomDBGrid.GroupDataChanged;
+var
+  DS: TDataSet;
+  R, G: Integer;
+  Keys: string;
+begin
+  if not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  // Bearbeitung laeuft: erst nach Post/Cancel neu lesen (First wuerde buchen)
+  if FGrpDirty and not (DS.State in dsEditModes) then
+    GroupLoad
+  else if FGrpRowDirty and (DS.State = dsBrowse) then
+  begin
+    FGrpRowDirty := False;
+    R := GroupIndexOfCurrent;
+    if R < 0 then
+      GroupLoad
+    else
+    begin
+      // Gruppe, in der die Zeile steht (die Feldaenderungen hat
+      // RecordChanged schon gelesen)
+      Keys := '';
+      G := DataRowGroup(FixedRows + R);
+      while G >= 0 do
+      begin
+        Keys := GroupInfo(G).Key + #1 + Keys;
+        G := GroupInfo(G).Parent;
+      end;
+      GroupReadRow(R, False);
+      // Anderer Gruppenwert: neu gruppieren, sonst nur die Summen
+      if GroupKeysOf(R) <> Keys then
+        FGrpNeedApply := True
+      else
+        RecalcAggregates;
+    end;
+  end;
+  // Neuer Satz (Insert/Append): eigene Zeile, bis er gebucht ist
+  if (DS.State = dsInsert) and (FGrpIns < 0) then
+  begin
+    R := Length(FCache);
+    GroupSetLength(R + 1, Length(FGrpAll) > 0);
+    GroupReadRow(R, True);
+    FGrpIns := R;
+    FGrpNeedApply := True;
+  end
+  else if (DS.State <> dsInsert) and (FGrpIns >= 0) then
+    GroupLoad;
+  if GroupViewSignature <> FGrpViewSig then
+    FGrpNeedApply := True;
+  if FGrpNeedApply then
+    GroupApply;
+end;
+
+procedure TPPGCustomDBGrid.GroupApply;
+var
+  N, G, V: Integer;
+  Path: string;
+  Footer: Boolean;
+begin
+  FGrpNeedApply := False;
+  FGrpViewSig := GroupViewSignature;
+  Inc(FGrpViewVer);
+  // Fokus auf einer Gruppenzeile: nach dem Neuaufbau dieselbe Gruppe
+  Path := '';
+  G := GroupAtRow(FocusRow, Footer);
+  if G >= 0 then
+    Path := GroupPath(G);
+  N := Length(FCache);
+  if N < 1 then
+    N := 1;
+  Inc(FSyncing);
+  try
+    if RowCount <> FixedRows + N then
+      RowCount := FixedRows + N
+    else
+      RebuildMap;
+    if Path <> '' then
+    begin
+      G := GroupByPath(Path);
+      if G >= 0 then
+      begin
+        V := GroupRow(G);
+        if V >= 0 then
+          MoveFocus(FocusCol, V, False, False);
+      end;
+    end;
+  finally
+    Dec(FSyncing);
+  end;
+end;
+
+function TPPGCustomDBGrid.GroupReveal(ARow: Integer): Integer;
+var
+  G: Integer;
+  Info: TPPGGridGroupInfo;
+begin
+  Result := VisualRow(ARow);
+  if Result >= 0 then
+    Exit;
+  // Zeile in einer zugeklappten Gruppe: die Gruppen darueber aufklappen
+  G := DataRowGroup(ARow);
+  while G >= 0 do
+  begin
+    Info := GroupInfo(G);
+    if not Info.Expanded then
+      ExpandGroup(G, True);
+    G := Info.Parent;
+  end;
+  Result := VisualRow(ARow);
+end;
+
+procedure TPPGCustomDBGrid.GroupFocusActive;
+var
+  V: Integer;
+begin
+  if (FGrpActive < 0) or (FGrpActive >= Length(FCache)) then
+    Exit;
+  V := GroupReveal(FixedRows + FGrpActive);
+  if V < 0 then
+    Exit;
+  Inc(FSyncing);
+  try
+    MoveFocus(FocusCol, V, False, False);
+  finally
+    Dec(FSyncing);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.GroupSync;
+var
+  DS: TDataSet;
+  B: TBookmark;
+  Ins, Changed: Boolean;
+  I, Old: Integer;
+begin
+  if not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  Ins := DS.State = dsInsert;
+  B := nil;
+  if not Ins and not DS.IsEmpty then
+    B := DS.Bookmark;
+  // Lesezeichen-Bytes vergleichen: CompareBookmarks meldet fuer einen
+  // herausgefilterten Satz (TClientDataSet) Gleichheit
+  if Ins <> FGrpLastIns then
+    Changed := True
+  else
+    Changed := BookmarkKey(B) <> BookmarkKey(FGrpLastBm);
+  FGrpLastBm := B;
+  FGrpLastIns := Ins;
+  if Ins then
+    FGrpActive := FGrpIns
+  else
+    FGrpActive := GroupIndexOfBm(B);
+  // Owner-Draw: Pufferzeilen der Datenmenge -> Saetze (OnDrawColumnCell
+  // kommt nur fuer Saetze im Puffer)
+  SetLength(FGrpBufRecs, 0);
+  if Assigned(FOnDrawColumnCell) then
+  begin
+    SetLength(FGrpBufRecs, FDataLink.RecordCount);
+    Old := FDataLink.ActiveRecord;
+    try
+      for I := 0 to High(FGrpBufRecs) do
+        if I = Old then
+          FGrpBufRecs[I] := FGrpActive
+        else
+        begin
+          FDataLink.ActiveRecord := I;
+          FGrpBufRecs[I] := GroupIndexOfBm(DS.Bookmark);
+        end;
+    finally
+      FDataLink.ActiveRecord := Old;
+    end;
+  end;
+  // Waehrend der Fokus die Datenmenge bewegt, setzt er auch die Zeile
+  if (FGrpMoving > 0) or (FGrpActive < 0) then
+    Exit;
+  if not Changed then
+  begin
+    // Derselbe Satz: eine fokussierte Gruppenzeile bleibt
+    if not IsDataRow(FocusRow) then
+      Exit;
+    if DataRow(FocusRow) = FixedRows + FGrpActive then
+      Exit;
+  end;
+  GroupFocusActive;
+end;
+
+function TPPGCustomDBGrid.GroupGoto(R: Integer): Boolean;
+var
+  DS: TDataSet;
+  B: TBookmark;
+  Ver: Integer;
+begin
+  Result := True;
+  DS := FDataLink.DataSet;
+  if (R < 0) or (R >= Length(FCache)) then
+    Exit(False);
+  if DS.State = dsInsert then
+  begin
+    if R = FGrpIns then
+      Exit;
+  end
+  else if R = FGrpActive then
+    Exit;
+  B := FRowBms[R];
+  if Length(B) = 0 then
+    Exit(False);
+  Ver := FGrpViewVer;
+  // Offene Bearbeitung buchen (wie MoveBy); das kann neu gruppieren
+  if DS.State in dsEditModes then
+    DS.CheckBrowseMode;
+  if not DS.BookmarkValid(B) then
+  begin
+    if FGrpViewVer <> Ver then
+      GroupFocusActive;
+    Exit(False);
+  end;
+  Inc(FGrpMoving);
+  Inc(FGrpQuiet);
+  try
+    DS.Bookmark := B;
+  finally
+    Dec(FGrpQuiet);
+    Dec(FGrpMoving);
+  end;
+  if FGrpViewVer <> Ver then
+  begin
+    // Ansicht wurde neu aufgebaut (gebuchte Aenderung): Fokus selbst setzen
+    GroupFocusActive;
+    Result := False;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.GroupSelectRange(const FromBm: TBookmark);
+var
+  Order: TArray<Integer>;
+  Cur: TBookmark;
+  A, C, P0, P1, I, R: Integer;
+begin
+  Cur := FSelected.CurrentBookmark;
+  if Length(Cur) = 0 then
+    Exit;
+  A := GroupIndexOfBm(FromBm);
+  C := GroupIndexOfBm(Cur);
+  if (A < 0) or (C < 0) then
+  begin
+    FSelected.AddBookmark(Cur);
+    Exit;
+  end;
+  // Reihenfolge der Ansicht (auch zugeklappte Gruppen)
+  Order := GroupDataRows(-1);
+  P0 := -1;
+  P1 := -1;
+  for I := 0 to High(Order) do
+  begin
+    if Order[I] = FixedRows + A then
+      P0 := I;
+    if Order[I] = FixedRows + C then
+      P1 := I;
+  end;
+  if (P0 < 0) or (P1 < 0) then
+  begin
+    FSelected.AddBookmark(Cur);
+    Exit;
+  end;
+  if P0 > P1 then
+  begin
+    I := P0;
+    P0 := P1;
+    P1 := I;
+  end;
+  FSelected.BeginUpdate;
+  try
+    // AddBookmark fragt OnCanSelectRecord je Satz
+    for I := P0 to P1 do
+    begin
+      R := Order[I] - FixedRows;
+      if (R >= 0) and (R < Length(FRowBms)) and (Length(FRowBms[R]) > 0) then
+        FSelected.AddBookmark(FRowBms[R]);
+    end;
+  finally
+    FSelected.EndUpdate;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.GroupRecordChanged;
+var
+  R: Integer;
+begin
+  // Nur der aktive Satz (Feld geaendert); neu gruppiert wird nach dem Buchen
+  if not FDataLink.Active then
+    Exit;
+  R := GroupIndexOfCurrent;
+  if (R < 0) or (R >= Length(FCache)) then
+    Exit;
+  GroupReadRow(R, FDataLink.DataSet.State = dsInsert);
+end;
+
+procedure TPPGCustomDBGrid.GroupListChanged;
+var
+  R, C: Integer;
+  L: TPPGDBGridColumn;
+  Any: Boolean;
+begin
+  // Nachschlage-Spalten: Texte aus den gespeicherten Schluesseln neu
+  Any := False;
+  for C := 0 to High(FFields) do
+  begin
+    L := ColumnLookup(FixedCols + C);
+    if L = nil then
+      Continue;
+    Any := True;
+    for R := 0 to High(FCache) do
+      if (C < Length(FCache[R])) and (C < Length(FGrpVals[R])) then
+      begin
+        if VarIsNull(FGrpVals[R][C]) or VarIsEmpty(FGrpVals[R][C]) then
+          FCache[R][C] := ''
+        else
+          FCache[R][C] := L.LookupText(FGrpVals[R][C]);
+      end;
+  end;
+  if Any then
+    GroupApply;
+end;
+
+function TPPGCustomDBGrid.GroupFind(const U: string; Forward, IncludeCurrent, Prefix,
+  OneCol: Boolean): Boolean;
+var
+  Order: TArray<Integer>;
+  Cols: array of Integer;
+  NC, CI, I, P, K, Total, Idx, R, DC, V: Integer;
+  T: string;
+begin
+  Result := False;
+  if (U = '') or (Length(FCache) = 0) then
+    Exit;
+  // Spalten in Anzeige-Reihenfolge (Tippsuche: nur die Fokusspalte)
+  SetLength(Cols, VisibleColCount);
+  NC := 0;
+  for I := FixedCols to VisibleColCount - 1 do
+    if (OneCol and (I = FocusCol)) or (not OneCol and FindSearchColumn(DataCol(I))) then
+    begin
+      Cols[NC] := I;
+      Inc(NC);
+    end;
+  if NC = 0 then
+    Exit;
+  CI := 0;
+  for I := 0 to NC - 1 do
+    if Cols[I] <= FocusCol then
+      CI := I;
+  // Zeilen in der Reihenfolge der Ansicht (auch zugeklappte Gruppen)
+  Order := GroupDataRows(-1);
+  P := 0;
+  R := DataRow(FocusRow);
+  if R < FixedRows then
+    R := FixedRows + FGrpActive;
+  for I := 0 to High(Order) do
+    if Order[I] = R then
+      P := I;
+  Total := Length(Order) * NC;
+  for K := 0 to Total - 1 do
+  begin
+    if Forward then
+      Idx := P * NC + CI + K + Ord(not IncludeCurrent)
+    else
+      Idx := P * NC + CI - K - Ord(not IncludeCurrent);
+    Idx := ((Idx mod Total) + Total) mod Total;
+    R := Order[Idx div NC] - FixedRows;
+    DC := DataCol(Cols[Idx mod NC]) - FixedCols;
+    if (R < 0) or (R >= Length(FCache)) or (DC < 0) or (DC >= Length(FCache[R])) then
+      Continue;
+    T := AnsiUpperCase(FCache[R][DC]);
+    if Prefix then
+    begin
+      if Copy(T, 1, Length(U)) <> U then
+        Continue;
+    end
+    else if Pos(U, T) = 0 then
+      Continue;
+    // Treffer: Gruppen aufklappen, Zeile fokussieren (bewegt die Datenmenge)
+    V := GroupReveal(FixedRows + R);
+    if V < 0 then
+      Exit;
+    MoveFocus(Cols[Idx mod NC], V, False, True);
+    Invalidate;
+    Exit(True);
+  end;
+end;
+
+function TPPGCustomDBGrid.CompareDataRows(ACol, R1, R2: Integer): Integer;
+var
+  A, B, C: Integer;
+  F: TField;
+  V1, V2: Variant;
+  N1, N2: Boolean;
+  D1, D2: Double;
+begin
+  A := R1 - FixedRows;
+  B := R2 - FixedRows;
+  C := ACol - FixedCols;
+  if not FGrpOn or (A < 0) or (B < 0) or (A >= Length(FGrpVals)) or (B >= Length(FGrpVals)) or
+    (C < 0) or (C >= Length(FGrpVals[A])) or (C >= Length(FGrpVals[B])) then
+    Exit(inherited CompareDataRows(ACol, R1, R2));
+  // Zahlen und Datum nach Wert (leer zuerst), sonst nach dem angezeigten Text
+  F := FieldOfCol(ACol);
+  if (F <> nil) and (F.FieldKind <> fkLookup) and not IsCheckColumn(ACol) and
+    (ColumnLookup(ACol) = nil) and (IsNumberField(F) or IsDateField(F)) then
+  begin
+    V1 := FGrpVals[A][C];
+    V2 := FGrpVals[B][C];
+    N1 := VarIsNull(V1) or VarIsEmpty(V1);
+    N2 := VarIsNull(V2) or VarIsEmpty(V2);
+    if N1 or N2 then
+      Exit(Ord(not N1) - Ord(not N2));
+    D1 := VarAsType(V1, varDouble);
+    D2 := VarAsType(V2, varDouble);
+    if D1 < D2 then
+      Result := -1
+    else if D1 > D2 then
+      Result := 1
+    else
+      Result := 0;
+    Exit;
+  end;
+  Result := AnsiCompareText(FCache[A][C], FCache[B][C]);
+end;
+
+function TPPGCustomDBGrid.ViewGroupKey(ACol, ARow: Integer): string;
+var
+  R, C: Integer;
+  V: Variant;
+begin
+  Result := inherited ViewGroupKey(ACol, ARow);
+  // Kaestchen gruppieren nach dem Wert (nicht nach 1/0)
+  if not FGrpOn or not IsCheckColumn(ACol) then
+    Exit;
+  R := ARow - FixedRows;
+  C := ACol - FixedCols;
+  if (R < 0) or (R >= Length(FGrpVals)) or (C < 0) or (C >= Length(FGrpVals[R])) then
+    Exit;
+  V := FGrpVals[R][C];
+  if VarIsNull(V) or VarIsEmpty(V) then
+    Result := ''
+  else
+    Result := VarToStr(V);
+end;
+
+function TPPGCustomDBGrid.LocateRecord(const KeyFields: string; const KeyValues: Variant;
+  Options: TLocateOptions): Boolean;
+var
+  DS: TDataSet;
+begin
+  Result := False;
+  if not FDataLink.Active then
+    Exit;
+  DS := FDataLink.DataSet;
+  // Offene Bearbeitung zuerst buchen (liest ggf. neu); der Satzwechsel selbst
+  // liest nicht neu
+  if DS.State in dsEditModes then
+    DS.CheckBrowseMode;
+  Inc(FGrpQuiet);
+  try
+    Result := DS.Locate(KeyFields, KeyValues, Options);
+  finally
+    Dec(FGrpQuiet);
+  end;
+end;
+
+procedure TPPGCustomDBGrid.RefreshGroups;
+begin
+  if not FGrpOn then
+    Exit;
+  FGrpDirty := True;
+  DataChanged;
 end;
 
 { TPPGDBGrid }
