@@ -37,7 +37,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | Eigenschaft | Typ | Vorgabe | Wirkung und Nutzung |
 |---|---|---|---|
 | `Preset` | `string` |  | Optik-Vorlage aller verbundenen Controls (Classic, ModernFlat, Fluent11). |
-| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Gemeinsame Appearance aller verbundenen Controls; wird beim Preset-Wechsel und bei geänderten Theme-Farben neu abgeleitet. |
+| `Appearance` | [TPPGAppearance](types/TPPGAppearance.md) |  | Gemeinsame Appearance aller verbundenen Controls; wird beim Preset-Wechsel und bei geänderten Theme-Farben neu abgeleitet. In der DFM stehen nur die Werte, die vom Preset abweichen (aus einer Markenfarbe abgeleitete Farben gehören dazu). |
 | `Animation` | [TPPGAnimationSettings](types/TPPGAnimationSettings.md) |  | Animationseinstellungen für alle verbundenen Controls (an/aus, Dauer, Systemeinstellung beachten). |
 | `ThemeMode` | `TPPGThemeMode` | `tmLight` | Hell (tmLight), Dunkel (tmDark) oder wie Windows (tmSystem) für alle PPGlow-Controls der Anwendung, auch im Designer. Bei mehreren Managern gilt der zuletzt gesetzte. Werte: `tmLight`, `tmDark`, `tmSystem`. |
 | `StyleForms` | `Boolean` | `False` | True: Formulare werden zur Laufzeit in den neutralen Farben des Modus gefärbt, im Dunkeln mit dunkler Titelleiste. |
@@ -52,7 +52,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `Name` | `TComponentName` |  | Name der Komponente im Formular; daraus wird das Feld in der Formular-Klasse (PPGButton1) und der Bezug in der DFM. Muss ein gültiger Pascal-Bezeichner und im Formular eindeutig sein. Nutzung: `PPGButton1.Name := 'btnSpeichern';` (meist nur im Objektinspektor ändern) |
 | `Tag` | `NativeInt` |  | Freier Ganzzahlwert für eigene Zwecke (z. B. eine ID oder einen Zeiger). |
 
-Tests: `PPG.Tests.Controls` (TLifecycleTests, TResourceTests, TStyleTests); `PPG.Tests.Custom` (TCustomThemeTests); `PPG.Tests.Phase8` (TThemeTests); `PPG.Tests.Phase9a` (TPresetTargetTests); `PPG.Tests.Review` (TReviewTests); `PPG.Tests.Streaming` (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Controls` (TLifecycleTests, TResourceTests, TStyleTests); `PPG.Tests.Custom` (TCustomThemeTests); `PPG.Tests.Phase8` (TThemeTests); `PPG.Tests.Phase9a` (TPresetTargetTests); `PPG.Tests.Review` (TReviewTests); `PPG.Tests.Streaming` (TPresetStreamingTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGStyleManager.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

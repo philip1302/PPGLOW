@@ -9,7 +9,7 @@ interface
 uses
   TestFramework, Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.TypInfo, Vcl.Controls, Vcl.Forms, Vcl.Graphics, Vcl.ActnList,
-  PPG.Feedback, PPG.Breadcrumb, PPG.Button, PPG.Calendar, PPG.Chart, PPG.CheckBox,
+  PPG.Feedback, PPG.RichEdit, PPG.DB.RichEdit, PPG.Breadcrumb, PPG.Button, PPG.Calendar, PPG.Chart, PPG.CheckBox,
   PPG.CheckComboBox, PPG.RadioGroup, PPG.CheckListBox, PPG.ColorPicker, PPG.ColumnComboBox,
   PPG.ComboBox, PPG.DatePicker, PPG.Edit, PPG.Expander, PPG.FileEdit, PPG.Gauge, PPG.Grid,
   PPG.GroupBox, PPG.Kanban, PPG.Labels, PPG.ListBox, PPG.MaskEdit, PPG.Memo, PPG.MenuBar,
@@ -80,7 +80,7 @@ type
 
 const
   /// Alle sichtbaren Controls der Paletten (PPG.Reg, PPG.DB.Reg).
-  VisualClasses: array[0..71] of TControlClass = (
+  VisualClasses: array[0..76] of TControlClass = (
     TPPGBadge, TPPGBreadcrumb, TPPGButton, TPPGCalendar, TPPGChart, TPPGCheckBox,
     TPPGCheckComboBox, TPPGCheckGroup, TPPGCheckListBox, TPPGColorPicker, TPPGColumnComboBox,
     TPPGComboBox, TPPGDatePicker, TPPGEdit, TPPGExpander, TPPGFileEdit, TPPGGauge, TPPGGrid,
@@ -93,7 +93,8 @@ const
     TPPGWizard, TPPGDBChart, TPPGDBCheckBox, TPPGDBCheckComboBox, TPPGDBColorPicker,
     TPPGDBComboBox, TPPGDBDatePicker, TPPGDBEdit, TPPGDBGrid, TPPGDBKanban,
     TPPGDBLookupComboBox, TPPGDBMaskEdit, TPPGDBMemo, TPPGDBNavigator, TPPGDBNumberEdit,
-    TPPGDBPlanner, TPPGDBRadioGroup, TPPGDBTagEdit);
+    TPPGDBPlanner, TPPGDBRadioGroup, TPPGDBTagEdit, TPPGDBText, TPPGDBToggleSwitch,
+    TPPGRichEdit, TPPGDBRichEdit, TPPGDBImage);
 
 implementation
 
@@ -317,9 +318,10 @@ begin
       begin
         if GetPropInfo(CC, 'OnDblClick') = nil then
           Missing := Missing + #13#10 + CC.ClassName + ': OnDblClick nicht veroeffentlicht';
-        // TPPGDBMemo laedt beim ersten Doppelklick das Memo (wie TDBMemo)
+        // TPPGDBMemo und TPPGDBRichEdit laden beim ersten Doppelklick das Memo (wie TDBMemo)
         // Aufklappfelder ohne Edit: der Klick klappt auf, der zweite gehoert der Liste
-        if not CC.InheritsFrom(TPPGDBMemo) and not SelectionClick(CC) then
+        if not CC.InheritsFrom(TPPGDBMemo) and not CC.InheritsFrom(TPPGDBRichEdit) and
+          not SelectionClick(CC) then
           Expected := Expected + ['OnDblClick'];
       end
       else if GetPropInfo(CC, 'OnDblClick') <> nil then

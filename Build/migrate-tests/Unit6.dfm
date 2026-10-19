@@ -1,0 +1,38 @@
+object Form6: TForm6
+  Left = 0
+  Top = 0
+  Caption = 'Form6'
+  ClientHeight = 200
+  ClientWidth = 300
+  PixelsPerInch = 96
+  object Shape1: TShape
+    Left = 8
+    Top = 8
+    Width = 65
+    Height = 65
+    Brush.Color = clYellow
+    Pen.Color = clRed
+    Pen.Width = 2
+    Shape = stRoundRect
+  end
+  object DBText1: TDBText
+    Left = 88
+    Top = 8
+    Width = 121
+    Height = 17
+    AutoSize = True
+    DataField = 'Name'
+    DataSource = DataSource1
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
+    Transparent = True
+  end
+  object DataSource1: TDataSource
+    Left = 240
+    Top = 8
+  end
+end

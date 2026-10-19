@@ -76,6 +76,7 @@ $Icons = [ordered]@{
   'TPPGTreeView'    = @('path 1.5 G 8 9 8 23 13 23', 'line 8 16 13 16 1.5 G', 'rect 4 5 8 6 1.5 A', 'rect 13 13 14 6 1.5 L', 'rect 13 20 12 6 1.5 H')
   'TPPGGrid'        = @('rect 3 5 26 22 2 W S 1.5', 'rect 3 5 26 6 2 A', 'line 3.5 16 28.5 16 1 S', 'line 3.5 21.5 28.5 21.5 1 S', 'line 12 5.5 12 26.5 1 S', 'line 20.5 5.5 20.5 26.5 1 S')
   'TPPGGridPrinter' = @('rect 8 3 16 8 1.5 W S 1.5', 'rect 3 11 26 12 2 A', 'rect 8 19 16 10 1.5 W S 1.5', 'line 11 23 21 23 1.5 G', 'line 11 26 18 26 1.5 G', 'circle 25 15 1.2 W')
+  'TPPGShape'       = @('rect 3 13 15 15 2 A', 'circle 21 12 8 W S 2')
   'TPPGLabel'       = @('path 2.5 D 7 25 13 7 19 25', 'line 9.5 19 16.5 19 2.5 D', 'line 21 25 27 25 2 A')
   'TPPGLinkLabel'   = @('line 4 16 28 16 2.5 A', 'line 4 21 28 21 1.5 A', 'path 2.5 A 7 12 7 9 25 9 25 12')
   'TPPGBadge'       = @('rect 3 10 18 14 3 H S 1', 'circle 23 10 7 R', 'line 23 7 23 13 2 W')
@@ -117,13 +118,17 @@ $Icons = [ordered]@{
   'TPPGCheckComboBox' = $Field + @('rect 5 12 7 7 1.5 A', 'path 1.5 W 6.5 15.5 8 17 10.5 14', 'line 14 15.5 19 15.5 2 G', 'path 2 D 22 14 24.5 17 27 14')
   'TPPGColumnComboBox' = @('rect 2 3 28 9 3 W S 1.5', 'path 1.8 D 22 6.5 24.5 9 27 6.5', 'rect 2 13 28 16 2 W S 1', 'rect 2 13 28 5 2 H', 'line 11 13.5 11 28.5 1 S', 'line 5 22 9 22 1.5 G', 'line 13 22 26 22 1.5 G', 'line 5 26 9 26 1.5 G', 'line 13 26 23 26 1.5 G')
   'TPPGTagEdit'     = $Field + @('rect 4 12 9 8 3 L A 1', 'rect 15 12 9 8 3 L A 1', 'line 26 13 26 19 1.5 D')
+  'TPPGRichEdit'    = @('rect 3 4 26 24 3 W S 1.5', 'line 7 10 14 10 3 A', 'line 17 10 25 10 2 G', 'line 7 16 25 16 2 G', 'line 7 21 20 21 2 G')
   'TPPGStyleManager'= @('circle 16 16 12 W S 1.5', 'circle 11 12 3 A', 'circle 19 10 3 R', 'circle 22 17 3 Y', 'circle 12 20 3 N')
+  'TPPGImage'       = @('rect 3 5 26 22 2 W S 1.5', 'circle 22 11 3 A', 'poly A 5 25 12 15 17 21 21 17 27 25')
 }
 
 $DbIcons = [ordered]@{
   'TPPGDBEdit'           = $Icons['TPPGEdit'] + @('db')
   'TPPGDBMemo'           = $Icons['TPPGMemo'] + @('db')
   'TPPGDBCheckBox'       = $Icons['TPPGCheckBox'] + @('db')
+  'TPPGDBText'           = $Icons['TPPGLabel'] + @('db')
+  'TPPGDBToggleSwitch'   = $Icons['TPPGToggleSwitch'] + @('db')
   'TPPGDBComboBox'       = $Icons['TPPGComboBox'] + @('db')
   'TPPGDBLookupComboBox' = $Field + @('line 7 16 12 16 2 G', 'path 1.6 A 14 13 16 16 14 19', 'path 2 D 21 14 24 17 27 14', 'db')
   'TPPGDBDatePicker'     = $Icons['TPPGDatePicker'] + @('db')
@@ -138,6 +143,8 @@ $DbIcons = [ordered]@{
   'TPPGDBColorPicker'    = $Icons['TPPGColorPicker'] + @('db')
   'TPPGDBCheckComboBox'  = $Icons['TPPGCheckComboBox'] + @('db')
   'TPPGDBTagEdit'        = $Icons['TPPGTagEdit'] + @('db')
+  'TPPGDBRichEdit'       = $Icons['TPPGRichEdit'] + @('db')
+  'TPPGDBImage'          = $Icons['TPPGImage'] + @('db')
 }
 
 $Source = @'

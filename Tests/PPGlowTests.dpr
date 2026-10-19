@@ -12,10 +12,13 @@ program PPGlowTests;
 {$APPTYPE CONSOLE}
 
 uses
+  Winapi.Windows,
   System.SysUtils,
   PPG.TestDesktop in 'PPG.TestDesktop.pas',
   System.Classes,
+  System.Rtti,
   Vcl.Forms,
+  Vcl.Graphics,
   TestFramework,
   TextTestRunner,
   GUITestRunner,
@@ -87,6 +90,7 @@ uses
   PPG.TreeView in '..\Source\Controls\PPG.TreeView.pas',
   PPG.Grid in '..\Source\Controls\PPG.Grid.pas',
   PPG.Labels in '..\Source\Controls\PPG.Labels.pas',
+  PPG.Shape in '..\Source\Controls\PPG.Shape.pas',
   PPG.Feedback in '..\Source\Controls\PPG.Feedback.pas',
   PPG.Expander in '..\Source\Controls\PPG.Expander.pas',
   PPG.Splitter in '..\Source\Controls\PPG.Splitter.pas',
@@ -155,6 +159,8 @@ uses
   PPG.Render.Shapes in '..\Source\Render\PPG.Render.Shapes.pas',
   PPG.Sparkline in '..\Source\Controls\PPG.Sparkline.pas',
   PPG.Gauge in '..\Source\Controls\PPG.Gauge.pas',
+  PPG.RichEdit in '..\Source\Controls\PPG.RichEdit.pas',
+  PPG.Image in '..\Source\Controls\PPG.Image.pas',
   PPG.Editors.Logic in '..\Source\Editors\PPG.Editors.Logic.pas',
   PPG.Editors.Forms in '..\Source\Editors\PPG.Editors.Forms.pas',
   PPG.DB.Controls in '..\Source\DB\PPG.DB.Controls.pas',
@@ -166,6 +172,7 @@ uses
   PPG.DB.Navigator in '..\Source\DB\PPG.DB.Navigator.pas',
   PPG.DB.Validator in '..\Source\DB\PPG.DB.Validator.pas',
   PPG.DB.Fields in '..\Source\DB\PPG.DB.Fields.pas',
+  PPG.DB.RichEdit in '..\Source\DB\PPG.DB.RichEdit.pas',
   PPG.Tests.Core in 'PPG.Tests.Core.pas',
   PPG.Tests.Controls in 'PPG.Tests.Controls.pas',
   PPG.Tests.Check in 'PPG.Tests.Check.pas',
@@ -189,6 +196,8 @@ uses
   PPG.Tests.Phase9b in 'PPG.Tests.Phase9b.pas',
   PPG.Tests.Phase9c in 'PPG.Tests.Phase9c.pas',
   PPG.Tests.Phase9d in 'PPG.Tests.Phase9d.pas',
+  PPG.Tests.GridFilterSearch in 'PPG.Tests.GridFilterSearch.pas',
+  PPG.Tests.DBGridGrouping in 'PPG.Tests.DBGridGrouping.pas',
   PPG.Tests.Phase10a in 'PPG.Tests.Phase10a.pas',
   PPG.Tests.Phase10b in 'PPG.Tests.Phase10b.pas',
   PPG.Tests.Phase10c in 'PPG.Tests.Phase10c.pas',
@@ -209,6 +218,12 @@ uses
   PPG.Tests.Phase13f in 'PPG.Tests.Phase13f.pas',
   PPG.Tests.Phase17 in 'PPG.Tests.Phase17.pas',
   PPG.Tests.Phase18 in 'PPG.Tests.Phase18.pas',
+  PPG.Tests.Inventur in 'PPG.Tests.Inventur.pas',
+  PPG.Tests.DBGridMultiSelect in 'PPG.Tests.DBGridMultiSelect.pas',
+  PPG.Tests.DBGridColumns in 'PPG.Tests.DBGridColumns.pas',
+  PPG.Tests.DBGridCards in 'PPG.Tests.DBGridCards.pas',
+  PPG.Tests.DBGridEditForm in 'PPG.Tests.DBGridEditForm.pas',
+  PPG.Tests.Image in 'PPG.Tests.Image.pas',
   PPG.Tests.Phase19 in 'PPG.Tests.Phase19.pas',
   PPG.Tests.Phase20 in 'PPG.Tests.Phase20.pas',
   PPG.Tests.Audit45 in 'PPG.Tests.Audit45.pas',
@@ -232,7 +247,8 @@ uses
   PPG.Tests.Phase14cKanban in 'PPG.Tests.Phase14cKanban.pas',
   PPG.Tests.Phase14cDB in 'PPG.Tests.Phase14cDB.pas',
   PPG.Tests.Review in 'PPG.Tests.Review.pas',
-  PPG.Tests.Custom in 'PPG.Tests.Custom.pas';
+  PPG.Tests.Custom in 'PPG.Tests.Custom.pas',
+  PPG.Tests.RichEdit in 'PPG.Tests.RichEdit.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;
@@ -260,33 +276,135 @@ begin
   end;
 end;
 
-/// Leck-Suche (/leaksuites): nach einem Lauf aller Tests (Caches fuellen)
-/// jede Test-Klasse einzeln noch einmal; gemeldet wird jede Klasse, nach der
-/// mehr als 1 KB mehr belegt ist ("LEAKSUITE Klasse Bytes").
-procedure LeakSuites;
+/// DUnit haengt jede Status-Meldung (Status(...), auch Skip) an eine Liste des
+/// Testobjekts, die erst mit dem Objekt freigegeben wird. Da die Testobjekte
+/// fuer Wiederholungslaeufe bestehen bleiben, waechst diese Liste je Lauf -
+/// ein Artefakt des Frameworks, kein Leck der Komponenten. Vor jeder Messung
+/// wird sie daher geleert.
+procedure ClearStatusLists(T: ITest);
 var
-  Root, Grp, S: ITest;
-  I, J: Integer;
+  Ctx: TRttiContext;
+  Fld: TRttiField;
+  Obj: TObject;
+  I: Integer;
+begin
+  Obj := T as TAbstractTest;
+  Fld := Ctx.GetType(TAbstractTest).GetField('FStatusStrings');
+  if (Fld <> nil) and (Fld.GetValue(Obj).AsObject is TStrings) then
+    TStrings(Fld.GetValue(Obj).AsObject).Clear;
+  for I := 0 to T.Tests.Count - 1 do
+    ClearStatusLists(T.Tests[I] as ITest);
+end;
+
+/// Ein Test wird dreimal hintereinander gelaufen; D1..D3 = Speicherzuwachs
+/// je Lauf (nach ProcessMessages). Mit /leaksizes werden zusaetzlich die
+/// Blockgroessen (Small-Block-Pools) ausgegeben, deren Blockzahl nach dem
+/// dritten Lauf von der davor abweicht ("SIZES Name: block Groesse delta n").
+procedure MeasureRuns(T: ITest; out D1, D2, D3: Int64);
+var
   B, A: Int64;
   R: TTestResult;
+  K, N: Integer;
+  S0, S1: TMemoryManagerState;
+  D: array[1..3] of Int64;
 begin
-  RunAll;
-  Root := RegisteredTests;
-  for I := 0 to Root.Tests.Count - 1 do
+  for K := 1 to 3 do
   begin
-    Grp := Root.Tests[I] as ITest;
-    for J := 0 to Grp.Tests.Count - 1 do
+    ClearStatusLists(T);
+    Application.ProcessMessages;
+    B := AllocatedBytes;
+    GetMemoryManagerState(S0);
+    R := TextTestRunner.RunTest(T, rxbContinue);
+    R.Free;
+    ClearStatusLists(T);
+    Application.ProcessMessages;
+    A := AllocatedBytes;
+    D[K] := A - B;
+    if (K = 3) and FindCmdLineSwitch('leaksizes', ['/', '-'], True) then
     begin
-      S := Grp.Tests[J] as ITest;
-      Application.ProcessMessages;
-      B := AllocatedBytes;
-      R := TextTestRunner.RunTest(S, rxbContinue);
-      R.Free;
-      Application.ProcessMessages;
-      A := AllocatedBytes;
-      if A - B > 1024 then
-        WriteLn(Format('LEAKSUITE %s.%s %d', [Grp.Name, S.Name, A - B]));
+      GetMemoryManagerState(S1);
+      for N := Low(S0.SmallBlockTypeStates) to High(S0.SmallBlockTypeStates) do
+        if S1.SmallBlockTypeStates[N].AllocatedBlockCount <>
+          S0.SmallBlockTypeStates[N].AllocatedBlockCount then
+          WriteLn(Format('SIZES %s: block %d delta %d', [T.Name,
+            S0.SmallBlockTypeStates[N].UseableBlockSize,
+            Integer(S1.SmallBlockTypeStates[N].AllocatedBlockCount) -
+            Integer(S0.SmallBlockTypeStates[N].AllocatedBlockCount)]));
     end;
+  end;
+  D1 := D[1];
+  D2 := D[2];
+  D3 := D[3];
+end;
+
+/// Test-Klassen mit bekanntem, belegtem Restwachstum ausserhalb der
+/// Komponenten (siehe Kommentar an LeakSuites).
+function IsKnownRemainder(const GroupName, SuiteName: string): Boolean;
+begin
+  // UI Automation: Das Testfenster beantwortet WM_GETOBJECT selbst
+  // (SendMessage). Windows haelt die Referenz auf die Wurzel, bis ein Client
+  // das zurueckgegebene LRESULT abholt; einen Client gibt es im Test nicht
+  // (ObjectFromLresult liefert E_FAIL, UiaDisconnectProvider und ein
+  // nil-Provider geben die Wurzel nicht frei). Gemessen: Wurzeln erzeugt 141,
+  // freigegeben 0, eine ohne UiaReturnRawElementProvider angelegte Wurzel
+  // wird dagegen sofort freigegeben. Je Test bleibt eine Wurzel (rund 250 Byte).
+  Result := GroupName = 'Phase9b';
+end;
+
+/// Leck-Suche (/leaksuites): nach einem Lauf aller Tests (Caches fuellen)
+/// wird jede Test-Klasse dreimal einzeln gelaufen. Einmalige Caches (Klassen-
+/// variablen, Schrift-/Glyph-/UIA-Provider, die erst beim ersten Durchlauf der
+/// Klasse entstehen und bis Programmende leben) wachsen nur im ersten Lauf;
+/// ein echtes Leck waechst in jedem Lauf. Gemeldet wird daher nur, wenn der
+/// zweite UND der dritte Lauf je mehr als 1 KB mehr belegen
+/// ("LEAKSUITE Klasse Lauf1 Lauf2 Lauf3"). Mit /leakmethods wird jede
+/// Testmethode einzeln so gemessen ("LEAKTEST Klasse.Methode ..."), mit
+/// /suite nur die genannten Gruppen bzw. Klassen. Die Status-Listen von DUnit
+/// werden vor jeder Messung geleert (ClearStatusLists).
+procedure LeakSuites(const Filter: string);
+var
+  Root, Grp, S, M: ITest;
+  I, J, K: Integer;
+  D1, D2, D3: Int64;
+  Methods: Boolean;
+  Names: TStringList;
+begin
+  Names := TStringList.Create;
+  try
+    Names.CommaText := Filter;
+    Names.CaseSensitive := False;
+    Methods := FindCmdLineSwitch('leakmethods', ['/', '-'], True);
+    RunAll;
+    Root := RegisteredTests;
+    for I := 0 to Root.Tests.Count - 1 do
+    begin
+      Grp := Root.Tests[I] as ITest;
+      for J := 0 to Grp.Tests.Count - 1 do
+      begin
+        S := Grp.Tests[J] as ITest;
+        if (Filter <> '') and (Names.IndexOf(Grp.Name) < 0) and
+          (Names.IndexOf(S.Name) < 0) then
+          Continue;
+        MeasureRuns(S, D1, D2, D3);
+        if (D2 > 1024) and (D3 > 1024) then
+          if IsKnownRemainder(Grp.Name, S.Name) then
+            WriteLn(Format('LEAKSUITE-BEKANNT %s.%s %d %d %d (Windows-UIA, siehe IsKnownRemainder)',
+              [Grp.Name, S.Name, D1, D2, D3]))
+          else
+            WriteLn(Format('LEAKSUITE %s.%s %d %d %d', [Grp.Name, S.Name, D1, D2, D3]));
+        if Methods then
+          for K := 0 to S.Tests.Count - 1 do
+          begin
+            M := S.Tests[K] as ITest;
+            MeasureRuns(M, D1, D2, D3);
+            if (D2 > 1024) and (D3 > 1024) then
+              WriteLn(Format('LEAKTEST %s.%s.%s %d %d %d',
+                [Grp.Name, S.Name, M.Name, D1, D2, D3]));
+          end;
+      end;
+    end;
+  finally
+    Names.Free;
   end;
 end;
 
@@ -337,6 +455,28 @@ begin
   end;
 end;
 
+/// Die Referenzbilder und Groessen-Pruefungen gelten fuer die Standard-Systemschrift
+/// (Segoe UI 9 pt). Steuerelemente nehmen Hint-, Menue- und Meldungsschrift aus
+/// Windows (Einstellung "Textgroesse" = Schriftgroesse ohne DPI-Aenderung); damit
+/// die Suite nicht von dieser Benutzereinstellung abhaengt, setzt der Lauf die
+/// Systemschriften der VCL fest auf den Standard.
+procedure PinSystemFonts;
+
+  procedure Pin(F: TFont);
+  begin
+    F.Name := 'Segoe UI';
+    F.Height := -MulDiv(9, Screen.PixelsPerInch, 72);
+    F.Style := [];
+  end;
+
+begin
+  Pin(Screen.HintFont);
+  Pin(Screen.MenuFont);
+  Pin(Screen.MessageFont);
+  Pin(Screen.IconFont);
+  Pin(Screen.CaptionFont);
+end;
+
 /// Anzahl und Liste der uebersprungenen Tests (PPGSkip) ausgeben.
 procedure ReportSkips;
 var
@@ -361,12 +501,17 @@ var
   Errors: Integer;
   Before, After: Int64;
 begin
+  // Nie ein Windows-Fehlerfenster (Absturz, fehlende DLL, Laufwerk): ein
+  // automatischer Lauf darf nicht auf einen Dialog warten; das Kind auf dem
+  // Testdesktop erbt den Modus.
+  SetErrorMode(SEM_FAILCRITICALERRORS or SEM_NOGPFAULTERRORBOX);
   // /hidden: auf eigenem Windows-Desktop neu starten (keine Fenster auf dem Bildschirm)
   if PPGRunOnHiddenDesktop then
     Exit;
   // Leak-Meldung beim Beenden (FastMM): nur im GUI-Modus, sonst blockiert
   // die MessageBox einen automatischen Lauf.
   Application.Initialize;
+  PinSystemFonts;
   PPGTestBaseline := FindCmdLineSwitch('baseline', ['/', '-'], True);
   PPGTestAllowSkip := FindCmdLineSwitch('allowskip', ['/', '-'], True);
   if FindCmdLineSwitch('gui', ['/', '-'], True) then
@@ -375,15 +520,15 @@ begin
     GUITestRunner.RunRegisteredTests;
     Exit;
   end;
+  if FindCmdLineSwitch('leaksuites', ['/', '-'], True) then
+  begin
+    LeakSuites(SuiteFilter);
+    Exit;
+  end;
   if SuiteFilter <> '' then
   begin
     ExitCode := RunFiltered(SuiteFilter);
     ReportSkips;
-    Exit;
-  end;
-  if FindCmdLineSwitch('leaksuites', ['/', '-'], True) then
-  begin
-    LeakSuites;
     Exit;
   end;
   if FindCmdLineSwitch('leaks', ['/', '-'], True) then

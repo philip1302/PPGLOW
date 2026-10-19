@@ -1,0 +1,18 @@
+unit UnitIn;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.StdCtrls,
+  PPG.Button;
+
+type
+  TFormIn = class(TForm)
+    Button1: TPPGButton;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

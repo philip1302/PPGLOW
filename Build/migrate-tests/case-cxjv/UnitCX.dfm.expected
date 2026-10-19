@@ -1,0 +1,182 @@
+object FormCX: TFormCX
+  Left = 0
+  Top = 0
+  Caption = 'FormCX'
+  ClientHeight = 400
+  ClientWidth = 600
+  PixelsPerInch = 96
+  TextHeight = 13
+  object BtnGlyph: TPPGButton
+    Left = 8
+    Top = 8
+    Width = 75
+    Height = 25
+    Caption = 'Glyph'
+    ImagePosition = ipTop
+    Spacing = 4
+    TabOrder = 0
+    OnClick = BtnGlyphClick
+  end
+  object BtnIndex: TPPGButton
+    Left = 96
+    Top = 8
+    Width = 75
+    Height = 25
+    Action = actTest
+    ImageIndex = 3
+    Images = ImageList1
+    TabOrder = 1
+  end
+  object BtnDrop: TPPGButton
+    Left = 184
+    Top = 8
+    Width = 75
+    Height = 25
+    Caption = 'Drop'
+    TabOrder = 2
+  end
+  object CheckA: TPPGCheckBox
+    Left = 8
+    Top = 48
+    Caption = 'Zeitraum'
+    State = cbChecked
+    AllowGrayed = True
+    OnChange = CheckAPropertiesChange
+    TabOrder = 3
+    OnClick = CheckAClick
+  end
+  object LookupA: TPPGDBLookupComboBox
+    Left = 8
+    Top = 80
+    DataField = 'Code'
+    DataSource = srcMain
+    KeyField = 'Id'
+    ListField = 'Name;Ort'
+    ListSource = srcList
+    OnChange = LookupAChanged
+    TabOrder = 4
+    Width = 200
+  end
+  object ToggleA: TPPGDBToggleSwitch
+    Left = 8
+    Top = 112
+    AutoSize = False
+    DataField = 'Flag_Kz'
+    DataSource = srcMain
+    ValueChecked = 'J'
+    ValueUnchecked = 'N'
+    TabOrder = 5
+    Height = 21
+    Width = 312
+  end
+  object Pages: TPPGPageControl
+    Left = 8
+    Top = 144
+    Width = 400
+    Height = 150
+    TabOrder = 6
+    ActivePage = SheetB
+    MultiLine = True
+    TabPosition = tpBottom
+    object SheetA: TPPGTabSheet
+      Caption = 'Eins'
+      ImageIndex = 0
+    end
+    object SheetB: TPPGTabSheet
+      Caption = 'Zwei'
+      ImageIndex = 1
+    end
+  end
+  object NavA: TcxNavigator
+    Left = 8
+    Top = 300
+    Width = 200
+    Height = 25
+    Control = GridView
+    Buttons.Insert.ImageIndex = 5
+    TabOrder = 7
+  end
+  object CheckCombo: TPPGCheckComboBox
+    Left = 8
+    Top = 332
+    Items.Strings = (
+      'Gut'
+      'Schlecht')
+    TabOrder = 8
+    Width = 200
+  end
+  object CheckComboLeer: TPPGCheckComboBox
+    Left = 220
+    Top = 332
+    TabOrder = 9
+    Width = 200
+  end
+  object DirEdit: TPPGFileEdit
+    Left = 8
+    Top = 364
+    Width = 200
+    Height = 22
+    AcceptDrop = False
+    TabOrder = 10
+    Text = 'DirEdit'
+    OnAfterDialog = DirEditAfterDialog
+    Kind = fkFolder
+  end
+  object FileEdit: TPPGFileEdit
+    Left = 220
+    Top = 364
+    Width = 200
+    Height = 22
+    DefaultExt = 'dat'
+    Kind = fkSaveFile
+    Filter = 'Daten(*.dat)|*.dat'
+    DialogTitle = 'Datei'
+    TabOrder = 11
+    Text = 'FileEdit'
+  end
+  object FileEditOpen: TPPGFileEdit
+    Left = 432
+    Top = 364
+    Width = 100
+    Height = 22
+    TabOrder = 12
+    Text = 'FileEditOpen'
+    Kind = fkOpenFile
+  end
+  object JvChkBoth: TPPGCheckBox
+    Left = 8
+    Top = 390
+    Width = 13
+    Height = 17
+    State = cbChecked
+    TabOrder = 13
+  end
+  object JvChkOnly: TPPGCheckBox
+    Left = 40
+    Top = 390
+    Width = 13
+    Height = 17
+    State = cbChecked
+    TabOrder = 14
+  end
+  object JvChkOff: TPPGCheckBox
+    Left = 72
+    Top = 390
+    Width = 13
+    Height = 17
+    TabOrder = 15
+  end
+  object JvCombo: TPPGComboBox
+    Left = 100
+    Top = 390
+    Width = 92
+    Height = 24
+    Style = csDropDownList
+    TabOrder = 16
+    Text = ''
+    OnCloseUp = JvComboCloseUp
+    Items.Strings = (
+      '2009'
+      '2008')
+  end
+end

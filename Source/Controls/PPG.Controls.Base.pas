@@ -46,6 +46,11 @@ type
     FStyleManager: TPPGStyleManager;
     FPreset: string;
     FRenderer: IPPGRenderer;
+    // Streaming (nur Abweichungen vom Preset, siehe WriteState/ReadState)
+    FStoreMinimal: Boolean;     // WriteState ohne Vorfahr: Vorgaben nicht speichern
+    FReadPass: Integer;         // ReadState-Aufrufe seit dem letzten Loaded (geerbte Formulare: >1)
+    FAppearanceRead: Boolean;   // beim Laden schon Appearance-Werte gelesen
+    FApplyingStreamDefaults: Boolean;
     FImages: TCustomImageList;
     FImageChangeLink: TChangeLink;
     FImageIndex: TPPGImageIndex;
@@ -161,6 +166,10 @@ type
     procedure DestroyWnd; override;
     procedure WndProc(var Message: TMessage); override;
     procedure Loaded; override;
+    /// Speichern ohne Vorfahr: nur, was vom Preset abweicht (Appearance-Werte
+    /// mit Vergleichswerten, Preset nur, wenn nicht das Standard-Preset).
+    procedure WriteState(Writer: TWriter); override;
+    procedure ReadState(Reader: TReader); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function CanAutoSize(var NewWidth, NewHeight: Integer): Boolean; override;
     /// Auch ohne Fensterhandle wirksam (TWinControl.AdjustSize ist es nicht).
@@ -507,6 +516,8 @@ end;
 
 procedure TPPGCustomControl.Loaded;
 begin
+  FReadPass := 0;
+  FAppearanceRead := False;
   inherited Loaded;
   if FRenderer = nil then
     SetPreset(TPPGRendererRegistry.DefaultName);
@@ -945,7 +956,42 @@ end;
 
 function TPPGCustomControl.IsPresetStored: Boolean;
 begin
-  Result := FStyleManager = nil;
+  // Das Standard-Preset setzt schon der Konstruktor
+  Result := (FStyleManager = nil) and
+    not (FStoreMinimal and SameText(FPreset, TPPGRendererRegistry.DefaultName));
+end;
+
+procedure TPPGCustomControl.WriteState(Writer: TWriter);
+var
+  Defaults: TPPGAppearance;
+begin
+  // Mit Vorfahr (geerbtes Formular, Frame) vergleicht der Writer selbst mit
+  // dessen Werten; mit StyleManager wird die Optik gar nicht gespeichert.
+  if (Writer.Ancestor <> nil) or (FStyleManager <> nil) or (FRenderer = nil) then
+  begin
+    inherited WriteState(Writer);
+    Exit;
+  end;
+  Defaults := TPPGAppearance.Create(nil);
+  try
+    PPGApplyStreamDefaults(FRenderer, Defaults);
+    FAppearance.StreamDefaults := Defaults;
+    FStoreMinimal := True;
+    try
+      inherited WriteState(Writer);
+    finally
+      FStoreMinimal := False;
+      FAppearance.StreamDefaults := nil;
+    end;
+  finally
+    Defaults.Free;
+  end;
+end;
+
+procedure TPPGCustomControl.ReadState(Reader: TReader);
+begin
+  Inc(FReadPass);
+  inherited ReadState(Reader);
 end;
 
 function TPPGCustomControl.IsStyleStored: Boolean;
@@ -974,10 +1020,22 @@ begin
     Exit;
   FPreset := NewName;
   FRenderer := R;
-  // Beim Laden kommen die Farben aus der DFM (Appearance wird nach Preset
-  // gestreamt), sonst aus dem Preset.
   if not (csLoading in ComponentState) then
-    FRenderer.ApplyDefaults(FAppearance);
+    FRenderer.ApplyDefaults(FAppearance)
+  else if (FReadPass <= 1) and not FAppearanceRead then
+  begin
+    // Laden: In der DFM stehen nur die Abweichungen vom Preset (Appearance
+    // kommt nach Preset). Erst die Vorgaben, dann die Werte der DFM. Alte DFMs
+    // mit allen Werten ueberschreiben sie vollstaendig. Nicht, wenn schon
+    // Appearance-Werte gelesen sind oder die DFM eines geerbten Formulars
+    // gelesen wird (dort stehen Abweichungen vom Vorfahren).
+    FApplyingStreamDefaults := True;
+    try
+      PPGApplyStreamDefaults(FRenderer, FAppearance);
+    finally
+      FApplyingStreamDefaults := False;
+    end;
+  end;
   Invalidate;
 end;
 
@@ -1041,6 +1099,8 @@ end;
 
 procedure TPPGCustomControl.AppearanceChanged(Sender: TObject);
 begin
+  if (csReading in ComponentState) and not FApplyingStreamDefaults then
+    FAppearanceRead := True;
   InvalidateStyledAppearance;
   RequestAutoSize; // Rahmen/Glow-Groesse beeinflussen die Wunschgroesse
   Invalidate;

@@ -88,6 +88,7 @@ uses
   PPG.TreeView in '..\..\Source\Controls\PPG.TreeView.pas',
   PPG.Grid in '..\..\Source\Controls\PPG.Grid.pas',
   PPG.Labels in '..\..\Source\Controls\PPG.Labels.pas',
+  PPG.Shape in '..\..\Source\Controls\PPG.Shape.pas',
   PPG.Feedback in '..\..\Source\Controls\PPG.Feedback.pas',
   PPG.Expander in '..\..\Source\Controls\PPG.Expander.pas',
   PPG.Splitter in '..\..\Source\Controls\PPG.Splitter.pas',
@@ -155,7 +156,9 @@ uses
   PPG.Chart.Palette in '..\..\Source\Core\PPG.Chart.Palette.pas',
   PPG.Render.Shapes in '..\..\Source\Render\PPG.Render.Shapes.pas',
   PPG.Sparkline in '..\..\Source\Controls\PPG.Sparkline.pas',
-  PPG.Gauge in '..\..\Source\Controls\PPG.Gauge.pas';
+  PPG.Gauge in '..\..\Source\Controls\PPG.Gauge.pas',
+  PPG.RichEdit in '..\..\Source\Controls\PPG.RichEdit.pas',
+  PPG.Image in '..\..\Source\Controls\PPG.Image.pas';
 
 {$R *.res}
 

@@ -199,14 +199,14 @@ uses
   PPG.Controls.Base, PPG.Button, PPG.CheckBox, PPG.RadioButton, PPG.ToggleSwitch,
   PPG.ProgressBar, PPG.TrackBar, PPG.Panel, PPG.GroupBox, PPG.RadioGroup, PPG.Edit, PPG.Memo, PPG.SpinEdit, PPG.ComboBox,
   PPG.TabControl, PPG.Controls.ItemList, PPG.ListBox, PPG.CheckListBox, PPG.TreeView, PPG.TileView, PPG.Grid, PPG.Grid.Print,
-  PPG.Labels, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
-  PPG.Calendar, PPG.DatePicker, PPG.TimePicker,
+  PPG.Labels, PPG.Shape, PPG.Feedback, PPG.Expander, PPG.Splitter, PPG.Rating, PPG.SearchEdit,
+  PPG.Calendar, PPG.DatePicker, PPG.TimePicker, PPG.Image,
   PPG.NavigationView, PPG.Breadcrumb, PPG.ToolBar, PPG.StatusBar, PPG.Notifications,
   PPG.Sparkline, PPG.Gauge, PPG.Chart,
   PPG.Menus, PPG.MenuBar, PPG.Hints, PPG.TeachingTip, PPG.Dialogs,
   PPG.NumberEdit, PPG.MaskEdit, PPG.PasswordEdit, PPG.FileEdit, PPG.ColorPicker,
   PPG.CheckComboBox, PPG.ColumnComboBox, PPG.TagEdit, PPG.Validator, PPG.Controls.Field, PPG.BusyOverlay,
-  PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban,
+  PPG.Print, PPG.Planner, PPG.Planner.Print, PPG.Kanban.Print, PPG.Ribbon.Items, PPG.Ribbon, PPG.Kanban, PPG.RichEdit,
   PPG.Editors.Logic, PPG.Editors.Forms, Vcl.ImgList, System.Math, PPG.Types;
 
 const
@@ -1177,15 +1177,15 @@ begin
     TPPGCheckGroup,
     TPPGEdit, TPPGMemo, TPPGSpinEdit, TPPGComboBox, TPPGTabControl, TPPGPageControl,
     TPPGListBox, TPPGCheckListBox, TPPGTreeView, TPPGGrid, TPPGTileView,
-    TPPGLabel, TPPGLinkLabel, TPPGBadge, TPPGProgressRing, TPPGInfoBar, TPPGExpander,
+    TPPGLabel, TPPGLinkLabel, TPPGShape, TPPGBadge, TPPGProgressRing, TPPGInfoBar, TPPGExpander,
     TPPGSplitter, TPPGRating, TPPGSearchEdit, TPPGCalendar, TPPGDatePicker, TPPGTimePicker,
     TPPGNavigationView, TPPGBreadcrumb, TPPGToolBar, TPPGStatusBar, TPPGNotificationCenter,
     TPPGSparkline, TPPGGauge, TPPGKpiTile, TPPGChart, TPPGPlanner, TPPGRibbon, TPPGKanban,
     TPPGPopupMenu, TPPGMenuBar, TPPGHintManager, TPPGCustomHint, TPPGTeachingTip,
     TPPGTaskDialog, TPPGWizard, TPPGValidator, TPPGBusyOverlay,
     TPPGNumberEdit, TPPGMaskEdit, TPPGPasswordEdit, TPPGFileEdit, TPPGColorPicker,
-    TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit,
-    TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager]);
+    TPPGCheckComboBox, TPPGColumnComboBox, TPPGTagEdit, TPPGRichEdit,
+    TPPGGridPrinter, TPPGPlannerPrinter, TPPGKanbanPrinter, TPPGStyleManager, TPPGImage]);
   // Seiten entstehen ueber den Komponenteneditor, nicht ueber die Palette
   RegisterClass(TPPGTabSheet);
   RegisterNoIcon([TPPGTabSheet]);

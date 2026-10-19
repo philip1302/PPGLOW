@@ -187,6 +187,11 @@ function PPGPresetTokens(const Preset: string; Dark, HighContrast: Boolean): TPP
 /// ('' = Vorgabe bzw. StyleManager). Unbekannt: zur Laufzeit EPPGPropertyError,
 /// beim DFM-Laden Warnung und ''.
 function PPGCheckPreset(Sender: TPersistent; const Value: string): string;
+/// Preset-Vorgaben fuer das DFM-Streaming: ApplyDefaults OHNE die
+/// anwendungsweiten Token-Ueberschreibungen (Marke eines StyleManagers).
+/// Gleiche Vergleichswerte beim Speichern (nur Abweichungen kommen in die DFM)
+/// und Grundwerte beim Laden - unabhaengig davon, ob gerade eine Marke aktiv ist.
+procedure PPGApplyStreamDefaults(const Renderer: IPPGRenderer; Appearance: TPPGAppearance);
 
 implementation
 
@@ -422,6 +427,18 @@ begin
   // Die Spur ist (an wie aus) eine Flaeche: Fokus als Ring aussen
   if S.Focused then
     DrawOuterFocusRing(Canvas, Track, S.Rounding, S.BorderColor, PPI);
+end;
+
+procedure PPGApplyStreamDefaults(const Renderer: IPPGRenderer; Appearance: TPPGAppearance);
+begin
+  if (Renderer = nil) or (Appearance = nil) then
+    Exit;
+  TPPGTokenOverrides.Suspend;
+  try
+    Renderer.ApplyDefaults(Appearance);
+  finally
+    TPPGTokenOverrides.Resume;
+  end;
 end;
 
 function PPGPresetTokens(const Preset: string; Dark: Boolean): TPPGTokens;

@@ -32,6 +32,19 @@ type
       Expanded, RightToLeft: Boolean; PPI: Integer);
   end;
 
+  /// Optional zu IPPGGridCellRenderer: Kaestchen mit drei Zustaenden
+  /// (cbGrayed = unbestimmt, z.B. leeres Datenbankfeld).
+  IPPGGridCheckStateRenderer = interface
+    ['{9C41D7E2-5A3B-4F86-8E0D-71B2C6A4F853}']
+    procedure DrawGridCheckState(const ACanvas: IPPGCanvas; const R: TRect;
+      State: TPPGCheckState; const Style: TPPGSurfaceStyle; PPI: Integer);
+  end;
+
+const
+  /// Text einer Kaestchen-Zelle fuer "unbestimmt" (grau, z.B. Null im DB-Grid).
+  PPGGridCheckGrayed = '?';
+
+type
   TPPGCellPainter = class
   private
     FTexts: array of string;
@@ -75,12 +88,18 @@ type
     procedure FlushTexts(DC: HDC; Font: HFONT; BoldFont: HFONT = 0);
     procedure DrawCheck(const ACanvas: IPPGCanvas; const CellR: TRect; Checked: Boolean;
       const Style: TPPGSurfaceStyle; PPI: Integer);
+    /// Kaestchen mit drei Zustaenden (Renderer ohne IPPGGridCheckStateRenderer:
+    /// cbGrayed wie nicht angehakt).
+    procedure DrawCheckState(const ACanvas: IPPGCanvas; const CellR: TRect;
+      State: TPPGCheckState; const Style: TPPGSurfaceStyle; PPI: Integer);
     procedure DrawSortArrow(const ACanvas: IPPGCanvas; const CellR: TRect;
       Ascending, RightToLeft: Boolean; Color: TColor; PPI: Integer);
     procedure DrawExpander(const ACanvas: IPPGCanvas; const R: TRect; Color: TColor;
       Expanded, RightToLeft: Boolean; PPI: Integer);
     /// Text einer Kaestchen-Zelle als Zustand ('1', 'True', 'Ja').
     class function IsCheckedText(const S: string): Boolean; static;
+    /// Text einer Kaestchen-Zelle als "unbestimmt" (PPGGridCheckGrayed).
+    class function IsGrayedText(const S: string): Boolean; static;
     /// DrawText-Flags fuer eine Ausrichtung (einzeilig, Ellipse).
     class function TextFlags(Alignment: TAlignment): Cardinal; static;
     /// Deckend fuellen (GDI).
@@ -97,7 +116,8 @@ uses
 
 type
   /// Standard: Kaestchen und Pfeil aus den vorhandenen Preset-Renderern.
-  TPPGPresetGridCellRenderer = class(TInterfacedObject, IPPGGridCellRenderer)
+  TPPGPresetGridCellRenderer = class(TInterfacedObject, IPPGGridCellRenderer,
+    IPPGGridCheckStateRenderer)
   private
     FInd: IPPGIndicatorRenderer;
     FList: IPPGListRenderer;
@@ -106,6 +126,8 @@ type
     constructor Create(const Renderer: IInterface);
     procedure DrawGridCheck(const ACanvas: IPPGCanvas; const R: TRect; Checked: Boolean;
       const Style: TPPGSurfaceStyle; PPI: Integer);
+    procedure DrawGridCheckState(const ACanvas: IPPGCanvas; const R: TRect;
+      State: TPPGCheckState; const Style: TPPGSurfaceStyle; PPI: Integer);
     procedure DrawGridSortArrow(const ACanvas: IPPGCanvas; const R: TRect;
       Ascending: Boolean; Color: TColor; PPI: Integer);
     procedure DrawGridExpander(const ACanvas: IPPGCanvas; const R: TRect; Color: TColor;
@@ -137,6 +159,13 @@ begin
     FInd.DrawCheckIndicator(ACanvas, R, Style, cbChecked, PPI)
   else
     FInd.DrawCheckIndicator(ACanvas, R, Style, cbUnchecked, PPI);
+end;
+
+procedure TPPGPresetGridCellRenderer.DrawGridCheckState(const ACanvas: IPPGCanvas;
+  const R: TRect; State: TPPGCheckState; const Style: TPPGSurfaceStyle; PPI: Integer);
+begin
+  if FInd <> nil then
+    FInd.DrawCheckIndicator(ACanvas, R, Style, State, PPI);
 end;
 
 procedure TPPGPresetGridCellRenderer.DrawGridSortArrow(const ACanvas: IPPGCanvas;
@@ -303,6 +332,28 @@ begin
   FCells.DrawGridCheck(ACanvas, R, Checked, Style, PPI);
 end;
 
+procedure TPPGCellPainter.DrawCheckState(const ACanvas: IPPGCanvas; const CellR: TRect;
+  State: TPPGCheckState; const Style: TPPGSurfaceStyle; PPI: Integer);
+var
+  R: TRect;
+  Sz: Integer;
+  SR: IPPGGridCheckStateRenderer;
+begin
+  if FCells = nil then
+    Exit;
+  if not Supports(FCells, IPPGGridCheckStateRenderer, SR) then
+  begin
+    DrawCheck(ACanvas, CellR, State = cbChecked, Style, PPI);
+    Exit;
+  end;
+  Sz := PPGScale(16, PPI);
+  R.Left := (CellR.Left + CellR.Right - Sz) div 2;
+  R.Top := (CellR.Top + CellR.Bottom - Sz) div 2;
+  R.Right := R.Left + Sz;
+  R.Bottom := R.Top + Sz;
+  SR.DrawGridCheckState(ACanvas, R, State, Style, PPI);
+end;
+
 procedure TPPGCellPainter.DrawSortArrow(const ACanvas: IPPGCanvas; const CellR: TRect;
   Ascending, RightToLeft: Boolean; Color: TColor; PPI: Integer);
 var
@@ -331,6 +382,11 @@ begin
   // Dialoge, damit Daten in der Sprache der Anwendung erkannt werden
   Result := (S = '1') or SameText(S, 'True') or SameText(S, 'Yes') or SameText(S, 'Ja') or
     SameText(S, StringReplace(PPGStr(@SPPGDlgYes), '&', '', [rfReplaceAll]));
+end;
+
+class function TPPGCellPainter.IsGrayedText(const S: string): Boolean;
+begin
+  Result := S = PPGGridCheckGrayed;
 end;
 
 class function TPPGCellPainter.TextFlags(Alignment: TAlignment): Cardinal;

@@ -84,7 +84,8 @@ procedure PPGCellDrawText(const Ctx: TPPGCellKindContext; const S: string; R: TR
 implementation
 
 uses
-  System.Math, System.UITypes, System.Generics.Collections, PPG.Lang, PPG.Consts, PPG.Appearance,
+  System.Math, System.UITypes, Vcl.StdCtrls, System.Generics.Collections, PPG.Lang, PPG.Consts,
+  PPG.Appearance,
   PPG.Markup, PPG.Markup.Parser, PPG.Sparkline, PPG.Render.Shapes;
 
 var
@@ -376,9 +377,19 @@ end;
 
 procedure TPPGCheckCellKind.PaintCell(const Ctx: TPPGCellKindContext; const R: TRect;
   const Text: string);
+var
+  St: TPPGSurfaceStyle;
 begin
   if TPPGCellPainter.IsCheckedText(Text) then
     Ctx.Painter.DrawCheck(Ctx.Canvas, R, True, Ctx.CheckedStyle, Ctx.PPI)
+  else if TPPGCellPainter.IsGrayedText(Text) then
+  begin
+    // Unbestimmt (z.B. Null im DB-Grid): Rahmen wie "aus", Fuellung in der
+    // kraeftigen "An"-Farbe (wie TPPGCheckBox mit cbGrayed)
+    St := Ctx.UncheckedStyle;
+    St.TextColor := Ctx.CheckedStyle.BorderColor;
+    Ctx.Painter.DrawCheckState(Ctx.Canvas, R, cbGrayed, St, Ctx.PPI);
+  end
   else
     Ctx.Painter.DrawCheck(Ctx.Canvas, R, False, Ctx.UncheckedStyle, Ctx.PPI);
 end;

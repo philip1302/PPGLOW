@@ -1,0 +1,51 @@
+# Controls TPPGImage und TPPGDBImage
+
+TPPGImage.Picture = Das angezeigte Bild (BMP, PNG, JPEG, GIF, TIFF, ICO, WMF/EMF), wie bei TImage.
+> `Image1.Picture.LoadFromFile('logo.png');`
+! Das Standardbild. Mit `PictureDark` zusammen für Logos, die auf dunklem Grund anders aussehen müssen.
+TPPGImage.PictureDark = Bild für den Dark Mode; leer = das helle Bild bleibt.
+> `Image1.PictureDark.LoadFromFile('logo-hell.png');`
+! Ein dunkles Logo auf dunklem Grund verschwindet; hier steht die helle Fassung. Im Hochkontrast gilt immer `Picture`.
+TPPGImage.Images = Bildliste (z. B. TVirtualImageList), aus der das Bild kommt, wenn Picture leer ist.
+! Für Symbole aus einer zentralen `TImageCollection`: eine Liste, mehrere Images am Formular.
+TPPGImage.ImageIndex = Nummer des Bilds in Images; -1 = keins. Bei Listen mit Namen wird nur ImageName gespeichert.
+> `Image1.ImageIndex := 3;`
+TPPGImage.ImageName = Name des Bilds in Images (ab Delphi 10.4, Liste mit Namen). Unbekannte Namen zeigen kein Bild.
+> `Image1.ImageName := 'Warnung';`
+! Robust gegen Umsortieren der Liste.
+TPPGImage.ImageIndexDark = Nummer des Bilds in Images für den Dark Mode; -1 = das helle Bild bleibt.
+TPPGImage.ImageNameDark = Name des Bilds in Images für den Dark Mode.
+> `Image1.ImageNameDark := 'Warnung-hell';`
+TPPGImage.Stretch = True: das Bild füllt das Control (mit Proportional im Seitenverhältnis), wie bei TImage.
+TPPGImage.Proportional = True: das Bild wird im Seitenverhältnis eingepasst; ohne Stretch nur verkleinert, wenn es nicht passt.
+! Für Fotos in Feldern fester Größe: `Stretch` und `Proportional` zusammen.
+TPPGImage.Center = True: das Bild liegt in der Mitte des Controls.
+TPPGImage.Transparent = True: die Transparenzfarbe von Bitmaps wird nicht gezeichnet (PNG und GIF haben ihre eigene Transparenz).
+TPPGImage.AutoSize = True: das Control nimmt die Größe des Bilds an (mit Rahmen).
+TPPGImage.DpiScaling = True: Bilder aus Picture werden mit der DPI des Controls vergrößert (natürliche Größe, AutoSize). Bildlisten skalieren sich selbst.
+! Einschalten für Symbole, die bei 150 % Skalierung nicht winzig bleiben sollen; Fotos mit Stretch brauchen es nicht.
+TPPGImage.BorderStyle = bsSingle: Rand in der Randfarbe des Themes (Dark Mode, Hochkontrast, deaktiviert).
+> `Image1.BorderStyle := bsSingle;`
+TPPGImage.IncrementalDisplay = Ohne Wirkung; nur für die Kompatibilität mit TImage da.
+TPPGImage.OnProgress = Fortschritt beim Laden des Bilds, wie bei TImage.
+
+TPPGDBImage.DataField = Name des BLOB-Felds der Datenmenge, dessen Bild angezeigt wird.
+TPPGDBImage.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBImage.ReadOnly = True: das Bild wird angezeigt, kann aber nicht ersetzt, eingefügt oder ausgeschnitten werden.
+TPPGDBImage.AutoDisplay = True: das Bild wird bei jedem Datensatzwechsel geladen. False: erst bei Enter oder LoadPicture (sonst steht der Feldname da).
+! Bei großen Bildern in langen Listen ausschalten, damit das Blättern schnell bleibt.
+TPPGDBImage.QuickDraw = Ohne Wirkung; nur für die Kompatibilität mit TDBImage da.
+TPPGDBImage.StoreFormat = Format, in dem das Bild ins Feld geschrieben wird. sfKeep: im Format des Bilds (ein eingefügtes Bitmap als BMP); sfBitmap, sfPng, sfJpeg, sfGif wandeln um.
+> `DBImage1.StoreFormat := sfPng;`
+! Mit `sfPng` bleiben Fotos und Logos klein und verlustfrei, auch wenn der Anwender ein Bitmap aus der Zwischenablage einfügt.
+TPPGDBImage.Stretch = True: das Bild füllt das Control (mit Proportional im Seitenverhältnis).
+TPPGDBImage.Proportional = True: das Bild wird im Seitenverhältnis eingepasst.
+TPPGDBImage.Center = True: das Bild liegt in der Mitte des Controls.
+TPPGDBImage.Images = Bildliste für den Platzhalter, der bei leerem Feld erscheint.
+TPPGDBImage.ImageIndex = Nummer des Platzhalterbilds in Images; -1 = keins.
+TPPGDBImage.ImageName = Name des Platzhalterbilds in Images (ab Delphi 10.4).
+> `DBImage1.ImageName := 'Person';`
+! Ein graues Personensymbol für Datensätze ohne Foto.
+TPPGDBImage.ImageIndexDark = Nummer des Platzhalterbilds im Dark Mode; -1 = das helle bleibt.
+TPPGDBImage.ImageNameDark = Name des Platzhalterbilds im Dark Mode.
+TPPGDBImage.BorderStyle = bsSingle (Vorgabe wie TDBImage): Rand in der Randfarbe des Themes; bsNone ohne Rand.

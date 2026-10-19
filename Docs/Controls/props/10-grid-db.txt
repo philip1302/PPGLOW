@@ -57,15 +57,35 @@ TPPGCustomComboBox.Style = csDropDown: freie Eingabe im Feld plus Liste (mit Aut
 TPPGCustomComboBox.Text = Der angezeigte bzw. eingegebene Text. Bei csDropDownList der Text des gewählten Eintrags.
 
 # --- TPPGCustomDBGrid ---
+TPPGCustomDBGrid.CardLabelWidth = Kartenansicht: Breite der Beschriftung links in der Karte (logische Pixel, 0..2000; Vorgabe 110). 0 = ohne Beschriftung, der Wert nutzt die ganze Breite. Der Wert behält mindestens 24 Pixel.
+TPPGCustomDBGrid.CardSpacing = Kartenansicht: Abstand zwischen den Karten und zum Rand in logischen Pixeln (0..200; Vorgabe 8).
+TPPGCustomDBGrid.CardWidth = Kartenansicht: Breite einer Karte in logischen Pixeln (60..4000; Vorgabe 280). Ist die Ansicht schmaler, wird die Karte schmaler. Die Höhe ergibt sich aus den sichtbaren Spalten (eine Zeile je Feld).
+TPPGCustomDBGrid.EditMode = dgeCells: Bearbeiten in der Zelle wie TDBGrid. dgeForm: Bearbeitungsformular in der Zeile – Enter, F2, Doppelklick, Tippen oder ShowEditForm klappen unter der aktuellen Zeile einen Bereich mit allen Feldern auf (Beschriftung und Editor je Feld im Raster, Schaltflächen Übernehmen/Abbrechen); die folgenden Zeilen rücken nach unten. Übernehmen schreibt die Werte und bucht (Post), ein Fehler (ungültiger Wert, Pflichtfeld, BeforePost) lässt das Formular offen und setzt den Fokus auf das Feld; Abbrechen bzw. Esc verwirft (Cancel). Einfg legt einen neuen Datensatz im Formular an. Wechselt der Datensatz (Navigator, Klick auf eine andere Zeile), bucht die Datenmenge wie üblich und das Formular schließt. Die Zellen selbst sind in diesem Modus nicht bearbeitbar. Nur in der Tabelle; die Kartenansicht bearbeitet immer in der Zelle.
+> `PPGDBGrid1.EditMode := dgeForm; PPGDBGrid1.EditForm.ColumnCount := 3;`
+TPPGCustomDBGrid.EditForm = Einstellungen des Bearbeitungsformulars (EditMode = dgeForm): Spalten des Rasters, Breite der Beschriftung, Schaltflächen.
+TPPGCustomDBGrid.OnEditFormShow = Das Bearbeitungsformular wurde geöffnet (Editoren gefüllt, Fokus gesetzt). Werte, die der Handler in die Editoren schreibt (EditFormEditor), gelten als Eingabe und werden beim Übernehmen geschrieben.
+> `procedure TForm1.GridEditFormShow(Sender: TObject); begin StatusBar1.SimpleText := 'Bearbeiten'; end;`
+TPPGCustomDBGrid.OnEditFormClose = Das Bearbeitungsformular wurde geschlossen; Accepted = True nach Übernehmen, False nach Abbrechen bzw. wenn der Datensatz von außen gewechselt hat.
+TPPGDBGridEditFormOptions.ColumnCount = Spalten des Rasters im Bearbeitungsformular (1..8; Vorgabe 2). Je Spalte steht ein Feld als Beschriftung + Editor; die Felder fließen in der Reihenfolge der Spalten nach rechts und brechen um.
+TPPGDBGridEditFormOptions.LabelWidth = Breite der Beschriftung links vom Editor in logischen Pixeln (0..1000; Vorgabe 120). 0 = ohne Beschriftung; höchstens die halbe Breite eines Felds.
+TPPGDBGridEditFormOptions.ShowButtons = True: Schaltflächen Übernehmen und Abbrechen unten im Formular. False: nur Tastatur (Strg+Enter, Esc; Enter im letzten Feld übernimmt).
+TPPGDBGridColumn.EditFormVisible = Feld der Spalte im Bearbeitungsformular: efvAuto wie Visible, efvShow immer (auch ausgeblendete Spalten, z. B. Bemerkungen), efvHide nie (z. B. berechnete Spalten).
+TPPGDBGridColumn.EditFormColSpan = Spalten des Formular-Rasters, die das Feld belegt (1..8; höchstens EditForm.ColumnCount), z. B. 2 für lange Texte.
 TPPGCustomDBGrid.DataSource = Die Datenquelle, deren Datenmenge das Grid zeigt. Ohne Columns erscheinen alle sichtbaren Felder (Titel = DisplayLabel, Breite aus DisplayWidth).
 > `PPGDBGrid1.DataSource := DataSource1;`
 TPPGCustomDBGrid.ExportMaxRecords = Drucken und Export lesen höchstens so viele Datensätze (Schutz vor sehr großen Tabellen). Vorgabe 100000.
 TPPGCustomDBGrid.OnCellClick = Klick mit der linken Maustaste auf eine Datenzelle; Column ist die angeklickte Spalte (Column.Field liefert das Feld).
 TPPGCustomDBGrid.OnGetFooterText = Text der Summenzeile (ShowFooter) für eine Spalte. Text ist mit dem Wert aus Column.FooterField vorbelegt und kann ersetzt werden; die ganze Datenmenge liest das Grid dafür nie.
 > `if Column.FieldName = 'Betrag' then Text := FormatFloat('#,##0.00 €', SummeAusAbfrage);`
+TPPGCustomDBGrid.OnSelectionChanged = Die Mehrfachauswahl (SelectedRows, nur mit dgMultiSelect) hat sich geändert: per Maus, Tastatur oder Code. Bereiche und SelectAll lösen das Ereignis einmal aus.
+> `StatusBar1.SimpleText := Format('%d ausgewählt', [PPGDBGrid1.SelectedRows.Count]);`
+! Für Zähler in der Statusleiste und zum Freischalten von Knöpfen, die mit mehreren Datensätzen arbeiten (Löschen, Exportieren, Sammelbuchung).
+TPPGCustomDBGrid.OnDrawColumnCell = Wie TDBGrid.OnDrawColumnCell: nach dem Zeichnen einer Datenzelle (nach OnDrawCell) selbst auf Canvas zeichnen. DataCol ist der Index der Spalte in Columns, Column die Spalte, State enthält gdSelected (Auswahl und Mehrfachauswahl) und gdFocused. Canvas ist mit Schrift, Textfarbe und Pinselfarbe der Zelle vorbereitet (Theme, Dunkelmodus); die Datenmenge steht auf dem gezeichneten Satz, Column.Field liefert dessen Werte. DefaultDrawColumnCell zeichnet den Standardinhalt.
+> `if Column.Field.AsCurrency < 0 then PPGDBGrid1.Canvas.Font.Color := clRed; PPGDBGrid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);`
+! Für Einfärbungen, die vom ganzen Datensatz abhängen (überfällig, gesperrt), und für migrierte TDBGrid-Handler. Für reine Werteregeln reichen ConditionalFormats und OnGetCellStyle. Die Datenmenge im Ereignis nicht bewegen.
 TPPGCustomDBGrid.OnTitleClick = Klick auf einen Spaltentitel (mit dgTitleClick in Options). Sortieren ist Sache der Datenmenge, z. B. IndexFieldNames setzen.
 > `FDQuery1.IndexFieldNames := Column.FieldName;`
-TPPGCustomDBGrid.Options = Verhalten wie bei TDBGrid: dgEditing (bearbeiten), dgTitles (Titelzeile), dgIndicator (Datensatzzeiger links), dgColumnResize (Spaltenbreite und -position ändern), dgColLines/dgRowLines (Gitterlinien), dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete (Rückfrage bei Strg+Entf), dgCancelOnExit, dgTitleClick, dgTitleHotTrack. dgMultiSelect wird nicht unterstützt.
+TPPGCustomDBGrid.Options = Verhalten wie bei TDBGrid: dgEditing (bearbeiten), dgTitles (Titelzeile), dgIndicator (Datensatzzeiger links), dgColumnResize (Spaltenbreite und -position ändern), dgColLines/dgRowLines (Gitterlinien), dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete (Rückfrage bei Strg+Entf), dgCancelOnExit, dgTitleClick, dgTitleHotTrack, dgMultiSelect (Mehrfachauswahl von Datensätzen, siehe SelectedRows).
 TPPGCustomDBGrid.ReadOnly = True: Keine Bearbeitung im Grid, auch wenn die Datenmenge änderbar ist.
 
 # --- TPPGCustomDatePicker ---
@@ -162,7 +182,8 @@ TPPGCustomGrid.OnValidateCell = Vor dem Übernehmen eines bearbeiteten Werts: Va
 TPPGCustomGrid.Options = Verhalten wie bei TStringGrid: goEditing (bearbeiten), goRowSelect (ganze Zeile wählen), goRangeSelect (Bereich wählen), goColSizing/goRowSizing (Breite/Höhe ziehen), goColMoving (Spalten verschieben), goTabs (Tab wechselt Zelle), goVertLine/goHorzLine und goFixedVertLine/goFixedHorzLine (Gitterlinien), goAlwaysShowEditor, goThumbTracking.
 > `Grid1.Options := Grid1.Options + [goEditing, goColSizing];`
 TPPGCustomGrid.RowCount = Anzahl der Zeilen einschließlich fester Zeilen (1 bis etwa 1 Milliarde); auch große Zahlen sind schnell (virtuell mit OnGetCellText).
-TPPGCustomGrid.ShowFilterRow = True: Unter dem Kopf erscheint eine Eingabezeile; Text je Spalte filtert die Zeilen (Teiltext, ohne Groß-/Kleinschreibung). Wirkt auf die Ansicht, die Daten bleiben unverändert.
+TPPGCustomGrid.ShowFilterRow = True: Unter dem Kopf erscheint eine Eingabezeile; Text je Spalte filtert die Zeilen (ohne Groß-/Kleinschreibung). Ohne Operator: Teiltext (Zahlen und Datum: gleich); dazu =, <>, <, <=, >, >=, a..b (zwischen), abc* (beginnt mit), *abc (endet mit), = allein (leer) und <> allein (nicht leer). Zahlen und Datum werden als Wert verglichen. Wirkt auf die Ansicht, die Daten bleiben unverändert.
+> `Grid1.Filters[2] := '>=100'; Grid1.SetFilterCondition(1, pfoBeginsWith, 'Mül');`
 TPPGCustomGrid.ShowFooter = True: Unten steht eine Summenzeile; was je Spalte berechnet wird, legt Column.Aggregate fest (gilt für die gefilterte Ansicht).
 TPPGCustomGrid.ShowGroupPanel = True: Über dem Grid erscheint eine Leiste; einen Spaltenkopf hineinziehen gruppiert nach dieser Spalte (mehrstufig möglich).
 TPPGCustomGrid.SortOnHeaderClick = True: Klick auf einen Spaltenkopf sortiert die Ansicht nach dieser Spalte, erneuter Klick kehrt die Richtung um (nur Spalten mit Sortable = True).
@@ -236,7 +257,25 @@ TPPGDBEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
 TPPGDBEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld hinter dem Platzhalter (TextHint) ein Sternchen, ohne TextHint nur das Sternchen. So ist die Pflicht sichtbar, bevor der Validator meldet.
 TPPGDBGrid.TitleFont = Wie TDBGrid.TitleFont: Schrift der Titelzeile. Ist ein Alias für Styles.Header.Font und wird nicht eigens gespeichert.
 TPPGDBGridColumn.ButtonStyle = Wie TColumn.ButtonStyle: cbsAuto (Auswahlliste bei PickList oder Nachschlagefeld), cbsEllipsis (Textfeld mit „…“-Knopf, löst OnEditButtonClick aus), cbsNone (immer Textfeld).
+TPPGDBGridColumn.ValueChecked = Kästchen-Spalte (Boolean-Feld, EditorKind = gekCheck oder CellKind = ckCheck): Wert für „an“ wie TDBCheckBox.ValueChecked, mehrere durch Semikolon (geschrieben wird der erste). Leer: 1, True und Ja gelten als an, geschrieben wird 1. Bei Boolean-Feldern ohne Wirkung.
+> `Column.EditorKind := gekCheck; Column.ValueChecked := 'J;Ja'; Column.ValueUnchecked := 'N;Nein';`
+! Für Ja/Nein-Spalten, die in der Datenbank als Text oder Zahl liegen (J/N, 1/0, T/F).
+TPPGDBGridColumn.ValueUnchecked = Wert für „aus“ (mehrere durch Semikolon, geschrieben wird der erste). Leer: jeder andere Wert ist aus, geschrieben wird 0. Gesetzt: unbekannte Werte erscheinen grau (unbestimmt), ebenso Null.
+! Setzen, wenn das Feld nur bestimmte Werte haben darf; Fremdwerte fallen dann grau auf.
+TPPGDBGridColumn.ListSource = Nachschlage-Spalte wie TDBLookupComboBox: Datenquelle der Liste. Zusammen mit KeyField und ListField zeigt die Spalte statt des Schlüssels aus FieldName den Text aus der Liste und bietet beim Bearbeiten eine Auswahlliste; geschrieben wird der Schlüssel.
+> `Column.FieldName := 'KundeID'; Column.ListSource := dsKunden; Column.KeyField := 'ID'; Column.ListField := 'Name';`
+! Statt eines Nachschlagefelds in der Datenmenge, wenn die Zuordnung nur in dieser Tabelle gebraucht wird. Die Liste wird beim Öffnen des Editors ganz gelesen; für sehr große Tabellen vorher filtern.
+TPPGDBGridColumn.KeyField = Schlüsselfeld der Liste (ListSource), dessen Wert zum Feld der Spalte (FieldName) passt. Nur ein Feld.
+TPPGDBGridColumn.ListField = Angezeigte Felder der Liste, mehrere durch Semikolon (wie TDBLookupComboBox). Bei mehreren Feldern zeigen Zell-Editor und Bearbeitungsformular eine mehrspaltige Auswahl (TPPGColumnComboBox); die Zelle zeigt das Feld nach ListFieldIndex.
+> `Column.ListField := 'Name;PLZ;Ort'; Column.ListFieldIndex := 0;`
+TPPGDBGridColumn.ListFieldIndex = Welches Feld aus ListField in der Zelle steht (0 = das erste; 0..31). Ein Index hinter der Liste nimmt das erste Feld.
+TPPGDBGridColumn.EditFormEditor = Editor im Bearbeitungsformular: efeAuto (Memo-Felder mehrzeilig, Datumsfelder mit Kalender, sonst wie in der Zelle), efeText (immer einzeilig), efeMemo (mehrzeilig) oder efeDate (Kalender; nur bei Datumsfeldern, sonst Text).
+TPPGDBGridColumn.EditFormRows = Höhe eines mehrzeiligen Felds im Bearbeitungsformular in Rasterzeilen (1..20).
+TPPGDBGridColumn.EditFormGroup = Abschnitt im Bearbeitungsformular: Felder mit derselben Angabe stehen nacheinander unter einer Überschrift mit diesem Text; ein Wechsel beginnt eine neue Rasterzeile. Leer: ohne Überschrift.
+> `TPPGDBGridColumn(PPGDBGrid1.Columns[4]).EditFormGroup := 'Anschrift';`
 TPPGCustomDBGrid.ShowRequired = True: Spalten mit Pflichtfeldern (TField.Required) zeigen im Titel ein Sternchen.
+TPPGCustomDBGrid.ViewStyle = dgvTable: Tabelle wie TDBGrid. dgvCards: Kartenansicht, je Datensatz eine Karte mit den sichtbaren Spalten als Zeilen „Beschriftung: Wert“ (Titel bzw. DisplayLabel, Kästchen und Nachschlagetexte wie in der Tabelle). Die Karten fließen nebeneinander, brechen um und werden senkrecht gescrollt; die aktuelle Karte ist der aktuelle Datensatz. Pfeile, Bild auf/ab und Pos1/Ende wechseln die Karte, Tab das Feld, F2/Enter oder Doppelklick bearbeiten das Feld, Mehrfachauswahl wie in der Tabelle.
+> `PPGDBGrid1.ViewStyle := dgvCards; PPGDBGrid1.CardWidth := 320;`
 TPPGDBLookupComboBox.KeyField = Schlüsselfeld der Listen-Datenmenge (ListSource); sein Wert wird in DataField geschrieben.
 TPPGDBLookupComboBox.ListField = Anzuzeigende Felder der Listen-Datenmenge; das erste ist der Eintrag, weitere (durch Semikolon getrennt) erscheinen als Detailzeile.
 > `Lookup1.ListSource := dsKunden; Lookup1.KeyField := 'ID'; Lookup1.ListField := 'Name;Ort';`
@@ -345,3 +384,15 @@ TPPGTagEdit.Tags = Die aktuellen Tags, je Zeile eines. Änderungen aus Code lös
 > `TagEdit1.Tags.Add('Wichtig');`
 TPPGCustomDatePicker.OnUserInput = Nur mit ParseInput = True: Die Eingabe wird übernommen (Enter, Fokusverlust). UserString ist der eingegebene Text, DateAndTime kommt mit dem gelesenen bzw. bisherigen Wert und kann ersetzt werden; AllowChange := False lehnt ab (Feld wird rot markiert).
 > `if SameText(UserString, 'morgen') then DateAndTime := Date + 1 else if UserString = '' then AllowChange := False;`
+# Gruppe 5, Schritt 6a: Filter, Suche, Ereignisse
+TPPGCustomGrid.FilterImmediate = True: Die Filterzeile filtert schon beim Tippen (der Editor bleibt offen); False: erst mit Enter bzw. beim Verlassen der Zelle.
+TPPGCustomGrid.ShowFilterBar = True: Bei aktivem Filter steht unten eine Leiste mit dem Filter als Text (z. B. „Name enthält mül und Betrag > 100“) und dem Link „Filter löschen“.
+TPPGCustomGrid.FindPanel = Suchfeld über der Tabelle: fpmNone (keins), fpmManual (Strg+F blendet es ein, Esc bzw. Schließen aus) oder fpmAlways (immer sichtbar). Gesucht wird ohne Groß-/Kleinschreibung in allen sichtbaren Textspalten; Treffer sind markiert, Enter/F3 springt weiter, Umschalt+Enter/Umschalt+F3 zurück.
+> `Grid1.FindPanel := fpmManual; Grid1.FindText := 'Müller'; Grid1.FindNext;`
+TPPGCustomGrid.IncrementalSearch = True: Tippen in einer nicht bearbeitbaren Zelle springt zur nächsten Zeile, deren Text in der Fokusspalte so beginnt (Zeichen sammeln sich bis zu einer Pause von einer Sekunde; Esc beginnt neu).
+TPPGCustomGrid.OnFilterChanged = Ein Filter der Filterzeile hat sich geändert (Eingabe, Filters[], ClearFilters, Filterleiste). FilterDescription liefert ihn als Text.
+TPPGCustomDBGrid.ShowFilterRow = True: Unter dem Kopf erscheint eine Eingabezeile; Text je Spalte filtert die Datenmenge über OnFilterRecord (Operatoren wie bei TPPGGrid; Zahl und Datum nach Feldtyp, Kästchen mit 1/0, Nachschlagespalten über den Text). Ein eigener OnFilterRecord und Filter/Filtered der Anwendung bleiben in Kraft und kommen beim Löschen der Filter zurück.
+TPPGCustomDBGrid.SortOnHeaderClick = True: Klick auf einen Spaltenkopf setzt nur den Sortierpfeil (SortColumn, SortAscending) und meldet OnSorted bzw. OnTitleClick; sortieren muss die Datenmenge (z. B. IndexFieldNames). Vorgabe False.
+TPPGCustomDBGrid.OnFocusedRecordChanged = Der aktuelle Datensatz ist ein anderer geworden (Blättern, Klick, Suche, Einfügen, Abbrechen); nicht beim Ändern von Werten desselben Satzes.
+TPPGCustomDBGrid.OnCanSelectRecord = Mehrfachauswahl: vor dem Wählen eines Datensatzes (Klick, Umschalt-Bereich, Strg+A, SelectedRows); die Datenmenge steht auf dem Satz, Allow := False lehnt ihn ab.
+TPPGCustomDBGrid.OnSelectCell = Vor dem Wechsel der Fokuszelle bzw. des Datensatzes; CanSelect := False verhindert ihn. RowValue('Feld') liefert dabei schon die Werte der Zielzeile.

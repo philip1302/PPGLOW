@@ -233,7 +233,13 @@ begin
   finally
     M.Free;
   end;
+  // Seit Schritt 6b gruppiert auch das DB-Grid (liest dann die ganze
+  // Datenmenge); das Kopfmenue oben bleibt ohne Gruppenleiste wie vorher
   G.GroupBy([2]);
+  CheckTrue(G.GroupedView, 'GroupBy gruppiert');
+  CheckTrue(G.GroupCount > 0);
+  G.Ungroup;
+  CheckFalse(G.GroupedView);
   CheckEquals(0, G.GroupCount);
 end;
 

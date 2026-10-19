@@ -456,6 +456,14 @@ begin
   // Qualitaet ...), Breite, Umbruch und Text
   FillChar(LF, SizeOf(LF), 0);
   GetObject(Font.Handle, SizeOf(LF), @LF);
+  // Bytes hinter dem Namensende sind unbestimmt (je TFont-Instanz anders):
+  // ohne Nullen kaeme jedes Mal ein neuer Schluessel und der Cache wuerde
+  // nie treffen, sondern nur bis MaxMeasureEntries wachsen
+  N := Low(LF.lfFaceName);
+  while (N <= High(LF.lfFaceName)) and (LF.lfFaceName[N] <> #0) do
+    Inc(N);
+  if N <= High(LF.lfFaceName) then
+    FillChar(LF.lfFaceName[N], (High(LF.lfFaceName) - N + 1) * SizeOf(Char), 0);
   N := (SizeOf(LF) + SizeOf(Char) - 1) div SizeOf(Char);
   SetLength(Result, N);
   Move(LF, Pointer(Result)^, SizeOf(LF));

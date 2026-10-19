@@ -176,6 +176,7 @@
         <DCCReference Include="..\Source\Controls\PPG.TreeView.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Grid.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Labels.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Shape.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Feedback.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Expander.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Splitter.pas"/>
@@ -244,6 +245,8 @@
         <DCCReference Include="..\Source\Render\PPG.Render.Shapes.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Sparkline.pas"/>
         <DCCReference Include="..\Source\Controls\PPG.Gauge.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.RichEdit.pas"/>
+        <DCCReference Include="..\Source\Controls\PPG.Image.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Logic.pas"/>
         <DCCReference Include="..\Source\Editors\PPG.Editors.Forms.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Controls.pas"/>
@@ -255,6 +258,7 @@
         <DCCReference Include="..\Source\DB\PPG.DB.Navigator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Validator.pas"/>
         <DCCReference Include="..\Source\DB\PPG.DB.Fields.pas"/>
+        <DCCReference Include="..\Source\DB\PPG.DB.RichEdit.pas"/>
         <DCCReference Include="..\Source\Render\PPG.Render.Fluent11.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.Presets.pas"/>
         <DCCReference Include="..\Source\Theme\PPG.StyleManager.pas"/>
@@ -320,6 +324,8 @@
         <DCCReference Include="PPG.Tests.Phase9b.pas"/>
         <DCCReference Include="PPG.Tests.Phase9c.pas"/>
         <DCCReference Include="PPG.Tests.Phase9d.pas"/>
+        <DCCReference Include="PPG.Tests.GridFilterSearch.pas"/>
+        <DCCReference Include="PPG.Tests.DBGridGrouping.pas"/>
         <DCCReference Include="PPG.Tests.Phase10a.pas"/>
         <DCCReference Include="PPG.Tests.Phase10b.pas"/>
         <DCCReference Include="PPG.Tests.Phase10c.pas"/>
@@ -340,6 +346,12 @@
         <DCCReference Include="PPG.Tests.Phase13f.pas"/>
         <DCCReference Include="PPG.Tests.Phase17.pas"/>
         <DCCReference Include="PPG.Tests.Phase18.pas"/>
+        <DCCReference Include="PPG.Tests.Inventur.pas"/>
+        <DCCReference Include="PPG.Tests.DBGridMultiSelect.pas"/>
+        <DCCReference Include="PPG.Tests.DBGridColumns.pas"/>
+        <DCCReference Include="PPG.Tests.DBGridCards.pas"/>
+        <DCCReference Include="PPG.Tests.DBGridEditForm.pas"/>
+        <DCCReference Include="PPG.Tests.Image.pas"/>
         <DCCReference Include="PPG.Tests.Phase19.pas"/>
         <DCCReference Include="PPG.Tests.Phase20.pas"/>
         <DCCReference Include="PPG.Tests.Audit45.pas"/>
@@ -365,6 +377,7 @@
         <DCCReference Include="PPG.Tests.Phase14cDB.pas"/>
         <DCCReference Include="PPG.Tests.Review.pas"/>
         <DCCReference Include="PPG.Tests.Custom.pas"/>
+        <DCCReference Include="PPG.Tests.RichEdit.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

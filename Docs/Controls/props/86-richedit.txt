@@ -1,0 +1,28 @@
+# TPPGRichEdit und TPPGDBRichEdit (Ersatz für TRichEdit und TDBRichEdit)
+
+TPPGCustomRichEdit.Lines = Der Text als Zeilenliste (wie TRichEdit.Lines). LoadFromStream und SaveToStream lesen und schreiben RTF, mit PlainText = True reinen Text. In der DFM stehen die Zeilen als reiner Text.
+> `RichEdit1.Lines.LoadFromFile('brief.rtf'); RichEdit1.Lines.SaveToStream(Stream);`
+TPPGCustomRichEdit.PlainText = True: Lines.LoadFromStream und SaveToStream lesen und schreiben reinen Text statt RTF. Vorgabe False (RTF).
+> `RichEdit1.PlainText := True; RichEdit1.Lines.SaveToFile('notiz.txt');`
+TPPGCustomRichEdit.ScrollBars = Scrollleisten: ssNone, ssHorizontal, ssVertical oder ssBoth. Ohne Umbruch (WordWrap = False) ssBoth wählen.
+TPPGCustomRichEdit.WantReturns = True: Enter fügt einen Absatz ein; False: Enter löst den Standard-Button des Formulars aus.
+TPPGCustomRichEdit.WantTabs = True: Tab fügt ein Tabulatorzeichen ein statt zum nächsten Control zu wechseln.
+TPPGCustomRichEdit.WordWrap = True: Lange Zeilen brechen am rechten Rand um. False: Zeilen laufen nach rechts weiter und werden waagerecht gescrollt.
+TPPGCustomRichEdit.HideScrollBars = True: Scrollleisten erscheinen nur, wenn der Text nicht mehr ins Feld passt. False: Sie bleiben bei Bedarf sichtbar (deaktiviert).
+TPPGCustomRichEdit.Zoom = Vergrößerung der Anzeige in Prozent (1 bis 6400, Vorgabe 100). Ändert nur die Darstellung, nicht die Schriftgröße im Text.
+> `RichEdit1.Zoom := 150;`
+TPPGCustomRichEdit.EnableURLs = True: Internetadressen im Text werden erkannt, als Link dargestellt und lösen OnLinkClick aus.
+TPPGCustomRichEdit.ShowURLHint = True: Beim Überfahren eines Links zeigt das Control die Adresse als Hint (mit EnableURLs).
+TPPGCustomRichEdit.SpellChecking = True: Windows-Rechtschreibprüfung im Text (soweit das System sie anbietet).
+TPPGCustomRichEdit.OnSelectionChange = Auswahl oder Cursorposition haben sich geändert. Dient dem Nachführen von Symbolleisten (Fett, Kursiv, Ausrichtung) aus SelAttributes und Paragraph.
+> `btnBold.Down := fsBold in RichEdit1.SelAttributes.Style;`
+TPPGCustomRichEdit.OnLinkClick = Klick auf einen Link (mit EnableURLs). URL nennt die Adresse, Button die Maustaste.
+> `ShellExecute(0, 'open', PChar(URL), nil, nil, SW_SHOWNORMAL);`
+TPPGCustomRichEdit.OnProtectChange = Der Anwender will geschützten Text ändern (SelAttributes.Protected). AllowChange := True erlaubt es.
+TPPGCustomRichEdit.OnResizeRequest = Der Inhalt braucht mehr Platz als das Control hat; Rect nennt die gewünschte Größe.
+TPPGCustomRichEdit.OnSaveClipboard = Beim Beenden wird der Zwischenablage-Inhalt des RichEdit gesichert. SaveClipboard := False verzichtet darauf.
+
+TPPGDBRichEdit.AutoDisplay = False: BLOB-Felder werden erst bei Doppelklick oder Enter geladen (spart Zeit beim Blättern; wie TDBRichEdit).
+TPPGDBRichEdit.DataField = Memo- oder BLOB-Feld mit RTF-Text, das angezeigt und bearbeitet wird (Textfelder zeigen reinen Text).
+TPPGDBRichEdit.DataSource = Datenquelle mit der Datenmenge, aus der DataField kommt.
+TPPGDBRichEdit.ShowRequired = True: Ist das Datenfeld ein Pflichtfeld (TField.Required), zeigt das leere Feld ein Sternchen, bevor der Validator meldet.

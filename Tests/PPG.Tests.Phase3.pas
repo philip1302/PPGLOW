@@ -1498,6 +1498,8 @@ begin
     P.Controls[0].Free;
     M.WriteComponent(P);
     M.Position := 0;
+    // Der Name P ist im Besitzer vergeben: ReadComponent braucht ihn frei
+    P.Free;
     P2 := TPPGPanel.Create(FForm);
     P2.Parent := FForm;
     M.ReadComponent(P2);

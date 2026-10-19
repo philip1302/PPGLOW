@@ -5,7 +5,12 @@
 # "Klasse.Name = Wirkung" am Anfang.
 
 # --- Wirkung, DB-spezifisch ---
-TPPGDBGrid.ShowFooter = True: Unten steht eine Summenzeile. Ihren Inhalt liefert die Datenmenge: je Spalte das Feld aus Column.FooterField (z. B. ein TAggregateField) oder der Text aus OnGetFooterText. Column.Aggregate wirkt im DB-Grid nicht; das Grid liest dafür nie die ganze Datenmenge.
+TPPGDBGrid.ShowFooter = True: Unten steht eine Summenzeile. Ihren Inhalt liefert die Datenmenge: je Spalte das Feld aus Column.FooterField (z. B. ein TAggregateField) oder der Text aus OnGetFooterText. Column.Aggregate rechnet das Grid nur, solange es gruppiert (dann sind alle Sätze gelesen); ohne Gruppierung liest es dafür nie die ganze Datenmenge.
+TPPGDBGrid.ShowGroupPanel = True: Über den Titeln erscheint die Gruppenleiste; einen Spaltenkopf hineinziehen gruppiert nach dieser Spalte (mehrstufig), das Kopfmenü bietet dann auch „Gruppieren nach“. Erst mit einer Gruppenspalte (Column.GroupIndex) liest das Grid die ganze Datenmenge in den Speicher; die Leiste allein ändert nichts.
+> `PPGDBGrid1.ShowGroupPanel := True;`
+TPPGDBGrid.GroupFooter = True: Unter jeder Gruppe steht eine Fußzeile mit den Summen der Spalten mit Column.Aggregate (nur in der gruppierten Ansicht).
+TPPGDBGrid.OnGetGroupText = Text einer Gruppenzeile (Markup erlaubt, vorbelegt mit „Feld: Wert (Anzahl)“); Group ist der Index für GroupInfo.
+> `Text := '<b>' + PPGDBGrid1.GroupInfo(Group).Key + '</b> (' + IntToStr(PPGDBGrid1.GroupInfo(Group).Count) + ' Artikel)';`
 TPPGDBGrid.HeaderMenu = True: Rechtsklick auf den Kopf öffnet ein Menü zum Ausblenden und Wählen der Spalten und zum Anpassen der Breite. Sortieren ist im DB-Grid Sache der Datenmenge (OnTitleClick), die Sortier-Einträge sind daher gesperrt. Ergänzen lässt sich das Menü in OnHeaderMenu.
 TPPGDBGrid.Columns = Feste Spalten des DB-Grids: je Spalte ein Feld (FieldName) mit Titel, Breite, Ausrichtung, Editor, Stil und Summenfeld (FooterField). Ohne Einträge zeigt das Grid alle sichtbaren Felder der Datenmenge (Titel = DisplayLabel, Breite aus DisplayWidth).
 > `with TPPGDBGridColumn(PPGDBGrid1.Columns.Add) do begin FieldName := 'Umsatz'; Title := 'Umsatz'; Width := 100; end;`
@@ -34,7 +39,7 @@ TPPGDBGrid.Constraints ! MinHeight so wählen, dass Kopf und mindestens drei, vi
 TPPGDBGrid.Cursor ! Meist crDefault lassen; Links und Buttons in Zellen zeigen die Hand selbst.
 TPPGDBGrid.CustomHint ! Für Hinweise mit Titel und Symbol einen TPPGCustomHint zuweisen; abgeschnittene Zelltexte zeigt das Grid über ToolTips ohnehin.
 TPPGDBGrid.DataSource ! Die Verbindung zur Datenmenge: eine TDataSource aus dem Datenmodul zuweisen, deren DataSet die Abfrage oder Tabelle ist. Navigator, Detailfelder und Grid an derselben DataSource zeigen immer denselben Datensatz.
-TPPGDBGrid.DefaultDrawing ! Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell komplett selbst zeichnen. Für Farben und Symbole reichen ConditionalFormats und OnGetCellStyle.
+TPPGDBGrid.DefaultDrawing ! Nur auf False setzen, wenn Sie den Zellinhalt in OnDrawCell bzw. OnDrawColumnCell komplett selbst zeichnen (DefaultDrawColumnCell zeichnet bei Bedarf Text und Kästchen). Für Farben und Symbole reichen ConditionalFormats und OnGetCellStyle.
 TPPGDBGrid.DoubleBuffered ! Bei PPGlow-Controls nicht nötig; das Grid zeichnet immer flackerfrei. Steht nur da, damit alte Formulare mit TDBGrid laden.
 TPPGDBGrid.DragCursor ! Nur bei DragMode = dmAutomatic sichtbar, z. B. crDrag beim Ziehen eines Datensatzes in eine andere Liste.
 TPPGDBGrid.DragKind ! dkDrag für Drag & Drop (Datensatz auf einen Ordner oder eine zweite Liste ziehen); dkDock braucht man bei Tabellen praktisch nie.
@@ -70,6 +75,9 @@ TPPGDBGrid.Preset ! Die Optik einmal für die ganze Anwendung festlegen, am best
 TPPGDBGrid.ReadOnly ! Für Listen, in denen nur gesucht und gewählt wird, während die Datenmenge selbst änderbar bleibt (Bearbeiten im Detailformular). Für ganz schreibgeschützte Daten besser die Abfrage bzw. DataSource.AutoEdit.
 TPPGDBGrid.ScrollBarMode ! sbmAuto lassen (schmale Leiste bei Bedarf). sbmAlways, wenn Anwender die Leiste sehen sollen, um die Länge der Liste abzuschätzen.
 TPPGDBGrid.ShowFooter ! Einschalten, sobald die Datenmenge Summen liefert (TAggregateField wie SUM(Betrag)) und eine Spalte sie über FooterField zeigt, z. B. Bestellwert oder offene Posten.
+TPPGDBGrid.ShowGroupPanel ! Für Übersichten, in denen der Anwender selbst gruppieren soll (nach Kunde, Lieferant, Status). Für eine feste Gruppierung reicht Column.GroupIndex im Designer; die Leiste kann dann aus bleiben.
+TPPGDBGrid.GroupFooter ! Einschalten, wenn jede Gruppe ihre Summe zeigen soll (Bestand je Lager, Umsatz je Kunde); dazu Column.Aggregate der Betragsspalte setzen.
+TPPGDBGrid.OnGetGroupText ! Gruppenzeilen mit dem Namen statt der Nummer füllen, z. B. den Kundennamen zur Kundennummer aus einem Nachschlagefeld.
 TPPGDBGrid.ShowHint ! Einschalten (oder am Formular), damit abgeschnittene Zelltexte und Hint erscheinen.
 TPPGDBGrid.ShowRequired ! In Erfassungstabellen einschalten: Pflichtfelder (TField.Required) bekommen ein Sternchen im Titel, bevor der Anwender beim Speichern eine Meldung bekommt.
 TPPGDBGrid.SmoothScrolling ! True lassen; bei sehr langsamen Remote-Sitzungen kann False das Scrollen direkter machen.
@@ -126,3 +134,31 @@ TPPGDBGridColumn.FooterField ! Unter Beträgen und Mengen die Summe zeigen: in d
 TPPGDBGridColumn.FooterFormat ! Im DB-Grid nicht verwenden; das Format der Summe steht im DisplayFormat des TAggregateField.
 TPPGDBGridColumn.GroupIndex ! Im DB-Grid nicht verwenden; für Auswertungen nach Kunde oder Monat GROUP BY in der Abfrage nehmen oder die Daten in ein TPPGGrid laden.
 TPPGDBGridColumn.Sortable ! Im DB-Grid nicht verwenden; ob eine Spalte sortierbar ist, entscheidet Ihr OnTitleClick-Handler.
+TPPGDBGrid.CardLabelWidth ! So breit wie die längste übliche Beschriftung wählen; bei kurzen Werten (Kennzeichen, Beträge) lieber eine schmalere Karte als eine schmale Beschriftung.
+TPPGDBGrid.CardSpacing ! Vorgabe lassen; 0 für dicht gepackte Karten in kleinen Fenstern, größer für Übersichtsseiten.
+TPPGDBGrid.CardWidth ! Nach dem längsten Wert wählen; bei vielen Feldern je Datensatz (z. B. 30 und mehr) sind 300 bis 400 Pixel übersichtlich, die Karte wird dann senkrecht gescrollt.
+TPPGDBGrid.EditMode ! dgeForm, wenn Datensätze mehr Felder haben als in die Breite passen oder Eingaben zusammen geprüft werden (Pflichtfelder, Abhängigkeiten); die Tabelle bleibt zum Vergleichen und Suchen, bearbeitet wird im Formular. Für schnelle Einzelkorrekturen in wenigen Spalten dgeCells lassen.
+TPPGDBGrid.EditForm ! ColumnCount nach der Breite des Grids wählen (2 bis 3 bei normalen Fenstern); lange Felder per Column.EditFormColSpan über mehrere Spalten legen statt ColumnCount zu senken.
+TPPGDBGrid.OnEditFormShow ! Zum Vorbelegen neuer Datensätze lieber OnNewRecord der Datenmenge nehmen; das Ereignis eignet sich für Hinweise und zum Ein- und Ausschalten anderer Bedienelemente.
+TPPGDBGrid.OnEditFormClose ! Accepted prüfen, um nach dem Speichern z. B. eine Summe oder Detailansicht zu aktualisieren.
+TPPGDBGridColumn.EditFormVisible ! Technische Spalten (IDs, Zeitstempel) mit efvHide ausblenden; Felder, die in der Tabelle keinen Platz haben (Bemerkung, Adresse), mit Visible = False und efvShow nur im Formular zeigen.
+TPPGDBGridColumn.EditFormColSpan ! Für Text- und Bemerkungsfelder die ganze Formularbreite (= EditForm.ColumnCount) wählen.
+TPPGDBGridEditFormOptions.ColumnCount ! 2 für normale Fenster, 3 bis 4 für breite Grids mit vielen kurzen Feldern (Kennzeichen, Beträge, Datum); mehr als 4 wird schnell unübersichtlich.
+TPPGDBGridEditFormOptions.LabelWidth ! So breit wie die längste übliche Beschriftung; 0 nur, wenn die Felder ohnehin selbsterklärend sind (z. B. mit TextHint).
+TPPGDBGridEditFormOptions.ShowButtons ! Eingeschaltet lassen; ohne Schaltflächen bleibt nur die Tastatur (Strg+Enter, Esc), das kennen Gelegenheitsnutzer nicht.
+TPPGDBGrid.ViewStyle ! dgvCards für Datensätze mit vielen Feldern, die man einzeln liest statt zu vergleichen (Stammdaten, Adressen, Geräte); ein Schalter in der Oberfläche kann zwischen Tabelle und Karten wechseln, Spalten, Auswahl und Datensatz bleiben erhalten.
+TPPGDBGrid.ShowFilterRow ! Für Listen aus einer schon geladenen Datenmenge (ClientDataSet, kleine Abfrage). Bei großen Tabellen besser serverseitig filtern (WHERE), denn OnFilterRecord liest jeden Satz.
+TPPGDBGrid.FilterImmediate ! Einschalten bei Datenmengen bis einige tausend Sätze; darüber False, damit erst Enter filtert.
+TPPGDBGrid.ShowFilterBar ! Einschalten, wenn die Filterzeile benutzt wird: Die Leiste zeigt, warum Sätze fehlen.
+TPPGDBGrid.FindPanel ! fpmManual für Strg+F-Suche in geladenen Datenmengen; die Suche durchläuft die Datenmenge, bei sehr großen Tabellen lieber eine Abfrage.
+TPPGDBGrid.IncrementalSearch ! Für schreibgeschützte Listen, die nach der Fokusspalte sortiert sind (IndexFieldNames).
+TPPGDBGrid.SortOnHeaderClick ! Einschalten und in OnTitleClick IndexFieldNames setzen; der Pfeil zeigt dann die Sortierung und kommt mit LoadLayout zurück.
+TPPGDBGrid.OnFilterChanged ! Trefferzahl (DataSet.RecordCount) in der Statusleiste anzeigen.
+TPPGDBGrid.OnFocusedRecordChanged ! Detailbereiche nachladen (Positionen, Vorschau), statt DataSource.OnDataChange auszuwerten, das auch bei jeder Feldänderung kommt.
+TPPGDBGrid.OnCanSelectRecord ! Sätze von einer Sammelaktion ausschließen, z. B. bereits gebuchte Rechnungen beim Markieren zum Buchen.
+TPPGDBGrid.OnSelectCell ! Wechsel verhindern, solange der aktuelle Satz ungültig ist; mit RowValue die Zielzeile prüfen (z. B. gesperrte Sätze nicht betreten).
+TPPGDBGridColumn.ListFieldIndex ! Bei ListField 'Nummer;Name' mit 1 den Namen in der Zelle zeigen, während die Auswahl beide Spalten hat.
+TPPGDBGridColumn.EditFormEditor ! Meist efeAuto lassen; efeMemo für lange Textfelder (Bemerkung), efeText, wenn ein Memo-Feld nur kurze Texte hat.
+TPPGDBGridColumn.EditFormRows ! 3 bis 5 Zeilen für Bemerkungen; mit EditFormColSpan über die ganze Breite.
+TPPGDBGridColumn.EditFormGroup ! Formulare ab etwa acht Feldern in Abschnitte teilen (Anschrift, Kontakt, Konditionen).
+TPPGDBGrid.OnSorted ! Mit SortOnHeaderClick: die Sortierung in der Statusleiste anzeigen oder in den Einstellungen merken; sortiert hat die Datenmenge schon in OnTitleClick.

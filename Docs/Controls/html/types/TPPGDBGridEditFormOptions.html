@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TPPGDBGridEditFormOptions</title><style>body{font-family:Segoe UI,sans-serif;max-width:72em;margin:2em auto;padding:0 1em;color:#242424;line-height:1.5}code{background:#f3f3f3;padding:0 .25em;border-radius:3px}pre{background:#f3f3f3;padding:.75em;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.25em .5em;text-align:left;vertical-align:top}a{color:#0f6cbd}@media (prefers-color-scheme:dark){body{background:#202020;color:#e6e6e6}code,pre{background:#2b2b2b}a{color:#60cdff}td,th{border-color:#444}}</style></head><body>
+<p><a href="../index.html">PPGlow-Hilfe</a></p>
+<h1>TPPGDBGridEditFormOptions</h1>
+<p>Typ in Unit <code>PPG.DB.Grid</code> - Basis <code>TPersistent</code></p>
+<p>Einstellungen des Bearbeitungsformulars (TPPGCustomDBGrid.EditForm).</p>
+<h2>Eigenschaften</h2>
+<table>
+<tr><th>Eigenschaft</th><th>Typ</th><th>Vorgabe</th><th>Wirkung und Nutzung</th></tr>
+<tr><td><code>ColumnCount</code></td><td><code>Integer</code></td><td><code>2</code></td><td>Spalten des Rasters im Bearbeitungsformular (1..8; Vorgabe 2). Je Spalte steht ein Feld als Beschriftung + Editor; die Felder flie&#223;en in der Reihenfolge der Spalten nach rechts und brechen um. Praxis: 2 f&#252;r normale Fenster, 3 bis 4 f&#252;r breite Grids mit vielen kurzen Feldern (Kennzeichen, Betr&#228;ge, Datum); mehr als 4 wird schnell un&#252;bersichtlich.</td></tr>
+<tr><td><code>LabelWidth</code></td><td><code>Integer</code></td><td><code>120</code></td><td>Breite der Beschriftung links vom Editor in logischen Pixeln (0..1000; Vorgabe 120). 0 = ohne Beschriftung; h&#246;chstens die halbe Breite eines Felds. Praxis: So breit wie die l&#228;ngste &#252;bliche Beschriftung; 0 nur, wenn die Felder ohnehin selbsterkl&#228;rend sind (z. B. mit TextHint).</td></tr>
+<tr><td><code>ShowButtons</code></td><td><code>Boolean</code></td><td><code>True</code></td><td>True: Schaltfl&#228;chen &#220;bernehmen und Abbrechen unten im Formular. False: nur Tastatur (Strg+Enter, Esc; Enter im letzten Feld &#252;bernimmt). Praxis: Eingeschaltet lassen; ohne Schaltfl&#228;chen bleibt nur die Tastatur (Strg+Enter, Esc), das kennen Gelegenheitsnutzer nicht.</td></tr>
+</table>
+<h2>Verwendet in</h2>
+<p><a href="../TPPGDBGrid.html">TPPGDBGrid</a></p>
+<hr>
+<p>Erzeugt von <code>Build\make-docs.ps1</code>; Beschreibungen in <code>Docs\Controls\props\*.txt</code>.</p>
+</body></html>

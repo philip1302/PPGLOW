@@ -210,6 +210,13 @@ function TPhase7cTestCase.NewNav: TPPGNavigationView;
 var
   Docs: TPPGNavItem;
 begin
+  // Die Navigation ist alLeft: ihre Hoehe ist die Formularhoehe, ein Height
+  // an der Navigation wirkt nicht. Das Standardformular (CreateNew) ist kleiner
+  // als 400 px; dann liegt der Fussbereich ueber den unteren Hauptzeilen und
+  // faengt deren Klicks ab. Die Tests setzen die Hoehe voraus, also das
+  // Formular entsprechend gross machen.
+  if FForm.ClientHeight < 400 then
+    FForm.ClientHeight := 400;
   Result := TPPGNavigationView.Create(FForm);
   Result.Parent := FForm;
   Result.Animation.Enabled := False;

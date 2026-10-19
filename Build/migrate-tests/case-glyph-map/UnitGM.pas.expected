@@ -1,0 +1,23 @@
+unit UnitGM;
+
+interface
+
+uses
+  Vcl.Forms, Old.Buttons,
+  My.Buttons, Ext.Buttons, Ext.Things;
+
+type
+  TFormGM = class(TForm)
+    Link1: TMyLinkButton;
+    Print1: TMyPrintButton;
+    Own1: TMyLayoutButton;
+    Ext1: TExternalButton;
+    Thing1: TExternalThing;
+    Edit1: TMyGlyphEdit;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

@@ -1,0 +1,6 @@
+UnitGR.dfm : Grid1 TOldGrid -> TMyGrid
+UnitGR.dfm :   Grid1.Options: dgAlwaysShowEditor wirkt bei TPPGDBGrid nicht
+UnitGR.dfm :   Grid1.Bogus entfernt (gibt es bei TMyGrid nicht)
+UnitGR.dfm :   Grid1.Columns: 'Expanded' entfernt
+UnitGR.dfm : Grid2 TOldExtGrid -> TExternalGrid
+UnitGR.dfm :   Grid2.Columns: 'Expanded' entfernt

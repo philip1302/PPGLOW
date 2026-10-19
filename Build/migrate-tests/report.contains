@@ -1,0 +1,20 @@
+Unit1.dfm :   BitBtn1.Glyph entfernt (mit -GlyphDir als PNG sichern)
+Unit1.dfm :   BitBtn1 Kind = bkHelp entfernt - Hilfe-Aufruf von Hand
+Unit5.dfm :   OkBtn Kind = bkOK -> ModalResult = 1, Default = True
+Unit5.dfm :   CancelBtn Kind = bkCancel -> Cancel = True
+Unit5.dfm :   YesBtn Kind = bkYes -> ModalResult = 6, Default = True
+Unit5.dfm :   NoBtn Kind = bkNo -> ModalResult = 7
+Unit5.dfm :   CloseBtn Kind = bkClose entfernt
+Unit5.dfm : PopupMenu1 TPopupMenu -> TPPGPopupMenu
+Unit5.pas :30: 'is TBitBtn'
+Unit5.pas :31: 'as TBitBtn'
+Unit5.pas :32: Cast 'TBitBtn('
+Unit5.pas :33: 'with OkBtn do'
+Unit5.pas :35: 'with Panel1 do'
+Unit5.pas :35: 'with CloseBtn do'
+Unit6.dfm : Shape1 TShape -> TPPGShape
+Unit6.dfm : DBText1 TDBText -> TPPGDBText
+Unit7.dfm : RichEdit1 TRichEdit -> TPPGRichEdit
+Unit7.dfm : DBRichEdit1 TDBRichEdit -> TPPGDBRichEdit
+Unit8.dfm : Image1 TImage -> TPPGImage
+Unit8.dfm : DBImage1 TDBImage -> TPPGDBImage

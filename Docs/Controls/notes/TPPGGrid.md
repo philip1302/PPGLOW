@@ -21,7 +21,10 @@ Das Grid zeigt Datensätze als Tabelle: Aufträge, Artikel, Buchungen, Positione
 - Gruppieren: `GroupBy`/`Column.GroupIndex` oder Kopf in die Gruppenleiste ziehen (`ShowGroupPanel`). Gruppenzeilen mit Pfeil (Klick, Doppelklick, Pfeiltasten, Enter/Leertaste), Text über `OnGetGroupText` (Markup).
 - Summen: `ShowFooter`, `GroupFooter`, `Column.Aggregate`/`FooterFormat`, `agCustom` über `OnCustomAggregate`. Summen gelten für die gefilterte Ansicht.
 - Zellen: `Column.CellKind` (Kästchen, Fortschritt, Sparkline, Bewertung, Bild, Link, Button, Farbfeld, Markup; eigene über `PPGRegisterCellKindName`), `ConditionalFormats`, `OnGetCellStyle`, `MergeCells`.
-- Layout merken: `SaveLayout`/`LoadLayout` (Reihenfolge, Breiten, Sichtbarkeit, Sortierung, Gruppen).
+- Filtern (`ShowFilterRow`, `Filters[]`, `SetFilterCondition`): ohne Operator Teiltext (Zahl/Datum: gleich), sonst `=x`, `<>x`, `<x`, `<=x`, `>x`, `>=x`, `a..b`, `abc*`, `*abc`, `*abc*`, `=` (leer), `<>` (nicht leer); Zahlen und Datum (Format der Ländereinstellung) werden als Wert verglichen, Text ohne Groß-/Kleinschreibung. `FilterImmediate` filtert beim Tippen, `ShowFilterBar` zeigt unten den Filter als Text (`FilterDescription`) mit „Filter löschen“, `OnFilterChanged` meldet jede Änderung. Parser für eigene Filter: `PPGFilterParse`/`PPGFilterText` (`PPG.Grid.View`).
+- Suchen: `FindPanel` (`fpmManual`: Strg+F; `fpmAlways`) blendet über der Tabelle ein Suchfeld mit Zurück/Weiter ein; Treffer in allen sichtbaren Textspalten sind markiert, Enter/F3 und Umschalt+Enter/Umschalt+F3 springen (im Kreis), Esc leert bzw. schließt. Aus dem Code: `FindText`, `FindNext`, `FindPrevious`, `ShowFind`, `HideFind`. `IncrementalSearch`: Tippen in einer nicht bearbeitbaren Zelle springt zur nächsten Zeile, deren Text in der Fokusspalte so beginnt (`IncrementalSearchText`).
+- `OnGetCellStyle` gilt auch für Druck und Export; abgeleitete Grids überschreiben `DoGetCellStyle(ACol, ARow, Purpose, Style)` (Purpose: Bildschirm, Druck, Export).
+- Layout merken: `SaveLayout`/`LoadLayout` (Reihenfolge, Breiten, Sichtbarkeit, Sortierung, Gruppen); die Filtertexte gehören nicht zum Layout.
 - Drucken mit `TPPGGridPrinter`; Export über `PPG.Grid.Export` (xlsx, PDF, HTML, CSV), Import `PPGLoadXlsx`.
 - Der xlsx-Export übernimmt die Optik des Grids in heller Darstellung: Schrift, Kopf- und Summenfarben, Bänder, Gitterlinien, Ausrichtung, Zeilenhöhe, Spalten- und Zebra-Stile, bedingte Formate, Kästchen (☑/☐ als 1/0), Sterne, Farb- und Linkzellen. Datenbalken, Fortschritt und Symbolsätze werden Excel-Regeln und rechnen beim Bearbeiten mit. Nur Werte: `TPPGXlsxWriter.Styled := False`.
 - UI Automation: Tabellen-Muster mit Kopfzeilen, Gruppenzeilen (Auf-/Zuklappen), Kästchen, Links und Buttons (Invoke).
@@ -40,4 +43,12 @@ Grid1.Columns[2].Aggregate := agSum;
 Grid1.ShowFooter := True;
 Grid1.GroupBy([1]);                       // nach Kategorie gruppieren
 PPGExportXlsx(Grid1 as IPPGTableSource, 'Liste.xlsx');
+
+// Filterzeile mit Operatoren, Filterleiste und Suchfeld (Strg+F)
+Grid1.ShowFilterRow := True;
+Grid1.FilterImmediate := True;
+Grid1.ShowFilterBar := True;
+Grid1.Filters[2] := '>=100';               // Betrag ab 100
+Grid1.SetFilterCondition(1, pfoBeginsWith, 'Mül');
+Grid1.FindPanel := fpmManual;
 ```

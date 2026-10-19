@@ -1,0 +1,20 @@
+unit Unit7;
+
+interface
+
+uses
+  Vcl.Forms, Vcl.ComCtrls, Vcl.DBCtrls, Data.DB,
+  PPG.RichEdit, PPG.DB.RichEdit;
+
+type
+  TForm7 = class(TForm)
+    RichEdit1: TPPGRichEdit;
+    DBRichEdit1: TPPGDBRichEdit;
+    DataSource1: TDataSource;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

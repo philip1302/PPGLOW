@@ -1,0 +1,20 @@
+unit UnitM;
+
+interface
+
+uses
+  Vcl.Forms,
+  My.Edit, PPG.Edit;
+
+type
+  TFormM = class(TForm)
+    Old1: TMyEdit;
+    Grid1: TOldGrid;
+    Edit2: TPPGEdit;
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

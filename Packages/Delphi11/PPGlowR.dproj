@@ -150,6 +150,7 @@
         <DCCReference Include="..\..\Source\Controls\PPG.TreeView.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Grid.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Labels.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.Shape.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Feedback.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Expander.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Splitter.pas"/>
@@ -218,6 +219,8 @@
         <DCCReference Include="..\..\Source\Render\PPG.Render.Shapes.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Sparkline.pas"/>
         <DCCReference Include="..\..\Source\Controls\PPG.Gauge.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.RichEdit.pas"/>
+        <DCCReference Include="..\..\Source\Controls\PPG.Image.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

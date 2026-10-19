@@ -71,7 +71,7 @@ uses
   System.SysUtils, System.TypInfo, System.UITypes, Vcl.Controls, Vcl.Dialogs, Vcl.Forms,
   Vcl.StdCtrls, Vcl.CheckLst, Vcl.Consts, Data.DB, ColnEdit,
   PPG.Grid, PPG.DB.Controls, PPG.DB.Lookup, PPG.DB.Grid, PPG.DB.Chart, PPG.DB.Fields,
-  PPG.DB.Planner, PPG.DB.Kanban, PPG.DB.Navigator;
+  PPG.DB.Planner, PPG.DB.Kanban, PPG.DB.Navigator, PPG.DB.RichEdit;
 
 resourcestring
   SPPGDBPalette = 'PPGlow DB';
@@ -287,12 +287,15 @@ begin
   RegisterComponents(SPPGDBPalette, [TPPGDBEdit, TPPGDBMemo, TPPGDBCheckBox, TPPGDBComboBox,
     TPPGDBLookupComboBox, TPPGDBDatePicker, TPPGDBGrid, TPPGDBChart, TPPGDBPlanner, TPPGDBKanban,
     TPPGDBMaskEdit, TPPGDBNumberEdit, TPPGDBColorPicker, TPPGDBCheckComboBox, TPPGDBTagEdit,
-    TPPGDBNavigator, TPPGDBRadioGroup]);
+    TPPGDBNavigator, TPPGDBRadioGroup, TPPGDBText, TPPGDBToggleSwitch, TPPGDBRichEdit, TPPGDBImage]);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBRadioGroup, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBNavigator, 'SearchField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBEdit, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBMemo, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBCheckBox, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBText, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBToggleSwitch, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBImage, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBComboBox, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBDatePicker, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBMaskEdit, 'DataField', TPPGDataFieldProperty);
@@ -300,6 +303,7 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TPPGDBColorPicker, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBCheckComboBox, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBTagEdit, 'DataField', TPPGDataFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string), TPPGDBRichEdit, 'DataField', TPPGDataFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBLookupComboBox, 'KeyField', TPPGListFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBLookupComboBox, 'ListField', TPPGListFieldProperty);
   RegisterPropertyEditor(TypeInfo(string), TPPGDBGridColumn, 'FieldName', TPPGColumnFieldProperty);

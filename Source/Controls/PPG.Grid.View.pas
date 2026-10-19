@@ -205,6 +205,58 @@ function PPGGridEntryIsGroup(Entry: Integer): Boolean; inline;
 function PPGGridEntryGroup(Entry: Integer): Integer; inline;
 function PPGGridEntryIsFooter(Entry: Integer): Boolean; inline;
 
+type
+  /// Vergleich einer Filterbedingung (Filterzeile von Grid und DB-Grid).
+  TPPGFilterOperator = (pfoContains, pfoEqual, pfoNotEqual, pfoLess, pfoLessEqual,
+    pfoGreater, pfoGreaterEqual, pfoBeginsWith, pfoEndsWith, pfoBetween, pfoEmpty,
+    pfoNotEmpty);
+
+  /// Art der Werte einer Spalte: fvkAuto = Zahl bzw. Datum, wenn Zelle und
+  /// Vergleichswert so lesbar sind (Grid ohne Typangaben), sonst Text.
+  TPPGFilterValueKind = (fvkAuto, fvkText, fvkNumber, fvkDate);
+
+  /// Eine Filterbedingung aus dem Text der Filterzeile. Schreibweise:
+  ///   abc        enthaelt (Text); bei Zahl/Datum (fvkNumber/fvkDate): gleich
+  ///   =abc  <>abc  <abc  <=abc  >abc  >=abc   Vergleich
+  ///   abc*       beginnt mit;  *abc  endet mit;  *abc*  enthaelt
+  ///   a..b       zwischen a und b (einschliesslich)
+  ///   =          leer;  <>  nicht leer
+  /// Zahlen und Datumswerte im Format der Anwendung (FormatSettings).
+  /// Datum ohne Uhrzeit vergleicht nur den Tag. Text ohne Gross-/Kleinschreibung.
+  TPPGFilterCondition = record
+    Op: TPPGFilterOperator;
+    Kind: TPPGFilterValueKind;
+    Value, Value2: string;           // Vergleichswerte (ohne Operator)
+    UpperValue, UpperValue2: string;
+    Num, Num2: Double;
+    NumOk: Boolean;                  // Vergleichswert(e) als Zahl lesbar
+    Date, Date2: TDateTime;
+    DateOk: Boolean;                 // Vergleichswert(e) als Datum lesbar
+    DateHasTime: Boolean;
+    /// Text der Filterzeile lesen ('' = keine Bedingung).
+    procedure Parse(const S: string; AKind: TPPGFilterValueKind = fvkAuto);
+    /// Gibt es eine Bedingung?
+    function Active: Boolean;
+    /// Vergleicht der Operator Werte (gleich, kleiner, zwischen ...)?
+    function Compares: Boolean;
+    /// Zelltext pruefen (Art nach Kind).
+    function MatchText(const CellText: string): Boolean;
+    /// Text immer als Text vergleichen.
+    function MatchPlainText(const S: string): Boolean;
+    /// Zahl bzw. Datum pruefen (nur mit NumOk bzw. DateOk sinnvoll).
+    function MatchNumber(V: Double): Boolean;
+    function MatchDate(V: TDateTime): Boolean;
+    /// Leerer Wert (Null): passt nur zu "leer" und "ungleich".
+    function MatchNull: Boolean;
+  end;
+
+/// Filtertext lesen (siehe TPPGFilterCondition).
+function PPGFilterParse(const S: string; Kind: TPPGFilterValueKind = fvkAuto): TPPGFilterCondition;
+/// Filtertext aus Operator und Werten (Gegenstueck zu Parse; Value2 nur fuer
+/// pfoBetween).
+function PPGFilterText(Op: TPPGFilterOperator; const Value: string;
+  const Value2: string = ''): string;
+
 implementation
 
 function PPGGridCompareSortKeys(const A, B: TPPGGridSortKey): Integer;
@@ -235,6 +287,276 @@ end;
 function PPGGridEntryIsFooter(Entry: Integer): Boolean;
 begin
   Result := (Entry <= -2) and Odd(-Entry - 2);
+end;
+
+{ TPPGFilterCondition }
+
+function PPGFilterParse(const S: string; Kind: TPPGFilterValueKind): TPPGFilterCondition;
+begin
+  Result.Parse(S, Kind);
+end;
+
+function PPGFilterText(Op: TPPGFilterOperator; const Value, Value2: string): string;
+begin
+  case Op of
+    pfoEqual: Result := '=' + Value;
+    pfoNotEqual: Result := '<>' + Value;
+    pfoLess: Result := '<' + Value;
+    pfoLessEqual: Result := '<=' + Value;
+    pfoGreater: Result := '>' + Value;
+    pfoGreaterEqual: Result := '>=' + Value;
+    pfoBeginsWith: Result := Value + '*';
+    pfoEndsWith: Result := '*' + Value;
+    pfoBetween: Result := Value + '..' + Value2;
+    pfoEmpty: Result := '=';
+    pfoNotEmpty: Result := '<>';
+  else
+    // Enthaelt: mit Sternen, damit es auch bei Zahl/Datum "enthaelt" bleibt
+    if Value = '' then
+      Result := ''
+    else
+      Result := '*' + Value + '*';
+  end;
+end;
+
+procedure TPPGFilterCondition.Parse(const S: string; AKind: TPPGFilterValueKind);
+var
+  T: string;
+  P: Integer;
+
+  function StartsWith(const Prefix: string): Boolean;
+  begin
+    Result := Copy(T, 1, Length(Prefix)) = Prefix;
+  end;
+
+begin
+  Kind := AKind;
+  Op := pfoContains;
+  Value := '';
+  Value2 := '';
+  Num := 0;
+  Num2 := 0;
+  Date := 0;
+  Date2 := 0;
+  NumOk := False;
+  DateOk := False;
+  DateHasTime := False;
+  T := Trim(S);
+  if T = '' then
+  begin
+    UpperValue := '';
+    UpperValue2 := '';
+    Exit;
+  end;
+  if StartsWith('<=') then
+  begin
+    Op := pfoLessEqual;
+    Value := Trim(Copy(T, 3, MaxInt));
+  end
+  else if StartsWith('>=') then
+  begin
+    Op := pfoGreaterEqual;
+    Value := Trim(Copy(T, 3, MaxInt));
+  end
+  else if StartsWith('<>') then
+  begin
+    Op := pfoNotEqual;
+    Value := Trim(Copy(T, 3, MaxInt));
+    if Value = '' then
+      Op := pfoNotEmpty;
+  end
+  else if StartsWith('=') then
+  begin
+    Op := pfoEqual;
+    Value := Trim(Copy(T, 2, MaxInt));
+    if Value = '' then
+      Op := pfoEmpty;
+  end
+  else if StartsWith('<') then
+  begin
+    Op := pfoLess;
+    Value := Trim(Copy(T, 2, MaxInt));
+  end
+  else if StartsWith('>') then
+  begin
+    Op := pfoGreater;
+    Value := Trim(Copy(T, 2, MaxInt));
+  end
+  else
+  begin
+    P := Pos('..', T);
+    if (P > 1) and (P < Length(T) - 1) then
+    begin
+      Op := pfoBetween;
+      Value := Trim(Copy(T, 1, P - 1));
+      Value2 := Trim(Copy(T, P + 2, MaxInt));
+    end
+    else if (Length(T) >= 2) and (T[1] = '*') and (T[Length(T)] = '*') then
+    begin
+      Op := pfoContains;
+      Value := Copy(T, 2, Length(T) - 2);
+    end
+    else if (Length(T) >= 2) and (T[Length(T)] = '*') then
+    begin
+      Op := pfoBeginsWith;
+      Value := Copy(T, 1, Length(T) - 1);
+    end
+    else if (Length(T) >= 2) and (T[1] = '*') then
+    begin
+      Op := pfoEndsWith;
+      Value := Copy(T, 2, MaxInt);
+    end
+    else
+    begin
+      Value := T;
+      // Ohne Operator: Text enthaelt, Zahl und Datum gleich
+      if AKind in [fvkNumber, fvkDate] then
+        Op := pfoEqual
+      else
+        Op := pfoContains;
+    end;
+    if (Op = pfoContains) and (Value = '') then
+    begin
+      // "**": keine Bedingung
+      UpperValue := '';
+      UpperValue2 := '';
+      Exit;
+    end;
+  end;
+  UpperValue := AnsiUpperCase(Value);
+  UpperValue2 := AnsiUpperCase(Value2);
+  if Op = pfoBetween then
+  begin
+    NumOk := TryStrToFloat(Value, Num) and TryStrToFloat(Value2, Num2);
+    DateOk := TryStrToDateTime(Value, Date) and TryStrToDateTime(Value2, Date2);
+    if DateOk then
+      DateHasTime := (Frac(Date) <> 0) or (Frac(Date2) <> 0);
+  end
+  else if Value <> '' then
+  begin
+    NumOk := TryStrToFloat(Value, Num);
+    DateOk := TryStrToDateTime(Value, Date);
+    if DateOk then
+      DateHasTime := Frac(Date) <> 0;
+  end;
+end;
+
+function TPPGFilterCondition.Active: Boolean;
+begin
+  Result := (Op in [pfoEmpty, pfoNotEmpty]) or (Value <> '');
+end;
+
+function TPPGFilterCondition.Compares: Boolean;
+begin
+  Result := Op in [pfoEqual, pfoNotEqual, pfoLess, pfoLessEqual, pfoGreater,
+    pfoGreaterEqual, pfoBetween];
+end;
+
+function TPPGFilterCondition.MatchNull: Boolean;
+begin
+  Result := Op in [pfoEmpty, pfoNotEqual];
+end;
+
+function TPPGFilterCondition.MatchPlainText(const S: string): Boolean;
+var
+  U: string;
+  C: Integer;
+begin
+  case Op of
+    pfoEmpty: Exit(Trim(S) = '');
+    pfoNotEmpty: Exit(Trim(S) <> '');
+  end;
+  U := AnsiUpperCase(S);
+  case Op of
+    pfoContains: Result := Pos(UpperValue, U) > 0;
+    pfoBeginsWith: Result := Copy(U, 1, Length(UpperValue)) = UpperValue;
+    pfoEndsWith: Result := (Length(U) >= Length(UpperValue)) and
+      (Copy(U, Length(U) - Length(UpperValue) + 1, MaxInt) = UpperValue);
+    pfoBetween:
+      Result := (AnsiCompareText(S, Value) >= 0) and (AnsiCompareText(S, Value2) <= 0);
+  else
+    C := AnsiCompareText(S, Value);
+    case Op of
+      pfoEqual: Result := C = 0;
+      pfoNotEqual: Result := C <> 0;
+      pfoLess: Result := C < 0;
+      pfoLessEqual: Result := C <= 0;
+      pfoGreater: Result := C > 0;
+      pfoGreaterEqual: Result := C >= 0;
+    else
+      Result := True;
+    end;
+  end;
+end;
+
+function TPPGFilterCondition.MatchNumber(V: Double): Boolean;
+begin
+  case Op of
+    pfoEqual: Result := V = Num;
+    pfoNotEqual: Result := V <> Num;
+    pfoLess: Result := V < Num;
+    pfoLessEqual: Result := V <= Num;
+    pfoGreater: Result := V > Num;
+    pfoGreaterEqual: Result := V >= Num;
+    pfoBetween: Result := (V >= Num) and (V <= Num2);
+    pfoEmpty: Result := False;
+    pfoNotEmpty: Result := True;
+  else
+    Result := MatchPlainText(FloatToStr(V));
+  end;
+end;
+
+function TPPGFilterCondition.MatchDate(V: TDateTime): Boolean;
+const
+  Eps = 1 / (24 * 60 * 60 * 1000); // 1 ms
+var
+  A, B: TDateTime;
+begin
+  // Ohne Uhrzeit im Vergleichswert zaehlt nur der Tag
+  if not DateHasTime then
+    V := Int(V);
+  A := Date;
+  B := Date2;
+  case Op of
+    pfoEqual: Result := Abs(V - A) < Eps;
+    pfoNotEqual: Result := Abs(V - A) >= Eps;
+    pfoLess: Result := V < A - Eps;
+    pfoLessEqual: Result := V < A + Eps;
+    pfoGreater: Result := V > A + Eps;
+    pfoGreaterEqual: Result := V > A - Eps;
+    pfoBetween: Result := (V > A - Eps) and (V < B + Eps);
+    pfoEmpty: Result := False;
+    pfoNotEmpty: Result := True;
+  else
+    Result := MatchPlainText(DateTimeToStr(V));
+  end;
+end;
+
+function TPPGFilterCondition.MatchText(const CellText: string): Boolean;
+var
+  F: Double;
+  D: TDateTime;
+begin
+  case Op of
+    pfoEmpty, pfoNotEmpty: Exit(MatchPlainText(CellText));
+  end;
+  if Compares then
+    case Kind of
+      fvkNumber, fvkAuto:
+        if NumOk and TryStrToFloat(Trim(CellText), F) then
+          Exit(MatchNumber(F))
+        else if (Kind = fvkNumber) and (Trim(CellText) = '') then
+          Exit(MatchNull);
+    end;
+  if Compares then
+    case Kind of
+      fvkDate, fvkAuto:
+        if DateOk and TryStrToDateTime(Trim(CellText), D) then
+          Exit(MatchDate(D))
+        else if (Kind = fvkDate) and (Trim(CellText) = '') then
+          Exit(MatchNull);
+    end;
+  Result := MatchPlainText(CellText);
 end;
 
 { TPPGGridFilterStage }

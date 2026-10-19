@@ -45,8 +45,27 @@ resourcestring
   SPPGSortAscending = 'Sorted ascending';
   SPPGSortDescending = 'Sorted descending';
   SPPGDBGridConfirmDelete = 'Delete record?';
+  SPPGDBGridConfirmDeleteSelected = 'Delete %d selected records?';
   SPPGDBEditPending = 'The data set is being edited elsewhere. Post or cancel that edit first.';
   SPPGDBLookupMultiKey = 'Lookup with several key fields (%s) is not supported.';
+  SPPGDBGridEditForm = 'Edit form';
+  SPPGDBGridEditFormApply = 'Apply';
+  // Filterleiste und Suchfeld der Grids
+  SPPGFilterDescContains = '%s contains "%s"';
+  SPPGFilterDescBeginsWith = '%s begins with "%s"';
+  SPPGFilterDescEndsWith = '%s ends with "%s"';
+  SPPGFilterDescCompare = '%s %s %s';
+  SPPGFilterDescBetween = '%s between %s and %s';
+  SPPGFilterDescEmpty = '%s is empty';
+  SPPGFilterDescNotEmpty = '%s is not empty';
+  SPPGFilterDescJoin = '%s and %s';
+  SPPGFilterBarText = 'Filter: %s';
+  SPPGFilterBarClear = 'Clear filter';
+  SPPGGridFindHint = 'Search';
+  SPPGGridFindNext = 'Next';
+  SPPGGridFindPrevious = 'Previous';
+  SPPGGridFindClose = 'Close search';
+  SPPGDBFieldNotFound = 'Field "%s" not found';
   SPPGAccJump = 'Jump';
   SPPGAccExpand = 'Expand';
   SPPGAccCollapse = 'Collapse';
@@ -309,6 +328,9 @@ resourcestring
   SPPGTrackRangeValue = '%d to %d';
   SPPGTrackRangeFrom = 'From %d';
   SPPGTrackRangeTo = 'To %d';
+
+  // Bild (TPPGImage, TPPGDBImage)
+  SPPGImageUnknownFormat = 'Unknown or unsupported image format.';
 
 implementation
 

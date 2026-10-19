@@ -13,7 +13,7 @@ interface
 
 const
   PPGLangDeCode = 'de';
-  PPGLangDeCount = 259;
+  PPGLangDeCount = 278;
 
 implementation
 
@@ -80,10 +80,46 @@ begin
     'Absteigend sortiert');
   PPGAddTranslation(PPGLangDeCode, @SPPGDBGridConfirmDelete,
     'Datensatz l'#$00F6'schen?');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDBGridConfirmDeleteSelected,
+    '%d ausgew'#$00E4'hlte Datens'#$00E4'tze l'#$00F6'schen?');
   PPGAddTranslation(PPGLangDeCode, @SPPGDBEditPending,
     'Die Datenmenge wird gerade an anderer Stelle bearbeitet. Diese Bearbeitung zuerst speichern oder verwerfen.');
   PPGAddTranslation(PPGLangDeCode, @SPPGDBLookupMultiKey,
     'Nachschlagen mit mehreren Schl'#$00FC'sselfeldern (%s) wird nicht unterst'#$00FC'tzt.');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDBGridEditForm,
+    'Bearbeitungsformular');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDBGridEditFormApply,
+    #$00DC'bernehmen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescContains,
+    '%s enth'#$00E4'lt "%s"');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescBeginsWith,
+    '%s beginnt mit "%s"');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescEndsWith,
+    '%s endet mit "%s"');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescCompare,
+    '%s %s %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescBetween,
+    '%s zwischen %s und %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescEmpty,
+    '%s ist leer');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescNotEmpty,
+    '%s ist nicht leer');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterDescJoin,
+    '%s und %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterBarText,
+    'Filter: %s');
+  PPGAddTranslation(PPGLangDeCode, @SPPGFilterBarClear,
+    'Filter l'#$00F6'schen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridFindHint,
+    'Suchen');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridFindNext,
+    'Weiter');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridFindPrevious,
+    'Zur'#$00FC'ck');
+  PPGAddTranslation(PPGLangDeCode, @SPPGGridFindClose,
+    'Suche schlie'#$00DF'en');
+  PPGAddTranslation(PPGLangDeCode, @SPPGDBFieldNotFound,
+    'Feld "%s" nicht gefunden');
   PPGAddTranslation(PPGLangDeCode, @SPPGAccJump,
     'Springen');
   PPGAddTranslation(PPGLangDeCode, @SPPGAccExpand,
@@ -540,6 +576,8 @@ begin
     'Von %d');
   PPGAddTranslation(PPGLangDeCode, @SPPGTrackRangeTo,
     'Bis %d');
+  PPGAddTranslation(PPGLangDeCode, @SPPGImageUnknownFormat,
+    'Unbekanntes oder nicht unterst'#$00FC'tztes Bildformat.');
 end;
 
 initialization

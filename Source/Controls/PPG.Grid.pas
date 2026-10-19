@@ -49,7 +49,7 @@ uses
   PPG.Types, PPG.RowLayout, PPG.Render.Intf, PPG.Accessibility, PPG.UIA,
   PPG.Controls.Base, PPG.Controls.Scroll,
   PPG.Grid.Columns, PPG.Grid.View, PPG.Grid.Data, PPG.Grid.Paint, PPG.Grid.Edit, PPG.Markup, PPG.Markup.Parser,
-  PPG.Grid.CellKinds, PPG.Grid.Styles, PPG.ElementStyle;
+  PPG.Grid.CellKinds, PPG.Grid.Styles, PPG.ElementStyle, PPG.Panel, PPG.Button, PPG.SearchEdit;
 
 const
   gekText = PPG.Grid.Columns.gekText;
@@ -115,6 +115,48 @@ type
 
   TPPGCustomGrid = class;
 
+  /// Suchfeld des Grids: fpmNone = keins, fpmManual = Strg+F blendet es ein
+  /// (Esc bzw. Schliessen blenden es aus), fpmAlways = immer sichtbar.
+  TPPGGridFindPanelMode = (fpmNone, fpmManual, fpmAlways);
+
+  /// Wofuer OnGetCellStyle gefragt wird: Bildschirm, Druck oder Export.
+  TPPGGridStylePurpose = (gspScreen, gspPrint, gspExport);
+
+  /// Suchfeld ueber den Zellen (Kind-Control des Grids, vom Grid erzeugt und
+  /// angeordnet): Eingabe sucht in den sichtbaren Textspalten und markiert
+  /// die Treffer, Enter bzw. Weiter springt zum naechsten Treffer,
+  /// Umschalt+Enter bzw. Zurueck zum vorigen, Esc leert bzw. schliesst.
+  TPPGGridFindPanel = class(TPPGCustomPanel)
+  private
+    FGrid: TPPGCustomGrid;
+    FEdit: TPPGSearchEdit;
+    FPrev: TPPGButton;
+    FNext: TPPGButton;
+    FClose: TPPGButton;
+    procedure EditSearch(Sender: TObject; const SearchText: string);
+    procedure EditSubmit(Sender: TObject; const SearchText: string);
+    procedure EditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure PrevClick(Sender: TObject);
+    procedure NextClick(Sender: TObject);
+    procedure CloseClick(Sender: TObject);
+    /// Ergebnis einer Suche anzeigen (kein Treffer: Feld rot).
+    procedure ShowResult(Found: Boolean);
+  protected
+    procedure Resize; override;
+    procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
+    function GetBackgroundColor: TColor; override;
+    function GetChildBackground(Child: TControl; out ColorTop, ColorBottom: TColor): Boolean; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    /// Feld und Schaltflaechen fuer die aktuelle Groesse anordnen.
+    procedure ArrangeControls;
+    property Grid: TPPGCustomGrid read FGrid;
+    property Edit: TPPGSearchEdit read FEdit;
+    property PreviousButton: TPPGButton read FPrev;
+    property NextButton: TPPGButton read FNext;
+    property CloseButton: TPPGButton read FClose;
+  end;
+
   /// Eine Zellaenderung fuer die inkrementelle Summe (intern, Audit 8c #6).
   TPPGGridAggChange = record
     Col, Row: Integer;
@@ -125,6 +167,7 @@ type
   TPPGGridEdit = PPG.Grid.Edit.TPPGGridEdit;
   TPPGGridCombo = PPG.Grid.Edit.TPPGGridCombo;
   TPPGGridSpin = PPG.Grid.Edit.TPPGGridSpin;
+  TPPGGridColumnCombo = PPG.Grid.Edit.TPPGGridColumnCombo;
 
   /// Farben eines Zeichenvorgangs (einmal berechnet, nicht je Zelle).
   TPPGGridPaintColors = record
@@ -204,6 +247,9 @@ type
     FPaintMaxColScroll: Integer;
     FPaintFirstRight: Integer;
     FHotV: Integer;              // Zeile unter der Maus (Styles.HotRow)
+    // Luecke unter einer Zeile (sichtbare Zeile, -1 = keine; Hoehe in Pixeln)
+    FGapRow: Integer;
+    FGapHeight: Integer;
     FGridLineWidth: Integer;
     FDrawingStyle: TGridDrawingStyle;
     FGradientStartColor: TColor;
@@ -223,8 +269,21 @@ type
     FSortAscending: Boolean;
     FSortOnHeaderClick: Boolean;
     FFilters: array of string;
-    FFilterUpper: array of string;  // Filter in Grossbuchstaben (je Lauf, Audit 8c #3)
+    FFilterConds: array of TPPGFilterCondition; // gelesene Filter (je Lauf)
     FShowFilterRow: Boolean;
+    FFilterImmediate: Boolean;
+    FKeepFilterEditor: Integer;     // > 0: Filter wird beim Tippen angewandt
+    FShowFilterBar: Boolean;
+    FOnFilterChanged: TNotifyEvent;
+    // Suchfeld (FindPanel) und Tippsuche in der Fokusspalte
+    FFindMode: TPPGGridFindPanelMode;
+    FFindPanel: TPPGGridFindPanel;  // nil bis zum ersten Einblenden
+    FFindVisible: Boolean;
+    FFindText: string;
+    FFindUpper: string;
+    FIncSearch: Boolean;
+    FTypeAhead: TPPGTypeAhead;
+    FIncText: string;
     FFocusC: Integer;
     FFocusV: Integer;
     FAnchorC: Integer;
@@ -284,6 +343,10 @@ type
     procedure AggregatesChanged;
     procedure SetConditionalFormats(const Value: TPPGGridConditionalFormats);
     procedure SetShowFilterRow(const Value: Boolean);
+    procedure SetShowFilterBar(const Value: Boolean);
+    procedure SetFindMode(const Value: TPPGGridFindPanelMode);
+    procedure SetFindText(const Value: string);
+    function GetFindVisible: Boolean;
     procedure SetBorderStyle(const Value: TBorderStyle);
     procedure SetStyles(const Value: TPPGGridStyles);
     procedure StylesObjChanged(Sender: TObject);
@@ -342,6 +405,8 @@ type
     procedure InvalidateColGeometry;
     procedure EnsureGeometry;
     procedure BuildRowGeometry(PPI: Integer);
+    /// Luecke (SetRowGap) in die Zeilenhoehen einrechnen.
+    procedure ApplyRowGap;
     /// Aggregate der Spalten als Text (aendert er sich, wird neu gerechnet).
     function AggSignature: string;
     /// Zaehler fuer Tests: volle Summen-Rechnungen, Neuaufbau der Zeilen.
@@ -382,6 +447,10 @@ type
     /// Darf das Grid gruppieren und rechnet es Summen/Sortierung selbst
     /// (Ansicht im Speicher)? DB-Grid: nein - das ist Sache der Datenmenge.
     function CanGroup: Boolean; virtual;
+    /// Haelt die Ansicht alle Datenzeilen (Gruppieren, Summen und
+    /// Gruppenfuesse rechnet das Grid selbst)? Standard: True; DB-Grid nur
+    /// im Gruppenmodus (ganze Datenmenge gelesen).
+    function AllRowsInView: Boolean; virtual;
     /// Collection der angezeigten Spalten (fuer BeginUpdate/EndUpdate).
     function ColumnCollection: TPPGGridColumns; virtual;
     /// Gruppenspalten aus Columns[].GroupIndex.
@@ -420,6 +489,9 @@ type
     procedure StylesChanged;
     /// Zellart einer Datenspalte (nil = Text).
     function KindOf(ACol: Integer): IPPGCellKind; virtual;
+    /// Ganze Datenzeile zusaetzlich zur Auswahl markiert (Mehrfachauswahl
+    /// des DB-Grids). Wird beim Zeichnen gefragt: nur Zwischenspeicher lesen.
+    function RowMarked(ARow: Integer): Boolean; virtual;
     /// Kontext fuer Zellarten (Farben, Schrift ...) fuer diesen Zeichenvorgang.
     procedure PrepareKindContext(const ACanvas: IPPGCanvas);
     /// Zellart-Kontext mit dem Bereich der Spalte.
@@ -466,6 +538,54 @@ type
     function RowPassesFilter(ARow: Integer): Boolean; virtual;
     /// Filtertexte in Grossbuchstaben vorbereiten (vor jedem Filterlauf).
     procedure PrepareFilters;
+    { Filter (Filterzeile, Filterleiste) }
+    /// Art der Werte einer Datenspalte fuer den Filtervergleich (Grid: aus
+    /// dem Text; DB-Grid: aus dem Feldtyp).
+    function FilterValueKind(ACol: Integer): TPPGFilterValueKind; virtual;
+    /// Gelesene Filterbedingung einer Datenspalte.
+    function FilterCondition(ACol: Integer): TPPGFilterCondition;
+    /// Filtertexte geaendert: anwenden (Grid: Ansicht neu; DB-Grid: Filter
+    /// der Datenmenge), danach DoFilterChanged.
+    procedure ApplyFilters; virtual;
+    /// OnFilterChanged ausloesen.
+    procedure DoFilterChanged; virtual;
+    /// Filtert bzw. sortiert die Ansicht die Zeilen selbst? (DB-Grid: nein,
+    /// das tut die Datenmenge; die Sortierung zeigt dort nur den Pfeil.)
+    function FiltersInView: Boolean; virtual;
+    function SortsInView: Boolean; virtual;
+    /// Leisten oben (Suchfeld) bzw. unten (Filterleiste) ein- oder
+    /// ausgeblendet: Geometrie neu (DB-Grid: auch der Puffer).
+    procedure BarsChanged; virtual;
+    function FilterBarHeight: Integer;
+    /// Filterleiste und ihr Verweis "Filter loeschen" (Client-Koordinaten).
+    function FilterBarRect: TRect;
+    function FilterBarClearRect: TRect;
+    procedure PaintFilterBar(const ACanvas: IPPGCanvas; const R: TRect);
+    /// Beschriftung einer Datenspalte (Titel) fuer Filterleiste und Meldungen.
+    function ColumnCaption(ACol: Integer): string;
+    /// Hoehe der Leisten oben (Suchfeld, Gruppenleiste) bzw. unten
+    /// (Summenzeile, Filterleiste).
+    function TopBarsHeight: Integer;
+    function BottomBarsHeight: Integer;
+    { Suchfeld und Tippsuche }
+    function FindPanelHeight: Integer;
+    /// Suchfeld anlegen, anordnen bzw. ausblenden.
+    procedure UpdateFindPanel;
+    /// Wird die Datenspalte durchsucht (Grid: sichtbare Textspalten)?
+    function FindSearchColumn(ACol: Integer): Boolean; virtual;
+    /// Naechsten bzw. vorigen Treffer von FindText ab der Fokuszelle suchen
+    /// (IncludeCurrent: die Fokuszelle zaehlt mit) und den Fokus setzen.
+    function FindFrom(Forward, IncludeCurrent: Boolean): Boolean; virtual;
+    /// Tippsuche: Zeile, deren Text in der Fokusspalte mit S beginnt (ab der
+    /// Fokuszeile, FromNext: ab der naechsten; im Kreis).
+    function IncrementalFind(const S: string; FromNext: Boolean): Boolean; virtual;
+    /// Treffer von FindText in einer gezeichneten Zelle markieren.
+    procedure PaintFindMark(const ACanvas: IPPGCanvas; const TR: TRect; const S: string;
+      Al: TAlignment; AFont: TFont);
+    /// OnGetCellStyle ausloesen (ARow wie im Ereignis; das DB-Grid stellt
+    /// dabei die Werte des Satzes fuer RowValue bereit).
+    procedure DoGetCellStyle(ACol, ARow: Integer; Purpose: TPPGGridStylePurpose;
+      var Style: TPPGGridCellStyle); virtual;
     { IPPGGridViewHost }
     function ViewRowPasses(ARow: Integer): Boolean;
     function ViewCompareRows(ACol, R1, R2: Integer): Integer;
@@ -515,7 +635,13 @@ type
     /// Wert setzen (Editor, Einfuegen): Cells + OnSetEditText.
     procedure SetCellByUser(ACol, ARow: Integer; const Value: string); virtual;
     /// Editor ist sichtbar geworden (ARow = Datenzeile, FilterRowMark = Filter).
+    /// Klasse des Zell-Editors (Standard: Registry nach Kind). Das DB-Grid
+    /// waehlt so z. B. die mehrspaltige Auswahl fuer Nachschlage-Spalten.
+    function CellEditorClass(ACol, ARow: Integer; Kind: TPPGGridEditorKind): TPPGGridEditorClass; virtual;
     procedure EditorOpened(ACol, ARow: Integer); virtual;
+    /// Editor ist gefuellt, aber noch nicht sichtbar/fokussiert (z.B. Liste
+    /// einer Auswahl fuellen; Stilwechsel nach dem Fokus kostet den Fokus).
+    procedure EditorPrepare(ACol, ARow: Integer); virtual;
     /// Der Anwender hat den Text im Editor einer Datenzeile geaendert (DB-Grid:
     /// Bearbeiten-Modus beim ersten Tastendruck).
     procedure EditorEdited; virtual;
@@ -549,10 +675,65 @@ type
     function FrameInset: Integer; override;
     procedure DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect); override;
     procedure PaintViewport(const ACanvas: IPPGCanvas; const View: TRect); override;
+    /// Farben, Schriften und Zellart-Kontext fuer einen Zeichenvorgang
+    /// vorbereiten bzw. danach freigeben (immer paarweise, try/finally).
+    procedure BeginPaintPass(const ACanvas: IPPGCanvas);
+    procedure EndPaintPass;
     /// Owner-Draw einer Zelle (OnDrawCell); Hintergrund und Text sind gezeichnet.
     procedure DrawCell(const ACanvas: IPPGCanvas; ACol, VRow: Integer; const R: TRect); virtual;
+    /// Gibt es Owner-Draw-Ereignisse (Standard: OnDrawCell)? Nur dann ruft
+    /// das Zeichnen DrawCell je Zelle.
+    function OwnerDrawAssigned: Boolean; virtual;
+    /// Owner-Draw-Ereignisse einer Zelle; Canvas ist vorbereitet (Schrift und
+    /// Farben der Zelle). ACol = Anzeige-Spalte, ARow = Datenzeile.
+    procedure OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
+      State: TGridDrawState); virtual;
+    /// Canvas (Owner-Draw) fuer eine Zelle vorbereiten: Schrift der Spalte,
+    /// Font.Color = Textfarbe wie gezeichnet, Brush.Style = bsClear.
+    procedure PrepareItemCanvas(ACol, VRow: Integer; State: TGridDrawState); virtual;
+    /// Flaeche und Textfarbe einer Zelle wie beim Zeichnen (Theme, Dunkelmodus,
+    /// Spalten-/Zeilenstile, Auswahl). Nur waehrend des Zeichnens gueltig.
+    procedure CellDrawColors(ACol, VRow: Integer; State: TGridDrawState;
+      out AFill, AText: TColor);
+    /// Zeichnet das Grid Zellarten (Kaestchen ...) selbst? Standard: immer;
+    /// das DB-Grid nur mit DefaultDrawing (wie der Text).
+    function DefaultDrawsKinds: Boolean; virtual;
     procedure DrawCellExtras(const ACanvas: IPPGCanvas; ACol, VRow: Integer;
       const R: TRect; const S: string);
+    { Eigene Anordnung der Zellen (DB-Grid: Kartenansicht). Liefert
+      CustomCellLayout True, liegen die Zellen nicht als Tabelle: CellRect,
+      MouseCoord, MakeCellVisible und das Zeichnen gehen an die Custom-
+      Methoden. Kein waagerechtes Scrollen; Baender, Gruppenleiste und
+      Summenzeile entfallen. Spalten, Zeilen, Fokus, Editor, Zellarten und
+      Barrierefreiheit arbeiten unveraendert mit Spalte/Zeile. }
+    function CustomCellLayout: Boolean; virtual;
+    /// Zelle (Anzeige-Spalte, sichtbare Zeile) in Client-Koordinaten; leer =
+    /// nicht sichtbar.
+    function CustomCellRect(ACol, VRow: Integer): TRect; virtual;
+    function CustomMouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean; virtual;
+    procedure CustomMakeCellVisible(ACol, VRow: Integer); virtual;
+    /// Zeichnet die Ansicht; Farben (PaintColors), Schriften und Zellart-
+    /// Kontext sind vorbereitet wie fuer die Tabelle.
+    procedure PaintCustomLayout(const ACanvas: IPPGCanvas; const View: TRect); virtual;
+    /// Farben dieses Zeichenvorgangs (nur waehrend des Zeichnens gueltig).
+    property PaintColors: TPPGGridPaintColors read FPaint;
+    /// Pfeil hoch/runter in einem Text-Editor (nach dem Uebernehmen): Fokus
+    /// weiter. Standard: Zeile darueber/darunter.
+    procedure EditorArrowMove(Down: Boolean); virtual;
+    /// Hat der Doppelklick (DblClick) bearbeitet? Dann laesst das folgende
+    /// MouseDown mit ssDouble den Fokus beim Editor. Standard: EditorMode.
+    function DoubleClickEdits: Boolean; virtual;
+    { Luecke unter einer Zeile (DB-Grid: Bearbeitungsformular). Die Zeile
+      VRow wird um AHeight Pixel hoeher, ihre Zellen behalten die normale
+      Hoehe; darunter bleibt ein freier Streifen ueber die ganze Breite (dort
+      liegt ein Kind-Control). Die folgenden Zeilen ruecken nach unten.
+      VRow < 0 bzw. AHeight <= 0 hebt die Luecke auf. }
+    procedure SetRowGap(VRow, AHeight: Integer);
+    /// Zeile mit Luecke (-1 = keine) und Hoehe der Luecke (Pixel).
+    property RowGapRow: Integer read FGapRow;
+    property RowGapHeight: Integer read FGapHeight;
+    /// Hoehe der Luecke in Zeile VRow (0 = keine).
+    function RowGapOf(VRow: Integer): Integer;
     procedure PaintRegion(const ACanvas: IPPGCanvas; ColFrom, ColTo, RowFrom, RowTo: Integer;
       const AClip: TRect; FixedArea: Boolean);
     function RawCellRect(ACol, VRow: Integer): TRect;
@@ -566,6 +747,7 @@ type
     /// Schriften der Element-Stile verwerfen (Schrift, Stil, Spalten geaendert).
     procedure FontsChanged;
     { Eingabe }
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -651,6 +833,20 @@ type
     property Columns: TPPGGridColumns read FColumns write SetColumns;
     property BorderStyle: TBorderStyle read FBorderStyle write SetBorderStyle default bsSingle;
     property ShowFilterRow: Boolean read FShowFilterRow write SetShowFilterRow default False;
+    /// Filterzeile: True = Filter beim Tippen anwenden, False = bei Enter, Tab
+    /// bzw. Verlassen der Zelle.
+    property FilterImmediate: Boolean read FFilterImmediate write FFilterImmediate default False;
+    /// Leiste unter den Zeilen mit dem aktiven Filter als Text und dem
+    /// Verweis "Filter loeschen" (nur sichtbar, solange ein Filter gilt).
+    property ShowFilterBar: Boolean read FShowFilterBar write SetShowFilterBar default False;
+    /// Filter geaendert (Filterzeile, Filters, ClearFilters).
+    property OnFilterChanged: TNotifyEvent read FOnFilterChanged write FOnFilterChanged;
+    /// Suchfeld ueber den Zellen (Strg+F, F3/Umschalt+F3 fuer weitere Treffer).
+    property FindPanel: TPPGGridFindPanelMode read FFindMode write SetFindMode default fpmNone;
+    /// Tippsuche in der Fokusspalte: Tippen springt zur ersten Zeile, deren
+    /// Text so beginnt (ohne Gross-/Kleinschreibung). Nur in Zellen, in denen
+    /// Tippen nicht den Editor oeffnet; Esc bzw. eine Pause beginnt neu.
+    property IncrementalSearch: Boolean read FIncSearch write FIncSearch default False;
     property SortOnHeaderClick: Boolean read FSortOnHeaderClick write FSortOnHeaderClick default True;
     property OnGetCellText: TPPGGetCellTextEvent read FOnGetCellText write FOnGetCellText;
     property OnCompareCells: TPPGCompareCellsEvent read FOnCompareCells write FOnCompareCells;
@@ -742,6 +938,11 @@ type
     function GroupText(Group: Integer): string;
     /// Datenzeilen einer Gruppe (-1 = alle Zeilen der Ansicht).
     function GroupDataRows(Group: Integer): TArray<Integer>;
+    /// Zeigt die sichtbare Zeile Daten (keine Kopf-, Filter-, Gruppenkopf-
+    /// oder Gruppenfusszeile)?
+    function IsDataRow(VRow: Integer): Boolean;
+    /// Unterste Gruppe einer Datenzeile (-1 = ungruppiert/nicht in der Ansicht).
+    function DataRowGroup(ARow: Integer): Integer;
     /// Summen neu berechnen (sonst verzoegert nach Datenaenderung).
     procedure RecalcAggregates;
     /// Text der Summenzeile bzw. des Gruppenfusses fuer eine Datenspalte.
@@ -762,6 +963,30 @@ type
     /// Sortiert nach Spalte (-1 = urspruengliche Reihenfolge).
     procedure SortBy(ACol: Integer; Ascending: Boolean = True);
     procedure ClearFilters;
+    /// Filter einer Datenspalte aus Operator und Wert(en) setzen (schreibt den
+    /// Text der Filterzeile, siehe TPPGFilterCondition).
+    procedure SetFilterCondition(ACol: Integer; Op: TPPGFilterOperator; const Value: string;
+      const Value2: string = '');
+    /// Gilt ein Filter (Filterzeile bzw. Filters)?
+    function FiltersActive: Boolean;
+    /// Aktiver Filter als Text ("Name enthaelt "a" und Preis > 5"; '' = keiner).
+    function FilterDescription: string;
+    /// Suchfeld einblenden und fokussieren (FindPanel <> fpmNone) bzw.
+    /// ausblenden (nur fpmManual; leert FindText).
+    procedure ShowFind;
+    procedure HideFind;
+    /// Naechster bzw. voriger Treffer von FindText ab der Fokuszelle (im
+    /// Kreis); False = kein Treffer.
+    function FindNext: Boolean;
+    function FindPrevious: Boolean;
+    /// Suchtext (markiert die Treffer in den sichtbaren Zellen; '' = aus).
+    property FindText: string read FFindText write SetFindText;
+    /// Ist das Suchfeld sichtbar?
+    property FindPanelVisible: Boolean read GetFindVisible;
+    /// Das Suchfeld (nil, solange es nie sichtbar war).
+    property FindPanelControl: TPPGGridFindPanel read FFindPanel;
+    /// Bisher getippter Text der Tippsuche ('' = keine).
+    property IncrementalSearchText: string read FIncText;
     procedure ShowEditor;
     procedure HideEditor(Accept: Boolean = True);
     procedure CopyToClipboard;
@@ -792,6 +1017,9 @@ type
     property FocusCol: Integer read FFocusC;
     /// Anzahl angezeigter Spalten (ohne ausgeblendete).
     property VisibleColCount: Integer read VColCount;
+    /// Anzahl sichtbarer Zeilen (inkl. fester Zeilen, Filter- und
+    /// Gruppenzeilen; ohne Zeilen zugeklappter Gruppen).
+    property ViewRowCount: Integer read VRowCount;
     property Selection: TGridRect read GetSelection write SetSelection;
     property SortColumn: Integer read FSortCol;
     property SortAscending: Boolean read FSortAscending;
@@ -810,6 +1038,10 @@ type
     property Bands;
     property Columns;
     property ShowFilterRow;
+    property FilterImmediate;
+    property ShowFilterBar;
+    property FindPanel;
+    property IncrementalSearch;
     property FixedColsRight;
     property HeaderMenu;
     property ShowFooter;
@@ -877,6 +1109,7 @@ type
     property OnEndDrag;
     property OnEnter;
     property OnExit;
+    property OnFilterChanged;
     property OnFixedCellClick;
     property OnGetCellText;
     property OnGetEditText;
@@ -911,7 +1144,7 @@ type
 implementation
 
 uses
-  PPG.Lang,
+  System.Math, PPG.Lang,
   System.SysUtils, System.Generics.Collections, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Menus, PPG.Render.Shapes, System.UITypes,
@@ -945,6 +1178,202 @@ begin
     Result := Lo;
 end;
 
+{ TPPGGridFindPanel }
+
+constructor TPPGGridFindPanel.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  ShowCaption := False;
+  NoFrame := True;
+  TabStop := False;
+  Caption := PPGStr(@SPPGGridFindHint); // Name fuer Screenreader
+  FEdit := TPPGSearchEdit.Create(Self);
+  FEdit.Parent := Self;
+  FEdit.TextHint := PPGStr(@SPPGGridFindHint);
+  FEdit.SearchDelay := 200;
+  FEdit.OnSearch := EditSearch;
+  FEdit.OnSubmit := EditSubmit;
+  FEdit.OnKeyDown := EditKeyDown;
+  FPrev := TPPGButton.Create(Self);
+  FPrev.Parent := Self;
+  FPrev.Caption := PPGStr(@SPPGGridFindPrevious);
+  FPrev.TabStop := False;
+  FPrev.OnClick := PrevClick;
+  FNext := TPPGButton.Create(Self);
+  FNext.Parent := Self;
+  FNext.Caption := PPGStr(@SPPGGridFindNext);
+  FNext.TabStop := False;
+  FNext.OnClick := NextClick;
+  FClose := TPPGButton.Create(Self);
+  FClose.Parent := Self;
+  FClose.Caption := PPGStr(@SPPGGridFindClose);
+  FClose.TabStop := False;
+  FClose.OnClick := CloseClick;
+end;
+
+procedure TPPGGridFindPanel.ArrangeControls;
+var
+  Pad, H, X, W, EW: Integer;
+
+  function ButtonWidth(B: TPPGButton): Integer;
+  begin
+    if FGrid <> nil then
+      Result := FGrid.FPainter.TextWidth(FGrid.Font, B.Caption) + PPGScale(24, ScalePPI)
+    else
+      Result := PPGScale(80, ScalePPI);
+  end;
+
+  procedure Place(C: TControl; AW: Integer);
+  begin
+    // Von links nach rechts, bei RTL gespiegelt
+    if UseRightToLeftAlignment then
+      C.SetBounds(ClientWidth - X - AW, Pad, AW, H)
+    else
+      C.SetBounds(X, Pad, AW, H);
+    Inc(X, AW + Pad);
+  end;
+
+begin
+  Pad := PPGScale(4, ScalePPI);
+  H := Max(1, ClientHeight - 2 * Pad);
+  W := ButtonWidth(FPrev) + ButtonWidth(FNext) + 3 * Pad;
+  if FClose.Visible then
+    Inc(W, ButtonWidth(FClose) + Pad);
+  EW := Min(PPGScale(320, ScalePPI), ClientWidth - W - Pad);
+  EW := Max(EW, PPGScale(60, ScalePPI));
+  X := Pad;
+  Place(FEdit, EW);
+  Place(FPrev, ButtonWidth(FPrev));
+  Place(FNext, ButtonWidth(FNext));
+  if FClose.Visible then
+    Place(FClose, ButtonWidth(FClose));
+end;
+
+procedure TPPGGridFindPanel.Resize;
+begin
+  inherited Resize;
+  ArrangeControls;
+end;
+
+procedure TPPGGridFindPanel.ShowResult(Found: Boolean);
+begin
+  if Found or (FEdit.Text = '') then
+    FEdit.ValidationState := pvsNone
+  else
+    FEdit.ValidationState := pvsError;
+end;
+
+procedure TPPGGridFindPanel.EditSearch(Sender: TObject; const SearchText: string);
+begin
+  if FGrid = nil then
+    Exit;
+  FGrid.FindText := SearchText;
+  ShowResult((SearchText = '') or FGrid.FindFrom(True, True));
+end;
+
+procedure TPPGGridFindPanel.EditSubmit(Sender: TObject; const SearchText: string);
+begin
+  if FGrid = nil then
+    Exit;
+  if FGrid.FindText <> SearchText then
+  begin
+    FGrid.FindText := SearchText;
+    ShowResult((SearchText = '') or FGrid.FindFrom(True, True));
+  end
+  else
+    ShowResult((SearchText = '') or FGrid.FindNext);
+end;
+
+procedure TPPGGridFindPanel.EditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if FGrid = nil then
+    Exit;
+  case Key of
+    VK_RETURN:
+      if ssShift in Shift then
+      begin
+        if FGrid.FindText <> FEdit.Text then
+          FGrid.FindText := FEdit.Text;
+        ShowResult((FEdit.Text = '') or FGrid.FindPrevious);
+        Key := 0;
+      end;
+    VK_F3:
+      begin
+        if FGrid.FindText <> FEdit.Text then
+          FGrid.FindText := FEdit.Text;
+        if ssShift in Shift then
+          ShowResult((FEdit.Text = '') or FGrid.FindPrevious)
+        else
+          ShowResult((FEdit.Text = '') or FGrid.FindNext);
+        Key := 0;
+      end;
+    VK_ESCAPE:
+      if (FEdit.Text = '') and (FGrid.FindPanel = fpmManual) then
+      begin
+        Key := 0;
+        FGrid.HideFind;
+      end;
+    VK_DOWN:
+      if (Shift = []) and not FEdit.DroppedDown and FGrid.CanFocus then
+      begin
+        // Zurueck in die Zellen
+        Key := 0;
+        FGrid.SetFocus;
+      end;
+  end;
+end;
+
+procedure TPPGGridFindPanel.PrevClick(Sender: TObject);
+begin
+  if FGrid <> nil then
+  begin
+    if FGrid.FindText <> FEdit.Text then
+      FGrid.FindText := FEdit.Text;
+    ShowResult((FEdit.Text = '') or FGrid.FindPrevious);
+  end;
+end;
+
+procedure TPPGGridFindPanel.NextClick(Sender: TObject);
+begin
+  if FGrid <> nil then
+  begin
+    if FGrid.FindText <> FEdit.Text then
+      FGrid.FindText := FEdit.Text;
+    ShowResult((FEdit.Text = '') or FGrid.FindNext);
+  end;
+end;
+
+procedure TPPGGridFindPanel.CloseClick(Sender: TObject);
+begin
+  if FGrid <> nil then
+    FGrid.HideFind;
+end;
+
+function TPPGGridFindPanel.GetBackgroundColor: TColor;
+begin
+  // Wie die Kopfzeile des Grids (Farben vom letzten Zeichnen)
+  if (FGrid <> nil) and (FGrid.FPaint.Header <> FGrid.FPaint.Text) then
+    Result := FGrid.FPaint.Header
+  else
+    Result := inherited GetBackgroundColor;
+end;
+
+function TPPGGridFindPanel.GetChildBackground(Child: TControl; out ColorTop,
+  ColorBottom: TColor): Boolean;
+begin
+  ColorTop := GetBackgroundColor;
+  ColorBottom := ColorTop;
+  Result := True;
+end;
+
+procedure TPPGGridFindPanel.DoPaint(const ACanvas: IPPGCanvas; const ClientR: TRect);
+begin
+  ACanvas.FillRoundRect(ClientR, 0, GetBackgroundColor, 255);
+  if FGrid <> nil then
+    ACanvas.FillRoundRect(Rect(ClientR.Left, ClientR.Bottom - 1, ClientR.Right, ClientR.Bottom),
+      0, FGrid.FPaint.HeaderLine, 255);
+end;
+
 { TPPGCustomGrid }
 
 constructor TPPGCustomGrid.Create(AOwner: TComponent);
@@ -972,6 +1401,7 @@ begin
   FStyles.OnChange := StylesObjChanged;
   FFontCache := TPPGFontCache.Create;
   FHotV := -1;
+  FGapRow := -1;
   FGridLineWidth := 1;
   FDrawingStyle := gdsThemed;
   FGradientStartColor := clWhite;
@@ -1009,6 +1439,9 @@ end;
 destructor TPPGCustomGrid.Destroy;
 begin
   FEditor := nil; // gehoert dem Grid (Owner), wird mit ihm freigegeben
+  // Suchfeld (Kind, Owner = Grid) nicht mehr bedienen
+  if FFindPanel <> nil then
+    FFindPanel.FGrid := nil;
   FreeAndNil(FItemCanvas);
   FreeAndNil(FColumns);
   FreeAndNil(FBands);
@@ -1041,6 +1474,8 @@ begin
     FAggPosted := True;
     PostMessage(Handle, GMsgAggregate, 0, 0);
   end;
+  if FindPanelHeight > 0 then
+    UpdateFindPanel;
 end;
 
 procedure TPPGCustomGrid.Loaded;
@@ -1515,17 +1950,435 @@ begin
   if FFilters[ACol] <> Value then
   begin
     FFilters[ACol] := Value;
-    RebuildMap;
+    ApplyFilters;
   end;
 end;
 
 procedure TPPGCustomGrid.ClearFilters;
 var
   I: Integer;
+  Had: Boolean;
 begin
+  Had := FiltersActive;
   for I := 0 to High(FFilters) do
     FFilters[I] := '';
+  if Had then
+    ApplyFilters
+  else
+    RebuildMap;
+end;
+
+procedure TPPGCustomGrid.SetFilterCondition(ACol: Integer; Op: TPPGFilterOperator;
+  const Value, Value2: string);
+begin
+  SetFilter(ACol, PPGFilterText(Op, Value, Value2));
+end;
+
+function TPPGCustomGrid.FiltersActive: Boolean;
+var
+  I: Integer;
+begin
+  for I := 0 to High(FFilters) do
+    if Trim(FFilters[I]) <> '' then
+      Exit(True);
+  Result := False;
+end;
+
+function TPPGCustomGrid.FilterValueKind(ACol: Integer): TPPGFilterValueKind;
+begin
+  Result := fvkAuto;
+end;
+
+function TPPGCustomGrid.FilterCondition(ACol: Integer): TPPGFilterCondition;
+begin
+  Result.Parse(GetFilter(ACol), FilterValueKind(ACol));
+end;
+
+procedure TPPGCustomGrid.ApplyFilters;
+begin
   RebuildMap;
+  BarsChanged;
+  DoFilterChanged;
+end;
+
+procedure TPPGCustomGrid.DoFilterChanged;
+begin
+  Invalidate;
+  if Assigned(FOnFilterChanged) then
+    FOnFilterChanged(Self);
+end;
+
+function TPPGCustomGrid.FiltersInView: Boolean;
+begin
+  Result := True;
+end;
+
+function TPPGCustomGrid.SortsInView: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TPPGCustomGrid.BarsChanged;
+begin
+  InvalidateGeometry;
+  Invalidate;
+end;
+
+procedure TPPGCustomGrid.SetShowFilterBar(const Value: Boolean);
+begin
+  if FShowFilterBar <> Value then
+  begin
+    FShowFilterBar := Value;
+    BarsChanged;
+  end;
+end;
+
+function TPPGCustomGrid.FilterBarHeight: Integer;
+begin
+  if FShowFilterBar and FiltersActive and not CustomCellLayout then
+    Result := PPGScale(FDefaultRowHeight, ScalePPI)
+  else
+    Result := 0;
+end;
+
+function TPPGCustomGrid.TopBarsHeight: Integer;
+begin
+  Result := FindPanelHeight + GroupPanelHeight;
+end;
+
+function TPPGCustomGrid.BottomBarsHeight: Integer;
+begin
+  Result := FooterHeight + FilterBarHeight;
+end;
+
+function TPPGCustomGrid.FilterBarRect: TRect;
+var
+  V: TRect;
+begin
+  V := ViewRect;
+  Result := Rect(V.Left, V.Bottom - FilterBarHeight, V.Right, V.Bottom);
+end;
+
+function TPPGCustomGrid.FilterBarClearRect: TRect;
+var
+  R: TRect;
+  Pad, W: Integer;
+begin
+  R := FilterBarRect;
+  if R.Bottom <= R.Top then
+    Exit(Rect(0, 0, 0, 0));
+  Pad := PPGScale(CellPadX, ScalePPI);
+  W := FPainter.TextWidth(Font, PPGStr(@SPPGFilterBarClear)) + 2 * Pad;
+  if UseRightToLeftAlignment then
+    Result := Rect(R.Left + Pad, R.Top, R.Left + Pad + W, R.Bottom)
+  else
+    Result := Rect(R.Right - Pad - W, R.Top, R.Right - Pad, R.Bottom);
+end;
+
+procedure TPPGCustomGrid.PaintFilterBar(const ACanvas: IPPGCanvas; const R: TRect);
+var
+  CR, TR: TRect;
+  Pad: Integer;
+begin
+  ACanvas.FillRoundRect(R, 0, FPaint.Header, 255);
+  ACanvas.FillRoundRect(Rect(R.Left, R.Top, R.Right, R.Top + Max(1, PPGScale(1, ScalePPI))), 0,
+    FPaint.HeaderLine, 255);
+  Pad := PPGScale(CellPadX, ScalePPI);
+  CR := FilterBarClearRect;
+  ACanvas.DrawText(CR, PPGStr(@SPPGFilterBarClear), Font, FPaint.Accent,
+    DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taCenter)));
+  TR := R;
+  InflateRect(TR, -Pad, 0);
+  if UseRightToLeftAlignment then
+    TR.Left := CR.Right + Pad
+  else
+    TR.Right := CR.Left - Pad;
+  if TR.Right > TR.Left then
+    ACanvas.DrawText(TR, Format(PPGStr(@SPPGFilterBarText), [FilterDescription]), Font,
+      FPaint.HeaderText, DrawTextBiDiModeFlags(TPPGCellPainter.TextFlags(taLeftJustify)));
+end;
+
+function TPPGCustomGrid.ColumnCaption(ACol: Integer): string;
+var
+  C: TPPGGridColumn;
+begin
+  Result := '';
+  if (FFixedRows > 0) and (ACol >= 0) and (ACol < FColCount) then
+    Result := GetCellText(ACol, 0);
+  C := ColumnOf(ACol);
+  if (Result = '') and (C <> nil) then
+    Result := C.Title;
+  if Result = '' then
+    Result := IntToStr(ACol + 1);
+end;
+
+function TPPGCustomGrid.FilterDescription: string;
+const
+  OpText: array[TPPGFilterOperator] of string = ('', '=', '<>', '<', '<=', '>', '>=', '', '',
+    '', '', '');
+var
+  C: Integer;
+  Cond: TPPGFilterCondition;
+  Cap, Part: string;
+begin
+  Result := '';
+  for C := 0 to High(FFilters) do
+  begin
+    if Trim(FFilters[C]) = '' then
+      Continue;
+    Cond := FilterCondition(C);
+    if not Cond.Active then
+      Continue;
+    Cap := ColumnCaption(C);
+    case Cond.Op of
+      pfoContains: Part := Format(PPGStr(@SPPGFilterDescContains), [Cap, Cond.Value]);
+      pfoBeginsWith: Part := Format(PPGStr(@SPPGFilterDescBeginsWith), [Cap, Cond.Value]);
+      pfoEndsWith: Part := Format(PPGStr(@SPPGFilterDescEndsWith), [Cap, Cond.Value]);
+      pfoBetween: Part := Format(PPGStr(@SPPGFilterDescBetween), [Cap, Cond.Value, Cond.Value2]);
+      pfoEmpty: Part := Format(PPGStr(@SPPGFilterDescEmpty), [Cap]);
+      pfoNotEmpty: Part := Format(PPGStr(@SPPGFilterDescNotEmpty), [Cap]);
+    else
+      Part := Format(PPGStr(@SPPGFilterDescCompare), [Cap, OpText[Cond.Op], Cond.Value]);
+    end;
+    if Result = '' then
+      Result := Part
+    else
+      Result := Format(PPGStr(@SPPGFilterDescJoin), [Result, Part]);
+  end;
+end;
+
+{ ---- Suchfeld und Tippsuche ---- }
+
+procedure TPPGCustomGrid.SetFindMode(const Value: TPPGGridFindPanelMode);
+begin
+  if FFindMode = Value then
+    Exit;
+  FFindMode := Value;
+  FFindVisible := Value = fpmAlways;
+  if Value = fpmNone then
+    SetFindText('');
+  UpdateFindPanel;
+end;
+
+function TPPGCustomGrid.GetFindVisible: Boolean;
+begin
+  Result := FindPanelHeight > 0;
+end;
+
+function TPPGCustomGrid.FindPanelHeight: Integer;
+begin
+  if FFindVisible and (FFindMode <> fpmNone) and not CustomCellLayout and
+    not (csDesigning in ComponentState) then
+    Result := PPGScale(FDefaultRowHeight + 12, ScalePPI)
+  else
+    Result := 0;
+end;
+
+procedure TPPGCustomGrid.UpdateFindPanel;
+var
+  H: Integer;
+  V: TRect;
+begin
+  H := FindPanelHeight;
+  // Suchfeld erst mit Fenster anlegen (CreateWnd holt es nach)
+  if (H > 0) and (FFindPanel = nil) and HandleAllocated and
+    not (csDestroying in ComponentState) then
+  begin
+    FFindPanel := TPPGGridFindPanel.Create(Self);
+    FFindPanel.FGrid := Self;
+    TCtrlAccess(FFindPanel).Preset := Preset;
+    TCtrlAccess(FFindPanel).StyleManager := StyleManager;
+    TCtrlAccess(FFindPanel.FEdit).Preset := Preset;
+    TCtrlAccess(FFindPanel.FEdit).StyleManager := StyleManager;
+    FFindPanel.Parent := Self;
+    FFindPanel.FEdit.Text := FFindText;
+  end;
+  if FFindPanel <> nil then
+  begin
+    if H > 0 then
+    begin
+      V := ViewRect;
+      FFindPanel.FClose.Visible := FFindMode = fpmManual;
+      FFindPanel.SetBounds(V.Left, V.Top, V.Right - V.Left, H);
+      FFindPanel.ArrangeControls;
+      FFindPanel.Visible := True;
+    end
+    else
+      FFindPanel.Visible := False;
+  end;
+  BarsChanged;
+end;
+
+procedure TPPGCustomGrid.SetFindText(const Value: string);
+begin
+  FFindText := Value;
+  FFindUpper := AnsiUpperCase(Value);
+  if (FFindPanel <> nil) and (FFindPanel.FEdit.Text <> Value) then
+    FFindPanel.FEdit.Text := Value; // ohne OnSearch (Text per Code)
+  Invalidate;
+end;
+
+procedure TPPGCustomGrid.ShowFind;
+begin
+  if FFindMode = fpmNone then
+    Exit;
+  if not FFindVisible then
+  begin
+    FFindVisible := True;
+    UpdateFindPanel;
+  end;
+  if (FFindPanel <> nil) and FFindPanel.FEdit.CanFocus and HandleAllocated and
+    IsWindowVisible(Handle) then
+    FFindPanel.FEdit.SetFocus;
+end;
+
+procedure TPPGCustomGrid.HideFind;
+var
+  HadFocus: Boolean;
+begin
+  if (FFindMode <> fpmManual) or not FFindVisible then
+    Exit;
+  HadFocus := (FFindPanel <> nil) and FFindPanel.ContainsControl(FindControl(GetFocus));
+  FFindVisible := False;
+  SetFindText('');
+  UpdateFindPanel;
+  if HadFocus and CanFocus and HandleAllocated and IsWindowVisible(Handle) then
+    SetFocus;
+end;
+
+function TPPGCustomGrid.FindNext: Boolean;
+begin
+  Result := (FFindUpper <> '') and FindFrom(True, False);
+end;
+
+function TPPGCustomGrid.FindPrevious: Boolean;
+begin
+  Result := (FFindUpper <> '') and FindFrom(False, False);
+end;
+
+function TPPGCustomGrid.FindSearchColumn(ACol: Integer): Boolean;
+var
+  C: TPPGGridColumn;
+begin
+  C := ColumnOf(ACol);
+  Result := (ACol >= FFixedCols) and ((C = nil) or C.Visible) and (KindOf(ACol) = nil);
+end;
+
+function TPPGCustomGrid.FindFrom(Forward, IncludeCurrent: Boolean): Boolean;
+var
+  Cols: array of Integer;
+  I, N, NC, Rows, Start, K, Idx, V, D, CI: Integer;
+begin
+  Result := False;
+  if FFindUpper = '' then
+    Exit;
+  // Durchsuchte Anzeige-Spalten (sichtbare Textspalten)
+  N := 0;
+  SetLength(Cols, VColCount);
+  for I := FFixedCols to VColCount - 1 do
+    if FindSearchColumn(DataCol(I)) then
+    begin
+      Cols[N] := I;
+      Inc(N);
+    end;
+  NC := N;
+  Rows := VRowCount - VFixedRows;
+  if (NC = 0) or (Rows <= 0) then
+    Exit;
+  // Lage der Fokuszelle in der Folge Zeile fuer Zeile, Spalte fuer Spalte
+  CI := 0;
+  for I := 0 to NC - 1 do
+    if Cols[I] <= FFocusC then
+      CI := I;
+  Start := (Max(FFocusV, VFixedRows) - VFixedRows) * NC + CI;
+  for K := 0 to Rows * NC - 1 do
+  begin
+    if Forward then
+      Idx := Start + K + Ord(not IncludeCurrent)
+    else
+      Idx := Start - K - Ord(not IncludeCurrent);
+    Idx := Idx mod (Rows * NC);
+    if Idx < 0 then
+      Inc(Idx, Rows * NC);
+    V := VFixedRows + Idx div NC;
+    D := DataRow(V);
+    if D < FFixedRows then
+      Continue; // Gruppenzeile
+    I := Cols[Idx mod NC];
+    if Pos(FFindUpper, AnsiUpperCase(GetCellText(DataCol(I), D))) > 0 then
+    begin
+      MoveFocus(I, V, False, True);
+      Exit(True);
+    end;
+  end;
+end;
+
+function TPPGCustomGrid.IncrementalFind(const S: string; FromNext: Boolean): Boolean;
+var
+  U: string;
+  Rows, Start, K, V, D, DC: Integer;
+begin
+  Result := False;
+  U := AnsiUpperCase(S);
+  Rows := VRowCount - VFixedRows;
+  DC := DataCol(FFocusC);
+  if (U = '') or (Rows <= 0) or (DC < 0) then
+    Exit;
+  Start := Max(FFocusV, VFixedRows) - VFixedRows;
+  if FromNext then
+    Inc(Start);
+  for K := 0 to Rows - 1 do
+  begin
+    V := VFixedRows + (Start + K) mod Rows;
+    D := DataRow(V);
+    if D < FFixedRows then
+      Continue;
+    if Copy(AnsiUpperCase(GetCellText(DC, D)), 1, Length(U)) = U then
+    begin
+      MoveFocus(FFocusC, V, False, True);
+      Exit(True);
+    end;
+  end;
+end;
+
+procedure TPPGCustomGrid.PaintFindMark(const ACanvas: IPPGCanvas; const TR: TRect;
+  const S: string; Al: TAlignment; AFont: TFont);
+var
+  P, W, X0, MW, Start, Inset: Integer;
+  MR: TRect;
+begin
+  P := Pos(FFindUpper, AnsiUpperCase(S));
+  if P = 0 then
+    Exit;
+  if AFont = nil then
+    AFont := Font;
+  Inset := PPGScale(3, ScalePPI);
+  if UseRightToLeftAlignment then
+    MR := TR // Rechts-nach-links: ganze Textflaeche
+  else
+  begin
+    W := FPainter.TextWidth(AFont, S);
+    X0 := FPainter.TextWidth(AFont, Copy(S, 1, P - 1));
+    MW := FPainter.TextWidth(AFont, Copy(S, P, Length(FFindUpper)));
+    case Al of
+      taRightJustify: Start := TR.Right - W;
+      taCenter: Start := TR.Left + (TR.Right - TR.Left - W) div 2;
+    else
+      Start := TR.Left;
+    end;
+    MR := Rect(Start + X0, TR.Top, Start + X0 + MW, TR.Bottom);
+  end;
+  InflateRect(MR, 1, -Inset);
+  IntersectRect(MR, MR, TR);
+  if not IsRectEmpty(MR) then
+    ACanvas.FillRoundRect(MR, PPGScale(2, ScalePPI), FPaint.Accent, 90);
+end;
+
+procedure TPPGCustomGrid.DoGetCellStyle(ACol, ARow: Integer; Purpose: TPPGGridStylePurpose;
+  var Style: TPPGGridCellStyle);
+begin
+  if Assigned(FOnGetCellStyle) then
+    FOnGetCellStyle(Self, ACol, ARow, Style);
 end;
 
 { ---- Zeilen-Abbildung ---- }
@@ -1578,23 +2431,22 @@ procedure TPPGCustomGrid.PrepareFilters;
 var
   C: Integer;
 begin
-  SetLength(FFilterUpper, Length(FFilters));
+  // Filter einmal je Lauf lesen (Operator, Zahl/Datum, Grossbuchstaben)
+  SetLength(FFilterConds, Length(FFilters));
   for C := 0 to High(FFilters) do
-    FFilterUpper[C] := AnsiUpperCase(FFilters[C]);
+    FFilterConds[C] := FilterCondition(C);
 end;
 
 function TPPGCustomGrid.RowPassesFilter(ARow: Integer): Boolean;
 var
   C: Integer;
 begin
-  // Filtertexte stehen schon in Grossbuchstaben (PrepareFilters, einmal je Lauf)
-  if Length(FFilterUpper) <> Length(FFilters) then
+  if Length(FFilterConds) <> Length(FFilters) then
     PrepareFilters;
   Inc(FFilterEvalCount);
   Result := True;
   for C := 0 to High(FFilters) do
-    if (FFilters[C] <> '') and
-      (Pos(FFilterUpper[C], AnsiUpperCase(GetCellText(C, ARow))) = 0) then
+    if FFilterConds[C].Active and not FFilterConds[C].MatchText(GetCellText(C, ARow)) then
       Exit(False);
 end;
 
@@ -1639,14 +2491,22 @@ begin
   for I := 0 to High(FFilters) do
     if FFilters[I] <> '' then
       Filtered := True;
-  FView.Filter.Active := Filtered;
-  FView.Sort.Column := FSortCol;
+  FView.Filter.Active := Filtered and FiltersInView;
+  if SortsInView then
+    FView.Sort.Column := FSortCol
+  else
+    FView.Sort.Column := -1;
   FView.Sort.Ascending := FSortAscending;
   if CanGroup then
     FGroupCols := CurrentGroupColumns
   else
     FGroupCols := nil;
-  FView.Group.Columns := FGroupCols;
+  // Gruppiert wird nur, wenn die Ansicht alle Zeilen haelt (DB-Grid: erst
+  // nach dem Lesen der ganzen Datenmenge); die Leiste zeigt die Spalten immer
+  if AllRowsInView then
+    FView.Group.Columns := FGroupCols
+  else
+    FView.Group.Columns := nil;
   FView.Group.SortColumn := FSortCol;
   FView.Group.SortAscending := FSortAscending;
   FView.Group.Footers := FGroupFooter;
@@ -1701,7 +2561,7 @@ end;
 function TPPGCustomGrid.AggViewKey: string;
 begin
   Result := '';
-  if not CanGroup or FView.Grouped or (Length(FGroupCols) > 0) or not PlainCellText then
+  if not AllRowsInView or FView.Grouped or (Length(FGroupCols) > 0) or not PlainCellText then
     Exit;
   if FView.Filter.Active then
   begin
@@ -1797,8 +2657,7 @@ begin
   ACol := DataCol(ACol);
   if FCondFormats.Count > 0 then
     FCondFormats.Apply(ACol, Text, Tokens, clWhite, Result);
-  if Assigned(FOnGetCellStyle) then
-    FOnGetCellStyle(Self, ACol, D, Result);
+  DoGetCellStyle(ACol, D, gspPrint, Result);
 end;
 
 function TPPGCustomGrid.PrintCellKind(ACol: Integer; out Ctx: TPPGCellKindContext): IPPGCellKind;
@@ -2048,8 +2907,7 @@ begin
   end;
   if FCondFormats.Count > 0 then
     FCondFormats.Apply(D, Text, ExportTokens(Renderer), PPGColorToRGB(Color), Result);
-  if Assigned(FOnGetCellStyle) then
-    FOnGetCellStyle(Self, D, TableStyleRow(ARow), Result);
+  DoGetCellStyle(D, TableStyleRow(ARow), gspExport, Result);
   if Result.Fill = clNone then
     Result.Fill := Fill;
   if Result.TextColor = clNone then
@@ -2258,10 +3116,10 @@ end;
 
 function TPPGCustomGrid.GridViewRect: TRect;
 begin
-  // Oben Gruppenleiste und Baender, unten die Summenzeile
+  // Oben Suchfeld, Gruppenleiste und Baender, unten Summenzeile und Filterleiste
   Result := ViewRect;
-  Inc(Result.Top, GroupPanelHeight + BandHeight);
-  Dec(Result.Bottom, FooterHeight);
+  Inc(Result.Top, TopBarsHeight + BandHeight);
+  Dec(Result.Bottom, BottomBarsHeight);
   if Result.Top > Result.Bottom then
     Result.Top := Result.Bottom;
 end;
@@ -2526,7 +3384,7 @@ begin
   M.Tag := ACol;
   Col := ColumnOf(ACol);
   Sortable := (ACol >= FFixedCols) and ((Col = nil) or Col.Sortable);
-  if not CanGroup then
+  if not SortsInView then
     Sortable := False; // DB-Grid: Sortieren ist Sache der Datenmenge
   It := Add(M.Items, PPGStr(@SPPGGridSortAsc), HMSortAsc);
   It.Enabled := Sortable;
@@ -2868,6 +3726,21 @@ end;
 function TPPGCustomGrid.CanGroup: Boolean;
 begin
   Result := True;
+end;
+
+function TPPGCustomGrid.AllRowsInView: Boolean;
+begin
+  Result := True;
+end;
+
+function TPPGCustomGrid.IsDataRow(VRow: Integer): Boolean;
+begin
+  Result := (VRow >= VFixedRows) and (VRow < VRowCount) and (DataRow(VRow) >= 0);
+end;
+
+function TPPGCustomGrid.DataRowGroup(ARow: Integer): Integer;
+begin
+  Result := LeafGroupOf(ARow);
 end;
 
 function TPPGCustomGrid.ColumnCollection: TPPGGridColumns;
@@ -3219,7 +4092,7 @@ var
 begin
   // Voll rechnen: Custom (Ereignis sieht alle Zeilen), virtuelle bzw.
   // umgeleitete Texte, Gruppenspalte, Statistik der bedingten Formate
-  Result := CanGroup and not FAggHasCustom and (FAggPendCount < MaxPending) and PlainCellText;
+  Result := AllRowsInView and not FAggHasCustom and (FAggPendCount < MaxPending) and PlainCellText;
   if not Result then
     Exit;
   for I := 0 to High(FGroupCols) do
@@ -3422,8 +4295,9 @@ begin
   SetLength(FGroupAcc, 0);
   SetLength(FGroupCustom, 0);
   // Statistiken fuer bedingte Formate (Oben-N, Farbskala, Datenbalken ...)
-  // Ansicht nicht im Speicher (DB-Grid): Summen liefert die Datenmenge
-  if not CanGroup then
+  // Ansicht nicht im Speicher (DB-Grid ohne Gruppierung): Summen liefert die
+  // Datenmenge
+  if not AllRowsInView then
   begin
     SetLength(FAggCols, 0);
     SetLength(FFooterAcc, 0);
@@ -3617,7 +4491,8 @@ var
   V: TRect;
 begin
   V := ViewRect;
-  Result := Rect(V.Left, V.Top, V.Right, V.Top + GroupPanelHeight);
+  Result := Rect(V.Left, V.Top + FindPanelHeight, V.Right,
+    V.Top + FindPanelHeight + GroupPanelHeight);
 end;
 
 function TPPGCustomGrid.GroupChipCaption(Index: Integer): string;
@@ -3971,6 +4846,11 @@ begin
   Invalidate;
 end;
 
+function TPPGCustomGrid.RowMarked(ARow: Integer): Boolean;
+begin
+  Result := False;
+end;
+
 function TPPGCustomGrid.KindOf(ACol: Integer): IPPGCellKind;
 var
   C: TPPGGridColumn;
@@ -4067,8 +4947,7 @@ begin
   Result.Reset;
   if FCondFormats.Count > 0 then
     FCondFormats.Apply(ACol, Text, FKindCtx.Tokens, FPaint.Fill, Result);
-  if Assigned(FOnGetCellStyle) then
-    FOnGetCellStyle(Self, ACol, ARow, Result);
+  DoGetCellStyle(ACol, ARow, gspScreen, Result);
 end;
 
 procedure TPPGCustomGrid.MergeCells(ACol, ARow, AColSpan, ARowSpan: Integer);
@@ -4286,9 +5165,18 @@ begin
   end;
   X := FColX[N];
   if not FRowGeomValid then
+  begin
     BuildRowGeometry(PPI);
+    ApplyRowGap;
+  end;
   // Baender liegen ueber dem Kopf und gehoeren zur Inhaltshoehe
-  BH := BandHeight + GroupPanelHeight + FooterHeight;
+  BH := BandHeight + TopBarsHeight + BottomBarsHeight;
+  // Eigene Anordnung: ohne Baender und Summenzeile, nie waagerecht scrollen
+  if CustomCellLayout then
+  begin
+    BH := 0;
+    X := 0;
+  end;
   H := RowsContentHeight;
   if H > MaxInt - BH then
     H := MaxInt - BH;
@@ -4334,6 +5222,36 @@ begin
     FLayout.SetRowHeight(Integer(Pairs[J] shr 32), Integer(Pairs[J] and $FFFFFFFF));
 end;
 
+procedure TPPGCustomGrid.ApplyRowGap;
+begin
+  // Luecke unter einer Zeile: die Zeile wird hoeher (Zellen nicht, RawCellRect)
+  if (FGapRow >= VFixedRows) and (FGapRow < FLayout.Count) and (FGapHeight > 0) then
+    FLayout.SetRowHeight(FGapRow, FLayout.RowHeight(FGapRow) + FGapHeight);
+end;
+
+procedure TPPGCustomGrid.SetRowGap(VRow, AHeight: Integer);
+begin
+  if (VRow < 0) or (AHeight <= 0) then
+  begin
+    VRow := -1;
+    AHeight := 0;
+  end;
+  if (VRow = FGapRow) and (AHeight = FGapHeight) then
+    Exit;
+  FGapRow := VRow;
+  FGapHeight := AHeight;
+  FRowGeomValid := False;
+  InvalidateGeometry;
+end;
+
+function TPPGCustomGrid.RowGapOf(VRow: Integer): Integer;
+begin
+  if (VRow = FGapRow) and (VRow >= 0) and (VRow < FLayout.Count) then
+    Result := FGapHeight
+  else
+    Result := 0;
+end;
+
 function TPPGCustomGrid.FixedWidth: Integer;
 begin
   EnsureGeometry;
@@ -4353,22 +5271,26 @@ function TPPGCustomGrid.CellRect(ACol, VRow: Integer): TRect;
 var
   V: TRect;
   X, Y: Int64;
-  W: Integer;
+  W, H: Integer;
 begin
   Result := Rect(0, 0, 0, 0);
   EnsureGeometry;
   if (ACol < 0) or (ACol >= VColCount) or (VRow < 0) or (VRow >= FLayout.Count) then
     Exit;
+  if CustomCellLayout then
+    Exit(CustomCellRect(ACol, VRow));
   V := GridViewRect;
   X := ColLeft(ACol);
   Y := FLayout.RowTop(VRow);
   if VRow >= VFixedRows then
     Y := Y - RowScrollY;
   W := FColX[ACol + 1] - FColX[ACol];
-  if (Y > V.Bottom - V.Top) or (Y + FLayout.RowHeight(VRow) < 0) then
+  // Zellen ohne die Luecke darunter (SetRowGap)
+  H := FLayout.RowHeight(VRow) - RowGapOf(VRow);
+  if (Y > V.Bottom - V.Top) or (Y + H < 0) then
     Exit;
   Result := Rect(V.Left + Integer(X), V.Top + Integer(Y), V.Left + Integer(X) + W,
-    V.Top + Integer(Y) + FLayout.RowHeight(VRow));
+    V.Top + Integer(Y) + H);
   if UseRightToLeftAlignment then
     Result := Rect(V.Left + V.Right - Result.Right, Result.Top,
       V.Left + V.Right - Result.Left, Result.Bottom);
@@ -4385,6 +5307,8 @@ begin
   ACol := -1;
   VRow := -1;
   EnsureGeometry;
+  if CustomCellLayout then
+    Exit(CustomMouseCoord(X, Y, ACol, VRow));
   V := GridViewRect;
   if not PtInRect(V, Point(X, Y)) then
     Exit;
@@ -4422,6 +5346,10 @@ begin
     Inc(CY, RowScrollY);
   if (CY < FLayout.TotalHeight64) and (FLayout.Count > 0) then
     VRow := FLayout.RowAt(CY);
+  // Luecke unter einer Zeile gehoert zu keiner Zelle
+  if (VRow >= 0) and (RowGapOf(VRow) > 0) and
+    (CY >= FLayout.RowTop(VRow) + FLayout.RowHeight(VRow) - RowGapOf(VRow)) then
+    VRow := -1;
   Result := (ACol >= 0) and (VRow >= 0);
 end;
 
@@ -4434,6 +5362,11 @@ begin
   EnsureGeometry;
   if (ACol < 0) or (ACol >= VColCount) or (VRow < 0) or (VRow >= FLayout.Count) then
     Exit;
+  if CustomCellLayout then
+  begin
+    CustomMakeCellVisible(ACol, VRow);
+    Exit;
+  end;
   V := GridViewRect;
   X := ScrollX;
   Y := RowScrollY;
@@ -4464,6 +5397,8 @@ procedure TPPGCustomGrid.Resize;
 begin
   inherited Resize;
   HideEditor(True);
+  if FFindPanel <> nil then
+    UpdateFindPanel;
 end;
 
 procedure TPPGCustomGrid.Scrolled;
@@ -4572,7 +5507,7 @@ begin
   if FStyles.HotRow.HasFill(UseDarkMode) or FStyles.HotRow.HasText(UseDarkMode) or
     (FStyles.HotRow.FontStyle <> []) then
   begin
-    if Assigned(FOnDrawCell) or Assigned(FOnGetCellStyle) or MergesActive then
+    if OwnerDrawAssigned or Assigned(FOnGetCellStyle) or MergesActive then
       Invalidate
     else
     begin
@@ -4592,6 +5527,12 @@ begin
   EnsureGeometry;
   if VRow >= FLayout.Count then
     Exit;
+  // Eigene Anordnung: eine Zeile ist kein Streifen ueber die ganze Breite
+  if CustomCellLayout then
+  begin
+    Invalidate;
+    Exit;
+  end;
   GV := GridViewRect;
   R := RawCellRect(0, VRow);
   R.Left := GV.Left;
@@ -4764,7 +5705,7 @@ begin
     Y := -(MaxInt div 2);
   Result := Rect(V.Left + Integer(X), V.Top + Integer(Y),
     V.Left + Integer(X) + FColX[ACol + 1] - FColX[ACol],
-    V.Top + Integer(Y) + FLayout.RowHeight(VRow));
+    V.Top + Integer(Y) + FLayout.RowHeight(VRow) - RowGapOf(VRow));
   if UseRightToLeftAlignment then
     Result := Rect(V.Left + V.Right - Result.Right, Result.Top,
       V.Left + V.Right - Result.Left, Result.Bottom);
@@ -4809,11 +5750,13 @@ begin
   // Linien und (bei DefaultDrawing) Text sind schon gezeichnet. ACol ist die
   // Anzeige-Spalte; das Ereignis bekommt Daten-Spalte und -Zeile.
   D := DataRow(VRow);
-  if not Assigned(FOnDrawCell) or (D < 0) then
+  if not OwnerDrawAssigned or (D < 0) then
     Exit;
   Sl := GetSelection;
   State := [];
   if (ACol >= Sl.Left) and (ACol <= Sl.Right) and (VRow >= Sl.Top) and (VRow <= Sl.Bottom) then
+    Include(State, gdSelected);
+  if (D >= FFixedRows) and (ACol >= FFixedCols) and RowMarked(D) then
     Include(State, gdSelected);
   if (ACol = FFocusC) and (VRow = FFocusV) and Focused then
     Include(State, gdFocused);
@@ -4823,12 +5766,10 @@ begin
   try
     FItemCanvas.Handle := DC;
     try
-      FItemCanvas.Font := Font;
-      FItemCanvas.Font.Color := FPaint.Text;
-      FItemCanvas.Brush.Style := bsClear;
+      PrepareItemCanvas(ACol, VRow, State);
       FInOwnerDraw := True;
       try
-        FOnDrawCell(Self, DataCol(ACol), D, R, State);
+        OwnerDrawCell(ACol, VRow, D, R, State);
       finally
         FInOwnerDraw := False;
       end;
@@ -4838,6 +5779,106 @@ begin
   finally
     ACanvas.EndGdi(DC);
   end;
+end;
+
+function TPPGCustomGrid.OwnerDrawAssigned: Boolean;
+begin
+  Result := Assigned(FOnDrawCell);
+end;
+
+procedure TPPGCustomGrid.OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
+  State: TGridDrawState);
+begin
+  if Assigned(FOnDrawCell) then
+    FOnDrawCell(Self, DataCol(ACol), ARow, R, State);
+end;
+
+function TPPGCustomGrid.DefaultDrawsKinds: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TPPGCustomGrid.CellDrawColors(ACol, VRow: Integer; State: TGridDrawState;
+  out AFill, AText: TColor);
+var
+  Col: TPPGGridColumn;
+  SelSt: TPPGElementStyle;
+  Dk: Boolean;
+begin
+  // Dieselbe Reihenfolge wie PaintRegion: Spalte -> Zebra -> Hover ->
+  // Auswahl -> Fokuszelle (bedingte Formate/OnGetCellStyle nicht: das
+  // Ereignis soll beim Owner-Draw nicht ein zweites Mal laufen)
+  Dk := FPaint.Dark;
+  if gdFixed in State then
+  begin
+    AFill := FPaint.Header;
+    AText := FPaint.HeaderText;
+    Exit;
+  end;
+  AFill := FPaint.Fill;
+  AText := FPaint.Text;
+  if not FPaint.UseColors then
+  begin
+    if gdSelected in State then
+      AFill := PPGBlendColor(AFill, FPaint.Accent, 46 / 255);
+    Exit;
+  end;
+  Col := ColumnOf(DataCol(ACol));
+  if Col <> nil then
+  begin
+    if Col.Style.HasFill(Dk) then
+      AFill := Col.Style.FillFor(Dk, AFill);
+    AText := Col.Style.TextFor(Dk, AText);
+  end;
+  if FStyles.AlternateRow.HasFill(Dk) and Odd(VRow - VFixedRows) then
+  begin
+    AFill := FStyles.AlternateRow.FillFor(Dk, AFill);
+    AText := FStyles.AlternateRow.TextFor(Dk, AText);
+  end;
+  if VRow = FHotV then
+  begin
+    if FStyles.HotRow.HasFill(Dk) then
+      AFill := FStyles.HotRow.FillFor(Dk, AFill);
+    AText := FStyles.HotRow.TextFor(Dk, AText);
+  end;
+  if gdSelected in State then
+  begin
+    if Focused then
+      SelSt := FStyles.Selection
+    else
+      SelSt := FStyles.SelectionInactive;
+    if SelSt.HasFill(Dk) then
+      AFill := SelSt.FillFor(Dk, FPaint.Accent)
+    else if Focused then
+      AFill := PPGBlendColor(AFill, FPaint.Accent, 46 / 255)
+    else
+      AFill := PPGBlendColor(AFill, FPaint.Text, 22 / 255);
+    AText := SelSt.TextFor(Dk, AText);
+  end;
+  if (gdFocused in State) and FStyles.FocusedCell.HasFill(Dk) then
+  begin
+    AFill := FStyles.FocusedCell.FillFor(Dk, AFill);
+    AText := FStyles.FocusedCell.TextFor(Dk, AText);
+  end;
+end;
+
+procedure TPPGCustomGrid.PrepareItemCanvas(ACol, VRow: Integer; State: TGridDrawState);
+var
+  Fill, Txt: TColor;
+  St: TPPGGridCellStyle;
+begin
+  CellDrawColors(ACol, VRow, State, Fill, Txt);
+  if gdFixed in State then
+    FItemCanvas.Font := Font
+  else
+  begin
+    St.Reset;
+    FItemCanvas.Font := CellFont(ColumnOf(DataCol(ACol)), St, []);
+  end;
+  FItemCanvas.Font.Color := Txt;
+  // Pinsel ohne Fuellung (TBrush setzt dabei Color auf clWhite): Ausgaben
+  // wie TextRect uebermalen die gezeichnete Flaeche nicht
+  FItemCanvas.Brush.Style := bsClear;
 end;
 
 function TPPGCustomGrid.GetCanvas: TCanvas;
@@ -4876,6 +5917,9 @@ var
   Pts: array[0..3] of TPoint;
   LW: Integer;           // Linienbreite (px)
   HasSel: Boolean;
+  // Ganze Zeilen markiert (RowMarked, Mehrfachauswahl), je sichtbarer Zeile
+  Marked: array of Boolean;
+  HasMarks: Boolean;
   SelSt: TPPGElementStyle;
   F: TFont;
   Extra: TFontStyles;
@@ -5002,6 +6046,11 @@ var
       (AV <= Sl.Bottom);
   end;
 
+  function IsMarked(AV: Integer): Boolean;
+  begin
+    Result := HasMarks and Marked[AV - RowFrom];
+  end;
+
   function IsZebraRow(AV: Integer): Boolean;
   begin
     Result := Odd(AV - VFixedRows);
@@ -5120,8 +6169,10 @@ begin
   SetLength(KindArr, ColTo - ColFrom + 1);
   SetLength(KindCtxArr, ColTo - ColFrom + 1);
   SetLength(HaveCtx, ColTo - ColFrom + 1);
-  for C := ColFrom to ColTo do
-    KindArr[C - ColFrom] := KindOf(FVisCols[C]);
+  // Ohne DefaultDrawing (DB-Grid) zeichnet das Grid auch keine Zellarten
+  if DefaultDrawsKinds then
+    for C := ColFrom to ColTo do
+      KindArr[C - ColFrom] := KindOf(FVisCols[C]);
   NF := 0;
   ACanvas.PushClipRoundRect(Clip, 0);
   try
@@ -5163,6 +6214,19 @@ begin
       Sl := GetSelection;
       HasSel := (Sl.Top >= VFixedRows) and (Sl.Right >= ColFrom) and (Sl.Left <= ColTo) and
         (Sl.Bottom >= RowFrom) and (Sl.Top <= RowTo);
+    end;
+    // Markierte Zeilen (Mehrfachauswahl): nur Datenzellen
+    HasMarks := False;
+    if not FixedArea and (ColFrom >= FFixedCols) then
+    begin
+      SetLength(Marked, RowTo - RowFrom + 1);
+      for V := RowFrom to RowTo do
+      begin
+        D := DataRow(V);
+        Marked[V - RowFrom] := (D >= FFixedRows) and RowMarked(D);
+        if Marked[V - RowFrom] then
+          HasMarks := True;
+      end;
     end;
     if Focused then
       SelSt := FStyles.Selection
@@ -5291,6 +6355,23 @@ begin
         end;
       end;
     end;
+    // 2a. Markierte Zeilen in derselben Auswahlfarbe (ganze Zeilenbreite)
+    if HasMarks then
+      for V := RowFrom to RowTo do
+        if Marked[V - RowFrom] then
+        begin
+          R := RawCellRect(ColFrom, V);
+          SR := Rect(Clip.Left, R.Top, Clip.Right, R.Bottom);
+          IntersectRect(SR, SR, Clip);
+          if IsRectEmpty(SR) then
+            Continue;
+          if FPaint.UseColors and SelSt.HasFill(FPaint.Dark) then
+            ACanvas.FillRoundRect(SR, 0, SelSt.FillFor(FPaint.Dark, FPaint.Accent), 255)
+          else if Focused then
+            ACanvas.FillRoundRect(SR, 0, FPaint.Accent, 46)
+          else
+            ACanvas.FillRoundRect(SR, 0, FPaint.Text, 22);
+        end;
     // 2b. Flaeche der Fokuszelle (Styles.FocusedCell.Color)
     if not FixedArea and Focused and FPaint.UseColors and FStyles.FocusedCell.HasFill(FPaint.Dark) and
       (FFocusC >= ColFrom) and (FFocusC <= ColTo) and (FFocusV >= RowFrom) and (FFocusV <= RowTo) and
@@ -5429,7 +6510,7 @@ begin
               else
                 Inc(TR.Left, IconW + Pad div 2);
           end;
-          if InSel(C, V) then
+          if InSel(C, V) or IsMarked(V) then
           begin
             if FPaint.UseColors then
               TC := SelSt.TextFor(FPaint.Dark, TC);
@@ -5442,6 +6523,9 @@ begin
             Extra := Extra + FStyles.FocusedCell.FontStyle;
           end;
           F := CellFont(Col, St, Extra);
+          // Treffer des Suchfelds hinterlegen (Texte kommen danach)
+          if (FFindUpper <> '') and FindSearchColumn(DCol) then
+            PaintFindMark(ACanvas, TR, S, Al, F);
         end;
         AddCellText(TR, S, TC, Al, F);
       end;
@@ -5610,7 +6694,7 @@ begin
       InflateRect(LR, -1, -1);
       ACanvas.FrameRoundRect(LR, PPGScale(2, PPI), PPGScale(2, PPI), FPaint.FocusFrame, 255);
     end;
-    if Assigned(FOnDrawCell) then
+    if OwnerDrawAssigned then
       for V := RowFrom to RowTo do
         for C := ColFrom to ColTo do
           DrawCell(ACanvas, C, V, RawCellRect(C, V));
@@ -5621,7 +6705,7 @@ end;
 
 procedure TPPGCustomGrid.PaintViewport(const ACanvas: IPPGCanvas; const View: TRect);
 var
-  FW, FH, C0, C1, R0, R1, FR, MidRight, X, PH, BH: Integer;
+  FW, FH, C0, C1, R0, R1, FR, MidRight, X, PH, BH, FPH, FTH: Integer;
   CX: Integer;
   CY: Int64;
   GV: TRect;
@@ -5647,33 +6731,27 @@ var
 
 begin
   EnsureGeometry;
+  if CustomCellLayout then
+  begin
+    BeginPaintPass(ACanvas);
+    try
+      PaintCustomLayout(ACanvas, View);
+    finally
+      EndPaintPass;
+    end;
+    Exit;
+  end;
   if (VColCount = 0) or (FLayout.Count = 0) then
     Exit;
-  // Farben einmal pro Zeichnen (nicht je Zelle)
-  GetGridColors(FPaint.Fill, FPaint.Text, FPaint.Header, FPaint.Line, FPaint.Accent);
-  // Schriften bleiben ueber Zeichenvorgaenge (Audit 8c #10); neu bei anderer
-  // DPI bzw. wenn sich zu viele angesammelt haben
-  if (FFontCachePPI <> ScalePPI) or (FFontCache.Count > 64) then
-  begin
-    FFontCache.Clear;
-    FFontCachePPI := ScalePPI;
-  end;
-  PrepareStyleColors;
-  FPaint.Hint := PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.55);
-  FPainter.Prepare(Renderer);
-  PrepareKindContext(ACanvas);
-  // Werte fuer RawCellRect/ColLeft einmal je Zeichnen (Audit 8c #8)
-  FPaintGV := GridViewRect;
-  FPaintMaxColScroll := MaxColScroll;
-  FPaintFirstRight := FirstRightCol;
-  FPaintCached := True;
-  FPainter.Painting := True;
+  BeginPaintPass(ACanvas);
   try
     GV := View;
+    FPH := FindPanelHeight; // Suchfeld (Kind-Control) ganz oben
     PH := GroupPanelHeight;
     BH := BandHeight;
-    Inc(GV.Top, PH + BH);
-    Dec(GV.Bottom, FooterHeight);
+    FTH := FooterHeight;
+    Inc(GV.Top, FPH + PH + BH);
+    Dec(GV.Bottom, BottomBarsHeight);
     if GV.Top > GV.Bottom then
       GV.Top := GV.Bottom;
     FW := FixedWidth;
@@ -5741,15 +6819,21 @@ begin
     end;
     PaintRegionIn(0, FFixedCols - 1, 0, VFixedRows - 1,
       Mirror(Rect(GV.Left, GV.Top, GV.Left + FW, GV.Top + FH)), True);
-    R := Rect(View.Left, View.Top + PH, View.Right, View.Top + PH + BH);
+    R := Rect(View.Left, View.Top + FPH + PH, View.Right, View.Top + FPH + PH + BH);
     if (BH > 0) and NeedsPaint(R, M) then
       PaintBands(ACanvas, R);
-    R := Rect(View.Left, View.Top, View.Right, View.Top + PH);
+    R := Rect(View.Left, View.Top + FPH, View.Right, View.Top + FPH + PH);
     if (PH > 0) and NeedsPaint(R, M) then
       PaintGroupPanel(ACanvas, R);
-    R := Rect(View.Left, GV.Bottom, View.Right, View.Bottom);
-    if (GV.Bottom < View.Bottom) and NeedsPaint(R, M) then
+    R := Rect(View.Left, View.Top, View.Right, View.Top + FPH);
+    if (FPH > 0) and NeedsPaint(R, M) then
+      ACanvas.FillRoundRect(R, 0, FPaint.Header, 255);
+    R := Rect(View.Left, GV.Bottom, View.Right, GV.Bottom + FTH);
+    if (FTH > 0) and NeedsPaint(R, M) then
       PaintFooter(ACanvas, R);
+    R := Rect(View.Left, GV.Bottom + FTH, View.Right, View.Bottom);
+    if (R.Bottom > R.Top) and NeedsPaint(R, M) then
+      PaintFilterBar(ACanvas, R);
     // Einfuegemarke beim Verschieben einer Spalte
     if FColDragging and not FDropToGroup and (FColDropAt >= 0) and HandleAllocated and
       (GetCapture = Handle) then
@@ -5757,16 +6841,84 @@ begin
       X := GV.Left + ColLeft(FColDropAt);
       if UseRightToLeftAlignment then
         X := GV.Left + GV.Right - X;
-      ACanvas.FillRoundRect(Rect(X - PPGScale(1, ScalePPI), View.Top + PH,
+      ACanvas.FillRoundRect(Rect(X - PPGScale(1, ScalePPI), View.Top + FPH + PH,
         X + PPGScale(1, ScalePPI), GV.Top + FH), 0, FPaint.Accent, 255);
     end;
   finally
-    FPaintCached := False;
-    FPainter.Painting := False;
-    FPainter.CollectTexts := False;
-    FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
-    FPaint.HeaderFont := nil;
+    EndPaintPass;
   end;
+end;
+
+procedure TPPGCustomGrid.BeginPaintPass(const ACanvas: IPPGCanvas);
+begin
+  // Farben einmal pro Zeichnen (nicht je Zelle)
+  GetGridColors(FPaint.Fill, FPaint.Text, FPaint.Header, FPaint.Line, FPaint.Accent);
+  // Schriften bleiben ueber Zeichenvorgaenge (Audit 8c #10); neu bei anderer
+  // DPI bzw. wenn sich zu viele angesammelt haben
+  if (FFontCachePPI <> ScalePPI) or (FFontCache.Count > 64) then
+  begin
+    FFontCache.Clear;
+    FFontCachePPI := ScalePPI;
+  end;
+  PrepareStyleColors;
+  FPaint.Hint := PPGBlendColor(FPaint.HeaderText, FPaint.Header, 0.55);
+  FPainter.Prepare(Renderer);
+  PrepareKindContext(ACanvas);
+  // Werte fuer RawCellRect/ColLeft einmal je Zeichnen (Audit 8c #8)
+  FPaintGV := GridViewRect;
+  FPaintMaxColScroll := MaxColScroll;
+  FPaintFirstRight := FirstRightCol;
+  FPaintCached := True;
+  FPainter.Painting := True;
+end;
+
+procedure TPPGCustomGrid.EndPaintPass;
+begin
+  FPaintCached := False;
+  FPainter.Painting := False;
+  FPainter.CollectTexts := False;
+  FKindCtx.Canvas := nil; // Canvas gilt nur waehrend des Zeichnens
+  FPaint.HeaderFont := nil;
+end;
+
+function TPPGCustomGrid.CustomCellLayout: Boolean;
+begin
+  Result := False;
+end;
+
+function TPPGCustomGrid.CustomCellRect(ACol, VRow: Integer): TRect;
+begin
+  Result := Rect(0, 0, 0, 0);
+end;
+
+function TPPGCustomGrid.CustomMouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean;
+begin
+  ACol := -1;
+  VRow := -1;
+  Result := False;
+end;
+
+procedure TPPGCustomGrid.CustomMakeCellVisible(ACol, VRow: Integer);
+begin
+  // Erweiterungspunkt (DB-Grid: Kartenansicht)
+end;
+
+procedure TPPGCustomGrid.PaintCustomLayout(const ACanvas: IPPGCanvas; const View: TRect);
+begin
+  // Erweiterungspunkt (DB-Grid: Kartenansicht)
+end;
+
+procedure TPPGCustomGrid.EditorArrowMove(Down: Boolean);
+begin
+  if Down then
+    MoveFocus(FFocusC, FFocusV + 1, False, True)
+  else
+    MoveFocus(FFocusC, FFocusV - 1, False, True);
+end;
+
+function TPPGCustomGrid.DoubleClickEdits: Boolean;
+begin
+  Result := EditorMode;
 end;
 
 procedure TPPGCustomGrid.PaintBands(const ACanvas: IPPGCanvas; const View: TRect);
@@ -6033,7 +7185,7 @@ begin
   // alte und die neue Zeile neu zeichnen (Fokusrahmen, Auswahl, Fokuszelle)
   NewSel := GetSelection;
   if (SX = ScrollX) and (SY = ScrollY) and (OldSel.Top = OldSel.Bottom) and
-    (NewSel.Top = NewSel.Bottom) and not Assigned(FOnDrawCell) and
+    (NewSel.Top = NewSel.Bottom) and not OwnerDrawAssigned and
     not Assigned(FOnGetCellStyle) and not MergesActive then
   begin
     InvalidateViewRow(OldV);
@@ -6177,6 +7329,21 @@ begin
   inherited;
 end;
 
+procedure TPPGCustomGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  // Doppelklick: DblClick kommt vor dem MouseDown mit ssDouble und hat den
+  // Editor schon geoeffnet. Der Fokus bleibt im Editor (das SetFocus der
+  // Basis bzw. von ContentMouseDown wuerde ihn ueber EditorExit sofort
+  // wieder schliessen); nur OnMouseDown wird noch gemeldet.
+  if (Button = mbLeft) and (ssDouble in Shift) and DoubleClickEdits then
+  begin
+    if Assigned(OnMouseDown) then
+      OnMouseDown(Self, Button, Shift, X, Y);
+    Exit;
+  end;
+  inherited MouseDown(Button, Shift, X, Y);
+end;
+
 procedure TPPGCustomGrid.ContentMouseDown(Button: TMouseButton; Shift: TShiftState;
   X, Y: Integer);
 var
@@ -6198,6 +7365,16 @@ begin
   if FShowGroupPanel and PtInRect(GroupPanelRect, Point(X, Y)) then
   begin
     GroupPanelClick(X, Y);
+    Exit;
+  end;
+  // Filterleiste: "Filter loeschen"
+  if (FilterBarHeight > 0) and PtInRect(FilterBarRect, Point(X, Y)) then
+  begin
+    if PtInRect(FilterBarClearRect, Point(X, Y)) then
+    begin
+      HideEditor(False);
+      ClearFilters;
+    end;
     Exit;
   end;
   S := SizingColAt(X, Y);
@@ -6481,6 +7658,33 @@ var
   Ext: Boolean;
   VR: TRect;
 begin
+  // Suchfeld: Strg+F zeigt es, F3 / Umschalt+F3 springen zum naechsten Treffer
+  if FFindMode <> fpmNone then
+  begin
+    if (Key = Ord('F')) and (Shift * [ssCtrl, ssAlt, ssShift] = [ssCtrl]) then
+    begin
+      ShowFind;
+      Key := 0;
+      Exit;
+    end;
+    if (Key = VK_F3) and (Shift * [ssCtrl, ssAlt] = []) and (FFindText <> '') then
+    begin
+      if ssShift in Shift then
+        FindPrevious
+      else
+        FindNext;
+      Key := 0;
+      Exit;
+    end;
+  end;
+  // Tippsuche: Esc und Navigation beginnen neu (Zeichentasten nicht: deren
+  // KeyDown kommt vor jedem KeyPress)
+  if (FIncText <> '') and ((Key = VK_ESCAPE) or (Key = VK_TAB) or (Key = VK_RETURN) or
+    ((Key >= VK_PRIOR) and (Key <= VK_DOWN))) then
+  begin
+    FIncText := '';
+    FTypeAhead.Reset;
+  end;
   // Gruppenkopf: Pfeil links/rechts klappt (bei RTL gespiegelt), Enter/Leertaste
   // schalten um, links auf zugeklappter Gruppe springt zur Elterngruppe
   C := GroupOfRow(FFocusV);
@@ -6692,6 +7896,17 @@ begin
     Key := #0;
     Exit;
   end;
+  // Tippsuche in der Fokusspalte (nur ohne Editor fuer die Zelle)
+  if FIncSearch and ((Key > ' ') or ((Key = ' ') and (FIncText <> ''))) and
+    (DataRow(FFocusV) <> FilterRowMark) and
+    not (CanEditCell(DataCol(FFocusC), FFocusV) and
+    (CellEditorKind(DataCol(FFocusC), DataRow(FFocusV)) = gekText)) then
+  begin
+    FIncText := FTypeAhead.Add(Key);
+    IncrementalFind(FIncText, Length(FIncText) = 1);
+    Key := #0;
+    Exit;
+  end;
   // Tippen startet den Editor mit dem Zeichen (wie Excel/TStringGrid)
   if (Key >= ' ') and CanEditCell(DataCol(FFocusC), FFocusV) and
     (CellEditorKind(DataCol(FFocusC), DataRow(FFocusV)) = gekText) then
@@ -6742,6 +7957,7 @@ var
   R: TRect;
   S: string;
   Col: TPPGGridColumn;
+  Cls: TPPGGridEditorClass;
 begin
   if (csDesigning in ComponentState) or not HandleAllocated then
     Exit;
@@ -6780,8 +7996,14 @@ begin
     IntersectRect(R, RangeRect(M0, N0, M1, N1), GridViewRect);
   if IsRectEmpty(R) then
     Exit;
-  // Editor passender Art (wiederverwendet, solange die Art gleich bleibt)
-  if (FEditor <> nil) and (FEditKind <> Kind) then
+  // Editor passender Art (wiederverwendet, solange Art und Klasse gleich bleiben)
+  if D = FilterRowMark then
+    Cls := PPGGridEditorClass(gekText)
+  else
+    Cls := CellEditorClass(DataCol(FEditC), D, Kind);
+  if Cls = nil then
+    Cls := PPGGridEditorClass(gekText);
+  if (FEditor <> nil) and ((FEditKind <> Kind) or (FEditor.ClassType <> Cls)) then
   begin
     FEditor.Visible := False;
     FreeAndNil(FEditor);
@@ -6789,7 +8011,7 @@ begin
   Col := ColumnOf(DataCol(FEditC));
   if FEditor = nil then
   begin
-    FEditor := PPGCreateGridEditor(Kind, Self, EditorKeyDown, EditorExit);
+    FEditor := PPGCreateGridEditorOf(Cls, Self, EditorKeyDown, EditorExit);
     FEditKind := Kind;
   end;
   TCtrlAccess(FEditor).Font := Font;
@@ -6803,15 +8025,28 @@ begin
   if FEditor is TPPGCustomField then
     TGridEditorFieldAccess(FEditor).OnChange := EditorChange;
   FEditCanceled := False;
+  if D <> FilterRowMark then
+    EditorPrepare(DataCol(FEditC), D);
   FEditor.Visible := True;
   if FEditor.CanFocus then
     FEditor.SetFocus;
   EditorOpened(DataCol(FEditC), D);
 end;
 
+function TPPGCustomGrid.CellEditorClass(ACol, ARow: Integer;
+  Kind: TPPGGridEditorKind): TPPGGridEditorClass;
+begin
+  Result := PPGGridEditorClass(Kind);
+end;
+
 procedure TPPGCustomGrid.EditorOpened(ACol, ARow: Integer);
 begin
   // Erweiterungspunkt (DB-Grid merkt sich den Datensatz)
+end;
+
+procedure TPPGCustomGrid.EditorPrepare(ACol, ARow: Integer);
+begin
+  // Erweiterungspunkt (DB-Grid: Auswahlliste der Nachschlage-Spalten)
 end;
 
 procedure TPPGCustomGrid.EditorEdited;
@@ -6820,16 +8055,37 @@ begin
 end;
 
 procedure TPPGCustomGrid.EditorChange(Sender: TObject);
+var
+  C: Integer;
+  S: string;
 begin
-  if (FEditor <> nil) and FEditor.Visible and (FEditV >= 0) and
-    (DataRow(FEditV) <> FilterRowMark) then
-    EditorEdited;
+  if (FEditor = nil) or not FEditor.Visible or (FEditV < 0) then
+    Exit;
+  if DataRow(FEditV) <> FilterRowMark then
+    EditorEdited
+  else if FFilterImmediate then
+  begin
+    // Sofort filtern: Editor der Filterzeile bleibt offen
+    C := DataCol(FEditC);
+    S := EditorText;
+    if (C >= 0) and (C < FColCount) and (FFilters[C] <> S) then
+    begin
+      FFilters[C] := S;
+      Inc(FKeepFilterEditor);
+      try
+        ApplyFilters;
+      finally
+        Dec(FKeepFilterEditor);
+      end;
+    end;
+  end;
 end;
 
 procedure TPPGCustomGrid.EndEditorForRebuild;
 begin
-  // FEditV < 0 bei sichtbarem Editor: HideEditor schreibt gerade selbst
-  if (FEditor = nil) or not FEditor.Visible or (FEditV < 0) then
+  // FEditV < 0 bei sichtbarem Editor: HideEditor schreibt gerade selbst;
+  // sofortiges Filtern laesst den Editor der Filterzeile offen
+  if (FEditor = nil) or not FEditor.Visible or (FEditV < 0) or (FKeepFilterEditor > 0) then
     Exit;
   HideEditor(True);
   if (FEditor <> nil) and FEditor.Visible and (FEditV >= 0) then
@@ -6856,6 +8112,9 @@ begin
     FEditV := -1;
     Exit;
   end;
+  // Sofortiges Filtern (EditorChange): Editor der Filterzeile bleibt offen
+  if (FKeepFilterEditor > 0) and (DataRow(FEditV) = FilterRowMark) then
+    Exit;
   EC := FEditC;
   C := DataCol(EC);
   V := FEditV;
@@ -6881,7 +8140,7 @@ begin
         if (C >= 0) and (C < FColCount) and (FFilters[C] <> S) then
         begin
           FFilters[C] := S;
-          RebuildMap;
+          ApplyFilters;
         end;
       end
       else if (D >= FFixedRows) and (GetCellText(C, D) <> S) then
@@ -6934,10 +8193,7 @@ begin
       begin
         // Text-Editor: Pfeil hoch/runter uebernimmt und wechselt die Zeile
         HideEditor(True);
-        if Key = VK_UP then
-          MoveFocus(FFocusC, FFocusV - 1, False, True)
-        else
-          MoveFocus(FFocusC, FFocusV + 1, False, True);
+        EditorArrowMove(Key = VK_DOWN);
         Key := 0;
       end;
   end;
@@ -7795,6 +9051,8 @@ begin
   S := UiaValue(Id);
   if TPPGCellPainter.IsCheckedText(S) then
     Result := ToggleState_On
+  else if TPPGCellPainter.IsGrayedText(S) then
+    Result := ToggleState_Indeterminate
   else
     Result := ToggleState_Off;
 end;
