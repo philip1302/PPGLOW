@@ -30,6 +30,9 @@ TPPGGrid.Enabled ! Sperren, solange Daten geladen werden oder ein Datensatz woan
 TPPGGrid.FixedColor ! Nur für Formulare, die von TStringGrid kommen. In neuem Code die Kopffarbe über Styles.Header.Color setzen, dort gibt es auch DarkColor für den Dark Mode.
 TPPGGrid.FixedCols ! 1 für eine Nummern- oder Namensspalte, die beim waagerechten Scrollen stehen bleiben soll; 0, wenn alle Spalten Daten sind.
 TPPGGrid.FixedColsRight ! Für eine Spalte ganz rechts, die immer sichtbar sein soll, z. B. Summe oder ein Button „Öffnen“ bei breiten Tabellen.
+TPPGGrid.FrozenCols ! Für breite Tabellen, in denen Nummer oder Name beim Scrollen nach rechts sichtbar bleiben sollen; die Spalten lassen sich weiter bearbeiten und sortieren.
+TPPGGrid.AutoRowHeights ! Für Bemerkungen oder Beschreibungen, die ganz lesbar sein sollen; zusammen mit WordWrap an genau dieser Spalte und meist MaxRowLines (z. B. 3), damit eine Zeile nicht die Ansicht füllt.
+TPPGGrid.MaxRowLines ! 2 oder 3 Zeilen reichen meist; der Rest steht im Hinweis bzw. im Editor.
 TPPGGrid.FixedRows ! 1 für die Kopfzeile (Normalfall). 0 nur für reine Wertetabellen ohne Überschrift; mehr als 1 besser über Bands lösen.
 TPPGGrid.Font ! Die Schrift aller Zellen; meist vom Formular übernehmen. Für einen anderen Kopf Styles.Header.Font bzw. FontStyle, für einzelne Spalten Column.Style.
 TPPGGrid.GradientEndColor ! Nur mit DrawingStyle = gdsGradient: Endfarbe des Kopfverlaufs, wie bei TStringGrid.
@@ -86,6 +89,7 @@ TPPGGrid.OnDblClick ! Den Datensatz der Zeile öffnen (Detaildialog). Bei goEdit
 TPPGGrid.OnDragDrop ! Abgelegte Elemente übernehmen, z. B. Artikel aus einer Liste als neue Positionen einfügen.
 TPPGGrid.OnDragOver ! Accept := True nur für passende Quellen, z. B. wenn Source die Artikelliste ist.
 TPPGGrid.OnDrawCell ! Für Zusätze, die keine Zellart kann, z. B. ein kleines Dreieck für Kommentare. Mit DefaultDrawing = False den ganzen Inhalt selbst zeichnen.
+TPPGGrid.OnDrawColumnTitle ! Für ein Symbol oder einen zweizeiligen Titel im Kopf; Sortierpfeil und Linien bleiben vom Grid. Nur zeichnen, nichts an Spalten oder Daten ändern.
 TPPGGrid.OnEndDock ! Nur bei DragKind = dkDock; bei Tabellen praktisch nie gebraucht.
 TPPGGrid.OnEndDrag ! Nach dem Ziehen von Zeilen aufräumen; Target = nil heißt abgebrochen.
 TPPGGrid.OnEnter ! Beim Betreten der Tabelle z. B. die zugehörigen Befehle (Neu, Löschen) in der Symbolleiste freischalten.
@@ -123,6 +127,7 @@ TPPGGridBand.Caption ! Kurzer Oberbegriff über den Spalten: „Anschrift“, �
 TPPGGridBand.ParentBand ! Für zweistufige Köpfe: „2026“ als oberes Band, darunter „Q1“ bis „Q4“ mit ParentBand = 0. Mehr als zwei Ebenen werden schnell unübersichtlich.
 TPPGGridColumn.Aggregate ! agSum für Beträge und Mengen, agCount für die Anzahl, agAvg für Durchschnittspreise. Sichtbar mit ShowFooter bzw. GroupFooter, auch im Excel-Export als Formel.
 TPPGGridColumn.Alignment ! Zahlen und Beträge rechtsbündig (taRightJustify), damit Stellen untereinander stehen; Text links, kurze Kennzeichen zentriert.
+TPPGGridColumn.WordWrap ! Nur für Textspalten mit längerem Inhalt einschalten (Bemerkung, Beschreibung) und AutoRowHeights dazu, sonst wird der Text in der normalen Zeilenhöhe abgeschnitten.
 TPPGGridColumn.Band ! Spalten unter ein gemeinsames Band stellen (Index in Bands), z. B. Straße, PLZ und Ort unter „Anschrift“. Die Spalten eines Bands nebeneinander anordnen.
 TPPGGridColumn.CellKind ! ckCheck für Ja/Nein, ckProgress für Fertigstellung, ckRating für Bewertungen, ckLink für Webseiten, ckButton für Aktionen je Zeile. Der Zelltext bleibt der Wert (z. B. „1“, „75“).
 TPPGGridColumn.CellKindName ! Nur für eigene, mit PPGRegisterCellKindName registrierte Zellarten, z. B. eine Ampel; dazu CellKind = ckCustom.
