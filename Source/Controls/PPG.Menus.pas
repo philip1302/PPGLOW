@@ -20,7 +20,8 @@ unit PPG.Menus;
   - TPPGPopupMenu = TPopupMenu mit eigener Darstellung: bestehende
     PopupMenu-Properties, Split-Button-DropDownMenu usw. funktionieren
     unveraendert. Popup(X, Y) kehrt wie bei der VCL erst nach dem Schliessen
-    zurueck.
+    zurueck. Ist nach OnPopup kein Eintrag sichtbar, erscheint wie bei der
+    VCL nichts (OnClose kommt trotzdem).
   - Barrierefreiheit: ROLE_SYSTEM_MENUPOPUP/MENUITEM, EVENT_SYSTEM_MENUPOPUPSTART
     /END, EVENT_OBJECT_FOCUS fuer den hervorgehobenen Eintrag - nur damit lesen
     Narrator und NVDA eigene Menues vor.
@@ -1992,6 +1993,16 @@ end;
 
 { TPPGPopupMenu }
 
+function HasVisibleItem(Root: TMenuItem): Boolean;
+var
+  I: Integer;
+begin
+  for I := 0 to Root.Count - 1 do
+    if Root.Items[I].Visible then
+      Exit(True);
+  Result := False;
+end;
+
 procedure TPPGPopupMenu.SetPreset(const Value: string);
 begin
   // Audit 5a: wie TPPGCustomControl.SetPreset pruefen
@@ -2109,6 +2120,13 @@ begin
   end;
   SetPopupPoint(Point(Anchor.Left, Anchor.Bottom));
   DoPopup(Self);
+  // Wie die VCL (TrackPopupMenu): ohne sichtbaren Eintrag erscheint nichts -
+  // sonst bliebe ein leeres Fenster offen, das den naechsten Klick verbraucht
+  if not HasVisibleItem(Items) then
+  begin
+    DoClose;
+    Exit;
+  end;
   Loop := TPPGMenuLoop.Create;
   FLoop := Loop;
   Destroyed := False;
