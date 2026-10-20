@@ -61,6 +61,10 @@ type
     FSavedDeactivate: TNotifyEvent;
     procedure ItemClick(Sender: TObject);
     procedure ButtonPopup(Sender: TObject);
+    procedure LogPopup(Sender: TObject);
+    procedure LogClose(Sender: TObject);
+    procedure ShowFirstPopup(Sender: TObject);
+    procedure ExitClick(Sender: TObject);
     procedure AbortPopup(Sender: TObject);
     procedure ChildDestroy(Sender: TObject);
     procedure ChildClose(Sender: TObject; var Action: TCloseAction);
@@ -86,6 +90,7 @@ type
     procedure AbortInOnPopup;
     procedure SecondPopupWhileOpen;
     procedure PopupFromModalDialog;
+    procedure EmptyMenuDoesNotOpen;
   end;
 
 implementation
@@ -687,6 +692,81 @@ begin
     FMenu := nil;
     Dlg.Free;
   end;
+end;
+
+procedure TPopupMenuBasicsTests.LogPopup(Sender: TObject);
+begin
+  FLog.Add('onpopup');
+end;
+
+procedure TPopupMenuBasicsTests.LogClose(Sender: TObject);
+begin
+  FLog.Add('onclose');
+end;
+
+procedure TPopupMenuBasicsTests.ShowFirstPopup(Sender: TObject);
+begin
+  FLog.Add('onpopup');
+  TPopupMenu(Sender).Items[0].Visible := True;
+end;
+
+procedure TPopupMenuBasicsTests.ExitClick(Sender: TObject);
+begin
+  FLog.Add('click:Exit:' + System.SysUtils.BoolToStr(PPGActiveMenuLoop = nil, True));
+end;
+
+procedure TPopupMenuBasicsTests.EmptyMenuDoesNotOpen;
+var
+  G: TPPGGrid;
+  I: Integer;
+begin
+  FForm.Show;
+  FMenu := NewMenu(FForm);
+  for I := 0 to FMenu.Items.Count - 1 do
+    FMenu.Items[I].Visible := False;
+  FMenu.OnPopup := LogPopup;
+  FMenu.OnClose := LogClose;
+  // Direkt: kehrt sofort zurueck, keine Schleife, kein Fenster
+  // Sicherung: oeffnet das leere Menue doch, schliesst die Probe es (Test schlaegt fehl statt zu haengen)
+  FProbe.Post(procedure begin end);
+  FMenu.Popup(50, 50);
+  CheckEquals('onpopup,onclose', FLog.CommaText, 'Popup direkt');
+  CheckClosed('leer direkt');
+  // Rechtsklick (Kontextmenue nur mit unsichtbaren Eintraegen)
+  FLog.Clear;
+  G := TPPGGrid.Create(FForm);
+  G.Parent := FForm;
+  G.SetBounds(10, 50, 300, 150);
+  G.PopupMenu := FMenu;
+  Pump;
+  FProbe.Post(procedure begin end);
+  PostMessage(G.Handle, WM_RBUTTONDOWN, MK_RBUTTON, MouseLParam(80, 80));
+  PostMessage(G.Handle, WM_RBUTTONUP, 0, MouseLParam(80, 80));
+  Pump;
+  CheckEquals('onpopup,onclose', FLog.CommaText, 'Rechtsklick');
+  CheckClosed('leer Rechtsklick');
+  // Ein Klick danach kommt normal an (wird nicht von einem leeren Menue verbraucht)
+  FLog.Clear;
+  FButton := TPPGButton.Create(FForm);
+  FButton.Parent := FForm;
+  FButton.SetBounds(10, 10, 80, 25);
+  FButton.OnClick := ExitClick;
+  FButton.Caption := 'Exit';
+  Pump;
+  FProbe.Post(procedure begin end);
+  FMenu.Popup(50, 50);
+  PostClick(FButton.Handle);
+  Pump;
+  CheckEquals('onpopup,onclose,click:Exit:True', FLog.CommaText, 'Klick nach leerem Menue');
+  CheckNoSafety('leer');
+  // Macht OnPopup einen Eintrag sichtbar, oeffnet das Menue (Esc schliesst)
+  FLog.Clear;
+  FMenu.OnPopup := ShowFirstPopup;
+  FProbe.Post(procedure begin PostKey(G.Handle, VK_ESCAPE); end);
+  FMenu.Popup(50, 50);
+  CheckNoSafety('sichtbar gemacht');
+  CheckClosed('sichtbar gemacht');
+  CheckEquals('onpopup,onclose', FLog.CommaText, 'in OnPopup sichtbar gemacht');
 end;
 
 initialization
