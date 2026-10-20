@@ -10,7 +10,12 @@ unit PPG.Tests.DBGridKeySync;
   - Tastenwiederholung (Bit 30 in WM_KEYDOWN) bewegt nur den Fokus, die
     Datenmenge folgt einmal (Loslassen, Wartezeit, Zugriff); Einzelschritt
     sofort; Mausrad scrollt nur die Ansicht; Bearbeiten nach schneller
-    Navigation trifft den fokussierten Satz.
+    Navigation trifft den fokussierten Satz;
+  - Gruppenkopfzeilen (auf- und zugeklappt) bewegen die Datenmenge nicht
+    (Tastatur, Code, Klappen per Taste; auch ohne Schluesselfelder), eine
+    Sammelphase auf einem Kopf zieht nichts nach, eine offene Bearbeitung
+    bzw. ein neuer Satz wird beim Wechsel auf den Kopf gebucht, Tippen oeffnet
+    dort kein Formular; FullExpand und LocateRecord fokussieren die Zeile.
 
   Daten: TClientDataSet im Speicher (synthetische Werte, OrtID = I mod 3 + 1).
   Formate fest deutsch (PPGTestGermanFormat). }
@@ -63,6 +68,12 @@ type
     procedure RepeatKey(G: TPPGDBGrid; VK: Word; Count: Integer);
     procedure KeyUpMsg(G: TPPGDBGrid; VK: Word);
     procedure FocusChanged(Sender: TObject);
+    /// Gruppe (Ebene 0) mit diesem Wert; -1 = keine.
+    function GroupOf(G: TPPGDBGrid; const Key: string): Integer;
+    /// Steht der Fokus auf dem Kopf dieser Gruppe?
+    function OnGroupRow(G: TPPGDBGrid; const Key: string): Boolean;
+    /// 9 Saetze nach OrtID gruppiert, mit bzw. ohne KeyFieldNames.
+    function NewGroupedGrid(Keyed: Boolean): TPPGDBGrid;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -78,6 +89,10 @@ type
     procedure WheelSeriesDoesNotMoveDataSet;
     procedure AccessAfterFastNavigationHitsFocusedRecord;
     procedure OutsideMoveWinsAndDelayZero;
+    procedure GroupRowFocusDoesNotMoveDataSet;
+    procedure RepeatEndingOnGroupRowKeepsDataSet;
+    procedure LeavingEditedRowForGroupRowPosts;
+    procedure GroupRowOpensNoFormAndFullExpandKeepsRow;
   end;
 
 implementation
@@ -746,6 +761,198 @@ begin
   CheckFalse(G.RecordSyncPending);
   CheckEquals(4, FCnt.Scrolls, 'jeder Schritt sofort');
   CheckEquals(FocusedID(G), CurID);
+end;
+
+function TDBGridKeySyncTests.GroupOf(G: TPPGDBGrid; const Key: string): Integer;
+var
+  I: Integer;
+begin
+  for I := 0 to G.GroupCount - 1 do
+    if G.GroupInfo(I).Key = Key then
+      Exit(I);
+  Result := -1;
+end;
+
+function TDBGridKeySyncTests.OnGroupRow(G: TPPGDBGrid; const Key: string): Boolean;
+begin
+  Result := G.GroupOfRow(G.FocusRow) = GroupOf(G, Key);
+end;
+
+function TDBGridKeySyncTests.NewGroupedGrid(Keyed: Boolean): TPPGDBGrid;
+begin
+  // Ansicht: Kopf 1 | 3 6 9 | Kopf 2 | 1 4 7 | Kopf 3 | 2 5 8
+  FillCounted(9);
+  if Keyed then
+    Result := NewGrid(['ID', 'Name', 'OrtID'], 'ID')
+  else
+    Result := NewGrid(['ID', 'Name', 'OrtID'], ''); // Lesezeichen
+  Column(Result, 'OrtID').GroupIndex := 0;
+end;
+
+procedure TDBGridKeySyncTests.GroupRowFocusDoesNotMoveDataSet;
+var
+  G: TPPGDBGrid;
+  Keyed: Boolean;
+begin
+  for Keyed := True downto False do
+  begin
+    G := NewGroupedGrid(Keyed);
+    G.ExpandGroup(GroupOf(G, '2'), False);
+    CheckTrue(G.LocateRecord('ID', 9, []));
+    FCnt.ResetCounts;
+    FFocusEvents := 0;
+    // Pfeil runter von der letzten Datenzeile auf den zugeklappten Kopf
+    G.Perform(WM_KEYDOWN, VK_DOWN, 1);
+    KeyUpMsg(G, VK_DOWN);
+    CheckTrue(OnGroupRow(G, '2'), 'Fokus auf dem Kopf');
+    CheckEquals(9, CurID, 'Datenmenge bleibt');
+    CheckFalse(G.IsActiveRecordRow(G.FocusRow), 'Kopf ist nicht der aktive Satz');
+    CheckFalse(G.RecordSyncPending);
+    CheckEquals('1', G.ActiveGroupValues[0], 'Gruppe des Satzes der Datenmenge');
+    // weiter auf den aufgeklappten Kopf, zurueck, Strg+Pos1, per Code
+    Key(G, VK_DOWN);
+    CheckTrue(OnGroupRow(G, '3'));
+    Key(G, VK_UP);
+    Key(G, VK_HOME, [ssCtrl]);
+    CheckTrue(OnGroupRow(G, '1'));
+    TDBGridAccess(G).MoveFocus(G.FocusCol, G.GroupRow(GroupOf(G, '3')), False, True);
+    CheckTrue(OnGroupRow(G, '3'));
+    // Zuklappen/Aufklappen auf dem Kopf
+    Key(G, VK_SUBTRACT);
+    Key(G, VK_ADD);
+    Key(G, VK_LEFT);
+    Key(G, VK_RIGHT);
+    CheckTrue(OnGroupRow(G, '3'));
+    CheckEquals(9, CurID);
+    CheckEquals(0, FCnt.Locates + FCnt.Gotos + FCnt.Scrolls, 'kein Zugriff auf die Datenmenge');
+    CheckEquals(0, FFocusEvents, 'kein OnFocusedRecordChanged');
+    // erst eine Datenzeile zieht nach
+    Key(G, VK_DOWN);
+    CheckEquals(2, FocusedID(G));
+    CheckEquals(2, CurID);
+    CheckEquals(1, FCnt.Scrolls);
+    CheckEquals(1, FFocusEvents);
+    G.Free;
+  end;
+end;
+
+procedure TDBGridKeySyncTests.RepeatEndingOnGroupRowKeepsDataSet;
+var
+  G: TPPGDBGrid;
+  Keyed: Boolean;
+begin
+  for Keyed := True downto False do
+  begin
+    G := NewGroupedGrid(Keyed);
+    CheckTrue(G.LocateRecord('ID', 6, []));
+    FCnt.ResetCounts;
+    // Taste gehalten: ueber 9 hinweg auf den Kopf der Gruppe 2
+    RepeatKey(G, VK_DOWN, 2);
+    CheckTrue(OnGroupRow(G, '2'));
+    CheckFalse(G.RecordSyncPending, 'auf dem Kopf nichts ausstehend');
+    CheckFalse(G.SyncActiveRecord);
+    KeyUpMsg(G, VK_DOWN);
+    CheckEquals(6, CurID, 'Datenmenge bleibt auf dem Satz von vorher');
+    CheckEquals(0, FCnt.Locates + FCnt.Gotos + FCnt.Scrolls);
+    // ueber den Kopf hinweg auf eine Datenzeile: wie bisher gesammelt
+    RepeatKey(G, VK_UP, 2);
+    CheckEquals(6, FocusedID(G));
+    CheckFalse(G.RecordSyncPending, 'zurueck auf dem Satz der Datenmenge');
+    RepeatKey(G, VK_DOWN, 3);
+    CheckEquals(1, FocusedID(G));
+    CheckTrue(G.RecordSyncPending);
+    KeyUpMsg(G, VK_DOWN);
+    CheckEquals(1, CurID);
+    CheckEquals(1, FCnt.Scrolls, 'ein Satzwechsel');
+    G.Free;
+  end;
+end;
+
+procedure TDBGridKeySyncTests.LeavingEditedRowForGroupRowPosts;
+var
+  G: TPPGDBGrid;
+  Keyed: Boolean;
+begin
+  for Keyed := True downto False do
+  begin
+    G := NewGroupedGrid(Keyed);
+    // Bearbeiten, Pfeil runter auf den Kopf: gebucht, Fokus auf dem Kopf
+    CheckTrue(G.LocateRecord('ID', 9, []));
+    TDBGridAccess(G).SetCellByUser(ColOf(G, 'Name'), G.Row, 'Neu9');
+    CheckTrue(FCnt.State = dsEdit);
+    Key(G, VK_DOWN);
+    CheckTrue(FCnt.State = dsBrowse, 'beim Wechsel auf den Kopf gebucht');
+    CheckEquals(9, CurID);
+    CheckEquals('Neu9', FCnt.FieldByName('Name').AsString);
+    CheckTrue(OnGroupRow(G, '2'));
+    // Klick bzw. Code auf einen Kopf: ebenso
+    Key(G, VK_UP);
+    CheckEquals(9, FocusedID(G));
+    FCnt.Edit;
+    FCnt.FieldByName('Name').AsString := 'Neu9b';
+    TDBGridAccess(G).MoveFocus(G.FocusCol, G.GroupRow(GroupOf(G, '1')), False, True);
+    CheckTrue(FCnt.State = dsBrowse, 'Code/Maus auf den Kopf bucht');
+    CheckTrue(OnGroupRow(G, '1'));
+    // Gruppenwert geaendert: neu gruppiert, Fokus auf dem gebuchten Satz
+    // (LocateRecord auf den Satz der Datenmenge holt den Fokus vom Kopf)
+    CheckTrue(G.LocateRecord('ID', 9, []));
+    CheckEquals(9, FocusedID(G), 'LocateRecord fokussiert den Satz');
+    FCnt.Edit;
+    FCnt.FieldByName('OrtID').AsInteger := 3;
+    Key(G, VK_DOWN);
+    CheckTrue(FCnt.State = dsBrowse);
+    CheckEquals(9, CurID, 'Satz nach dem Buchen');
+    CheckEquals(9, FocusedID(G), 'Fokus folgt dem gebuchten Satz');
+    CheckEquals('3', G.ActiveGroupValues[0]);
+    // Neuer, geaenderter Satz: Pfeil hoch auf den Kopf bucht ihn
+    CheckTrue(G.LocateRecord('ID', 3, []));
+    FCnt.Insert;
+    FCnt.FieldByName('ID').AsInteger := 100;
+    FCnt.FieldByName('Name').AsString := 'Neu100';
+    FCnt.FieldByName('OrtID').AsInteger := 1;
+    Key(G, VK_UP);
+    CheckTrue(FCnt.State = dsBrowse, 'neuer Satz gebucht');
+    CheckEquals(100, CurID);
+    G.Free;
+  end;
+end;
+
+procedure TDBGridKeySyncTests.GroupRowOpensNoFormAndFullExpandKeepsRow;
+var
+  G: TPPGDBGrid;
+  K: Char;
+  G1: Integer;
+begin
+  G := NewGroupedGrid(True);
+  // Formular-Modus: Tippen auf dem Kopf oeffnet nichts, auf der Datenzeile schon
+  G.EditMode := dgeForm;
+  Key(G, VK_HOME, [ssCtrl]);
+  CheckTrue(OnGroupRow(G, '1'));
+  K := 'X';
+  TDBGridAccess(G).KeyPress(K);
+  CheckFalse(G.EditFormActive, 'Kopf: kein Formular');
+  CheckTrue(FCnt.State = dsBrowse);
+  Key(G, VK_DOWN);
+  K := 'X';
+  TDBGridAccess(G).KeyPress(K);
+  CheckTrue(G.EditFormActive, 'Datenzeile: Formular');
+  G.HideEditForm(False);
+  G.EditMode := dgeCells;
+  // Alles aufklappen haelt die fokussierte Zeile (Datenzeile und Kopf)
+  CheckTrue(G.LocateRecord('ID', 4, []));
+  G.ExpandGroup(GroupOf(G, '1'), False);
+  CheckEquals(4, FocusedID(G));
+  G.FullExpand;
+  CheckEquals(4, FocusedID(G), 'Datenzeile bleibt fokussiert');
+  CheckTrue(G.IsActiveRecordRow(G.FocusRow));
+  G.FullCollapse;
+  Key(G, VK_DOWN);
+  G1 := G.GroupOfRow(G.FocusRow);
+  CheckTrue(G1 >= 0);
+  G.FullExpand;
+  CheckEquals(G1, G.GroupOfRow(G.FocusRow), 'Kopf bleibt fokussiert');
+  CheckEquals(4, CurID);
+  G.Free;
 end;
 
 initialization

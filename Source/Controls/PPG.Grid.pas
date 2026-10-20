@@ -832,6 +832,10 @@ type
     /// Fokus auf eine Zelle (sichtbare Zeile); Extend = Bereich vom Anker.
     function MoveFocus(ACol, VRow: Integer; Extend, ByUser: Boolean): Boolean;
     function SelectCell(ACol, ARow: Integer): Boolean; virtual;
+    /// Fokus wechselt auf eine Gruppenkopf- oder Gruppenfusszeile (keine
+    /// Datenzeile, daher kein SelectCell/OnSelectCell); VRow = sichtbare
+    /// Zeile. False = ablehnen (Fokus bleibt). Vorgabe: True.
+    function SelectGroupRow(VRow: Integer): Boolean; virtual;
     /// ACol = Datenspalte, VRow = sichtbare Zeile.
     procedure ToggleCheck(ACol, VRow: Integer);
     /// ACol = Datenspalte, VRow = feste Zeile.
@@ -4423,12 +4427,32 @@ begin
 end;
 
 procedure TPPGCustomGrid.FullExpand;
+var
+  FD, FG, V: Integer;
+  Footer: Boolean;
 begin
   if not FView.Grouped then
     Exit;
   HideEditor(True);
+  // Fokus an derselben Daten- bzw. Gruppenzeile halten (die Nummer der
+  // sichtbaren Zeile verschiebt sich durch aufgeklappte Gruppen davor)
+  FD := DataRow(FFocusV);
+  FG := GroupAtRow(FFocusV, Footer);
   FView.Group.ExpandAll(True);
   FView.Reflatten;
+  V := -1;
+  if FD >= 0 then
+    V := VisualRow(FD)
+  else if (FG >= 0) and not Footer then
+    V := GroupRow(FG)
+  else if FG >= 0 then
+  begin
+    V := VFixedRows;
+    while (V < VRowCount) and (GroupOfFooterRow(V) <> FG) do
+      Inc(V);
+  end;
+  if (V >= VFixedRows) and (V < VRowCount) then
+    FFocusV := V;
   FFocusV := EnsureRangeInt(FFocusV, VFixedRows, VRowCount - 1);
   FAnchorV := FFocusV;
   InvalidateGeometry;
@@ -7650,6 +7674,11 @@ begin
     FOnSelectCell(Self, ACol, ARow, Result);
 end;
 
+function TPPGCustomGrid.SelectGroupRow(VRow: Integer): Boolean;
+begin
+  Result := True;
+end;
+
 function TPPGCustomGrid.MoveFocus(ACol, VRow: Integer; Extend, ByUser: Boolean): Boolean;
 var
   D, M0, N0, M1, N1, OldV, SX, SY: Integer;
@@ -7669,6 +7698,10 @@ begin
   end;
   D := DataRow(VRow);
   if ((ACol <> FFocusC) or (VRow <> FFocusV)) and (D >= 0) and not SelectCell(DataCol(ACol), D) then
+    Exit;
+  // Gruppenkopf/-fuss: keine Datenzeile, eigene Rueckfrage
+  if (VRow <> FFocusV) and ((D = GroupRowMark) or (D = GroupFooterMark)) and
+    not SelectGroupRow(VRow) then
     Exit;
   HideEditor(True);
   ColChanged := ACol <> FFocusC;
