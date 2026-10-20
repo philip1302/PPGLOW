@@ -384,6 +384,7 @@
         <DCCReference Include="PPG.Tests.NavigatorExtras.pas"/>
         <DCCReference Include="PPG.Tests.ImageStored.pas"/>
         <DCCReference Include="PPG.Tests.PopupMenuBasics.pas"/>
+        <DCCReference Include="PPG.Tests.CalendarPopup.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -30,6 +30,12 @@ TPPGDatePicker - Datumsfeld mit Kalender-Popup (Phase 7b).
 - ParseInput + OnUserInput: eigene Auswertung der Eingabe (wie TDateTimePicker.OnUserInput), z. B. "morgen" oder "+3".
 - Code (Date := ...) loest kein OnChange aus.
 
+Kalender-Popup ohne DatePicker (PPGShowCalendarPopup):
+- Oeffnet TPPGCalendarPopup unter einem beliebigen PPGlow-Control (Anker, z. B. ein TPPGEdit mit eigenem Kalender-Knopf) und kehrt erst nach dem Schliessen zurueck: True = Tag uebernommen (ADate = gewaehlter Tag, die Uhrzeit von ADate bleibt), False = abgebrochen (ADate unveraendert).
+- Startdatum = ADate (0 = heute), in MinDate..MaxDate geholt; Optik, Schrift, DPI und Animation vom Anker (SyncFrom wie bei den Aufklapp-Feldern). Kalenderwochen (ISO 8601) schaltbar, Grenzen optional.
+- Bedienung wie beim DatePicker: Klick auf einen Tag bzw. Enter uebernimmt, Pfeile/Bild/Pos1/Ende bewegen den Fokus-Tag, F4 und Alt+Pfeil uebernehmen einen bewegten Fokus-Tag. Esc, Tab, Alt, Klick daneben (verbraucht), Fokuswechsel, Deaktivieren der Anwendung sowie Verstecken, Minimieren oder Freigeben von Anker bzw. Formular brechen ab.
+- Modal wie TPPGPopupMenu.Popup: eine Nachrichtenschleife (Application.HandleMessage), Tasten und Maus laufen ueber PPG.AppHooks (auch wenn die Anwendung Application.OnMessage selbst setzt). Das Popup wird nie aktiviert, der Fokus bleibt beim Anker. Release (caFree) des Formulars waehrend das Popup offen ist, wird bis nach der Rueckkehr verschoben. Besitzer ist das oberste Fenster des Ankers (bei MDI das Hauptformular). Nur ein Popup gleichzeitig: ein neuer Aufruf bricht das offene ab.
+
 ## PPGlow-Eigenschaften
 
 Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
@@ -134,7 +140,7 @@ Verlinkte Typen haben eine eigene Seite mit allen Untereigenschaften.
 | `OnStartDrag` | `TStartDragEvent` `(Sender: TObject; var DragObject: TDragObject)` | Beginn des Ziehens dieses Controls; hier kann ein eigenes DragObject gesetzt werden. |
 | `OnEndDrag` | `TEndDragEvent` `(Sender, Target: TObject; X, Y: Integer)` | Ziehen dieses Controls beendet (abgelegt oder abgebrochen; Target = nil bei Abbruch). |
 
-Tests: `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit7A` (TDatePickerPinTests, TDateSegmentTests, TDropDownFieldTests); `PPG.Tests.Custom` (TCustomRestTests, TCustomVclPropTests, TCustomViewTests); `PPG.Tests.GridFilterSearch` (TDBGridFilterSearchTests); `PPG.Tests.Phase19` (TValidatorTests); `PPG.Tests.Phase7b` (TCalendarTests, TDatePickerTests, TPhase7bPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
+Tests: `PPG.Tests.Audit5d` (TStage3Tests); `PPG.Tests.Audit7A` (TDatePickerPinTests, TDateSegmentTests, TDropDownFieldTests); `PPG.Tests.CalendarPopup` (TCalendarPopupTests); `PPG.Tests.Custom` (TCustomRestTests, TCustomVclPropTests, TCustomViewTests); `PPG.Tests.GridFilterSearch` (TDBGridFilterSearchTests); `PPG.Tests.Phase19` (TValidatorTests); `PPG.Tests.Phase7b` (TCalendarTests, TDatePickerTests, TPhase7bPaintTests); `PPG.Tests.Streaming`; `PPG.Tests.Visual` (TVisualTests) (Uebersicht: [Control -> Testunits](Tests.md))
 
 ---
 Erzeugt von `Build\make-docs.ps1`. Eigene Ergaenzungen in `Docs\Controls\notes\TPPGDatePicker.md`, Beschreibungen der Eigenschaften in `Docs\Controls\props\*.txt`.

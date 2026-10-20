@@ -49,7 +49,7 @@ TPPGComboBox - Auswahlfeld mit eigener Aufklappliste in der Optik des Presets.
 - Anders als die Basis: Zeichen gehen auch bei offener Liste ins Edit (FieldKeyPress), Pos1/Ende im editierbaren Stil bewegen den Cursor, und ReadOnly verhindert das Aufklappen nicht (TComboBox kennt kein ReadOnly).
 - Ereignisse wie TComboBox: Auswahl durch den Anwender loest OnClick und danach OnSelect aus - ist OnSelect nicht zugewiesen, stattdessen OnChange. Tippen im Edit loest OnChange aus. ItemIndex/Text im Code setzen loest (wie bei TComboBox) kein Ereignis aus.
 - Tastatur: Alt+Unten/Alt+Oben/F4 klappen auf/zu; geschlossen waehlen Oben/Unten/Bild/(Pos1/Ende bei csDropDownList) direkt; offen bewegen sie die Hervorhebung, Enter uebernimmt, Esc verwirft. Tippsuche ueber die Anfangsbuchstaben bei csDropDownList.
-- Migration: Property-Namen von TComboBox (Style, Items, ItemIndex, DropDownCount, Sorted, AutoComplete, ...). csSimple wird wie csDropDown, csOwnerDraw* wie csDropDownList behandelt (Owner-Draw gibt es nicht). ItemHeight ist eine Mindesthoehe der Zeilen (0 = aus der Schrift).
+- Migration: Property-Namen von TComboBox (Style, Items, ItemIndex, DropDownCount, Sorted, AutoComplete, ...). csSimple wird wie csDropDown, csOwnerDraw* wie csDropDownList behandelt (Owner-Draw gibt es nicht). ItemHeight ist eine Mindesthoehe der Zeilen (0 = aus der Schrift). Items[I] ausserhalb 0..Count-1 liefert wie bei TComboBox '' statt einer Ausnahme (Code wie Items[ItemIndex] bei ItemIndex = -1).
 
 ## PPGlow-Eigenschaften
 
