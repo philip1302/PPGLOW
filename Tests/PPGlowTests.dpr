@@ -252,7 +252,8 @@ uses
   PPG.Tests.RichEdit in 'PPG.Tests.RichEdit.pas',
   PPG.Tests.ToolBarDropdown in 'PPG.Tests.ToolBarDropdown.pas',
   PPG.Tests.NavigatorExtras in 'PPG.Tests.NavigatorExtras.pas',
-  PPG.Tests.ImageStored in 'PPG.Tests.ImageStored.pas';
+  PPG.Tests.ImageStored in 'PPG.Tests.ImageStored.pas',
+  PPG.Tests.PopupMenuBasics in 'PPG.Tests.PopupMenuBasics.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;
