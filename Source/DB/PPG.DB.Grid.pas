@@ -94,7 +94,13 @@ unit PPG.DB.Grid;
     (Texte, Werte, Lesezeichen). Gruppen, Zuklappen, Gruppenfuesse und Summen
     (Column.Aggregate) rechnet die Basis wie im TPPGGrid; die Reihenfolge
     innerhalb einer Gruppe ist die der Datenmenge. Fokus auf einer Datenzeile
-    stellt die Datenmenge per Lesezeichen auf den Satz; Satzwechsel von aussen
+    stellt die Datenmenge per Lesezeichen auf den Satz; Fokus auf einer
+    Gruppenkopf- oder Gruppenfusszeile (Tastatur, Maus, Code; auf- wie
+    zugeklappt) bewegt sie nicht (wie cxGrid): sie bleibt auf dem zuletzt
+    fokussierten Satz, eine offene Bearbeitung wird dabei gebucht (wie beim
+    Zeilenwechsel), IsActiveRecordRow ist dort False, ActiveGroupValues und
+    RowValue gelten dem Satz der Datenmenge, Tippen oeffnet kein Formular;
+    erst eine Datenzeile zieht nach. Satzwechsel von aussen
     (Navigator, Next, Locate) fokussieren die Zeile und klappen ihre Gruppen
     auf. Aenderungen von aussen (DataSetChanged: Refresh, Filter, Loeschen,
     First/Last, EnableControls ...) lesen die Datenmenge neu; Post/Cancel einer
@@ -131,7 +137,9 @@ unit PPG.DB.Grid;
     und Leiste scrollen gruppiert nur die Ansicht. Waehrend der Sammelphase
     sehen OnKeyDown und Code ausserhalb des Grids noch den vorherigen Satz;
     ein Satzwechsel bzw. Neulesen von aussen verwirft das Nachziehen (der
-    Fokus folgt der Datenmenge). SyncActiveRecord zieht sofort nach.
+    Fokus folgt der Datenmenge); endet sie auf einer Gruppenzeile, entfaellt
+    es (die Datenmenge bleibt auf dem Satz von vorher, RecordSyncPending ist
+    False). SyncActiveRecord zieht sofort nach.
   - Nicht unterstuetzt: Unterspalten (ADT/Array-Felder). }
 
 {$I ..\PPG.inc}
@@ -904,6 +912,7 @@ type
     function CanEditCell(ACol, VRow: Integer): Boolean; override;
     function CellEditorKind(ACol, ARow: Integer): TPPGGridEditorKind; override;
     function SelectCell(ACol, ARow: Integer): Boolean; override;
+    function SelectGroupRow(VRow: Integer): Boolean; override;
     procedure HeaderClicked(ACol, VRow: Integer); override;
     function MoveToNextCell: Boolean; override;
     function CanSortColumn(ACol: Integer): Boolean; override;
@@ -1116,8 +1125,10 @@ type
     /// noch nicht darauf.
     function SyncActiveRecord: Boolean;
     /// Wartet die Datenmenge noch auf den fokussierten Satz (GroupSyncDelay)?
+    /// Fokus auf einer Gruppenzeile: False (dort gibt es keinen Satz).
     function RecordSyncPending: Boolean;
-    /// Zeigt die sichtbare Zeile den aktiven Satz der Datenmenge?
+    /// Zeigt die sichtbare Zeile den aktiven Satz der Datenmenge? (Gruppen-
+    /// zeile: False, auch wenn sie fokussiert ist.)
     function IsActiveRecordRow(VRow: Integer): Boolean;
     /// Sortierpfeil nach IndexFieldNames setzen (siehe
     /// SortIndicatorFromIndex); True = Pfeil geaendert.
@@ -4391,6 +4402,32 @@ begin
   Result := inherited SelectCell(ACol, ARow);
 end;
 
+function TPPGCustomDBGrid.SelectGroupRow(VRow: Integer): Boolean;
+var
+  DS: TDataSet;
+  Ver: Integer;
+begin
+  Result := inherited SelectGroupRow(VRow);
+  if not Result or not FGrpOn or (FSyncing > 0) or not FDataLink.Active then
+    Exit;
+  // Gruppenkopf/-fuss ist kein Satz: die Datenmenge bleibt, wo sie ist (kein
+  // Locate/Lesezeichen); ein gesammeltes Nachziehen entfaellt
+  CancelPendingSync;
+  // Offene Bearbeitung buchen wie beim Wechsel auf eine andere Datenzeile;
+  // das kann neu gruppieren (Fokus dann auf den gebuchten Satz)
+  DS := FDataLink.DataSet;
+  if DS.State in dsEditModes then
+  begin
+    Ver := FGrpViewVer;
+    DS.CheckBrowseMode;
+    if FGrpViewVer <> Ver then
+    begin
+      GroupFocusActive;
+      Result := False;
+    end;
+  end;
+end;
+
 procedure TPPGCustomDBGrid.HeaderClicked(ACol, VRow: Integer);
 var
   C: TPPGGridColumn;
@@ -7048,6 +7085,9 @@ begin
   // Fokusspalte (Leertaste nicht: Mehrfachauswahl, Kaestchen)
   if not FormMode or FFormOpen or (Key <= ' ') or not FDataLink.Active then
     Exit;
+  // Gruppenkopf/-fuss: kein Satz, kein Formular
+  if FGrpOn and not IsDataRow(FocusRow) then
+    Exit;
   K := Key;
   Key := #0;
   ShowEditForm;
@@ -8960,6 +9000,10 @@ begin
   finally
     Dec(FGrpQuiet);
   end;
+  // Stand die Datenmenge schon auf dem Satz (Fokus z.B. auf einem
+  // Gruppenkopf), kommt kein Satzwechsel: Fokus selbst setzen
+  if Result and FGrpOn and not IsActiveRecordRow(FocusRow) then
+    GroupFocusActive;
 end;
 
 procedure TPPGCustomDBGrid.RefreshGroups;
