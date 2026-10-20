@@ -24,7 +24,9 @@ unit PPG.ComboBox;
   - Migration: Property-Namen von TComboBox (Style, Items, ItemIndex,
     DropDownCount, Sorted, AutoComplete, ...). csSimple wird wie csDropDown,
     csOwnerDraw* wie csDropDownList behandelt (Owner-Draw gibt es nicht).
-    ItemHeight ist eine Mindesthoehe der Zeilen (0 = aus der Schrift). }
+    ItemHeight ist eine Mindesthoehe der Zeilen (0 = aus der Schrift).
+    Items[I] ausserhalb 0..Count-1 liefert wie bei TComboBox '' statt einer
+    Ausnahme (Code wie Items[ItemIndex] bei ItemIndex = -1). }
 
 {$I ..\PPG.inc}
 
@@ -282,6 +284,13 @@ uses
   PPG.Consts, PPG.Appearance, PPG.Render.Registry, PPG.Markup.Parser;
 
 type
+  /// Items wie TComboBox.Items: Lesen ausserhalb der Liste liefert '' (die VCL
+  /// fragt CB_GETLBTEXTLEN, das bei ungueltigem Index CB_ERR liefert).
+  TComboItems = class(TStringList)
+  protected
+    function Get(Index: Integer): string; override;
+  end;
+
   /// Reiche Eintraege der Combo fuer die Liste (Indizes wie Items).
   TComboExSource = class(TPPGItemSourceBase)
   private
@@ -290,6 +299,14 @@ type
     function Count: Integer; override;
     procedure GetItem(Index: Integer; var Data: TPPGItemData); override;
   end;
+
+function TComboItems.Get(Index: Integer): string;
+begin
+  if (Index < 0) or (Index >= Count) then
+    Result := ''
+  else
+    Result := inherited Get(Index);
+end;
 
 function TComboExSource.Count: Integer;
 begin
@@ -337,7 +354,7 @@ end;
 constructor TPPGCustomComboBox.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FItems := TStringList.Create;
+  FItems := TComboItems.Create;
   FItems.OnChange := ItemsChanged;
   FItemIndex := -1;
   FLoadedItemIndex := -2;
