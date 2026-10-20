@@ -56,6 +56,7 @@ type
     procedure PopupOpensAboveWithoutRoomBelow;
     procedure TrackClickPagesList;
     procedure LoadsTComboBoxDfmAndRoundTrips;
+    procedure ItemsOutOfRangeReadLikeTComboBox;
   end;
 
   TComboAccessibilityTests = class(TComboTestCase)
@@ -270,6 +271,27 @@ begin
 end;
 
 { TComboBoxTests }
+
+procedure TComboBoxTests.ItemsOutOfRangeReadLikeTComboBox;
+// TComboBox.Items[I] ausserhalb der Liste liefert '' (CB_GETLBTEXTLEN = CB_ERR);
+// migrierter Code liest Items[ItemIndex] auch bei ItemIndex = -1
+var
+  C: TPPGComboBox;
+begin
+  C := NewCombo(csDropDownList);
+  C.Items.Text := 'A'#13#10'B';
+  CheckEquals(-1, C.ItemIndex);
+  CheckEquals('', C.Items[C.ItemIndex], 'Items[-1]');
+  CheckEquals('', C.Items[2], 'Items[Count]');
+  CheckEquals('B', C.Items[1]);
+  CheckEquals(1, C.Items.IndexOf('B'), 'IndexOf unveraendert');
+  C.Items.Clear;
+  CheckEquals('', C.Items[0], 'leere Liste');
+  // Schreiben ausserhalb bleibt ein Fehler (nur das Lesen ist nachsichtig)
+  StartExpectingException(EStringListError);
+  C.Items[5] := 'X';
+  StopExpectingException('Schreiben ausserhalb');
+end;
 
 procedure TComboBoxTests.DefaultsMatchTComboBox;
 var
