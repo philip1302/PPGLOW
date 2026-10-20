@@ -36,7 +36,7 @@ OnClick, DFM). Ersetzt wird nur die Darstellung:
 - TPPGMenuWindow: eine Menue-Ebene als Popup ohne Aktivierung (wie die ComboBox-Liste). Spalten Bild/Haken | Text mit Mnemonic | Tastenkuerzel | Pfeil; Trenner, Break-Spalten, Blaettern bei sehr langen Menues.
 - TPPGMenuLoop: steuert alle offenen Ebenen. Solange ein Menue offen ist, leitet ein Haken in PPG.AppHooks Tasten und Mausklicks an das Menue (Fokus und Titelleiste bleiben beim Formular, wie bei Windows-Menues). Klick ausserhalb schliesst (und wird verbraucht, wie bei Windows), Deaktivieren der Anwendung schliesst.
 - Ausloesen: erst alles schliessen, dann TMenuItem.Click ueber eine gepostete Nachricht - wie die VCL (WM_COMMAND nach TrackPopupMenu). So laeuft Anwender-Code nie mit offenem Menue oder aus einem Menuefenster.
-- TPPGPopupMenu = TPopupMenu mit eigener Darstellung: bestehende PopupMenu-Properties, Split-Button-DropDownMenu usw. funktionieren unveraendert. Popup(X, Y) kehrt wie bei der VCL erst nach dem Schliessen zurueck.
+- TPPGPopupMenu = TPopupMenu mit eigener Darstellung: bestehende PopupMenu-Properties, Split-Button-DropDownMenu usw. funktionieren unveraendert. Popup(X, Y) kehrt wie bei der VCL erst nach dem Schliessen zurueck. Ist nach OnPopup kein Eintrag sichtbar, erscheint wie bei der VCL nichts (OnClose kommt trotzdem).
 - Barrierefreiheit: ROLE_SYSTEM_MENUPOPUP/MENUITEM, EVENT_SYSTEM_MENUPOPUPSTART /END, EVENT_OBJECT_FOCUS fuer den hervorgehobenen Eintrag - nur damit lesen Narrator und NVDA eigene Menues vor.
 - Owner-Draw fremder Menues (OnDrawItem/OnAdvancedDrawItem) wird weiter aufgerufen.
 

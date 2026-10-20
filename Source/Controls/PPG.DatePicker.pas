@@ -26,7 +26,29 @@ unit PPG.DatePicker;
   - DateMode = dmUpDown: Auf/Ab-Knoepfe statt Kalender (Tag, Strg = Monat).
   - ParseInput + OnUserInput: eigene Auswertung der Eingabe (wie
     TDateTimePicker.OnUserInput), z. B. "morgen" oder "+3".
-  - Code (Date := ...) loest kein OnChange aus. }
+  - Code (Date := ...) loest kein OnChange aus.
+
+  Kalender-Popup ohne DatePicker (PPGShowCalendarPopup):
+  - Oeffnet TPPGCalendarPopup unter einem beliebigen PPGlow-Control (Anker,
+    z. B. ein TPPGEdit mit eigenem Kalender-Knopf) und kehrt erst nach dem
+    Schliessen zurueck: True = Tag uebernommen (ADate = gewaehlter Tag, die
+    Uhrzeit von ADate bleibt), False = abgebrochen (ADate unveraendert).
+  - Startdatum = ADate (0 = heute), in MinDate..MaxDate geholt; Optik, Schrift,
+    DPI und Animation vom Anker (SyncFrom wie bei den Aufklapp-Feldern).
+    Kalenderwochen (ISO 8601) schaltbar, Grenzen optional.
+  - Bedienung wie beim DatePicker: Klick auf einen Tag bzw. Enter uebernimmt,
+    Pfeile/Bild/Pos1/Ende bewegen den Fokus-Tag, F4 und Alt+Pfeil uebernehmen
+    einen bewegten Fokus-Tag. Esc, Tab, Alt, Klick daneben (verbraucht),
+    Fokuswechsel, Deaktivieren der Anwendung sowie Verstecken, Minimieren
+    oder Freigeben von Anker bzw. Formular brechen ab.
+  - Modal wie TPPGPopupMenu.Popup: eine Nachrichtenschleife
+    (Application.HandleMessage), Tasten und Maus laufen ueber PPG.AppHooks
+    (auch wenn die Anwendung Application.OnMessage selbst setzt). Das Popup
+    wird nie aktiviert, der Fokus bleibt beim Anker. Release (caFree) des
+    Formulars waehrend das Popup offen ist, wird bis nach der Rueckkehr
+    verschoben. Besitzer ist das oberste Fenster des Ankers (bei MDI das
+    Hauptformular). Nur ein Popup gleichzeitig: ein neuer Aufruf bricht das
+    offene ab. }
 
 {$I ..\PPG.inc}
 
@@ -41,8 +63,9 @@ uses
 type
   TPPGCustomDatePicker = class;
 
-  /// Popup mit Kalender (gehoert dem DatePicker). Maus und Tastatur kommen
-  /// ueber die Drop*-Methoden vom Feld (Audit 7a #3).
+  /// Popup mit Kalender (DatePicker bzw. PPGShowCalendarPopup). Maus und
+  /// Tastatur kommen ueber die Drop*-Methoden vom Feld bzw. von der Schleife
+  /// von PPGShowCalendarPopup (Audit 7a #3).
   TPPGCalendarPopup = class(TPPGDropPopup)
   private
     FCalendar: TPPGCalendar;
@@ -51,6 +74,7 @@ type
     FMouseDown: Boolean;
     FDownDay: TDate;
     FForwarding: Integer;
+    FOnDirectPick: TNotifyEvent;
     procedure CalendarChange(Sender: TObject);
     function CalPoint(X, Y: Integer): TPoint;
     function DayAt(X, Y: Integer): TDate;
@@ -81,6 +105,24 @@ type
     property Picked: Boolean read FPicked;
     /// Fokus-Tag beim Aufklappen.
     property StartFocus: TDate read FStartFocus;
+    /// Tag direkt am Kalender gewaehlt (nicht ueber Drop*, z. B. per
+    /// Automation): der Besitzer uebernimmt und schliesst.
+    property OnDirectPick: TNotifyEvent read FOnDirectPick write FOnDirectPick;
+  end;
+
+  /// Einstellungen fuer PPGShowCalendarPopup (Vorgabe: PPGCalendarPopupOptions).
+  TPPGCalendarPopupOptions = record
+    /// Kalenderwochen (ISO 8601) zeigen.
+    ShowWeekNumbers: Boolean;
+    /// Fruehester bzw. spaetester waehlbarer Tag (0 = keine Grenze).
+    MinDate: TDate;
+    MaxDate: TDate;
+    /// Lage zum Anker, wenn das Popup breiter ist: links (Vorgabe), rechts, mittig.
+    Alignment: TAlignment;
+    /// Bereiche des Kalenders (nil = Preset); gehoeren dem Aufrufer.
+    Styles: TPPGCalendarStyles;
+    /// Eigenes Zeichnen der Tage (optional).
+    OnCustomDrawDay: TPPGCalendarDrawDayEvent;
   end;
 
   TPPGCustomDatePicker = class(TPPGCustomDropDownField)
@@ -130,6 +172,7 @@ type
     function GetDroppedDown: Boolean;
     procedure SetDroppedDown(const Value: Boolean);
     function GetCalendarPopup: TPPGCalendarPopup;
+    procedure PopupDirectPick(Sender: TObject);
     procedure UpdateText;
     function ClampToRange(D: TDate): TDate;
     procedure ApplyDateRange;
@@ -291,15 +334,32 @@ const
   PPGDateButtonUp = 42;
   PPGDateButtonDown = 43;
 
+/// Vorgabe-Einstellungen: ohne Grenzen, links am Anker, Stile des Presets.
+function PPGCalendarPopupOptions(ShowWeekNumbers: Boolean = False; MinDate: TDate = 0;
+  MaxDate: TDate = 0): TPPGCalendarPopupOptions;
+/// Kalender-Popup unter Anchor zeigen und warten, bis es schliesst (siehe
+/// Unit-Kopf). True = Tag gewaehlt: ADate = Tag + Uhrzeit von ADate.
+/// False = abgebrochen bzw. Anker nicht sichtbar: ADate bleibt.
+function PPGShowCalendarPopup(Anchor: TPPGCustomControl; var ADate: TDateTime;
+  const Options: TPPGCalendarPopupOptions): Boolean; overload;
+function PPGShowCalendarPopup(Anchor: TPPGCustomControl; var ADate: TDateTime;
+  ShowWeekNumbers: Boolean = False): Boolean; overload;
+/// Das offene Popup von PPGShowCalendarPopup (nil = keins); Tests, Diagnose.
+function PPGActiveCalendarPopup: TPPGCalendarPopup;
+/// Offenes Popup von PPGShowCalendarPopup ohne Uebernahme schliessen.
+procedure PPGCloseCalendarPopup;
+
 implementation
 
 uses
   PPG.Lang,
-  System.Math, System.DateUtils, Winapi.oleacc,
-  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.TimePicker;
+  System.Math, System.DateUtils, Winapi.oleacc, Vcl.Forms,
+  PPG.Consts, PPG.Appearance, PPG.DpiUtils, PPG.Tokens, PPG.IconFont, PPG.TimePicker,
+  PPG.AppHooks, PPG.Popup.Placement;
 
 type
   TCalendarAccess = class(TPPGCalendar);
+  TAnchorAccess = class(TPPGCustomControl);
 
 function MouseLParam(X, Y: Integer): LPARAM;
 begin
@@ -360,15 +420,17 @@ procedure TPPGCalendarPopup.CalendarChange(Sender: TObject);
 begin
   FPicked := True;
   // Direkt am Kalender gewaehlt (nicht ueber das Feld, z.B. per Automation):
-  // wie ein Klick uebernehmen und schliessen
-  if (FForwarding = 0) and (Source is TPPGCustomDatePicker) and
-    TPPGCustomDatePicker(Source).DroppedDown then
-    TPPGCustomDatePicker(Source).CloseUp(True);
+  // der Besitzer uebernimmt wie bei einem Klick und schliesst
+  if (FForwarding = 0) and Assigned(FOnDirectPick) then
+    FOnDirectPick(Self);
 end;
 
 function TPPGCalendarPopup.PreferredSize(FieldWidth: Integer): TSize;
 begin
   Result.cx := PPGScale(300, ScalePPI);
+  // Kalenderwochen: eine achte Spalte, die Tage behalten ihre Breite
+  if FCalendar.ShowWeekNumbers then
+    Result.cx := Result.cx * 8 div 7;
   Result.cy := PPGScale(330, ScalePPI);
 end;
 
@@ -495,17 +557,15 @@ end;
 procedure TPPGCalendarPopup.SyncFrom(Source: TPPGCustomControl);
 begin
   inherited SyncFrom(Source);
+  if Source = nil then
+    Exit;
   FCalendar.Preset := Preset;
   FCalendar.StyleManager := StyleManager;
   FCalendar.Appearance := Appearance;
   FCalendar.Font := Font;
   FCalendar.BiDiMode := Source.BiDiMode;
-  // Stile und eigenes Zeichnen der Tage vom Datumsfeld
-  if Source is TPPGCustomDatePicker then
-  begin
-    FCalendar.Styles := TPPGCustomDatePicker(Source).FCalendarStyles;
-    FCalendar.OnCustomDrawDay := TPPGCustomDatePicker(Source).FOnCustomDrawDay;
-  end;
+  // Stile und eigenes Zeichnen der Tage setzt der Besitzer (DatePicker:
+  // PreparePopup, PPGShowCalendarPopup: Options)
 end;
 
 procedure TPPGCustomDatePicker.SetCalendarStyles(const Value: TPPGCalendarStyles);
@@ -1197,8 +1257,19 @@ end;
 { ---- Popup (Aufklapp-Basis) ---- }
 
 function TPPGCustomDatePicker.CreatePopup: TPPGDropPopup;
+var
+  P: TPPGCalendarPopup;
 begin
-  Result := TPPGCalendarPopup.Create(Self);
+  P := TPPGCalendarPopup.Create(Self);
+  P.OnDirectPick := PopupDirectPick;
+  Result := P;
+end;
+
+procedure TPPGCustomDatePicker.PopupDirectPick(Sender: TObject);
+begin
+  // Direkt am Kalender gewaehlt (z.B. per Automation): uebernehmen und schliessen
+  if DroppedDown then
+    CloseUp(True);
 end;
 
 function TPPGCustomDatePicker.CanDropDown: Boolean;
@@ -1212,6 +1283,9 @@ var
   D: TDate;
 begin
   P := TPPGCalendarPopup(APopup);
+  // Stile und eigenes Zeichnen der Tage vom Datumsfeld
+  P.Calendar.Styles := FCalendarStyles;
+  P.Calendar.OnCustomDrawDay := FOnCustomDrawDay;
   P.Calendar.MinDate := FMinDate;
   P.Calendar.MaxDate := FMaxDate;
   P.Calendar.View := cvMonth;
@@ -1337,6 +1411,500 @@ begin
     Result := FormatDateTime(FormatSettings.LongDateFormat, FDateTime)
   else
     Result := '';
+end;
+
+{ ---- Kalender-Popup ohne DatePicker (PPGShowCalendarPopup) ---- }
+
+type
+  /// Eine Sitzung von PPGShowCalendarPopup: Popup, Haken und Schleife.
+  /// Lebt nur waehrend des Aufrufs; FreeNotification auf Anker und Formular.
+  TCalendarPopupRun = class(TComponent)
+  private
+    FAnchor: TPPGCustomControl;
+    FAnchorWnd: HWND;
+    FForm: TCustomForm;
+    FFormWnd: HWND;
+    FPopup: TPPGCalendarPopup;
+    FAlign: TAlignment;
+    FActive: Boolean;
+    FAccepted: Boolean;
+    FResult: TDate;
+    FHooked: Boolean;
+    FFocusWnd: HWND;
+    FMouseIn: Boolean;
+    FCloseOnKeyUp: Boolean;
+    FDeferredRelease: TArray<HWND>;
+    procedure Hook(var Msg: TMsg; var Handled: Boolean);
+    procedure AppDeactivate(Sender: TObject);
+    procedure PopupDirectPick(Sender: TObject);
+    procedure PopupFollow(Sender: TObject);
+    procedure PopupSourceHidden(Sender: TObject);
+    procedure HandleKey(Key: Word; Shift: TShiftState);
+    procedure HandleMouse(var Msg: TMsg; var Handled: Boolean);
+    function IsPopupWnd(Wnd: HWND): Boolean;
+    procedure Act(Action: TPPGDropAction);
+    procedure AcceptFocusDay;
+    procedure Place(Duration: Cardinal);
+    procedure StartHooks;
+    procedure StopHooks;
+    procedure PostDeferredReleases;
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    destructor Destroy; override;
+    function Execute(Anchor: TPPGCustomControl; StartDate: TDate;
+      const Options: TPPGCalendarPopupOptions): Boolean;
+    procedure Finish(Accept: Boolean);
+    property PickedDate: TDate read FResult;
+  end;
+
+var
+  GActiveCalendarRun: TCalendarPopupRun = nil;
+
+function PPGCalendarPopupOptions(ShowWeekNumbers: Boolean; MinDate: TDate;
+  MaxDate: TDate): TPPGCalendarPopupOptions;
+begin
+  Result.ShowWeekNumbers := ShowWeekNumbers;
+  Result.MinDate := MinDate;
+  Result.MaxDate := MaxDate;
+  Result.Alignment := taLeftJustify;
+  Result.Styles := nil;
+  Result.OnCustomDrawDay := nil;
+end;
+
+function PPGShowCalendarPopup(Anchor: TPPGCustomControl; var ADate: TDateTime;
+  const Options: TPPGCalendarPopupOptions): Boolean;
+var
+  Run: TCalendarPopupRun;
+begin
+  Result := False;
+  if (Anchor = nil) or (csDesigning in Anchor.ComponentState) or
+    (csDestroying in Anchor.ComponentState) or not Anchor.HandleAllocated or
+    not IsWindowVisible(Anchor.Handle) then
+    Exit;
+  // Nur ein Popup gleichzeitig: das offene bricht ab (sein Aufruf kehrt
+  // zurueck, sobald dieser endet)
+  if GActiveCalendarRun <> nil then
+    GActiveCalendarRun.Finish(False);
+  Run := TCalendarPopupRun.Create(nil);
+  try
+    if Run.Execute(Anchor, Trunc(ADate), Options) then
+    begin
+      ADate := Run.PickedDate + Frac(ADate);
+      Result := True;
+    end;
+  finally
+    Run.Free;
+  end;
+end;
+
+function PPGShowCalendarPopup(Anchor: TPPGCustomControl; var ADate: TDateTime;
+  ShowWeekNumbers: Boolean): Boolean;
+begin
+  Result := PPGShowCalendarPopup(Anchor, ADate, PPGCalendarPopupOptions(ShowWeekNumbers));
+end;
+
+function PPGActiveCalendarPopup: TPPGCalendarPopup;
+begin
+  if (GActiveCalendarRun <> nil) and GActiveCalendarRun.FActive then
+    Result := GActiveCalendarRun.FPopup
+  else
+    Result := nil;
+end;
+
+procedure PPGCloseCalendarPopup;
+begin
+  if GActiveCalendarRun <> nil then
+    GActiveCalendarRun.Finish(False);
+end;
+
+{ TCalendarPopupRun }
+
+destructor TCalendarPopupRun.Destroy;
+begin
+  StopHooks;
+  if GActiveCalendarRun = Self then
+    GActiveCalendarRun := nil;
+  FreeAndNil(FPopup);
+  if FAnchor <> nil then
+    FAnchor.RemoveFreeNotification(Self);
+  if (FForm <> nil) and (TComponent(FForm) <> TComponent(FAnchor)) then
+    FForm.RemoveFreeNotification(Self);
+  FAnchor := nil;
+  FForm := nil;
+  inherited Destroy;
+end;
+
+procedure TCalendarPopupRun.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if Operation <> opRemove then
+    Exit;
+  if AComponent = FAnchor then
+  begin
+    // Anker freigegeben: das Popup zeigt noch auf ihn (Besitzer, Optik)
+    FAnchor := nil;
+    FAnchorWnd := 0;
+    if FPopup <> nil then
+      FPopup.SyncFrom(nil);
+    Finish(False);
+  end;
+  if AComponent = FForm then
+  begin
+    FForm := nil;
+    FFormWnd := 0;
+    Finish(False);
+  end;
+end;
+
+function TCalendarPopupRun.Execute(Anchor: TPPGCustomControl; StartDate: TDate;
+  const Options: TPPGCalendarPopupOptions): Boolean;
+var
+  Cal: TPPGCalendar;
+  D: TDate;
+  Duration: Cardinal;
+begin
+  FAnchor := Anchor;
+  FAnchor.FreeNotification(Self);
+  FAnchorWnd := Anchor.Handle;
+  FForm := GetParentForm(Anchor);
+  if FForm <> nil then
+  begin
+    FForm.FreeNotification(Self);
+    if FForm.HandleAllocated then
+      FFormWnd := FForm.Handle;
+  end;
+  FAlign := Options.Alignment;
+  FPopup := TPPGCalendarPopup.Create(nil);
+  FPopup.OnDirectPick := PopupDirectPick;
+  FPopup.OnFollow := PopupFollow;
+  FPopup.OnSourceHidden := PopupSourceHidden;
+  FPopup.SyncFrom(Anchor);
+  Cal := FPopup.Calendar;
+  if Options.Styles <> nil then
+    Cal.Styles := Options.Styles;
+  Cal.OnCustomDrawDay := Options.OnCustomDrawDay;
+  Cal.ShowWeekNumbers := Options.ShowWeekNumbers;
+  Cal.MinDate := Options.MinDate;
+  Cal.MaxDate := Options.MaxDate;
+  Cal.View := cvMonth;
+  // Startdatum: ADate (0 = heute), in den Bereich geholt
+  D := StartDate;
+  if D = 0 then
+    D := System.SysUtils.Date;
+  if (Options.MinDate <> 0) and (D < Trunc(Options.MinDate)) then
+    D := Trunc(Options.MinDate);
+  if (Options.MaxDate <> 0) and (D > Trunc(Options.MaxDate)) then
+    D := Trunc(Options.MaxDate);
+  Cal.Date := D;
+  Cal.FocusDate := D;
+  Cal.Animation.Enabled := TAnchorAccess(Anchor).Animation.Enabled;
+  FPopup.StartPick;
+  if TAnchorAccess(Anchor).Animation.EffectiveEnabled then
+    Duration := TAnchorAccess(Anchor).Animation.Duration
+  else
+    Duration := 0;
+  // Hinweise aus, eine gefangene Maus frei (Mausnachrichten gehen dann an
+  // das Fenster unter dem Zeiger und laufen ueber den Haken)
+  Application.CancelHint;
+  if GetCapture <> 0 then
+    ReleaseCapture;
+  FActive := True;
+  FAccepted := False;
+  GActiveCalendarRun := Self;
+  try
+    Place(Duration);
+    FPopup.ShowCalendar;
+    FFocusWnd := GetFocus;
+    StartHooks;
+    while FActive and not Application.Terminated do
+    begin
+      Application.HandleMessage;
+      // Fokus woanders hin (Code, anderes Fenster): abbrechen
+      if FActive and (GetFocus <> FFocusWnd) then
+        Finish(False);
+    end;
+  finally
+    StopHooks;
+    Finish(False);
+    if GActiveCalendarRun = Self then
+      GActiveCalendarRun := nil;
+    PostDeferredReleases;
+  end;
+  Result := FAccepted and (FResult <> 0);
+end;
+
+procedure TCalendarPopupRun.Place(Duration: Cardinal);
+var
+  P: TPoint;
+  A, WA: TRect;
+  Sz: TSize;
+  Pl: TPPGPlacement;
+  AlignEnd: Boolean;
+begin
+  // Wie TPPGCustomDropDownField.PlacePopup: unter dem Anker, sonst darueber
+  if (FAnchor = nil) or not FAnchor.HandleAllocated or (FPopup = nil) then
+    Exit;
+  P := FAnchor.ClientToScreen(Point(0, 0));
+  A := Rect(P.X, P.Y, P.X + FAnchor.Width, P.Y + FAnchor.Height);
+  WA := FPopup.MonitorWorkArea(A);
+  Sz := FPopup.PreferredSize(FAnchor.Width);
+  AlignEnd := FAnchor.UseRightToLeftAlignment;
+  case FAlign of
+    taRightJustify:
+      AlignEnd := not AlignEnd;
+    taCenter:
+      begin
+        A.Left := (A.Left + A.Right - Sz.cx) div 2;
+        A.Right := A.Left + Sz.cx;
+        AlignEnd := False;
+      end;
+  end;
+  Pl := PPGPlacePopup(A, Sz.cx, Sz.cy, ppsBelow, WA, AlignEnd, True);
+  FPopup.PopupAt(Pl.Bounds, Pl.Side, Duration);
+end;
+
+procedure TCalendarPopupRun.Finish(Accept: Boolean);
+begin
+  if not FActive then
+    Exit;
+  FActive := False;
+  FAccepted := Accept;
+  if FPopup <> nil then
+  begin
+    FPopup.HideCalendar;
+    FPopup.ClosePopup;
+  end;
+end;
+
+procedure TCalendarPopupRun.Act(Action: TPPGDropAction);
+begin
+  case Action of
+    pdaAccept:
+      if FPopup <> nil then
+      begin
+        FResult := Trunc(FPopup.Calendar.Date);
+        Finish(FResult <> 0);
+      end;
+    pdaCancel:
+      Finish(False);
+  end;
+end;
+
+procedure TCalendarPopupRun.AcceptFocusDay;
+var
+  Cal: TPPGCalendar;
+begin
+  // F4/Alt+Pfeil wie beim DatePicker: gewaehlt bzw. bewegter Fokus-Tag
+  if FPopup = nil then
+    Exit;
+  Cal := FPopup.Calendar;
+  FResult := 0;
+  if FPopup.Picked then
+    FResult := Trunc(Cal.Date)
+  else if (Cal.View = cvMonth) and (Trunc(Cal.FocusDate) <> FPopup.StartFocus) and
+    not Cal.IsDateDisabled(Cal.FocusDate) then
+    FResult := Trunc(Cal.FocusDate);
+  Finish(FResult <> 0);
+end;
+
+procedure TCalendarPopupRun.PopupDirectPick(Sender: TObject);
+begin
+  if FActive and (FPopup <> nil) then
+  begin
+    FResult := Trunc(FPopup.Calendar.Date);
+    Finish(FResult <> 0);
+  end;
+end;
+
+procedure TCalendarPopupRun.PopupFollow(Sender: TObject);
+begin
+  // Formular bzw. Anker verschoben: neu platzieren
+  if FActive then
+    Place(0);
+end;
+
+procedure TCalendarPopupRun.PopupSourceHidden(Sender: TObject);
+begin
+  Finish(False);
+end;
+
+procedure TCalendarPopupRun.AppDeactivate(Sender: TObject);
+begin
+  Finish(False);
+end;
+
+procedure TCalendarPopupRun.StartHooks;
+begin
+  if FHooked then
+    Exit;
+  PPGAddMessageHook(Hook);
+  PPGAddDeactivateHook(AppDeactivate);
+  FHooked := True;
+end;
+
+procedure TCalendarPopupRun.StopHooks;
+begin
+  if not FHooked then
+    Exit;
+  PPGRemoveMessageHook(Hook);
+  PPGRemoveDeactivateHook(AppDeactivate);
+  FHooked := False;
+end;
+
+procedure TCalendarPopupRun.PostDeferredReleases;
+var
+  L: TArray<HWND>;
+  I: Integer;
+begin
+  L := FDeferredRelease;
+  FDeferredRelease := nil;
+  for I := 0 to High(L) do
+    if IsWindow(L[I]) then
+      PostMessage(L[I], CM_RELEASE, 0, 0);
+end;
+
+function TCalendarPopupRun.IsPopupWnd(Wnd: HWND): Boolean;
+begin
+  Result := (FPopup <> nil) and FPopup.HandleAllocated and (Wnd <> 0) and
+    ((Wnd = FPopup.Handle) or IsChild(FPopup.Handle, Wnd));
+end;
+
+procedure TCalendarPopupRun.HandleKey(Key: Word; Shift: TShiftState);
+var
+  K: Word;
+begin
+  case Key of
+    VK_ESCAPE, VK_TAB:
+      Finish(False);
+    VK_MENU, VK_F10:
+      // Erst beim Loslassen: sonst startet DefWindowProc die System-Menueschleife
+      FCloseOnKeyUp := True;
+    VK_F4:
+      if Shift = [] then
+        AcceptFocusDay
+      else
+        Finish(False);
+    VK_UP, VK_DOWN:
+      if ssAlt in Shift then
+        AcceptFocusDay
+      else
+      begin
+        K := Key;
+        Act(FPopup.DropKeyDown(K, Shift));
+      end;
+  else
+    // Pfeile, Bild, Pos1/Ende, Enter an den Kalender; alle anderen Tasten verbraucht
+    if FPopup <> nil then
+    begin
+      K := Key;
+      Act(FPopup.DropKeyDown(K, Shift));
+    end;
+  end;
+end;
+
+procedure TCalendarPopupRun.HandleMouse(var Msg: TMsg; var Handled: Boolean);
+var
+  Pt, PP: TPoint;
+  R: TRect;
+  InPopup, OwnWnd: Boolean;
+begin
+  // Bildschirmpunkt: Client-Nachrichten in Koordinaten des Zielfensters,
+  // Rahmen-Nachrichten und das Rad schon in Bildschirmkoordinaten
+  Pt := Point(SmallInt(LoWord(Cardinal(Msg.lParam))), SmallInt(HiWord(Cardinal(Msg.lParam))));
+  if (Msg.message >= WM_MOUSEFIRST) and (Msg.message <= WM_MOUSELAST) and
+    (Msg.message <> WM_MOUSEWHEEL) and (Msg.message <> WM_MOUSEHWHEEL) then
+    Winapi.Windows.ClientToScreen(Msg.hwnd, Pt);
+  InPopup := FPopup.HandleAllocated and GetWindowRect(FPopup.Handle, R) and PtInRect(R, Pt);
+  PP := FPopup.ScreenToClient(Pt);
+  OwnWnd := IsPopupWnd(Msg.hwnd);
+  // Das Popup und der Kalender sehen nie rohe Mausnachrichten (sie wuerden
+  // sonst den Fokus nehmen); alles geht ueber die Drop*-Methoden
+  Handled := OwnWnd;
+  case Msg.message of
+    WM_MOUSEMOVE:
+      if InPopup then
+      begin
+        FMouseIn := True;
+        FPopup.DropMouseMove(PP.X, PP.Y, KeysToShiftState(Word(Msg.wParam)));
+      end
+      else if FMouseIn then
+      begin
+        FMouseIn := False;
+        FPopup.DropMouseLeave;
+      end;
+    WM_LBUTTONDOWN, WM_LBUTTONDBLCLK:
+      begin
+        Handled := True;
+        if InPopup then
+          Act(FPopup.DropMouseDown(PP.X, PP.Y))
+        else
+          Finish(False); // Klick daneben: schliessen und verbrauchen
+      end;
+    WM_LBUTTONUP:
+      begin
+        // Ausserhalb losgelassen nur verbrauchen, wenn im Popup gedrueckt wurde
+        if InPopup then
+          Handled := True;
+        Act(FPopup.DropMouseUp(PP.X, PP.Y));
+      end;
+    WM_RBUTTONDOWN, WM_RBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONDBLCLK,
+    WM_XBUTTONDOWN, WM_XBUTTONDBLCLK,
+    WM_NCLBUTTONDOWN, WM_NCLBUTTONDBLCLK, WM_NCRBUTTONDOWN, WM_NCRBUTTONDBLCLK,
+    WM_NCMBUTTONDOWN, WM_NCMBUTTONDBLCLK, WM_NCXBUTTONDOWN, WM_NCXBUTTONDBLCLK:
+      begin
+        Handled := True;
+        if not InPopup then
+          Finish(False);
+      end;
+    WM_MOUSEWHEEL:
+      begin
+        // Geht an das Fenster mit Fokus: ueber dem Popup blaettern, sonst verbrauchen
+        Handled := True;
+        if InPopup then
+          FPopup.DropWheel(SmallInt(HiWord(Cardinal(Msg.wParam))));
+      end;
+    WM_MOUSEHWHEEL:
+      Handled := True;
+  end;
+end;
+
+procedure TCalendarPopupRun.Hook(var Msg: TMsg; var Handled: Boolean);
+begin
+  if not FActive or (FPopup = nil) then
+    Exit;
+  case Msg.message of
+    WM_KEYDOWN, WM_SYSKEYDOWN:
+      begin
+        Handled := True;
+        HandleKey(Word(Msg.wParam), KeyDataToShiftState(Msg.lParam));
+      end;
+    WM_KEYUP, WM_SYSKEYUP:
+      begin
+        Handled := True;
+        if FCloseOnKeyUp and ((Msg.wParam = VK_MENU) or (Msg.wParam = VK_F10)) then
+        begin
+          FCloseOnKeyUp := False;
+          Finish(False);
+        end;
+      end;
+    WM_CHAR, WM_SYSCHAR, WM_DEADCHAR, WM_SYSDEADCHAR:
+      Handled := True; // nichts in das Feld tippen, solange das Popup offen ist
+    WM_MOUSEFIRST..WM_MOUSELAST, WM_NCMOUSEMOVE..WM_NCXBUTTONDBLCLK:
+      HandleMouse(Msg, Handled);
+    CM_RELEASE:
+      // Formular des Ankers gibt sich frei (Close mit caFree, Release): der
+      // Aufrufer (z.B. ein Klick-Ereignis) liefe danach in freigegebenen
+      // Objekten weiter. Erst schliessen, nach der Rueckkehr neu posten.
+      if (Msg.hwnd <> 0) and (((FFormWnd <> 0) and (Msg.hwnd = FFormWnd)) or
+        ((FAnchorWnd <> 0) and IsChild(Msg.hwnd, FAnchorWnd))) then
+      begin
+        SetLength(FDeferredRelease, Length(FDeferredRelease) + 1);
+        FDeferredRelease[High(FDeferredRelease)] := Msg.hwnd;
+        Handled := True;
+        Finish(False);
+      end;
+  end;
 end;
 
 end.

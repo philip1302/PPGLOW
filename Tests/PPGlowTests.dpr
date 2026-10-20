@@ -253,7 +253,8 @@ uses
   PPG.Tests.ToolBarDropdown in 'PPG.Tests.ToolBarDropdown.pas',
   PPG.Tests.NavigatorExtras in 'PPG.Tests.NavigatorExtras.pas',
   PPG.Tests.ImageStored in 'PPG.Tests.ImageStored.pas',
-  PPG.Tests.PopupMenuBasics in 'PPG.Tests.PopupMenuBasics.pas';
+  PPG.Tests.PopupMenuBasics in 'PPG.Tests.PopupMenuBasics.pas',
+  PPG.Tests.CalendarPopup in 'PPG.Tests.CalendarPopup.pas';
 
 /// Belegter Speicher (Bytes) laut Speichermanager.
 function AllocatedBytes: Int64;
