@@ -72,6 +72,8 @@ type
     FTitleAlignment: TPPGGridTitleAlignment;
     FVisibleForCustomization: Boolean;
     FGroupDateMode: TPPGGridGroupDateMode;
+    FWordWrap: Boolean;
+    procedure SetWordWrap(const Value: Boolean);
     procedure SetGroupDateMode(const Value: TPPGGridGroupDateMode);
     procedure SetMinValue(const Value: Integer);
     procedure SetMaxValue(const Value: Integer);
@@ -145,6 +147,11 @@ type
     /// Gruppen und Sortierung folgen dem Datum, nicht dem Text.
     property GroupDateMode: TPPGGridGroupDateMode read FGroupDateMode
       write SetGroupDateMode default gdmValue;
+    /// Text der Datenzellen umbrechen (mehrzeilig; der Textblock steht
+    /// senkrecht mittig, solange er in die Zeile passt, sonst oben). Mit
+    /// Grid.AutoRowHeights wird die Zeile so hoch wie noetig; sonst zeigt die
+    /// Zelle, was in die Hoehe passt.
+    property WordWrap: Boolean read FWordWrap write SetWordWrap default False;
   end;
 
   TPPGGridColumns = class(TOwnedCollection)
@@ -318,6 +325,7 @@ begin
     FTitleAlignment := S.FTitleAlignment;
     FVisibleForCustomization := S.FVisibleForCustomization;
     FGroupDateMode := S.FGroupDateMode;
+    FWordWrap := S.FWordWrap;
     Changed(True);
   end
   else
@@ -427,6 +435,15 @@ begin
   if FAlignment <> Value then
   begin
     FAlignment := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TPPGGridColumn.SetWordWrap(const Value: Boolean);
+begin
+  if FWordWrap <> Value then
+  begin
+    FWordWrap := Value;
     Changed(False);
   end;
 end;

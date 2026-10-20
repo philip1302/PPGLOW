@@ -334,16 +334,29 @@ type
     procedure SortList;
     procedure EnsureOrder;
   protected
-    procedure BeginUpdate;
-    procedure EndUpdate;
-    /// Lesezeichen aufnehmen bzw. entfernen (True = Liste geaendert).
-    function AddBookmark(const Item: TBookmark): Boolean;
-    function RemoveBookmark(const Item: TBookmark): Boolean;
     /// Lesezeichen des aktiven Datensatzes (leer = keiner, z.B. neuer Satz).
     function CurrentBookmark: TBookmark;
   public
     constructor Create(AGrid: TPPGCustomDBGrid);
     destructor Destroy; override;
+    /// Aenderungen sammeln: OnSelectionChanged kommt einmal beim letzten
+    /// EndUpdate (nur wenn sich die Auswahl geaendert hat). Paarweise mit
+    /// try/finally aufrufen.
+    procedure BeginUpdate;
+    procedure EndUpdate;
+    /// Lesezeichen aufnehmen bzw. entfernen, ohne die Datenmenge zu bewegen
+    /// (wie CurrentRowSelected, aber fuer einen beliebigen Satz). True = Liste
+    /// geaendert. Nur mit dgMultiSelect; OnCanSelectRecord gilt (dann steht
+    /// die Datenmenge kurz auf dem Satz).
+    function AddBookmark(const Item: TBookmark): Boolean;
+    function RemoveBookmark(const Item: TBookmark): Boolean;
+    /// Viele Lesezeichen auf einmal aufnehmen (z. B. aus einem eigenen
+    /// Durchlauf der Datenmenge): einmal sortieren statt je Eintrag,
+    /// OnSelectionChanged einmal am Ende, OnCanSelectRecord bzw.
+    /// Schluesselfelder mit nur einem Wechsel-Block (DisableControls).
+    /// Leere und doppelte Eintraege werden uebergangen. Ergebnis: Anzahl
+    /// neu aufgenommener Saetze.
+    function AddBookmarks(const Items: array of TBookmark): Integer;
     /// Auswahl aufheben.
     procedure Clear;
     /// Alle Datensaetze der Datenmenge waehlen (einmal durchlaufen).
@@ -640,6 +653,12 @@ type
     FPendRow: Integer;  // Satz, auf den die Datenmenge noch folgt (-1 = keiner)
     FDeferNav: Integer; // > 0: Fokuswechsel einer Tastenwiederholung
     FKeyRepeat: Boolean; // laufende WM_KEYDOWN ist eine Wiederholung
+    FAutoFitBusy: Integer; // > 0: Puffer wird an die Zeilenhoehen angepasst
+    /// AutoRowHeights ungruppiert: Puffer messen und so viele Saetze laden,
+    /// wie ganz in die Ansicht passen.
+    procedure AutoFitBuffer;
+    function GetActiveRowInView: Integer;
+    procedure SetActiveRowInView(const Value: Integer);
     procedure FilterRecordHook(DataSet: TDataSet; var Accept: Boolean);
     procedure FilterHook(DS: TDataSet);
     procedure FilterUnhook;
@@ -965,6 +984,12 @@ type
     procedure DoGetCellStyle(ACol, ARow: Integer; Purpose: TPPGGridStylePurpose;
       var Style: TPPGGridCellStyle); override;
     function CellEditorClass(ACol, ARow: Integer; Kind: TPPGGridEditorKind): TPPGGridEditorClass; override;
+    { Zeilenhoehe nach Inhalt und Spaltenkopf }
+    /// Gruppiert misst die Basis beim Zeichnen; ungruppiert misst das Grid
+    /// seinen Puffer in DataChanged (AutoFitBuffer).
+    function AutoRowHeightsLazy: Boolean; override;
+    /// Index in Columns ohne Indikator (-1 fuer den Indikator).
+    function ColumnIndexOf(ACol: Integer): Integer; override;
     /// OnFocusedRecordChanged ausloesen.
     procedure DoFocusedRecordChanged; virtual;
     /// Anderer Datensatz im Fokus (Navigation, Klick, Suche, Code; auch der
@@ -1134,6 +1159,21 @@ type
     /// SortIndicatorFromIndex); True = Pfeil geaendert.
     function SyncSortIndicator: Boolean;
     function ColumnFilterValues(ACol: Integer; MaxCount: Integer = 1000): TArray<string>; override;
+    /// Wie HitTest der Basis; ColumnIndex ohne Indikator, DataIndex = Zeile
+    /// im Puffer (gruppiert: Satz der Ansicht). Leere Zeilen ohne Satz: ghaNone.
+    function HitTest(X, Y: Integer): TPPGGridHitInfo; override;
+    /// Zusaetzlich (ungruppiert) Puffer neu messen und anpassen.
+    procedure InvalidateRowHeights; override;
+    /// Lage des aktiven Satzes in der Ansicht: Datenzeilen zwischen der
+    /// obersten sichtbaren Datenzeile und der Zeile des aktiven Satzes (0 =
+    /// ganz oben; wie TDBGrid.Row - 1 mit Titeln). Setzen verschiebt nur die
+    /// Ansicht, der aktive Satz bleibt (ungruppiert: Puffer der Datenmenge,
+    /// nur ausserhalb einer Bearbeitung; gruppiert: TopRow). So laesst sich
+    /// die Ansicht nach einem eigenen Durchlauf (DisableControls, First/Next,
+    /// zurueck per Lesezeichen) wiederherstellen. -1 = kein aktiver Satz bzw.
+    /// er steht in einer zugeklappten Gruppe. Am Anfang bzw. Ende der
+    /// Datenmenge steht der Satz so nah wie moeglich am Wunsch.
+    property ActiveRowInView: Integer read GetActiveRowInView write SetActiveRowInView;
   end;
 
 type
@@ -1167,6 +1207,9 @@ type
     property FindExtendedSyntax;
     property FilterValueMenu;
     property FixedColsRight;
+    property FrozenCols;
+    property AutoRowHeights;
+    property MaxRowLines;
     property HeaderMenu;
     property ShowFooter;
     property ShowGroupPanel;
@@ -1230,6 +1273,7 @@ type
     property OnDragOver;
     property OnDrawCell;
     property OnDrawColumnCell;
+    property OnDrawColumnTitle;
     property OnEndDock;
     property OnEndDrag;
     property OnEnter;
@@ -1856,6 +1900,91 @@ begin
     FGrid.LearnBookmarkKey(Item);
     Changed;
   end;
+end;
+
+function TPPGBookmarkList.AddBookmarks(const Items: array of TBookmark): Integer;
+var
+  DS: TDataSet;
+  Cand, Merged: TList<TBookmark>;
+  I, Pos0, Old: Integer;
+  Cur: TBookmark;
+begin
+  Result := 0;
+  DS := DataSet;
+  if (DS = nil) or not FGrid.MultiSelectActive or (Length(Items) = 0) then
+    Exit;
+  FGrid.SyncActiveRecord;
+  Cand := TList<TBookmark>.Create;
+  try
+    // Kandidaten: nicht leer und noch nicht gewaehlt
+    for I := 0 to High(Items) do
+      if (Length(Items[I]) > 0) and (IndexOf(Items[I]) < 0) then
+        Cand.Add(Copy(Items[I]));
+    if Cand.Count = 0 then
+      Exit;
+    // Veto (OnCanSelectRecord) und Schluessel (KeyFieldNames): einmal auf
+    // jeden Satz, alles in einem Block ohne Anzeige, danach zurueck an
+    // dieselbe Pufferstelle
+    if ((FGrid.FNoVeto = 0) and Assigned(FGrid.FOnCanSelectRecord)) or FGrid.KeyMode then
+    begin
+      // Bookmark setzen wuerde eine offene Bearbeitung still buchen
+      if DS.State in dsEditModes then
+        DS.CheckBrowseMode;
+      Cur := nil;
+      if not DS.IsEmpty then
+        Cur := DS.Bookmark;
+      Pos0 := TDataSetAccess(DS).ActiveRecord;
+      PPGDBBeginRead;
+      DS.DisableControls;
+      try
+        try
+          for I := Cand.Count - 1 downto 0 do
+          begin
+            if not DS.BookmarkValid(Cand[I]) then
+            begin
+              Cand.Delete(I);
+              Continue;
+            end;
+            DS.Bookmark := Cand[I];
+            if not FGrid.AllowSelectCurrent then
+            begin
+              Cand.Delete(I);
+              Continue;
+            end;
+            FGrid.NoteBookmarkKey(Cand[I]);
+          end;
+        finally
+          if (Length(Cur) > 0) and DS.BookmarkValid(Cur) then
+            GotoBookmarkAt(DS, Cur, Pos0);
+        end;
+      finally
+        DS.EnableControls;
+        PPGDBEndRead;
+      end;
+    end;
+    if Cand.Count = 0 then
+      Exit;
+    // Einmal sortieren, doppelte (auch innerhalb von Items) zusammenfassen
+    Old := FList.Count;
+    FList.AddRange(Cand);
+    SortList;
+    Merged := TList<TBookmark>.Create;
+    try
+      for I := 0 to FList.Count - 1 do
+        if (Merged.Count = 0) or (DS.CompareBookmarks(Merged[Merged.Count - 1], FList[I]) <> 0) then
+          Merged.Add(FList[I]);
+      FList.Clear;
+      FList.AddRange(Merged);
+    finally
+      Merged.Free;
+    end;
+    FCheckOrder := False;
+    Result := FList.Count - Old;
+  finally
+    Cand.Free;
+  end;
+  if Result > 0 then
+    Changed;
 end;
 
 function TPPGBookmarkList.RemoveBookmark(const Item: TBookmark): Boolean;
@@ -3024,6 +3153,8 @@ begin
     GroupSync
   else
   begin
+    // Zeilenhoehe nach Inhalt: Puffer messen, so viele Saetze wie passen
+    AutoFitBuffer;
     // Mindestens eine (ggf. leere) Datenzeile: RowCount > FixedRows
     N := Length(FCache);
     if N < 1 then
@@ -3130,7 +3261,17 @@ begin
   if FGrpOn then
     GroupRecordChanged
   else
+  begin
     RebuildCache;
+    // Zeilenhoehe nach Inhalt: nur die Zeile des Satzes neu messen (der
+    // Puffer passt sich beim naechsten DataChanged an)
+    if FDataLink.Active and not CardMode and AutoRowHeightsActive then
+    begin
+      SetAutoRowHeight(FixedRows + FDataLink.ActiveRecord,
+        MeasureRowHeight(FixedRows + FDataLink.ActiveRecord));
+      InvalidateGeometry;
+    end;
+  end;
   // Formular: Felder, die der Anwender nicht geaendert hat, folgen dem Satz
   if FFormOpen and (FFormBusy = 0) then
     FormLoadValues(True);
@@ -3731,6 +3872,159 @@ begin
   begin
     UpdateBufferCount;
     DataChanged;
+  end;
+end;
+
+{ ---- Zeilenhoehe nach Inhalt, Lage in der Ansicht, Treffer ---- }
+
+function TPPGCustomDBGrid.AutoRowHeightsLazy: Boolean;
+begin
+  Result := FGrpOn;
+end;
+
+function TPPGCustomDBGrid.ColumnIndexOf(ACol: Integer): Integer;
+begin
+  Result := ACol - FixedCols;
+  if Result < 0 then
+    Result := -1;
+end;
+
+procedure TPPGCustomDBGrid.InvalidateRowHeights;
+begin
+  inherited InvalidateRowHeights;
+  if not (csLoading in ComponentState) and (FDataLink <> nil) and FDataLink.Active and
+    not FGrpOn and not FLayoutBusy then
+  begin
+    UpdateBufferCount;
+    DataChanged;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.AutoFitBuffer;
+var
+  Pass, N, K, R, Avail, Sum, DefH, Want: Integer;
+  V: TRect;
+  Heights: array of Integer;
+begin
+  // Ungruppiert ist jede Pufferzeile ein anderer Satz: immer neu messen
+  ClearAutoRowHeights;
+  if (FAutoFitBusy > 0) or FGrpOn or CardMode or not FDataLink.Active or
+    not AutoRowHeightsActive then
+    Exit;
+  Inc(FAutoFitBusy);
+  try
+    DefH := DataRowHeight;
+    for Pass := 1 to 8 do
+    begin
+      N := Length(FCache);
+      V := GridViewRect;
+      Avail := (V.Bottom - V.Top) - FixedHeight - FFormGap;
+      SetLength(Heights, N);
+      for R := 0 to N - 1 do
+      begin
+        Heights[R] := MeasureRowHeight(FixedRows + R);
+        SetAutoRowHeight(FixedRows + R, Heights[R]);
+      end;
+      // Ganz sichtbare Zeilen von oben (wie VisibleDataRows)
+      Sum := 0;
+      K := 0;
+      while (K < N) and (Sum + Heights[K] <= Avail) do
+      begin
+        Inc(Sum, Heights[K]);
+        Inc(K);
+      end;
+      if K < 1 then
+        K := 1;
+      if K < N then
+        Want := K // zu hoch: weniger Saetze (der aktive bleibt im Puffer)
+      else if (Pass = 1) and (N >= FDataLink.BufferCount) and (Avail - Sum >= DefH) then
+        Want := N + (Avail - Sum) div DefH // Platz fuer weitere Saetze
+      else
+        Break;
+      if Want = FDataLink.BufferCount then
+        Break;
+      FDataLink.BufferCount := Want;
+      RebuildCache;
+      ClearAutoRowHeights;
+    end;
+  finally
+    Dec(FAutoFitBusy);
+  end;
+end;
+
+function TPPGCustomDBGrid.GetActiveRowInView: Integer;
+var
+  V: Integer;
+begin
+  Result := -1;
+  if not FDataLink.Active or CardMode or FDataLink.DataSet.IsEmpty then
+    Exit;
+  if FGrpOn then
+  begin
+    V := ActiveDataRow;
+    if V >= 0 then
+      V := VisualRow(V);
+    if V >= 0 then
+      Result := V - TopRow;
+  end
+  else
+    Result := FDataLink.ActiveRecord;
+end;
+
+procedure TPPGCustomDBGrid.SetActiveRowInView(const Value: Integer);
+var
+  DS: TDataSet;
+  V, Want, Cur, First: Integer;
+begin
+  if not FDataLink.Active or CardMode then
+    Exit;
+  DS := FDataLink.DataSet;
+  if DS.IsEmpty then
+    Exit;
+  if FGrpOn then
+  begin
+    // Gruppiert scrollt die Ansicht: Zeile des Satzes so weit unter TopRow
+    V := ActiveDataRow;
+    if V >= 0 then
+      V := VisualRow(V);
+    if V >= 0 then
+      TopRow := V - Value;
+    Exit;
+  end;
+  // MoveBy wuerde eine Bearbeitung buchen
+  if DS.State <> dsBrowse then
+    Exit;
+  Want := Value;
+  if Want > FDataLink.BufferCount - 1 then
+    Want := FDataLink.BufferCount - 1;
+  if Want < 0 then
+    Want := 0;
+  Cur := FDataLink.ActiveRecord;
+  if Want = Cur then
+    Exit;
+  // Puffer verschieben, der Satz bleibt (wie in der Kartenansicht): Index im
+  // Puffer der Datenmenge = erste Zeile des Grids + gewuenschte Zeile
+  First := TDataSetAccess(DS).ActiveRecord - Cur;
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    MoveToBufferIndex(DS, First + Want);
+  finally
+    DS.EnableControls; // loest DataChanged aus (neue Lage)
+    PPGDBEndRead;
+  end;
+end;
+
+function TPPGCustomDBGrid.HitTest(X, Y: Integer): TPPGGridHitInfo;
+begin
+  Result := inherited HitTest(X, Y);
+  // Leere Zeile ohne Satz (leere Datenmenge) bzw. Platz hinter dem Puffer
+  if (Result.Area in [ghaData, ghaFixedCol]) and
+    (not FDataLink.Active or (Result.DataIndex >= LoadedRowCount)) then
+  begin
+    Result.Area := ghaNone;
+    Result.DataRow := -1;
+    Result.DataIndex := -1;
   end;
 end;
 
@@ -7885,6 +8179,8 @@ var
   K: string;
 begin
   DS := FDataLink.DataSet;
+  // Neuer Inhalt: Hoehe beim naechsten Zeichnen neu messen
+  SetAutoRowHeight(FixedRows + R, 0);
   if IsInsert then
   begin
     FRowBms[R] := nil; // neuer Satz hat kein Lesezeichen (und keinen Schluessel)
@@ -7945,6 +8241,8 @@ begin
   FGrpKeyIndex.Clear;
   // Die Zeilen von vorher gibt es nicht mehr
   CancelPendingSync;
+  // Gemessene Zeilenhoehen gehoeren zu den alten Zeilen
+  ClearAutoRowHeights;
   // Mit Schluesselfeldern: je Satz die Schluesselwerte, keine Lesezeichen
   FGrpKeyed := KeyMode;
   // Alle Felder nur, wenn RowValue sie fuer andere Saetze braucht

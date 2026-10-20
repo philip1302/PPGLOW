@@ -44,7 +44,7 @@ unit PPG.Grid;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.Classes, System.Types,
+  Winapi.Windows, Winapi.Messages, System.Classes, System.Types, System.Generics.Collections,
   Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.StdCtrls, Vcl.Forms, Vcl.Menus,
   PPG.Types, PPG.RowLayout, PPG.Render.Intf, PPG.Accessibility, PPG.UIA,
   PPG.Controls.Base, PPG.Controls.Scroll,
@@ -118,6 +118,35 @@ type
   /// aendern, ergaenzen, leeren).
   TPPGGridFilterValuesEvent = procedure(Sender: TObject; ACol: Integer;
     Values: TStrings) of object;
+  /// Spaltenkopf selbst zeichnen (OnDrawColumnTitle). ACanvas ist vorbereitet:
+  /// Schrift und Textfarbe des Kopfs, Brush.Color = Kopfflaeche (bsSolid).
+  /// Rect = Kopfzelle in Client-Koordinaten (Flaeche schon gezeichnet).
+  /// ACol = Index in Columns (DB-Grid ohne Indikator, wie DataCol bei
+  /// OnDrawColumnCell), Column = die Spalte (nil ohne Columns). DefaultDraw
+  /// := False laesst den Titeltext weg; Linien und Sortierpfeil zeichnet das
+  /// Grid weiter.
+  TPPGDrawColumnTitleEvent = procedure(Sender: TObject; ACanvas: TCanvas; const Rect: TRect;
+    ACol: Integer; Column: TPPGGridColumn; State: TGridDrawState;
+    var DefaultDraw: Boolean) of object;
+
+  /// Bereich unter einem Punkt (HitTest): Kopfzeile, feste Spalte links
+  /// (DB-Grid: Indikator), Datenzelle, Filterzeile, Gruppenkopf, Gruppenfuss,
+  /// Summenzeile, Gruppenleiste, Baender, Filterleiste, Suchfeld.
+  TPPGGridHitArea = (ghaNone, ghaHeader, ghaFixedCol, ghaData, ghaFilterRow, ghaGroupRow,
+    ghaGroupFooter, ghaFooter, ghaGroupPanel, ghaBand, ghaFilterBar, ghaFindPanel);
+
+  /// Ergebnis von HitTest (-1 bzw. nil = keine Angabe).
+  TPPGGridHitInfo = record
+    Area: TPPGGridHitArea;
+    VisCol: Integer;       // Anzeige-Spalte (wie MouseCoord, mit festen Spalten)
+    VisRow: Integer;       // sichtbare Zeile (wie MouseCoord)
+    DataCol: Integer;      // Datenspalte wie Col (mit festen Spalten)
+    DataRow: Integer;      // Datenzeile wie Row (Kopfzeilen: 0..FixedRows - 1)
+    ColumnIndex: Integer;  // Index in Columns (DB-Grid: ohne Indikator)
+    DataIndex: Integer;    // Datenzeile ohne Kopfzeilen (DB-Grid: Puffer bzw. Ansicht)
+    Column: TPPGGridColumn;
+    Group: Integer;        // Gruppe bei ghaGroupRow/ghaGroupFooter
+  end;
 
   /// Verbundene Zellen (Datenspalte/-zeile der Ursprungszelle).
   TPPGGridMerge = record
@@ -357,6 +386,25 @@ type
     FOnColEnter: TNotifyEvent;
     FOnColExit: TNotifyEvent;
     FOnEditButtonClick: TNotifyEvent;
+    FOnDrawColumnTitle: TPPGDrawColumnTitleEvent;
+    // Zeilenhoehe nach Inhalt: gemessene Hoehe (Pixel) je Datenzeile, nur fuer
+    // Zeilen, die schon sichtbar waren (bzw. im Puffer des DB-Grids standen)
+    FAutoRowHeights: Boolean;
+    FMaxRowLines: Integer;
+    FAutoH: TDictionary<Integer, Integer>;
+    // Eingefrorene Datenspalten links (nach FixedCols)
+    FFrozenCols: Integer;
+    procedure SetAutoRowHeights(const Value: Boolean);
+    procedure SetMaxRowLines(const Value: Integer);
+    procedure SetFrozenCols(const Value: Integer);
+    function GetTopRow: Integer;
+    procedure SetTopRow(const Value: Integer);
+    /// Gemessene Hoehen ab Datenzeile ARow verwerfen (weniger Zeilen).
+    procedure RemoveAutoRowHeightsFrom(ARow: Integer);
+    /// Anzeige-Spalte unter X (Client), -1 = keine (auch ausserhalb der Spalten).
+    function ColAtX(X: Integer): Integer;
+    /// Inhaltsgroesse fuer die Leisten aus Spalten und Zeilen.
+    procedure UpdateContentExtent;
     procedure SetDefaultDrawing(const Value: Boolean);
     procedure SetColCount(const Value: Integer);
     procedure SetRowCount(const Value: Integer);
@@ -456,9 +504,43 @@ type
     property RowGeomCount: Integer read FRowGeomCount;
     function VFixedRows: Integer;
     function VRowCount: Integer;
+    /// Breite der festen Spalten links (FixedCols, DB-Grid: Indikator).
     function FixedWidth: Integer;
     function FixedHeight: Integer;
     function ColPixelWidth(ACol: Integer): Integer;
+    { Eingefrorene Spalten (FrozenCols) }
+    /// Erste waagerecht scrollende Anzeige-Spalte (FixedCols + wirksame
+    /// FrozenCols; mindestens eine Spalte scrollt).
+    function ScrollStartCol: Integer;
+    /// Breite des stehenden Bereichs links (feste und eingefrorene Spalten).
+    function FrozenWidth: Integer;
+    { Zeilenhoehe nach Inhalt (AutoRowHeights, Column.WordWrap) }
+    /// AutoRowHeights an und mindestens eine sichtbare Spalte mit WordWrap
+    /// (nicht in eigener Anordnung wie der Kartenansicht)?
+    function AutoRowHeightsActive: Boolean;
+    /// Misst das Grid Zeilen erst beim Sichtbarwerden (vor dem Zeichnen)?
+    /// Standard: True; das DB-Grid misst ungruppiert seinen Puffer selbst.
+    function AutoRowHeightsLazy: Boolean; virtual;
+    /// Benoetigte Hoehe einer Datenzeile in Pixeln (mindestens
+    /// DefaultRowHeight): umgebrochene Texte der WordWrap-Spalten, hoechstens
+    /// MaxRowLines Zeilen und die Hoehe der Ansicht.
+    function MeasureRowHeight(ARow: Integer): Integer; virtual;
+    /// Gemessene Hoehe einer Datenzeile setzen (Pixel; <= 0 = keine).
+    /// Geometrie wird beim naechsten Zugriff neu aufgebaut.
+    procedure SetAutoRowHeight(ARow, AHeight: Integer);
+    /// Alle gemessenen Hoehen verwerfen (ohne Neuaufbau).
+    procedure ClearAutoRowHeights;
+    /// Sichtbare, noch nicht gemessene Zeilen messen (vor dem Zeichnen).
+    procedure MeasureVisibleRows;
+    /// Hoehe eines umgebrochenen Texts in Pixeln (Breite W, Schrift AFont).
+    function WrapTextHeight(AFont: TFont; const S: string; W: Integer): Integer;
+    { Spaltenkopf selbst zeichnen }
+    /// OnDrawColumnTitle ausloesen; Ergebnis = DefaultDraw. ACol = Datenspalte.
+    function DrawColumnTitle(const ACanvas: IPPGCanvas; ACol, VRow: Integer;
+      const R: TRect): Boolean; virtual;
+    /// Index fuer OnDrawColumnTitle bzw. HitTest.ColumnIndex zu einer
+    /// Datenspalte (Standard: gleich; DB-Grid: ohne Indikator).
+    function ColumnIndexOf(ACol: Integer): Integer; virtual;
     { Spalten in der Anzeige (Phase 13b) }
     procedure RebuildColumnMap;
     function VColCount: Integer;
@@ -952,6 +1034,22 @@ type
     property Bands: TPPGGridBands read FBands write SetBands;
     /// Anzahl Spalten, die rechts stehen bleiben (z.B. Aktionsspalte).
     property FixedColsRight: Integer read FFixedColsRight write SetFixedColsRight default 0;
+    /// Anzahl Datenspalten links (in der Anzeige-Reihenfolge, nach FixedCols
+    /// bzw. dem Indikator), die beim waagerechten Scrollen stehen bleiben
+    /// (0..100). Sie bleiben normale Datenzellen (Auswahl, Editor, Stile);
+    /// mindestens eine Spalte scrollt weiter.
+    property FrozenCols: Integer read FFrozenCols write SetFrozenCols default 0;
+    /// Zeilenhoehe nach Inhalt: Spalten mit WordWrap brechen ihren Text um,
+    /// jede Datenzeile wird so hoch wie ihr laengster Text (mindestens
+    /// DefaultRowHeight, hoechstens MaxRowLines Textzeilen). Gemessen werden
+    /// nur Zeilen, die sichtbar werden (DB-Grid: der Puffer).
+    property AutoRowHeights: Boolean read FAutoRowHeights write SetAutoRowHeights default False;
+    /// Hoechstens so viele Textzeilen je Zelle bei AutoRowHeights (0 = ohne
+    /// Grenze, hoechstens die Hoehe der Ansicht; 0..100).
+    property MaxRowLines: Integer read FMaxRowLines write SetMaxRowLines default 0;
+    /// Spaltenkopf selbst zeichnen (nach der Flaeche, vor dem Titeltext).
+    property OnDrawColumnTitle: TPPGDrawColumnTitleEvent read FOnDrawColumnTitle
+      write FOnDrawColumnTitle;
     /// Rechtsklick auf den Kopf: Sortieren, Ausblenden, Spaltenauswahl, Breite.
     property HeaderMenu: Boolean read FHeaderMenu write FHeaderMenu default True;
     /// Spalte verschoben (FromIndex/ToIndex = Anzeige-Positionen).
@@ -1050,6 +1148,19 @@ type
     function CellRect(ACol, VRow: Integer): TRect;
     /// Zelle unter dem Punkt; False = keine.
     function MouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean;
+    /// Was liegt unter dem Punkt (Client-Koordinaten)? Bereich (Kopf, Daten,
+    /// Summenzeile, Gruppenzeile ...), Spalte als Anzeige-, Daten- und
+    /// Columns-Index und Zeile als sichtbare Zeile, Datenzeile und Index ohne
+    /// Kopfzeilen. Summenzeile und Leisten liefern die Spalte unter X.
+    function HitTest(X, Y: Integer): TPPGGridHitInfo; virtual;
+    /// Gemessene Zeilenhoehen (AutoRowHeights) verwerfen und neu messen, z. B.
+    /// nachdem sich Texte aus OnGetCellText geaendert haben.
+    procedure InvalidateRowHeights; virtual;
+    /// Oberste sichtbare scrollende Zeile (sichtbare Zeile wie FocusRow, wie
+    /// TStringGrid.TopRow); Setzen scrollt sie nach oben (soweit moeglich).
+    /// DB-Grid ungruppiert: immer die erste Datenzeile (der Puffer steht oben),
+    /// siehe ActiveRowInView.
+    property TopRow: Integer read GetTopRow write SetTopRow;
     procedure MakeCellVisible(ACol, VRow: Integer);
     /// Sortiert nach Spalte (-1 = urspruengliche Reihenfolge).
     procedure SortBy(ACol: Integer; Ascending: Boolean = True);
@@ -1154,6 +1265,9 @@ type
     property EnterMovesNext;
     property IncrementalSearch;
     property FixedColsRight;
+    property FrozenCols;
+    property AutoRowHeights;
+    property MaxRowLines;
     property HeaderMenu;
     property ShowFooter;
     property GroupFooter;
@@ -1217,6 +1331,7 @@ type
     property OnDragDrop;
     property OnDragOver;
     property OnDrawCell;
+    property OnDrawColumnTitle;
     property OnEndDock;
     property OnEndDrag;
     property OnEnter;
@@ -1259,7 +1374,7 @@ implementation
 
 uses
   System.Math, PPG.Lang,
-  System.SysUtils, System.Generics.Collections, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
+  System.SysUtils, Winapi.oleacc, Vcl.Clipbrd, PPG.UIA.Intf,
   PPG.Consts, PPG.Exceptions, PPG.Appearance, PPG.Tokens, PPG.DpiUtils, PPG.VclStyles,
   PPG.Render.Registry, PPG.Render.Gdi, PPG.Menus, PPG.Render.Shapes, System.UITypes,
   PPG.Controls.Field;
@@ -1270,6 +1385,7 @@ type
 
 const
   CellPadX = 6;      // logische px Text-Abstand links/rechts
+  CellPadY = 3;      // logische px Text-Abstand oben/unten (umgebrochene Texte)
   SizeZone = 4;      // logische px Greifzone fuer die Spaltenbreite
   MinColWidth = 8;   // logische px
   FilterRowMark = -2;
@@ -1531,6 +1647,7 @@ begin
   FLastFocusRow := -1;
   FLayout := TPPGRowLayout.Create;
   FRowHeightStore := TPPGRowLayout.Create;
+  FAutoH := TDictionary<Integer, Integer>.Create;
   FColumns := CreateColumns;
   FBands := TPPGGridBands.Create(Self, TPPGGridBand);
   FHeaderMenu := True;
@@ -1569,6 +1686,7 @@ begin
   FreeAndNil(FBands);
   FreeAndNil(FLayout);
   FreeAndNil(FRowHeightStore);
+  FreeAndNil(FAutoH);
   FreeAndNil(FView);
   FreeAndNil(FStore);
   FreeAndNil(FPainter);
@@ -1819,6 +1937,8 @@ begin
   Inc(FDataVersion);
   FStore.TruncateRows(V);
   FRowHeightStore.Count := V; // Hoehen dahinter verfallen
+  if (FAutoH <> nil) and (FAutoH.Count > 0) then
+    RemoveAutoRowHeightsFrom(V);
   if FFixedRows >= V then
     FFixedRows := V - 1;
   RebuildMap;
@@ -1914,6 +2034,301 @@ begin
     HideEditor(True);
     FFixedColsRight := V;
     InvalidateGeometry;
+  end;
+end;
+
+procedure TPPGCustomGrid.SetFrozenCols(const Value: Integer);
+var
+  V: Integer;
+begin
+  V := PPGCheckRange(Self, 'FrozenCols', Value, 0, 100);
+  if V <> FFrozenCols then
+  begin
+    HideEditor(True);
+    FFrozenCols := V;
+    InvalidateGeometry;
+  end;
+end;
+
+function TPPGCustomGrid.ScrollStartCol: Integer;
+var
+  N: Integer;
+begin
+  // Eingefrorene Spalten stehen hinter den festen; eine Spalte scrollt immer
+  N := FFrozenCols;
+  if N > VColCount - FFixedCols - 1 then
+    N := VColCount - FFixedCols - 1;
+  if N < 0 then
+    N := 0;
+  Result := FFixedCols + N;
+end;
+
+function TPPGCustomGrid.FrozenWidth: Integer;
+begin
+  EnsureGeometry;
+  Result := FColX[ScrollStartCol];
+end;
+
+procedure TPPGCustomGrid.SetAutoRowHeights(const Value: Boolean);
+begin
+  if FAutoRowHeights <> Value then
+  begin
+    FAutoRowHeights := Value;
+    InvalidateRowHeights;
+  end;
+end;
+
+procedure TPPGCustomGrid.SetMaxRowLines(const Value: Integer);
+var
+  V: Integer;
+begin
+  V := PPGCheckRange(Self, 'MaxRowLines', Value, 0, 100);
+  if V <> FMaxRowLines then
+  begin
+    FMaxRowLines := V;
+    InvalidateRowHeights;
+  end;
+end;
+
+procedure TPPGCustomGrid.InvalidateRowHeights;
+begin
+  ClearAutoRowHeights;
+  FRowGeomValid := False;
+  InvalidateGeometry;
+end;
+
+procedure TPPGCustomGrid.RemoveAutoRowHeightsFrom(ARow: Integer);
+var
+  Keys: TArray<Integer>;
+  I: Integer;
+begin
+  Keys := FAutoH.Keys.ToArray;
+  for I := 0 to High(Keys) do
+    if Keys[I] >= ARow then
+      FAutoH.Remove(Keys[I]);
+  FRowGeomValid := False;
+end;
+
+procedure TPPGCustomGrid.ClearAutoRowHeights;
+begin
+  if (FAutoH <> nil) and (FAutoH.Count > 0) then
+  begin
+    FAutoH.Clear;
+    FRowGeomValid := False;
+  end;
+end;
+
+procedure TPPGCustomGrid.SetAutoRowHeight(ARow, AHeight: Integer);
+var
+  Old: Integer;
+begin
+  if FAutoH = nil then
+    Exit;
+  if AHeight <= 0 then
+  begin
+    if FAutoH.ContainsKey(ARow) then
+    begin
+      FAutoH.Remove(ARow);
+      FRowGeomValid := False;
+    end;
+    Exit;
+  end;
+  if FAutoH.TryGetValue(ARow, Old) and (Old = AHeight) then
+    Exit;
+  FAutoH.AddOrSetValue(ARow, AHeight);
+  FRowGeomValid := False;
+end;
+
+function TPPGCustomGrid.AutoRowHeightsActive: Boolean;
+var
+  I: Integer;
+  C: TPPGGridColumn;
+begin
+  Result := False;
+  if not FAutoRowHeights or CustomCellLayout then
+    Exit;
+  for I := FFixedCols to VColCount - 1 do
+  begin
+    C := ColumnOf(FVisCols[I]);
+    if (C <> nil) and C.WordWrap then
+      Exit(True);
+  end;
+end;
+
+function TPPGCustomGrid.AutoRowHeightsLazy: Boolean;
+begin
+  Result := True;
+end;
+
+function TPPGCustomGrid.WrapTextHeight(AFont: TFont; const S: string; W: Integer): Integer;
+var
+  DC: HDC;
+  Old: HGDIOBJ;
+  R: TRect;
+begin
+  Result := 0;
+  if (S = '') or (W < 1) or (AFont = nil) then
+    Exit;
+  DC := GetDC(0);
+  try
+    Old := SelectObject(DC, AFont.Handle);
+    try
+      R := Rect(0, 0, W, 0);
+      Winapi.Windows.DrawText(DC, PChar(S), Length(S), R,
+        DT_CALCRECT or DT_WORDBREAK or DT_EDITCONTROL or DT_NOPREFIX);
+      Result := R.Bottom - R.Top;
+    finally
+      SelectObject(DC, Old);
+    end;
+  finally
+    ReleaseDC(0, DC);
+  end;
+end;
+
+function TPPGCustomGrid.MeasureRowHeight(ARow: Integer): Integer;
+var
+  VC, DCol, W, H, LineH, Pad, PadY, PPI, MaxH: Integer;
+  C: TPPGGridColumn;
+  St: TPPGGridCellStyle;
+  F: TFont;
+  S: string;
+  DC: HDC;
+  Old: HGDIOBJ;
+  TM: TTextMetric;
+  V: TRect;
+begin
+  EnsureGeometry;
+  PPI := ScalePPI;
+  Result := PPGScale(FDefaultRowHeight, PPI);
+  Pad := PPGScale(CellPadX, PPI);
+  PadY := PPGScale(CellPadY, PPI);
+  for VC := FFixedCols to VColCount - 1 do
+  begin
+    DCol := FVisCols[VC];
+    C := ColumnOf(DCol);
+    if (C = nil) or not C.WordWrap or (KindOf(DCol) <> nil) then
+      Continue;
+    S := GetCellText(DCol, ARow);
+    if S = '' then
+      Continue;
+    W := FColX[VC + 1] - FColX[VC] - 2 * Pad;
+    St.Reset;
+    F := CellFont(C, St, []);
+    H := WrapTextHeight(F, S, W);
+    if H <= 0 then
+      Continue;
+    if FMaxRowLines > 0 then
+    begin
+      LineH := 0;
+      DC := GetDC(0);
+      try
+        Old := SelectObject(DC, F.Handle);
+        if GetTextMetrics(DC, TM) then
+          LineH := TM.tmHeight;
+        SelectObject(DC, Old);
+      finally
+        ReleaseDC(0, DC);
+      end;
+      if (LineH > 0) and (H > FMaxRowLines * LineH) then
+        H := FMaxRowLines * LineH;
+    end;
+    Inc(H, 2 * PadY);
+    if H > Result then
+      Result := H;
+  end;
+  // Nie hoeher als die Ansicht (sonst laesst sich die Zeile nicht ganz zeigen)
+  V := GridViewRect;
+  MaxH := (V.Bottom - V.Top) - FixedHeight;
+  if (MaxH > 0) and (Result > MaxH) then
+    Result := Max(MaxH, PPGScale(FDefaultRowHeight, PPI));
+end;
+
+procedure TPPGCustomGrid.MeasureVisibleRows;
+var
+  Pass, V, R0, R1, D, H, ViewH: Integer;
+  CY: Int64;
+  GV: TRect;
+  Changed: Boolean;
+begin
+  if not AutoRowHeightsLazy or not AutoRowHeightsActive then
+    Exit;
+  for Pass := 1 to 3 do
+  begin
+    EnsureGeometry;
+    if FLayout.Count <= VFixedRows then
+      Exit;
+    GV := GridViewRect;
+    ViewH := (GV.Bottom - GV.Top) - FixedHeight;
+    if ViewH <= 0 then
+      Exit;
+    CY := Int64(RowScrollY) + FixedHeight;
+    if CY >= FLayout.TotalHeight64 then
+      Exit;
+    R0 := FLayout.RowAt(CY);
+    if R0 < VFixedRows then
+      R0 := VFixedRows;
+    R1 := R0;
+    while (R1 < FLayout.Count - 1) and (FLayout.RowTop(R1 + 1) < CY + ViewH) do
+      Inc(R1);
+    Changed := False;
+    for V := R0 to R1 do
+    begin
+      D := DataRow(V);
+      if (D < FFixedRows) or FAutoH.ContainsKey(D) then
+        Continue;
+      H := MeasureRowHeight(D);
+      FAutoH.Add(D, H);
+      // Direkt ins Layout (der naechste Neuaufbau liest den Zwischenspeicher)
+      if (H > FLayout.RowHeight(V)) and (RowGapOf(V) = 0) then
+      begin
+        FLayout.SetRowHeight(V, H);
+        Changed := True;
+      end;
+    end;
+    if not Changed then
+      Exit;
+    FPaintCached := False;
+    UpdateContentExtent;
+  end;
+end;
+
+function TPPGCustomGrid.GetTopRow: Integer;
+var
+  Y: Int64;
+begin
+  EnsureGeometry;
+  Result := VFixedRows;
+  if (FLayout.Count <= VFixedRows) or CustomCellLayout then
+    Exit;
+  Y := Int64(RowScrollY) + FixedHeight;
+  if Y < FLayout.TotalHeight64 then
+    Result := Max(VFixedRows, FLayout.RowAt(Y));
+end;
+
+procedure TPPGCustomGrid.SetTopRow(const Value: Integer);
+var
+  V: Integer;
+  Y: Int64;
+begin
+  EnsureGeometry;
+  if (FLayout.Count <= VFixedRows) or CustomCellLayout then
+    Exit;
+  V := EnsureRangeInt(Value, VFixedRows, FLayout.Count - 1);
+  Y := FLayout.RowTop(V) - FixedHeight;
+  if Y > MaxScroll(saVert) then
+    Y := MaxScroll(saVert);
+  if Y < 0 then
+    Y := 0;
+  ScrollCellsTo(ScrollX, Integer(Y));
+  // Erst nach dem Scrollen sichtbare Zeilen messen; die Zeile bleibt oben
+  if AutoRowHeightsLazy and AutoRowHeightsActive then
+  begin
+    MeasureVisibleRows;
+    Y := FLayout.RowTop(V) - FixedHeight;
+    if Y > MaxScroll(saVert) then
+      Y := MaxScroll(saVert);
+    if (Y >= 0) and (Y <> RowScrollY) then
+      ScrollCellsTo(ScrollX, Integer(Y));
   end;
 end;
 
@@ -3549,8 +3964,8 @@ var
 begin
   N := FFixedColsRight;
   // Mindestens eine scrollbare Spalte bleibt
-  if N > VColCount - FFixedCols - 1 then
-    N := VColCount - FFixedCols - 1;
+  if N > VColCount - ScrollStartCol - 1 then
+    N := VColCount - ScrollStartCol - 1;
   if N < 0 then
     N := 0;
   Result := VColCount - N;
@@ -3596,9 +4011,9 @@ end;
 
 function TPPGCustomGrid.ColLeft(VCol: Integer): Integer;
 begin
-  // Feste links stehen, rechts fixierte stehen am rechten Rand (als waere
-  // ganz nach rechts gescrollt), die uebrigen scrollen
-  if VCol < FFixedCols then
+  // Feste und eingefrorene links stehen, rechts fixierte stehen am rechten
+  // Rand (als waere ganz nach rechts gescrollt), die uebrigen scrollen
+  if (VCol < FFixedCols) or ((FFrozenCols > 0) and (VCol < ScrollStartCol)) then
     Result := FColX[VCol]
   else if FPaintCached then
   begin
@@ -4638,6 +5053,12 @@ var
   N: Integer;
 begin
   Inc(FDataVersion);
+  // Gemessene Hoehe der Zeile gilt nicht mehr (neu beim naechsten Zeichnen)
+  if (FAutoH <> nil) and FAutoH.ContainsKey(ARow) then
+  begin
+    FAutoH.Remove(ARow);
+    FRowGeomValid := False;
+  end;
   if not StatsNeeded or ([csLoading, csDestroying] * ComponentState <> []) then
     Exit;
   if not HaveOld or FAggDirty or not AggIncrementalOk(ACol) then
@@ -5152,7 +5573,7 @@ end;
 
 procedure TPPGCustomGrid.PaintFooter(const ACanvas: IPPGCanvas; const R: TRect);
 var
-  FR, Pad, PPI: Integer;
+  FR, SS, Pad, PPI: Integer;
   GV: TRect;
   FootFont: TFont;
   FootText: TColor;
@@ -5218,14 +5639,17 @@ begin
     ACanvas.FillRoundRect(R, 0, FPaint.Header, 255);
   ACanvas.FillRoundRect(Rect(R.Left, R.Top, R.Right, R.Top + 1), 0, FPaint.HeaderLine, 255);
   FR := FirstRightCol;
+  SS := ScrollStartCol;
   Area(0, FFixedCols - 1, GV.Left, GV.Left + FixedWidth);
+  // Eingefrorene Spalten stehen wie die festen
+  Area(FFixedCols, SS - 1, GV.Left + FixedWidth, GV.Left + FrozenWidth);
   if FR < VColCount then
   begin
-    Area(FFixedCols, FR - 1, GV.Left + FixedWidth, GV.Left + ColLeft(FR));
+    Area(SS, FR - 1, GV.Left + FrozenWidth, GV.Left + ColLeft(FR));
     Area(FR, VColCount - 1, GV.Left + ColLeft(FR), GV.Right);
   end
   else
-    Area(FFixedCols, VColCount - 1, GV.Left + FixedWidth, GV.Right);
+    Area(SS, VColCount - 1, GV.Left + FrozenWidth, GV.Right);
 end;
 
 function TPPGCustomGrid.GroupExpanderRect(VRow: Integer): TRect;
@@ -5568,6 +5992,7 @@ begin
     Exit;
   // Nicht ueber die Grenze fester/scrollbarer/rechts fixierter Bereiche
   if ((C0 < FFixedCols) <> (C1 < FFixedCols)) or
+    ((C0 < ScrollStartCol) <> (C1 < ScrollStartCol)) or
     ((C0 >= FirstRightCol) <> (C1 >= FirstRightCol)) or
     ((R0 < VFixedRows) <> (R1 < VFixedRows)) then
     Exit;
@@ -5665,7 +6090,7 @@ end;
 
 procedure TPPGCustomGrid.EnsureGeometry;
 var
-  I, N, X, H, BH: Integer;
+  I, N, X: Integer;
   PPI: Integer;
 begin
   PPI := ScalePPI;
@@ -5676,6 +6101,8 @@ begin
   begin
     FColGeomValid := False;
     FRowGeomValid := False;
+    // Gemessene Zeilenhoehen gelten fuer die alte DPI
+    ClearAutoRowHeights;
   end;
   FGeomPPI := PPI;
   // Spalten in Anzeige-Reihenfolge (ausgeblendete fehlen)
@@ -5691,13 +6118,24 @@ begin
       Inc(X, ColPixelWidth(FVisCols[I]));
     end;
     FColX[N] := X;
+    // Andere Spaltenbreiten: umgebrochene Texte neu messen (nur ohne eigenen
+    // Puffer; das DB-Grid misst ihn beim naechsten DataChanged)
+    if AutoRowHeightsLazy then
+      ClearAutoRowHeights;
   end;
-  X := FColX[N];
   if not FRowGeomValid then
   begin
     BuildRowGeometry(PPI);
     ApplyRowGap;
   end;
+  UpdateContentExtent;
+end;
+
+procedure TPPGCustomGrid.UpdateContentExtent;
+var
+  X, H, BH: Integer;
+begin
+  X := FColX[High(FColX)];
   // Baender liegen ueber dem Kopf und gehoeren zur Inhaltshoehe
   BH := BandHeight + TopBarsHeight + BottomBarsHeight;
   // Eigene Anordnung: ohne Baender und Summenzeile, nie waagerecht scrollen
@@ -5714,9 +6152,10 @@ end;
 
 procedure TPPGCustomGrid.BuildRowGeometry(PPI: Integer);
 var
-  J, N, V, H, Def: Integer;
+  J, N, V, H, Def, OwnN: Integer;
   Pairs: TArray<Int64>;
   Sorted: Boolean;
+  AutoPair: TPair<Integer, Integer>;
 begin
   FRowGeomValid := True;
   Inc(FRowGeomCount);
@@ -5724,14 +6163,17 @@ begin
   FLayout.Count := 0;
   FLayout.DefaultHeight := Def;
   FLayout.Count := VRowCount;
-  if not FHasRowHeights or (FRowHeightStore.OwnHeightCount = 0) then
+  OwnN := 0;
+  if FHasRowHeights then
+    OwnN := FRowHeightStore.OwnHeightCount;
+  if (OwnN = 0) and ((FAutoH = nil) or (FAutoH.Count = 0)) then
     Exit;
   // Nur die k Zeilen mit eigener Hoehe (Audit 8c #5): Datenzeile ->
   // sichtbare Zeile, aufsteigend ins Layout (Anhaengen ist O(1))
-  SetLength(Pairs, FRowHeightStore.OwnHeightCount);
+  SetLength(Pairs, OwnN + FAutoH.Count);
   N := 0;
   Sorted := True;
-  for J := 0 to FRowHeightStore.OwnHeightCount - 1 do
+  for J := 0 to OwnN - 1 do
   begin
     H := PPGScale(FRowHeightStore.OwnHeightValue(J), PPI);
     if H = Def then
@@ -5744,11 +6186,26 @@ begin
       Sorted := False;
     Inc(N);
   end;
+  // Gemessene Hoehen (AutoRowHeights, Pixel): nur hoeher als die Vorgabe
+  for AutoPair in FAutoH do
+  begin
+    H := AutoPair.Value;
+    if H <= Def then
+      Continue;
+    V := VisualRow(AutoPair.Key);
+    if (V < 0) or (V >= FLayout.Count) then
+      Continue;
+    Pairs[N] := (Int64(V) shl 32) or Cardinal(H);
+    Sorted := False;
+    Inc(N);
+  end;
   SetLength(Pairs, N);
   if not Sorted then
     TArray.Sort<Int64>(Pairs);
+  // Gleiche Zeile (eigene und gemessene Hoehe): die groessere (die letzte)
   for J := 0 to N - 1 do
-    FLayout.SetRowHeight(Integer(Pairs[J] shr 32), Integer(Pairs[J] and $FFFFFFFF));
+    if (J = N - 1) or ((Pairs[J] shr 32) <> (Pairs[J + 1] shr 32)) then
+      FLayout.SetRowHeight(Integer(Pairs[J] shr 32), Integer(Pairs[J] and $FFFFFFFF));
 end;
 
 procedure TPPGCustomGrid.ApplyRowGap;
@@ -5825,30 +6282,26 @@ begin
       V.Left + V.Right - Result.Left, Result.Bottom);
 end;
 
-function TPPGCustomGrid.MouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean;
+function TPPGCustomGrid.ColAtX(X: Integer): Integer;
 var
   V: TRect;
-  CX, Lo, Hi, Off: Integer;
-  CY: Int64;
-  I: Integer;
+  CX, Lo, Hi, Off, I, SS: Integer;
 begin
-  Result := False;
-  ACol := -1;
-  VRow := -1;
+  Result := -1;
   EnsureGeometry;
-  if CustomCellLayout then
-    Exit(CustomMouseCoord(X, Y, ACol, VRow));
   V := GridViewRect;
-  if not PtInRect(V, Point(X, Y)) then
+  if (X < V.Left) or (X >= V.Right) then
     Exit;
   if UseRightToLeftAlignment then
     X := V.Left + V.Right - X - 1;
   CX := X - V.Left;
-  // Bereich bestimmen: feste links, rechts fixierte oder scrollbare Spalten
-  if CX < FixedWidth then
+  SS := ScrollStartCol;
+  // Bereich bestimmen: feste und eingefrorene links, rechts fixierte oder
+  // scrollbare Spalten
+  if CX < FColX[SS] then
   begin
     Lo := 0;
-    Hi := FFixedCols - 1;
+    Hi := SS - 1;
     Off := 0;
   end
   else if (FirstRightCol < VColCount) and (CX >= ColLeft(FirstRightCol)) then
@@ -5859,17 +6312,31 @@ begin
   end
   else
   begin
-    Lo := FFixedCols;
+    Lo := SS;
     Hi := FirstRightCol - 1;
     Off := ScrollX;
   end;
   Inc(CX, Off);
   for I := Lo to Hi do
     if (CX >= FColX[I]) and (CX < FColX[I + 1]) then
-    begin
-      ACol := I;
-      Break;
-    end;
+      Exit(I);
+end;
+
+function TPPGCustomGrid.MouseCoord(X, Y: Integer; out ACol, VRow: Integer): Boolean;
+var
+  V: TRect;
+  CY: Int64;
+begin
+  Result := False;
+  ACol := -1;
+  VRow := -1;
+  EnsureGeometry;
+  if CustomCellLayout then
+    Exit(CustomMouseCoord(X, Y, ACol, VRow));
+  V := GridViewRect;
+  if not PtInRect(V, Point(X, Y)) then
+    Exit;
+  ACol := ColAtX(X);
   CY := Y - V.Top;
   if CY >= FixedHeight then
     Inc(CY, RowScrollY);
@@ -5899,12 +6366,13 @@ begin
   V := GridViewRect;
   X := ScrollX;
   Y := RowScrollY;
-  VW := (V.Right - V.Left) - FixedWidth - FixedRightWidth;
+  // Feste und eingefrorene Spalten stehen: nur scrollende Spalten zaehlen
+  VW := (V.Right - V.Left) - FrozenWidth - FixedRightWidth;
   VH := (V.Bottom - V.Top) - FixedHeight;
-  if (ACol >= FFixedCols) and (ACol < FirstRightCol) then
+  if (ACol >= ScrollStartCol) and (ACol < FirstRightCol) then
   begin
-    CL := FColX[ACol] - FixedWidth;
-    CR := FColX[ACol + 1] - FixedWidth;
+    CL := FColX[ACol] - FrozenWidth;
+    CR := FColX[ACol + 1] - FrozenWidth;
     if CL < X then
       X := CL
     else if CR > X + VW then
@@ -5950,6 +6418,10 @@ procedure TPPGCustomGrid.FontsChanged;
 begin
   if FFontCache <> nil then
     FFontCache.Clear;
+  // Schrift, Stile oder Spalten geaendert: umgebrochene Texte neu messen
+  // (das DB-Grid misst seinen Puffer beim naechsten DataChanged selbst)
+  if AutoRowHeightsLazy then
+    ClearAutoRowHeights;
 end;
 
 { ---- Farben und Zeichnen ---- }
@@ -6315,6 +6787,152 @@ begin
   Result := Assigned(FOnDrawCell);
 end;
 
+function TPPGCustomGrid.ColumnIndexOf(ACol: Integer): Integer;
+begin
+  Result := ACol;
+end;
+
+function TPPGCustomGrid.DrawColumnTitle(const ACanvas: IPPGCanvas; ACol, VRow: Integer;
+  const R: TRect): Boolean;
+var
+  DC: HDC;
+  Col: TPPGGridColumn;
+  F: TFont;
+  TC, Fill: TColor;
+begin
+  // Wie DrawCell auf einem TCanvas: Flaeche ist gezeichnet, Text noch nicht
+  Result := True;
+  if not Assigned(FOnDrawColumnTitle) or IsRectEmpty(R) then
+    Exit;
+  Col := ColumnOf(ACol);
+  F := FPaint.HeaderFont;
+  TC := FPaint.HeaderText;
+  Fill := FPaint.Header;
+  if Col <> nil then
+  begin
+    F := FFontCache.ForStyle(Col.TitleStyle, FPaint.HeaderFont);
+    if FPaint.UseColors then
+    begin
+      TC := Col.TitleStyle.TextFor(FPaint.Dark, TC);
+      if Col.TitleStyle.HasFill(FPaint.Dark) then
+        Fill := Col.TitleStyle.FillFor(FPaint.Dark, Fill);
+    end;
+  end;
+  DC := ACanvas.BeginGdi;
+  try
+    FItemCanvas.Handle := DC;
+    try
+      if F <> nil then
+        FItemCanvas.Font := F
+      else
+        FItemCanvas.Font := Font;
+      FItemCanvas.Font.Color := TC;
+      FItemCanvas.Brush.Color := Fill;
+      FItemCanvas.Brush.Style := bsSolid;
+      FInOwnerDraw := True;
+      try
+        FOnDrawColumnTitle(Self, FItemCanvas, R, ColumnIndexOf(ACol), Col, [gdFixed], Result);
+      finally
+        FInOwnerDraw := False;
+      end;
+    finally
+      FItemCanvas.Handle := 0;
+    end;
+  finally
+    ACanvas.EndGdi(DC);
+  end;
+end;
+
+function TPPGCustomGrid.HitTest(X, Y: Integer): TPPGGridHitInfo;
+var
+  GV, R: TRect;
+  Footer: Boolean;
+  D: Integer;
+begin
+  Result.Area := ghaNone;
+  Result.VisCol := -1;
+  Result.VisRow := -1;
+  Result.DataCol := -1;
+  Result.DataRow := -1;
+  Result.ColumnIndex := -1;
+  Result.DataIndex := -1;
+  Result.Column := nil;
+  Result.Group := -1;
+  EnsureGeometry;
+  // Leisten ausserhalb der Zellen (Suchfeld, Gruppenleiste, Filterleiste)
+  if (FindPanelHeight > 0) and (Y >= ViewRect.Top) and (Y < ViewRect.Top + FindPanelHeight) then
+  begin
+    Result.Area := ghaFindPanel;
+    Exit;
+  end;
+  R := GroupPanelRect;
+  if not IsRectEmpty(R) and PtInRect(R, Point(X, Y)) then
+  begin
+    Result.Area := ghaGroupPanel;
+    Exit;
+  end;
+  R := FilterBarRect;
+  if not IsRectEmpty(R) and PtInRect(R, Point(X, Y)) then
+  begin
+    Result.Area := ghaFilterBar;
+    Exit;
+  end;
+  GV := GridViewRect;
+  if not CustomCellLayout then
+  begin
+    // Baender ueber dem Kopf bzw. Summenzeile unter den Zeilen: Spalte unter X
+    if (BandHeight > 0) and (Y >= GV.Top - BandHeight) and (Y < GV.Top) then
+      Result.Area := ghaBand
+    else if (FooterHeight > 0) and (Y >= GV.Bottom) and (Y < GV.Bottom + FooterHeight) then
+      Result.Area := ghaFooter;
+    if Result.Area <> ghaNone then
+    begin
+      Result.VisCol := ColAtX(X);
+      if Result.VisCol >= 0 then
+      begin
+        Result.DataCol := DataCol(Result.VisCol);
+        Result.Column := ColumnOf(Result.DataCol);
+        Result.ColumnIndex := ColumnIndexOf(Result.DataCol);
+      end;
+      Exit;
+    end;
+  end;
+  if not MouseCoord(X, Y, Result.VisCol, Result.VisRow) then
+  begin
+    Result.VisCol := -1;
+    Result.VisRow := -1;
+    Exit;
+  end;
+  Result.DataCol := DataCol(Result.VisCol);
+  Result.Column := ColumnOf(Result.DataCol);
+  Result.ColumnIndex := ColumnIndexOf(Result.DataCol);
+  D := DataRow(Result.VisRow);
+  if Result.VisRow < FFixedRows then
+  begin
+    Result.Area := ghaHeader;
+    Result.DataRow := D;
+  end
+  else if D = FilterRowMark then
+    Result.Area := ghaFilterRow
+  else if (D = GroupRowMark) or (D = GroupFooterMark) then
+  begin
+    Result.Group := GroupAtRow(Result.VisRow, Footer);
+    if D = GroupFooterMark then
+      Result.Area := ghaGroupFooter
+    else
+      Result.Area := ghaGroupRow;
+  end
+  else if D >= FFixedRows then
+  begin
+    Result.DataRow := D;
+    Result.DataIndex := D - FFixedRows;
+    if Result.VisCol < FFixedCols then
+      Result.Area := ghaFixedCol
+    else
+      Result.Area := ghaData;
+  end;
+end;
+
 procedure TPPGCustomGrid.OwnerDrawCell(ACol, VRow, ARow: Integer; const R: TRect;
   State: TGridDrawState);
 begin
@@ -6467,6 +7085,10 @@ var
   FillR: array of TRect;
   FillC: array of TColor;
   NF: Integer;
+  // Umbrechen (WordWrap) und eigener Spaltenkopf (OnDrawColumnTitle)
+  PadY: Integer;
+  WrapFlags: Cardinal;
+  HasTitleDraw: Boolean;
 
   function CellIndex(AC, AV: Integer): Integer;
   begin
@@ -6913,6 +7535,7 @@ begin
     end;
     // 3. Texte sammeln (Zellarten/Sortierpfeil merken)
     NX := 0;
+    HasTitleDraw := Assigned(FOnDrawColumnTitle) and (FFixedRows > 0);
     I := (ColTo - ColFrom + 1) * (RowTo - RowFrom + 1);
     SetLength(ExtraC, I);
     SetLength(ExtraV, I);
@@ -6976,6 +7599,11 @@ begin
           if HasKind then
             Continue; // Zellart zeichnet selbst
         end;
+        // Spaltenkopf selbst zeichnen (OnDrawColumnTitle): DefaultDraw = False
+        // laesst den Titeltext weg, der Sortierpfeil bleibt (oben vorgemerkt)
+        if HasTitleDraw and (D = 0) and (C >= FFixedCols) and
+          not DrawColumnTitle(ACanvas, DCol, V, RawCellRect(C, V)) then
+          Continue;
         if (S = '') or not FDefaultDrawing then
           Continue;
         R := RawCellRect(C, V);
@@ -7055,6 +7683,34 @@ begin
           // Treffer des Suchfelds hinterlegen (Texte kommen danach)
           if (FFindUpper <> '') and FindSearchColumn(DCol) then
             PaintFindMark(ACanvas, TR, S, Al, F);
+          // Umbrechen (Column.WordWrap): Textblock senkrecht mittig, solange
+          // er passt, sonst oben mit Ellipse in der letzten Zeile
+          if (Col <> nil) and Col.WordWrap and (D >= FFixedRows) then
+          begin
+            PadY := PPGScale(CellPadY, PPI);
+            W := WrapTextHeight(F, S, TR.Right - TR.Left);
+            WrapFlags := DT_WORDBREAK or DT_EDITCONTROL or DT_NOPREFIX;
+            case Al of
+              taRightJustify: WrapFlags := WrapFlags or DT_RIGHT;
+              taCenter: WrapFlags := WrapFlags or DT_CENTER;
+            end;
+            if W <= (R.Bottom - R.Top) - 2 * PadY then
+            begin
+              TR.Top := R.Top + ((R.Bottom - R.Top) - W) div 2;
+              TR.Bottom := TR.Top + W;
+            end
+            else
+            begin
+              TR.Top := R.Top + PadY;
+              TR.Bottom := R.Bottom - PadY;
+              WrapFlags := WrapFlags or DT_END_ELLIPSIS;
+            end;
+            if (F = nil) or (F = Font) then
+              FPainter.AddText(TR, S, TC, DrawTextBiDiModeFlags(WrapFlags))
+            else
+              FPainter.AddTextFont(TR, S, TC, DrawTextBiDiModeFlags(WrapFlags), F.Handle);
+            Continue;
+          end;
         end;
         AddCellText(TR, S, TC, Al, F);
       end;
@@ -7235,6 +7891,7 @@ end;
 procedure TPPGCustomGrid.PaintViewport(const ACanvas: IPPGCanvas; const View: TRect);
 var
   FW, FH, C0, C1, R0, R1, FR, MidRight, X, PH, BH, FPH, FTH: Integer;
+  FFW, SS: Integer;
   CX: Integer;
   CY: Int64;
   GV: TRect;
@@ -7260,6 +7917,8 @@ var
 
 begin
   EnsureGeometry;
+  // Zeilenhoehe nach Inhalt: neu sichtbare Zeilen vor dem Zeichnen messen
+  MeasureVisibleRows;
   if CustomCellLayout then
   begin
     BeginPaintPass(ACanvas);
@@ -7283,7 +7942,10 @@ begin
     Dec(GV.Bottom, BottomBarsHeight);
     if GV.Top > GV.Bottom then
       GV.Top := GV.Bottom;
-    FW := FixedWidth;
+    // FFW = feste Spalten (Indikator), FW = mit den eingefrorenen Spalten
+    FFW := FixedWidth;
+    FW := FrozenWidth;
+    SS := ScrollStartCol;
     FH := FixedHeight;
     FR := FirstRightCol;
     // Rechter Rand der scrollbaren Spalten (rechts fixierte stehen dahinter)
@@ -7293,7 +7955,7 @@ begin
       MidRight := GV.Right - GV.Left;
     // Sichtbare scrollbare Spalten/Zeilen
     CX := ScrollX + FW;
-    C0 := FFixedCols;
+    C0 := SS;
     while (C0 < FR - 1) and (FColX[C0 + 1] <= CX) do
       Inc(C0);
     C1 := C0;
@@ -7333,12 +7995,20 @@ begin
       Mirror(Rect(GV.Left + FW, GV.Top + FH, GV.Left + MidRight, GV.Bottom)), False);
     PaintRegionIn(C0, C1, 0, VFixedRows - 1,
       Mirror(Rect(GV.Left + FW, GV.Top, GV.Left + MidRight, GV.Top + FH)), True);
+    // Eingefrorene Spalten (FrozenCols): Datenzellen bzw. Kopf, scrollen nicht
+    if SS > FFixedCols then
+    begin
+      PaintRegionIn(FFixedCols, SS - 1, CR0, CR1,
+        Mirror(Rect(GV.Left + FFW, GV.Top + FH, GV.Left + FW, GV.Bottom)), False);
+      PaintRegionIn(FFixedCols, SS - 1, 0, VFixedRows - 1,
+        Mirror(Rect(GV.Left + FFW, GV.Top, GV.Left + FW, GV.Top + FH)), True);
+    end;
     if FPaint.Gradient then
       PaintRegionIn(0, FFixedCols - 1, R0, R1,
-        Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FW, GV.Bottom)), True)
+        Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FFW, GV.Bottom)), True)
     else
       PaintRegionIn(0, FFixedCols - 1, CR0, CR1,
-        Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FW, GV.Bottom)), True);
+        Mirror(Rect(GV.Left, GV.Top + FH, GV.Left + FFW, GV.Bottom)), True);
     if FR < VColCount then
     begin
       PaintRegionIn(FR, VColCount - 1, CR0, CR1,
@@ -7347,7 +8017,7 @@ begin
         Mirror(Rect(GV.Left + MidRight, GV.Top, GV.Right, GV.Top + FH)), True);
     end;
     PaintRegionIn(0, FFixedCols - 1, 0, VFixedRows - 1,
-      Mirror(Rect(GV.Left, GV.Top, GV.Left + FW, GV.Top + FH)), True);
+      Mirror(Rect(GV.Left, GV.Top, GV.Left + FFW, GV.Top + FH)), True);
     R := Rect(View.Left, View.Top + FPH + PH, View.Right, View.Top + FPH + PH + BH);
     if (BH > 0) and NeedsPaint(R, M) then
       PaintBands(ACanvas, R);
@@ -7477,10 +8147,11 @@ var
     X1 := View.Left + ColLeft(ALast) + FColX[ALast + 1] - FColX[ALast];
     R := Rect(X0, Y0, X1, Y0 + RH);
     // Scrollbare Baender nicht ueber die festen bzw. rechts fixierten Spalten
+    // (Baender eingefrorener Spalten stehen mit ihnen)
     Clip := View;
-    if AFirst < FirstRightCol then
+    if (AFirst >= ScrollStartCol) and (AFirst < FirstRightCol) then
     begin
-      Clip.Left := View.Left + FixedWidth;
+      Clip.Left := View.Left + FrozenWidth;
       if FirstRightCol < VColCount then
         Clip.Right := View.Left + ColLeft(FirstRightCol);
     end;
@@ -7527,7 +8198,8 @@ begin
           B := BandOf(VC, L);
           First := VC;
           Inc(VC);
-          while (VC < VColCount) and (VC <> FirstRightCol) and (BandOf(VC, L) = B) do
+          while (VC < VColCount) and (VC <> FirstRightCol) and (VC <> ScrollStartCol) and
+            (BandOf(VC, L) = B) do
             Inc(VC);
           if B >= 0 then
             EmitRun(First, VC - 1, B);

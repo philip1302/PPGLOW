@@ -49,6 +49,9 @@ TPPGDBGrid.Enabled ! Sperren, solange die Abfrage neu geladen wird. Nur zum Lese
 TPPGDBGrid.ExportMaxRecords ! Schutz vor versehentlichem Export einer Millionen-Tabelle. Bei großen Abfragen lieber vorher filtern; für Auswertungen mit vielen Sätzen den Wert bewusst erhöhen.
 TPPGDBGrid.FixedColor ! Nur für Formulare, die von TDBGrid kommen. In neuem Code die Kopffarbe über Styles.Header.Color setzen, dort gibt es auch DarkColor für den Dark Mode.
 TPPGDBGrid.FixedColsRight ! Für eine Spalte ganz rechts, die bei breiten Tabellen immer sichtbar sein soll, z. B. Betrag oder Status.
+TPPGDBGrid.FrozenCols ! Ersatz für FixedCols anderer DB-Grids: die ersten Datenspalten (z. B. Nummer und Bezeichnung) bleiben beim Scrollen nach rechts stehen; der Indikator zählt nicht mit.
+TPPGDBGrid.AutoRowHeights ! Für Memo- oder Bemerkungsfelder, die ganz lesbar sein sollen; die Spalte braucht WordWrap. Das Grid zeigt dann weniger Datensätze auf einmal, bei großen Datenmengen bleibt es schnell (gemessen wird nur der Puffer).
+TPPGDBGrid.MaxRowLines ! 2 oder 3 Zeilen reichen meist, damit genug Datensätze auf einmal sichtbar bleiben.
 TPPGDBGrid.Font ! Die Schrift aller Zellen; meist vom Formular übernehmen. Für den Kopf TitleFont bzw. Styles.Header, für einzelne Spalten Column.Style.
 TPPGDBGrid.GradientEndColor ! Nur mit DrawingStyle = gdsGradient: Endfarbe des Kopfverlaufs, wie bei TDBGrid.
 TPPGDBGrid.GradientStartColor ! Nur mit DrawingStyle = gdsGradient: Anfangsfarbe des Kopfverlaufs.
@@ -103,6 +106,7 @@ TPPGDBGrid.OnDblClick ! Den Datensatz im Detailformular öffnen. Bei dgEditing �
 TPPGDBGrid.OnDragDrop ! Abgelegte Elemente übernehmen, z. B. Artikel aus einer Liste als neue Positionen anhängen (Append und Post).
 TPPGDBGrid.OnDragOver ! Accept := True nur für passende Quellen, z. B. wenn Source die Artikelliste ist.
 TPPGDBGrid.OnDrawCell ! Für Zusätze, die keine Zellart kann, z. B. ein kleines Dreieck für Bemerkungen. Nur zeichnen, die Datenmenge dabei nicht bewegen.
+TPPGDBGrid.OnDrawColumnTitle ! Für ein Symbol oder einen eigenen Titel im Kopf; ACol ist der Index in Columns wie bei OnDrawColumnCell. Die Datenmenge dabei nicht bewegen.
 TPPGDBGrid.OnEditButtonClick ! Für Spalten mit ButtonStyle = cbsEllipsis: Auswahldialog öffnen (Kunde, Artikel) und den gewählten Wert ins Feld schreiben.
 TPPGDBGrid.OnEndDock ! Nur bei DragKind = dkDock; bei Tabellen praktisch nie gebraucht.
 TPPGDBGrid.OnEndDrag ! Nach dem Ziehen eines Datensatzes aufräumen; Target = nil heißt abgebrochen.

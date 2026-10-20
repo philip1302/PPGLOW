@@ -144,6 +144,13 @@ TPPGCustomGrid.FixedColor = Wie TStringGrid.FixedColor: Hintergrund des Kopfs. I
 > `Grid1.FixedColor := $00F0E6DC;`
 TPPGCustomGrid.FixedCols = Anzahl fester Spalten links, die beim waagerechten Scrollen stehen bleiben (0..ColCount-1).
 TPPGCustomGrid.FixedColsRight = Anzahl Spalten, die rechts fest stehen bleiben (0..100), z. B. eine Aktions- oder Summenspalte.
+TPPGCustomGrid.FrozenCols = Anzahl Datenspalten links (in der Anzeige-Reihenfolge, nach FixedCols bzw. dem Indikator des DB-Grids), die beim waagerechten Scrollen stehen bleiben (0..100). Anders als FixedCols bleiben es normale Datenzellen: Auswahl, Bearbeiten, Stile und Sortieren wie bei jeder Spalte. Mindestens eine Spalte scrollt weiter.
+> `Grid1.FrozenCols := 2; // Nummer und Name bleiben links stehen`
+TPPGCustomGrid.AutoRowHeights = Zeilenhöhe nach Inhalt: Spalten mit WordWrap brechen ihren Text um, jede Datenzeile wird so hoch wie ihr längster Text (mindestens DefaultRowHeight, höchstens MaxRowLines Textzeilen und die Höhe der Ansicht). Gemessen werden nur Zeilen, die sichtbar werden; das DB-Grid misst seinen Puffer und zeigt so viele Datensätze, wie ganz hineinpassen.
+> `Grid1.Columns[2].WordWrap := True; Grid1.AutoRowHeights := True;`
+TPPGCustomGrid.MaxRowLines = Höchstens so viele Textzeilen je Zelle bei AutoRowHeights (0..100; 0 = ohne Grenze). Längere Texte enden mit „…".
+TPPGCustomGrid.OnDrawColumnTitle = Spaltenkopf selbst zeichnen: nach der Kopffläche, vor dem Titeltext. ACanvas ist mit Schrift, Textfarbe und Kopffarbe (Brush) vorbereitet, Rect ist die Kopfzelle, ACol der Index in Columns (DB-Grid ohne Indikator, wie DataCol bei OnDrawColumnCell), Column die Spalte. DefaultDraw := False lässt den Titeltext weg; Linien, Filter- und Sortiersymbol zeichnet das Grid weiter.
+> `if Column.Index = 0 then begin ACanvas.Draw(Rect.Left + 4, Rect.Top + 4, FIcon); DefaultDraw := False; end;`
 TPPGCustomGrid.FixedRows = Anzahl fester Kopfzeilen oben (0..RowCount-1).
 TPPGCustomGrid.GradientEndColor = Endfarbe des Kopf-Verlaufs bei DrawingStyle = gdsGradient.
 TPPGCustomGrid.GradientStartColor = Anfangsfarbe des Kopf-Verlaufs bei DrawingStyle = gdsGradient.
@@ -308,6 +315,7 @@ TPPGGridBand.ParentBand = Übergeordnetes Band (Index in Grid.Bands) für mehrst
 # --- TPPGGridColumn ---
 TPPGGridColumn.Aggregate = Zusammenfassung in Summenzeile (ShowFooter) und Gruppenfuß (GroupFooter): agSum (Summe), agAvg (Mittelwert), agMin, agMax, agCount (Anzahl), agCustom (Wert aus OnCustomAggregate), agNone.
 TPPGGridColumn.Alignment = Ausrichtung des Zellinhalts (links, zentriert, rechts); Zahlen meist rechtsbündig.
+TPPGGridColumn.WordWrap = Text der Spalte an Wortgrenzen umbrechen (zu lange Wörter an der Spaltenbreite). Ohne AutoRowHeights bleibt die Zeilenhöhe; mit AutoRowHeights wird die Zeile so hoch wie der Text.
 TPPGGridColumn.Band = Band (Index in Grid.Bands), unter dem diese Spalte steht; -1 = keins.
 TPPGGridColumn.CellKind = Darstellung der Zellen: ckText, ckCheck (Kästchen), ckProgress (Balken zwischen MinValue und MaxValue, sonst 0..100), ckSparkline (Werte „1;4;2"), ckRating (Sterne, Anzahl = MaxValue, sonst 5), ckImage (Bildindex), ckLink, ckButton (OnCellButtonClick), ckColor (Farbfeld), ckMarkup, ckCustom (eigene Zellart über CellKindName).
 > `Grid1.Columns[2].CellKind := ckProgress;`
