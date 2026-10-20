@@ -198,6 +198,7 @@ uses
   PPG.Tests.Phase9d in 'PPG.Tests.Phase9d.pas',
   PPG.Tests.GridFilterSearch in 'PPG.Tests.GridFilterSearch.pas',
   PPG.Tests.DBGridGrouping in 'PPG.Tests.DBGridGrouping.pas',
+  PPG.Tests.DBGridKeySync in 'PPG.Tests.DBGridKeySync.pas',
   PPG.Tests.GridWishes in 'PPG.Tests.GridWishes.pas',
   PPG.Tests.Phase10a in 'PPG.Tests.Phase10a.pas',
   PPG.Tests.Phase10b in 'PPG.Tests.Phase10b.pas',

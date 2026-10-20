@@ -107,6 +107,31 @@ unit PPG.DB.Grid;
     den aktiven Satz liefert die Felder der Spalten (alle Felder nur, wenn
     OnGetCellStyle/OnSelectCell beim Lesen zugewiesen waren); Kartenansicht
     gruppiert nicht.
+    Schluesselfelder (KeyFieldNames, wie KeyFieldNames am DataController
+    eines cxGrid; Semikolon-Liste, eindeutig je Satz): das Grid merkt sich
+    je Zeile die Schluesselwerte statt eines Lesezeichens und stellt die
+    Datenmenge per Locate auf den Satz (steht sie schon darauf: nichts).
+    Lesen, Fokus, Satzvergleich (OnFocusedRecordChanged, Bearbeitung,
+    Neulesen nur des Satzes) und die Markierung der Mehrfachauswahl kommen so
+    ohne Lesezeichen aus (GetBookmark, BookmarkValid, CompareBookmarks,
+    GotoBookmark). Gedacht fuer Datenmengen, deren Lesezeichen teuer sind
+    (z.B. eine Tabelle auf einer SQL-Sicht ohne eindeutigen Index: jedes
+    Lesezeichen ist dort eine Suchabfrage). SelectedRows bleibt eine Liste von
+    Lesezeichen (TDBGrid); sie werden nur fuer die Auswahl geholt (Bereiche
+    mit einem Durchlauf). Leer = Lesezeichen wie bisher.
+    Schnelle Navigation (GroupSyncDelay > 0): Tastenwiederholung von Pfeil
+    auf/ab und Bild auf/ab (Taste gehalten) bewegt zuerst nur den Fokus (die
+    Anzeige kommt aus dem Speicher); die Datenmenge folgt einmal, sobald die
+    Taste losgelassen wird bzw. GroupSyncDelay ms nach der letzten
+    Wiederholung, spaetestens vor jedem Zugriff auf den aktiven Satz (andere
+    Taste, Maus, Doppelklick, Editor, Formular, Zellwert schreiben, Aktionen,
+    SelectedRows, ForEachSelected, RowValue, OnClick, Fokusverlust,
+    RefreshGroups, Freigabe). Der erste Tastendruck, Klicks und Code wirken
+    sofort; OnFocusedRecordChanged kommt einmal fuer den Zielsatz. Mausrad
+    und Leiste scrollen gruppiert nur die Ansicht. Waehrend der Sammelphase
+    sehen OnKeyDown und Code ausserhalb des Grids noch den vorherigen Satz;
+    ein Satzwechsel bzw. Neulesen von aussen verwirft das Nachziehen (der
+    Fokus folgt der Datenmenge). SyncActiveRecord zieht sofort nach.
   - Nicht unterstuetzt: Unterspalten (ADT/Array-Felder). }
 
 {$I ..\PPG.inc}
@@ -118,7 +143,7 @@ uses
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Grids, Vcl.DBGrids, Vcl.StdCtrls,
   System.TypInfo, // vor Data.DB: dessen ftCurrency/ftExtended gelten
   Data.DB,
-  PPG.Types, PPG.Render.Intf, PPG.Controls.Base, PPG.Panel, PPG.Button, PPG.Grid,
+  PPG.Types, PPG.Animation, PPG.Render.Intf, PPG.Controls.Base, PPG.Panel, PPG.Button, PPG.Grid,
   PPG.Grid.Columns, PPG.Grid.Data, PPG.Grid.Styles, PPG.Grid.CellKinds, PPG.Grid.View,
   PPG.Grid.Edit, PPG.ColumnComboBox;
 
@@ -588,6 +613,25 @@ type
     FGrpViewVer: Integer;
     FGrpReadCount: Integer;
     FDrawRec: Integer;      // Owner-Draw im Gruppenmodus: gezeichneter Satz
+    // Schluesselfelder (KeyFieldNames): Satz per Locate statt Lesezeichen
+    FKeyFieldNames: string;
+    FKeyFlds: array of TField; // aufgeloeste Felder (leer = ohne Schluessel)
+    FKeyFldsOk: Boolean;       // FKeyFlds passt zur offenen Datenmenge
+    FGrpKeyed: Boolean;        // gruppiert mit Schluesseln gelesen
+    FGrpKeys: array of string;  // Schluessel je Satz ('' = neuer Satz)
+    FGrpKeyVals: array of Variant; // Werte fuer Locate je Satz
+    FGrpKeyIndex: TDictionary<string, Integer>; // Schluessel -> Satz
+    FGrpEditKey: string;       // wie FGrpEditBm
+    FGrpLastKey: string;       // wie FGrpLastBm
+    FLastRecKey: string;       // wie FLastRecBm
+    FEditKey: string;          // wie FEditBm
+    FBmKeys: TDictionary<string, string>; // Lesezeichen -> Schluessel (Auswahl)
+    // Nachziehen der Datenmenge bei schneller Navigation (gruppiert)
+    FGroupSyncDelay: Integer;
+    FSyncAnim: TPPGAnimation;
+    FPendRow: Integer;  // Satz, auf den die Datenmenge noch folgt (-1 = keiner)
+    FDeferNav: Integer; // > 0: Fokuswechsel einer Tastenwiederholung
+    FKeyRepeat: Boolean; // laufende WM_KEYDOWN ist eine Wiederholung
     procedure FilterRecordHook(DataSet: TDataSet; var Accept: Boolean);
     procedure FilterHook(DS: TDataSet);
     procedure FilterUnhook;
@@ -736,6 +780,8 @@ type
     /// Datenmenge auf Satz R stellen; False = Ansicht neu aufgebaut bzw.
     /// Satz nicht erreichbar (Fokus ist dann schon gesetzt).
     function GroupGoto(R: Integer): Boolean;
+    /// GroupGoto mit Schluesselfeldern (Locate statt Lesezeichen).
+    function GroupGotoKey(R: Integer): Boolean;
     function GroupIndexOfBm(const B: TBookmark): Integer;
     function GroupIndexOfCurrent: Integer;
     function GroupKeysOf(R: Integer): string;
@@ -757,6 +803,31 @@ type
     procedure GotoDataIndex(R: Integer);
     function GetGroupPanel: Boolean;
     procedure SetGroupPanel(const Value: Boolean);
+    { Schluesselfelder und Nachziehen }
+    procedure SetKeyFieldNames(const Value: string);
+    procedure SetGroupSyncDelay(const Value: Integer);
+    /// KeyFieldNames gesetzt und alle Felder in der offenen Datenmenge?
+    function KeyMode: Boolean;
+    /// Schluessel des aktiven Satzes (Vergleich, Woerterbuch).
+    function CurrentKey: string;
+    /// Werte der Schluesselfelder des aktiven Satzes (fuer Locate).
+    function CurrentKeyValues: Variant;
+    /// Schluessel des Satzes zu einem Lesezeichen (nur aus dem
+    /// Zwischenspeicher, ohne Satzwechsel); '' = unbekannt.
+    function BookmarkRecordKey(const B: TBookmark): string;
+    /// Lesezeichen des aktiven Satzes mit seinem Schluessel merken.
+    procedure NoteBookmarkKey(const B: TBookmark);
+    /// Schluessel eines fremden Lesezeichens merken (ggf. kurz auf den Satz).
+    procedure LearnBookmarkKey(const B: TBookmark);
+    /// Lesezeichen fuer Saetze holen (gruppiert mit Schluesseln: ein Durchlauf).
+    procedure GroupFetchBookmarks(const Rows: TArray<Integer>);
+    /// Satz des Lesezeichens in der gruppierten Ansicht (-1 = keiner).
+    function GroupRowOfBookmark(const B: TBookmark): Integer;
+    /// Fokuswechsel ohne Datenmenge (Tastenwiederholung): Satz R merken.
+    procedure DeferGoto(R: Integer);
+    procedure CancelPendingSync;
+    procedure SyncAnimStep(Sender: TObject);
+    procedure WMKeyDown(var Message: TWMKeyDown); message WM_KEYDOWN;
   protected
     /// Kaestchen-Spalte (Boolean-Feld, gekCheck oder ckCheck)?
     function IsCheckColumn(ACol: Integer): Boolean;
@@ -847,6 +918,10 @@ type
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure NavigateKey(var Key: Word; Shift: TShiftState); override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure KeyUp(var Key: Word; Shift: TShiftState); override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure Click; override;
     procedure ContentMouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     /// Rueckfrage vor dem Loeschen (dgConfirmDelete). Standard: MessageDlg.
     function ConfirmDelete: Boolean; virtual;
@@ -933,6 +1008,18 @@ type
     /// Gruppenleiste ueber den Titeln: Spaltenkopf hineinziehen gruppiert
     /// (liest dann die ganze Datenmenge, siehe Kopf der Unit).
     property ShowGroupPanel: Boolean read GetGroupPanel write SetGroupPanel default False;
+    /// Schluesselfelder der Datenmenge (Semikolon-Liste, eindeutig je Satz;
+    /// wie KeyFieldNames eines cxGrid-DataControllers): gruppiert merkt sich
+    /// das Grid je Zeile die Schluesselwerte und stellt die Datenmenge per
+    /// Locate statt per Lesezeichen auf den Satz; auch der Vergleich des
+    /// aktiven Satzes (OnFocusedRecordChanged, Editor) nutzt sie. Leer bzw.
+    /// ein unbekanntes Feld = Lesezeichen wie bisher.
+    property KeyFieldNames: string read FKeyFieldNames write SetKeyFieldNames;
+    /// Gruppiert: Tastenwiederholung (Pfeil auf/ab, Bild auf/ab gehalten)
+    /// bewegt nur den Fokus; die Datenmenge folgt einmal beim Loslassen bzw.
+    /// so viele ms nach der letzten Wiederholung (spaetestens vor jedem
+    /// Zugriff auf den aktiven Satz). 0 = jeder Schritt sofort (0..5000).
+    property GroupSyncDelay: Integer read FGroupSyncDelay write SetGroupSyncDelay default 120;
     /// Formular wurde geoeffnet (Editoren gefuellt, Fokus gesetzt).
     property OnEditFormShow: TNotifyEvent read FOnEditFormShow write FOnEditFormShow;
     /// Formular wurde geschlossen (Accepted = uebernommen).
@@ -1024,6 +1111,12 @@ type
     procedure RefreshGroups;
     /// Anzahl kompletter Lesevorgaenge der Datenmenge im Gruppenmodus.
     property GroupReadCount: Integer read FGrpReadCount;
+    /// Gruppiert nach schneller Navigation: Datenmenge sofort auf die
+    /// fokussierte Zeile stellen (siehe GroupSyncDelay). True = sie stand
+    /// noch nicht darauf.
+    function SyncActiveRecord: Boolean;
+    /// Wartet die Datenmenge noch auf den fokussierten Satz (GroupSyncDelay)?
+    function RecordSyncPending: Boolean;
     /// Zeigt die sichtbare Zeile den aktiven Satz der Datenmenge?
     function IsActiveRecordRow(VRow: Integer): Boolean;
     /// Sortierpfeil nach IndexFieldNames setzen (siehe
@@ -1067,6 +1160,8 @@ type
     property ShowFooter;
     property ShowGroupPanel;
     property GroupFooter;
+    property KeyFieldNames;
+    property GroupSyncDelay;
     property ShowFilterRow;
     property FilterImmediate;
     property ShowFilterBar;
@@ -1746,6 +1841,8 @@ begin
   if Result then
   begin
     FList.Insert(I, Copy(Item));
+    // Mit Schluesselfeldern: Schluessel fuer die Markierung (gruppiert)
+    FGrid.LearnBookmarkKey(Item);
     Changed;
   end;
 end;
@@ -1768,9 +1865,15 @@ var
 begin
   Result := nil;
   DS := DataSet;
+  // Nach schneller Navigation: erst die Datenmenge auf den Fokus
+  if DS <> nil then
+    FGrid.SyncActiveRecord;
   // Neuer, noch nicht gebuchter Satz hat kein Lesezeichen
   if (DS <> nil) and not DS.IsEmpty and (DS.State <> dsInsert) then
+  begin
     Result := DS.Bookmark;
+    FGrid.NoteBookmarkKey(Result);
+  end;
 end;
 
 function TPPGBookmarkList.GetCurrentRowSelected: Boolean;
@@ -1810,6 +1913,7 @@ begin
   DS := DataSet;
   if (DS = nil) or not FGrid.MultiSelectActive then
     Exit;
+  FGrid.SyncActiveRecord;
   // First wuerde eine offene Bearbeitung still buchen (wie EnsureSnapshot)
   if DS.State in dsEditModes then
     DS.CheckBrowseMode;
@@ -1825,7 +1929,10 @@ begin
       begin
         // Veto der Anwendung je Satz (OnCanSelectRecord)
         if FGrid.AllowSelectCurrent then
+        begin
           FList.Add(DS.Bookmark);
+          FGrid.NoteBookmarkKey(FList[FList.Count - 1]);
+        end;
         DS.Next;
       end;
     finally
@@ -1850,6 +1957,7 @@ begin
   DS := DataSet;
   if (DS = nil) or (FList.Count = 0) then
     Exit;
+  FGrid.SyncActiveRecord;
   DS.DisableControls;
   try
     // Von hinten: die uebrigen Lesezeichen bleiben gueltig
@@ -1886,6 +1994,7 @@ begin
     // Ungueltige entfernen. Gueltige neu lesen: manche Datenmengen (z.B.
     // TClientDataSet) liefern nach einem Indexwechsel andere Lesezeichen fuer
     // denselben Satz; danach neu sortieren
+    FGrid.SyncActiveRecord;
     if DS.State in dsEditModes then
       DS.CheckBrowseMode;
     Pos := TDataSetAccess(DS).ActiveRecord;
@@ -1904,6 +2013,7 @@ begin
           begin
             DS.Bookmark := FList[I];
             FList[I] := DS.Bookmark;
+            FGrid.NoteBookmarkKey(FList[I]);
           end;
       finally
         if (Length(B) > 0) and DS.BookmarkValid(B) then
@@ -2043,6 +2153,12 @@ begin
   FGrpIns := -1;
   FDrawRec := -1;
   FGrpIndex := TDictionary<string, Integer>.Create;
+  FGrpKeyIndex := TDictionary<string, Integer>.Create;
+  FBmKeys := TDictionary<string, string>.Create;
+  FGroupSyncDelay := 120;
+  FPendRow := -1;
+  FSyncAnim := TPPGAnimation.Create(Self);
+  FSyncAnim.OnStep := SyncAnimStep;
   FEditForm := TPPGDBGridEditFormOptions.Create(Self);
   FDataLink := TPPGGridDataLink.Create(Self);
   FSelected := TPPGBookmarkList.Create(Self);
@@ -2057,25 +2173,40 @@ end;
 
 destructor TPPGCustomDBGrid.Destroy;
 begin
-  // Filter der Datenmenge zuruecksetzen (OnFilterRecord, Filtered, Filter)
-  FilterUnhook;
-  // Formular nicht mehr bedienen (Kinder werden mit dem Grid freigegeben)
-  FFormOpen := False;
-  FFormBm := nil;
-  if FEditPanel <> nil then
-    FEditPanel.FGrid := nil;
-  if FDataLink <> nil then
-    FDataLink.FGrid := nil;
-  FreeAndNil(FDataLink);
-  if FSelected <> nil then
-    FSelected.FGrid := nil;
-  FreeAndNil(FSelected);
-  FAnchor := nil;
-  FreeAndNil(FAutoColumns);
-  FreeAndNil(FAutoState);
-  inherited Destroy;
-  FreeAndNil(FEditForm);
-  FreeAndNil(FGrpIndex);
+  try
+    // Nach schneller Navigation: die Datenmenge (lebt ggf. weiter) noch auf
+    // den fokussierten Satz stellen
+    if (FPendRow >= 0) and (FDataLink <> nil) and FDataLink.Active and
+      not (csDestroying in FDataLink.DataSet.ComponentState) and
+      (FDataLink.DataSet.State = dsBrowse) then
+      SyncActiveRecord;
+  finally
+    FPendRow := -1;
+    if FSyncAnim <> nil then
+      FSyncAnim.OnStep := nil;
+    FreeAndNil(FSyncAnim);
+    // Filter der Datenmenge zuruecksetzen (OnFilterRecord, Filtered, Filter)
+    FilterUnhook;
+    // Formular nicht mehr bedienen (Kinder werden mit dem Grid freigegeben)
+    FFormOpen := False;
+    FFormBm := nil;
+    if FEditPanel <> nil then
+      FEditPanel.FGrid := nil;
+    if FDataLink <> nil then
+      FDataLink.FGrid := nil;
+    FreeAndNil(FDataLink);
+    if FSelected <> nil then
+      FSelected.FGrid := nil;
+    FreeAndNil(FSelected);
+    FAnchor := nil;
+    FreeAndNil(FAutoColumns);
+    FreeAndNil(FAutoState);
+    inherited Destroy;
+    FreeAndNil(FEditForm);
+    FreeAndNil(FGrpIndex);
+    FreeAndNil(FGrpKeyIndex);
+    FreeAndNil(FBmKeys);
+  end;
 end;
 
 procedure TPPGCustomDBGrid.SetShowRequired(const Value: Boolean);
@@ -2164,6 +2295,9 @@ end;
 
 function TPPGCustomDBGrid.ExecuteAction(Action: TBasicAction): Boolean;
 begin
+  // Aktionen (Navigator, Datenmenge) arbeiten auf dem fokussierten Satz;
+  // UpdateAction laeuft im Leerlauf und zieht nicht nach
+  SyncActiveRecord;
   Result := inherited ExecuteAction(Action) or ((FDataLink <> nil) and FDataLink.ExecuteAction(Action));
 end;
 
@@ -2180,6 +2314,8 @@ end;
 procedure TPPGCustomDBGrid.CMExit(var Message: TCMExit);
 begin
   try
+    // Fokus geht woanders hin: die Datenmenge steht dann auf dem Fokus-Satz
+    SyncActiveRecord;
     HideEditor(True);
     // Leerer, unveraenderter neuer Datensatz verschwindet wieder (TDBGrid)
     // (nicht bei offenem Formular: seine Eingaben stehen noch nicht im Satz)
@@ -2470,11 +2606,26 @@ end;
 
 procedure TPPGCustomDBGrid.UpdateMarks;
 var
-  R: Integer;
+  R, I: Integer;
 begin
   if not FDataLink.Active or (FSelected = nil) or (FSelected.Count = 0) then
   begin
     SetLength(FMarks, 0);
+    Exit;
+  end;
+  // Gruppiert mit Schluesseln: je ausgewaehltem Satz sein Schluessel (die
+  // Zeilen haben keine Lesezeichen)
+  if FGrpOn and FGrpKeyed then
+  begin
+    SetLength(FMarks, Length(FCache));
+    for R := 0 to High(FMarks) do
+      FMarks[R] := False;
+    for I := 0 to FSelected.Count - 1 do
+    begin
+      R := GroupRowOfBookmark(FSelected[I]);
+      if (R >= 0) and (R < Length(FMarks)) then
+        FMarks[R] := True;
+    end;
     Exit;
   end;
   // Nur Lesezeichen vergleichen (aus RebuildCache), kein Satzwechsel
@@ -2498,7 +2649,10 @@ begin
     Exit;
   // Leere Auswahl: der naechste Bereich beginnt am dann aktiven Satz
   if FSelected.Count = 0 then
+  begin
     FAnchor := nil;
+    FBmKeys.Clear;
+  end;
   UpdateMarks;
   Invalidate;
   if Assigned(FOnSelectionChanged) then
@@ -2759,6 +2913,11 @@ begin
     Exit;
   // Lesezeichen gehoeren zur alten Datenmenge bzw. zum alten Oeffnen
   FAnchor := nil;
+  CancelPendingSync;
+  // Schluesselfelder neu aufloesen (Felder der Datenmenge sind ggf. neu)
+  FKeyFldsOk := False;
+  SetLength(FKeyFlds, 0);
+  FBmKeys.Clear;
   FCardActive := -1;
   FCardTop := 0;
   if FSelected <> nil then
@@ -2783,6 +2942,9 @@ end;
 
 procedure TPPGCustomDBGrid.LayoutChanged;
 begin
+  // Felder koennen neu sein: Schluesselfelder beim naechsten Zugriff aufloesen
+  FKeyFldsOk := False;
+  SetLength(FKeyFlds, 0);
   if not (csDestroying in ComponentState) then
     BuildColumns;
 end;
@@ -2797,12 +2959,23 @@ begin
     Exit;
   // Anderer Datensatz (Navigator, Code, Blaettern ueber den Puffer hinaus):
   // der offene Editor gehoert zum alten und wird verworfen
-  if EditorMode and (Length(FEditBm) > 0) and FDataLink.Active and
-    (FDataLink.DataSet.State = dsBrowse) and
-    (FDataLink.DataSet.CompareBookmarks(FEditBm, FDataLink.DataSet.Bookmark) <> 0) then
-    HideEditor(False);
+  if EditorMode and FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
+  begin
+    // Mit Schluesselfeldern ohne Lesezeichen vergleichen
+    if FEditKey <> '' then
+    begin
+      if not KeyMode or FDataLink.DataSet.IsEmpty or (CurrentKey <> FEditKey) then
+        HideEditor(False);
+    end
+    else if (Length(FEditBm) > 0) and
+      (FDataLink.DataSet.CompareBookmarks(FEditBm, FDataLink.DataSet.Bookmark) <> 0) then
+      HideEditor(False);
+  end;
   if not EditorMode then
+  begin
     FEditBm := nil;
+    FEditKey := '';
+  end;
   // Gruppiert: alle Saetze im Speicher (neu gelesen nur nach Aenderungen)
   if FGrpOn then
     GroupDataChanged
@@ -2859,6 +3032,7 @@ var
   DS: TDataSet;
   B: TBookmark;
   Ins, Changed: Boolean;
+  K: string;
 begin
   if csDestroying in ComponentState then
     Exit;
@@ -2869,9 +3043,24 @@ begin
   begin
     DS := FDataLink.DataSet;
     Ins := DS.State = dsInsert;
+    // Schluesselfelder: Vergleich ohne Lesezeichen
+    if KeyMode then
+    begin
+      K := '';
+      if not Ins and not DS.IsEmpty then
+        K := CurrentKey;
+      Changed := (Ins <> FLastRecIns) or (K <> FLastRecKey) or (Length(FLastRecBm) > 0);
+      FLastRecKey := K;
+      FLastRecBm := nil;
+      FLastRecIns := Ins;
+      if Changed then
+        DoFocusedRecordChanged;
+      Exit;
+    end;
     if not Ins and not DS.IsEmpty then
       B := DS.Bookmark;
   end;
+  FLastRecKey := '';
   if Ins <> FLastRecIns then
     Changed := True
   else if (Length(B) = 0) or (Length(FLastRecBm) = 0) then
@@ -2900,9 +3089,24 @@ begin
   if FGrpOn and FDataLink.Active then
   begin
     if FDataLink.DataSet.State = dsEdit then
-      FGrpEditBm := FDataLink.DataSet.Bookmark
+    begin
+      // Mit Schluesselfeldern: Schluessel statt Lesezeichen
+      if FGrpKeyed and KeyMode then
+      begin
+        FGrpEditKey := CurrentKey;
+        FGrpEditBm := nil;
+      end
+      else
+      begin
+        FGrpEditBm := FDataLink.DataSet.Bookmark;
+        FGrpEditKey := '';
+      end;
+    end
     else if FDataLink.DataSet.State = dsInsert then
+    begin
       FGrpEditBm := nil;
+      FGrpEditKey := '';
+    end;
   end;
   Invalidate;
 end;
@@ -3289,6 +3493,10 @@ begin
   F := DS.FindField(FieldName);
   if F = nil then
     raise EPPGError.CreateFmt(PPGStr(@SPPGDBFieldNotFound), [FieldName]);
+  // Ohne Zeile (Aufruf der Anwendung, nicht beim Zeichnen): der aktive Satz
+  // ist der fokussierte
+  if (FCtxRow < 0) and (FCtxSnap < 0) and (FDrawRow < 0) and (FDrawRec < 0) then
+    SyncActiveRecord;
   if FGrpOn then
   begin
     // Gruppiert: gespeicherte Werte des Satzes (aktiver Satz: das Feld)
@@ -3993,6 +4201,8 @@ var
   NewSt: TCheckBoxState;
   VC, VU: string;
 begin
+  // Kaestchen, Einfuegen, Zellart: erst auf den fokussierten Satz
+  SyncActiveRecord;
   F := FieldOfCol(ACol);
   if (F = nil) or not FDataLink.Active or (ARow - FixedRows <> ActiveDataIndex) then
     Exit;
@@ -4089,6 +4299,8 @@ end;
 
 procedure TPPGCustomDBGrid.EditorPrepare(ACol, ARow: Integer);
 begin
+  // Der Editor gehoert zum fokussierten Satz: Datenmenge vorher nachziehen
+  SyncActiveRecord;
   inherited EditorPrepare(ACol, ARow);
   // Vor dem Fokus: der Stilwechsel der Auswahl blendet das innere Feld aus
   FillLookupEditor(ACol);
@@ -4098,9 +4310,17 @@ procedure TPPGCustomDBGrid.EditorOpened(ACol, ARow: Integer);
 begin
   inherited EditorOpened(ACol, ARow);
   FEditBm := nil;
+  FEditKey := '';
   // Filterzeile (ARow < 0) gehoert zu keinem Datensatz
-  if (ARow >= 0) and FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
-    FEditBm := FDataLink.DataSet.Bookmark;
+  if (ARow >= 0) and FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) and
+    not FDataLink.DataSet.IsEmpty then
+  begin
+    // Mit Schluesselfeldern ohne Lesezeichen
+    if KeyMode then
+      FEditKey := CurrentKey
+    else
+      FEditBm := FDataLink.DataSet.Bookmark;
+  end;
 end;
 
 function TPPGCustomDBGrid.CellEditorClass(ACol, ARow: Integer;
@@ -4130,8 +4350,16 @@ begin
     finally
       FCtxRow := OldCtx;
     end;
-    if Result then
+    // Tastenwiederholung: nur der Fokus, die Datenmenge folgt gesammelt
+    if Result and (FDeferNav > 0) then
+      DeferGoto(R)
+    else if Result then
+    begin
+      // Einzelner Schritt (Code) waehrend einer Sammelphase: erst nachziehen
+      // (Tasten und Maus haben das schon getan), dann wie immer
+      SyncActiveRecord;
       Result := GroupGoto(R);
+    end;
     Exit;
   end;
   if (FSyncing = 0) and FDataLink.Active and (ARow >= FixedRows) then
@@ -4202,7 +4430,7 @@ end;
 procedure TPPGCustomDBGrid.NavigateKey(var Key: Word; Shift: TShiftState);
 var
   DS: TDataSet;
-  RowKey: Boolean;
+  RowKey, Defer: Boolean;
   OrigKey, K2: Word;
   OldBm: TBookmark;
 begin
@@ -4249,6 +4477,11 @@ begin
   DS := FDataLink.DataSet;
   OrigKey := Key;
   RowKey := False;
+  // Gruppiert, Taste gehalten (Wiederholung): nur der Fokus wandert, die
+  // Datenmenge folgt gesammelt (GroupSyncDelay)
+  Defer := FGrpOn and FKeyRepeat and (FGroupSyncDelay > 0) and (Shift = []) and
+    (DS.State = dsBrowse) and ((Key = VK_UP) or (Key = VK_DOWN) or (Key = VK_PRIOR) or
+    (Key = VK_NEXT));
   if MultiSelectActive then
   begin
     case Key of
@@ -4287,7 +4520,11 @@ begin
     end;
     if RowKey then
     begin
-      OldBm := FSelected.CurrentBookmark;
+      // Ohne Umschalt (auch beim Sammeln) braucht die Auswahl den alten Satz nicht
+      if Defer then
+        OldBm := nil
+      else
+        OldBm := FSelected.CurrentBookmark;
       // Umschalt+Pfeil runter am Ende waehlt, haengt aber keinen Satz an
       if (Key = VK_DOWN) and (ssShift in Shift) and (DS.State = dsBrowse) and not FGrpOn then
       begin
@@ -4315,7 +4552,14 @@ begin
           else
           begin
             K2 := Key;
-            inherited NavigateKey(K2, Shift - [ssShift]);
+            if Defer then
+              Inc(FDeferNav);
+            try
+              inherited NavigateKey(K2, Shift - [ssShift]);
+            finally
+              if Defer then
+                Dec(FDeferNav);
+            end;
           end;
           Key := 0;
         end;
@@ -4416,7 +4660,12 @@ begin
     else
     begin
       FSelected.Clear;
-      FAnchor := FSelected.CurrentBookmark;
+      // Sammelphase: der Anker kommt beim naechsten Bereich vom dann
+      // aktiven Satz (wie nach einer leeren Auswahl)
+      if FPendRow >= 0 then
+        FAnchor := nil
+      else
+        FAnchor := FSelected.CurrentBookmark;
     end;
   end;
 end;
@@ -6622,6 +6871,7 @@ var
   DS: TDataSet;
   T, I: Integer;
 begin
+  SyncActiveRecord;
   if FFormOpen or not FormMode or not FormAllowed then
     Exit;
   DS := FDataLink.DataSet;
@@ -6778,6 +7028,7 @@ end;
 procedure TPPGCustomDBGrid.DblClick;
 begin
   // OnDblClick; Zell-Editor (nicht im Formular-Modus: CanEditCell)
+  SyncActiveRecord;
   inherited DblClick;
   // Formular-Modus: Doppelklick auf eine Datenzeile oeffnet das Formular
   if FormMode and FDownOnRow and not FFormOpen and not EditorMode then
@@ -6790,6 +7041,8 @@ var
   I: Integer;
   Ed: TPPGCustomControl;
 begin
+  // Tippen (OnKeyPress, Editor, Formular) wirkt auf den fokussierten Satz
+  SyncActiveRecord;
   inherited KeyPress(Key);
   // Formular-Modus: Tippen oeffnet das Formular und beginnt im Feld der
   // Fokusspalte (Leertaste nicht: Mehrfachauswahl, Kaestchen)
@@ -7310,6 +7563,8 @@ begin
   Result := 0;
   if not Assigned(Proc) or not MultiSelectActive or (FSelected.Count = 0) then
     Exit;
+  // Danach steht die Datenmenge wieder auf dem fokussierten Satz
+  SyncActiveRecord;
   DS := FDataLink.DataSet;
   // Lesezeichen erst kopieren: Proc darf die Auswahl aendern
   SetLength(L, FSelected.Count);
@@ -7489,6 +7744,17 @@ begin
   SetLength(FCache, N);
   SetLength(FRowBms, N);
   SetLength(FGrpVals, N);
+  // Schluessel nur, wenn mit Schluesselfeldern gelesen wird
+  if FGrpKeyed then
+  begin
+    SetLength(FGrpKeys, N);
+    SetLength(FGrpKeyVals, N);
+  end
+  else
+  begin
+    SetLength(FGrpKeys, 0);
+    SetLength(FGrpKeyVals, 0);
+  end;
   if All then
     SetLength(FGrpAll, N)
   else
@@ -7502,11 +7768,19 @@ begin
   NewOn := FDataLink.Active and not CardMode and (Length(CurrentGroupColumns) > 0);
   if NewOn = FGrpOn then
     Exit;
+  // Gruppierung endet: die Datenmenge erst auf den fokussierten Satz
+  if FDataLink.Active and (FDataLink.DataSet.State = dsBrowse) then
+    SyncActiveRecord
+  else
+    CancelPendingSync;
   FGrpOn := NewOn;
   FGrpActive := -1;
   FGrpIns := -1;
   FGrpEditBm := nil;
   FGrpLastBm := nil;
+  FGrpEditKey := '';
+  FGrpLastKey := '';
+  FGrpKeyed := False;
   FGrpLastIns := False;
   FGrpRowDirty := False;
   FGrpNeedApply := False;
@@ -7516,6 +7790,8 @@ begin
   SetLength(FGrpBufRecs, 0);
   if FGrpIndex <> nil then
     FGrpIndex.Clear;
+  if FGrpKeyIndex <> nil then
+    FGrpKeyIndex.Clear;
   FGrpDirty := NewOn;
   if not NewOn then
   begin
@@ -7538,15 +7814,27 @@ begin
   // Neuer Satz: eigene Zeile (GroupDataChanged), die Saetze bleiben
   if DS.State = dsInsert then
     Exit;
-  // Post/Cancel einer Bearbeitung: nur dieser Satz hat sich geaendert
-  if (DS.State = dsBrowse) and (Length(FGrpEditBm) > 0) and not FGrpDirty and
+  // Post/Cancel einer Bearbeitung: nur dieser Satz hat sich geaendert (mit
+  // Schluesselfeldern: derselbe Schluessel, ohne Lesezeichen)
+  if FGrpEditKey <> '' then
+  begin
+    if (DS.State = dsBrowse) and not FGrpDirty and not DS.IsEmpty and KeyMode and
+      (CurrentKey = FGrpEditKey) then
+      FGrpRowDirty := True
+    else
+      FGrpDirty := True;
+  end
+  else if (DS.State = dsBrowse) and (Length(FGrpEditBm) > 0) and not FGrpDirty and
     not DS.IsEmpty and DS.BookmarkValid(FGrpEditBm) and
     (DS.CompareBookmarks(FGrpEditBm, DS.Bookmark) = 0) then
     FGrpRowDirty := True
   else
     FGrpDirty := True;
   if DS.State = dsBrowse then
+  begin
     FGrpEditBm := nil;
+    FGrpEditKey := '';
+  end;
 end;
 
 procedure TPPGCustomDBGrid.GroupReadRow(R: Integer; IsInsert: Boolean);
@@ -7554,10 +7842,32 @@ var
   C: Integer;
   F: TField;
   DS: TDataSet;
+  K: string;
 begin
   DS := FDataLink.DataSet;
   if IsInsert then
-    FRowBms[R] := nil // neuer Satz hat kein Lesezeichen
+  begin
+    FRowBms[R] := nil; // neuer Satz hat kein Lesezeichen (und keinen Schluessel)
+    if R < Length(FGrpKeys) then
+    begin
+      FGrpKeys[R] := '';
+      FGrpKeyVals[R] := Unassigned;
+    end;
+  end
+  else if FGrpKeyed then
+  begin
+    // Schluesselfelder: kein Lesezeichen je Satz (holt die Auswahl bei Bedarf)
+    FRowBms[R] := nil;
+    K := CurrentKey;
+    if K <> FGrpKeys[R] then
+    begin
+      if (FGrpKeys[R] <> '') and FGrpKeyIndex.TryGetValue(FGrpKeys[R], C) and (C = R) then
+        FGrpKeyIndex.Remove(FGrpKeys[R]);
+      FGrpKeys[R] := K;
+      FGrpKeyIndex.AddOrSetValue(K, R);
+    end;
+    FGrpKeyVals[R] := CurrentKeyValues;
+  end
   else
     FRowBms[R] := DS.Bookmark;
   SetLength(FCache[R], Length(FFields));
@@ -7582,7 +7892,8 @@ var
   DS: TDataSet;
   B: TBookmark;
   Pos0, N: Integer;
-  All: Boolean;
+  All, HasKey: Boolean;
+  KeyVals: Variant;
 begin
   DS := FDataLink.DataSet;
   FGrpDirty := False;
@@ -7591,13 +7902,27 @@ begin
   FGrpNeedApply := True;
   Inc(FGrpReadCount);
   FGrpIndex.Clear;
+  FGrpKeyIndex.Clear;
+  // Die Zeilen von vorher gibt es nicht mehr
+  CancelPendingSync;
+  // Mit Schluesselfeldern: je Satz die Schluesselwerte, keine Lesezeichen
+  FGrpKeyed := KeyMode;
   // Alle Felder nur, wenn RowValue sie fuer andere Saetze braucht
   All := Assigned(OnGetCellStyle) or Assigned(OnSelectCell);
   GroupSetLength(0, False);
   Pos0 := TDataSetAccess(DS).ActiveRecord;
   B := nil;
+  HasKey := False;
   if not DS.IsEmpty then
-    B := DS.Bookmark;
+  begin
+    if FGrpKeyed then
+    begin
+      KeyVals := CurrentKeyValues;
+      HasKey := True;
+    end
+    else
+      B := DS.Bookmark;
+  end;
   N := 0;
   FGrpLoading := True;
   // Andere PPGlow-Controls an derselben Datenmenge sollen das EnableControls
@@ -7613,13 +7938,20 @@ begin
         if N >= Length(FCache) then
           GroupSetLength(Max(64, Length(FCache) * 2), All);
         GroupReadRow(N, False);
-        FGrpIndex.AddOrSetValue(BookmarkKey(FRowBms[N]), N);
+        if not FGrpKeyed then
+          FGrpIndex.AddOrSetValue(BookmarkKey(FRowBms[N]), N);
         Inc(N);
         DS.Next;
       end;
     finally
       GroupSetLength(N, All);
-      if (Length(B) > 0) and DS.BookmarkValid(B) then
+      // Zurueck auf den Satz von vorher (Schluessel: per Locate)
+      if HasKey then
+      begin
+        if DS.Locate(FKeyFieldNames, KeyVals, []) then
+          MoveToBufferIndex(DS, Pos0);
+      end
+      else if (Length(B) > 0) and DS.BookmarkValid(B) then
         GotoBookmarkAt(DS, B, Pos0);
     end;
   finally
@@ -7659,6 +7991,12 @@ begin
     Result := FGrpIns
   else if DS.IsEmpty then
     Result := -1
+  else if FGrpKeyed then
+  begin
+    // Schluessel des aktiven Satzes (ohne Lesezeichen)
+    if not FGrpKeyIndex.TryGetValue(CurrentKey, Result) or (Result >= Length(FCache)) then
+      Result := -1;
+  end
   else
     Result := GroupIndexOfBm(DS.Bookmark);
 end;
@@ -7755,6 +8093,9 @@ begin
   if not FDataLink.Active then
     Exit;
   DS := FDataLink.DataSet;
+  // KeyFieldNames bzw. Felder geaendert: mit bzw. ohne Schluessel neu lesen
+  if FGrpKeyed <> KeyMode then
+    FGrpDirty := True;
   // Bearbeitung laeuft: erst nach Post/Cancel neu lesen (First wuerde buchen)
   if FGrpDirty and not (DS.State in dsEditModes) then
     GroupLoad
@@ -7881,24 +8222,41 @@ var
   B: TBookmark;
   Ins, Changed: Boolean;
   I, Old: Integer;
+  K: string;
 begin
   if not FDataLink.Active then
     Exit;
   DS := FDataLink.DataSet;
   Ins := DS.State = dsInsert;
   B := nil;
-  if not Ins and not DS.IsEmpty then
-    B := DS.Bookmark;
-  // Lesezeichen-Bytes vergleichen: CompareBookmarks meldet fuer einen
-  // herausgefilterten Satz (TClientDataSet) Gleichheit
-  if Ins <> FGrpLastIns then
-    Changed := True
+  if FGrpKeyed then
+  begin
+    // Schluesselfelder: Schluessel statt Lesezeichen vergleichen
+    K := '';
+    if not Ins and not DS.IsEmpty then
+      K := CurrentKey;
+    Changed := (Ins <> FGrpLastIns) or (K <> FGrpLastKey);
+    FGrpLastKey := K;
+    FGrpLastBm := nil;
+  end
   else
-    Changed := BookmarkKey(B) <> BookmarkKey(FGrpLastBm);
-  FGrpLastBm := B;
+  begin
+    if not Ins and not DS.IsEmpty then
+      B := DS.Bookmark;
+    // Lesezeichen-Bytes vergleichen: CompareBookmarks meldet fuer einen
+    // herausgefilterten Satz (TClientDataSet) Gleichheit
+    if Ins <> FGrpLastIns then
+      Changed := True
+    else
+      Changed := BookmarkKey(B) <> BookmarkKey(FGrpLastBm);
+    FGrpLastBm := B;
+    FGrpLastKey := '';
+  end;
   FGrpLastIns := Ins;
   if Ins then
     FGrpActive := FGrpIns
+  else if FGrpKeyed then
+    FGrpActive := GroupIndexOfCurrent
   else
     FGrpActive := GroupIndexOfBm(B);
   // Owner-Draw: Pufferzeilen der Datenmenge -> Saetze (OnDrawColumnCell
@@ -7915,11 +8273,25 @@ begin
         else
         begin
           FDataLink.ActiveRecord := I;
-          FGrpBufRecs[I] := GroupIndexOfBm(DS.Bookmark);
+          if FGrpKeyed then
+          begin
+            if not FGrpKeyIndex.TryGetValue(CurrentKey, FGrpBufRecs[I]) then
+              FGrpBufRecs[I] := -1;
+          end
+          else
+            FGrpBufRecs[I] := GroupIndexOfBm(DS.Bookmark);
         end;
     finally
       FDataLink.ActiveRecord := Old;
     end;
+  end;
+  // Sammelphase (schnelle Navigation): der Fokus bleibt, solange die
+  // Datenmenge auf ihrem Satz steht; ein Satzwechsel von aussen gewinnt
+  if (FPendRow >= 0) and (FGrpMoving = 0) then
+  begin
+    if not Changed then
+      Exit;
+    CancelPendingSync;
   end;
   // Waehrend der Fokus die Datenmenge bewegt, setzt er auch die Zeile
   if (FGrpMoving > 0) or (FGrpActive < 0) then
@@ -7952,6 +8324,9 @@ begin
   end
   else if R = FGrpActive then
     Exit;
+  // Schluesselfelder: per Locate (steht die Datenmenge schon darauf: nichts)
+  if FGrpKeyed then
+    Exit(GroupGotoKey(R));
   B := FRowBms[R];
   if Length(B) = 0 then
     Exit(False);
@@ -7981,17 +8356,63 @@ begin
   end;
 end;
 
+function TPPGCustomDBGrid.GroupGotoKey(R: Integer): Boolean;
+var
+  DS: TDataSet;
+  Key: string;
+  Vals: Variant;
+  Ver: Integer;
+  Found: Boolean;
+begin
+  DS := FDataLink.DataSet;
+  if (R >= Length(FGrpKeys)) or (FGrpKeys[R] = '') or not KeyMode then
+    Exit(False);
+  // Werte vorher merken: Buchen kann neu lesen (andere Zeilen)
+  Key := FGrpKeys[R];
+  Vals := FGrpKeyVals[R];
+  Ver := FGrpViewVer;
+  // Offene Bearbeitung buchen (wie MoveBy); das kann neu gruppieren
+  if DS.State in dsEditModes then
+    DS.CheckBrowseMode;
+  if (DS.State = dsBrowse) and not DS.IsEmpty and (CurrentKey = Key) then
+    Found := True // steht schon darauf: kein Zugriff auf die Datenmenge
+  else
+  begin
+    Inc(FGrpMoving);
+    Inc(FGrpQuiet);
+    try
+      Found := DS.Locate(FKeyFieldNames, Vals, []);
+    finally
+      Dec(FGrpQuiet);
+      Dec(FGrpMoving);
+    end;
+  end;
+  if FGrpViewVer <> Ver then
+  begin
+    // Ansicht wurde neu aufgebaut (gebuchte Aenderung): Fokus selbst setzen
+    GroupFocusActive;
+    Exit(False);
+  end;
+  if not Found then
+    Exit(False); // Satz gibt es nicht mehr: Fokus bleibt
+  FGrpActive := GroupIndexOfCurrent;
+  Result := FGrpActive = R;
+  // Doppelter Schluessel (Locate fand einen anderen Satz): Fokus dorthin
+  if not Result then
+    GroupFocusActive;
+end;
+
 procedure TPPGCustomDBGrid.GroupSelectRange(const FromBm: TBookmark);
 var
-  Order: TArray<Integer>;
+  Order, Rows: TArray<Integer>;
   Cur: TBookmark;
   A, C, P0, P1, I, R: Integer;
 begin
   Cur := FSelected.CurrentBookmark;
   if Length(Cur) = 0 then
     Exit;
-  A := GroupIndexOfBm(FromBm);
-  C := GroupIndexOfBm(Cur);
+  A := GroupRowOfBookmark(FromBm);
+  C := GroupRowOfBookmark(Cur);
   if (A < 0) or (C < 0) then
   begin
     FSelected.AddBookmark(Cur);
@@ -8019,6 +8440,14 @@ begin
     P0 := P1;
     P1 := I;
   end;
+  // Schluesselfelder: Lesezeichen der Zeilen erst jetzt (ein Durchlauf)
+  if FGrpKeyed then
+  begin
+    SetLength(Rows, P1 - P0 + 1);
+    for I := P0 to P1 do
+      Rows[I - P0] := Order[I] - FixedRows;
+    GroupFetchBookmarks(Rows);
+  end;
   FSelected.BeginUpdate;
   try
     // AddBookmark fragt OnCanSelectRecord je Satz
@@ -8041,6 +8470,9 @@ begin
   if not FDataLink.Active then
     Exit;
   R := GroupIndexOfCurrent;
+  // Schluesselfeld selbst geaendert: die Zeile ist die des aktiven Satzes
+  if (R < 0) and FGrpKeyed and (FDataLink.DataSet.State = dsEdit) then
+    R := FGrpActive;
   if (R < 0) or (R >= Length(FCache)) then
     Exit;
   GroupReadRow(R, FDataLink.DataSet.State = dsInsert);
@@ -8513,6 +8945,8 @@ var
   DS: TDataSet;
 begin
   Result := False;
+  // Der gesuchte Satz ersetzt ein noch offenes Nachziehen
+  CancelPendingSync;
   if not FDataLink.Active then
     Exit;
   DS := FDataLink.DataSet;
@@ -8530,10 +8964,343 @@ end;
 
 procedure TPPGCustomDBGrid.RefreshGroups;
 begin
+  // Neu lesen haelt den aktiven Satz: vorher auf den fokussierten
+  SyncActiveRecord;
   if not FGrpOn then
     Exit;
   FGrpDirty := True;
   DataChanged;
+end;
+
+{ ---- Schluesselfelder (KeyFieldNames) ---- }
+
+procedure TPPGCustomDBGrid.SetKeyFieldNames(const Value: string);
+var
+  DS: TDataSet;
+begin
+  if Value = FKeyFieldNames then
+    Exit;
+  // Ein offenes Nachziehen noch mit den alten Schluesseln
+  SyncActiveRecord;
+  FKeyFieldNames := Value;
+  FKeyFldsOk := False;
+  SetLength(FKeyFlds, 0);
+  FBmKeys.Clear;
+  FEditKey := '';
+  // Vergleich des aktiven Satzes im neuen Verfahren fortsetzen (kein
+  // falsches OnFocusedRecordChanged)
+  FLastRecKey := '';
+  FLastRecBm := nil;
+  if (FDataLink <> nil) and FDataLink.Active then
+  begin
+    DS := FDataLink.DataSet;
+    if (DS.State <> dsInsert) and not DS.IsEmpty then
+    begin
+      if KeyMode then
+        FLastRecKey := CurrentKey
+      else
+        FLastRecBm := DS.Bookmark;
+    end;
+  end;
+  // Gruppiert: mit bzw. ohne Schluessel neu lesen
+  if FGrpOn and not (csLoading in ComponentState) then
+    RefreshGroups;
+end;
+
+function TPPGCustomDBGrid.KeyMode: Boolean;
+var
+  Names: TArray<string>;
+  I: Integer;
+  F: TField;
+begin
+  Result := False;
+  if (FKeyFieldNames = '') or (FDataLink = nil) or not FDataLink.Active then
+    Exit;
+  if not FKeyFldsOk then
+  begin
+    // Einmal je Oeffnen bzw. Feldaenderung aufloesen (LinkActive, LayoutChanged)
+    FKeyFldsOk := True;
+    Names := PPGSplitString(FKeyFieldNames, ';', True);
+    SetLength(FKeyFlds, Length(Names));
+    for I := 0 to High(Names) do
+    begin
+      F := FDataLink.DataSet.FindField(Trim(Names[I]));
+      if F = nil then
+      begin
+        // Unbekanntes Feld: ohne Schluessel (Lesezeichen wie bisher)
+        SetLength(FKeyFlds, 0);
+        Break;
+      end;
+      FKeyFlds[I] := F;
+    end;
+  end;
+  Result := Length(FKeyFlds) > 0;
+end;
+
+function TPPGCustomDBGrid.CurrentKey: string;
+var
+  I: Integer;
+  F: TField;
+begin
+  Result := '';
+  if not KeyMode then
+    Exit;
+  // Je Feld "=" + Text bzw. #2 fuer Null, getrennt mit #1 (nie leer)
+  for I := 0 to High(FKeyFlds) do
+  begin
+    F := FKeyFlds[I];
+    if F.IsNull then
+      Result := Result + #2 + #1
+    else
+      Result := Result + '=' + F.AsString + #1;
+  end;
+end;
+
+function TPPGCustomDBGrid.CurrentKeyValues: Variant;
+var
+  I: Integer;
+begin
+  Result := Null;
+  if not KeyMode then
+    Exit;
+  // Wie Locate es erwartet: ein Feld = Wert, mehrere = Variant-Array
+  if Length(FKeyFlds) = 1 then
+    Exit(FKeyFlds[0].Value);
+  Result := VarArrayCreate([0, High(FKeyFlds)], varVariant);
+  for I := 0 to High(FKeyFlds) do
+    Result[I] := FKeyFlds[I].Value;
+end;
+
+procedure TPPGCustomDBGrid.NoteBookmarkKey(const B: TBookmark);
+begin
+  // Die Datenmenge steht auf dem Satz von B
+  if (Length(B) > 0) and (FBmKeys <> nil) and KeyMode then
+    FBmKeys.AddOrSetValue(BookmarkKey(B), CurrentKey);
+end;
+
+function TPPGCustomDBGrid.BookmarkRecordKey(const B: TBookmark): string;
+begin
+  Result := '';
+  if (Length(B) = 0) or (FBmKeys = nil) or not KeyMode then
+    Exit;
+  if not FBmKeys.TryGetValue(BookmarkKey(B), Result) then
+    Result := '';
+end;
+
+procedure TPPGCustomDBGrid.LearnBookmarkKey(const B: TBookmark);
+var
+  DS: TDataSet;
+  Cur: TBookmark;
+  Vals: Variant;
+  Pos0: Integer;
+  HasCur: Boolean;
+begin
+  // Lesezeichen von aussen (SelectedRows.AddBookmark): Schluessel merken
+  if (Length(B) = 0) or not KeyMode or (BookmarkRecordKey(B) <> '') then
+    Exit;
+  DS := FDataLink.DataSet;
+  HasCur := (DS.State = dsBrowse) and not DS.IsEmpty;
+  if HasCur then
+  begin
+    // Meist der aktive Satz: ohne Satzwechsel
+    Cur := DS.Bookmark;
+    if BookmarkKey(Cur) = BookmarkKey(B) then
+    begin
+      NoteBookmarkKey(B);
+      Exit;
+    end;
+  end;
+  // Sonst kurz auf den Satz (nicht waehrend einer Bearbeitung: wuerde buchen)
+  if not HasCur or FGrpLoading or not DS.BookmarkValid(B) then
+    Exit;
+  Vals := CurrentKeyValues;
+  Pos0 := TDataSetAccess(DS).ActiveRecord;
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    DS.Bookmark := B;
+    try
+      NoteBookmarkKey(B);
+    finally
+      if DS.Locate(FKeyFieldNames, Vals, []) then
+        MoveToBufferIndex(DS, Pos0);
+    end;
+  finally
+    DS.EnableControls;
+    PPGDBEndRead;
+  end;
+end;
+
+function TPPGCustomDBGrid.GroupRowOfBookmark(const B: TBookmark): Integer;
+begin
+  if not FGrpKeyed then
+    Exit(GroupIndexOfBm(B));
+  // Schluesselfelder: ueber den gemerkten Schluessel (kein Satzwechsel)
+  if not FGrpKeyIndex.TryGetValue(BookmarkRecordKey(B), Result) or
+    (Result >= Length(FCache)) then
+    Result := -1;
+end;
+
+procedure TPPGCustomDBGrid.GroupFetchBookmarks(const Rows: TArray<Integer>);
+var
+  DS: TDataSet;
+  Want: array of Boolean;
+  I, R, Missing, Pos0: Integer;
+  Vals: Variant;
+begin
+  if not FGrpKeyed or not KeyMode then
+    Exit;
+  DS := FDataLink.DataSet;
+  // Nicht waehrend einer Bearbeitung (First wuerde buchen)
+  if (DS.State <> dsBrowse) or DS.IsEmpty then
+    Exit;
+  SetLength(Want, Length(FCache));
+  Missing := 0;
+  for I := 0 to High(Rows) do
+  begin
+    R := Rows[I];
+    if (R >= 0) and (R < Length(Want)) and (R < Length(FRowBms)) and (R < Length(FGrpKeys)) and
+      (Length(FRowBms[R]) = 0) and (FGrpKeys[R] <> '') and not Want[R] then
+    begin
+      Want[R] := True;
+      Inc(Missing);
+    end;
+  end;
+  if Missing = 0 then
+    Exit;
+  // Ein Durchlauf statt eines Satzwechsels je Zeile
+  Vals := CurrentKeyValues;
+  Pos0 := TDataSetAccess(DS).ActiveRecord;
+  PPGDBBeginRead;
+  DS.DisableControls;
+  try
+    try
+      DS.First;
+      while not DS.Eof and (Missing > 0) do
+      begin
+        if FGrpKeyIndex.TryGetValue(CurrentKey, R) and (R < Length(Want)) and Want[R] then
+        begin
+          FRowBms[R] := DS.Bookmark;
+          NoteBookmarkKey(FRowBms[R]);
+          Want[R] := False;
+          Dec(Missing);
+        end;
+        DS.Next;
+      end;
+    finally
+      if DS.Locate(FKeyFieldNames, Vals, []) then
+        MoveToBufferIndex(DS, Pos0);
+    end;
+  finally
+    DS.EnableControls;
+    PPGDBEndRead;
+  end;
+end;
+
+{ ---- Nachziehen bei schneller Navigation ---- }
+
+procedure TPPGCustomDBGrid.SetGroupSyncDelay(const Value: Integer);
+begin
+  FGroupSyncDelay := PPGCheckRange(Self, 'GroupSyncDelay', Value, 0, 5000);
+  if FGroupSyncDelay = 0 then
+    SyncActiveRecord;
+end;
+
+procedure TPPGCustomDBGrid.DeferGoto(R: Integer);
+begin
+  // Zurueck auf dem Satz der Datenmenge: nichts nachzuziehen
+  if R = FGrpActive then
+  begin
+    CancelPendingSync;
+    Exit;
+  end;
+  FPendRow := R;
+  if FSyncAnim = nil then
+    Exit;
+  // Jede Wiederholung startet die Wartezeit neu; OnStep erst an ihrem Ende
+  FSyncAnim.Jump(0);
+  FSyncAnim.StepInterval := Cardinal(FGroupSyncDelay);
+  FSyncAnim.AnimateTo(1, Cardinal(FGroupSyncDelay), ekLinear);
+end;
+
+procedure TPPGCustomDBGrid.CancelPendingSync;
+begin
+  FPendRow := -1;
+  if (FSyncAnim <> nil) and FSyncAnim.Running then
+    FSyncAnim.Stop;
+end;
+
+procedure TPPGCustomDBGrid.SyncAnimStep(Sender: TObject);
+begin
+  // Wartezeit nach der letzten Wiederholung vorbei
+  if (FPendRow >= 0) and not FSyncAnim.Running then
+    SyncActiveRecord;
+end;
+
+function TPPGCustomDBGrid.SyncActiveRecord: Boolean;
+var
+  R: Integer;
+begin
+  Result := FPendRow >= 0;
+  if not Result then
+    Exit;
+  R := FPendRow;
+  CancelPendingSync;
+  if not FGrpOn or (FDataLink = nil) or not FDataLink.Active or (R >= Length(FCache)) then
+    Exit;
+  // Satz nicht erreichbar (z.B. geloescht): Fokus zurueck auf den aktiven
+  if not GroupGoto(R) then
+    GroupFocusActive;
+end;
+
+function TPPGCustomDBGrid.RecordSyncPending: Boolean;
+begin
+  Result := FPendRow >= 0;
+end;
+
+procedure TPPGCustomDBGrid.WMKeyDown(var Message: TWMKeyDown);
+var
+  Old: Boolean;
+begin
+  // Bit 30 = Taste war schon gedrueckt (automatische Wiederholung)
+  Old := FKeyRepeat;
+  FKeyRepeat := (Message.KeyData and $40000000) <> 0;
+  try
+    inherited;
+  finally
+    FKeyRepeat := Old;
+  end;
+end;
+
+procedure TPPGCustomDBGrid.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  // Jede andere Taste als eine Wiederholung von Pfeil/Bild: erst nachziehen
+  // (OnKeyDown und die Taste wirken auf den fokussierten Satz)
+  if (FPendRow >= 0) and not (FKeyRepeat and (Shift = []) and ((Key = VK_UP) or
+    (Key = VK_DOWN) or (Key = VK_PRIOR) or (Key = VK_NEXT))) then
+    SyncActiveRecord;
+  inherited KeyDown(Key, Shift);
+end;
+
+procedure TPPGCustomDBGrid.KeyUp(var Key: Word; Shift: TShiftState);
+begin
+  // Taste losgelassen: die Datenmenge folgt jetzt (einmal)
+  SyncActiveRecord;
+  inherited KeyUp(Key, Shift);
+end;
+
+procedure TPPGCustomDBGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  SyncActiveRecord;
+  inherited MouseDown(Button, Shift, X, Y);
+end;
+
+procedure TPPGCustomDBGrid.Click;
+begin
+  // OnClick der Anwendung liest ggf. die Datenmenge
+  if Assigned(OnClick) then
+    SyncActiveRecord;
+  inherited Click;
 end;
 
 { TPPGDBGrid }

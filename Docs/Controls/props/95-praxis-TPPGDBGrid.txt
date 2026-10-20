@@ -178,3 +178,5 @@ TPPGDBGridColumn.EditFormIndex ! Die wichtigsten Felder zuerst ins Formular hole
 TPPGDBGridColumn.EditFormNewRow ! Zusammengehörige Felder (PLZ und Ort) in eine eigene Zeile stellen.
 TPPGDBGridColumn.VisibleForCustomization ! Für Schlüsselfelder (IDs), die der Anwender nicht über das Kopfmenü einblenden soll.
 TPPGDBGridColumn.GroupDateMode ! gdmMonth für Belegdatum, gdmRelative für Termine (gruppiert wird erst mit GroupIndex bzw. der Gruppenleiste).
+TPPGDBGrid.KeyFieldNames ! Bei Datenmengen, deren Lesezeichen teuer sind (z. B. Tabellen ohne eindeutigen Index, bei denen jedes Lesezeichen eine Suche auslöst), das Primärschlüsselfeld eintragen, sobald gruppiert wird. Mehrteilige Schlüssel mit Semikolon trennen.
+TPPGDBGrid.GroupSyncDelay ! Die Vorgabe passt meist. Langsame Datenmengen vertragen höhere Werte (200–300); 0 nur, wenn jeder Fokuswechsel sofort Details nachladen muss. Eigener Code, der den aktiven Satz liest, ruft vorher SyncActiveRecord auf.
