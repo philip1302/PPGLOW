@@ -12,6 +12,8 @@ unit PPG.Tests.PopupMenuBasics;
   - Release des Formulars waehrend das Menue offen ist: erst nach Popup.
   - Abort in OnPopup, zweites Popup waehrend eines offenen, Popup aus einem
     modalen Dialog.
+  - Dasselbe Menue erneut waehrend es offen ist (zweiter Rechtsklick) bzw.
+    Freigabe in OnPopup: kein Zugriff auf das freigegebene Menue.
   Nach jedem Weg: keine Schleife mehr aktiv, Haken abgemeldet.
 
   Ablauf: Aktionen werden vor Popup in die Warteschlange gelegt (Probe) und
@@ -65,6 +67,8 @@ type
     procedure LogClose(Sender: TObject);
     procedure ShowFirstPopup(Sender: TObject);
     procedure ExitClick(Sender: TObject);
+    procedure FreeMenuPopup(Sender: TObject);
+    procedure FreeOwnerPopup(Sender: TObject);
     procedure AbortPopup(Sender: TObject);
     procedure ChildDestroy(Sender: TObject);
     procedure ChildClose(Sender: TObject; var Action: TCloseAction);
@@ -91,6 +95,8 @@ type
     procedure SecondPopupWhileOpen;
     procedure PopupFromModalDialog;
     procedure EmptyMenuDoesNotOpen;
+    procedure SameMenuReentryOwnerFreed;
+    procedure OnPopupFreesMenu;
   end;
 
 implementation
@@ -769,7 +775,103 @@ begin
   CheckEquals('onpopup,onclose', FLog.CommaText, 'in OnPopup sichtbar gemacht');
 end;
 
-initialization
-  RegisterTest('Menues', TPopupMenuBasicsTests.Suite);
+procedure TPopupMenuBasicsTests.FreeMenuPopup(Sender: TObject);
+begin
+  FLog.Add('onpopup');
+  Sender.Free;
+end;
+
+procedure TPopupMenuBasicsTests.FreeOwnerPopup(Sender: TObject);
+begin
+  FLog.Add('onpopup');
+  FChild.Free;
+end;
+
+procedure TPopupMenuBasicsTests.SameMenuReentryOwnerFreed;
+var
+  Back: Boolean;
+begin
+  // Dasselbe Menue erneut, waehrend es offen ist (zweiter Rechtsklick in
+  // RunModal): wie Windows schliesst das das offene, statt zu verschachteln.
+  FForm.Show;
+  FButton := NewButton('Ausloeser');
+  FButton.SetFocus;
+  FMenu := NewMenu(FForm);
+  FMenu.OnPopup := LogPopup;
+  FMenu.OnClose := LogClose;
+  Back := False;
+  FProbe.Post(
+    procedure
+    begin
+      FMenu.Popup(80, 80);
+      Back := PPGActiveMenuLoop = nil;
+    end);
+  FMenu.Popup(50, 50);
+  Pump;
+  CheckTrue(Back, 'erneutes Popup kehrt sofort zurueck, Menue geschlossen');
+  CheckEquals('onpopup,onclose', FLog.CommaText, 'einmal OnPopup/OnClose');
+  CheckNoSafety('erneut');
+  CheckClosed('erneut');
+  // Meldung aus einer MDI-Anwendung: im zweiten Aufruf wird der Besitzer
+  // (MDI-Kind, Menue gehoert ihm) freigegeben. Der aeussere PopupAtRect lief
+  // danach in das freigegebene Menue (FLoop := nil, DoClose).
+  FLog.Clear;
+  MakeMdi;
+  FMenu.OnClose := LogClose;
+  FProbe.Post(
+    procedure
+    begin
+      FLog.Add('reenter');
+      // Freigabe im inneren Aufruf (ohne Korrektur: in dessen RunModal)
+      FProbe.Post(procedure begin FChild.Free; end, False);
+      FMenu.Popup(80, 80);
+      // ... bzw. nach dessen Rueckkehr, waehrend der aeussere noch laeuft
+      if FChild <> nil then
+        FChild.Free;
+    end);
+  ButtonPopup(nil);
+  FMenu := nil;
+  FButton := nil;
+  Pump;
+  CheckTrue(FChildGone, 'Besitzer freigegeben');
+  CheckEquals('popup,reenter,destroyed,returned:True', FLog.CommaText,
+    'kein OnClose nach der Freigabe');
+  CheckEquals(0, FAppExceptions, 'kein Zugriffsfehler');
+  CheckNoSafety('Besitzer frei');
+  CheckClosed('Besitzer frei');
+end;
+
+procedure TPopupMenuBasicsTests.OnPopupFreesMenu;
+var
+  M: TPPGPopupMenu;
+begin
+  // OnPopup gibt das Menue frei: danach kein Zugriff mehr (Items, DoClose)
+  FForm.Show;
+  M := NewMenu(nil);
+  M.OnPopup := FreeMenuPopup;
+  M.OnClose := LogClose;
+  FProbe.Post(procedure begin end);
+  M.Popup(50, 50);
+  Pump;
+  CheckEquals('onpopup', FLog.CommaText, 'kein OnClose nach der Freigabe');
+  CheckEquals(0, FAppExceptions, 'kein Zugriffsfehler');
+  CheckClosed('in OnPopup freigegeben');
+  // Ebenso, wenn OnPopup den Besitzer freigibt (MDI-Kind)
+  FLog.Clear;
+  MakeMdi;
+  FMenu.OnPopup := FreeOwnerPopup;
+  FMenu.OnClose := LogClose;
+  FProbe.Post(procedure begin end);
+  FMenu.Popup(50, 50);
+  FMenu := nil;
+  FButton := nil;
+  Pump;
+  CheckTrue(FChildGone, 'Besitzer freigegeben');
+  CheckEquals('onpopup,destroyed', FLog.CommaText, 'kein OnClose nach der Freigabe');
+  CheckEquals(0, FAppExceptions, 'kein Zugriffsfehler');
+  CheckClosed('Besitzer in OnPopup freigegeben');
+end;
+
+initialization  RegisterTest('Menues', TPopupMenuBasicsTests.Suite);
 
 end.

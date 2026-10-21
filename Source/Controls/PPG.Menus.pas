@@ -2111,6 +2111,7 @@ var
   AlignEnd: Boolean;
   Destroyed: Boolean;
   OldFlag: PBoolean;
+  OldLoop: TPPGMenuLoop;
   Host: TCustomForm;
 begin
   if csDesigning in ComponentState then
@@ -2118,45 +2119,63 @@ begin
     inherited Popup(Anchor.Left, Anchor.Bottom);
     Exit;
   end;
-  SetPopupPoint(Point(Anchor.Left, Anchor.Bottom));
-  DoPopup(Self);
-  // Wie die VCL (TrackPopupMenu): ohne sichtbaren Eintrag erscheint nichts -
-  // sonst bliebe ein leeres Fenster offen, das den naechsten Klick verbraucht
-  if not HasVisibleItem(Items) then
+  // Wiedereintritt (z.B. zweiter Rechtsklick waehrend RunModal): wie Windows
+  // das offene Menue schliessen statt ein zweites zu verschachteln - sonst
+  // liefe der aeussere Aufruf nach einer Freigabe im inneren in freigegebenen
+  // Speicher. Aufraeumen und DoClose uebernimmt der offene (aeussere) Aufruf.
+  if FLoop <> nil then
   begin
-    DoClose;
+    FLoop.CloseAll;
     Exit;
   end;
-  Loop := TPPGMenuLoop.Create;
-  FLoop := Loop;
+  SetPopupPoint(Point(Anchor.Left, Anchor.Bottom));
+  // Flag schon vor DoPopup: OnPopup kann das Menue (bzw. den Besitzer) freigeben
+  Loop := nil;
+  OldLoop := FLoop;
   Destroyed := False;
   OldFlag := FDestroyedFlag;
   FDestroyedFlag := @Destroyed;
   try
-    Loop.StyleSource := StyleSourceControl;
-    Loop.StyleManager := FStyleManager;
-    Loop.Preset := FPreset;
-    Loop.BiDiMode := BiDiMode;
-    Loop.Styles := FMenuStyles;
-    Loop.OnCustomDrawItem := FOnCustomDrawItem;
-    Loop.DrawSender := Self;
-    // Ohne PPGlow-Ausloeser gehoeren die Menuefenster dem Formular (bei MDI dem
-    // Hauptformular) - nicht dem Anwendungsfenster, sonst laegen sie unter
-    // dem Hauptformular, sobald es nach vorn kommt
-    Host := HostFormOf;
-    if (Host <> nil) and Host.HandleAllocated then
-      Loop.OwnerWindow := Host.Handle;
-    Loop.HostForm := Host;
-    Loop.ShowAccelerators := ShowAccelerators;
-    AlignEnd := (Alignment = paRight) <> (BiDiMode = bdRightToLeft);
-    Loop.OpenPopup(Items, Anchor, ppsBelow, AlignEnd);
-    Loop.RunModal;
-  finally
-    // RunModal pumpt Nachrichten: das Menue (z.B. mit seinem Besitzer) kann
-    // dabei freigegeben worden sein. Dann kein Zugriff mehr auf Self.
-    if not Destroyed then
+    DoPopup(Self);
+    // Wie die VCL (TrackPopupMenu): ohne sichtbaren Eintrag erscheint nichts -
+    // sonst bliebe ein leeres Fenster offen, das den naechsten Klick verbraucht.
+    // DoClose kommt dann wie sonst erst nach dem Aufraeumen (unten).
+    if not Destroyed and HasVisibleItem(Items) then
     begin
-      FLoop := nil;
+      Loop := TPPGMenuLoop.Create;
+      FLoop := Loop;
+      Loop.StyleSource := StyleSourceControl;
+      Loop.StyleManager := FStyleManager;
+      Loop.Preset := FPreset;
+      Loop.BiDiMode := BiDiMode;
+      Loop.Styles := FMenuStyles;
+      Loop.OnCustomDrawItem := FOnCustomDrawItem;
+      Loop.DrawSender := Self;
+      // Ohne PPGlow-Ausloeser gehoeren die Menuefenster dem Formular (bei MDI dem
+      // Hauptformular) - nicht dem Anwendungsfenster, sonst laegen sie unter
+      // dem Hauptformular, sobald es nach vorn kommt
+      Host := HostFormOf;
+      if (Host <> nil) and Host.HandleAllocated then
+        Loop.OwnerWindow := Host.Handle;
+      Loop.HostForm := Host;
+      Loop.ShowAccelerators := ShowAccelerators;
+      AlignEnd := (Alignment = paRight) <> (BiDiMode = bdRightToLeft);
+      Loop.OpenPopup(Items, Anchor, ppsBelow, AlignEnd);
+      Loop.RunModal;
+    end;
+  finally
+    // DoPopup/RunModal pumpen ggf. Nachrichten: das Menue (z.B. mit seinem
+    // Besitzer) kann dabei freigegeben worden sein. Dann kein Zugriff mehr auf
+    // Self; ein aeusserer Rahmen (OnPopup ruft erneut Popup) erfaehrt die
+    // Freigabe ueber sein Flag.
+    if Destroyed then
+    begin
+      if OldFlag <> nil then
+        OldFlag^ := True;
+    end
+    else
+    begin
+      FLoop := OldLoop;
       FDestroyedFlag := OldFlag;
     end;
     Loop.Free;
